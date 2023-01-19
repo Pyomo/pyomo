@@ -25,6 +25,7 @@ from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
 from operator import itemgetter
+from pyomo.common.errors import DeveloperError
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.opt import SolverFactory, SolverResults, ProblemSense, SolutionStatus, SolverStatus
 from pyomo.contrib.mindtpy.util import (generate_norm2sq_objective_function, set_solver_options, 
@@ -1919,7 +1920,7 @@ class _MindtPyAlgorithm(object):
                                                                      descent_order=None))
         for v_from, v_to in zip(working_model_variable_list, original_model_variable_list):
             if v_from.name != v_to.name:
-                raise ValueError(
+                raise DeveloperError(
                     'The name of the two variables is not the same. Loading final solution')
         copy_var_list_values(working_model_variable_list,
                              original_model_variable_list,
