@@ -60,7 +60,7 @@ Based on the above notation, the form of the robust counterpart addressed in PyR
     \end{align*}
 
 In order to solve problems of the above type, PyROS implements the
-Generalized Robust Cutting-Set algorithm developed in [GRCSPaper]_.
+Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_.
 
 When using PyROS, please consider citing the above paper.
 
