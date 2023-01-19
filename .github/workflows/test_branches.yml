@@ -209,6 +209,8 @@ jobs:
       if: matrix.PYENV == 'conda'
       uses: conda-incubator/setup-miniconda@v2
       with:
+        auto-activate-base: true
+        activate-environment: ""
         auto-update-conda: true
         python-version: ${{ matrix.python }}
         channels: conda-forge
@@ -270,7 +272,8 @@ jobs:
       if: matrix.PYENV == 'conda'
       run: |
         # Switch to a faster environment solver
-        conda install -q -y -n base -c conda-forge conda-libmamba-solver
+        conda update -n base conda
+        conda install -q -y -n base conda-libmamba-solver
         conda config --set solver libmamba
         # Set up environment
         mkdir -p $GITHUB_WORKSPACE/cache/conda
