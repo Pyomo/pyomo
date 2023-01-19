@@ -1256,92 +1256,12 @@ class _MindtPyAlgorithm(object):
             else:
                 self.results.solver.termination_condition = tc.feasible
             return True
+        return (self.bounds_converged() or 
+                self.reached_iteration_limit() or 
+                self.reached_time_limit() or 
+                self.reached_stalling_limit() or 
+                (check_cycling and self.iteration_cycling()))
 
-        # Check bound convergence
-        if self.abs_gap <= config.absolute_bound_tolerance:
-            config.logger.info(
-                'MindtPy exiting on bound convergence. '
-                'Absolute gap: {} <= absolute tolerance: {} \n'.format(
-                    self.abs_gap, config.absolute_bound_tolerance))
-            self.results.solver.termination_condition = tc.optimal
-            return True
-        # Check relative bound convergence
-        if self.best_solution_found is not None:
-            if self.rel_gap <= config.relative_bound_tolerance:
-                config.logger.info(
-                    'MindtPy exiting on bound convergence. '
-                    'Relative gap : {} <= relative tolerance: {} \n'.format(
-                        self.rel_gap, config.relative_bound_tolerance))
-
-        # Check iteration limit
-        if self.mip_iter >= config.iteration_limit:
-            config.logger.info(
-                'MindtPy unable to converge bounds '
-                'after {} main iterations.'.format(self.mip_iter))
-            config.logger.info(
-                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
-                format(self.primal_bound, self.dual_bound))
-            if config.single_tree:
-                self.results.solver.termination_condition = tc.feasible
-            else:
-                self.results.solver.termination_condition = tc.maxIterations
-            return True
-
-        # Check time limit
-        if get_main_elapsed_time(self.timing) >= config.time_limit:
-            config.logger.info(
-                'MindtPy unable to converge bounds '
-                'before time limit of {} seconds. '
-                'Elapsed: {} seconds'
-                .format(config.time_limit, get_main_elapsed_time(self.timing)))
-            config.logger.info(
-                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
-                format(self.primal_bound, self.dual_bound))
-            self.results.solver.termination_condition = tc.maxTimeLimit
-            return True
-
-        # Check if algorithm is stalling
-        if len(self.primal_bound_progress) >= config.stalling_limit:
-            if abs(self.primal_bound_progress[-1] - self.primal_bound_progress[-config.stalling_limit]) <= config.zero_tolerance:
-                config.logger.info(
-                    'Algorithm is not making enough progress. '
-                    'Exiting iteration loop.')
-                config.logger.info(
-                    'Final bound values: Primal Bound: {}  Dual Bound: {}'.
-                    format(self.primal_bound, self.dual_bound))
-                if self.best_solution_found is not None:
-                    self.results.solver.termination_condition = tc.feasible
-                else:
-                    # TODO: Is it correct to set self.working_model as the best_solution_found?
-                    # In function copy_var_list_values, skip_fixed is set to True in default.
-                    self.best_solution_found = self.working_model.clone()
-                    config.logger.warning(
-                        'Algorithm did not find a feasible solution. '
-                        'Returning best bound solution. Consider increasing stalling_limit or absolute_bound_tolerance.')
-                    self.results.solver.termination_condition = tc.noSolution
-                return True
-
-        # Cycling check
-        if check_cycling:
-            if config.cycling_check or config.use_tabu_list:
-                self.curr_int_sol = get_integer_solution(self.mip)
-                if config.cycling_check and self.mip_iter >= 1:
-                    if self.curr_int_sol in set(self.integer_list):
-                        config.logger.info(
-                            'Cycling happens after {} main iterations. '
-                            'The same combination is obtained in iteration {} '
-                            'This issue happens when the NLP subproblem violates constraint qualification. '
-                            'Convergence to optimal solution is not guaranteed.'
-                            .format(self.mip_iter, self.integer_list.index(self.curr_int_sol)+1))
-                        config.logger.info(
-                            'Final bound values: Primal Bound: {}  Dual Bound: {}'.
-                            format(self.primal_bound, self.dual_bound))
-                        # TODO determine self.primal_bound, self.dual_bound is inf or -inf.
-                        self.results.solver.termination_condition = tc.feasible
-                        return True
-                self.integer_list.append(self.curr_int_sol)
-
-        return False
 
     def fix_dual_bound(self, config, last_iter_cuts):
         """Fix the dual bound when no-good cuts or tabu list is activated.
@@ -1493,16 +1413,15 @@ class _MindtPyAlgorithm(object):
         set_solver_options(mainopt, self.timing, config,
                            solver_type='mip', regularization=regularization_problem)
         try:
-            with time_code(self.timing, 'regularization main' if regularization_problem else ('fp main' if fp else 'main')):
-                main_mip_results = mainopt.solve(self.mip,
-                                                 tee=config.mip_solver_tee,
-                                                 load_solutions=False,
-                                                 **mip_args)
-                # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
-                if config.single_tree or config.use_tabu_list:
-                    self.update_attributes()
-                if len(main_mip_results.solution) > 0:
-                    self.mip.solutions.load_from(main_mip_results)
+            main_mip_results = mainopt.solve(self.mip,
+                                             tee=config.mip_solver_tee,
+                                             load_solutions=False,
+                                             **mip_args)
+            # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
+            if config.single_tree or config.use_tabu_list:
+                self.update_attributes()
+            if len(main_mip_results.solution) > 0:
+                self.mip.solutions.load_from(main_mip_results)
         except (ValueError, AttributeError):
             if config.single_tree:
                 config.logger.warning('Single tree terminate.')
@@ -2163,12 +2082,12 @@ class _MindtPyAlgorithm(object):
                 config.logger.error('Feasibility pump Fixed-NLP is infeasible, something might be wrong. '
                                     'There might be a problem with the precisions - the feasibility pump seems to have converged')
 
-    def handle_fp_main_tc(self, feas_main_results, config):
+    def handle_fp_main_tc(self, fp_main_results, config):
         """Handle the termination condition of the feasibility pump main problem.
 
         Parameters
         ----------
-        feas_main_results : SolverResults
+        fp_main_results : SolverResults
             The results from solving the FP main problem.
         solve_data : MindtPySolveData
             Data container that holds solve-instance data.
@@ -2180,27 +2099,27 @@ class _MindtPyAlgorithm(object):
         bool
             True if FP loop should terminate, False otherwise.
         """
-        if feas_main_results.solver.termination_condition is tc.optimal:
+        if fp_main_results.solver.termination_condition is tc.optimal:
             config.logger.info(self.log_formatter.format(
                 self.fp_iter, 'FP-MIP', value(
                     self.mip.MindtPy_utils.fp_mip_obj),
                 self.primal_bound, self.dual_bound, self.rel_gap, get_main_elapsed_time(self.timing)))
             return False
-        elif feas_main_results.solver.termination_condition is tc.maxTimeLimit:
+        elif fp_main_results.solver.termination_condition is tc.maxTimeLimit:
             config.logger.warning('FP-MIP reaches max TimeLimit')
             self.results.solver.termination_condition = tc.maxTimeLimit
             return True
-        elif feas_main_results.solver.termination_condition is tc.infeasible:
+        elif fp_main_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
             no_good_cuts = self.mip.MindtPy_utils.cuts.no_good_cuts
             if no_good_cuts.__len__() > 0:
                 no_good_cuts[no_good_cuts.__len__()].deactivate()
             return True
-        elif feas_main_results.solver.termination_condition is tc.unbounded:
+        elif fp_main_results.solver.termination_condition is tc.unbounded:
             config.logger.warning('FP-MIP unbounded')
             return True
-        elif (feas_main_results.solver.termination_condition is tc.other and
-                feas_main_results.solution.status is SolutionStatus.feasible):
+        elif (fp_main_results.solver.termination_condition is tc.other and
+                fp_main_results.solution.status is SolutionStatus.feasible):
             config.logger.warning('MILP solver reported feasible solution of FP-MIP, '
                                   'but not guaranteed to be optimal.')
             return False
@@ -2229,9 +2148,9 @@ class _MindtPyAlgorithm(object):
         while self.fp_iter < config.fp_iteration_limit:
 
             # solve MILP main problem
-            feas_main, feas_main_results = self.solve_main(config, fp=True)
-            fp_should_terminate = self.handle_fp_main_tc(
-                feas_main_results, config)
+            with time_code(self.timing, 'fp main'):
+                fp_main, fp_main_results = self.solve_main(config, fp=True)
+            fp_should_terminate = self.handle_fp_main_tc(fp_main_results, config)
             if fp_should_terminate:
                 break
 
@@ -2451,17 +2370,17 @@ class _MindtPyAlgorithm(object):
         while self.mip_iter < config.iteration_limit:
             
             # solve MILP main problem
-            main_mip, main_mip_results = self.solve_main(config)
+            with time_code(self.timing, 'main'):
+                main_mip, main_mip_results = self.solve_main(config)
             if self.handle_main_mip_termination(main_mip, main_mip_results):
                 break
-            # This can be moved out of this if else check?
             # Call the MILP post-solve callback
             with time_code(self.timing, 'Call after main solve'):
                 config.call_after_main_solve(main_mip)
 
             # Regularization is activated after the first feasible solution is found.
             if config.add_regularization is not None:
-                self.add_regularization()
+                self.add_regularization(main_mip)
 
             if self.algorithm_should_terminate(config, check_cycling=True):
                 self.last_iter_cuts = False
@@ -2541,13 +2460,14 @@ class _MindtPyAlgorithm(object):
         solution_name_obj = solution_name_obj[:config.num_solution_iteration]
         return solution_name_obj
 
-    def add_regularization(self):
+    def add_regularization(self, main_mip):
         config = self.config
         if self.best_solution_found is not None and not config.single_tree:
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if self.dual_bound != self.dual_bound_progress[0]:
-                main_mip, main_mip_results = self.solve_main(config, regularization_problem=True)
-                self.handle_regularization_main_tc(main_mip, main_mip_results, config)
+                with time_code(self.timing, 'regularization main'):
+                    regularization_main_mip, regularization_main_mip_results = self.solve_main(config, regularization_problem=True)
+                self.handle_regularization_main_tc(regularization_main_mip, regularization_main_mip_results, config)
 
         # TODO: add descriptions for the following code
         if config.single_tree:
@@ -2560,3 +2480,104 @@ class _MindtPyAlgorithm(object):
             if self.curr_int_sol not in set(self.integer_list):
                 fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
                 self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
+
+
+    def bounds_converged(self):
+        # Check bound convergence
+        config = self.config
+        if self.abs_gap <= config.absolute_bound_tolerance:
+            config.logger.info(
+                'MindtPy exiting on bound convergence. '
+                'Absolute gap: {} <= absolute tolerance: {} \n'.format(
+                    self.abs_gap, config.absolute_bound_tolerance))
+            self.results.solver.termination_condition = tc.optimal
+            return True
+        # Check relative bound convergence
+        if self.best_solution_found is not None:
+            if self.rel_gap <= config.relative_bound_tolerance:
+                config.logger.info(
+                    'MindtPy exiting on bound convergence. '
+                    'Relative gap : {} <= relative tolerance: {} \n'.format(
+                        self.rel_gap, config.relative_bound_tolerance))
+                self.results.solver.termination_condition = tc.optimal
+                return True
+        return False
+
+    def reached_iteration_limit(self):
+        # Check iteration limit
+        config = self.config
+        if self.mip_iter >= config.iteration_limit:
+            config.logger.info(
+                'MindtPy unable to converge bounds '
+                'after {} main iterations.'.format(self.mip_iter))
+            config.logger.info(
+                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                format(self.primal_bound, self.dual_bound))
+            if config.single_tree:
+                self.results.solver.termination_condition = tc.feasible
+            else:
+                self.results.solver.termination_condition = tc.maxIterations
+            return True
+        else:
+            return False
+
+    def reached_time_limit(self):
+        config = self.config
+        if get_main_elapsed_time(self.timing) >= config.time_limit:
+            config.logger.info(
+                'MindtPy unable to converge bounds '
+                'before time limit of {} seconds. '
+                'Elapsed: {} seconds'
+                .format(config.time_limit, get_main_elapsed_time(self.timing)))
+            config.logger.info(
+                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                format(self.primal_bound, self.dual_bound))
+            self.results.solver.termination_condition = tc.maxTimeLimit
+            return True
+        else:
+            return False
+
+
+    def reached_stalling_limit(self):
+        config = self.config
+        if len(self.primal_bound_progress) >= config.stalling_limit:
+            if abs(self.primal_bound_progress[-1] - self.primal_bound_progress[-config.stalling_limit]) <= config.zero_tolerance:
+                config.logger.info(
+                    'Algorithm is not making enough progress. '
+                    'Exiting iteration loop.')
+                config.logger.info(
+                    'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                    format(self.primal_bound, self.dual_bound))
+                if self.best_solution_found is not None:
+                    self.results.solver.termination_condition = tc.feasible
+                else:
+                    # TODO: Is it correct to set self.working_model as the best_solution_found?
+                    # In function copy_var_list_values, skip_fixed is set to True in default.
+                    self.best_solution_found = self.working_model.clone()
+                    config.logger.warning(
+                        'Algorithm did not find a feasible solution. '
+                        'Returning best bound solution. Consider increasing stalling_limit or absolute_bound_tolerance.')
+                    self.results.solver.termination_condition = tc.noSolution
+                return True
+        return False
+
+    def iteration_cycling(self):
+        config = self.config
+        if config.cycling_check or config.use_tabu_list:
+            self.curr_int_sol = get_integer_solution(self.mip)
+            if config.cycling_check and self.mip_iter >= 1:
+                if self.curr_int_sol in set(self.integer_list):
+                    config.logger.info(
+                        'Cycling happens after {} main iterations. '
+                        'The same combination is obtained in iteration {} '
+                        'This issue happens when the NLP subproblem violates constraint qualification. '
+                        'Convergence to optimal solution is not guaranteed.'
+                        .format(self.mip_iter, self.integer_list.index(self.curr_int_sol)+1))
+                    config.logger.info(
+                        'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                        format(self.primal_bound, self.dual_bound))
+                    # TODO determine self.primal_bound, self.dual_bound is inf or -inf.
+                    self.results.solver.termination_condition = tc.feasible
+                    return True
+            self.integer_list.append(self.curr_int_sol)
+        return False

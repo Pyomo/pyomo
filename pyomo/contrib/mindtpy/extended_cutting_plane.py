@@ -160,71 +160,15 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 self.results.solver.termination_condition = tc.feasible
             return True
 
-        # Check bound convergence
-        if self.abs_gap <= config.absolute_bound_tolerance:
-            config.logger.info(
-                'MindtPy exiting on bound convergence. '
-                'Absolute gap: {} <= absolute tolerance: {} \n'.format(
-                    self.abs_gap, config.absolute_bound_tolerance))
-            self.results.solver.termination_condition = tc.optimal
-            return True
-        # Check relative bound convergence
-        if self.best_solution_found is not None:
-            if self.rel_gap <= config.relative_bound_tolerance:
-                config.logger.info(
-                    'MindtPy exiting on bound convergence. '
-                    'Relative gap : {} <= relative tolerance: {} \n'.format(
-                        self.rel_gap, config.relative_bound_tolerance))
+        return (self.bounds_converged() or 
+                self.reached_iteration_limit() or 
+                self.reached_time_limit() or 
+                self.reached_stalling_limit() or 
+                self.all_nonlinear_constraint_satisfied())
 
-        # Check iteration limit
-        if self.mip_iter >= config.iteration_limit:
-            config.logger.info(
-                'MindtPy unable to converge bounds '
-                'after {} main iterations.'.format(self.mip_iter))
-            config.logger.info(
-                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
-                format(self.primal_bound, self.dual_bound))
-            if config.single_tree:
-                self.results.solver.termination_condition = tc.feasible
-            else:
-                self.results.solver.termination_condition = tc.maxIterations
-            return True
-
-        # Check time limit
-        if get_main_elapsed_time(self.timing) >= config.time_limit:
-            config.logger.info(
-                'MindtPy unable to converge bounds '
-                'before time limit of {} seconds. '
-                'Elapsed: {} seconds'
-                .format(config.time_limit, get_main_elapsed_time(self.timing)))
-            config.logger.info(
-                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
-                format(self.primal_bound, self.dual_bound))
-            self.results.solver.termination_condition = tc.maxTimeLimit
-            return True
-
-        # Check if algorithm is stalling
-        if len(self.primal_bound_progress) >= config.stalling_limit:
-            if abs(self.primal_bound_progress[-1] - self.primal_bound_progress[-config.stalling_limit]) <= config.zero_tolerance:
-                config.logger.info(
-                    'Algorithm is not making enough progress. '
-                    'Exiting iteration loop.')
-                config.logger.info(
-                    'Final bound values: Primal Bound: {}  Dual Bound: {}'.
-                    format(self.primal_bound, self.dual_bound))
-                if self.best_solution_found is not None:
-                    self.results.solver.termination_condition = tc.feasible
-                else:
-                    # TODO: Is it correct to set self.working_model as the best_solution_found?
-                    # In function copy_var_list_values, skip_fixed is set to True in default.
-                    self.best_solution_found = self.working_model.clone()
-                    config.logger.warning(
-                        'Algorithm did not find a feasible solution. '
-                        'Returning best bound solution. Consider increasing stalling_limit or absolute_bound_tolerance.')
-                    self.results.solver.termination_condition = tc.noSolution
-                return True
-
+    def all_nonlinear_constraint_satisfied(self):
         # check to see if the nonlinear constraints are satisfied
+        config = self.config
         MindtPy = self.mip.MindtPy_utils
         nonlinear_constraints = [c for c in MindtPy.nonlinear_constraint_list]
         for nlc in nonlinear_constraints:
