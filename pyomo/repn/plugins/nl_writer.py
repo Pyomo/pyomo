@@ -277,7 +277,7 @@ class NLWriter(object):
             _open = lambda fname: open(fname, 'w')
         else:
             _open = nullcontext
-        with open(filename, 'w') as FILE, \
+        with open(filename, 'w', newline='') as FILE, \
              _open(row_fname) as ROWFILE, \
              _open(col_fname) as COLFILE:
             info = self.write(
@@ -963,7 +963,49 @@ class _NLWriter_impl(object):
         #
         # LINE 1
         #
-        ostream.write("g3 1 1 0\t# problem %s\n" % (model.name,))
+        if (visitor.encountered_string_arguments
+            and 'b' not in getattr(ostream, 'mode', '')
+        ):
+            # Not all streams support tell()
+            try:
+                _init_fpos = ostream.tell()
+            except IOError:
+                _init_fpos = None
+
+        line_1_txt = f"g3 1 1 0\t# problem {model.name}\n"
+        ostream.write(line_1_txt)
+
+        # If there were any string arguments, then we need to ensure
+        # that ostream is not converting newlines to something other
+        # than '\n'.  Binary files do not perform newline mapping (of
+        # course, we will also need to map all the str to bytes for
+        # binary-mode I/O).
+        if (visitor.encountered_string_arguments
+            and 'b' not in getattr(ostream, 'mode', '')
+        ):
+            if _init_fpos is None:
+                if os.linesep != '\n':
+                    logger.warning(
+                        "Writing NL file containing string arguments to a "
+                        "text output stream that does not support tell() on "
+                        "a platform with default line endings other than "
+                        "'\\n'. Current versions of the ASL "
+                        "(through at least 20190605) require UNIX-style "
+                        "newlines as terminators for string arguments: "
+                        "it is possible that the ASL may refuse to read "
+                        "the NL file.")
+            else:
+                _written_bytes = ostream.tell() - _init_fpos
+                if ostream.encoding:
+                    line_1_txt = line_1_txt.encode(ostream.encoding)
+                if len(line_1_txt) != _written_bytes:
+                    logger.error(
+                        "Writing NL file containing string arguments to a "
+                        "text output stream with line endings other than '\\n' "
+                        "Current versions of the ASL "
+                        "(through at least 20190605) require UNIX-style "
+                        "newlines as terminators for string arguments.")
+
         #
         # LINE 2
         #
@@ -2131,6 +2173,7 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 def _before_string(visitor, child):
+    visitor.encountered_string_arguments = True
     ans = AMPLRepn(child, None, None)
     ans.nl = (visitor.template.string % (len(child), child), ())
     return False, (_GENERAL, ans)
@@ -2286,6 +2329,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.used_named_expressions = used_named_expressions
         self.symbolic_solver_labels = symbolic_solver_labels
         self.use_named_exprs = use_named_exprs
+        self.encountered_string_arguments = False
         #self.value_cache = {}
 
     def initializeWalker(self, expr):
