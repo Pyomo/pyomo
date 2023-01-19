@@ -295,7 +295,7 @@ jobs:
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
         # Switch to a faster environment solver
-        conda install -q -y -n base conda-libmamba-solver
+        conda install -q -y -n base -c conda-forge conda-libmamba-solver
         conda config --set solver libmamba
         # Print environment info
         echo "*** CONDA environment: ***"
