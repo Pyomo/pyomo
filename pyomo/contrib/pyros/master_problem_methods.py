@@ -462,8 +462,6 @@ def minimize_dr_vars(model_data, config):
         for master_ssv, polish_ssv in ssv_zip:
             master_ssv.set_value(value(polish_ssv))
         for master_sv, polish_sv in sv_zip:
-            print("master", master_sv.name, master_sv.value)
-            print("polish", polish_sv.name, polish_sv.value)
             master_sv.set_value(value(polish_sv))
 
         # update master problem decision rule variables
