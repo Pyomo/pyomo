@@ -679,9 +679,11 @@ class Test_NLWriter(unittest.TestCase):
         )
 
         # Test system-dependent newline translation
-        OUT = io.StringIO()
-        with LoggingIntercept() as LOG:
-            nl_writer.NLWriter().write(m, OUT)
+        with TempfileManager:
+            fname = TempfileManager.create_tempfile()
+            with open(fname, 'w') as OUT:
+                with LoggingIntercept() as LOG:
+                    nl_writer.NLWriter().write(m, OUT)
         if os.linesep == '\n':
             self.assertEqual(LOG.getvalue(), "")
         else:
