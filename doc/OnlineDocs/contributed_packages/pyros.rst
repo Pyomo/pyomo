@@ -5,7 +5,8 @@ PyROS Solver
 PyROS (Pyomo Robust Optimization Solver) is a metasolver capability within Pyomo for solving non-convex,
 two-stage optimization models using adjustable robust optimization.
 
-It was developed by **Natalie M. Isenberg** and **Chrysanthos E. Gounaris** of Carnegie Mellon University,
+It was developed by **Natalie M. Isenberg**, **Jason A. F. Sherman**,
+and **Chrysanthos E. Gounaris** of Carnegie Mellon University,
 in collaboration with **John D. Siirola** of Sandia National Labs.
 The developers gratefully acknowledge support from the U.S. Department of Energy's
 `Institute for the Design of Advanced Energy Systems (IDAES) <https://idaes.org>`_.
