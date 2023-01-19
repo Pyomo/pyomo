@@ -290,13 +290,14 @@ jobs:
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
       run: |
+        # Switch to a faster environment solver
+        conda install -q -y -n base -c conda-forge conda-libmamba-solver
+        conda config --set solver libmamba
+        # Set up environment
         mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
-        # Switch to a faster environment solver
-        conda install -q -y -n base -c conda-forge conda-libmamba-solver
-        conda config --set solver libmamba
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
