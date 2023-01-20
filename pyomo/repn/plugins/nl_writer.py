@@ -968,9 +968,9 @@ class _NLWriter_impl(object):
         ):
             # Not all streams support tell()
             try:
-                _init_fpos = ostream.tell()
+                _written_bytes = ostream.tell()
             except IOError:
-                _init_fpos = None
+                _written_bytes = None
 
         line_1_txt = f"g3 1 1 0\t# problem {model.name}\n"
         ostream.write(line_1_txt)
@@ -983,7 +983,11 @@ class _NLWriter_impl(object):
         if (visitor.encountered_string_arguments
             and 'b' not in getattr(ostream, 'mode', '')
         ):
-            if _init_fpos is None:
+            if _written_bytes is None:
+                _written_bytes = 0
+            else:
+                _written_bytes = ostream.tell() - _init_fpos
+            if not _written_bytes:
                 if os.linesep != '\n':
                     logger.warning(
                         "Writing NL file containing string arguments to a "
@@ -995,7 +999,6 @@ class _NLWriter_impl(object):
                         "it is possible that the ASL may refuse to read "
                         "the NL file.")
             else:
-                _written_bytes = ostream.tell() - _init_fpos
                 if ostream.encoding:
                     line_1_txt = line_1_txt.encode(ostream.encoding)
                 if len(line_1_txt) != _written_bytes:
