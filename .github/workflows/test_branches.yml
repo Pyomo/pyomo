@@ -275,7 +275,7 @@ jobs:
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
         # Try and install mamba
-        conda install -q -y conda-libmamba-solver
+        conda install -q -y -n base conda-libmamba-solver
         if test "$?" == 0; then
             conda config --set solver libmamba
         fi
