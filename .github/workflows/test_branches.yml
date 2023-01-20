@@ -211,8 +211,9 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
+        mamba-version: "*"
         channels: conda-forge,gurobi,ibmdecisionoptimization,fico-xpress
-        #channel-priority: strict
+        channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -269,15 +270,11 @@ jobs:
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
       run: |
-        # Switch to a faster environment solver
-        conda install -q -y conda-libmamba-solver
-        conda config --set solver libmamba
         # Set up environment
         mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
-        conda config --set channel_priority strict
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
@@ -311,20 +308,20 @@ jobs:
             fi
         done
         echo "*** Install Pyomo dependencies ***""
-        conda install -q -y $CONDA_DEPENDENCIES
+        mamba install -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             echo "*** Install CPLEX ***""
-            conda install -q -y 'cplex>=12.10' docplex \
+            mamba install -q -y 'cplex>=12.10' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             echo "*** Install Gurobi ***""
-            conda install -q -y gurobi \
+            mamba install -q -y gurobi \
                 || echo "WARNING: Gurobi is not available"
             echo "*** Install Xpress ***""
-            conda install -q -y xpress \
+            mamba install -q -y xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps scip; do
                 echo "*** Install $PKG ***""
-                conda install -q -y $PKG \
+                mamba install -q -y $PKG \
                     || echo "WARNING: $PKG is not available"
             done
             # TODO: This is a hack to stop test_qt.py from running until we
