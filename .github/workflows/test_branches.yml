@@ -212,7 +212,7 @@ jobs:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
         mamba-version: "*"
-        channels: conda-forge,gurobi,ibmdecisionoptimization,fico-xpress
+        channels: conda,conda-forge,gurobi,ibmdecisionoptimization,fico-xpress
         channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
