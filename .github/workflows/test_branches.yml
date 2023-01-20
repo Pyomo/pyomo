@@ -277,6 +277,7 @@ jobs:
         # Try and install mamba
         conda install -q -y -n base conda-libmamba-solver || MAMBA_FAILED=1
         if test -z "$MAMBA_FAILED"; then
+            echo "*** Activating the mamba environment solver ***"
             conda config --set solver libmamba
         fi
         # Print environment info
