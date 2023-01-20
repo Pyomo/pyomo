@@ -44,7 +44,7 @@ from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
 class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_object, create_model, solver=None,
-                 time_set_name = "t", prior_FIM=None, discretize_model=None, verbose=True, args=None):
+                 time_set_name = "t", prior_FIM=None, discretize_model=None, args=None):
         """
         This package enables model-based design of experiments analysis with Pyomo. 
         Both direct optimization and enumeration modes are supported.
@@ -73,8 +73,6 @@ class DesignOfExperiments:
             A ``list`` of lists containing Fisher information matrix (FIM) for prior experiments.
         discretize_model:
             A user-specified ``function`` that discretizes the model. Only use with Pyomo.DAE, default=None
-        verbose:
-            A ``bool`` if print statements are made
         args:
             Additional arguments for the create_model function.
         """
@@ -113,7 +111,7 @@ class DesignOfExperiments:
         self.prior_FIM = prior_FIM
 
         # if print statements
-        self.verbose = verbose
+        #self.verbose = verbose
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.WARN)
         
@@ -136,16 +134,15 @@ class DesignOfExperiments:
                 raise ValueError('Found wrong prior information matrix shape.')
 
         if check_mode:
-            if self.mode not in ['simultaneous_finite', 'sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug']:
-                raise ValueError('Wrong mode. Choose from "simultaneous_finite", "sequential_finite", "0sequential_sipopt", "sequential_kaug"')
-
-
+            curr_available_mode = ['sequential_finite','direct_kaug']
+            if self.mode not in curr_available_mode:
+                raise ValueError('Wrong mode.')
 
     def stochastic_program(self,  design_values, if_optimize=True, objective_option='det',
                      jac_involved_measurement=None,
                      scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-7, L_initial=None,
                      jac_initial=None, fim_initial=None,
-                     formula='central', step=0.001, check=True):
+                     formula='central', step=0.001, check=True, tee_opt=True):
         """
         Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
@@ -211,7 +208,7 @@ class DesignOfExperiments:
         self.fim_initial = fim_initial
         self.formula = formula
         self.step = step
-        self.tee_opt = self.verbose
+        self.tee_opt = tee_opt
 
         # calculate how much the FIM element is scaled by a constant number
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
@@ -286,7 +283,7 @@ class DesignOfExperiments:
 
     def _optimize_stochastic_program(self, m):
         """
-        Solve the stochastic program problem with degree of freedoms. 
+        Solve the stochastic program problem with degrees of freedom. 
         """
         
         m = self._add_objective(m)
@@ -355,7 +352,7 @@ class DesignOfExperiments:
             if reading the output (value for Var 'output_record') as a pickle file, give the file name here as a string.
         extract_single_model:
             if True, the solved model outputs for each scenario are all recorded as a .csv file. 
-            The output file uses the name "store_output Scenario_index.csv", where store_output is the input toggle, 
+            The output file uses the name AB.csv, where string A is store_output input, B is the index of scenario.  
             scenario index is the number of the scenario outputs which is stored.
         formula:
             choose from 'central', 'forward', 'backward', None. This option is only used for 'sequential_finite' mode.
@@ -398,16 +395,12 @@ class DesignOfExperiments:
             FIM_analysis = self._sequential_finite(read_output, extract_single_model, store_output)
             return FIM_analysis
 
-        elif self.mode in ['sequential_sipopt', 'sequential_kaug']:
-            FIM_analysis = self._sequential_sipopt(read_output)
-            return FIM_analysis
-
         elif self.mode =='direct_kaug':
             FIM_analysis = self._direct_kaug()
             return FIM_analysis
             
         else:
-            raise ValueError('This is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
+            raise ValueError(self.mode+' is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
 
     def _sequential_finite(self, read_output, extract_single_model, store_output):
         time00 = time.time()
@@ -940,7 +933,7 @@ class DesignOfExperiments:
         # loop over design value combinations
         for design_set_iter in search_design_set:
             # generate the design variable dictionary needed for running compute_FIM
-            # first copy value from design_Values
+            # first copy value from design_values
             design_iter = design_values.copy()
 
             # update the controlled value of certain time points for certain design variables

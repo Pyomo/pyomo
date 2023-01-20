@@ -165,16 +165,16 @@ Pyomo.DoE Solver Interface
         #.  Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem. This step is for initialization.
         #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
 
-.. autoclass:: pyomo.contrib.doe.fim_doe.Measurements
+.. autoclass:: pyomo.contrib.doe.Measurements
     :members: __init__, check_subset
 
-.. autoclass:: pyomo.contrib.doe.fim_doe.Scenario_generator
+.. autoclass:: pyomo.contrib.doe.Scenario_generator
     :special-members: __init__
 
-.. autoclass:: pyomo.contrib.doe.fim_doe.FIM_result
+.. autoclass:: pyomo.contrib.doe.FIM_result
     :special-members: __init__, calculate_FIM
 
-.. autoclass:: pyomo.contrib.doe.fim_doe.Grid_Search_Result
+.. autoclass:: pyomo.contrib.doe.Grid_Search_Result
     :special-members: __init__
 
 
@@ -215,8 +215,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import ContinuousSet, DerivativeVar
-    >>> import pyomo.contrib.doe.doe as doe
-    >>> from pyomo.contrib.doe.measurements import Measurements
+    >>> from pyomo.contrib.doe import Measurements, DesignOfExperiments
     >>> import numpy as np
 
 Step 1: Define the Pyomo process model
@@ -332,7 +331,7 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
     >>> # === Specify an experiment ===
     >>> exp1 = {'CA0': {0: 5}, 'T': {0: 570, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
     >>> # === Create the DOE object ===
-    >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
+    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
     ...                            prior_FIM=prior_none, discretize_model=disc)
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
     >>> result = doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
@@ -370,7 +369,7 @@ The function ``run_grid_search`` enumerates over the design space, each MBDoE pr
     >>> prior_pass=np.asarray(prior_all)
 
     >>> # === Run enumeration ===
-    >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
+    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
     ...                            prior_FIM=prior_none, discretize_model=disc) # doctest: +SKIP
     >>> all_fim = doe_object.run_grid_search(exp1, design_ranges, dv_apply_name, dv_apply_time, mode=sensi_opt) # doctest: +SKIP
 
@@ -389,6 +388,7 @@ Successful run of the above code shows the following figure:
 .. figure:: grid-1.png
    :scale: 35 %
 
+A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design region. Horizontal and vertical axes are two design variables, while the color of each grid shows the experimental information content. Taking the Fig. Reactor case - A optimality as example, A-optimality shows that the most informative region is around $C_{A0}=5.0$ M, $T=300.0$ K, while the least informative region is around $C_{A0}=1.0$ M, $T=700.0$ K.
 
 Step 5: Gradient-based optimization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -402,7 +402,7 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     >>> # === Specify a starting point ===
     >>> exp1 = {'CA0': {0: 5}, 'T': {0: 300, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
     >>> # === Define DOE object ===
-    >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
+    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
     ...                            prior_FIM=prior_pass, discretize_model=disc) # doctest: +SKIP
     >>> # === Optimize ===
     >>> square_result, optimize_result= doe_object.stochastic_program(exp1,
@@ -411,14 +411,5 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     ...                                                         scale_nominal_param_value=True,
     ...                                                         objective_option='det',
     ...                                                         L_initial=None) # doctest: +SKIP
-    >>> # === Analyze results===
-    # TODO: single print statments with multiple lines.
-    >>> print('This optimization is solved with status:', optimize_result.status) # doctest: +SKIP
-    >>> print('The result FIM is:', optimize_result.FIM) # doctest: +SKIP
-    >>> print('Four design criteria log10() value:') # doctest: +SKIP
-    >>> print('A-optimality:', np.log10(optimize_result.trace)) # doctest: +SKIP
-    >>> print('D-optimality:', np.log10(optimize_result.det)) # doctest: +SKIP
-    >>> print('E-optimality:', np.log10(optimize_result.min_eig)) # doctest: +SKIP
-    >>> print('Modified E-optimality:', np.log10(optimize_result.cond)) # doctest: +SKIP
 
 

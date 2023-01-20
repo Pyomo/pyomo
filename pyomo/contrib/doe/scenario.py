@@ -88,7 +88,6 @@ class Scenario_generator:
         if self.store:
             with open('scenario_simultaneous.pickle', 'wb') as f:
                 pickle.dump(scenario_overall, f)
-            #f.close()
 
         return scenario_overall
 

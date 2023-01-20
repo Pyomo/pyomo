@@ -182,7 +182,7 @@ class FisherResults:
 
     def _jac_reform_3D(self, jac_original, Q_response=False):
         """
-        Reform the Jacobian returned by __finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
+        Reform the Jacobian returned by _finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
         """
         # 3-D array form of jacobian [measurements, parameters, time]
         self.measure_timeset = list(self.measurement_timeset.values())[0]
@@ -258,8 +258,8 @@ class FisherResults:
         Return:
         ------
         model_info: model solutions dictionary containing the following key:value pairs
-            ~['obj']: a scalar number of objective function value
-            ~['det']: a scalar number of determinant calculated by the model (different from FIM_info['det'] which
+            -['obj']: a scalar number of objective function value
+            -['det']: a scalar number of determinant calculated by the model (different from FIM_info['det'] which
             is calculated by numpy)
             -['trace']: a scalar number of trace calculated by the model
             -[design variable name]: a list of design variable solution
@@ -306,7 +306,7 @@ class FisherResults:
         Return:
         ------
         solver_status: a solver infomation dictionary containing the following key:value pairs
-            ~['square']: a string of square result solver status
+            -['square']: a string of square result solver status
             -['doe']: a string of doe result solver status
         """
 
@@ -392,7 +392,7 @@ class GridSearchResult:
         count = 0
         for i in self.design_names:
             # if a name is in the design variable name list more than once, name them as name_itself, name_itself2, ...
-            # this is because it can be errornous when we extract values from a dataframe with two columns having the same name
+            # this is because it can be erroneous when we extract values from a dataframe with two columns having the same name
             if i in column_names:
                 count += 1
                 i = i+str(count+1)
@@ -425,9 +425,9 @@ class GridSearchResult:
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
             In a 1D sensitivity curve, it is the design variable by which the curve is drawn.
-            In a 2D heatmap, it should be the second design varialbe in the design_ranges
+            In a 2D heatmap, it should be the second design variable in the design_ranges
         ylabel_text: y label title, a string.
-            A 1D sensitivity cuve does not need it. In a 2D heatmap, it should be the first design variable in the dv_ranges
+            A 1D sensitivity curve does not need it. In a 2D heatmap, it should be the first design variable in the dv_ranges
         font_axes: axes label font size
         font_tick: tick label font size
         log_scale: if True, the result matrix will be scaled by log10
@@ -580,7 +580,7 @@ class GridSearchResult:
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
-            In a 2D heatmap, it should be the second design varialbe in the design_ranges
+            In a 2D heatmap, it should be the second design variable in the design_ranges
         ylabel_text: y label title, a string.
             In a 2D heatmap, it should be the first design variable in the dv_ranges
         font_axes: axes label font size

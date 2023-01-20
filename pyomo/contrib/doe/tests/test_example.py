@@ -39,11 +39,6 @@ ipopt_available = SolverFactory('ipopt').available()
 
 class TestReactorExample(unittest.TestCase):
     
-    #@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    #def test_reactor_kinetics(self):
-        #from pyomo.contrib.doe.example import reactor_kinetics
-        #reactor_kinetics.main()
-    
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_reactor_compute_FIM(self):

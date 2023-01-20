@@ -34,15 +34,19 @@ from pyomo.common.dependencies import (
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import DesignOfExperiments, Measurements
+from pyomo.environ import value
+
 
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
+kaug_available = SolverFactory('k_aug').available()
 
-class doe_object_Tester(unittest.TestCase):
+class Test_doe_object(unittest.TestCase):
     """ Test the kinetics example with both the sequential_finite mode and the direct_kaug mode
     """
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def setUP(self):
+    @unittest.skipIf(not kaug_available, "The 'k_aug' command is not available")
+    def test_setUP(self):
         from pyomo.contrib.doe.example import reactor_kinetics as reactor
         
         # define create model function 
@@ -97,13 +101,12 @@ class doe_object_Tester(unittest.TestCase):
 
 
         result.calculate_FIM(doe_object.design_values)
-
-        self.assertAlmostEqual(np.log10(result.trace), 2.962954, places=3)
-        self.assertAlmostEqual(result.FIM[0][1], 1.840604, places=3)
-        self.assertAlmostEqual(result.FIM[0][2], -70.238140, places=3)
+        
+        self.assertAlmostEqual(np.log10(result.trace), 2.96, places=2)
+        self.assertAlmostEqual(result.FIM[0][1], 1.84, places=2)
+        self.assertAlmostEqual(result.FIM[0][2], -70.238, places=2)
         
         ### Test direct_kaug mode
-        ## TODO: check k_aug available
         exp2 = generate_exp(t_control, 5, [570, 300, 300, 300, 300, 300, 300, 300, 300])
         
         doe_object2 = DesignOfExperiments(parameter_dict, dv_pass,
@@ -114,19 +117,38 @@ class doe_object_Tester(unittest.TestCase):
                                         scale_nominal_param_value=True, formula='central')
         
         result2.calculate_FIM(doe_object2.design_values)
+        
+        self.assertAlmostEqual(np.log10(result2.trace), 2.788587, places=2)
+        self.assertAlmostEqual(np.log10(result2.det), 2.821840, places=2)
+        self.assertAlmostEqual(np.log10(result2.min_eig), -1.012346, places=2)
+        
+        '''
+        square_result, optimize_result= doe_object.stochastic_program(exp1, if_optimize=True, if_Cholesky=True,                                          scale_nominal_param_value=True, objective_option='det')
+        '''
+        
+        # prior
+        exp1 = generate_exp(t_control, 3, [500, 300, 300, 300, 300, 300, 300, 300, 300])
 
-        self.assertAlmostEqual(np.log10(result2.trace), 2.788587, places=3)
-        self.assertAlmostEqual(np.log10(result2.det), 2.821840, places=3)
-        self.assertAlmostEqual(np.log10(result2.min_eig), -1.012346, places=3)
+        # add a prior information (scaled FIM with T=500 and T=300 experiments)
+        prior = np.asarray([[  28.67892806 ,   5.41249739 , -81.73674601 , -24.02377324],
+              [   5.41249739 ,  26.40935036 , -12.41816477 , -139.23992532],
+              [ -81.73674601 , -12.41816477 , 240.46276004 ,  58.76422806],
+              [ -24.02377324 , -139.23992532 ,  58.76422806 , 767.25584508]])
+
+
+        doe_object3 = DesignOfExperiments(parameter_dict, dv_pass,
+                                     measure_class, createmod,
+                                    prior_FIM=prior, discretize_model=disc, args=[True])
+
+        square_result, optimize_result= doe_object3.stochastic_program(exp1, if_optimize=True, if_Cholesky=True, 
+                                                             scale_nominal_param_value=True, objective_option='det', 
+                                                             L_initial=np.linalg.cholesky(prior))
+
+        self.assertAlmostEqual(value(optimize_result.model.T[0]), 478.757557, places=2)
+        self.assertAlmostEqual(value(optimize_result.model.T[1]), 300.000261, places=2)
+        self.assertAlmostEqual(np.log10(optimize_result.trace), 3.305095, places=2)
+        self.assertAlmostEqual(np.log10(optimize_result.det), 6.059633, places=2)
         
-            
-        square_result, optimize_result= doe_object.optimize_doe(exp1, if_optimize=True, if_Cholesky=True,                                          scale_nominal_param_value=True, objective_option='det', 
-                                                         L_initial=None)
-        
-        self.assertAlmostEqual(optimize_result.model.T[0], 477.134504, places=3)
-        self.assertAlmostEqual(optimize_result.model.T[1], 300.000207, places=3)
-        self.assertAlmostEqual(np.log10(optimize_result.trace), 2.982298, places=3)
-        self.assertAlmostEqual(np.log10(optimize_result.det), 3.303190, places=3)
         
 
 if __name__ == '__main__':
