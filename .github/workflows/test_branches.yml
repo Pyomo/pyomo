@@ -211,8 +211,8 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
-        channels: conda-forge
-        channel-priority: strict
+        channels: conda-forge,gurobi,ibmdecisionoptimization,fico-xpress
+        #channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -270,14 +270,15 @@ jobs:
       if: matrix.PYENV == 'conda'
       run: |
         # Switch to a faster environment solver
-        conda update -n base conda
-        conda install -q -y -n base conda-libmamba-solver
+        conda update conda
+        conda install -q -y conda-libmamba-solver
         conda config --set solver libmamba
         # Set up environment
         mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
+        conda config --set channel_priority strict
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
@@ -311,21 +312,20 @@ jobs:
             fi
         done
         echo "*** Install Pyomo dependencies ***""
-        conda install -q -y -c conda-forge $CONDA_DEPENDENCIES
+        conda install -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             echo "*** Install CPLEX ***""
-            conda install -q -y -c ibmdecisionoptimization \
-                'cplex>=12.10' docplex \
+            conda install -q -y 'cplex>=12.10' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             echo "*** Install Gurobi ***""
-            conda install -q -y -c gurobi gurobi \
+            conda install -q -y gurobi \
                 || echo "WARNING: Gurobi is not available"
             echo "*** Install Xpress ***""
-            conda install -q -y -c fico-xpress xpress \
+            conda install -q -y xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps scip; do
                 echo "*** Install $PKG ***""
-                conda install -q -y -c conda-forge $PKG \
+                conda install -q -y $PKG \
                     || echo "WARNING: $PKG is not available"
             done
             # TODO: This is a hack to stop test_qt.py from running until we
