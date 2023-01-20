@@ -986,7 +986,7 @@ class _NLWriter_impl(object):
             if _written_bytes is None:
                 _written_bytes = 0
             else:
-                _written_bytes = ostream.tell() - _init_fpos
+                _written_bytes = ostream.tell() - _written_bytes
             if not _written_bytes:
                 if os.linesep != '\n':
                     logger.warning(
