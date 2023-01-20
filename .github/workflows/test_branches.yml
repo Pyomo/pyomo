@@ -270,7 +270,6 @@ jobs:
       if: matrix.PYENV == 'conda'
       run: |
         # Switch to a faster environment solver
-        conda update conda
         conda install -q -y conda-libmamba-solver
         conda config --set solver libmamba
         # Set up environment
