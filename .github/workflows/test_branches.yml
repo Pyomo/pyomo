@@ -213,7 +213,7 @@ jobs:
         python-version: ${{ matrix.python }}
         mamba-version: "*"
         channels: conda,conda-forge,gurobi,ibmdecisionoptimization,fico-xpress
-        channel-priority: strict
+        #channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
