@@ -320,7 +320,7 @@ jobs:
             mamba install -q -y xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps scip; do
-                echo "*** Install $PKG ***""
+                echo "*** Install $PKG ***"
                 mamba install -q -y $PKG \
                     || echo "WARNING: $PKG is not available"
             done
