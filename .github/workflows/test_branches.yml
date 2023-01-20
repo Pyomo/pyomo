@@ -307,16 +307,16 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
-        echo "*** Install Pyomo dependencies ***""
+        echo "*** Install Pyomo dependencies ***"
         mamba install -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            echo "*** Install CPLEX ***""
+            echo "*** Install CPLEX ***"
             mamba install -q -y 'cplex>=12.10' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            echo "*** Install Gurobi ***""
+            echo "*** Install Gurobi ***"
             mamba install -q -y gurobi \
                 || echo "WARNING: Gurobi is not available"
-            echo "*** Install Xpress ***""
+            echo "*** Install Xpress ***"
             mamba install -q -y xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps scip; do
