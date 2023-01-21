@@ -29,17 +29,18 @@ import time
 
 
 from pyomo.scripting.pyomo_parser import add_subparser
-from pyomo.contrib.viewer.qt import *
+import pyomo.contrib.viewer.qt as myqt
 
 qtconsole_available = False
-if qt_available:
+qtconsole_errors = list(myqt.import_errors)
+if myqt.available:
     try:
         from qtconsole.rich_jupyter_widget import RichJupyterWidget
         from qtconsole.manager import QtKernelManager
 
         qtconsole_available = True
-    except ImportError:
-        pass
+    except ImportError as e:
+        qtconsole_errors.append(f"{type(e).__name__}: {e.msg}")
 
 if qtconsole_available:
 
@@ -65,7 +66,7 @@ model = pyo.ConcreteModel("Default Model")""",
         )
         return km, kc
 
-    class MainWindow(QMainWindow):
+    class MainWindow(myqt.QMainWindow):
         """A window that contains a single Qt console."""
 
         def __init__(self, kernel_manager, kernel_client):
@@ -76,11 +77,11 @@ model = pyo.ConcreteModel("Default Model")""",
             kernel_client.hb_channel.kernel_died.connect(self.close)
             kernel_client.iopub_channel.message_received.connect(self.mrcv)
             menubar = self.menuBar()
-            run_script_act = QAction("&Run Script...", self)
-            wdir_set_act = QAction("Set &Working Directory...", self)
-            exit_act = QAction("&Exit", self)
-            show_ui_act = QAction("&Start/Show Model Viewer", self)
-            hide_ui_act = QAction("&Hide Model Viewer", self)
+            run_script_act = myqt.QAction("&Run Script...", self)
+            wdir_set_act = myqt.QAction("Set &Working Directory...", self)
+            exit_act = myqt.QAction("&Exit", self)
+            show_ui_act = myqt.QAction("&Start/Show Model Viewer", self)
+            hide_ui_act = myqt.QAction("&Hide Model Viewer", self)
             exit_act.triggered.connect(self.close)
             show_ui_act.triggered.connect(self.show_ui)
             hide_ui_act.triggered.connect(self.hide_ui)
@@ -93,7 +94,7 @@ model = pyo.ConcreteModel("Default Model")""",
             file_menu.addAction(exit_act)
             view_menu.addAction(show_ui_act)
             view_menu.addAction(hide_ui_act)
-            self.status_bar = QStatusBar()
+            self.status_bar = myqt.QStatusBar()
             self.setStatusBar(self.status_bar)
             self.status_bar.show()
             self.setCentralWidget(self.jupyter_widget)
@@ -112,9 +113,9 @@ model = pyo.ConcreteModel("Default Model")""",
             """
             if wdir is None:
                 # Show a dialog box for user to select working directory
-                wd = QFileDialog(self, "Working Directory", os.getcwd())
-                wd.setFileMode(QFileDialog.Directory)
-            if wd.exec_() == QFileDialog.Accepted:
+                wd = myqt.QFileDialog(self, "Working Directory", os.getcwd())
+                wd.setFileMode(myqt.QFileDialog.Directory)
+            if wd.exec_() == myqt.QFileDialog.Accepted:
                 wdir = wd.selectedFiles()[0]
             else:
                 wdir = None
@@ -137,7 +138,7 @@ model = pyo.ConcreteModel("Default Model")""",
             """
             if filename is None:
                 # Show a dialog box for user to select working directory
-                filename = QFileDialog.getOpenFileName(
+                filename = myqt.QFileDialog.getOpenFileName(
                     self, "Run Script", os.getcwd(), "py (*.py);;text (*.txt);;all (*)"
                 )
                 if filename[0]:  # returns a tuple of file and filter or ("","")
@@ -176,11 +177,18 @@ model = pyo.ConcreteModel("Default Model")""",
 
 
 def main(*args):
+    if not myqt.available:
+        print("qt not available")
+        for msg in myqt.import_errors:
+            print(f"    {msg}")
+        return
     if not qtconsole_available:
         print("qtconsole not available")
+        for msg in qtconsole_errors:
+            print(f"    {msg}")
         return
     km, kc = _start_kernel()
-    app = QApplication(sys.argv)
+    app = myqt.QApplication(sys.argv)
     window = MainWindow(kernel_manager=km, kernel_client=kc)
     window.show()
     app.aboutToQuit.connect(window.shutdown_kernel)

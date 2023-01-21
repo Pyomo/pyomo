@@ -27,117 +27,105 @@ use some dummy classes to allow some testing.
 """
 __author__ = "John Eslick"
 
-import logging
 import enum
+import importlib
 
-_log = logging.getLogger(__name__)
+# Supported Qt wrappers in preferred order
+supported = ["PySide6", "PyQt5"]
+# Import errors encountered, delay logging for testing reasons
+import_errors = []
+# Set this to the Qt wrapper module is available
+available = False
 
-qt_available = False
-
-class DummyQt(object):
-    class ItemDataRole(enum.Enum):
-        EditRole = 1
-        DisplayRole = 2
-        ToolTipRole = 3
-        ForegroundRole = 4
-
-class DummyQtCore(object):
-    """
-    A dummy QtCore class to allow some testing without PyQt
-    """
-
-    class QModelIndex(object):
-        pass
-
-    Qt = DummyQt
-
-
-class DummyQAbstractItemModel(object):
-    """
-    A dummy QAbstractItemModel class to allow some testing without PyQt
-    """
-
-    def __init__(*args, **kwargs):
-        pass
-
-
-class DummyQAbstractTableModel(object):
-    """
-    A dummy QAbstractTableModel class to allow some testing without PyQt
-    """
-
-    def __init__(*args, **kwargs):
-        pass
-
-
-try:
-    from PySide6 import QtCore
-
-    qt_available = "PySide6"
-except:
-    _log.error("PySide6 could not be impoerted, trying PyQt5")
+for module_str in supported:
     try:
-        from PyQt5 import QtCore
+        qt_package = importlib.import_module(module_str)
+        QtWidgets = importlib.import_module(f"{module_str}.QtWidgets")
+        QtCore = importlib.import_module(f"{module_str}.QtCore")
+        QtGui = importlib.import_module(f"{module_str}.QtGui")
+        available = module_str
+        break
+    except Exception as e:
+        import_errors.append(f"{type(e).__name__}: {e.msg}")
 
-        qt_available = "PyQt5"
-    except:
-        _log.error("PyQt5 could not be impoerted")
+if not available:
+    # If Qt is not available, we still want to be able to test as much
+    # as we can, so add some dummy classes that allow for testing
+    class Qt(object):
+        class ItemDataRole(enum.Enum):
+            EditRole = 1
+            DisplayRole = 2
+            ToolTipRole = 3
+            ForegroundRole = 4
+
+    class QtCore(object):
+        """
+        A dummy QtCore class to allow some testing without PyQt
+        """
+
+        class QModelIndex(object):
+            pass
+
+        Qt = Qt
+
+
+    class QAbstractItemModel(object):
+        """
+        A dummy QAbstractItemModel class to allow some testing without PyQt
+        """
+
+        def __init__(*args, **kwargs):
+            pass
+
+
+    class QAbstractTableModel(object):
+        """
+        A dummy QAbstractTableModel class to allow some testing without PyQt
+        """
+
+        def __init__(*args, **kwargs):
+            pass
+
+    class QItemEditorCreatorBase(object):
+        """
+        A dummy QItemEditorCreatorBase class to allow some testing without PyQt
+        """
+
         pass
 
-if qt_available == "PyQt5":
-    from PyQt5.QtWidgets import (
-        QAbstractItemView,
-        QFileDialog,
-        QMainWindow,
-        QMessageBox,
-        QMdiArea,
-        QApplication,
-        QTableWidgetItem,
-        QAction,
-        QStatusBar,
-        QLineEdit,
-        QItemEditorFactory,
-        QItemEditorCreatorBase,
-        QStyledItemDelegate,
-        QItemDelegate,
-        QComboBox,
-    )
-    from PyQt5.QtGui import QColor
-    from PyQt5.QtCore import QAbstractItemModel, QAbstractTableModel
-    import PyQt5.QtCore as QtCore
-    from PyQt5.QtCore import QMetaType, Qt, pyqtSignal as Signal
+    class QItemDelegate(object):
+        """
+        A dummy QItemDelegate class to allow some testing without PyQt
+        """
 
-    from PyQt5 import uic
+        pass
 
-elif qt_available == "PySide6":
-    from PySide6.QtWidgets import (
-        QAbstractItemView,
-        QFileDialog,
-        QMainWindow,
-        QMessageBox,
-        QMdiArea,
-        QApplication,
-        QTableWidgetItem,
-        QStatusBar,
-        QLineEdit,
-        QItemEditorFactory,
-        QItemEditorCreatorBase,
-        QStyledItemDelegate,
-        QItemDelegate,
-        QComboBox,
-    )
-
-    from PySide6.QtGui import QColor, QAction
-    from PySide6.QtCore import QAbstractItemModel, QAbstractTableModel
-    import PySide6.QtCore as QtCore
-    from PySide6.QtCore import Qt, Signal, QMetaType
-
-    from PySide6 import QtUiTools as uic
-
-
-if not qt_available:
-    # Dummy classes allow some testing without PyQt
-    QAbstractItemModel = DummyQAbstractItemModel
-    QAbstractTableModel = DummyQAbstractTableModel
-    QtCore = DummyQtCore
-    Qt = DummyQt
+else:
+    QAbstractItemView = QtWidgets.QAbstractItemView
+    QFileDialog = QtWidgets.QFileDialog
+    QMainWindow = QtWidgets.QMainWindow
+    QMainWindow = QtWidgets.QMainWindow
+    QMdiArea = QtWidgets.QMdiArea
+    QApplication = QtWidgets.QApplication
+    QTableWidgetItem = QtWidgets.QTableWidgetItem
+    QStatusBar = QtWidgets.QStatusBar
+    QLineEdit = QtWidgets.QLineEdit
+    QItemEditorFactory = QtWidgets.QItemEditorFactory
+    QItemEditorCreatorBase = QtWidgets.QItemEditorCreatorBase
+    QStyledItemDelegate = QtWidgets.QStyledItemDelegate
+    QItemDelegate = QtWidgets.QItemDelegate
+    QComboBox = QtWidgets.QComboBox
+    QMessageBox = QtWidgets.QMessageBox
+    QColor = QtGui.QColor
+    QAbstractItemModel = QtCore.QAbstractItemModel
+    QAbstractTableModel = QtCore.QAbstractTableModel
+    QMetaType = QtCore.QMetaType
+    Qt = QtCore.Qt
+    if available == "PySide6":
+        from PySide6.QtGui import QAction
+        from PySide6.QtCore import Signal
+        from PySide6 import QtUiTools as uic
+    elif available == "PyQt5":
+        from PyQt5.QtWidgets import QAction
+        from PyQt5.qt_module.QtCore import pyqtSignal as Signal
+        from PyQt5.qt_module import uic

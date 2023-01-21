@@ -31,12 +31,12 @@ import os
 _log = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
-from pyomo.contrib.viewer.qt import *
+import pyomo.contrib.viewer.qt as myqt
 from pyomo.common.fileutils import this_file_dir
 
 mypath = this_file_dir()
 try:
-    _ModelSelectUI, _ModelSelect = uic.loadUiType(
+    _ModelSelectUI, _ModelSelect = myqt.uic.loadUiType(
         os.path.join(mypath, "model_select.ui")
     )
 except:
@@ -75,16 +75,16 @@ class ModelSelect(_ModelSelect, _ModelSelectUI):
         self.tableWidget.setRowCount(len(keys))
         self.models = []
         for row, k in enumerate(sorted(keys)):
-            item = QTableWidgetItem()
+            item = myqt.QTableWidgetItem()
             item.setText(k)
             self.tableWidget.setItem(row, 0, item)
-            item = QTableWidgetItem()
+            item = myqt.QTableWidgetItem()
             try:
                 item.setText(s[k].name)
             except:
                 item.setText("None")
             self.tableWidget.setItem(row, 1, item)
-            item = QTableWidgetItem()
+            item = myqt.QTableWidgetItem()
             item.setText(str(type(s[k])))
             self.tableWidget.setItem(row, 2, item)
             self.models.append(s[k])

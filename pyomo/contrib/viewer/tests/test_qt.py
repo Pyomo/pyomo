@@ -40,9 +40,9 @@ from pyomo.environ import (
 )
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.viewer.qt import qt_available
+from pyomo.contrib.viewer.qt import available
 
-if qt_available:
+if available:
     import contextvars
     from pyomo.contrib.viewer.qt import QtCore, QMessageBox
     from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
@@ -96,7 +96,7 @@ def get_model():
     return m
 
 
-@unittest.skipIf(not qt_available, "Qt packages are not available.")
+@unittest.skipIf(not available, "Qt packages are not available.")
 def test_get_mainwindow(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
@@ -107,7 +107,7 @@ def test_get_mainwindow(qtbot):
     assert isinstance(mw.parameters, ModelBrowser)
 
 
-@unittest.skipIf(not qt_available, "Qt packages are not available.")
+@unittest.skipIf(not available, "Qt packages are not available.")
 def test_model_information(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)

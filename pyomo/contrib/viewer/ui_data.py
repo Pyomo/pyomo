@@ -112,12 +112,12 @@ class UIDataNoUi(object):
             try:
                 self.value_cache_units[o] = str(pyo.units.get_units(o))
             except:
-                # If this units aren't obtainable for whatever reason, let it go.
+                # If units aren't obtainable for whatever reason, let it go.
                 pass
         self.emit_exec_refresh()
 
 
-if not qt_available:
+if not available:
 
     class UIData(UIDataNoUi):
         pass

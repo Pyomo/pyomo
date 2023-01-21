@@ -38,7 +38,7 @@ except ImportError:
 
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pyo
-from pyomo.contrib.viewer.qt import *
+import pyomo.contrib.viewer.qt as myqt
 from pyomo.contrib.viewer.model_browser import ModelBrowser
 from pyomo.contrib.viewer.residual_table import ResidualTable
 from pyomo.contrib.viewer.model_select import ModelSelect
@@ -49,7 +49,7 @@ _log = logging.getLogger(__name__)
 
 _mypath = this_file_dir()
 try:
-    _MainWindowUI, _MainWindow = uic.loadUiType(os.path.join(_mypath, "main.ui"))
+    _MainWindowUI, _MainWindow = myqt.uic.loadUiType(os.path.join(_mypath, "main.ui"))
 except:
     _log.exception("Failed to load UI files.")
     # This lets the file still be imported, but you won't be able to use it
@@ -61,9 +61,8 @@ except:
         pass
 
 
-if not qt_available:
-    _log.error("Qt is not available. Cannot create UI classes.")
-    raise ImportError("Could not import PyQt5 or PySide6")
+if not myqt.available:
+    raise ImportError(f"Could not import Qt pacakge in {myqt.supported} errors {myqt.import_errors}")
 
 
 def get_mainwindow(model=None, show=True, testing=False):
@@ -132,20 +131,20 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.actionTabs.triggered.connect(self.toggle_tabs)
         self._dialog = None  # dialog displayed so can access it easier for tests
         self._dialog_test_button = None  # button clicked on dialog in test mode
-        self.mdiArea.setViewMode(QMdiArea.TabbedView)
+        self.mdiArea.setViewMode(myqt.QMdiArea.TabbedView)
 
     def toggle_tabs(self):
-        if self.mdiArea.viewMode() == QMdiArea.SubWindowView:
-            self.mdiArea.setViewMode(QMdiArea.TabbedView)
-        elif self.mdiArea.viewMode() == QMdiArea.TabbedView:
-            self.mdiArea.setViewMode(QMdiArea.SubWindowView)
+        if self.mdiArea.viewMode() == myqt.QMdiArea.SubWindowView:
+            self.mdiArea.setViewMode(myqt.QMdiArea.TabbedView)
+        elif self.mdiArea.viewMode() == myqt.QMdiArea.TabbedView:
+            self.mdiArea.setViewMode(myqt.QMdiArea.SubWindowView)
         else:
             # There are no other modes unless there is a change in Qt so pass
             pass
 
     def _tree_restart(self, w, cls=ModelBrowser, **kwargs):
         """
-        Start/Restart the a tree window
+        Start/Restart a tree window
         """
         try:
             self._refresh_list.remove(w)
@@ -233,10 +232,9 @@ class MainWindow(_MainWindow, _MainWindowUI):
             doftext = "Degree"
         else:
             doftext = "Degrees"
-        msg = QMessageBox()
+        msg = myqt.QMessageBox()
         msg.setStyleSheet("QLabel{min-width: 600px;}")
         self._dialog = msg
-        # msg.setIcon(QMessageBox.Information)
         msg.setWindowTitle("Model Information")
         msg.setText(
             """{} -- Active Constraints
@@ -246,7 +244,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
                 cons, active_eq, free_vars, dof, doftext
             )
         )
-        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setStandardButtons(myqt.QMessageBox.Ok)
         msg.setModal(False)
         msg.show()
 
@@ -277,20 +275,20 @@ class MainWindow(_MainWindow, _MainWindowUI):
         """
         Handle the close event by asking for confirmation
         """
-        msg = QMessageBox()
+        msg = myqt.QMessageBox()
         self._dialog = msg
-        msg.setIcon(QMessageBox.Question)
+        msg.setIcon(myqt.QMessageBox.Question)
         msg.setText(
             "Are you sure you want to close this window?"
             " You can reopen it with ui.show()."
         )
         msg.setWindowTitle("Close?")
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setStandardButtons(myqt.QMessageBox.Yes | myqt.QMessageBox.No)
         if self.testing:  # don't even show dialog just pretend button clicked
             result = self._dialog_test_button
         else:
             result = msg.exec_()
-        if result == QMessageBox.Yes:
+        if result == myqt.QMessageBox.Yes:
             event.accept()
         else:
             event.ignore()

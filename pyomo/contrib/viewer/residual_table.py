@@ -30,14 +30,14 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-from pyomo.contrib.viewer.qt import *
+import pyomo.contrib.viewer.qt as myqt
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
 
 mypath = this_file_dir()
 try:
-    _ResidualTableUI, _ResidualTable = uic.loadUiType(
+    _ResidualTableUI, _ResidualTable = myqt.uic.loadUiType(
         os.path.join(mypath, "residual_table.ui")
     )
 except:
@@ -74,7 +74,7 @@ class ResidualTable(_ResidualTable, _ResidualTableUI):
         self.refresh()
 
 
-class ResidualDataModel(QAbstractTableModel):
+class ResidualDataModel(myqt.QAbstractTableModel):
     def __init__(self, parent, ui_data):
         super().__init__(parent)
         self.column = ["name", "residual", "value", "ub", "lb", "active"]
@@ -103,16 +103,16 @@ class ResidualDataModel(QAbstractTableModel):
             reverse=True,
         )
 
-    def rowCount(self, parent=QtCore.QModelIndex()):
+    def rowCount(self, parent=myqt.QtCore.QModelIndex()):
         return len(self._items)
 
-    def columnCount(self, parent=QtCore.QModelIndex()):
+    def columnCount(self, parent=myqt.QtCore.QModelIndex()):
         return len(self.column)
 
-    def data(self, index=QtCore.QModelIndex(), role=Qt.ItemDataRole.DisplayRole):
+    def data(self, index=myqt.QtCore.QModelIndex(), role=myqt.Qt.ItemDataRole.DisplayRole):
         row = index.row()
         col = self.column[index.column()]
-        if role == Qt.ItemDataRole.DisplayRole:
+        if role == myqt.Qt.ItemDataRole.DisplayRole:
             o = self._items[row]
             if col == "name":
                 return str(o)
@@ -132,11 +132,11 @@ class ResidualDataModel(QAbstractTableModel):
         else:
             return None
 
-    def headerData(self, i, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(self, i, orientation, role=myqt.Qt.ItemDataRole.DisplayRole):
         """
         Return the column headings for the horizontal header and
         index numbers for the vertical header.
         """
-        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+        if orientation == myqt.Qt.Orientation.Horizontal and role == myqt.Qt.ItemDataRole.DisplayRole:
             return self.column[i]
         return None

@@ -30,7 +30,7 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-from pyomo.contrib.viewer.qt import *
+import pyomo.contrib.viewer.qt as myqt
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
 
 from pyomo.core.base.param import _ParamData
@@ -39,7 +39,7 @@ from pyomo.common.fileutils import this_file_dir
 
 mypath = this_file_dir()
 try:
-    _ModelBrowserUI, _ModelBrowser = uic.loadUiType(
+    _ModelBrowserUI, _ModelBrowser = myqt.uic.loadUiType(
         os.path.join(mypath, "model_browser.ui")
     )
 except:
@@ -50,36 +50,29 @@ except:
     class _ModelBrowser(object):
         pass
 
-    class QItemEditorCreatorBase(object):
-        pass
-
-    class QItemDelegate(object):
-        pass
-
-
-class LineEditCreator(QItemEditorCreatorBase):
+class LineEditCreator(myqt.QItemEditorCreatorBase):
     """
     Class to create editor widget for int and floats in a model view type object
     """
 
     def createWidget(self, parent):
-        return QLineEdit(parent=parent)
+        return myqt.QLineEdit(parent=parent)
 
 
-class NumberDelegate(QItemDelegate):
+class NumberDelegate(myqt.QItemDelegate):
     """
     Tree view item delegate. This is used here to change how items are edited.
     """
 
     def __init__(self, parent):
         super().__init__(parent=parent)
-        factory = QItemEditorFactory()
-        factory.registerEditor(QMetaType.Int, LineEditCreator())
-        factory.registerEditor(QMetaType.Double, LineEditCreator())
+        factory = myqt.QItemEditorFactory()
+        factory.registerEditor(myqt.QMetaType.Int, LineEditCreator())
+        factory.registerEditor(myqt.QMetaType.Double, LineEditCreator())
         self.setItemEditorFactory(factory)
 
     def setModelData(self, editor, model, index):
-        if isinstance(editor, QComboBox):
+        if isinstance(editor, myqt.QComboBox):
             value = editor.currentText()
         else:
             value = editor.text()
@@ -153,8 +146,8 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
         self.treeView.setModel(datmodel)
         self.treeView.setColumnWidth(0, 400)
         # Selection behavior: select a whole row, can select multiple rows.
-        self.treeView.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.treeView.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.treeView.setSelectionBehavior(myqt.QAbstractItemView.SelectRows)
+        self.treeView.setSelectionMode(myqt.QAbstractItemView.ExtendedSelection)
 
     def refresh(self):
         added = self.datmodel._update_tree()
@@ -393,7 +386,7 @@ class ComponentDataItem(object):
 
 
 
-class ComponentDataModel(QAbstractItemModel):
+class ComponentDataModel(myqt.QAbstractItemModel):
     """
     This is a data model to provide the tree structure and information
     to the tree viewer
@@ -529,62 +522,62 @@ class ComponentDataModel(QAbstractItemModel):
 
     def parent(self, index):
         if not index.isValid():
-            return QtCore.QModelIndex()
+            return myqt.QtCore.QModelIndex()
         item = index.internalPointer()
         if item.parent is None:
-            return QtCore.QModelIndex()
+            return myqt.QtCore.QModelIndex()
         else:
             return self.createIndex(0, 0, item.parent)
 
-    def index(self, row, column, parent=QtCore.QModelIndex()):
+    def index(self, row, column, parent=myqt.QtCore.QModelIndex()):
         if not parent.isValid():
             return self.createIndex(row, column, self.rootItems[row])
         parentItem = parent.internalPointer()
         return self.createIndex(row, column, parentItem.children[row])
 
-    def columnCount(self, parent=QtCore.QModelIndex()):
+    def columnCount(self, parent=myqt.QtCore.QModelIndex()):
         """
         Return the number of columns
         """
         return len(self.column)
 
-    def rowCount(self, parent=QtCore.QModelIndex()):
+    def rowCount(self, parent=myqt.QtCore.QModelIndex()):
         if not parent.isValid():
             return len(self.rootItems)
         return len(parent.internalPointer().children)
 
-    def data(self, index=QtCore.QModelIndex(), role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+    def data(self, index=myqt.QtCore.QModelIndex(), role=myqt.Qt.ItemDataRole.DisplayRole):
+        if role == myqt.Qt.ItemDataRole.DisplayRole or role == myqt.Qt.ItemDataRole.EditRole:
             a = self.column[index.column()]
             return index.internalPointer().get(a)
-        elif role == Qt.ItemDataRole.ToolTipRole:
+        elif role == myqt.Qt.ItemDataRole.ToolTipRole:
             if self.column[index.column()] == "name":
                 o = index.internalPointer()
                 if isinstance(o.data, Constraint._ComponentDataClass):
                     return o.get("expr")
                 else:
                     return o.get("doc")
-        elif role == Qt.ItemDataRole.ForegroundRole:
+        elif role == myqt.Qt.ItemDataRole.ForegroundRole:
             if isinstance(
                 index.internalPointer().data, (Block, Block._ComponentDataClass)
             ):
-                return QColor(QtCore.Qt.black)
+                return myqt.QColor(myqt.QtCore.Qt.black)
             else:
-                return QColor(QtCore.Qt.blue)
+                return myqt.QColor(myqt.QtCore.Qt.blue)
         else:
             return
 
-    def headerData(self, i, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(self, i, orientation, role=myqt.Qt.ItemDataRole.DisplayRole):
         """
         Return the column headings for the horizontal header and
         index numbers for the vertical header.
         """
-        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+        if orientation == myqt.Qt.Orientation.Horizontal and role == myqt.Qt.ItemDataRole.DisplayRole:
             return self.column[i]
         return None
 
-    def flags(self, index=QtCore.QModelIndex()):
+    def flags(self, index=myqt.QtCore.QModelIndex()):
         if self.column[index.column()] in self._col_editable:
-            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
+            return myqt.Qt.ItemFlag.ItemIsEnabled | myqt.Qt.ItemFlag.ItemIsSelectable | myqt.Qt.ItemFlag.ItemIsEditable
         else:
-            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            return myqt.Qt.ItemFlag.ItemIsEnabled | myqt.Qt.ItemFlag.ItemIsSelectable
