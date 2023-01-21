@@ -109,7 +109,9 @@ class ResidualDataModel(myqt.QAbstractTableModel):
     def columnCount(self, parent=myqt.QtCore.QModelIndex()):
         return len(self.column)
 
-    def data(self, index=myqt.QtCore.QModelIndex(), role=myqt.Qt.ItemDataRole.DisplayRole):
+    def data(
+        self, index=myqt.QtCore.QModelIndex(), role=myqt.Qt.ItemDataRole.DisplayRole
+    ):
         row = index.row()
         col = self.column[index.column()]
         if role == myqt.Qt.ItemDataRole.DisplayRole:
@@ -137,6 +139,9 @@ class ResidualDataModel(myqt.QAbstractTableModel):
         Return the column headings for the horizontal header and
         index numbers for the vertical header.
         """
-        if orientation == myqt.Qt.Orientation.Horizontal and role == myqt.Qt.ItemDataRole.DisplayRole:
+        if (
+            orientation == myqt.Qt.Orientation.Horizontal
+            and role == myqt.Qt.ItemDataRole.DisplayRole
+        ):
             return self.column[i]
         return None

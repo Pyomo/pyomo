@@ -61,8 +61,8 @@ except:
         pass
 
 
-if not myqt.available:
-    raise ImportError(f"Could not import Qt pacakge in {myqt.supported} errors {myqt.import_errors}")
+for _err in myqt.import_errors:
+    _log.error(_err)
 
 
 def get_mainwindow(model=None, show=True, testing=False):

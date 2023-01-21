@@ -34,7 +34,16 @@ import pyomo.contrib.viewer.qt as myqt
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
 
 from pyomo.core.base.param import _ParamData
-from pyomo.environ import Block, BooleanVar, Var, Constraint, Param, Expression, value, units
+from pyomo.environ import (
+    Block,
+    BooleanVar,
+    Var,
+    Constraint,
+    Param,
+    Expression,
+    value,
+    units,
+)
 from pyomo.common.fileutils import this_file_dir
 
 mypath = this_file_dir()
@@ -49,6 +58,7 @@ except:
 
     class _ModelBrowser(object):
         pass
+
 
 class LineEditCreator(myqt.QItemEditorCreatorBase):
     """
@@ -297,9 +307,7 @@ class ComponentDataItem(object):
                 self.data.value = val
             except:
                 return
-        elif isinstance(
-            self.data, (Var, BooleanVar)
-        ):
+        elif isinstance(self.data, (Var, BooleanVar)):
             try:
                 for o in self.data.values():
                     o.value = val
@@ -327,11 +335,23 @@ class ComponentDataItem(object):
                 self.data.setlb(val)
             except:
                 return
+        elif isinstance(self.data, Var):
+            try:
+                for o in self.data.values():
+                    o.setlb(val)
+            except:
+                return
 
     def _set_ub_callback(self, val):
         if isinstance(self.data, (Var._ComponentDataClass)):
             try:
                 self.data.setub(val)
+            except:
+                return
+        elif isinstance(self.data, Var):
+            try:
+                for o in self.data.values():
+                    o.setub(val)
             except:
                 return
 
@@ -382,8 +402,6 @@ class ComponentDataItem(object):
                 self.data.unfix()
         except:
             return
-
-
 
 
 class ComponentDataModel(myqt.QAbstractItemModel):
@@ -546,8 +564,13 @@ class ComponentDataModel(myqt.QAbstractItemModel):
             return len(self.rootItems)
         return len(parent.internalPointer().children)
 
-    def data(self, index=myqt.QtCore.QModelIndex(), role=myqt.Qt.ItemDataRole.DisplayRole):
-        if role == myqt.Qt.ItemDataRole.DisplayRole or role == myqt.Qt.ItemDataRole.EditRole:
+    def data(
+        self, index=myqt.QtCore.QModelIndex(), role=myqt.Qt.ItemDataRole.DisplayRole
+    ):
+        if (
+            role == myqt.Qt.ItemDataRole.DisplayRole
+            or role == myqt.Qt.ItemDataRole.EditRole
+        ):
             a = self.column[index.column()]
             return index.internalPointer().get(a)
         elif role == myqt.Qt.ItemDataRole.ToolTipRole:
@@ -572,12 +595,19 @@ class ComponentDataModel(myqt.QAbstractItemModel):
         Return the column headings for the horizontal header and
         index numbers for the vertical header.
         """
-        if orientation == myqt.Qt.Orientation.Horizontal and role == myqt.Qt.ItemDataRole.DisplayRole:
+        if (
+            orientation == myqt.Qt.Orientation.Horizontal
+            and role == myqt.Qt.ItemDataRole.DisplayRole
+        ):
             return self.column[i]
         return None
 
     def flags(self, index=myqt.QtCore.QModelIndex()):
         if self.column[index.column()] in self._col_editable:
-            return myqt.Qt.ItemFlag.ItemIsEnabled | myqt.Qt.ItemFlag.ItemIsSelectable | myqt.Qt.ItemFlag.ItemIsEditable
+            return (
+                myqt.Qt.ItemFlag.ItemIsEnabled
+                | myqt.Qt.ItemFlag.ItemIsSelectable
+                | myqt.Qt.ItemFlag.ItemIsEditable
+            )
         else:
             return myqt.Qt.ItemFlag.ItemIsEnabled | myqt.Qt.ItemFlag.ItemIsSelectable

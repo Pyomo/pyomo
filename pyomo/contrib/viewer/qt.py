@@ -68,7 +68,6 @@ if not available:
 
         Qt = Qt
 
-
     class QAbstractItemModel(object):
         """
         A dummy QAbstractItemModel class to allow some testing without PyQt
@@ -76,7 +75,6 @@ if not available:
 
         def __init__(*args, **kwargs):
             pass
-
 
     class QAbstractTableModel(object):
         """
