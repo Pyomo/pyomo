@@ -171,7 +171,7 @@ optimizer.options["threads"] = 4
 # @Add_option_to_solver
 
 # @Add_multiple_options_to_solver
-results = optimizer.solve(instance, options="threads=4", tee=True)
+results = optimizer.solve(instance, options={'threads' : 4}, tee=True)
 # @Add_multiple_options_to_solver
 
 # @Set_path_to_solver_executable
