@@ -1382,7 +1382,7 @@ class _MindtPyAlgorithm(object):
     ##########################################################################################################################################
     # mip_solve.py
 
-    def solve_main(self, config, fp=False, regularization_problem=False):
+    def solve_main(self, config):
         """This function solves the MIP main problem.
 
         Parameters
@@ -1401,18 +1401,12 @@ class _MindtPyAlgorithm(object):
         main_mip_results : SolverResults
             Results from solving the main MIP.
         """
-        if not fp and not regularization_problem:
-            self.mip_iter += 1
+        self.mip_iter += 1
 
         # setup main problem
-        self.setup_main(config, fp, regularization_problem)
-        mainopt = self.set_up_mip_solver(config, regularization_problem)
+        self.setup_main(config)
+        mainopt, mip_args = self.set_up_mip_solver(config)
 
-        mip_args = dict(config.mip_solver_args)
-        if config.mip_solver in {'cplex', 'cplex_persistent', 'gurobi', 'gurobi_persistent'}:
-            mip_args['warmstart'] = True
-        set_solver_options(mainopt, self.timing, config,
-                           solver_type='mip', regularization=regularization_problem)
         try:
             main_mip_results = mainopt.solve(self.mip,
                                              tee=config.mip_solver_tee,
@@ -1439,14 +1433,94 @@ class _MindtPyAlgorithm(object):
             main_mip_results._solver_model = mainopt._solver_model
             main_mip_results._pyomo_var_to_solver_var_map = mainopt._pyomo_var_to_solver_var_map
         if main_mip_results.solver.termination_condition is tc.optimal:
-            if config.single_tree and not config.add_no_good_cuts and not regularization_problem:
+            if config.single_tree and not config.add_no_good_cuts:
                 self.update_suboptimal_dual_bound(main_mip_results)
-            if regularization_problem:
-                config.logger.info(self.log_formatter.format(self.mip_iter, 'Reg '+self.regularization_mip_type,
-                                                             value(
-                                                                 self.mip.MindtPy_utils.roa_proj_mip_obj),
-                                                             self.primal_bound, self.dual_bound, self.rel_gap,
-                                                             get_main_elapsed_time(self.timing)))
+        elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
+            # Linear solvers will sometimes tell me that it's infeasible or
+            # unbounded during presolve, but fails to distinguish. We need to
+            # resolve with a solver option flag on.
+            main_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
+                self.mip, config)
+        return self.mip, main_mip_results
+
+
+    def solve_fp_main(self, config):
+        """This function solves the MIP main problem.
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        fp : bool, optional
+            Whether it is in the loop of feasibility pump, by default False.
+        regularization_problem : bool, optional
+            Whether it is solving a regularization problem, by default False.
+
+        Returns
+        -------
+        self.mip : Pyomo model
+            The MIP stored in self.
+        main_mip_results : SolverResults
+            Results from solving the main MIP.
+        """
+        # setup main problem
+        self.setup_fp_main(config)
+        mainopt, mip_args = self.set_up_mip_solver(config)
+
+        main_mip_results = mainopt.solve(self.mip,
+                                            tee=config.mip_solver_tee,
+                                            load_solutions=False,
+                                            **mip_args)
+        # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
+        # if config.single_tree or config.use_tabu_list:
+        #     self.update_attributes()
+        if len(main_mip_results.solution) > 0:
+            self.mip.solutions.load_from(main_mip_results)
+        if main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
+            # Linear solvers will sometimes tell me that it's infeasible or
+            # unbounded during presolve, but fails to distinguish. We need to
+            # resolve with a solver option flag on.
+            main_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
+                self.mip, config)
+
+        return self.mip, main_mip_results
+
+
+    def solve_regularization_main(self, config):
+        """This function solves the MIP main problem.
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        fp : bool, optional
+            Whether it is in the loop of feasibility pump, by default False.
+        regularization_problem : bool, optional
+            Whether it is solving a regularization problem, by default False.
+
+        Returns
+        -------
+        self.mip : Pyomo model
+            The MIP stored in self.
+        main_mip_results : SolverResults
+            Results from solving the main MIP.
+        """
+
+        # setup main problem
+        self.setup_regularization_main(config)
+        mainopt, mip_args = self.set_up_mip_solver(config, regularization_problem=True)
+
+        main_mip_results = mainopt.solve(self.mip,
+                                         tee=config.mip_solver_tee,
+                                         load_solutions=False,
+                                         **mip_args)
+        if len(main_mip_results.solution) > 0:
+            self.mip.solutions.load_from(main_mip_results)
+        if main_mip_results.solver.termination_condition is tc.optimal:
+            config.logger.info(self.log_formatter.format(self.mip_iter, 'Reg '+self.regularization_mip_type,
+                                                            value(self.mip.MindtPy_utils.roa_proj_mip_obj),
+                                                            self.primal_bound, self.dual_bound, self.rel_gap,
+                                                            get_main_elapsed_time(self.timing)))
 
         elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
             # Linear solvers will sometimes tell me that it's infeasible or
@@ -1454,21 +1528,18 @@ class _MindtPyAlgorithm(object):
             # resolve with a solver option flag on.
             main_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
                 self.mip, config)
-            return self.mip, main_mip_results
 
-        if regularization_problem:
-            self.mip.MindtPy_utils.objective_constr.deactivate()
-            self.mip.MindtPy_utils.del_component('roa_proj_mip_obj')
-            self.mip.MindtPy_utils.cuts.del_component('obj_reg_estimate')
-            if config.add_regularization == 'level_L1':
-                self.mip.MindtPy_utils.del_component('L1_obj')
-            elif config.add_regularization == 'level_L_infinity':
-                self.mip.MindtPy_utils.del_component(
-                    'L_infinity_obj')
+        self.mip.MindtPy_utils.objective_constr.deactivate()
+        self.mip.MindtPy_utils.del_component('roa_proj_mip_obj')
+        self.mip.MindtPy_utils.cuts.del_component('obj_reg_estimate')
+        if config.add_regularization == 'level_L1':
+            self.mip.MindtPy_utils.del_component('L1_obj')
+        elif config.add_regularization == 'level_L_infinity':
+            self.mip.MindtPy_utils.del_component('L_infinity_obj')
 
         return self.mip, main_mip_results
 
-    def set_up_mip_solver(self, config, regularization_problem):
+    def set_up_mip_solver(self, config, regularization_problem=False):
         """Set up the MIP solver.
 
         Parameters
@@ -1506,7 +1577,14 @@ class _MindtPyAlgorithm(object):
             self.set_up_lazy_OA_callback(mainopt)
         if config.use_tabu_list:
             self.set_up_tabulist_callback(mainopt)
-        return mainopt
+
+        set_solver_options(mainopt, self.timing, config,
+                           solver_type='mip', 
+                           regularization=regularization_problem)
+        mip_args = dict(config.mip_solver_args)
+        if config.mip_solver in {'cplex', 'cplex_persistent', 'gurobi', 'gurobi_persistent'}:
+            mip_args['warmstart'] = True
+        return mainopt, mip_args
 
     # The following functions deal with handling the solution we get from the above MIP solver function
 
@@ -1754,7 +1832,57 @@ class _MindtPyAlgorithm(object):
                 'of %s. Solver message: %s' %
                 (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
 
-    def setup_main(self, config, fp, regularization_problem):
+
+    def setup_main(self, config):
+        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        """
+        MindtPy = self.mip.MindtPy_utils
+
+        for c in MindtPy.constraint_list:
+            if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree:
+                c.deactivate()
+
+        MindtPy.cuts.activate()
+
+        sign_adjust = 1 if self.objective_sense == minimize else - 1
+        MindtPy.del_component('mip_obj')
+        if config.add_regularization is not None and config.add_no_good_cuts:
+            MindtPy.cuts.no_good_cuts.deactivate()
+
+        if config.add_slack:
+            MindtPy.del_component('aug_penalty_expr')
+
+            MindtPy.aug_penalty_expr = Expression(
+                expr=sign_adjust * config.OA_penalty_factor * sum(
+                    v for v in MindtPy.cuts.slack_vars[...]))
+        main_objective = MindtPy.objective_list[-1]
+        MindtPy.mip_obj = Objective(
+            expr=main_objective.expr +
+            (MindtPy.aug_penalty_expr if config.add_slack else 0),
+            sense=self.objective_sense)
+
+        if config.use_dual_bound:
+            # Delete previously added dual bound constraint
+            MindtPy.cuts.del_component('dual_bound')
+            if self.dual_bound not in {float('inf'), float('-inf')}:
+                if self.objective_sense == minimize:
+                    MindtPy.cuts.dual_bound = Constraint(
+                        expr=main_objective.expr +
+                        (MindtPy.aug_penalty_expr if config.add_slack else 0) >= self.dual_bound,
+                        doc='Objective function expression should improve on the best found dual bound')
+                else:
+                    MindtPy.cuts.dual_bound = Constraint(
+                        expr=main_objective.expr +
+                        (MindtPy.aug_penalty_expr if config.add_slack else 0) <= self.dual_bound,
+                        doc='Objective function expression should improve on the best found dual bound')
+
+
+    def setup_fp_main(self, config):
         """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
 
         Parameters
@@ -1773,92 +1901,79 @@ class _MindtPyAlgorithm(object):
                 c.deactivate()
 
         MindtPy.cuts.activate()
+        MindtPy.del_component('mip_obj')
+        MindtPy.del_component('fp_mip_obj')
+        if config.fp_main_norm == 'L1':
+            MindtPy.fp_mip_obj = generate_norm1_objective_function(
+                self.mip,
+                self.working_model,
+                discrete_only=config.fp_discrete_only)
+        elif config.fp_main_norm == 'L2':
+            MindtPy.fp_mip_obj = generate_norm2sq_objective_function(
+                self.mip,
+                self.working_model,
+                discrete_only=config.fp_discrete_only)
+        elif config.fp_main_norm == 'L_infinity':
+            MindtPy.fp_mip_obj = generate_norm_inf_objective_function(
+                self.mip,
+                self.working_model,
+                discrete_only=config.fp_discrete_only)
+
+
+    def setup_regularization_main(self, config):
+        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        """
+        MindtPy = self.mip.MindtPy_utils
+
+        for c in MindtPy.constraint_list:
+            if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree:
+                c.deactivate()
+
+        MindtPy.cuts.activate()
 
         sign_adjust = 1 if self.objective_sense == minimize else - 1
         MindtPy.del_component('mip_obj')
-        if regularization_problem and config.single_tree:
+        if config.single_tree:
             MindtPy.del_component('roa_proj_mip_obj')
             MindtPy.cuts.del_component('obj_reg_estimate')
         if config.add_regularization is not None and config.add_no_good_cuts:
-            if regularization_problem:
-                MindtPy.cuts.no_good_cuts.activate()
-            else:
-                MindtPy.cuts.no_good_cuts.deactivate()
+            MindtPy.cuts.no_good_cuts.activate()
 
-        if fp:
-            MindtPy.del_component('fp_mip_obj')
-            if config.fp_main_norm == 'L1':
-                MindtPy.fp_mip_obj = generate_norm1_objective_function(
-                    self.mip,
-                    self.working_model,
-                    discrete_only=config.fp_discrete_only)
-            elif config.fp_main_norm == 'L2':
-                MindtPy.fp_mip_obj = generate_norm2sq_objective_function(
-                    self.mip,
-                    self.working_model,
-                    discrete_only=config.fp_discrete_only)
-            elif config.fp_main_norm == 'L_infinity':
-                MindtPy.fp_mip_obj = generate_norm_inf_objective_function(
-                    self.mip,
-                    self.working_model,
-                    discrete_only=config.fp_discrete_only)
-        elif regularization_problem:
-            # The epigraph constraint is very "flat" for branching rules.
-            # In ROA, if the objective function is linear(or quadratic when quadratic_strategy = 1 or 2), the original objective function is used in the MIP problem.
-            # In the MIP projection problem, we need to reactivate the epigraph constraint(objective_constr).
-            if MindtPy.objective_list[0].expr.polynomial_degree() in self.mip_objective_polynomial_degree:
-                MindtPy.objective_constr.activate()
-            if config.add_regularization == 'level_L1':
-                MindtPy.roa_proj_mip_obj = generate_norm1_objective_function(self.mip,
-                                                                             self.best_solution_found,
-                                                                             discrete_only=False)
-            elif config.add_regularization == 'level_L2':
-                MindtPy.roa_proj_mip_obj = generate_norm2sq_objective_function(self.mip,
-                                                                               self.best_solution_found,
-                                                                               discrete_only=False)
-            elif config.add_regularization == 'level_L_infinity':
-                MindtPy.roa_proj_mip_obj = generate_norm_inf_objective_function(self.mip,
-                                                                                self.best_solution_found,
-                                                                                discrete_only=False)
-            elif config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-                MindtPy.roa_proj_mip_obj = generate_lag_objective_function(self.mip,
-                                                                           self.best_solution_found,
-                                                                           config,
-                                                                           self.timing,
-                                                                           discrete_only=False)
-            if self.objective_sense == minimize:
-                MindtPy.cuts.obj_reg_estimate = Constraint(
-                    expr=sum(MindtPy.objective_value[:]) <= (1 - config.level_coef) * self.primal_bound + config.level_coef * self.dual_bound)
-            else:
-                MindtPy.cuts.obj_reg_estimate = Constraint(
-                    expr=sum(MindtPy.objective_value[:]) >= (1 - config.level_coef) * self.primal_bound + config.level_coef * self.dual_bound)
+        # The epigraph constraint is very "flat" for branching rules.
+        # In ROA, if the objective function is linear(or quadratic when quadratic_strategy = 1 or 2), the original objective function is used in the MIP problem.
+        # In the MIP projection problem, we need to reactivate the epigraph constraint(objective_constr).
+        if MindtPy.objective_list[0].expr.polynomial_degree() in self.mip_objective_polynomial_degree:
+            MindtPy.objective_constr.activate()
+        if config.add_regularization == 'level_L1':
+            MindtPy.roa_proj_mip_obj = generate_norm1_objective_function(self.mip,
+                                                                            self.best_solution_found,
+                                                                            discrete_only=False)
+        elif config.add_regularization == 'level_L2':
+            MindtPy.roa_proj_mip_obj = generate_norm2sq_objective_function(self.mip,
+                                                                            self.best_solution_found,
+                                                                            discrete_only=False)
+        elif config.add_regularization == 'level_L_infinity':
+            MindtPy.roa_proj_mip_obj = generate_norm_inf_objective_function(self.mip,
+                                                                            self.best_solution_found,
+                                                                            discrete_only=False)
+        elif config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
+            MindtPy.roa_proj_mip_obj = generate_lag_objective_function(self.mip,
+                                                                        self.best_solution_found,
+                                                                        config,
+                                                                        self.timing,
+                                                                        discrete_only=False)
+        if self.objective_sense == minimize:
+            MindtPy.cuts.obj_reg_estimate = Constraint(
+                expr=sum(MindtPy.objective_value[:]) <= (1 - config.level_coef) * self.primal_bound + config.level_coef * self.dual_bound)
         else:
-            if config.add_slack:
-                MindtPy.del_component('aug_penalty_expr')
+            MindtPy.cuts.obj_reg_estimate = Constraint(
+                expr=sum(MindtPy.objective_value[:]) >= (1 - config.level_coef) * self.primal_bound + config.level_coef * self.dual_bound)
 
-                MindtPy.aug_penalty_expr = Expression(
-                    expr=sign_adjust * config.OA_penalty_factor * sum(
-                        v for v in MindtPy.cuts.slack_vars[...]))
-            main_objective = MindtPy.objective_list[-1]
-            MindtPy.mip_obj = Objective(
-                expr=main_objective.expr +
-                (MindtPy.aug_penalty_expr if config.add_slack else 0),
-                sense=self.objective_sense)
-
-            if config.use_dual_bound:
-                # Delete previously added dual bound constraint
-                MindtPy.cuts.del_component('dual_bound')
-                if self.dual_bound not in {float('inf'), float('-inf')}:
-                    if self.objective_sense == minimize:
-                        MindtPy.cuts.dual_bound = Constraint(
-                            expr=main_objective.expr +
-                            (MindtPy.aug_penalty_expr if config.add_slack else 0) >= self.dual_bound,
-                            doc='Objective function expression should improve on the best found dual bound')
-                    else:
-                        MindtPy.cuts.dual_bound = Constraint(
-                            expr=main_objective.expr +
-                            (MindtPy.aug_penalty_expr if config.add_slack else 0) <= self.dual_bound,
-                            doc='Objective function expression should improve on the best found dual bound')
 
     def export_attributes(self):
         for name, val in self.__dict__.items():
@@ -2150,7 +2265,7 @@ class _MindtPyAlgorithm(object):
 
             # solve MILP main problem
             with time_code(self.timing, 'fp main'):
-                fp_main, fp_main_results = self.solve_main(config, fp=True)
+                fp_main, fp_main_results = self.solve_fp_main(config)
             fp_should_terminate = self.handle_fp_main_tc(fp_main_results, config)
             if fp_should_terminate:
                 break
@@ -2467,7 +2582,7 @@ class _MindtPyAlgorithm(object):
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if self.dual_bound != self.dual_bound_progress[0]:
                 with time_code(self.timing, 'regularization main'):
-                    regularization_main_mip, regularization_main_mip_results = self.solve_main(config, regularization_problem=True)
+                    regularization_main_mip, regularization_main_mip_results = self.solve_regularization_main(config)
                 self.handle_regularization_main_tc(regularization_main_mip, regularization_main_mip_results, config)
 
         # TODO: add descriptions for the following code
