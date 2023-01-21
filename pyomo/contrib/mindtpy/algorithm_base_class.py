@@ -1010,7 +1010,6 @@ class _MindtPyAlgorithm(object):
             # TODO: fix
             add_no_good_cuts(self.mip, var_values, config, self.timing)
 
-        # TODO: fix
         config.call_after_subproblem_feasible(fixed_nlp)
 
         config.logger.info(self.fixed_nlp_log_formatter.format('*' if self.primal_bound_improved else ' ',
@@ -1701,8 +1700,6 @@ class _MindtPyAlgorithm(object):
                 'quality cuts.')
         # TODO no-good cuts for single tree case
         # set optimistic bound to infinity
-        # TODO: can we remove the following line?
-        # self.dual_bound_progress.append(self.dual_bound)
         config.logger.info(
             'MindtPy exiting due to MILP main problem infeasibility.')
         if self.results.solver.termination_condition is None:
@@ -2016,7 +2013,7 @@ class _MindtPyAlgorithm(object):
         self.working_model.MindtPy_utils.objective_list[0].activate()
         if self.working_model.component("_int_to_binary_reform") is not None:
             self.working_model._int_to_binary_reform.deactivate()
-        # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
+        # exclude fixed variables here. This is consistent with the definition of variable_list.
         working_model_variable_list = list(get_vars_from_components(block=self.working_model,
                                                                     ctype=(
                                                                         Constraint, Objective),
