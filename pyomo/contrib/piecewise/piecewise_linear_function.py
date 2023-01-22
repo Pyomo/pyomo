@@ -17,7 +17,7 @@ from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import UnindexedComponent_set
-from pyomo.core.base.initializer import Initializer, FunctionInitializer
+from pyomo.core.base.initializer import Initializer
 import pyomo.core.expr.current as EXPR
 
 np, numpy_available = attempt_import('numpy')
@@ -26,7 +26,7 @@ spatial, scipy_available = attempt_import('scipy.spatial')
 
 # DEBUG
 from pytest import set_trace
-
+from pyomo.environ import ConcreteModel, Var
 
 
 class PiecewiseLinearFunctionData(_BlockData):
@@ -37,7 +37,7 @@ class PiecewiseLinearFunctionData(_BlockData):
 
         with self._declare_reserved_components():
             self._expressions = Expression(NonNegativeIntegers)
-            self._simplices = []
+            self._simplices = None
             self._points = []
             self._linear_functions = []
 
@@ -50,8 +50,13 @@ class PiecewiseLinearFunctionData(_BlockData):
     def _evaluate(self, *args):
         # ESJ: This is a very inefficient implementation in high dimension, but
         # for now we will just do a linear scan of the simplices.
+        if self._simplices is None:
+            raise RuntimeError("Cannot evaluate PiecewiseLinearFunction--it "
+                               "appears it is not fully defined. (No simplices "
+                               "are stored.)")
+
         pt = (arg for arg in args)
-        for idx, simplex, func in enumerate(zip(sef._simplices,
+        for idx, simplex, func in enumerate(zip(self._simplices,
                                                 self._linear_functions)):
             if _pt_in_simplex(pt, simplex):
                 return func(*args)
@@ -106,18 +111,20 @@ class PiecewiseLinearFunction(Block):
            approximating the given function will be calculated for each
            of the simplices in the triangulation. In this case, scipy is
            required.
-        2) List of breakpoints along each dimension (variable) in the 
+        2) List of breakpoints along each dimension (variable) in the
            function.
 
     Args:
         function: Nonlinear function to approximate, given as a Pyomo
             expression
-        points: List of points in the same dimension as the domain of the 
-            function being approximated. Note that if the pieces of the 
+        function_rule: Function that returns a nonlinear function to
+            approximate for each index in an IndexedPiecewiseLinearFunction
+        points: List of points in the same dimension as the domain of the
+            function being approximated. Note that if the pieces of the
             function are specified this way, we require scipy.
         breakpoints: A ComponentMap mapping each variable in the function
             to a list of breakpoints along the corresponding dimension. If
-            the pieces of  
+            the pieces of
     """
     _ComponentDataClass = PiecewiseLinearFunctionData
 
@@ -134,15 +141,16 @@ class PiecewiseLinearFunction(Block):
     def __init__(self, *args, **kwargs):
         self._handlers = {
             # (f, pts, simplices, linear_funcs) : handler
-            (True, True, False, 
+            (True, True, False,
              False): self._construct_from_function_and_points,
-            (True, False, True, 
+            (True, False, True,
              False): self._construct_from_function_and_simplices,
-            (False, False, True, 
+            (False, False, True,
              True): self._construct_from_linear_functions_and_simplices
         }
 
         _func_arg = kwargs.pop('function', None)
+        _func_rule_arg = kwargs.pop('function_rule', None)
         _points_arg = kwargs.pop('points', None)
         _simplices_arg = kwargs.pop('simplices', None)
         _linear_functions = kwargs.pop('linear_functions', None)
@@ -150,29 +158,44 @@ class PiecewiseLinearFunction(Block):
         kwargs.setdefault('ctype', PiecewiseLinearFunction)
         Block.__init__(self, *args, **kwargs)
 
-        self._func_rule = FunctionInitializer(_func_arg)
+        # This cannot be a rule.
+        self._func = _func_arg
+        self._func_rule = Initializer(_func_rule_arg)
         self._points_rule = Initializer(_points_arg,
                                         treat_sequences_as_mappings=False)
         self._simplices_rule = Initializer(_simplices_arg,
                                            treat_sequences_as_mappings=False)
         self._linear_funcs_rule = Initializer(_linear_functions)
 
-    def _construct_from_function_and_points(self, obj, parent, nonlinear):
+    def _construct_from_function_and_points(self, obj, parent,
+                                            nonlinear_function):
         parent = obj.parent_block()
         idx = obj._index
 
-        nonlinear_function = self._func_rule(parent, idx)
         points = self._points_rule(parent, idx)
+        if len(points) < 1:
+            raise ValueError("Cannot construct PiecewiseLinearFunction from "
+                             "points list of length 0.")
 
-        func_vars = list(EXPR.identify_variables(nonlinear_function))
-        if len(func_vars) == 1:
+        # TODO: I don't think we need to save dimension--can just check and move
+        # on
+        if hasattr(points[0], '__len__'):
+            dimension = len(points[0])
+        else:
+            dimension = 1
+
+        if dimension == 1:
             # This is univariate and we'll handle it separately in order to
             # avoid a dependence on numpy.
             points.sort()
-            simplices = [(points[i], points[i + 1]) for i in range(len(points) -
-                                                                   1)]
+            self._simplices = []
+            for i in range(len(points) - 1):
+                self._simplices.append((i, i + 1))
+                self._points.append(points[i])
+            # Add the last one
+            self._points.append(points[-1])
             return self._construct_from_univariate_function_and_segments(
-                obj, nonlinear_function, simplices, func_vars[0]) 
+                obj, nonlinear_function)
 
         try:
             triangulation = spatial.Delaunay(points)
@@ -187,33 +210,51 @@ class PiecewiseLinearFunction(Block):
         # TODO: Need to make some modifications to the below for this to
         # work--we should check if we already have simplices. And we should
         # always store them in the numpy/scipy style.
-        return self._construct_from_function_and_simplices(obj)
-        
-        # TODO: Get simplices from scipy, then revert to the method below
+        return self._construct_from_function_and_simplices(obj, parent,
+                                                           nonlinear_function)
 
-    def _construct_from_univariate_function_and_segments(self, obj, func,
-                                                         simplices):
-        point_set = set()
-        indices = {}
-        for (x1, x2) in simplices:
-            y_val = {}
-            for xi in (x1, x2):
-                y_val[xi] = func(xi)
-                if xi not in point_set:
-                    point_set.add(xi)
-                    self._points.append(xi)
-                    indices[xi] = len(self._points) - 1
-            obj._simplices.append((indices[x1], indices[x2]))
-            slope = (y_val[x2] - y_val[x1])/(x2 - x1)
-            def f(x, y):
-                return slope*x + y_val[x1] - slope*x1
-            obj._linear_functions.append(f)
+    def _construct_from_univariate_function_and_segments(self, obj, func):
+        # [ESJ 1/21/23]: See this blog post about why this is necessary:
+        # https://eev.ee/blog/2011/04/24/gotcha-python-scoping-closures/
+        # Basically, Python scoping is such a disaster that if we directly
+        # declare the lambda function in the loop, their defintions will
+        # rely on the value of idx1 and idx2... So all the functions will be
+        # the last iteration function. By using a factory, we put 'slope' and
+        # 'intercept' in a separate scope and get around this.
+        def linear_func_factory(slope, intercept):
+            return lambda x : slope*x + intercept
+
+        for idx1, idx2 in obj._simplices:
+            x1 = obj._points[idx1]
+            x2 = obj._points[idx2]
+            y = {x : func(x) for x in [x1, x2]}
+            slope = (y[x2] - y[x1])/(x2 - x1)
+            intercept = y[x1] - slope*x1
+            obj._linear_functions.append(linear_func_factory(slope, intercept))
 
         return obj
 
+    def _get_simplices_from_arg(self, simplices):
+        self._simplices = []
+        known_points = set()
+        point_to_index = {}
+        for simplex in simplices:
+            extreme_pts = []
+            for pt in simplex:
+                if pt not in known_points:
+                    known_points.add(pt)
+                    self._points.append(pt)
+                    point_to_index[pt] = len(self._points) - 1
+                extreme_pts.append(point_to_index[pt])
+            self._simplices.append(tuple(extreme_pts))
+
     def _construct_from_function_and_simplices(self, obj, parent,
                                                nonlinear_function):
-        simplices = self._simplices_rule(parent, idx)
+        if obj._simplices is None:
+            self._get_simplices_from_arg(obj._simplices_rule(parent,
+                                                             obj._index))
+        simplices = obj._simplices
+
         if len(simplices) < 1:
             raise ValueError("Cannot construct PiecewiseLinearFunction "
                              "with empty list of simplices")
@@ -224,7 +265,7 @@ class PiecewiseLinearFunction(Block):
             # it separately in order to avoid a kind of silly dependence on
             # numpy.
             return self._construct_from_univariate_function_and_segments(
-                obj, nonlinear_function, simplices) 
+                obj, nonlinear_function)
 
         A = np.ones((dimension, dimension + 1))
         b = np.empty((dimension + 1, 0))
@@ -253,10 +294,18 @@ class PiecewiseLinearFunction(Block):
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
-
         obj._index = index
-        handler = self._handlers.get((self._func_rule is not None, 
-                                      self._points_rule is not None, 
+        parent = obj.parent_block()
+
+        # Get the nonlinear function, if we have one.
+        nonlinear_function = None
+        if self._func_rule is not None:
+            nonlinear_function = self._func_rule(parent, index)
+        elif self._func is not None:
+            nonlinear_function = self._func
+
+        handler = self._handlers.get((nonlinear_function is not None,
+                                      self._points_rule is not None,
                                       self._simplices_rule is not None,
                                       self._linear_funcs_rule is not None))
         if handler is None:
@@ -266,8 +315,6 @@ class PiecewiseLinearFunction(Block):
                              "of breakpoints, a nonlinear function an a list "
                              "of simplices, or a list of linear functions and "
                              "a list of corresponding domains.")
-        parent = obj.parent_block()
-        nonlinear_function = self._func_rule(parent, index)
         handler(obj, parent, nonlinear_function)
 
         return obj

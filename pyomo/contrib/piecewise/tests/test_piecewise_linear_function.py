@@ -11,8 +11,10 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
-from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import ConcreteModel, log, Var
+
+from pytest import set_trace
 
 class TestPiecewiseLinearFunction2D(unittest.TestCase):
     def make_ln_x_model(self):
@@ -25,20 +27,20 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         return m
 
     def check_ln_x_approx(self, m):
-        # indices of extreme points.
-        simplices = [(0, 1), (1, 2), (2, 3)]
-
         self.assertEqual(len(m.pw.simplices), 3)
         self.assertEqual(len(m.pw.linear_functions), 3)
+        # indices of extreme points.
+        simplices = [(0, 1), (1, 2), (2, 3)]
         for idx, simplex in enumerate(simplices):
             self.assertEqual(m.pw.simplices[idx], simplices[idx])
-        # assertExpressionsStructurallyEqual(self, m.pw.linear_functions[0],
-        #                                    (log(3)/2)*m.x - log(3)/2)
-        # assertExpressionsStructurallyEqual(self, m.pw.linear_functions[1],
-        #                                    (log(2)/3)*m.x + log(3/2))
-        # assertExpressionsStructurallyEqual(self, m.pw.linear_functions[2],
-        #                                    (log(5/3)/4)*m.x +
-        #                                    log(6/((5/3)**(3/2))))
+
+        assertExpressionsEqual(self, m.pw.linear_functions[0](m.x),
+                               (log(3)/2)*m.x - log(3)/2, places=7)
+        assertExpressionsEqual(self, m.pw.linear_functions[1](m.x),
+                               (log(2)/3)*m.x + log(3/2), places=7)
+        assertExpressionsEqual(self, m.pw.linear_functions[2](m.x),
+                               (log(5/3)/4)*m.x + log(6/((5/3)**(3/2))),
+                               places=7)
 
     def test_pw_linear_approx_of_ln_x_simplices(self):
         m = self.make_ln_x_model()
@@ -77,7 +79,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
 #     )
 #     m.c = Constraint(expr=m.pw(m.x, m.y) <= 5)
 
-#     # 
+#     #
 
 #     PLF(points, function)
 #     PLF(simplices, function?)
