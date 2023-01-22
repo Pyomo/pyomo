@@ -24,10 +24,6 @@ np, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import('scipy')
 spatial, scipy_available = attempt_import('scipy.spatial')
 
-# DEBUG
-from pytest import set_trace
-from pyomo.environ import ConcreteModel, Var
-
 
 class PiecewiseLinearFunctionData(_BlockData):
     _Block_reserved_words = Any
@@ -267,24 +263,33 @@ class PiecewiseLinearFunction(Block):
             return self._construct_from_univariate_function_and_segments(
                 obj, nonlinear_function)
 
-        A = np.ones((dimension, dimension + 1))
-        b = np.empty((dimension + 1, 0))
+        def linear_function_factory(normal):
+            def f(*args):
+                return sum(normal[i]*arg for i, arg in enumerate(args)) + \
+                    normal[-1]
+            return f
 
         # evaluate the function at each of the points and form the homogeneous
         # system of equations
+        A = np.ones((dimension + 2, dimension + 2))
+        b = np.zeros(dimension + 2)
+        b[-1] = 1
+
         for num_piece, simplex in enumerate(simplices):
-            for i, pt in enumerate(simplex):
+            for i, pt_idx in enumerate(simplex):
+                pt = obj._points[pt_idx]
                 for j, val in enumerate(pt):
                     A[i, j] = val
-                b[i] = nonlinear_function(*pt)
+                A[i, j + 1] = nonlinear_function(*pt)
+            A[i + 1, :] = 0
+            A[i + 1, dimension] = -1
             # This system has a solution unless there's a bug--we know there is
-            # a hyperplane that passes through dimension + 1 points.
+            # a hyperplane that passes through dimension + 1 points (and the
+            # last equation scales it so that the coefficient for the output
+            # of the nonlinear function dimension is -1, so we can just read
+            # off the linear equation in the x space).
             normal = np.linalg.solve(A, b)
-
-            def f(*args):
-                return sum(normal[i]*args[i] for i in dimension) - \
-                    normal[dimension + 1]
-            obj._linear_functions.append(f)
+            obj._linear_functions.append(linear_function_factory(normal))
 
     def _construct_from_linear_functions_and_simplices(self, obj):
         pass

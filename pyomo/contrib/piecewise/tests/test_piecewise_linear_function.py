@@ -9,12 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
-from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.core.expr.compare import (
+    assertExpressionsEqual, assertExpressionsStructurallyEqual)
 from pyomo.environ import ConcreteModel, log, Var
 
-from pytest import set_trace
+np, numpy_available = attempt_import('numpy')
+scipy, scipy_available = attempt_import('scipy')
 
 class TestPiecewiseLinearFunction2D(unittest.TestCase):
     def make_ln_x_model(self):
@@ -54,6 +57,8 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         self.check_ln_x_approx(m)
 
 class TestPiecewiseLinearFunction3D(unittest.TestCase):
+    @unittest.skipUnless(scipy_available and numpy_available,
+                         "scipy and/or numpy are not available")
     def test_pw_linear_approx_of_paraboloid_points(self):
         m = ConcreteModel()
         m.x1 = Var(bounds=(0, 3))
@@ -66,7 +71,18 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         m.pw = PiecewiseLinearFunction(points=[(0, 1), (0, 4), (0, 7),
                                                (3, 1), (3, 4), (3, 7)],
                                        function=m.f)
-        m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
+        self.assertEqual(len(m.pw.simplices), 4)
+        self.assertEqual(len(m.pw.linear_functions), 4)
+
+        assertExpressionsStructurallyEqual(self,
+                                           m.pw.linear_functions[0](m.x1, m.x2),
+                                           3*m.x1 + 5*m.x2 - 4)
+        # TODO: Check the other 3
+        # assertExpressionsStructurallyEqual(self,
+        #                                    m.pw.linear_functions[1](m.x1, m.x2),
+        #                                    )
+
+        #m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
 
 
 # def alternate_thing():
@@ -83,5 +99,6 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
 
 #     PLF(points, function)
 #     PLF(simplices, function?)
-#     PLF(simplices, linear_expression_list)
+#     PLF(simplices, linear_expression_list) # ESJ: Should these be
+                                             # expressions or functions?
 #     PLF(table_data) ... {point: val}
