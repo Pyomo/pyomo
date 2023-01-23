@@ -576,6 +576,9 @@ jobs:
         else
             COVERAGE_BASE=${GITHUB_WORKSPACE}/.cover
         fi
+        echo "Remove old .coverage files"
+        rm -v ${COVERAGE_BASE}age ${COVERAGE_BASE}age.*
+        echo "Set up coverage tracking"
         COVERAGE_RC=${COVERAGE_BASE}_rc
         echo "COVERAGE_RCFILE=$COVERAGE_RC" >> $GITHUB_ENV
         echo "COVERAGE_PROCESS_START=$COVERAGE_RC" >> $GITHUB_ENV
