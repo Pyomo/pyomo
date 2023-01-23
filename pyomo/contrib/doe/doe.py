@@ -36,7 +36,7 @@ import time
 import pickle
 from itertools import permutations, product
 import logging
-from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
+from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
 from pyomo.contrib.doe.scenario import Scenario_generator
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
@@ -82,7 +82,6 @@ class DesignOfExperiments:
         self.design_name = list(self.design_timeset.keys())
         # the control time point for each design variable
         self.design_time = list(self.design_timeset.values())
-        # create_model()
         self.create_model = create_model
         self.args = args
 
@@ -109,7 +108,6 @@ class DesignOfExperiments:
         self.prior_FIM = prior_FIM
 
         # if print statements
-        #self.verbose = verbose
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.WARN)
         
@@ -302,10 +300,8 @@ class DesignOfExperiments:
         analysis_optimize.calculate_FIM(self.design_timeset, result=result_doe)
         analysis_optimize.model = m
 
-        
         # record optimization time
         analysis_optimize.solve_time = time_solve2
-
 
         return analysis_optimize
 
@@ -359,7 +355,6 @@ class DesignOfExperiments:
         objective_option: 
             choose from 'det' or 'trace' or 'zero'. Optimization problem maximizes determinant or trace or using 0 as objective function.
 
-
         Return
         ------
         FIM_analysis: result summary object of this solve
@@ -402,7 +397,6 @@ class DesignOfExperiments:
 
     def _sequential_finite(self, read_output, extract_single_model, store_output):
         time00 = time.time()
-        no_para = len(list(self.param.keys()))
 
         # if using sequential model
         # call generator function to get scenario dictionary
@@ -438,7 +432,6 @@ class DesignOfExperiments:
                 # discretize if needed
                 if self.discretize_model:
                     mod = self.discretize_model(mod)
-
 
                 # solve model
                 time0_solve = time.time()
@@ -542,11 +535,6 @@ class DesignOfExperiments:
                 # For sIPOPT, fix model DOF
                 if self.mode =='sequential_sipopt':
                     mod = self._fix_design(mod, self.design_values, fix_opt=True)
-
-                time_set_attr = getattr(mod, self.t)
-
-                # extract (discretized) time
-                time_set = list(time_set_attr)
 
                 # add sIPOPT perturbation parameters
                 mod = self._add_parameter(mod, perturb=pa)
@@ -778,7 +766,6 @@ class DesignOfExperiments:
                                     prior_FIM=prior_in_use, store_FIM=self.FIM_store_name,
                                     scale_constant_value=self.scale_constant_value)
         
-        
         self.jac = jac
         FIM_analysis.build_time = time_build
         FIM_analysis.solve_time = time_solve
@@ -804,7 +791,7 @@ class DesignOfExperiments:
         jac = {}
 
         # After collecting outputs from all scenarios, calculate sensitivity
-        for no_p, para in enumerate(list(self.param.keys())):
+        for para in list(self.param.keys()):
             # extract involved scenario No. for each parameter from scenario class
             involved_s = scena_gen.scenario_para[para]
 
@@ -832,17 +819,15 @@ class DesignOfExperiments:
         ------
         JAC: the overall jacobian as a dictionary
         """
-        no_para = len(list(self.param.keys()))
         # dictionary form of jacobian
         jac = {}
         # loop over parameters
         for p in list(self.param.keys()): 
             jac_para = []
-            for n1, name1 in enumerate(self.jac_involved_name):
-                for t, tim in enumerate(self.timepoint_overall_set):
+            for name1 in self.jac_involved_name:
+                for tim in self.timepoint_overall_set:
                     jac_para.append(pyo.value(m.jac[name1, p, tim]))
             jac[p] = jac_para
-        
         return jac
 
     def run_grid_search(self, design_values, design_ranges, design_dimension_names, 
@@ -896,7 +881,6 @@ class DesignOfExperiments:
         -------
         figure_draw_object: a combined result object of class Grid_search_result
         """
-
         # time 0
         t_enumeration_begin = time.time()
 
@@ -975,7 +959,6 @@ class DesignOfExperiments:
                 self.logger.info('This is the  %s run out of  %s run.', count+1, total_count)
                 self.logger.info('The code has run  %s seconds.', t_now-t_enumeration_begin)
                 self.logger.info('Estimated remaining time:  %s seconds', (t_now-t_enumeration_begin)/(count+1)*(total_count-count-1))
-
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
@@ -1176,7 +1159,6 @@ class DesignOfExperiments:
             """
             return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
 
-
         ### Constraints and Objective function
         m.dC_value = pyo.Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
         m.ele_rule = pyo.Constraint(m.para_set, m.para_set, rule=calc_FIM)
@@ -1184,9 +1166,6 @@ class DesignOfExperiments:
         return m
 
     def _add_objective(self, m):
-
-        #if deactive_obj:
-        #    m.Obj.deactivate()
 
         def cholesky_imp(m, c, d):
             """
@@ -1204,7 +1183,6 @@ class DesignOfExperiments:
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
-            sum_x = 0  
             return m.trace == sum(m.FIM[j,j] for j in m.para_set)
 
         def det_general(m):
@@ -1308,8 +1286,7 @@ class DesignOfExperiments:
         opt_option: a dictionary, keys are design variable name, values are True or False, 
             deciding if this design variable is optimized as DOF this time.
             If None, all design variables are optimized as DOF this time.
-
-
+            
         Return:
         -------
         solver_results: solver results

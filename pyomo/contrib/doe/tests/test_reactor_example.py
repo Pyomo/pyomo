@@ -125,10 +125,10 @@ class Test_doe_object(unittest.TestCase):
         exp1 = generate_exp(t_control, 3, [500, 300, 300, 300, 300, 300, 300, 300, 300])
 
         # add a prior information (scaled FIM with T=500 and T=300 experiments)
-        prior = np.asarray([[  28.67892806 ,   5.41249739 , -81.73674601 , -24.02377324],
-              [   5.41249739 ,  26.40935036 , -12.41816477 , -139.23992532],
-              [ -81.73674601 , -12.41816477 , 240.46276004 ,  58.76422806],
-              [ -24.02377324 , -139.23992532 ,  58.76422806 , 767.25584508]])
+        prior = np.asarray([[  17.22501773 ,  14.37041814 , -36.47520583 , -71.0809284 ],
+                             [  14.37041814 ,  34.96329376 , -27.32915307, -169.61728922],
+                             [ -36.47520583 , -27.32915307 ,  78.42752049,  135.96877921],
+                             [ -71.0809284 , -169.61728922,  135.96877921 , 829.77538611]])
 
 
         doe_object3 = DesignOfExperiments(parameter_dict, dv_pass,
@@ -139,10 +139,11 @@ class Test_doe_object(unittest.TestCase):
                                                              scale_nominal_param_value=True, objective_option='det', 
                                                              L_initial=np.linalg.cholesky(prior))
         
-        self.assertAlmostEqual(value(optimize_result.model.T[0]), 579.212348, places=2)
-        self.assertAlmostEqual(value(optimize_result.model.T[1]), 300.000450, places=2)
-        self.assertAlmostEqual(np.log10(optimize_result.trace), 3.214432, places=2)
-        self.assertAlmostEqual(np.log10(optimize_result.det), 6.214118, places=2)
+        
+        self.assertAlmostEqual(value(optimize_result.model.T[0]), 300, places=2)
+        self.assertAlmostEqual(value(optimize_result.model.T[0.5]), 300, places=2)
+        self.assertAlmostEqual(np.log10(optimize_result.trace), 3.273840, places=2)
+        self.assertAlmostEqual(np.log10(optimize_result.det), 5.506772, places=2)
         
         
 
