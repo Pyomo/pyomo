@@ -65,6 +65,7 @@ logger=logging.getLogger(__name__)
 # Feasibility tolerance for trivial (fixed) constraints
 TOL = 1e-8
 inf = float('inf')
+minus_inf = -inf
 nan = float('nan')
 
 HALT_ON_EVALUATION_ERROR = False
@@ -604,10 +605,14 @@ class _NLWriter_impl(object):
                 self._record_named_expression_usage(
                     expr.named_exprs, con, 0)
             lb = con.lb
-            if lb is not None:
+            if lb == minus_inf:
+                lb = None
+            elif lb is not None:
                 lb = repr(lb - expr.const)
             ub = con.ub
-            if ub is not None:
+            if ub == inf:
+                ub = None
+            elif ub is not None:
                 ub = repr(ub - expr.const)
             _type = _RANGE_TYPE(lb, ub)
             if _type == 4:
@@ -849,9 +854,13 @@ class _NLWriter_impl(object):
         for idx, _id in enumerate(variables):
             v = var_map[_id]
             lb, ub = v.bounds
-            if lb is not None:
+            if lb == minus_inf:
+                lb = None
+            elif lb is not None:
                 lb = repr(lb)
-            if ub is not None:
+            if ub == inf:
+                ub = None
+            elif ub is not None:
                 ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
