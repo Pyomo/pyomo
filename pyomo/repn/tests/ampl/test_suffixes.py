@@ -28,7 +28,7 @@ from .nl_diff import load_and_compare_nl_baseline
 
 currdir = this_file_dir()
 
-class TestSuffix(unittest.TestCase):
+class SuffixTester(object):
     @classmethod
     def setUpClass(cls):
         cls.context = TempfileManager.new_context()
@@ -74,7 +74,7 @@ class TestSuffix(unittest.TestCase):
 
         _test = os.path.join(self.tempdir, "EXPORT_suffixes.test.nl")
         model.write(filename=_test,
-                    format=ProblemFormat.nl,
+                    format=self.nl_version,
                     io_options={"symbolic_solver_labels": False})
         _base = os.path.join(currdir, "EXPORT_suffixes_int.baseline.nl")
         self.assertEqual(*load_and_compare_nl_baseline(_base, _test))
@@ -115,7 +115,7 @@ class TestSuffix(unittest.TestCase):
 
         _test = os.path.join(self.tempdir, "EXPORT_suffixes.test.nl")
         model.write(filename=_test,
-                    format=ProblemFormat.nl,
+                    format=self.nl_version,
                     io_options={"symbolic_solver_labels" : False})
         _base = os.path.join(currdir, "EXPORT_suffixes_float.baseline.nl")
         self.assertEqual(*load_and_compare_nl_baseline(_base, _test))
@@ -140,7 +140,7 @@ class TestSuffix(unittest.TestCase):
                 RuntimeError, "NL file writer does not allow both manually "
                 "declared 'ref' suffixes as well as SOSConstraint "):
             model.write(filename=os.path.join(self.tempdir, "junk.nl"),
-                        format=ProblemFormat.nl,
+                        format=self.nl_version,
                         io_options={"symbolic_solver_labels" : False})
 
     # Test that user defined sosno suffixes fail to
@@ -163,7 +163,7 @@ class TestSuffix(unittest.TestCase):
                 RuntimeError, "NL file writer does not allow both manually "
                 "declared 'sosno' suffixes as well as SOSConstraint "):
             model.write(filename=os.path.join(self.tempdir, "junk.nl"),
-                        format=ProblemFormat.nl,
+                        format=self.nl_version,
                         io_options={"symbolic_solver_labels" : False})
 
     # Test that user defined sosno suffixes fail to
@@ -186,8 +186,15 @@ class TestSuffix(unittest.TestCase):
                 RuntimeError, "NL file writer does not allow both manually "
                 "declared 'sosno' suffixes as well as SOSConstraint "):
             model.write(filename=os.path.join(self.tempdir, "junk.nl"),
-                        format=ProblemFormat.nl,
+                        format=self.nl_version,
                         io_options={"symbolic_solver_labels" : False})
+
+
+class TestSuffix_nlv1(SuffixTester, unittest.TestCase):
+    nl_version = 'nl_v1'
+
+class TestSuffix_nlv2(SuffixTester, unittest.TestCase):
+    nl_version = 'nl_v2'
 
 if __name__ == "__main__":
     unittest.main()
