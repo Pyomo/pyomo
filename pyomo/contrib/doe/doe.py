@@ -40,8 +40,6 @@ from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculati
 from pyomo.contrib.doe.scenario import Scenario_generator
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
-
-
 class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_object, create_model, solver=None,
                  time_set_name = "t", prior_FIM=None, discretize_model=None, args=None):
@@ -1176,11 +1174,7 @@ class DesignOfExperiments:
             """
             Calculate FIM elements
             """
-            # check if scale
-            if self.scale_nominal_param_value:
-                return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*self.param[j]*self.param[d]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
-            else:
-                return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
+            return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
 
 
         ### Constraints and Objective function

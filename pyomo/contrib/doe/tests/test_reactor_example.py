@@ -36,16 +36,13 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import DesignOfExperiments, Measurements
 from pyomo.environ import value
 
-
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
-kaug_available = SolverFactory('k_aug').available()
 
 class Test_doe_object(unittest.TestCase):
     """ Test the kinetics example with both the sequential_finite mode and the direct_kaug mode
     """
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not kaug_available, "The 'k_aug' command is not available")
     def test_setUP(self):
         from pyomo.contrib.doe.example import reactor_kinetics as reactor
         
@@ -122,9 +119,7 @@ class Test_doe_object(unittest.TestCase):
         self.assertAlmostEqual(np.log10(result2.det), 2.821840, places=2)
         self.assertAlmostEqual(np.log10(result2.min_eig), -1.012346, places=2)
         
-        '''
-        square_result, optimize_result= doe_object.stochastic_program(exp1, if_optimize=True, if_Cholesky=True,                                          scale_nominal_param_value=True, objective_option='det')
-        '''
+        ### Test stochastic_program mode
         
         # prior
         exp1 = generate_exp(t_control, 3, [500, 300, 300, 300, 300, 300, 300, 300, 300])
@@ -143,11 +138,11 @@ class Test_doe_object(unittest.TestCase):
         square_result, optimize_result= doe_object3.stochastic_program(exp1, if_optimize=True, if_Cholesky=True, 
                                                              scale_nominal_param_value=True, objective_option='det', 
                                                              L_initial=np.linalg.cholesky(prior))
-
-        self.assertAlmostEqual(value(optimize_result.model.T[0]), 478.757557, places=2)
-        self.assertAlmostEqual(value(optimize_result.model.T[1]), 300.000261, places=2)
-        self.assertAlmostEqual(np.log10(optimize_result.trace), 3.305095, places=2)
-        self.assertAlmostEqual(np.log10(optimize_result.det), 6.059633, places=2)
+        
+        self.assertAlmostEqual(value(optimize_result.model.T[0]), 579.212348, places=2)
+        self.assertAlmostEqual(value(optimize_result.model.T[1]), 300.000450, places=2)
+        self.assertAlmostEqual(np.log10(optimize_result.trace), 3.214432, places=2)
+        self.assertAlmostEqual(np.log10(optimize_result.det), 6.214118, places=2)
         
         
 
