@@ -39,14 +39,13 @@ from pyomo.environ import (
     sqrt,
 )
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
+from pyomo.contrib.viewer.qt import available
 
-try:
-    no_pyqt = False
+
+if available:
     from pyomo.contrib.viewer.ui_data import UIData
     import pyomo.contrib.viewer.ui as ui
-except:
-    no_pyqt = True
-
+else:
     class UIData(object):
         model = None
 
@@ -54,7 +53,7 @@ except:
             pass
 
 
-@unittest.skipIf(no_pyqt, "PyQt needed to test tree data model")
+@unittest.skipIf(not available, "PyQt needed to test tree data model")
 class TestDataModel(unittest.TestCase):
     def setUp(self):
         # Borrowed this test model from the trust region tests

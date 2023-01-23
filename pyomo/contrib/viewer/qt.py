@@ -46,7 +46,7 @@ for module_str in supported:
         available = module_str
         break
     except Exception as e:
-        import_errors.append(f"{type(e).__name__}: {e.msg}")
+        import_errors.append(f"{e}")
 
 if not available:
     # If Qt is not available, we still want to be able to test as much
