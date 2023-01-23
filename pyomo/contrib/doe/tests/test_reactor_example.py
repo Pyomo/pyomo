@@ -29,7 +29,6 @@
 # import libraries
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
-    pandas as pd, pandas_available,
 )
 
 import pyomo.common.unittest as unittest
