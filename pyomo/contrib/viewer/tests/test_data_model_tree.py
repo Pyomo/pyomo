@@ -46,6 +46,7 @@ if available:
     from pyomo.contrib.viewer.ui_data import UIData
     import pyomo.contrib.viewer.ui as ui
 else:
+
     class UIData(object):
         model = None
 
