@@ -125,5 +125,5 @@ else:
         from PySide6 import QtUiTools as uic
     elif available == "PyQt5":
         from PyQt5.QtWidgets import QAction
-        from PyQt5.qt_module.QtCore import pyqtSignal as Signal
-        from PyQt5.qt_module import uic
+        from PyQt5.QtCore import pyqtSignal as Signal
+        from PyQt5 import uic
