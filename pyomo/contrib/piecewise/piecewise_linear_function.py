@@ -26,6 +26,11 @@ np, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import('scipy')
 spatial, scipy_available = attempt_import('scipy.spatial')
 
+# This is the default absolute tolerance in np.isclose... Not sure if it's
+# enough, but we need to make sure that 'barely negative' values are assumed to
+# be zero.
+ZERO_TOLERANCE = 1e-8
+
 class PiecewiseLinearFunctionData(_BlockData):
     _Block_reserved_words = Any
 
@@ -88,7 +93,7 @@ class PiecewiseLinearFunctionData(_BlockData):
                 # This would be a bug (non-square system)
                 raise
         for l in lambdas:
-            if l < 0:
+            if l < -ZERO_TOLERANCE:
                 # TODO: Do we need a tolerance?? Eeeeeek
                 return False
         return True
