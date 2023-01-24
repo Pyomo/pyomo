@@ -231,7 +231,8 @@ def assertExpressionsEqual(test, a, b, include_named_exprs=True,
                   f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")
 
 
-def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True):
+def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True,
+                                       places=None):
     """unittest-based assertion for comparing expressions
 
     This converts the expressions `a` and `b` into prefix notation and
@@ -281,7 +282,10 @@ def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True):
             if _a.__class__ not in native_types and \
                _b.__class__ not in native_types:
                 test.assertIs(_a.__class__, _b.__class__)
-            test.assertEqual(_a, _b)
+            if places is None:
+                test.assertEqual(_a, _b)
+            else:
+                test.assertAlmostEqual(_a, _b, places=places)
     except (PyomoException, AssertionError):
         test.fail(f"Expressions not structurally equal:\n\t"
                   f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")
