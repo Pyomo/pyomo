@@ -12,12 +12,20 @@
 #### Adding option for "local" EF starting Sept 2020
 #### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
 
+# TODO: move use_mpisppy to a Pyomo configuration option
+#
 # False implies always use the EF that is local to parmest
 use_mpisppy = True  # Use it if we can but use local if not.
 if use_mpisppy:
     try:
-        import mpisppy.utils.sputils as sputils
-    except:
+        # MPI-SPPY has an unfortunate side effect of outputting
+        # "[ 0.00] Initializing mpi-sppy" when it is imported.  This can
+        # cause things like doctests to fail.  We will suppress that
+        # information here.
+        from pyomo.common.tee import capture_output
+        with capture_output():
+            import mpisppy.utils.sputils as sputils
+    except ImportError:
         use_mpisppy = False  # we can't use it
 if use_mpisppy:
     # These things should be outside the try block.

@@ -21,165 +21,355 @@ from pyomo.util.blockutil import log_model_constraints
 
 logger = logging.getLogger(__name__)
 
-def log_infeasible_constraints(
-        m, tol=1E-6, logger=logger,
-        log_expression=False, log_variables=False
-):
-    """Print the infeasible constraints in the model.
+def _check_infeasible(obj, val, tol):
+    if val is None:
+        # Undefined value due to missing variable value or evaluation error
+        return 4
+    # Check for infeasibilities
+    infeasible = 0
+    if obj.has_lb():
+        lb = value(obj.lower, exception=False)
+        if lb is None:
+            infeasible |= 4 | 1
+        elif lb - val > tol:
+            infeasible |= 1
+    if obj.has_ub():
+        ub = value(obj.upper, exception=False)
+        if ub is None:
+            infeasible |= 4 | 2
+        elif val - ub > tol:
+            infeasible |= 2
+    return infeasible
 
-    Uses the current model state. Uses pyomo.util.infeasible logger unless one
-    is provided.
 
-    Args:
-        m (Block): Pyomo block or model to check
-        tol (float): feasibility tolerance
-        log_expression (bool): If true, prints the constraint expression
-        log_variables (bool): If true, prints the constraint variable names and values
+def find_infeasible_constraints(m, tol=1E-6):
+    """Find the infeasible constraints in the model.
+
+    Uses the current model state.
+
+    Parameters
+    ----------
+    m: Block
+        Pyomo block or model to check
+
+    tol: float
+        absolute feasibility tolerance
+
+    Yields
+    ------
+    constr: ConstraintData
+        The infeasible constraint object
+
+    body_value: float or None
+        The numeric value of the constraint body (or None if there was an
+        error evaluating the expression)
+
+    infeasible: int
+        A bitmask indicating which bound was infeasible (1 for the lower
+        bound, 2 for the upper bound, or 4 if the body or bound was
+        undefined)
 
     """
     # Iterate through all active constraints on the model
     for constr in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
-        constr_body_value = value(constr.body, exception=False)
-        constr_lb_value = value(constr.lower, exception=False)
-        constr_ub_value = value(constr.upper, exception=False)
+        body_value = value(constr.body, exception=False)
+        infeasible = _check_infeasible(constr, body_value, tol)
+        if infeasible:
+            yield constr, body_value, infeasible
 
-        constr_undefined = False
-        equality_violated = False
-        lb_violated = False
-        ub_violated = False
 
-        if constr_body_value is None:
-            # Undefined constraint body value due to missing variable value
-            constr_undefined = True
-            pass
-        else:
-            # Check for infeasibilities
-            if constr.equality:
-                if fabs(constr_lb_value - constr_body_value) >= tol:
-                    equality_violated = True
-            else:
-                if constr.has_lb() and constr_lb_value - constr_body_value >= tol:
-                    lb_violated = True
-                if constr.has_ub() and constr_body_value - constr_ub_value >= tol:
-                    ub_violated = True
+def log_infeasible_constraints(
+        m, tol=1E-6, logger=logger,
+        log_expression=False, log_variables=False
+):
+    """Logs the infeasible constraints in the model.
 
-        if not any((constr_undefined, equality_violated, lb_violated, ub_violated)):
-            # constraint is fine. skip to next constraint
-            continue
+    Uses the current model state.  Messages are logged at the INFO level.
 
-        output_dict = dict(name=constr.name)
+    Parameters
+    ----------
+    m: Block
+        Pyomo block or model to check
 
-        log_template = "CONSTR {name}: {lb_value}{lb_operator}{body_value}{ub_operator}{ub_value}"
-        if log_expression:
-            log_template += "\n  - EXPR: {lb_expr}{lb_operator}{body_expr}{ub_operator}{ub_expr}"
-        if log_variables:
-            vars_template = "\n  - VAR {name}: {value}"
-            log_template += "{var_printout}"
-            constraint_vars = identify_variables(constr.body, include_fixed=True)
-            output_dict['var_printout'] = ''.join(
-                vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
+    tol: float
+        absolute feasibility tolerance
 
-        output_dict['body_value'] = "missing variable value" if constr_undefined else constr_body_value
-        output_dict['body_expr'] = constr.body
+    logger: logging.Logger
+        Logger to output to; defaults to `pyomo.util.infeasible`.
+
+    log_expression: bool
+        If true, prints the constraint expression
+
+    log_variables: bool
+        If true, prints the constraint variable names and values
+
+    """
+    if logger.getEffectiveLevel() > logging.INFO:
+        logger.warning(
+            'log_infeasible_constraints() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of constraint feasibility'
+        )
+
+    for constr, body, infeas in find_infeasible_constraints(m, tol):
         if constr.equality:
-            output_dict['lb_value'] = output_dict['lb_expr'] = output_dict['lb_operator'] = ""
-            output_dict['ub_value'] = constr_ub_value
-            output_dict['ub_expr'] = constr.upper
-            if equality_violated:
-                output_dict['ub_operator'] = " =/= "
-            elif constr_undefined:
-                output_dict['ub_operator'] = " =?= "
+            lb = lb_expr = lb_op = ""
+            ub_expr = constr.upper
+            ub = value(ub_expr, exception=False)
+            if body is None:
+                ub_op = " =?= "
+            else:
+                ub_op = " =/= "
         else:
             if constr.has_lb():
-                output_dict['lb_value'] = constr_lb_value
-                output_dict['lb_expr'] = constr.lower
-                if lb_violated:
-                    output_dict['lb_operator'] = " </= "
-                elif constr_undefined:
-                    output_dict['lb_operator'] = " <?= "
+                lb_expr = constr.lower
+                lb = value(lb_expr, exception=False)
+                if body is None:
+                    lb_op = " <?= "
+                elif infeas & 1:
+                    lb_op = " </= "
                 else:
-                    output_dict['lb_operator'] = " <= "
+                    lb_op = " <= "
             else:
-                output_dict['lb_value'] = output_dict['lb_expr'] = output_dict['lb_operator'] = ""
+                lb = lb_expr = lb_op = ""
 
             if constr.has_ub():
-                output_dict['ub_value'] = constr_ub_value
-                output_dict['ub_expr'] = constr.upper
-                if ub_violated:
-                    output_dict['ub_operator'] = " </= "
-                elif constr_undefined:
-                    output_dict['ub_operator'] = " <?= "
+                ub_expr = constr.upper
+                ub = value(ub_expr, exception=False)
+                if body is None:
+                    ub_op = " <?= "
+                elif infeas & 2:
+                    ub_op = " </= "
                 else:
-                    output_dict['ub_operator'] = " <= "
+                    ub_op = " <= "
             else:
-                output_dict['ub_value'] = output_dict['ub_expr'] = output_dict['ub_operator'] = ""
+                ub = ub_expr = ub_op = ""
+        if body is None:
+            body = "evaluation error"
+        if lb is None:
+            lb = "evaluation error"
+        if ub is None:
+            ub = "evaluation error"
 
-        logger.info(log_template.format(**output_dict))
+        line = f"CONSTR {constr.name}: {lb}{lb_op}{body}{ub_op}{ub}"
+        if log_expression:
+            line += (
+                f"\n  - EXPR: {lb_expr}{lb_op}{constr.body}{ub_op}{ub_expr}"
+            )
+        if log_variables:
+            line += ''.join(
+                f"\n  - VAR {v.name}: {v.value}"
+                for v in identify_variables(constr.body, include_fixed=True)
+            )
+
+        logger.info(line)
 
 
-def log_infeasible_bounds(m, tol=1E-6, logger=logger):
-    """Print the infeasible variable bounds in the model.
+def find_infeasible_bounds(m, tol=1E-6):
+    """Find variables whose values are outside their bounds
 
-    Args:
-        m (Block): Pyomo block or model to check
-        tol (float): feasibility tolerance
+    Uses the current model state. Variables with no values are returned
+    as if they were infeasible.
+
+    Parameters
+    ----------
+    m: Block
+        Pyomo block or model to check
+
+    tol: float
+        absolute feasibility tolerance
+
+    Yields
+    ------
+    var: VarData
+        The variable that is outside its bounds
+
+    infeasible: int
+        A bitmask indicating which bound was infeasible (1 for the lower
+        bound or 2 for the upper bound; 4 indicates the variable had no
+        value or a bound was undefined)
 
     """
     for var in m.component_data_objects(
             ctype=Var, descend_into=True):
-        var_value = var.value
-        if var_value is None:
-            logger.debug("Skipping VAR {} with no assigned value.")
+        val = var.value
+        infeasible = _check_infeasible(var, val, tol)
+        if infeasible:
+            yield var, infeasible
+
+
+_evaluation_errors = {
+    4: 'no assigned value',
+    5: 'error evaluating lower bound',
+    6: 'error evaluating upper bound',
+    7: 'error evaluating lower or upper bounds',
+}
+
+def log_infeasible_bounds(m, tol=1E-6, logger=logger):
+    """Logs the infeasible variable bounds in the model.
+
+    Parameters
+    ----------
+    m: Block
+        Pyomo block or model to check
+
+    tol: float
+        absolute feasibility tolerance
+
+    logger: logging.Logger
+        Logger to output to; defaults to `pyomo.util.infeasible`.
+
+    """
+    if logger.getEffectiveLevel() > logging.INFO:
+        logger.warning(
+            'log_infeasible_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of bound feasibility'
+        )
+
+    for var, infeas in find_infeasible_bounds(m, tol):
+        if infeas & 4:
+            logger.info(f"VAR {var.name}: {_evaluation_errors[infeas]}.")
             continue
-        if var.has_lb() and value(var.lb - var) >= tol:
-            logger.info('VAR {}: {} >/= LB {}'.format(
-                var.name, value(var), value(var.lb)))
-        if var.has_ub() and value(var - var.ub) >= tol:
-            logger.info('VAR {}: {} </= UB {}'.format(
-                var.name, value(var), value(var.ub)))
+        if infeas & 1:
+            logger.info(f'VAR {var.name}: LB {var.lb} </= {var.value}')
+        if infeas & 2:
+            logger.info(f'VAR {var.name}: {var.value} </= UB {var.ub}')
+
+
+def _check_close(obj, val, tol):
+    if val is None:
+        return 4
+    close = 0
+    if obj.has_lb():
+        lb = value(obj.lower, exception=False)
+        if lb is None:
+            close |= 4 | 1
+        if fabs(lb - val) <= tol:
+            close |= 1
+    if obj.has_ub():
+        ub = value(obj.upper, exception=False)
+        if ub is None:
+            close |= 4 | 2
+        if fabs(val - ub) <= tol:
+            close |= 2
+    return close
+
+
+def find_close_to_bounds(m, tol=1E-6):
+    """Find variables and constraints whose values are close to their bounds.
+
+    Uses the current model state. Variables with no values and
+    constraints with evaluation errors are returned as if they were
+    close to their bounds.
+
+    Note
+    ----
+    This will omit variables and constraints in several situations:
+      - Equality constraints are omitted (as they should always
+        be close to their bounds!).
+      - Range constraints where both the upper and lower bounds are
+        close are omitted (these are basically equality constraints).
+      - Fixed variables are omitted (this is analogous to an equality
+        constraint).
+      - Variables where both the upper and lower bounds are close are
+        omitted (these are basically fixed variables).
+
+    Parameters
+    ----------
+    m: Block
+        Pyomo block or model to check
+
+    tol: float
+        absolute feasibility tolerance: values within tol of the bound
+        will be returned.
+
+    Yields
+    ------
+    var: ComponentData
+        The variable or constraint that is close to its bounds
+
+    val: float
+        The value of the variable or constraint body
+
+    close: int
+        A bitmask indicating which bound(s) the value was close to (1
+        for the lower bound or 2 for the upper bound; 0 indicates the
+        variable or constraint had no value or evaluating the constraint
+        generated an error)
+
+    """
+    for var in m.component_data_objects(ctype=Var, descend_into=True):
+        if var.fixed:
+            continue
+        val = var.value
+        close = _check_close(var, val, tol)
+        if not close or close & 4:
+            # interior value or evaluation error
+            continue
+        if close == 3:
+            # The bounds are too close: skip this Var (it is
+            # effectively fixed)
+            continue
+        yield var, val, close
+
+    for con in m.component_data_objects(
+            ctype=Constraint, active=True, descend_into=True):
+        if con.equality:
+            continue
+        val = value(con.body, exception=False)
+        close = _check_close(con, val, tol)
+        if not close or close & 4:
+            # interior value or evaluation error
+            continue
+        if close == 3:
+            # The bounds are too close: skip this Constraint (it is
+            # effectively an equality)
+            continue
+        yield con, val, close
 
 
 def log_close_to_bounds(m, tol=1E-6, logger=logger):
     """Print the variables and constraints that are near their bounds.
 
-    Fixed variables and equality constraints are excluded from this analysis.
+    See :py:func:`find_close_to_bounds()` for a description of the
+    variables and constraints that are returned (and which are omitted).
 
-    Args:
-        m (Block): Pyomo block or model to check
-        tol (float): bound tolerance
+    Parameters
+    ----------
+    m: Block
+        Pyomo block or model to check
+
+    tol: float
+        absolute feasibility tolerance
+
+    logger: logging.Logger
+        Logger to output to; defaults to `pyomo.util.infeasible`.
+
     """
-    for var in m.component_data_objects(
-            ctype=Var, descend_into=True):
-        if var.fixed:
-            continue
-        var_value = var.value
-        if var_value is None:
-            logger.debug("Skipping VAR {} with no assigned value.")
-            continue
-        if (var.has_lb() and var.has_ub() and
-                fabs(value(var.ub - var.lb)) <= 2 * tol):
-            continue  # if the bounds are too close, skip.
-        if var.has_lb() and fabs(value(var.lb - var)) <= tol:
-            logger.info('{} near LB of {}'.format(var.name, value(var.lb)))
-        elif var.has_ub() and fabs(value(var.ub - var)) <= tol:
-            logger.info('{} near UB of {}'.format(var.name, value(var.ub)))
+    if logger.getEffectiveLevel() > logging.INFO:
+        logger.warning(
+            'log_close_to_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of bound status'
+        )
 
-    for constr in m.component_data_objects(
-            ctype=Constraint, descend_into=True, active=True):
-        if not constr.equality:
-            # skip equality constraints, because they should always be close to
-            # bounds if enforced.
-            body_value = value(constr.body, exception=False)
-            if body_value is None:
-                logger.info("Skipping CONSTR {}: missing variable value.".format(constr.name))
-                continue
-            if (constr.has_ub() and
-                    fabs(value(body_value - constr.upper)) <= tol):
-                logger.info('{} near UB'.format(constr.name))
-            if (constr.has_lb() and
-                    fabs(value(body_value - constr.lower)) <= tol):
-                logger.info('{} near LB'.format(constr.name))
+    for obj, val, close in find_close_to_bounds(m, tol):
+        if not close:
+            if obj.ctype is Var:
+                logger.debug(f"Skipping VAR {obj.name} with no assigned value.")
+            elif obj.ctype is Constraint:
+                logger.info(f"Skipping CONSTR {obj.name}: evaluation error.")
+            else:
+                logger.error(
+                    f"Object {obj.name} was neither a Var nor Constraint")
+            continue
+        if close & 1:
+            logger.info(f'{obj.name} near LB of {obj.lb}')
+        if close & 2:
+            logger.info(f'{obj.name} near UB of {obj.ub}')
+    return
 
 
 @deprecated("log_active_constraints is deprecated.  "

@@ -201,7 +201,7 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
 
@@ -211,7 +211,7 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
-        channels: conda-forge
+        channels: conda-forge,gurobi,ibmdecisionoptimization,fico-xpress
         channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
@@ -269,10 +269,19 @@ jobs:
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
       run: |
+        # Set up environment
         mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
+        # Try to install mamba
+        conda install -q -y -n base conda-libmamba-solver || MAMBA_FAILED=1
+        if test -z "$MAMBA_FAILED"; then
+            echo "*** Activating the mamba environment solver ***"
+            conda config --set solver libmamba
+        fi
+        # Print environment info
+        echo "*** CONDA environment: ***"
         conda info
         conda config --show-sources
         conda config --show channels
@@ -303,17 +312,21 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
-        conda install -q -y -c conda-forge $CONDA_DEPENDENCIES
+        echo "*** Install Pyomo dependencies ***"
+        conda install -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            conda install -q -y -c ibmdecisionoptimization \
-                'cplex>=12.10' docplex \
+            echo "*** Install CPLEX ***"
+            conda install -q -y 'cplex>=12.10' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            conda install -q -y -c gurobi gurobi \
+            echo "*** Install Gurobi ***"
+            conda install -q -y gurobi \
                 || echo "WARNING: Gurobi is not available"
-            conda install -q -y -c fico-xpress xpress \
+            echo "*** Install Xpress ***"
+            conda install -q -y xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps scip; do
-                conda install -q -y -c conda-forge $PKG \
+                echo "*** Install $PKG ***"
+                conda install -q -y $PKG \
                     || echo "WARNING: $PKG is not available"
             done
             # TODO: This is a hack to stop test_qt.py from running until we
@@ -628,7 +641,7 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: 3.8
 
@@ -696,7 +709,7 @@ jobs:
         path: artifacts
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: 3.8
 

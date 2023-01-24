@@ -46,14 +46,24 @@ logger = logging.getLogger('pyomo.core')
 
 
 def _handle_PowExpression(visitor, node, values):
-    x,y = node.args
-    if type(x) not in native_types and not x.is_fixed() and \
-       type(y) not in native_types and not y.is_fixed():
-        # Per the BARON manual, x ^ y is allowed as long as x
-        # and y are not both variables
-        return f"exp(({values[0]}) * log({values[1]}))"
-    else:
+    # Per the BARON manual, x ^ y is allowed as long as x and y are not
+    # both variables.  There is an issue that if one of the arguments
+    # contains "0*var", Pyomo will see that as fixed, but Baron will see
+    # it as variable.  We will work around that by resolving any fixed
+    # expressions to their corresponding fixed value.
+    unfixed_count = 0
+    for i, arg in enumerate(node.args):
+        if type(arg) in native_types:
+            pass
+        elif arg.is_fixed():
+            values[i] = ftoa(value(arg))
+        else:
+            unfixed_count += 1
+
+    if unfixed_count < 2:
         return f"{values[0]} ^ {values[1]}"
+    else:
+        return f"exp(({values[0]}) * log({values[1]}))"
 
 _allowableUnaryFunctions = {
     'exp', 'log10', 'log', 'sqrt',

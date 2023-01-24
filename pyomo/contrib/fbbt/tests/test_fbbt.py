@@ -669,8 +669,8 @@ class FbbtTestBase(object):
             x = 10**z
             print(xl, xu, cl, cu)
             print(x)
-            self.assertTrue(np.all(xl <= x))
-            self.assertTrue(np.all(xu >= x))
+            self.assertTrue(np.all(xl - 1e-14 <= x))
+            self.assertTrue(np.all(xu + 1e-14 >= x))
 
     def test_sin(self):
         m = pyo.Block(concrete=True)
