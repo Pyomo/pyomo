@@ -118,6 +118,19 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
                                                   [(0, 7), (0, 4), (3, 4)]])
         self.check_pw_linear_approximation(m)
 
+    def test_pw_linear_approx_of_paraboloid_linear_funcs(self):
+        m = self.make_model()
+        def f1(x1, x2):
+            return 3*x1 + 5*x2 - 4
+        def f2(x1, x2):
+            return 3*x1 + 11*x2 - 28
+        m.pw = PiecewiseLinearFunction(simplices=[[(0, 1), (0, 4), (3, 1)],
+                                                  [(0, 1), (3, 4), (3, 1)],
+                                                  [(3, 4), (3, 7), (0, 7)],
+                                                  [(0, 7), (0, 4), (3, 4)]],
+                                       linear_functions=[f1, f1, f2, f2])
+        self.check_pw_linear_approximation(m)
+
         #m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
 
 
