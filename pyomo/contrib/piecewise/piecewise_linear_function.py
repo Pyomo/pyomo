@@ -93,6 +93,20 @@ class PiecewiseLinearFunctionData(_BlockData):
                 return False
         return True
 
+    def _get_simplices_from_arg(self, simplices):
+        self._simplices = []
+        known_points = set()
+        point_to_index = {}
+        for simplex in simplices:
+            extreme_pts = []
+            for pt in simplex:
+                if pt not in known_points:
+                    known_points.add(pt)
+                    self._points.append(pt)
+                    point_to_index[pt] = len(self._points) - 1
+                extreme_pts.append(point_to_index[pt])
+            self._simplices.append(tuple(extreme_pts))
+
     @property
     def points(self):
         return self._points
@@ -163,6 +177,8 @@ class PiecewiseLinearFunction(Block):
             (False, False, True,
              True): self._construct_from_linear_functions_and_simplices
         }
+        # [ESJ 1/24/23]: TODO: Eventually we should also support constructing
+        # this from table data--a mapping of points to function values.
 
         _func_arg = kwargs.pop('function', None)
         _func_rule_arg = kwargs.pop('function_rule', None)
@@ -245,24 +261,10 @@ class PiecewiseLinearFunction(Block):
 
         return obj
 
-    def _get_simplices_from_arg(self, simplices):
-        self._simplices = []
-        known_points = set()
-        point_to_index = {}
-        for simplex in simplices:
-            extreme_pts = []
-            for pt in simplex:
-                if pt not in known_points:
-                    known_points.add(pt)
-                    self._points.append(pt)
-                    point_to_index[pt] = len(self._points) - 1
-                extreme_pts.append(point_to_index[pt])
-            self._simplices.append(tuple(extreme_pts))
-
     def _construct_from_function_and_simplices(self, obj, parent,
                                                nonlinear_function):
         if obj._simplices is None:
-            self._get_simplices_from_arg(obj._simplices_rule(parent,
+            obj._get_simplices_from_arg(self._simplices_rule(parent,
                                                              obj._index))
         simplices = obj._simplices
 
@@ -312,9 +314,9 @@ class PiecewiseLinearFunction(Block):
                                                        nonlinear_function):
         # We know that we have simplices because else this handler wouldn't
         # have been called.
-        self._get_simplices_from_arg(obj._simplices_rule(parent, obj._index))
-        self._linear_functions = [f for f in obj._linear_funcs_rule(parent,
-                                                                    obj._index)]
+        obj._get_simplices_from_arg(self._simplices_rule(parent, obj._index))
+        obj._linear_functions = [f for f in self._linear_funcs_rule(
+            parent, obj._index)]
         return obj
 
     def _getitem_when_not_present(self, index):
@@ -340,9 +342,9 @@ class PiecewiseLinearFunction(Block):
             raise ValueError("Unsupported set of arguments given for "
                              "constructing PiecewiseLinearFunction. "
                              "Expected a nonlinear function and a list"
-                             "of breakpoints, a nonlinear function an a list "
+                             "of breakpoints, a nonlinear function and a list "
                              "of simplices, or a list of linear functions and "
-                             "a list of corresponding domains.")
+                             "a list of corresponding simplices.")
         return handler(obj, parent, nonlinear_function)
 
 
