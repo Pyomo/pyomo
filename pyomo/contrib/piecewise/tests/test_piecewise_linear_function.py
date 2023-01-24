@@ -14,7 +14,7 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
 from pyomo.core.expr.compare import (
     assertExpressionsEqual, assertExpressionsStructurallyEqual)
-from pyomo.environ import ConcreteModel, log, Var
+from pyomo.environ import ConcreteModel, Constraint, log, Var
 
 np, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import('scipy')
@@ -26,6 +26,16 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         def f(x):
             return log(x)
         m.f = f
+
+        def f1(x):
+            return (log(3)/2)*x - log(3)/2
+        m.f1 = f1
+        def f2(x):
+            return (log(2)/3)*x + log(3/2)
+        m.f2 = f2
+        def f3(x):
+            return (log(5/3)/4)*x + log(6/((5/3)**(3/2)))
+        m.f3 = f3
 
         return m
 
@@ -58,19 +68,17 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
 
     def test_pw_linear_approx_of_ln_x_linear_funcs(self):
         m = self.make_ln_x_model()
-        def f1(x):
-            return (log(3)/2)*x - log(3)/2
-        m.f1 = f1
-        def f2(x):
-            return (log(2)/3)*x + log(3/2)
-        m.f2 = f2
-        def f3(x):
-            return (log(5/3)/4)*x + log(6/((5/3)**(3/2)))
-        m.f3 = f3
-                    
         m.pw = PiecewiseLinearFunction(simplices=[(1, 3), (3, 6), (6, 10)],
                                        linear_functions=[m.f1, m.f2, m.f3])
         self.check_ln_x_approx(m)
+
+    def test_use_pw_function_in_constraint(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(simplices=[(1, 3), (3, 6), (6, 10)],
+                                       linear_functions=[m.f1, m.f2, m.f3])
+        m.c = Constraint(expr=m.pw(m.x) <= 1)
+        self.assertEqual(str(m.c.body), "pw(x)")
+
 
 class TestPiecewiseLinearFunction3D(unittest.TestCase):
     @unittest.skipUnless(scipy_available and numpy_available,

@@ -11,7 +11,9 @@
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
-from pyomo.core import Any, NonNegativeIntegers, value
+from pyomo.contrib.piecewise.piecewise_linear_expression import (
+    PiecewiseLinearExpression)
+from pyomo.core import Any, NonNegativeIntegers, value, Var
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.expression import Expression
@@ -39,6 +41,10 @@ class PiecewiseLinearFunctionData(_BlockData):
 
     def __call__(self, *args):
         ans = 0
+        if any(isinstance(arg, Var) for arg in args):
+            expr = PiecewiseLinearExpression([self] + list(args))
+            self._expressions[len(self._expressions)] = expr
+            return expr
         if all(arg in EXPR.native_types for arg in args):
             # We need to actually evaluate
             return self._evaluate(*args)
@@ -344,12 +350,5 @@ class ScalarPiecewiseLinearFunction(PiecewiseLinearFunctionData,
         self._data[None] = self
         self._index = UnindexedComponent_index
 
-
 class IndexedPiecewiseLinearFunction(PiecewiseLinearFunction):
     pass
-
-class PiecewiseLinearExpression():
-    # This needs to be an expression node, it is what the _expressions above are
-    # going to store.
-    pass
-    # example : m.c = Constraint(expr=m.pw(m.x, m.y) <= 0)
