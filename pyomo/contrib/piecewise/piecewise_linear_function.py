@@ -218,12 +218,12 @@ class PiecewiseLinearFunction(Block):
             # This is univariate and we'll handle it separately in order to
             # avoid a dependence on numpy.
             points.sort()
-            self._simplices = []
+            obj._simplices = []
             for i in range(len(points) - 1):
-                self._simplices.append((i, i + 1))
-                self._points.append(points[i])
+                obj._simplices.append((i, i + 1))
+                obj._points.append(points[i])
             # Add the last one
-            self._points.append(points[-1])
+            obj._points.append(points[-1])
             return self._construct_from_univariate_function_and_segments(
                 obj, nonlinear_function)
 
