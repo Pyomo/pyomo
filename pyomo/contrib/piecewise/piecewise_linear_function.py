@@ -49,7 +49,7 @@ class PiecewiseLinearFunctionData(_BlockData):
             # We need to actually evaluate
             return self._evaluate(*args)
         else:
-            expr = PiecewiseLinearExpression([self] + list(args))
+            expr = PiecewiseLinearExpression(args, self)
             self._expressions[len(self._expressions)] = expr
             return expr
 
@@ -81,7 +81,7 @@ class PiecewiseLinearFunctionData(_BlockData):
         A = np.ones((dim + 1, dim + 1))
         b = np.array([x for x in pt] + [1])
         for j, extreme_point in enumerate(simplex):
-            for i, coord in enumerate(self.points[extreme_point]):
+            for i, coord in enumerate(self._points[extreme_point]):
                 A[i, j] = coord
         try:
             lambdas = np.linalg.solve(A, b)
@@ -111,20 +111,6 @@ class PiecewiseLinearFunctionData(_BlockData):
                     point_to_index[pt] = len(self._points) - 1
                 extreme_pts.append(point_to_index[pt])
             self._simplices.append(tuple(extreme_pts))
-
-    @property
-    def points(self):
-        return self._points
-
-    @property
-    def simplices(self):
-        # TODO: Is this really what you want? These are by index right now,
-        # scipy style
-        return self._simplices
-
-    @property
-    def linear_functions(self):
-        return self._linear_functions
 
 
 @ModelComponentFactory.register("Multidimensional piecewise linear function")

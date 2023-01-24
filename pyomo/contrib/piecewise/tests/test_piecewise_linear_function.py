@@ -40,34 +40,34 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         return m
 
     def check_ln_x_approx(self, pw, x):
-        self.assertEqual(len(pw.simplices), 3)
-        self.assertEqual(len(pw.linear_functions), 3)
+        self.assertEqual(len(pw._simplices), 3)
+        self.assertEqual(len(pw._linear_functions), 3)
         # indices of extreme points.
         simplices = [(0, 1), (1, 2), (2, 3)]
         for idx, simplex in enumerate(simplices):
-            self.assertEqual(pw.simplices[idx], simplices[idx])
+            self.assertEqual(pw._simplices[idx], simplices[idx])
 
-        assertExpressionsEqual(self, pw.linear_functions[0](x),
+        assertExpressionsEqual(self, pw._linear_functions[0](x),
                                (log(3)/2)*x - log(3)/2, places=7)
-        assertExpressionsEqual(self, pw.linear_functions[1](x),
+        assertExpressionsEqual(self, pw._linear_functions[1](x),
                                (log(2)/3)*x + log(3/2), places=7)
-        assertExpressionsEqual(self, pw.linear_functions[2](x),
+        assertExpressionsEqual(self, pw._linear_functions[2](x),
                                (log(5/3)/4)*x + log(6/((5/3)**(3/2))),
                                places=7)
 
     def check_x_squared_approx(self, pw, x):
-        self.assertEqual(len(pw.simplices), 3)
-        self.assertEqual(len(pw.linear_functions), 3)
+        self.assertEqual(len(pw._simplices), 3)
+        self.assertEqual(len(pw._linear_functions), 3)
         # indices of extreme points.
         simplices = [(0, 1), (1, 2), (2, 3)]
         for idx, simplex in enumerate(simplices):
-            self.assertEqual(pw.simplices[idx], simplices[idx])
+            self.assertEqual(pw._simplices[idx], simplices[idx])
 
-        assertExpressionsStructurallyEqual(self, pw.linear_functions[0](x),
+        assertExpressionsStructurallyEqual(self, pw._linear_functions[0](x),
                                            4*x - 3, places=7)
-        assertExpressionsStructurallyEqual(self, pw.linear_functions[1](x),
+        assertExpressionsStructurallyEqual(self, pw._linear_functions[1](x),
                                            9*x - 18, places=7)
-        assertExpressionsStructurallyEqual(self, pw.linear_functions[2](x),
+        assertExpressionsStructurallyEqual(self, pw._linear_functions[2](x),
                                            16*x - 60, places=7)
 
     def test_pw_linear_approx_of_ln_x_simplices(self):
@@ -166,21 +166,25 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         return m
 
     def check_pw_linear_approximation(self, m):
-        self.assertEqual(len(m.pw.simplices), 4)
-        self.assertEqual(len(m.pw.linear_functions), 4)
+        self.assertEqual(len(m.pw._simplices), 4)
+        self.assertEqual(len(m.pw._linear_functions), 4)
 
-        assertExpressionsStructurallyEqual(self,
-                                           m.pw.linear_functions[0](m.x1, m.x2),
-                                           3*m.x1 + 5*m.x2 - 4, places=7)
-        assertExpressionsStructurallyEqual(self,
-                                           m.pw.linear_functions[1](m.x1, m.x2),
-                                           3*m.x1 + 5*m.x2 - 4, places=7)
-        assertExpressionsStructurallyEqual(self,
-                                           m.pw.linear_functions[2](m.x1, m.x2),
-                                           3*m.x1 + 11*m.x2 - 28, places=7)
-        assertExpressionsStructurallyEqual(self,
-                                           m.pw.linear_functions[3](m.x1, m.x2),
-                                           3*m.x1 + 11*m.x2 - 28, places=7)
+        assertExpressionsStructurallyEqual(
+            self,
+            m.pw._linear_functions[0](m.x1, m.x2),
+            3*m.x1 + 5*m.x2 - 4, places=7)
+        assertExpressionsStructurallyEqual(
+            self,
+            m.pw._linear_functions[1](m.x1, m.x2),
+            3*m.x1 + 5*m.x2 - 4, places=7)
+        assertExpressionsStructurallyEqual(
+            self,
+            m.pw._linear_functions[2](m.x1, m.x2),
+            3*m.x1 + 11*m.x2 - 28, places=7)
+        assertExpressionsStructurallyEqual(
+            self,
+            m.pw._linear_functions[3](m.x1, m.x2),
+            3*m.x1 + 11*m.x2 - 28, places=7)
 
     def test_pw_linear_approx_of_paraboloid_points(self):
         m = self.make_model()
@@ -241,7 +245,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
                                        linear_functions=[f1, f1, f2, f2])
         # check it's equal to the original function at all the extreme points of
         # the simplices
-        for (x1, x2) in m.pw.points:
+        for (x1, x2) in m.pw._points:
             self.assertAlmostEqual(m.pw(x1, x2), m.f(x1, x2))
         # check some points in the approximation
         self.assertAlmostEqual(m.pw(1, 3), f1(1, 3))
