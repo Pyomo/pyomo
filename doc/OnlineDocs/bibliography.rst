@@ -9,7 +9,7 @@ Bibliography
 
 .. [GAMS] http://www.gams.com
 
-.. [GRCSPaper] Isenberg, NM, Akula, P, Eslick, JC, Bhattacharyya, D,
+.. [Isenberg_et_al] Isenberg, NM, Akula, P, Eslick, JC, Bhattacharyya, D,
    Miller, DC, Gounaris, CE. A generalized cutting‐set approach for
    nonlinear robust optimization in process systems
    engineering. AIChE J. 2021; 67:e17175. DOI `10.1002/aic.17175
