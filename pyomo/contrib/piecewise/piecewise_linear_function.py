@@ -26,7 +26,6 @@ np, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import('scipy')
 spatial, scipy_available = attempt_import('scipy.spatial')
 
-
 class PiecewiseLinearFunctionData(_BlockData):
     _Block_reserved_words = Any
 
@@ -40,41 +39,44 @@ class PiecewiseLinearFunctionData(_BlockData):
             self._linear_functions = []
 
     def __call__(self, *args):
-        ans = 0
-        if any(isinstance(arg, Var) for arg in args):
+        if all(type(arg) in EXPR.native_types or not
+               arg.is_potentially_variable() for arg in args):
+            # We need to actually evaluate
+            return self._evaluate(*args)
+        else:
             expr = PiecewiseLinearExpression([self] + list(args))
             self._expressions[len(self._expressions)] = expr
             return expr
-        if all(arg in EXPR.native_types for arg in args):
-            # We need to actually evaluate
-            return self._evaluate(*args)
 
     def _evaluate(self, *args):
-        # ESJ: This is a very inefficient implementation in high dimension, but
+        # ESJ: This is a very inefficient implementation in high dimensions, but
         # for now we will just do a linear scan of the simplices.
         if self._simplices is None:
             raise RuntimeError("Cannot evaluate PiecewiseLinearFunction--it "
                                "appears it is not fully defined. (No simplices "
                                "are stored.)")
 
-        pt = (arg for arg in args)
-        for idx, simplex, func in enumerate(zip(self._simplices,
-                                                self._linear_functions)):
-            if _pt_in_simplex(pt, simplex):
+        pt = [value(arg) for arg in args]
+        for simplex, func in zip(self._simplices, self._linear_functions):
+            if self._pt_in_simplex(pt, simplex):
                 return func(*args)
+
+        raise ValueError("Unsuccessful evaluation of PiecewiseLinearFunction "
+                         "'%s' at point (%s). Is the point in the function's "
+                         "domain?" %
+                         (self.name, ', '.join(str(arg) for arg in args)))
 
     def _pt_in_simplex(self, pt, simplex):
         dim = len(pt)
         if dim == 1:
-            return self._points[simplex[0]] <= pt and \
-                self._points[simplex[1]] >= pt
+            return self._points[simplex[0]] <= pt[0] and \
+                self._points[simplex[1]] >= pt[0]
         # Otherwise, we check if pt is a convex combination of the simplex's
         # extreme points
-        A = np.ones((dim, dim))
-        b = np.ones((dim, 0))
-        for i, extreme_point in enumerate(simplex):
-            b[i] = pt[i]
-            for j, coord in enumerate(self._points[extreme_point]):
+        A = np.ones((dim + 1, dim + 1))
+        b = np.array([x for x in pt] + [1])
+        for j, extreme_point in enumerate(simplex):
+            for i, coord in enumerate(self.points[extreme_point]):
                 A[i, j] = coord
         try:
             lambdas = np.linalg.solve(A, b)
@@ -90,6 +92,10 @@ class PiecewiseLinearFunctionData(_BlockData):
                 # TODO: Do we need a tolerance?? Eeeeeek
                 return False
         return True
+
+    @property
+    def points(self):
+        return self._points
 
     @property
     def simplices(self):

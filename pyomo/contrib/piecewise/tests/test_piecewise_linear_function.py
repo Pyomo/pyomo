@@ -79,6 +79,17 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         m.c = Constraint(expr=m.pw(m.x) <= 1)
         self.assertEqual(str(m.c.body), "pw(x)")
 
+    def test_evaluate_pw_function(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(simplices=[(1, 3), (3, 6), (6, 10)],
+                                       linear_functions=[m.f1, m.f2, m.f3])
+        self.assertAlmostEqual(m.pw(1), 0)
+        self.assertAlmostEqual(m.pw(2), m.f1(2))
+        self.assertAlmostEqual(m.pw(3), log(3))
+        self.assertAlmostEqual(m.pw(4.5), m.f2(4.5))
+        self.assertAlmostEqual(m.pw(9.2), m.f3(9.2))
+        self.assertAlmostEqual(m.pw(10), log(10))
+
 
 class TestPiecewiseLinearFunction3D(unittest.TestCase):
     @unittest.skipUnless(scipy_available and numpy_available,
@@ -139,23 +150,38 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
                                        linear_functions=[f1, f1, f2, f2])
         self.check_pw_linear_approximation(m)
 
-        #m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
+    def test_use_pw_linear_approx_in_constraint(self):
+        m = self.make_model()
+        def f1(x1, x2):
+            return 3*x1 + 5*x2 - 4
+        def f2(x1, x2):
+            return 3*x1 + 11*x2 - 28
+        m.pw = PiecewiseLinearFunction(simplices=[[(0, 1), (0, 4), (3, 1)],
+                                                  [(0, 1), (3, 4), (3, 1)],
+                                                  [(3, 4), (3, 7), (0, 7)],
+                                                  [(0, 7), (0, 4), (3, 4)]],
+                                       linear_functions=[f1, f1, f2, f2])
 
+        m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
+        self.assertEqual(str(m.c.body), "pw(x1, x2)")
 
-# def alternate_thing():
-#     def f(x, y):
-#         return x**2 + y**2
-
-#     m.pw = PiecewiseLinearFunction(points=[...],
-#                                    function=f,
-#                                    #nargs=2,
-#     )
-#     m.c = Constraint(expr=m.pw(m.x, m.y) <= 5)
-
-#     #
-
-#     PLF(points, function)
-#     PLF(simplices, function?)
-#     PLF(simplices, linear_expression_list) # ESJ: Should these be
-                                             # expressions or functions?
-#     PLF(table_data) ... {point: val}
+    def test_evaluate_pw_linear_function(self):
+        m = self.make_model()
+        def f1(x1, x2):
+            return 3*x1 + 5*x2 - 4
+        def f2(x1, x2):
+            return 3*x1 + 11*x2 - 28
+        simplices = [[(0, 1), (0, 4), (3, 1)],
+                     [(0, 1), (3, 4), (3, 1)],
+                     [(3, 4), (3, 7), (0, 7)],
+                     [(0, 7), (0, 4), (3, 4)]]
+        m.pw = PiecewiseLinearFunction(simplices=simplices,
+                                       linear_functions=[f1, f1, f2, f2])
+        # check it's equal to the original function at all the extreme points of
+        # the simplices
+        for (x1, x2) in m.pw.points:
+            self.assertAlmostEqual(m.pw(x1, x2), m.f(x1, x2))
+        # check some points in the approximation
+        self.assertAlmostEqual(m.pw(1, 3), f1(1, 3))
+        self.assertAlmostEqual(m.pw(2.5, 6), f2(2.5, 6))
+        self.assertAlmostEqual(m.pw(0.2, 4.3), f2(0.2, 4.3))
