@@ -59,7 +59,7 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
 class TestPiecewiseLinearFunction3D(unittest.TestCase):
     @unittest.skipUnless(scipy_available and numpy_available,
                          "scipy and/or numpy are not available")
-    def test_pw_linear_approx_of_paraboloid_points(self):
+    def make_model(self):
         m = ConcreteModel()
         m.x1 = Var(bounds=(0, 3))
         m.x2 = Var(bounds=(1, 7))
@@ -67,10 +67,9 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         def f(x, y):
             return x**2 + y**2
         m.f = f
+        return m
 
-        m.pw = PiecewiseLinearFunction(points=[(0, 1), (0, 4), (0, 7),
-                                               (3, 1), (3, 4), (3, 7)],
-                                       function=m.f)
+    def check_pw_linear_approximation(self, m):
         self.assertEqual(len(m.pw.simplices), 4)
         self.assertEqual(len(m.pw.linear_functions), 4)
 
@@ -86,6 +85,22 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         assertExpressionsStructurallyEqual(self,
                                            m.pw.linear_functions[3](m.x1, m.x2),
                                            3*m.x1 + 11*m.x2 - 28)
+
+    def test_pw_linear_approx_of_paraboloid_points(self):
+        m = self.make_model()
+        m.pw = PiecewiseLinearFunction(points=[(0, 1), (0, 4), (0, 7),
+                                               (3, 1), (3, 4), (3, 7)],
+                                       function=m.f)
+        self.check_pw_linear_approximation(m)
+
+    def test_pw_linear_approx_of_paraboloid_simplices(self):
+        m = self.make_model()
+        m.pw = PiecewiseLinearFunction(function=m.f,
+                                       simplices=[[(0, 1), (0, 4), (3, 1)],
+                                                  [(0, 1), (3, 4), (3, 1)],
+                                                  [(3, 4), (3, 7), (0, 7)],
+                                                  [(0, 7), (0, 4), (3, 4)]])
+        self.check_pw_linear_approximation(m)
 
         #m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
 
