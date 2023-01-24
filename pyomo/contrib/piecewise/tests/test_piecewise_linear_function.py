@@ -77,10 +77,15 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         assertExpressionsStructurallyEqual(self,
                                            m.pw.linear_functions[0](m.x1, m.x2),
                                            3*m.x1 + 5*m.x2 - 4)
-        # TODO: Check the other 3
-        # assertExpressionsStructurallyEqual(self,
-        #                                    m.pw.linear_functions[1](m.x1, m.x2),
-        #                                    )
+        assertExpressionsStructurallyEqual(self,
+                                           m.pw.linear_functions[1](m.x1, m.x2),
+                                           3*m.x1 + 5*m.x2 - 4)
+        assertExpressionsStructurallyEqual(self,
+                                           m.pw.linear_functions[2](m.x1, m.x2),
+                                           3*m.x1 + 11*m.x2 - 28)
+        assertExpressionsStructurallyEqual(self,
+                                           m.pw.linear_functions[3](m.x1, m.x2),
+                                           3*m.x1 + 11*m.x2 - 28)
 
         #m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
 
