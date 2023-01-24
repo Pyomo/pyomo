@@ -10,17 +10,34 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numeric_expr import NumericExpression
+from weakref import ref as weakref_ref
 
 class PiecewiseLinearExpression(NumericExpression):
+    """
+    A numeric expression node representing a specific instantiation of a
+    PiecewiseLinearFunction.
+
+    Args:
+        args (list or tuple): Children of this node
+        parent (PiecewiseLinearFunction): parent piece-wise linear function
+            of which this node is an instance.
+    """
+    __slots__ = ('_parent_pw_linear_function',)
+
+    def __init__(self, args, parent):
+        super().__init__(args)
+        self._parent_pw_linear_function = weakref_ref(parent)
+
     def nargs(self):
         return len(self._args_)
 
     @property
-    def _parent_pw_linear_function(self):
-        return self._args_[0]
+    def parent_pw_linear_function(self):
+        return self._parent_pw_linear_function()
 
     def _to_string(self, values, verbose, smap):
-        return "%s(%s)" % (values[0], ', '.join(values[1:])) 
+        return "%s(%s)" % (str(self.parent_pw_linear_function),
+                           ', '.join(values))
 
     def polynomial_degree(self):
         return None

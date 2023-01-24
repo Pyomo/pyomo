@@ -225,6 +225,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
 
         m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
         self.assertEqual(str(m.c.body), "pw(x1, x2)")
+        self.assertIs(m.c.body.parent_pw_linear_function, m.pw)
 
     def test_evaluate_pw_linear_function(self):
         m = self.make_model()
