@@ -56,6 +56,22 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         m.pw = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=m.f)
         self.check_ln_x_approx(m)
 
+    def test_pw_linear_approx_of_ln_x_linear_funcs(self):
+        m = self.make_ln_x_model()
+        def f1(x):
+            return (log(3)/2)*x - log(3)/2
+        m.f1 = f1
+        def f2(x):
+            return (log(2)/3)*x + log(3/2)
+        m.f2 = f2
+        def f3(x):
+            return (log(5/3)/4)*x + log(6/((5/3)**(3/2)))
+        m.f3 = f3
+                    
+        m.pw = PiecewiseLinearFunction(simplices=[(1, 3), (3, 6), (6, 10)],
+                                       linear_functions=[m.f1, m.f2, m.f3])
+        self.check_ln_x_approx(m)
+
 class TestPiecewiseLinearFunction3D(unittest.TestCase):
     @unittest.skipUnless(scipy_available and numpy_available,
                          "scipy and/or numpy are not available")

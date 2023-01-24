@@ -106,9 +106,14 @@ class PiecewiseLinearFunction(Block):
            of the part of the domain of interest, and a linear function
            approximating the given function will be calculated for each
            of the simplices in the triangulation. In this case, scipy is
-           required.
-        2) List of breakpoints along each dimension (variable) in the
-           function.
+           required (for multivariate functions).
+        2) List of simplices and a nonlinear function to approximate. In
+           this case, a linear function approximating the given function
+           will be calculated for each simplex. For multivariate functions,
+           numpy is required.
+        3) List of simplices and list of functions that return linear function
+           expressions. These are the desired piecewise functions
+           corresponding to each simplex.
 
     Args:
         function: Nonlinear function to approximate, given as a Pyomo
@@ -118,9 +123,11 @@ class PiecewiseLinearFunction(Block):
         points: List of points in the same dimension as the domain of the
             function being approximated. Note that if the pieces of the
             function are specified this way, we require scipy.
-        breakpoints: A ComponentMap mapping each variable in the function
-            to a list of breakpoints along the corresponding dimension. If
-            the pieces of
+        simplices: A list of lists of points, where each list specifies the
+            extreme points of a a simplex over which the nonlinear function
+            will be approximated as a linear function.
+        linear_functions: A list of functions, each of which returns an
+            expression for a linear function of the arguments.
     """
     _ComponentDataClass = PiecewiseLinearFunctionData
 
@@ -161,7 +168,8 @@ class PiecewiseLinearFunction(Block):
                                         treat_sequences_as_mappings=False)
         self._simplices_rule = Initializer(_simplices_arg,
                                            treat_sequences_as_mappings=False)
-        self._linear_funcs_rule = Initializer(_linear_functions)
+        self._linear_funcs_rule = Initializer(_linear_functions,
+                                              treat_sequences_as_mappings=False)
 
     def _construct_from_function_and_points(self, obj, parent,
                                             nonlinear_function):
@@ -173,8 +181,6 @@ class PiecewiseLinearFunction(Block):
             raise ValueError("Cannot construct PiecewiseLinearFunction from "
                              "points list of length 0.")
 
-        # TODO: I don't think we need to save dimension--can just check and move
-        # on
         if hasattr(points[0], '__len__'):
             dimension = len(points[0])
         else:
@@ -203,14 +209,11 @@ class PiecewiseLinearFunction(Block):
         obj._simplices = [simplex for simplex in map(tuple,
                                                      triangulation.simplices)]
 
-        # TODO: Need to make some modifications to the below for this to
-        # work--we should check if we already have simplices. And we should
-        # always store them in the numpy/scipy style.
         return self._construct_from_function_and_simplices(obj, parent,
                                                            nonlinear_function)
 
     def _construct_from_univariate_function_and_segments(self, obj, func):
-        # [ESJ 1/21/23]: See this blog post about why this is necessary:
+        # [ESJ 1/21/23]: See this blog post about why tje below is necessary:
         # https://eev.ee/blog/2011/04/24/gotcha-python-scoping-closures/
         # Basically, Python scoping is such a disaster that if we directly
         # declare the lambda function in the loop, their defintions will
@@ -291,8 +294,16 @@ class PiecewiseLinearFunction(Block):
             normal = np.linalg.solve(A, b)
             obj._linear_functions.append(linear_function_factory(normal))
 
-    def _construct_from_linear_functions_and_simplices(self, obj):
-        pass
+        return obj
+
+    def _construct_from_linear_functions_and_simplices(self, obj, parent,
+                                                       nonlinear_function):
+        # We know that we have simplices because else this handler wouldn't
+        # have been called.
+        self._get_simplices_from_arg(obj._simplices_rule(parent, obj._index))
+        self._linear_functions = [f for f in obj._linear_funcs_rule(parent,
+                                                                    obj._index)]
+        return obj
 
     def _getitem_when_not_present(self, index):
         if index is None and not self.is_indexed():
@@ -320,9 +331,7 @@ class PiecewiseLinearFunction(Block):
                              "of breakpoints, a nonlinear function an a list "
                              "of simplices, or a list of linear functions and "
                              "a list of corresponding domains.")
-        handler(obj, parent, nonlinear_function)
-
-        return obj
+        return handler(obj, parent, nonlinear_function)
 
 
 class ScalarPiecewiseLinearFunction(PiecewiseLinearFunctionData,
