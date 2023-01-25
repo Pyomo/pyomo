@@ -111,10 +111,8 @@ def minlp_config_block(init=False):
         int,
         'When interfacing with a solver using file based I/O, set '
         'the effort level for ensuring the file creation process is '
-        'determistic. The default (1) sorts the index of components '
-        'when transforming the model. Anything less than 1 disables '
-        'index sorting. Anything greater than 1 additionally sorts '
-        'by component name to override declaration order.',
+        'determistic. See the individual solver interfaces for '
+        'valid values and default level of file determinism.',
         None,
     )).declare_as_argument(dest='file_determinism')
 
