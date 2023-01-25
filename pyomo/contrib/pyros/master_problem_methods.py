@@ -70,20 +70,10 @@ def get_state_vars(model, iterations):
     """
     iter_state_var_map = dict()
     for itn in iterations:
-        fsv_set = ComponentSet(
-                model.scenarios[itn, 0].util.first_stage_variables)
-        state_vars = list()
-        for blk in model.scenarios[itn, :]:
-            ssv_set = ComponentSet(blk.util.second_stage_variables)
-            state_vars.extend(
-                    v for v in blk.component_data_objects(
-                        Var,
-                        active=True,
-                        descend_into=True,
-                        sort=SortComponents.deterministic,  # guarantee order
-                    )
-                    if v not in fsv_set and v not in ssv_set
-            )
+        state_vars = [
+            var for blk in model.scenarios[itn, :]
+            for var in blk.util.state_vars
+        ]
         iter_state_var_map[itn] = state_vars
 
     return iter_state_var_map
@@ -466,10 +456,9 @@ def minimize_dr_vars(model_data, config):
             polishing_model.scenarios[idx].util.second_stage_variables,
         )
         sv_zip = zip(
-            get_state_vars(model_data.master_model, [idx[0]])[idx[0]],
-            get_state_vars(polishing_model, [idx[0]])[idx[0]],
+            blk.util.state_vars,
+            polishing_model.scenarios[idx].util.state_vars,
         )
-
         for master_ssv, polish_ssv in ssv_zip:
             master_ssv.set_value(value(polish_ssv))
         for master_sv, polish_sv in sv_zip:
