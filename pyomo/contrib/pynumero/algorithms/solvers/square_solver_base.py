@@ -169,18 +169,14 @@ class SquareNlpSolverBase(object):
 
     def evaluate_function(self, x0):
         # NOTE: NLP object should handle any caching
-        self._timer.start("function")
         self._nlp.set_primals(x0)
         values = self._nlp.evaluate_eq_constraints()
-        self._timer.stop("function")
         return values
 
     def evaluate_jacobian(self, x0):
         # NOTE: NLP object should handle any caching
-        self._timer.start("jacobian")
         self._nlp.set_primals(x0)
         self._jacobian = self._nlp.evaluate_jacobian_eq(out=self._jacobian)
-        self._timer.stop("jacobian")
         return self._jacobian
 
 
@@ -189,10 +185,8 @@ class DenseSquareNlpSolver(SquareNlpSolverBase):
     """
 
     def evaluate_jacobian(self, x0):
-        self._timer.start("jacobian")
         sparse_jac = super().evaluate_jacobian(x0)
         dense_jac = sparse_jac.toarray()
-        self._timer.stop("jacobian")
         return dense_jac
 
 class ScalarDenseSquareNlpSolver(DenseSquareNlpSolver):
