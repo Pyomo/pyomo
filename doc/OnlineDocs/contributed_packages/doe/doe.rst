@@ -156,25 +156,25 @@ Pyomo.DoE Solver Interface
    :scale: 25 %
 
 
-.. autoclass:: pyomo.contrib.doe.fim_doe.DesignOfExperiments
-    :members: __init__, optimize_doe, compute_FIM, run_grid_search
+.. autoclass:: pyomo.contrib.doe.doe.DesignOfExperiments
+    :members: __init__, stochastic_program, compute_FIM, run_grid_search
 
 .. Note::
-    ``optimize_doe()`` includes the following steps:
+    ``stochastic_program()`` includes the following steps:
         #.  Build two-stage stochastic programming optimization model where scenarios correspond to finite difference approximations for the Jacobian of the response variables with respect to calibrated model parameters
         #.  Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem. This step is for initialization.
         #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
 
-.. autoclass:: pyomo.contrib.doe.Measurements
+.. autoclass:: pyomo.contrib.doe.measurements.Measurements
     :members: __init__, check_subset
 
-.. autoclass:: pyomo.contrib.doe.Scenario_generator
+.. autoclass:: pyomo.contrib.doe.scenario.Scenario_generator
     :special-members: __init__
 
-.. autoclass:: pyomo.contrib.doe.FIM_result
+.. autoclass:: pyomo.contrib.doe.result.FIM_result
     :special-members: __init__, calculate_FIM
 
-.. autoclass:: pyomo.contrib.doe.Grid_Search_Result
+.. autoclass:: pyomo.contrib.doe.result.Grid_Search_Result
     :special-members: __init__
 
 
@@ -393,7 +393,7 @@ A heatmap shows the change of the objective function, a.k.a. the experimental in
 Step 5: Gradient-based optimization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pyomo.DoE accomplishes gradient-based optimization with the ``optimize_doe`` function for A- and D-optimality design.
+Pyomo.DoE accomplishes gradient-based optimization with the ``stochastic_program`` function for A- and D-optimality design.
 
 This function solves twice: It solves the square version of the MBDoE problem first, and then unfixes the design variables as degree of freedoms and solves again. In this way the optimization problem can be well initialized.
 
