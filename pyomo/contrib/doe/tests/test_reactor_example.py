@@ -29,6 +29,7 @@
 # import libraries
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
+    pandas_available
 )
 
 import pyomo.common.unittest as unittest
@@ -41,7 +42,9 @@ ipopt_available = SolverFactory('ipopt').available()
 class Test_doe_object(unittest.TestCase):
     """ Test the kinetics example with both the sequential_finite mode and the direct_kaug mode
     """
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    @unittest.skipIf(not pandas_available, "Pandas is not available")
     def test_setUP(self):
         from pyomo.contrib.doe.example import reactor_kinetics as reactor
         
