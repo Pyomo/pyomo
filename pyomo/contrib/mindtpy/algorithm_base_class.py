@@ -47,10 +47,6 @@ tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
 
 
-tabu_list, tabu_list_available = attempt_import(
-    'pyomo.contrib.mindtpy.tabu_list')
-
-
 class _MindtPyAlgorithm(object):
 
     def __init__(self, **kwds):
