@@ -135,6 +135,7 @@ def test_tree_expand_collapse(qtbot):
     mw.variables.treeView.expandAll()
     mw.variables.treeView.collapseAll()
 
+
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_tree_expand_collapse(qtbot):
     m = get_model()
@@ -145,7 +146,7 @@ def test_tree_expand_collapse(qtbot):
     mw.residuals_restart()
     mw.residuals.sort()
     dm = mw.residuals.tableView.model()
-    # Name 
+    # Name
     assert dm.data(dm.index(0, 0)) == "c4"
     # residual value
     assert dm.data(dm.index(0, 1)) == "Divide_by_0"

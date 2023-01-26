@@ -89,7 +89,7 @@ class TestDataModelItem(unittest.TestCase):
         m.p1 = Param(mutable=True, initialize=1)
         m.p2 = Param(initialize=1)
         m.p3 = Param(initialize=3.2)
-        m.p4 = Param([1,2,3], mutable=True, initialize=1)
+        m.p4 = Param([1, 2, 3], mutable=True, initialize=1)
         m.c8 = Constraint(expr=m.x[1] <= 1 / m.p1)
         m.p1 = 0
         self.m = m.clone()
@@ -204,7 +204,6 @@ class TestDataModelItem(unittest.TestCase):
         cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
         self.assertAlmostEqual(cdi.get("lb"), 0)
         self.assertAlmostEqual(cdi.get("ub"), 10)
-
 
     def test_var_fixed_bounds(self):
         cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])

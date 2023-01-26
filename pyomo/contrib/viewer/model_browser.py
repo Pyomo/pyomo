@@ -356,14 +356,7 @@ class ComponentDataItem(object):
                 return
 
     def _set_active_callback(self, val):
-        if (
-            not val
-            or val == "False"
-            or val == "false"
-            or val == "0"
-            or val == "f"
-            or val == "F"
-        ):
+        if not val or val in ["False", "false", "0", "f", "F"]:
             # depending on the version of Qt, you may see a combo box that
             # lets you select true/false or may be able to type the combo
             # box will return True or False, if you have to type could be
@@ -380,14 +373,7 @@ class ComponentDataItem(object):
             return
 
     def _set_fixed_callback(self, val):
-        if (
-            not val
-            or val == "False"
-            or val == "false"
-            or val == "0"
-            or val == "f"
-            or val == "F"
-        ):
+        if not val or val in ["False", "false", "0", "f", "F"]:
             # depending on the version of Qt, you may see a combo box that
             # lets you select true/false or may be able to type the combo
             # box will return True or False, if you have to type could be
