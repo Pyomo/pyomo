@@ -51,8 +51,9 @@ class TestDataModelItem(unittest.TestCase):
     def setUp(self):
         # Borrowed this test model from the trust region tests
         m = ConcreteModel()
-        m.z = Var(range(3), domain=Reals, initialize=2.0)
-        m.x = Var(range(4), initialize=2.0)
+        m.y = BooleanVar(range(3), initialize=False)
+        m.z = Var(range(3), domain=Reals, initialize=2.0, units=pyo.units.m)
+        m.x = Var(range(4), initialize=2.0, units=pyo.units.m)
         m.x[1] = 1.0
         m.x[2] = 0.0
         m.x[3] = None
@@ -86,6 +87,9 @@ class TestDataModelItem(unittest.TestCase):
         m.c6 = Constraint(expr=0 == log(m.x[2] - 4))
         m.c7 = Constraint(expr=0 == log(m.x[3]))
         m.p1 = Param(mutable=True, initialize=1)
+        m.p2 = Param(initialize=1)
+        m.p3 = Param(initialize=3.2)
+        m.p4 = Param([1,2,3], mutable=True, initialize=1)
         m.c8 = Constraint(expr=m.x[1] <= 1 / m.p1)
         m.p1 = 0
         self.m = m.clone()
@@ -161,9 +165,24 @@ class TestDataModelItem(unittest.TestCase):
         # why I'm getting "ub" and not "upper"
         self.assertEqual(cdi.get("ub"), "Divide_by_0")
 
+    def test_cons_calc_lower(self):
+        cdi = ComponentDataItem(parent=None, ui_data=UIData(model=self.m), o=self.m.c7)
+        cdi.ui_data.calculate_constraints()
+        # the ui lists the upper and lower attributes as ub and lb
+        # this was originally so I could easily combine variables and
+        # constarints in the same view, but I split them up, so may want
+        # to reconsider that choise in the future. This is to remind myself
+        # why I'm getting "ub" and not "upper"
+        self.assertEqual(cdi.get("lb"), 0)
+
     def test_var_get_value(self):
         cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
         self.assertAlmostEqual(cdi.get("value"), 1)
+        self.assertIsNone(cdi.get(expr))  # test can't get expr
+
+    def test_var_get_units(self):
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
+        self.assertAlmostEqual(cdi.get("units"), "m")
         self.assertIsNone(cdi.get(expr))  # test can't get expr
 
     def test_var_get_bounds(self):
@@ -179,6 +198,13 @@ class TestDataModelItem(unittest.TestCase):
         cdi.set("ub", 8)
         self.assertAlmostEqual(cdi.get("lb"), 2)
         self.assertAlmostEqual(cdi.get("ub"), 8)
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x)
+        cdi.set("lb", 0)
+        cdi.set("ub", 10)
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
+        self.assertAlmostEqual(cdi.get("lb"), 0)
+        self.assertAlmostEqual(cdi.get("ub"), 10)
+
 
     def test_var_fixed_bounds(self):
         cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
@@ -199,9 +225,27 @@ class TestDataModelItem(unittest.TestCase):
         self.assertIsNone(cdi.set("test_val", 5))
         self.assertEqual(cdi.get("test_val"), 5)  # test can set with no callback
 
-    def test_degrees_of_freedom(self):
-        import pyomo.contrib.viewer.report as rpt
+    def test_get_set_param(self):
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.p1)
+        self.assertIsNone(cdi.set("value", 5))
+        self.assertEqual(cdi.get("value"), 5)
+        self.assertIsNone(cdi.set("value", 0))
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.p2)
+        self.assertEqual(cdi.get("value"), 1)
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.p3)
+        self.assertEqual(cdi.get("value"), 3.2)
+        self.assertEqual(cdi.get("expr"), None)
+        self.assertIsNone(cdi.set("value", 5))
+        self.assertEqual(cdi.get("value"), 3.2)
+        self.assertEqual(cdi.get("units"), "None")
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.p4)
+        self.assertIsNone(cdi.set("value", 6))
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.p4[1])
+        self.assertEqual(cdi.get("value"), 6)
 
-        # this should hit everything in report.  It only exists to calculate
-        # degrees of freedom for display in the ui
-        self.assertEqual(rpt.degrees_of_freedom(self.m), 0)
+    def test_get_set_boolvar(self):
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.y)
+        self.assertIsNone(cdi.set("value", True))
+        self.assertEqual(pyo.value(self.m.y[1]), True)
+        self.assertIsNone(cdi.set("value", False))
+        self.assertEqual(pyo.value(self.m.y[1]), False)
