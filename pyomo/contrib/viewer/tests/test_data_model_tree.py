@@ -38,6 +38,7 @@ from pyomo.environ import (
     sin,
     sqrt,
 )
+import pyomo.environ as pyo
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
 from pyomo.contrib.viewer.qt import available
 
@@ -59,9 +60,9 @@ class TestDataModel(unittest.TestCase):
     def setUp(self):
         # Borrowed this test model from the trust region tests
         m = ConcreteModel(name="tm")
-        m.y = Var(range(3), initialize=False)
-        m.z = Var(range(3), domain=Reals, initialize=2.0)
-        m.x = Var(range(2), initialize=2.0)
+        m.y = BooleanVar(range(3), initialize=False)
+        m.z = Var(range(3), domain=Reals, initialize=2.0, units=pyo.units.m)
+        m.x = Var(range(2), initialize=2.0, units=pyo.units.m)
         m.x[1] = 1.0
 
         m.b1 = Block()
@@ -83,7 +84,6 @@ class TestDataModel(unittest.TestCase):
             expr=m.x[0] * m.z[0] ** 2 + self.bb(m.x[0], m.x[1]) == 2 * sqrt(2.0)
         )
         m.c2 = Constraint(expr=m.z[2] ** 4 * m.z[1] ** 2 + m.z[1] == 8 + sqrt(2.0))
-
         self.m = m.clone()
 
     def test_create_tree_var(self):
@@ -96,8 +96,6 @@ class TestDataModel(unittest.TestCase):
         # The children should be in the model construction order,
         # and the indexes are sorted
         children = data_model.rootItems[0].children
-        self.m.display()
-        print(children[0].data)
         assert children[0].data == self.m.y
         assert children[1].data == self.m.z
         assert children[2].data == self.m.x

@@ -29,6 +29,7 @@ import pyomo.common.unittest as unittest
 from pyomo.environ import (
     ConcreteModel,
     Var,
+    BooleanVar,
     Block,
     Param,
     Expression,
@@ -41,6 +42,7 @@ from pyomo.environ import (
     sqrt,
     expr,
 )
+import pyomo.environ as pyo
 from pyomo.contrib.viewer.model_browser import ComponentDataItem
 from pyomo.contrib.viewer.ui_data import UIData
 

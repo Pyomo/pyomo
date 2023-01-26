@@ -54,14 +54,26 @@ def get_residual(ui_data, c):
     Returns:
         (float) residual
     """
-    ub = value_no_exception(c.upper)
-    lb = value_no_exception(c.lower)
+    if c.upper is None:
+        ub = None  # This is no upper bound
+    else:
+        ub = value_no_exception(c.upper, "Divide_by_0")
+        if ub is None or isinstance(ub, str):
+            # This is calc error
+            return ub
+    if c.lower is None:
+        lb = None  # This is no lower bound
+    else:
+        lb = value_no_exception(c.lower, "Divide_by_0")
+        if lb is None or isinstance(lb, str):
+            # This is calc error
+            return lb
     try:
         v = ui_data.value_cache[c]
     except KeyError:
-        v = None
-    if v is None:
-        return
+        return None
+    if v is None or isinstance(v, str):
+        return v
     if lb is not None and v < lb:
         return lb - v
     if ub is not None and v > ub:

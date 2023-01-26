@@ -411,7 +411,12 @@ class ComponentDataModel(myqt.QAbstractItemModel):
     """
 
     def __init__(
-        self, parent, ui_data, columns=["name", "value"], components=(Var,), editable=[]
+        self,
+        parent,
+        ui_data,
+        columns=["name", "value"],
+        components=(Var, BooleanVar),
+        editable=[],
     ):
         super().__init__(parent)
         self.column = columns
