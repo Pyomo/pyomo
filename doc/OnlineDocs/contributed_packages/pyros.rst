@@ -2,8 +2,8 @@
 PyROS Solver
 ############
 
-PyROS (Pyomo Robust Optimization Solver) is a metasolver capability within Pyomo for solving non-convex,
-two-stage optimization models using adjustable robust optimization.
+PyROS (Pyomo Robust Optimization Solver) is a Pyomo-based metasolver
+for non-convex, two-stage adjustable robust optimization problems.
 
 It was developed by **Natalie M. Isenberg**, **Jason A. F. Sherman**,
 and **Chrysanthos E. Gounaris** of Carnegie Mellon University,
@@ -21,81 +21,91 @@ Below is an overview of the type of optimization models PyROS can accomodate.
 * PyROS can handle **equality constraints** defining state variables, including implicit state variables that cannot be eliminated via reformulation.
 * PyROS allows for **two-stage** optimization problems that may feature both first-stage and second-stage degrees of freedom.
 
-The general form of a deterministic optimization problem that can be passed into PyROS is shown below:
+PyROS is designed to operate on deterministic models of the general form
 
 .. math::
     \begin{align*}
-    \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^n, y\in\mathbb{R}^a}} & ~~ f_1\left(x\right) + f_2\left(x,z,y; q^0\right) & \\
-    \displaystyle \text{s.t.} \quad \: & ~~ g_i\left(x, z, y; q^0\right) \leq 0 & \forall i \in \mathcal{I} \\
-    & ~~ h_j\left(x,z,y; q^0\right) = 0 & \forall j \in \mathcal{J} \\
+    \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2\left(x,z,y; q^{\text{nom}}\right) & \\
+    \displaystyle \text{s.t.} \quad \: & ~~ g_i\left(x, z, y; q^{\text{nom}}\right) \leq 0 & \forall i \in \mathcal{I} \\
+    & ~~ h_j\left(x,z,y; q^{\text{nom}}\right) = 0 & \forall j \in \mathcal{J} \\
     \end{align*}
 
 where:
 
-* :math:`x \in \mathcal{X}` are the "design" variables (i.e., first-stage degrees of freedom), where :math:`\mathcal{X} \subseteq \mathbb{R}^m` is the feasible space defined by the model constraints that only reference these variables
-* :math:`z \in \mathbb{R}^n` are the "control" variables (i.e., second-stage degrees of freedom)
-* :math:`y \in \mathbb{R}^a` are the "state" variables
-* :math:`q \in \mathbb{R}^w` is the vector of parameters that we shall later consider to be uncertain, and :math:`q^0` is the vector of nominal values associated with those.
-* :math:`f_1\left(x\right)` are the terms of the objective function that depend only on design variables
-* :math:`f_2\left(x, z, y; q\right)` are the terms of the objective function that depend on control and/or state variables
-* :math:`g_i\left(x, z, y; q\right)` is the :math:`i^\text{th}` inequality constraint in set :math:`\mathcal{I}` (see Note)
-* :math:`h_j\left(x, z, y; q\right)` is the :math:`j^\text{th}` equality constraint in set :math:`\mathcal{J}` (see Note)
+* :math:`x \in \mathcal{X}` are the "design" variables
+  (i.e., first-stage degrees of freedom),
+  where :math:`\mathcal{X} \subseteq \mathbb{R}^{n_x}` is the feasible space defined by the model constraints
+  (including variable bounds specifications) referencing :math:`x` only.
+* :math:`z \in \mathbb{R}^{n_z}` are the "control" variables
+  (i.e., second-stage degrees of freedom)
+* :math:`y \in \mathbb{R}^{n_y}` are the "state" variables
+* :math:`q \in \mathbb{R}^{n_q}` is the vector of model parameters considered
+  uncertain, and :math:`q^{\text{nom}}` is the vector of nominal values
+  associated with those.
+* :math:`f_1\left(x\right)` are the terms of the objective function that depend
+  only on design variables
+* :math:`f_2\left(x, z, y; q\right)` are the terms of the objective function
+  that depend on all variables and the uncertain parameters
+* :math:`g_i\left(x, z, y; q\right)` is the :math:`i^\text{th}`
+  inequality constraint function in set :math:`\mathcal{I}` (see Note)
+* :math:`h_j\left(x, z, y; q\right)` is the :math:`j^\text{th}`
+  equality constraint function in set :math:`\mathcal{J}` (see Note)
 
 .. note::
-    * Applicable bounds on variables :math:`z` and/or :math:`y` are assumed to have been incorporated in the set of inequality constraints :math:`\mathcal{I}`.
-    * A key requirement of PyROS is that each value of :math:`\left(x, z, q \right)` maps to a unique value of :math:`y`, a property that is assumed to be properly enforced by the system of equality constraints :math:`\mathcal{J}`. If such unique mapping does not hold, then the selection of 'state' (i.e., not degree of freedom) variables :math:`y` is incorrect, and one or more of the :math:`y` variables should be appropriately redesignated to be part of either :math:`x` or :math:`z`.
+    PyROS accepts models in which bounds are directly imposed on
+    ``Var`` objects representing components of the variables :math:`z`
+    and :math:`y`. These models are cast to the form above
+    by reformulating the bounds as inequality constraints.
 
-In order to cast the robust optimization counterpart formulation of the above model, we shall now assume that the uncertain parameters may attain
-any realization from within an uncertainty set :math:`\mathcal{Q} \subseteq \mathbb{R}^w`, such that :math:`q^0 \in \mathcal{Q}`.
-The set :math:`\mathcal{Q}` is assumed to be closed and bounded, while it can be **either continuous or discrete**.
+.. note::
+    A key requirement of PyROS is that each value of :math:`\left(x, z, q \right)`
+    maps to a unique value of :math:`y`, a property that is assumed to
+    be properly enforced by the system of equality constraints
+    :math:`\mathcal{J}`.
+    If the mapping is not unique, then the selection of 'state'
+    (i.e., not degree of freedom) variables :math:`y` is incorrect,
+    and one or more of the :math:`y` variables should be appropriately
+    redesignated to be part of either :math:`x` or :math:`z`.
 
-Based on the above notation, the form of the robust counterpart addressed in PyROS is shown below:
+In order to cast the robust optimization counterpart formulation of the above model,
+we now assume that the uncertain parameters may attain
+any realization in a compact uncertainty set
+:math:`\mathcal{Q} \subseteq \mathbb{R}^{n_q}` containing
+the nominal value :math:`q^{\text{nom}}`.
+The set :math:`\mathcal{Q}` may be **either continuous or discrete**.
+
+Based on the above notation, the form of the robust counterpart addressed by PyROS is
 
 .. math::
     \begin{align*}
     \displaystyle \min_{x \in \mathcal{X}}
     & \displaystyle \max_{q \in \mathcal{Q}}
-    & \displaystyle \min_{z \in \mathbb{R}^n, y \in \mathbb{R}^a} \ \ & \displaystyle ~~ f_1\left(x\right) + f_2\left(x, z, y, q\right) & & \\
+    & \displaystyle \min_{z \in \mathbb{R}^{n_z}, y \in \mathbb{R}^{n_y}} \ \ & \displaystyle ~~ f_1\left(x\right) + f_2\left(x, z, y, q\right) & & \\
     & & \text{s.t.} \quad \:& \displaystyle ~~ g_i\left(x, z, y, q\right) \leq 0 &  & \forall i \in \mathcal{I}\\
     & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall j \in \mathcal{J}
     \end{align*}
 
-In order to solve problems of the above type, PyROS implements the
+PyROS solves problems of this form using the
 Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_.
 
 When using PyROS, please consider citing the above paper.
 
 PyROS Required Inputs
 -----------------------------
-The required inputs to the PyROS solver are the following:
+The required inputs to the PyROS solver are:
 
-* The determinisitic optimization model
+* The deterministic optimization model
 * List of first-stage ("design") variables
 * List of second-stage ("control") variables
-* List of parameters to be considered uncertain
+* List of parameters considered uncertain
 * The uncertainty set
-* Subordinate local and global NLP optimization solvers
+* Subordinate local and global nonlinear programming (NLP) solvers
 
-Below is a list of arguments that PyROS expects the user to provide when calling the ``solve`` command.
-Note how all but the ``model`` argument **must** be specified as ``kwargs``.
-
-model : ``ConcreteModel``
-    A ``ConcreteModel`` object representing the deterministic model.
-first_stage_variables : ``list(Var)``
-    A list of Pyomo ``Var`` objects representing the first-stage degrees of freedom (design variables) in ``model``.
-second_stage_variables : ``list(Var)``
-    A list of Pyomo ``Var`` objects representing second-stage degrees of freedom (control variables) in ``model``.
-uncertain_params : ``list(Param)``
-    A list of Pyomo ``Param`` objects in ``deterministic_model`` to be considered uncertain. These specified ``Param`` objects must have the property ``mutable=True``.
-uncertainty_set : ``UncertaintySet``
-    A PyROS ``UncertaintySet`` object representing uncertainty in the space of those parameters listed in the ``uncertain_params`` object.
-local_solver : ``Solver``
-    A Pyomo ``Solver`` instance for a local NLP optimization solver.
-global_solver : ``Solver``
-    A Pyomo ``Solver`` instance for a global NLP optimization solver.
+These are more elaborately presented in the next section.
 
 .. note::
-    Any variables in the model not specified to be first- or second-stage variables are automatically considered to be state variables.
+    Any variables in the model not specified to be first-stage or second-stage
+    variables are automatically considered to be state variables.
 
 PyROS Solver Interface
 -----------------------------
@@ -104,28 +114,27 @@ PyROS Solver Interface
     :members: solve
 
 .. note::
-    Solving the master problems globally (via option ``solve_masters_globally=True``) is one of the requirements to guarantee robust optimality;
-    solving the master problems locally can only lead to a robust feasible solution.
+    Upon successful convergence of PyROS, the solution returned is
+    certified to be robust optimal only if:
+    - master problems are solved to global optimality (specified through
+    the option ``solve_master_globally=True``)
+    - a worst-case objective focus is chosen (by specifying the option
+    ``objective_focus=ObjectiveType.worst_case``).
 
-.. note::
-    Selecting worst-case objective (via option ``objective_focus=ObjectiveType.worst_case``) is one of the requirements to guarantee robust optimality;
-    selecting nominal objective can only lead to a robust feasible solution,
-    albeit one that has optimized the sum of first- and (nominal) second-stage objectives.
-
-.. note::
-    To utilize option ``p_robustness``, a dictionary of the following form must be supplied via the ``kwarg``:
-    There must be a key (``str``) called 'rho', which maps to a non-negative value, where '1+rho' defines a bound
-    for the ratio of the objective that any scenario may exhibit compared to the nominal objective.
+    Otherwise, the solution returned is certified to only be robust feasible.
 
 PyROS Uncertainty Sets
 -----------------------------
-PyROS contains pre-implemented ``UncertaintySet`` specializations for many types of commonly used uncertainty sets.
-Additional capabilities for intersecting multiple PyROS ``UncertaintySet`` objects so as to create custom sets are also provided
-via the ``IntersectionSet`` class.  Custom user-specified sets can also be defined via the base ``UncertaintySet`` class.
+Uncertainty sets are represented by subclasses of the ``UncertaintySet`` abstract base class.
+PyROS provides a suite of pre-implemented subclasses representing commonly used
+uncertainty sets, along with an ``IntersectionSet`` subclass for representing
+an intersection of multiple uncertainty sets.
+A custom uncertainty set type may be implemented as
+a subclass of the ``UncertaintySet`` class.
 
 Mathematical representations of the sets are shown below, followed by the class descriptions.
 
-.. list-table:: Mathematical definitions of PyROS uncertainty sets
+.. list-table:: Mathematical definitions of PyROS uncertainty sets of dimension :math:`n`
    :header-rows: 1
    :class: tight-table
 
@@ -133,11 +142,11 @@ Mathematical representations of the sets are shown below, followed by the class 
      - Input Data
      - Mathematical Definition
    * - ``BoxSet``
-     - :math:`\begin{array}{l} q ^{\text{L}} \in \mathbb{R}^{n}, \\ q^{\text{U}} \in \mathbb{R}^{n}: q^{\text{L}} \leq q^{\text{U}} \end{array}`
+     - :math:`\begin{array}{l} q ^{\text{L}} \in \mathbb{R}^{n}, \\ q^{\text{U}} \in \mathbb{R}^{n} \end{array}`
      - :math:`\{q \in \mathbb{R}^n \mid q^\mathrm{L} \leq q \leq q^\mathrm{U}\}`
    * - ``CardinalitySet``
      - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ \hat{q} \in \mathbb{R}_{+}^{n}, \\ \Gamma \in [0, n] \end{array}`
-     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} q = q^{0} + \hat{q} \odot \xi \\ \displaystyle \sum_{i=1}^{n} \xi_{i} \leq \Gamma \\ \xi \in [0, 1]^{n} \end{array} \right\}`
+     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} q = q^{0} + \hat{q} \circ \xi \\ \displaystyle \sum_{i=1}^{n} \xi_{i} \leq \Gamma \\ \xi \in [0, 1]^{n} \end{array} \right\}`
    * - ``BudgetSet``
      - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ b \in \mathbb{R}_{+}^{L}, \\ B \in \{0, 1\}^{L \times n} \end{array}`
      - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \begin{pmatrix} B \\ -I \end{pmatrix} q \leq \begin{pmatrix}  b + Bq^{0} \\ -q^{0} \end{pmatrix}  \end{array} \right\}`
@@ -148,10 +157,10 @@ Mathematical representations of the sets are shown below, followed by the class 
      - :math:`\begin{array}{l} A \in \mathbb{R}^{m \times n}, \\ b \in \mathbb{R}^{m}\end{array}`
      - :math:`\{q \in \mathbb{R}^{n} \mid A q \leq b\}`
    * - ``AxisAlignedEllipsoidalSet``
-     - :math:`\begin{array}{l} \alpha \in \mathbb{R}_{+}^{n}, \\ q^{0} \in \mathbb{R}^{n} \end{array}`
-     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \displaystyle\sum_{\substack{i = 1 \\ \alpha_{i} > 0}}^{n}  \left(\frac{q_{i} - q_{i}^{0}}{\alpha_{i}}\right)^2 \leq 1 \\ q_{i} = q_{i}^{0} \,\forall\,i : \alpha_{i} = 0 \end{array} \right\}`
+     - :math:`\begin{array}{l} q^0 \in \mathbb{R}^{n}, \\ \alpha \in \mathbb{R}_{+}^{n} \end{array}`
+     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \displaystyle\sum_{\substack{i = 1: \\ \alpha_{i} > 0}}^{n}  \left(\frac{q_{i} - q_{i}^{0}}{\alpha_{i}}\right)^2 \leq 1 \\ q_{i} = q_{i}^{0} \,\forall\,i : \alpha_{i} = 0 \end{array} \right\}`
    * - ``EllipsoidalSet``
-     - :math:`\begin{array}{l} P \in \mathbb{S}_{++}^{n}, \\ s \in \mathbb{R}_{+}, \\ q^{0} \in \mathbb{R}^{n} \end{array}`
+     - :math:`\begin{array}{l} q^0 \in \mathbb{R}^n, \\ P \in \mathbb{S}_{++}^{n}, \\ s \in \mathbb{R}_{+} \end{array}`
      - :math:`\{q \in \mathbb{R}^{n} \mid (q - q^{0})^{\intercal} P^{-1} (q - q^{0}) \leq s\}`
    * - ``UncertaintySet``
      - :math:`g: \mathbb{R}^{n} \to \mathbb{R}^{m}`
