@@ -39,7 +39,7 @@ from pyomo.environ import (
     log,
 )
 import pyomo.common.unittest as unittest
-
+import pyomo.contrib.viewer.qt as myqt
 from pyomo.contrib.viewer.qt import available
 
 if available:
@@ -126,3 +126,37 @@ def test_model_information(qtbot):
     assert isinstance(mw.constraints, ModelBrowser)
     assert isinstance(mw.expressions, ModelBrowser)
     assert isinstance(mw.parameters, ModelBrowser)
+
+
+@unittest.skipIf(not available, "Qt packages are not available.")
+def test_tree_expand_collapse(qtbot):
+    m = get_model()
+    mw, m = get_mainwindow(model=m, testing=True)
+    mw.variables.treeView.expandAll()
+    mw.variables.treeView.collapseAll()
+
+@unittest.skipIf(not available, "Qt packages are not available.")
+def test_tree_expand_collapse(qtbot):
+    m = get_model()
+    mw, m = get_mainwindow(model=m, testing=True)
+    mw.residuals_restart()
+    mw.ui_data.calculate_expressions()
+    mw.ui_data.calculate_constraints()
+    mw.residuals_restart()
+    mw.residuals.sort()
+    dm = mw.residuals.tableView.model()
+    # Name 
+    assert dm.data(dm.index(0, 0)) == "c4"
+    # residual value
+    assert dm.data(dm.index(0, 1)) == "Divide_by_0"
+    # body value
+    assert dm.data(dm.index(0, 2)) == "Divide_by_0"
+    # upper
+    assert dm.data(dm.index(0, 3)) == 0
+    # lower
+    assert dm.data(dm.index(0, 4)) == 0
+    # active
+    assert dm.data(dm.index(0, 5)) == True
+    m.c4.deactivate()
+    mw.residuals.sort()
+    assert dm.data(dm.index(0, 0)) == "c5"

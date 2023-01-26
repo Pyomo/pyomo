@@ -93,12 +93,19 @@ class ResidualDataModel(myqt.QAbstractTableModel):
         )
 
     def sort(self):
+        def _inactive_to_back(c):
+            if c.active:
+                return float("inf")
+            else:
+                return float("-inf")
+
         self._items.sort(
             key=lambda o: (
                 o is None,
                 get_residual(self.ui_data, o)
                 if get_residual(self.ui_data, o) is not None
-                else -float("inf"),
+                and not isinstance(get_residual(self.ui_data, o), str)
+                else _inactive_to_back(o),
             ),
             reverse=True,
         )
