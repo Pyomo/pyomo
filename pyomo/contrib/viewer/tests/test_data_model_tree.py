@@ -41,7 +41,13 @@ from pyomo.environ import (
 import pyomo.environ as pyo
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
 from pyomo.contrib.viewer.qt import available
+from pyomo.common.dependencies import DeferredImportError
 
+try:
+    x = pyo.units.m
+    units_available = True
+except DeferredImportError:
+    units_available = False
 
 if available:
     from pyomo.contrib.viewer.ui_data import UIData
@@ -55,7 +61,7 @@ else:
             pass
 
 
-@unittest.skipIf(not available, "PyQt needed to test tree data model")
+@unittest.skipIf(not available or not units_available, "PyQt or units not available")
 class TestDataModel(unittest.TestCase):
     def setUp(self):
         # Borrowed this test model from the trust region tests
