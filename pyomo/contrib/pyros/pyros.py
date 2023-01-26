@@ -109,6 +109,7 @@ class InputDataStandardizer(object):
             assert isinstance(_, self.cdatatype)
         return ans
 
+
 def pyros_config():
     CONFIG = ConfigDict('PyROS')
 
@@ -117,134 +118,323 @@ def pyros_config():
     # ================================================
     CONFIG.declare('time_limit', ConfigValue(
         default=None,
-        domain=NonNegativeFloat, description="Optional. Default = None. "
-                                             "Total allotted time for the execution of the PyROS solver in seconds "
-                                             "(includes time spent in sub-solvers). 'None' is no time limit."
+        domain=NonNegativeFloat,
+        doc=(
+            """(`float` or `None`, optional) Default = `None`.
+            Wall time limit for the execution of the PyROS solver
+            in seconds (including time spent by subsolvers).
+            If `None` is provided, then no time limit is enforced.
+            """
+        ),
     ))
     CONFIG.declare('keepfiles', ConfigValue(
         default=False,
-        domain=bool, description="Optional. Default = False. Whether or not to write files of sub-problems for use in debugging. "
-                                 "Must be paired with a writable directory supplied via ``subproblem_file_directory``."
+        domain=bool,
+        description=(
+            """
+            (`bool`, optional) Default = `False`.
+            Export subproblems with a non-acceptable termination status
+            for debugging purposes.
+            If `True` is provided, then option ``subproblem_file_directory``
+            must also be specified.
+            """
+        ),
     ))
     CONFIG.declare('tee', ConfigValue(
         default=False,
-        domain=bool, description="Optional. Default = False. Sets the ``tee`` for all sub-solvers utilized."
+        domain=bool,
+        description=(
+            """
+            (`bool`, optional) Default = `False`.
+            Output all subproblem solver logs.
+            """
+        ),
     ))
     CONFIG.declare('load_solution', ConfigValue(
         default=True,
-        domain=bool, description="Optional. Default = True. "
-                                 "Whether or not to load the final solution of PyROS into the model object."
+        domain=bool,
+        description=(
+            """
+            (`bool`, optional) Default = `True`.
+            Load final solution(s) found by PyROS to the deterministic model.
+            """
+        ),
     ))
 
     # ================================================
     # === Required User Inputs
     # ================================================
     CONFIG.declare("first_stage_variables", ConfigValue(
-        default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="Required. List of ``Var`` objects referenced in ``model`` representing the design variables."
+        default=[],
+        domain=InputDataStandardizer(Var, _VarData),
+        description=(
+            "(`List[Var]`). First-stage (or design) variables."
+        ),
     ))
     CONFIG.declare("second_stage_variables", ConfigValue(
-        default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="Required. List of ``Var`` referenced in ``model`` representing the control variables."
+        default=[],
+        domain=InputDataStandardizer(Var, _VarData),
+        description=(
+            "(`List[Var]`). Second-stage (or control) variables."
+        ),
     ))
     CONFIG.declare("uncertain_params", ConfigValue(
-        default=[], domain=InputDataStandardizer(Param, _ParamData),
-        description="Required. List of ``Param`` referenced in ``model`` representing the uncertain parameters. MUST be ``mutable``. "
-                    "Assumes entries are provided in consistent order with the entries of 'nominal_uncertain_param_vals' input."
+        default=[],
+        domain=InputDataStandardizer(Param, _ParamData),
+        description=(
+            """
+            (`List[Var]`). Uncertain model parameters.
+            All should satisfy the property ``mutable=True``.
+            """
+        ),
     ))
     CONFIG.declare("uncertainty_set", ConfigValue(
-        default=None, domain=uncertainty_sets,
-        description="Required. ``UncertaintySet`` object representing the uncertainty space "
-                    "that the final solutions will be robust against."
+        default=None,
+        domain=uncertainty_sets,
+        description=(
+            """
+            (`UncertaintySet`) Uncertainty set against which the
+            final solution(s) returned by PyROS should be certified
+            to be robust.
+            """
+        ),
     ))
     CONFIG.declare("local_solver", ConfigValue(
-        default=None, domain=SolverResolvable(),
-        description="Required. ``Solver`` object to utilize as the primary local NLP solver."
+        default=None,
+        domain=SolverResolvable(),
+        description=(
+            "(`Solver`) Subordinate local NLP solver."
+        ),
     ))
     CONFIG.declare("global_solver", ConfigValue(
-        default=None, domain=SolverResolvable(),
-        description="Required. ``Solver`` object to utilize as the primary global NLP solver."
+        default=None,
+        domain=SolverResolvable(),
+        description=(
+            "(`Solver`) Subordinate global NLP solver."
+        ),
     ))
     # ================================================
     # === Optional User Inputs
     # ================================================
     CONFIG.declare("objective_focus", ConfigValue(
-        default=ObjectiveType.nominal, domain=ValidEnum(ObjectiveType),
-        description="Optional. Default = ``ObjectiveType.nominal``. Choice of objective function to optimize in the master problems. "
-                    "Choices are: ``ObjectiveType.worst_case``, ``ObjectiveType.nominal``. See Note for details."
+        default=ObjectiveType.nominal,
+        domain=ValidEnum(ObjectiveType),
+        description=(
+            """
+            (`ObjectiveType`, optional)
+            Default = ``ObjectiveType.nominal``.
+            Choice of objective focus to optimize in the master problems.
+            Choices are: ``ObjectiveType.worst_case``,
+            ``ObjectiveType.nominal``.
+            """
+        ),
+        doc=(
+            """(`ObjectiveType`, optional)
+            Default = `ObjectiveType.nominal`
+            Objective focus for the master problems.
+
+            - "`ObjectiveType.nominal`:
+                Optimize the objective function subject to the nominal
+                uncertain parameter realization
+            - "`ObjectiveType.worst_case`:
+                Optimize the objective function subject to the worst-case
+                uncertain parameter realization
+
+            A worst-case objective focus is required for certification
+            of robust optimality of the final solution(s) returned
+            by PyROS.
+            If a nominal objective focus is chosen, then only robust
+            feasibility is guaranteed.
+            """
+        ),
     ))
     CONFIG.declare("nominal_uncertain_param_vals", ConfigValue(
-        default=[], domain=list,
-        description="Optional. Default = deterministic model ``Param`` values. List of nominal values for all uncertain parameters. "
-                    "Assumes entries are provided in consistent order with the entries of ``uncertain_params`` input."
+        default=[],
+        domain=list,
+        doc=(
+            """
+            (`List[float]`, optional) Default=`[]`.
+            Nominal uncertain parameter realization.
+            Entries should be provided in an order consistent with the
+            entries of the argument `uncertain_params`.
+            If an empty list is provided, then the values of the ``Param``
+            objects specified through ``uncertain_params`` are chosen.
+            """
+        ),
     ))
     CONFIG.declare("decision_rule_order", ConfigValue(
         default=0, domain=In([0, 1, 2]),
-        description="Optional. Default = 0. Order of decision rule functions for handling second-stage variable recourse. "
-                    "Choices are: '0' for constant recourse (a.k.a. static approximation), '1' for affine recourse "
-                    "(a.k.a. affine decision rules), '2' for quadratic recourse."
+        description=(
+            """
+            (`int`, optional) Default=0.
+            Order of the polynomial decision rule functions used
+            for approximating the adjustability of the second stage
+            variables with respect to the uncertain parameters.
+            Must be either 0, 1, or 2.
+            """
+        ),
+        doc=(
+            """(`int`, optional) Default=0.
+            Order of the polynomial decision rule functions used
+            for approximating the adjustability of the second stage
+            variables with respect to the uncertain parameters.
+
+            Choices are:
+            - 0: static recourse
+            - 1: affine recourse
+            - 2: quadratic recourse
+            """
+        ),
     ))
     CONFIG.declare("solve_master_globally", ConfigValue(
-        default=False, domain=bool,
-        description="Optional. Default = False. 'True' for the master problems to be solved with the user-supplied global solver(s); "
-                    "or 'False' for the master problems to be solved with the user-supplied local solver(s). "
-
+        default=False,
+        domain=bool,
+        doc=(
+            """(`bool`, optional) Default=`False`.
+            If `True` [`False`] is provided, solve all master problems to
+            global [local] optimality with the user-provided subordinate
+            global [local] NLP solver.
+            If PyROS terminates successfully, then the final solution(s)
+            returned is certified to be robust optimal only if
+            ``solve_master_globally=True`` and a worst-case objective
+            focus is chosen (see argument `objective_focus`).
+            """
+        ),
     ))
     CONFIG.declare("max_iter", ConfigValue(
-        default=-1, domain=PositiveIntOrMinusOne,
-        description="Optional. Default = -1. Iteration limit for the GRCS algorithm. '-1' is no iteration limit."
+        default=-1,
+        domain=PositiveIntOrMinusOne,
+        description=(
+            """(`int`, optional) Default=-1.
+            Iteration limit. If -1 is provided, then no iteration
+            limit is enforced.
+            """
+        ),
     ))
     CONFIG.declare("robust_feasibility_tolerance", ConfigValue(
-        default=1e-4, domain=NonNegativeFloat,
-        description="Optional. Default = 1e-4. Relative tolerance for assessing robust feasibility violation during separation phase."
+        default=1e-4,
+        domain=NonNegativeFloat,
+        description=(
+            """(`float`, optional) Default=`1E-4`.
+            Relative tolerance for assessing maximal inequality
+            constraint violations during the GRCS separation step.
+            """
+        ),
     ))
     CONFIG.declare("separation_priority_order", ConfigValue(
-        default={}, domain=dict,
-        description="Optional. Default = {}. Dictionary mapping inequality constraint names to positive integer priorities for separation. "
-                    "Constraints not referenced in the dictionary assume a priority of 0 (lowest priority)."
+        default={},
+        domain=dict,
+        doc=(
+            """
+            (`dict`, optional) Default=`{}`.
+            Mapping from inequality constraint names (strs)
+            to positive integers specifying the priority
+            of the inequality constraint maximization problem
+            during the separation step.
+            A higher integer value indicates to a higher
+            separation priority.
+            Constraints not referenced in the dictionary assume
+            a priority of 0.
+            """
+        ),
     ))
     CONFIG.declare("progress_logger", ConfigValue(
-        default="pyomo.contrib.pyros", domain=a_logger,
-        description="Optional. Default = \"pyomo.contrib.pyros\". The logger object to use for reporting."
+        default="pyomo.contrib.pyros",
+        domain=a_logger,
+        doc=(
+            """(`str` or `logging.Logger`, optional)
+            Default=`logging.getLogger('pyomo.contrib.pyros')`.
+            PyROS output logger.
+            If a `str` is specified, then a logger whose name
+            is specified as the `str` is used.
+            """
+        ),
     ))
     CONFIG.declare("backup_local_solvers", ConfigValue(
-        default=[], domain=SolverResolvable(),
-        description="Optional. Default = []. List of additional ``Solver`` objects to utilize as backup "
-                    "whenever primary local NLP solver fails to identify solution to a sub-problem."
+        default=[],
+        domain=SolverResolvable(),
+        doc=(
+            """(`list[Solver]`, optional) Default=`[]`.
+            Additional subordinate local NLP optimizers to invoke
+            in the event the primary local NLP optimizers fails
+            to solve a subproblem to an acceptable termination condition.
+            """
+        ),
     ))
     CONFIG.declare("backup_global_solvers", ConfigValue(
-        default=[], domain=SolverResolvable(),
-        description="Optional. Default = []. List of additional ``Solver`` objects to utilize as backup "
-                    "whenever primary global NLP solver fails to identify solution to a sub-problem."
+        default=[],
+        domain=SolverResolvable(),
+        doc=(
+            """(`list[Solver]`, optional) Default=`[]`.
+            Additional subordinate global NLP optimizers to invoke
+            in the event the primary global NLP optimizers fails
+            to solve a subproblem to an acceptable termination condition.
+            """
+        ),
     ))
     CONFIG.declare("subproblem_file_directory", ConfigValue(
-        default=None, domain=str,
-        description="Optional. Path to a directory where subproblem files and "
-                    "logs will be written in the case that a subproblem fails to solve."
+        default=None,
+        domain=str,
+        description=(
+            """(`path-like` or `None`, optional) Default=`None`.
+            Directory to which to export subproblems not successfully
+            solved to an acceptable termination condition.
+            """
+        ),
     ))
+
     # ================================================
     # === Advanced Options
     # ================================================
     CONFIG.declare("bypass_local_separation", ConfigValue(
-        default=False, domain=bool,
-        description="This is an advanced option. Default = False. 'True' to only use global solver(s) during separation; "
-                    "'False' to use local solver(s) at intermediate separations, "
-                    "using global solver(s) only before termination to certify robust feasibility. "
+        default=False,
+        domain=bool,
+        description=(
+            """(`bool`, optional) Default=`False`.
+            This is an advanced option.
+            Solve all separation problems with the subordinate global
+            solver(s) only.
+            """
+        ),
     ))
     CONFIG.declare("bypass_global_separation", ConfigValue(
-        default=False, domain=bool,
-        description="This is an advanced option. Default = False. 'True' to only use local solver(s) during separation; "
-                    "however, robustness of the final result will not be guaranteed. Use to expedite PyROS run when "
-                    "global solver(s) cannot (efficiently) solve separation problems."
+        default=False,
+        domain=bool,
+        doc=(
+            """(`bool`, optional) Default=`False`.
+            This is an advanced option.
+            Solve all separation problems with the subordinate local
+            solver only.
+            If `True` is chosen, then robustness of the final solution(s)
+            returned by PyROS is not guaranteed, and a warning will
+            be issued at termination.
+            This option is useful for expediting PyROS
+            in the event that the subordinate global optimizer provided
+            cannot tractably solve separation problems successfully.
+            """
+        ),
     ))
     CONFIG.declare("p_robustness", ConfigValue(
-        default={}, domain=dict,
-        description="This is an advanced option. Default = {}. Whether or not to add p-robustness constraints to the master problems. "
-                    "If the dictionary is empty (default), then p-robustness constraints are not added. "
-                    "See Note for how to specify arguments."
+        default={},
+        domain=dict,
+        doc=(
+            """(`dict`, optional) Default=`{}`.
+            This is an advanced option.
+            Add p-robustness constraints to all master subproblems.
+            If an empty dict is provided, then p-robustness constraints
+            are not added.
+            Otherwise, the dict must map a `str` of value `'rho'`
+            to a non-negative `float`. PyROS automatically
+            specifies 1 + `'rho'` as a bound for the ratio of the
+            objective function value under any PyROS-sampled uncertain
+            parameter realization to the objective function under
+            the nominal parameter realization.
+            """
+        ),
     ))
 
     return CONFIG
+
 
 @SolverFactory.register(
     "pyros",
@@ -283,31 +473,34 @@ class PyROS(object):
     def solve(self, model, first_stage_variables, second_stage_variables,
               uncertain_params, uncertainty_set, local_solver, global_solver,
               **kwds):
-        """Solve the model.
+        """Solve a model.
 
         Parameters
         ----------
         model: ConcreteModel
-            A ``ConcreteModel`` object representing the deterministic
-            model, cast as a minimization problem.
+            The deterministic model.
         first_stage_variables: List[Var]
-            The list of ``Var`` objects referenced in ``model``
-            representing the design variables.
+            First-stage model variables (or design variables).
         second_stage_variables: List[Var]
-            The list of ``Var`` objects referenced in ``model``
-            representing the control variables.
+            Second-stage model variables (or control variables).
         uncertain_params: List[Param]
-            The list of ``Param`` objects referenced in ``model``
-            representing the uncertain parameters.  MUST be ``mutable``.
-            Assumes entries are provided in consistent order with the
-            entries of 'nominal_uncertain_param_vals' input.
+            Uncertain model parameters. All should satisfy the property
+            ``mutable=True``.
         uncertainty_set: UncertaintySet
-            ``UncertaintySet`` object representing the uncertainty space
-            that the final solutions will be robust against.
+            Uncertainty set against which the solution(s) returned
+            will be confirmed to be robust.
         local_solver: Solver
-            ``Solver`` object to utilize as the primary local NLP solver.
+            Subordinate local NLP solver.
         global_solver: Solver
-            ``Solver`` object to utilize as the primary global NLP solver.
+            Subordinate global NLP solver.
+        **kwds: dict, optional
+            Optional keyword arguments. See the Keyword Arguments
+            section.
+
+        Returns
+        -------
+        return_soln : ROSolveResults
+            Summary of PyROS termination outcome.
 
         """
 
@@ -485,5 +678,6 @@ def _generate_filtered_docstring():
     del cfg['local_solver']
     del cfg['global_solver']
     return add_docstring_list(PyROS.solve.__doc__, cfg, indent_by=8)
+
 
 PyROS.solve.__doc__ = _generate_filtered_docstring()
