@@ -858,7 +858,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
     def initializeWalker(self, expr):
         # Refresh the cached dimensionless (in case the underlying pint
         # registry was either changed or had not been set when the
-        # PyomoUnitsContainer was originally created.
+        # PyomoUnitsContainer was originally created).
         self._pint_dimensionless \
             = self._pyomo_units_container._pint_dimensionless
         walk, result = self.beforeChild(None, expr, 0)
