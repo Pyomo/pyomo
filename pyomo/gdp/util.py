@@ -308,7 +308,8 @@ def is_child_of(parent, child, knownBlocks=None):
     if knownBlocks is None:
         knownBlocks = {}
     tmp = set()
-    node = child
+    node = child if isinstance(child, (Block, _BlockData)) else \
+           child.parent_block()
     while True:
         known = knownBlocks.get(node)
         if known:
