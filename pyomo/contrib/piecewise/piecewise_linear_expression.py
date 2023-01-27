@@ -21,12 +21,16 @@ class PiecewiseLinearExpression(NumericExpression):
         args (list or tuple): Children of this node
         parent (PiecewiseLinearFunction): parent piece-wise linear function
             of which this node is an instance.
+        index (non-negative int): this expression's index in the parent's
+            '_expressions' object (which is an indexed Expression)
     """
     __slots__ = ('_parent_pw_linear_function', '_index',)
 
     def __init__(self, args, parent, index):
         super().__init__(args)
         self._parent_pw_linear_function = weakref_ref(parent)
+        # We store the index here so that it will be easy to replace with a
+        # variable in the case that we later convert the model to a MIP
         self._index = index
 
     def nargs(self):

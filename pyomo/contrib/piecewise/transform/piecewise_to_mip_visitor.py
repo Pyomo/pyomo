@@ -15,6 +15,19 @@ from pyomo.core import Expression
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 
 class PiecewiseLinearToMIP(StreamBasedExpressionVisitor):
+    """
+    Expression walker to replace PiecewiseLinearExpressions when creating
+    equivalent MIP formulations.
+
+    Args:
+        transform_pw_linear_expression (function): a callback that accepts
+            a PiecewiseLinearExpression, its parent PiecewiseLinearFunction,
+            and a transformation Block. It is expected to convert the
+            PiecewiseLinearExpression to MIP form, and return the Var (or
+            other expression) that will replace it in the expression.
+        transBlock (Block): transformation Block to pass to the above
+            callback
+    """
     def __init__(self, transform_pw_linear_expression, transBlock):
         self.transform_pw_linear_expression = transform_pw_linear_expression
         self.transBlock = transBlock
@@ -27,7 +40,7 @@ class PiecewiseLinearToMIP(StreamBasedExpressionVisitor):
 
     def beforeChild(self, node, child, child_idx):
         return True, None
-        
+
     def exitNode(self, node, data):
         if node.__class__ is PiecewiseLinearExpression:
             parent = node.parent_pw_linear_function

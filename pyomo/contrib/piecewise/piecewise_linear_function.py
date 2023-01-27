@@ -96,7 +96,6 @@ class PiecewiseLinearFunctionData(_BlockData):
                 raise
         for l in lambdas:
             if l < -ZERO_TOLERANCE:
-                # TODO: Do we need a tolerance?? Eeeeeek
                 return False
         return True
 
