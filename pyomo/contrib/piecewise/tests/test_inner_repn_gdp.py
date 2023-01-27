@@ -10,15 +10,13 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.piecewise import PiecewiseLinearFunction
+from pyomo.contrib.piecewise import (
+    PiecewiseLinearFunction, PiecewiseLinearExpression)
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import (
     assertExpressionsEqual, assertExpressionsStructurallyEqual)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import ConcreteModel, Constraint, log, Objective, Var
-
-## DEBUG
-from pytest import set_trace
 
 class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
     def make_model(self):
@@ -129,19 +127,11 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             x2 == pts[0][1]*d.lambdas[0] + pts[1][1]*d.lambdas[1] +
             pts[2][1]*d.lambdas[2])
 
-    def test_transformation_do_not_descend(self):
-        m = self.make_model()
-        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
-        inner_repn.apply_to(m)
-
-        # Check that all the expressions have been re-mapped to Vars
-        self.assertIsInstance(m.pw_log._expressions[0].expr, Var)
-        self.assertIsInstance(m.pw_paraboloid._expressions[0].expr, Var)
-
+    def check_pw_log(self, m):
         ##
         # Check the transformation of the approximation of log(x)
         ##
-
+        self.assertIsInstance(m.pw_log._expressions[0].expr, Var)
         # Now we can use those Vars to check on what the transformation created
         z = m.pw_log._expressions[0].expr
         log_block = z.parent_block()
@@ -167,10 +157,11 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         # And check the substitute Var is in the objective now.
         self.assertIs(m.obj.expr.expr, log_block.substitute_var)
 
+    def check_pw_paraboloid(self, m):
         ##
         # Check the approximation of the transformation of the paraboloid
         ##
-
+        self.assertIsInstance(m.pw_paraboloid._expressions[0].expr, Var)
         z = m.pw_paraboloid._expressions[0].expr
         paraboloid_block = z.parent_block()
         self.check_trans_block_structure(paraboloid_block)
@@ -197,3 +188,53 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         # And check the substitute Var is in the objective now.
         self.assertIs(m.indexed_c[0].body.args[0].expr,
                       paraboloid_block.substitute_var)
+
+    def test_transformation_do_not_descend(self):
+        m = self.make_model()
+        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn.apply_to(m)
+
+        self.check_pw_log(m)
+        self.check_pw_paraboloid(m)
+
+    def test_transformation_PiecewiseLinearFunction_targets(self):
+        m = self.make_model()
+        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn.apply_to(m, targets=[m.pw_log])
+
+        self.check_pw_log(m)
+
+        # And check that the paraboloid was *not* transformed.
+        self.assertIsInstance(m.pw_paraboloid._expressions[0].expr,
+                              PiecewiseLinearExpression)
+
+    def test_descend_into_expressions(self):
+        m = self.make_model()
+        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn.apply_to(m, descend_into_expressions=True)
+
+        # Everything should be transformed
+        self.check_pw_log(m)
+        self.check_pw_paraboloid(m)
+
+    def test_descend_into_expressions_constraint_target(self):
+        m = self.make_model()
+        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn.apply_to(m, descend_into_expressions=True,
+                            targets=[m.indexed_c])
+
+        self.check_pw_paraboloid(m)
+        # And check that the log was *not* transformed.
+        self.assertIsInstance(m.pw_log._expressions[0].expr,
+                              PiecewiseLinearExpression)
+
+    def test_descend_into_expressions_objective_target(self):
+        m = self.make_model()
+        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn.apply_to(m, descend_into_expressions=True,
+                            targets=[m.obj])
+
+        self.check_pw_log(m)
+        # And check that the paraboloid was *not* transformed.
+        self.assertIsInstance(m.pw_paraboloid._expressions[0].expr,
+                              PiecewiseLinearExpression)

@@ -10,9 +10,12 @@
 #  ___________________________________________________________________________
 
 import logging
+from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
+from pyomo.contrib.piecewise.transform.piecewise_to_mip_visitor import (
+    PiecewiseLinearToMIP)
 from pyomo.core import (
     Constraint, Objective, Var, BooleanVar, Expression, Suffix, Param, Set,
     SetOf, RangeSet, ExternalFunction, Connector, SortComponents, Any,
@@ -23,8 +26,6 @@ from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import is_child_of
 from pyomo.network import Port
-
-from pytest import set_trace
 
 logger = logging.getLogger('pyomo.contrib.piecewise')
 
@@ -128,7 +129,8 @@ class InnerRepresentationGDPTransformation(Transformation):
                         "Constraints, and Objectives where your "
                         "PiecewiseLinearFunctions have been used in "
                         "expressions.")
-                self._transform_piecewise_linear_function(f)
+                self._transform_piecewise_linear_function(
+                    t, config.descend_into_expressions)
             elif t.ctype is Block or isinstance(t, _BlockData):
                 self._transform_block(t, config.descend_into_expressions)
             elif t.ctype is Constraint:
@@ -136,17 +138,17 @@ class InnerRepresentationGDPTransformation(Transformation):
                     raise ValueError(
                         "Encountered Constraint target '%s':\n%s"
                         % (t.name, not_walking_exprs_msg))
-                self._transform_constraint(t)
+                self._transform_constraint(t, config.descend_into_expressions)
             elif t.ctype is Objective:
                 if not config.descend_into_expressions:
                     raise ValueError(
                         "Encountered Objective target '%s':\n%s"
                         % (t.name, not_walking_exprs_msg))
-                self._transform_objective(t)
+                self._transform_objective(t, config.descend_into_expressions)
             else:
                 raise ValueError(
-                    "Target '%s' is not a Block or Constraint "
-                    "It was of type '%s' and can't be transformed."
+                    "Target '%s' is not a PiecewiseLinearFunction, Block or "
+                    "Constraint. It was of type '%s' and can't be transformed."
                     % (t.name, type(t)))
 
     def _get_transformation_block(self, parent):
@@ -178,9 +180,12 @@ class InnerRepresentationGDPTransformation(Transformation):
                     continue
                 handler(obj, descend_into_expressions)
 
-    def _transform_pw_linear_expr(self, expr, pw_linear_func, transBlock):
+    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func,
+                                  transformation_block):
+        transBlock = transformation_block.transformed_functions[
+            len(transformation_block.transformed_functions)]
+
         # get the PiecewiseLinearFunctionExpression
-        pw_expr = expr.expr
         dimension = pw_expr.nargs()
         transBlock.disjuncts = Disjunct(NonNegativeIntegers)
         transBlock.substitute_var = Var()
@@ -210,45 +215,49 @@ class InnerRepresentationGDPTransformation(Transformation):
         transBlock.pick_a_piece = Disjunction(
             expr=[d for d in transBlock.disjuncts.values()])
 
-        # We change the named expression to point to the variable that will
-        # take the appropriate value of the piecewise linear function.
-        expr.expr = transBlock.substitute_var
+        return transBlock.substitute_var
 
     def _transform_piecewise_linear_function(self, pw_linear_func,
                                              descend_into_expressions):
         if descend_into_expressions:
-            # TODO: Should it even touch these guys?
-            pw.deactivate()
             return
 
+        transBlock = self._get_transformation_block(
+            pw_linear_func.parent_block())
         _functions = pw_linear_func.values() if pw_linear_func.is_indexed() \
                      else (pw_linear_func,)
         for pw_func in _functions:
-            transBlock = self._get_transformation_block(pw_func.parent_block())
-
             for pw_expr in pw_func._expressions.values():
-                blk = transBlock.transformed_functions[
-                    len(transBlock.transformed_functions)]
-                self._transform_pw_linear_expr(pw_expr, pw_func, blk)
+                substitute_var = self._transform_pw_linear_expr(pw_expr.expr,
+                                                                pw_func,
+                                                                transBlock)
+                # We change the named expression to point to the variable that
+                # will take the appropriate value of the piecewise linear
+                # function.
+                pw_expr.expr = substitute_var
 
     def _transform_constraint(self, constraint, descend_into_expressions):
         if not descend_into_expressions:
             return
 
+        transBlock = self._get_transformation_block(constraint.parent_block())
+        visitor = PiecewiseLinearToMIP(self._transform_pw_linear_expr,
+                                       transBlock)
+
         _constraints = constraint.values() if constraint.is_indexed() else \
                        (constraint,)
         for c in _constraints:
-            pass
+            visitor.walk_expression((c.expr, c, 0))
 
     def _transform_objective(self, objective, descend_into_expressions):
         if not descend_into_expressions:
             return
 
+        transBlock = self._get_transformation_block(objective.parent_block())
+        visitor = PiecewiseLinearToMIP(self._transform_pw_linear_expr,
+                                       transBlock)
+
         _objectives = objective.values() if objective.is_indexed() else \
                       (objective,)
         for o in _objectives:
-            pass
-
-    def get_transformed_pw_linear_function_expression(self, pw_expr):
-        pw_func = pw_expr.parent_pw_linear_function
-
+            visitor.walk_expression((o.expr, o, 0))

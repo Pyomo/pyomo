@@ -1,3 +1,5 @@
+from pyomo.contrib.piecewise.piecewise_linear_expression import (
+    PiecewiseLinearExpression)
 from pyomo.contrib.piecewise.piecewise_linear_function import (
     PiecewiseLinearFunction)
 ## register transformations
