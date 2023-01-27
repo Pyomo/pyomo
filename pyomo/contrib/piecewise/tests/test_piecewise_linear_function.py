@@ -232,7 +232,10 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertEqual(str(m.c.body.expr), "pw(x1, x2)")
         self.assertIs(m.c.body.expr.parent_pw_linear_function, m.pw)
 
+    @unittest.skipUnless(numpy_available, "numpy are not available")
     def test_evaluate_pw_linear_function(self):
+        # NOTE: This test requires numpy because it is used to check which
+        # simplex a point is in
         m = self.make_model()
         def f1(x1, x2):
             return 3*x1 + 5*x2 - 4
