@@ -698,9 +698,16 @@ class TestSensitivityInterface(unittest.TestCase):
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
         dsdp, col = get_dsdp(m, variable_name, theta)
-        np.testing.assert_almost_equal(dsdp.toarray(),[[1., 0., 1., 0.],[0., 1., 0., 1.]])
-
-        assert col == ['x1', 'x2', 'p1', 'p2']
+        ref = {
+            'x1': [1., 0.],
+            'x2': [0., 1.],
+            'p1': [1., 0.],
+            'p2': [0., 1.],
+        }
+        np.testing.assert_almost_equal(
+            dsdp.toarray(),
+            np.vstack(ref[c] for c in col).transpose()
+        )
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_ipopt.available(False), "ipopt is not available")
@@ -757,10 +764,26 @@ class TestSensitivityInterface(unittest.TestCase):
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
         gradient_f, gradient_c, col ,row, line_dic=  get_dfds_dcds(m, variable_name)
-        np.testing.assert_almost_equal( gradient_f, [10., 50., 15., 35.])
-        np.testing.assert_almost_equal( gradient_c.toarray(), [[ 1.,  0.,  -1., 0.], [ 0.,  1., 0., -1.]])
-        assert col == ['x1', 'x2', 'p1', 'p2']
-        assert row == ['c1', 'c2', 'obj']
+
+        ref_f = {
+            'x1': [10.],
+            'x2': [50.],
+            'p1': [15.],
+            'p2': [35.],
+        }
+        ref_c = {
+            'x1': [1., 0.],
+            'x2': [0., 1.],
+            'p1': [-1., 0.],
+            'p2': [0., -1.],
+        }
+        np.testing.assert_almost_equal(
+            gradient_f, np.hstack(ref_f[v] for v in col)
+        )
+        np.testing.assert_almost_equal(
+            gradient_c.toarray(),
+            np.vstack(ref_c[v] for v in col).transpose()
+        )
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
