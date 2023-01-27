@@ -16,7 +16,8 @@ from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import (
     assertExpressionsEqual, assertExpressionsStructurallyEqual)
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.environ import ConcreteModel, Constraint, log, Objective, Var
+from pyomo.environ import (
+    ConcreteModel, Constraint, log, SolverFactory, Objective, Var)
 
 class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
     def make_model(self):
@@ -54,7 +55,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         def g2(x1, x2):
             return 3*x1 + 11*x2 - 28
         m.g2 = g2
-        simplices = [[(0, 1), (0, 4), (3, 1)],
+        simplices = [[(0, 1), (0, 4), (3, 4)],
                      [(0, 1), (3, 4), (3, 1)],
                      [(3, 4), (3, 7), (0, 7)],
                      [(0, 7), (0, 4), (3, 4)]]
@@ -88,7 +89,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.assertEqual(len(d.lambdas), 2)
         for lamb in d.lambdas.values():
             self.assertEqual(lamb.lb, 0)
-            self.assertIsNone(lamb.ub)
+            self.assertEqual(lamb.ub, 1)
         self.assertIsInstance(d.convex_combo, Constraint)
         assertExpressionsEqual(self, d.convex_combo.expr,
                                d.lambdas[0] + d.lambdas[1] == 1)
@@ -109,7 +110,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.assertEqual(len(d.lambdas), 3)
         for lamb in d.lambdas.values():
             self.assertEqual(lamb.lb, 0)
-            self.assertIsNone(lamb.ub)
+            self.assertEqual(lamb.ub, 1)
         self.assertIsInstance(d.convex_combo, Constraint)
         assertExpressionsEqual(self, d.convex_combo.expr,
                                d.lambdas[0] + d.lambdas[1] + d.lambdas[2] == 1)
@@ -168,7 +169,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
         self.assertEqual(len(paraboloid_block.disjuncts), 4)
         disjuncts_dict = {
-            paraboloid_block.disjuncts[0]: ([(0, 1), (0, 4), (3, 1)], m.g1),
+            paraboloid_block.disjuncts[0]: ([(0, 1), (0, 4), (3, 4)], m.g1),
             paraboloid_block.disjuncts[1]: ([(0, 1), (3, 4), (3, 1)], m.g1),
             paraboloid_block.disjuncts[2]: ([(3, 4), (3, 7), (0, 7)], m.g2),
             paraboloid_block.disjuncts[3]: ([(0, 7), (0, 4), (3, 4)], m.g2),
@@ -238,3 +239,14 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         # And check that the paraboloid was *not* transformed.
         self.assertIsInstance(m.pw_paraboloid._expressions[0].expr,
                               PiecewiseLinearExpression)
+
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         'Gurobi is not available')
+    def test_solve_disaggregated_convex_combo_model(self):
+        m = self.make_model()
+        TransformationFactory(
+            'contrib.disaggregated_convex_combination').apply_to(m)
+
+        SolverFactory('gurobi').solve(m, tee=True)
+
+        # TODO: you need assertions

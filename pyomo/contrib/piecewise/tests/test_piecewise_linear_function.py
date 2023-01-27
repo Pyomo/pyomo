@@ -153,8 +153,11 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         self.check_x_squared_approx(m.pw[2], m.z[2])
 
 class TestPiecewiseLinearFunction3D(unittest.TestCase):
-    @unittest.skipUnless(scipy_available and numpy_available,
-                         "scipy and/or numpy are not available")
+    simplices = [[(0, 1), (0, 4), (3, 4)],
+                 [(0, 1), (3, 4), (3, 1)],
+                 [(3, 4), (3, 7), (0, 7)],
+                 [(0, 7), (0, 4), (3, 4)]]
+
     def make_model(self):
         m = ConcreteModel()
         m.x1 = Var(bounds=(0, 3))
@@ -167,6 +170,10 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
 
     def check_pw_linear_approximation(self, m):
         self.assertEqual(len(m.pw._simplices), 4)
+        for i, simplex in enumerate(m.pw._simplices):
+            for idx in simplex:
+                self.assertIn(m.pw._points[idx], self.simplices[i])
+
         self.assertEqual(len(m.pw._linear_functions), 4)
 
         assertExpressionsStructurallyEqual(
@@ -186,6 +193,8 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
             m.pw._linear_functions[3](m.x1, m.x2),
             3*m.x1 + 11*m.x2 - 28, places=7)
 
+    @unittest.skipUnless(scipy_available and numpy_available,
+                         "scipy and/or numpy are not available")
     def test_pw_linear_approx_of_paraboloid_points(self):
         m = self.make_model()
         m.pw = PiecewiseLinearFunction(points=[(0, 1), (0, 4), (0, 7),
@@ -193,13 +202,11 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
                                        function=m.f)
         self.check_pw_linear_approximation(m)
 
+    @unittest.skipUnless(numpy_available, "numpy are not available")
     def test_pw_linear_approx_of_paraboloid_simplices(self):
         m = self.make_model()
         m.pw = PiecewiseLinearFunction(function=m.f,
-                                       simplices=[[(0, 1), (0, 4), (3, 1)],
-                                                  [(0, 1), (3, 4), (3, 1)],
-                                                  [(3, 4), (3, 7), (0, 7)],
-                                                  [(0, 7), (0, 4), (3, 4)]])
+                                       simplices=self.simplices)
         self.check_pw_linear_approximation(m)
 
     def test_pw_linear_approx_of_paraboloid_linear_funcs(self):
@@ -208,10 +215,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
             return 3*x1 + 5*x2 - 4
         def f2(x1, x2):
             return 3*x1 + 11*x2 - 28
-        m.pw = PiecewiseLinearFunction(simplices=[[(0, 1), (0, 4), (3, 1)],
-                                                  [(0, 1), (3, 4), (3, 1)],
-                                                  [(3, 4), (3, 7), (0, 7)],
-                                                  [(0, 7), (0, 4), (3, 4)]],
+        m.pw = PiecewiseLinearFunction(simplices=self.simplices,
                                        linear_functions=[f1, f1, f2, f2])
         self.check_pw_linear_approximation(m)
 
@@ -221,10 +225,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
             return 3*x1 + 5*x2 - 4
         def f2(x1, x2):
             return 3*x1 + 11*x2 - 28
-        m.pw = PiecewiseLinearFunction(simplices=[[(0, 1), (0, 4), (3, 1)],
-                                                  [(0, 1), (3, 4), (3, 1)],
-                                                  [(3, 4), (3, 7), (0, 7)],
-                                                  [(0, 7), (0, 4), (3, 4)]],
+        m.pw = PiecewiseLinearFunction(simplices=self.simplices,
                                        linear_functions=[f1, f1, f2, f2])
 
         m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
@@ -237,11 +238,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
             return 3*x1 + 5*x2 - 4
         def f2(x1, x2):
             return 3*x1 + 11*x2 - 28
-        simplices = [[(0, 1), (0, 4), (3, 1)],
-                     [(0, 1), (3, 4), (3, 1)],
-                     [(3, 4), (3, 7), (0, 7)],
-                     [(0, 7), (0, 4), (3, 4)]]
-        m.pw = PiecewiseLinearFunction(simplices=simplices,
+        m.pw = PiecewiseLinearFunction(simplices=self.simplices,
                                        linear_functions=[f1, f1, f2, f2])
         # check it's equal to the original function at all the extreme points of
         # the simplices
