@@ -44,11 +44,8 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
         m.x1 = Var(bounds=(0, 3))
         m.x2 = Var(bounds=(1, 7))
-        # Here's a cute paraboloid:
-        def f(x, y):
-            return x**2 + y**2
-        m.parabaloid = f
 
+        ## apprximates paraboloid x1**2 + x2**2
         def g1(x1, x2):
             return 3*x1 + 5*x2 - 4
         m.g1 = g1
