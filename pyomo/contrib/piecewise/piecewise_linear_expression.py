@@ -22,11 +22,12 @@ class PiecewiseLinearExpression(NumericExpression):
         parent (PiecewiseLinearFunction): parent piece-wise linear function
             of which this node is an instance.
     """
-    __slots__ = ('_parent_pw_linear_function',)
+    __slots__ = ('_parent_pw_linear_function', '_index',)
 
-    def __init__(self, args, parent):
+    def __init__(self, args, parent, index):
         super().__init__(args)
         self._parent_pw_linear_function = weakref_ref(parent)
+        self._index = index
 
     def nargs(self):
         return len(self._args_)

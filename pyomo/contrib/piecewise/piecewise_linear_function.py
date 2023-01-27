@@ -50,8 +50,8 @@ class PiecewiseLinearFunctionData(_BlockData):
             # We need to actually evaluate
             return self._evaluate(*args)
         else:
-            expr = PiecewiseLinearExpression(args, self)
             idx = len(self._expressions)
+            expr = PiecewiseLinearExpression(args, self, idx)
             self._expressions[idx] = expr
             return self._expressions[idx]
 
