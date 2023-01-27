@@ -12,14 +12,19 @@
 
 import pyomo.common.unittest as unittest
 
+import io
 import math
+import os
 
 import pyomo.repn.plugins.nl_writer as nl_writer
 
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr.current import Expr_if, inequality
 from pyomo.core.base.expression import ScalarExpression
-from pyomo.environ import ConcreteModel, Param, Var, log
+from pyomo.environ import (
+    ConcreteModel, Objective, Param, Var, log, ExternalFunction,
+)
 
 
 class INFO(object):
@@ -655,3 +660,53 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, [(id(m.x), 1)])
         self.assertEqual(repn.nonlinear, None)
         self.assertEqual(info, [None, None, False])
+
+class Test_NLWriter(unittest.TestCase):
+    def test_external_function_str_args(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.e = ExternalFunction(library='tmp', function='test')
+        m.o = Objective(expr=m.e(m.x, 'str'))
+
+        # Test explicit newline translation
+        OUT = io.StringIO(newline='\r\n')
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertIn(
+            "Writing NL file containing string arguments to a "
+            "text output stream with line endings other than '\\n' ",
+            LOG.getvalue()
+        )
+
+        # Test system-dependent newline translation
+        with TempfileManager:
+            fname = TempfileManager.create_tempfile()
+            with open(fname, 'w') as OUT:
+                with LoggingIntercept() as LOG:
+                    nl_writer.NLWriter().write(m, OUT)
+        if os.linesep == '\n':
+            self.assertEqual(LOG.getvalue(), "")
+        else:
+            self.assertIn(
+                "Writing NL file containing string arguments to a "
+                "text output stream with line endings other than '\\n' ",
+                LOG.getvalue()
+            )
+
+        # Test objects lacking 'tell':
+        r,w = os.pipe()
+        try:
+            OUT = os.fdopen(w, 'w')
+            with LoggingIntercept() as LOG:
+                nl_writer.NLWriter().write(m, OUT)
+            if os.linesep == '\n':
+                self.assertEqual(LOG.getvalue(), "")
+            else:
+                self.assertIn(
+                    "Writing NL file containing string arguments to a "
+                    "text output stream that does not support tell()",
+                    LOG.getvalue()
+                )
+        finally:
+            OUT.close()
+            os.close(r)
