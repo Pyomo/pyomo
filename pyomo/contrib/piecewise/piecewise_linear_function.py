@@ -40,6 +40,7 @@ class PiecewiseLinearFunctionData(_BlockData):
         with self._declare_reserved_components():
             self._expressions = Expression(NonNegativeIntegers)
             self._simplices = None
+            # These will always be tuples, even when we only have one dimension.
             self._points = []
             self._linear_functions = []
 
@@ -74,8 +75,8 @@ class PiecewiseLinearFunctionData(_BlockData):
     def _pt_in_simplex(self, pt, simplex):
         dim = len(pt)
         if dim == 1:
-            return self._points[simplex[0]] <= pt[0] and \
-                self._points[simplex[1]] >= pt[0]
+            return self._points[simplex[0]][0] <= pt[0] and \
+                self._points[simplex[1]][0] >= pt[0]
         # Otherwise, we check if pt is a convex combination of the simplex's
         # extreme points
         A = np.ones((dim + 1, dim + 1))
@@ -107,7 +108,10 @@ class PiecewiseLinearFunctionData(_BlockData):
             for pt in simplex:
                 if pt not in known_points:
                     known_points.add(pt)
-                    self._points.append(pt)
+                    if hasattr(pt, '__len__'):
+                        self._points.append(pt)
+                    else:
+                        self._points.append((pt,))
                     point_to_index[pt] = len(self._points) - 1
                 extreme_pts.append(point_to_index[pt])
             self._simplices.append(tuple(extreme_pts))
@@ -212,9 +216,9 @@ class PiecewiseLinearFunction(Block):
             obj._simplices = []
             for i in range(len(points) - 1):
                 obj._simplices.append((i, i + 1))
-                obj._points.append(points[i])
+                obj._points.append((points[i],))
             # Add the last one
-            obj._points.append(points[-1])
+            obj._points.append((points[-1],))
             return self._construct_from_univariate_function_and_segments(
                 obj, nonlinear_function)
 
@@ -243,8 +247,8 @@ class PiecewiseLinearFunction(Block):
             return lambda x : slope*x + intercept
 
         for idx1, idx2 in obj._simplices:
-            x1 = obj._points[idx1]
-            x2 = obj._points[idx2]
+            x1 = obj._points[idx1][0]
+            x2 = obj._points[idx2][0]
             y = {x : func(x) for x in [x1, x2]}
             slope = (y[x2] - y[x1])/(x2 - x1)
             intercept = y[x1] - slope*x1
