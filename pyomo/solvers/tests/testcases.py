@@ -85,9 +85,14 @@ MissingSuffixFailures['cplex_persistent', 'python', 'QCP_simple'] = (
     "Cplex does not report duals of quadratic constraints.")
 
 MissingSuffixFailures['cplex', 'nl', 'QCP_simple'] = (
-    lambda v: v <= (12,5,9,9),
+    lambda v: v < (12,6,0,0),
     {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
+
+SkipTests['cplex', 'nl', 'QCP_simple'] = (
+    lambda v: v == (12,6,0,0),
+    "Cplex 12.6.0.0 produces inconsistent dual values based on "
+    "NL variable ordering (which changes between the NLv1 and NLv2 writers")
 
 #
 # GUROBI
