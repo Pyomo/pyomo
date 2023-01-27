@@ -51,8 +51,9 @@ class PiecewiseLinearFunctionData(_BlockData):
             return self._evaluate(*args)
         else:
             expr = PiecewiseLinearExpression(args, self)
-            self._expressions[len(self._expressions)] = expr
-            return expr
+            idx = len(self._expressions)
+            self._expressions[idx] = expr
+            return self._expressions[idx]
 
     def _evaluate(self, *args):
         # ESJ: This is a very inefficient implementation in high dimensions, but

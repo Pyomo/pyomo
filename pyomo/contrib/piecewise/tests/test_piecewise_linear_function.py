@@ -92,7 +92,7 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         m.pw = PiecewiseLinearFunction(simplices=[(1, 3), (3, 6), (6, 10)],
                                        linear_functions=[m.f1, m.f2, m.f3])
         m.c = Constraint(expr=m.pw(m.x) <= 1)
-        self.assertEqual(str(m.c.body), "pw(x)")
+        self.assertEqual(str(m.c.body.expr), "pw(x)")
 
     def test_evaluate_pw_function(self):
         m = self.make_ln_x_model()
@@ -228,8 +228,8 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
                                        linear_functions=[f1, f1, f2, f2])
 
         m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
-        self.assertEqual(str(m.c.body), "pw(x1, x2)")
-        self.assertIs(m.c.body.parent_pw_linear_function, m.pw)
+        self.assertEqual(str(m.c.body.expr), "pw(x1, x2)")
+        self.assertIs(m.c.body.expr.parent_pw_linear_function, m.pw)
 
     def test_evaluate_pw_linear_function(self):
         m = self.make_model()
