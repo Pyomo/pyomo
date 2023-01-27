@@ -107,10 +107,12 @@ def test_get_mainwindow(qtbot):
     assert isinstance(mw.expressions, ModelBrowser)
     assert isinstance(mw.parameters, ModelBrowser)
 
+
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_close_mainwindow(qtbot):
     mw, m = get_mainwindow(model=None, testing=True)
     mw.exit_action()
+
 
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_show_model_select_no_models(qtbot):
@@ -118,6 +120,7 @@ def test_show_model_select_no_models(qtbot):
     ms = mw.show_model_select()
     ms.update_models()
     ms.select_model()
+
 
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_model_information(qtbot):
@@ -173,13 +176,13 @@ def test_residual_table(qtbot):
     m.c4.deactivate()
     mw.residuals.sort()
     assert dm.data(dm.index(0, 0)) == "c5"
-    
+
+
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_qtconsole_viewer(qtbot):
     km, kc = pv._start_kernel()
     mw = pv.MainWindow(kernel_manager=km, kernel_client=kc)
-    kc.execute("model.display()", silent=True) 
+    kc.execute("model.display()", silent=True)
     mw.show_ui()
     mw.hide_ui()
     mw.shutdown_kernel()
-    
