@@ -17,7 +17,7 @@ from pyomo.core.expr.compare import (
     assertExpressionsEqual, assertExpressionsStructurallyEqual)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import (
-    ConcreteModel, Constraint, log, SolverFactory, Objective, Var)
+    ConcreteModel, Constraint, log, SolverFactory, Objective, value, Var)
 
 class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
     def make_model(self):
@@ -249,4 +249,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
         SolverFactory('gurobi').solve(m, tee=True)
 
-        # TODO: you need assertions
+        self.assertAlmostEqual(value(m.x), 4)
+        self.assertAlmostEqual(value(m.x1), 1)
+        self.assertAlmostEqual(value(m.x2), 1)
+        self.assertAlmostEqual(value(m.obj), m.f2(4))
