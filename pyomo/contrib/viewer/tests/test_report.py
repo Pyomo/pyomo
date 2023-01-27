@@ -86,6 +86,9 @@ class TestReportFunctions(unittest.TestCase):
         m.c7 = Constraint(expr=0 == log(m.x[3]))
         m.p1 = Param(mutable=True, initialize=1)
         m.c8 = Constraint(expr=m.x[1] <= 1 / m.p1)
+        m.c8b = Constraint(expr=m.x[1] >= 1 / m.p1)
+        m.c9 = Constraint(expr=m.x[1] <= 1)
+        m.c10 = Constraint(expr=m.x[1] >= 1)
         m.p1 = 0
         self.m = m.clone()
 
@@ -119,6 +122,7 @@ class TestReportFunctions(unittest.TestCase):
         # In c8 the bound has a divide by 0, I think this is only possible
         # with a mutable param
         assert rpt.get_residual(dat, self.m.c8) == "Divide_by_0"
+        assert rpt.get_residual(dat, self.m.c8b) == "Divide_by_0"
         self.m.x[2] = 0
         assert rpt.get_residual(dat, self.m.c4) == "Divide_by_0"
         self.m.x[2] = 2
@@ -126,6 +130,8 @@ class TestReportFunctions(unittest.TestCase):
         assert rpt.get_residual(dat, self.m.c4) == "Divide_by_0"
         dat.calculate_constraints()
         self.assertAlmostEqual(rpt.get_residual(dat, self.m.c4), 3.0 / 2.0)
+        self.assertAlmostEqual(rpt.get_residual(dat, self.m.c9), 0)
+        self.assertAlmostEqual(rpt.get_residual(dat, self.m.c10), 0)
 
     def test_active_equalities(self):
         eq = [
@@ -151,6 +157,9 @@ class TestReportFunctions(unittest.TestCase):
                 self.m.c6,
                 self.m.c7,
                 self.m.c8,
+                self.m.c8b,
+                self.m.c9,
+                self.m.c10,
             ]
         )
         self.m.c4.activate()
@@ -164,6 +173,9 @@ class TestReportFunctions(unittest.TestCase):
                 self.m.c6,
                 self.m.c7,
                 self.m.c8,
+                self.m.c8b,
+                self.m.c9,
+                self.m.c10,
             ]
         )
 
@@ -199,7 +211,7 @@ class TestReportFunctions(unittest.TestCase):
         assert rpt.count_equality_constraints(self.m) == 7
 
     def test_count_constraints(self):
-        assert rpt.count_constraints(self.m) == 8
+        assert rpt.count_constraints(self.m) == 11
 
     def test_degrees_of_freedom(self):
         assert rpt.degrees_of_freedom(self.m) == 0
