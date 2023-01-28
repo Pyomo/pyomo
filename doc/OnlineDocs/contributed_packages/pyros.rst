@@ -115,26 +115,32 @@ PyROS Solver Interface
 
 .. note::
     Upon successful convergence of PyROS, the solution returned is
-    certified to be robust optimal only if:
-    - master problems are solved to global optimality (specified through
-    the option ``solve_master_globally=True``)
-    - a worst-case objective focus is chosen (by specifying the option
+    certified to be robust optimal only if
+    (1) master problems are solved to global optimality (specified through
+    the option ``solve_master_globally=True``);
+    (2) a worst-case objective focus is chosen (by specifying the option
     ``objective_focus=ObjectiveType.worst_case``).
 
     Otherwise, the solution returned is certified to only be robust feasible.
 
 PyROS Uncertainty Sets
 -----------------------------
-Uncertainty sets are represented by subclasses of the ``UncertaintySet`` abstract base class.
+Uncertainty sets are represented by subclasses of
+the :py:class:`~pyomo.contrib.pyros.UncertaintySet` abstract base class.
 PyROS provides a suite of pre-implemented subclasses representing commonly used
-uncertainty sets, along with an ``IntersectionSet`` subclass for representing
-an intersection of multiple uncertainty sets.
-A custom uncertainty set type may be implemented as
-a subclass of the ``UncertaintySet`` class.
+uncertainty sets, including an :py:class:`~pyomo.contrib.pyros.IntersectionSet`
+subclass for
+the intersection of a sequence of uncertainty set instances.
+Custom user-defined uncertainty set types may be implemented by
+subclassing the :py:class:`~pyomo.contrib.pyros.UncertaintySet` class.
 
-Mathematical representations of the sets are shown below, followed by the class descriptions.
+:ref:`This table <table-uncertsets>` provides mathematical definitions of
+the various abstract and pre-implemented
+:py:class:`~pyomo.contrib.pyros.UncertaintySet` subclasses.
 
-.. list-table:: Mathematical definitions of PyROS uncertainty sets of dimension :math:`n`
+.. _table-uncertsets:
+
+.. list-table:: Mathematical definitions of PyROS uncertainty sets of dimension :math:`n`.
    :header-rows: 1
    :class: tight-table
 
@@ -173,7 +179,8 @@ Mathematical representations of the sets are shown below, followed by the class 
      - :math:`\displaystyle \bigcap_{i=1}^{m} \mathcal{Q}_{i}`
 
 .. note::
-    Each of the PyROS uncertainty set classes inherits from the ``UncertaintySet`` base class.
+    Each of the PyROS uncertainty set classes inherits from the
+    :py:class:`~pyomo.contrib.pyros.UncertaintySet` abstract base class.
 
 PyROS Uncertainty Set Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
