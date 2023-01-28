@@ -309,15 +309,12 @@ class Geometry(Enum):
 
 class UncertaintySet(object, metaclass=abc.ABCMeta):
     """
-    An object representing an uncertainty set for a two-stage robust
-    optimization model. Along with a `ConcreteModel` object
-    representing the corresponding deterministic model formulation, the
-    uncertainty set object may be passed to the PyROS solver to obtain a
-    robust model solution.
+    An object representing an uncertainty set to be passed to the
+    PyROS solver.
 
     An `UncertaintySet` object should be viewed as merely a container
-    for data needed to parameterize the set it represents, such that the
-    object's attributes do not, in general, reference the
+    for data needed to parameterize the set it represents,
+    such that the object's attributes do not reference the
     components of a Pyomo modeling object.
     """
 
@@ -742,7 +739,7 @@ class UncertaintySetList(MutableSequence):
 
 class BoxSet(UncertaintySet):
     """
-    A hyper-rectangle (a.k.a "box").
+    A hyper-rectangle (a.k.a. "box").
 
     Parameters
     ----------
@@ -804,27 +801,30 @@ class BoxSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the box set.
+        int : Dimension `N` of the box set.
         """
         return len(self.bounds)
 
     @property
     def geometry(self):
         """
-        Geometry of the box set. See the `Geometry` class
-        documentation.
+        Geometry of the box set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the box set.
+        Bounds in each dimension of the box set.
+        This is numerically equivalent to `bounds`.
 
         Returns
         -------
-        : list(tuple)
-            Box set bounds.
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
+            dimension.
         """
         return [tuple(bound) for bound in self.bounds]
 
