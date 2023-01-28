@@ -1407,8 +1407,8 @@ class BudgetSet(UncertaintySet):
         """
         (L, N) numpy.ndarray : Incidence matrix of the budget
         constraints.  Each row corresponds to a single budget
-        constraint, and defines which uncertain parameters (which
-        dimensions) participate in that row's constraint.
+        constraint and defines which uncertain parameters
+        participate in that row's constraint.
         """
         return self._budget_membership_mat
 
