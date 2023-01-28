@@ -1647,7 +1647,7 @@ class BudgetSet(UncertaintySet):
 
 class FactorModelSet(UncertaintySet):
     """
-    A factor model (a.k.a "net-alpha" model) set.
+    A factor model (a.k.a. "net-alpha" model) set.
 
     Parameters
     ----------
@@ -1657,10 +1657,12 @@ class FactorModelSet(UncertaintySet):
     number_of_factors : int
         Natural number representing the dimensionality of the
         space to which the set projects.
-    psi_mat : (N, `number_of_factors`) array_like
+    psi_mat : (N, F) array_like
         Matrix designating each uncertain parameter's contribution to
         each factor.  Each row is associated with a separate uncertain
         parameter.  Each column is associated with a separate factor.
+        Number of columns `F` of `psi_mat` should be equal to
+        `number_of_factors`.
     beta : numeric type
         Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
@@ -1716,8 +1718,8 @@ class FactorModelSet(UncertaintySet):
     @property
     def number_of_factors(self):
         """
-        int : Natural number representing the dimensionality of the
-        space to which the set projects.
+        int : Natural number representing the dimensionality `F`
+        of the space to which the set projects.
 
         This attribute is immutable, and may only be set at
         object construction. Typically, the number of factors
@@ -1743,7 +1745,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def psi_mat(self):
         """
-        (N, `number_of_factors`) numpy.ndarray : Matrix designating each
+        (N, F) numpy.ndarray : Matrix designating each
         uncertain parameter's contribution to each factor. Each row is
         associated with a separate uncertain parameter. Each column with
         a separate factor.
@@ -1790,11 +1792,11 @@ class FactorModelSet(UncertaintySet):
         fraction of the independent factors that can simultaneously
         attain their extreme values.
 
-        Note that mathematically, setting `beta = 0` will enforce
+        Note that, mathematically, setting ``beta = 0`` will enforce
         that as many factors will be above 0 as there will be below 0
-        (i.e., "zero-net-alpha" model). Setting `beta = 1` produces the
-        hyper-rectangle ``[origin - psi @ e, origin + psi @ e]``, where
-        `e` is a vector of ones.
+        (i.e., "zero-net-alpha" model). If ``beta = 1``,
+        then the set is numerically equivalent to a `BoxSet` with bounds
+        ``[origin - psi @ np.ones(F), origin + psi @ np.ones(F)].T``.
         """
         return self._beta
 
@@ -1811,28 +1813,28 @@ class FactorModelSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the factor model set.
+        int : Dimension `N` of the factor model set.
         """
         return len(self.origin)
 
     @property
     def geometry(self):
         """
-        Geometry of the factor model set. See the `Geometry` class
-        documentation.
+        Geometry of the factor model set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the factor model set.
+        Bounds in each dimension of the factor model set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         F = self.number_of_factors
