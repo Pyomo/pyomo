@@ -1340,12 +1340,12 @@ class BudgetSet(UncertaintySet):
 
     Parameters
     ----------
-    budget_membership_mat : (M, N) array_like
+    budget_membership_mat : (L, N) array_like
         Incidence matrix of the budget constraints.
         Each row corresponds to a single budget constraint,
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
-    rhs_vec : (M,) array_like
+    rhs_vec : (L,) array_like
         Budget limits (upper bounds) with respect to
         the origin of the set.
     origin : (N,) array_like or None, optional
@@ -1371,7 +1371,7 @@ class BudgetSet(UncertaintySet):
     @property
     def coefficients_mat(self):
         """
-        (M + N, N) numpy.ndarray : Coefficient matrix of all polyhedral
+        (L + N, N) numpy.ndarray : Coefficient matrix of all polyhedral
         constraints defining the budget set. Composed from the incidence
         matrix used for defining the budget constraints and a
         coefficient matrix for individual uncertain parameter
@@ -1390,7 +1390,7 @@ class BudgetSet(UncertaintySet):
     @property
     def rhs_vec(self):
         """
-        (M + N,) numpy.ndarray : Right-hand side vector for polyhedral
+        (L + N,) numpy.ndarray : Right-hand side vector for polyhedral
         constraints defining the budget set. This also includes entries
         for nonnegativity constraints on the uncertain parameters.
 
@@ -1405,7 +1405,7 @@ class BudgetSet(UncertaintySet):
     @property
     def budget_membership_mat(self):
         """
-        (M, N) numpy.ndarray : Incidence matrix of the budget
+        (L, N) numpy.ndarray : Incidence matrix of the budget
         constraints.  Each row corresponds to a single budget
         constraint, and defines which uncertain parameters (which
         dimensions) participate in that row's constraint.
@@ -1484,7 +1484,7 @@ class BudgetSet(UncertaintySet):
     @property
     def budget_rhs_vec(self):
         """
-        (M,) numpy.ndarray : Budget limits (upper bounds)
+        (L,) numpy.ndarray : Budget limits (upper bounds)
         with respect to the origin.
         """
         return self._budget_rhs_vec
@@ -1558,28 +1558,28 @@ class BudgetSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the budget set.
+        int : Dimension `N` of the budget set.
         """
         return self.budget_membership_mat.shape[1]
 
     @property
     def geometry(self):
         """
-        Geometry of the budget set. See the `Geometry` class
-        documentation.
+        Geometry of the budget set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the budget set.
+        Bounds in each dimension of the budget set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         bounds = []
