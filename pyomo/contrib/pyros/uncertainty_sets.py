@@ -867,7 +867,7 @@ class CardinalitySet(UncertaintySet):
     Parameters
     ----------
     origin : (N,) array_like
-        Origin of the set (e.g. nominal uncertain parameter values).
+        Origin of the set (e.g., nominal uncertain parameter values).
     positive_deviation : (N,) array_like
         Maximal non-negative coordinate deviation from the origin
         in each dimension.
@@ -968,9 +968,9 @@ class CardinalitySet(UncertaintySet):
         origin values simultaneously. Must be a numerical value ranging
         from 0 to the set dimension.
 
-        Note that mathematically, setting `gamma` to 0 reduces the set
+        Note that, mathematically, setting `gamma` to 0 reduces the set
         to a singleton containing the center, while setting `gamma` to
-        the set dimension reduces the set to a hyperrectangle with
+        the set dimension `N` reduces the set to a hyperrectangle with
         bounds ``[origin, origin + positive_deviation]``.
         """
         return self._gamma
@@ -994,28 +994,28 @@ class CardinalitySet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the cardinality set.
+        int : Dimension `N` of the cardinality set.
         """
         return len(self.origin)
 
     @property
     def geometry(self):
         """
-        Geometry of the cardinality set. See the `Geometry` class
-        documentation.
+        Geometry of the cardinality set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the cardinality set.
+        Bounds in each dimension of the cardinality set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         nom_val = self.origin
