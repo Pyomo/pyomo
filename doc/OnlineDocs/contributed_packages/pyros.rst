@@ -126,17 +126,19 @@ PyROS Solver Interface
 PyROS Uncertainty Sets
 -----------------------------
 Uncertainty sets are represented by subclasses of
-the :py:class:`~pyomo.contrib.pyros.UncertaintySet` abstract base class.
+the :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet` abstract base
+class.
 PyROS provides a suite of pre-implemented subclasses representing commonly used
-uncertainty sets, including an :py:class:`~pyomo.contrib.pyros.IntersectionSet`
-subclass for
+uncertainty sets, including an
+:class:`~pyomo.contrib.pyros.uncertainty_sets.IntersectionSet` subclass for
 the intersection of a sequence of uncertainty set instances.
 Custom user-defined uncertainty set types may be implemented by
-subclassing the :py:class:`~pyomo.contrib.pyros.UncertaintySet` class.
+subclassing the :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
+class.
 
 :ref:`This table <table-uncertsets>` provides mathematical definitions of
 the various abstract and pre-implemented
-:py:class:`~pyomo.contrib.pyros.UncertaintySet` subclasses.
+:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet` subclasses.
 
 .. _table-uncertsets:
 
@@ -180,7 +182,8 @@ the various abstract and pre-implemented
 
 .. note::
     Each of the PyROS uncertainty set classes inherits from the
-    :py:class:`~pyomo.contrib.pyros.UncertaintySet` abstract base class.
+    :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
+    abstract base class.
 
 PyROS Uncertainty Set Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
