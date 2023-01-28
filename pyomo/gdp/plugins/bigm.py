@@ -143,12 +143,13 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                                         # not to be when I try to put it into
                                         # this map!
         try:
-            super()._apply_to(instance, **kwds)
+            self._apply_to_impl(instance, **kwds)
         finally:
+            self._restore_state()
             self.used_args.clear()
 
     def _apply_to_impl(self, instance, **kwds):
-        super()._apply_to_impl(instance, **kwds)
+        self._process_arguments(instance, **kwds)
 
         # filter out inactive targets and handle case where targets aren't
         # specified.

@@ -205,12 +205,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
+            self._restore_state()
             self._transformation_blocks.clear()
             self._algebraic_constraints.clear()
             self._targets_set = set()
 
     def _apply_to_impl(self, instance, **kwds):
-        super()._apply_to_impl(instance, **kwds)
+        self._process_arguments(instance, **kwds)
 
         # filter out inactive targets and handle case where targets aren't
         # specified.

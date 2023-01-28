@@ -71,16 +71,13 @@ class GDP_to_MIP_Transformation(Transformation):
         self._transformation_blocks = {}
         self._algebraic_constraints = {}
 
-    def _apply_to(self, instance, **kwds):
-        try:
-            self._apply_to_impl(instance, **kwds)
-        finally:
-            self._transformation_blocks.clear()
-            self._algebraic_constraints.clear()
-            if hasattr(self, '_config'):
-                del self._config
+    def _restore_state(self):
+        self._transformation_blocks.clear()
+        self._algebraic_constraints.clear()
+        if hasattr(self, '_config'):
+            del self._config
 
-    def _apply_to_impl(self, instance, **kwds):
+    def _process_arguments(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
             raise GDP_Error("Transformation called on %s of type %s. 'instance'"
                             " must be a ConcreteModel, Block, or Disjunct (in "

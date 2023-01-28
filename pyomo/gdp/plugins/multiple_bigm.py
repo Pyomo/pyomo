@@ -167,13 +167,14 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()
         try:
-            super()._apply_to(instance, **kwds)
+            self._apply_to_impl(instance, **kwds)
         finally:
+            self._restore_state()
             self.used_args.clear()
             self._arg_list.clear()
 
     def _apply_to_impl(self, instance, **kwds):
-        super()._apply_to_impl(instance, **kwds)
+        self._process_arguments(instance, **kwds)
 
         if (self._config.only_mbigm_bound_constraints and not
             self._config.reduce_bound_constraints):
