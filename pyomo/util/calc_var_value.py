@@ -121,15 +121,17 @@ def calculate_variable_from_constraint(variable, constraint,
             "initial guess.\n\tPlease provide a different initial guess.")
         raise
 
-    variable.set_value(x1 - (residual_1 - upper), skip_validation=True)
-    residual_2 = value(body, exception=False)
-
-    # If we encounter an error while evaluating the expression at the
-    # linear intercept calculated assuming the derivative was 1.  This
-    # is most commonly due to nonlinear expressions (like sqrt())
-    # becoming invalid/complex.  We will skip the rest of the
-    # "shortcuts" that assume the expression is linear and move directly
-    # to using Newton's method.
+    try:
+        variable.set_value(x1 - (residual_1 - upper), skip_validation=True)
+        residual_2 = value(body, exception=False)
+    except OverflowError:
+        # If we encounter an error while evaluating the expression at the
+        # linear intercept calculated assuming the derivative was 1.  This
+        # is most commonly due to nonlinear expressions (like sqrt())
+        # becoming invalid/complex.  We will skip the rest of the
+        # "shortcuts" that assume the expression is linear and move directly
+        # to using Newton's method.
+        residual_2 = None
 
     if residual_2 is not None and type(residual_2) is not complex:
         # if the variable appears linearly with a coefficient of 1, then we
