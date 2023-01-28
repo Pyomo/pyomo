@@ -149,34 +149,34 @@ the various abstract and pre-implemented
    * - Uncertainty Set Type
      - Input Data
      - Mathematical Definition
-   * - ``BoxSet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet`
      - :math:`\begin{array}{l} q ^{\text{L}} \in \mathbb{R}^{n}, \\ q^{\text{U}} \in \mathbb{R}^{n} \end{array}`
      - :math:`\{q \in \mathbb{R}^n \mid q^\mathrm{L} \leq q \leq q^\mathrm{U}\}`
-   * - ``CardinalitySet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.CardinalitySet`
      - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ \hat{q} \in \mathbb{R}_{+}^{n}, \\ \Gamma \in [0, n] \end{array}`
      - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} q = q^{0} + \hat{q} \circ \xi \\ \displaystyle \sum_{i=1}^{n} \xi_{i} \leq \Gamma \\ \xi \in [0, 1]^{n} \end{array} \right\}`
-   * - ``BudgetSet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.BudgetSet`
      - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ b \in \mathbb{R}_{+}^{L}, \\ B \in \{0, 1\}^{L \times n} \end{array}`
      - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \begin{pmatrix} B \\ -I \end{pmatrix} q \leq \begin{pmatrix}  b + Bq^{0} \\ -q^{0} \end{pmatrix}  \end{array} \right\}`
-   * - ``FactorModelSet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.FactorModelSet`
      - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ \Psi \in \mathbb{R}^{n \times F}, \\ \beta \in [0, 1] \end{array}`
      - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} q = q^{0} + \Psi \xi \\ \displaystyle\bigg| \sum_{j=1}^{F} \xi_{j} \bigg| \leq \beta F \\ \xi \in [-1, 1]^{F} \\ \end{array} \right\}`
-   * - ``PolyhedralSet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet`
      - :math:`\begin{array}{l} A \in \mathbb{R}^{m \times n}, \\ b \in \mathbb{R}^{m}\end{array}`
      - :math:`\{q \in \mathbb{R}^{n} \mid A q \leq b\}`
-   * - ``AxisAlignedEllipsoidalSet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet`
      - :math:`\begin{array}{l} q^0 \in \mathbb{R}^{n}, \\ \alpha \in \mathbb{R}_{+}^{n} \end{array}`
      - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \displaystyle\sum_{\substack{i = 1: \\ \alpha_{i} > 0}}^{n}  \left(\frac{q_{i} - q_{i}^{0}}{\alpha_{i}}\right)^2 \leq 1 \\ q_{i} = q_{i}^{0} \,\forall\,i : \alpha_{i} = 0 \end{array} \right\}`
-   * - ``EllipsoidalSet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet`
      - :math:`\begin{array}{l} q^0 \in \mathbb{R}^n, \\ P \in \mathbb{S}_{++}^{n}, \\ s \in \mathbb{R}_{+} \end{array}`
      - :math:`\{q \in \mathbb{R}^{n} \mid (q - q^{0})^{\intercal} P^{-1} (q - q^{0}) \leq s\}`
-   * - ``UncertaintySet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
      - :math:`g: \mathbb{R}^{n} \to \mathbb{R}^{m}`
      - :math:`\{q \in \mathbb{R}^{n} \mid g(q) \leq 0\}`
-   * - ``DiscreteScenariosSet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet`
      - :math:`q^{1}, q^{2},\dots , q^{S} \in \mathbb{R}^{n}`
      - :math:`\{q^{1}, q^{2}, \dots , q^{S}\}`
-   * - ``IntersectionSet``
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.IntersectionSet`
      - :math:`\mathcal{Q}_{1}, \mathcal{Q}_{2}, \dots , \mathcal{Q}_{m} \subset \mathbb{R}^{n}`
      - :math:`\displaystyle \bigcap_{i=1}^{m} \mathcal{Q}_{i}`
 
