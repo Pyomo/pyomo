@@ -817,7 +817,8 @@ class BoxSet(UncertaintySet):
     def parameter_bounds(self):
         """
         Bounds in each dimension of the box set.
-        This is numerically equivalent to `bounds`.
+        This is numerically equivalent to
+        :attr:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet.bounds`.
 
         Returns
         -------
