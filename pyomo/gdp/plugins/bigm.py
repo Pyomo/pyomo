@@ -133,7 +133,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     transformation_name = 'bigm'
 
     def __init__(self):
-        super(BigM_Transformation, self).__init__(logger)
+        super().__init__(logger)
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap() # If everything was sure to go well,
@@ -148,7 +148,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             self.used_args.clear()
 
     def _apply_to_impl(self, instance, **kwds):
-        super(BigM_Transformation, self)._apply_to_impl(instance, **kwds)
+        super()._apply_to_impl(instance, **kwds)
 
         # filter out inactive targets and handle case where targets aren't
         # specified.

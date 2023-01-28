@@ -169,7 +169,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     transformation_name = 'hull'
 
     def __init__(self):
-        super(Hull_Reformulation, self).__init__(logger)
+        super().__init__(logger)
         self._targets = set()
 
     def _add_local_vars(self, block, local_var_dict):
@@ -210,7 +210,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             self._targets_set = set()
 
     def _apply_to_impl(self, instance, **kwds):
-        super(Hull_Reformulation, self)._apply_to_impl(instance, **kwds)
+        super()._apply_to_impl(instance, **kwds)
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
@@ -234,8 +234,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # so for hull's purposes, they need not be in the tree.
 
     def _add_transformation_block(self, to_block):
-        transBlock, new_block = super(Hull_Reformulation,
-                                      self)._add_transformation_block(to_block)
+        transBlock, new_block = super()._add_transformation_block(to_block)
         if not new_block:
             return transBlock, new_block
 

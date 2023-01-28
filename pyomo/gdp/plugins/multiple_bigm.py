@@ -161,7 +161,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     transformation_name = 'mbigm'
 
     def __init__(self):
-        super(MultipleBigMTransformation, self).__init__(logger)
+        super().__init__(logger)
         self._arg_list = {}
 
     def _apply_to(self, instance, **kwds):
@@ -173,7 +173,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             self._arg_list.clear()
 
     def _apply_to_impl(self, instance, **kwds):
-        super(MultipleBigMTransformation, self)._apply_to_impl(instance, **kwds)
+        super()._apply_to_impl(instance, **kwds)
 
         if (self._config.only_mbigm_bound_constraints and not
             self._config.reduce_bound_constraints):
@@ -480,8 +480,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         return transformed_constraints
 
     def _add_transformation_block(self, to_block):
-        transBlock, new_block = super(MultipleBigMTransformation,
-                                      self)._add_transformation_block(to_block)
+        transBlock, new_block = super()._add_transformation_block(to_block)
 
         if new_block:
             # Will store M values as we transform
@@ -604,8 +603,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         """
         # This is silly, but we rename this function for multiple bigm because
         # transformed constraints have multiple source constraints.
-        return super(MultipleBigMTransformation, self).get_src_constraint(
-            transformedConstraint)
+        return super().get_src_constraint(transformedConstraint)
 
     def get_all_M_values(self, model):
         """Returns a dictionary mapping each constraint, disjunct pair (where
