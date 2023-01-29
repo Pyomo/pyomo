@@ -128,11 +128,12 @@ PyROS Solver Interface
 
 .. note::
     Upon successful convergence of PyROS, the solution returned is
-    certified to be robust optimal only if
-    (1) master problems are solved to global optimality (specified through
-    the option ``solve_master_globally=True``);
-    (2) a worst-case objective focus is chosen (by specifying the option
-    ``objective_focus=ObjectiveType.worst_case``).
+    certified to be robust optimal only if:
+
+    1. master problems are solved to global optimality
+       (by specifying ``solve_master_globally=True``)
+    2. a worst-case objective focus is chosen
+       (by specifying ``objective_focus=ObjectiveType.worst_case``)
 
     Otherwise, the solution returned is certified to only be robust feasible.
 
