@@ -23,7 +23,7 @@ from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set)
 from pyomo.core.base.initializer import BoundInitializer, Initializer
-from pyomo.core.expr.current import GetAttrExpression, GetItemExpression
+from pyomo.core.expr.current import GetItemExpression
 
 class IntervalVarTimePoint(ScalarVar):
     """This class defines the abstract interface for a single variable
