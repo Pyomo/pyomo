@@ -26,11 +26,11 @@ PyROS is designed to operate on deterministic models of the general form
 .. _deterministic-model:
 
 .. math::
-    \begin{align*}
-    \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2\left(x,z,y; q^0\right) & \\
-    \displaystyle \text{s.t.} \quad \: & ~~ g_i\left(x, z, y; q^0\right) \leq 0 & \forall i \in \mathcal{I} \\
-    & ~~ h_j\left(x,z,y; q^0\right) = 0 & \forall j \in \mathcal{J} \\
-    \end{align*}
+    \begin{array}{clll}
+    \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2(x,z,y; q^0) & \\
+    \displaystyle \text{s.t.} & ~~ g_i(x, z, y; q^0) \leq 0 & \forall\,i \in \mathcal{I} \\
+    & ~~ h_j(x,z,y; q^0) = 0 & \forall\,j \in \mathcal{J} \\
+    \end{array}
 
 where:
 
@@ -83,13 +83,13 @@ The set :math:`\mathcal{Q}` may be **either continuous or discrete**.
 Based on the above notation, the form of the robust counterpart addressed by PyROS is
 
 .. math::
-    \begin{align*}
+    \begin{array}{ccclll}
     \displaystyle \min_{x \in \mathcal{X}}
     & \displaystyle \max_{q \in \mathcal{Q}}
-    & \displaystyle \min_{z \in \mathbb{R}^{n_z}, y \in \mathbb{R}^{n_y}} \ \ & \displaystyle ~~ f_1\left(x\right) + f_2\left(x, z, y, q\right) & & \\
-    & & \text{s.t.} \quad \:& \displaystyle ~~ g_i\left(x, z, y, q\right) \leq 0 &  & \forall i \in \mathcal{I}\\
-    & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall j \in \mathcal{J}
-    \end{align*}
+    & \displaystyle \min_{\substack{z \in \mathbb{R}^{n_z},\\y \in \mathbb{R}^{n_y}}} \ \ & \displaystyle ~~ f_1\left(x\right) + f_2\left(x, z, y, q\right) \\
+    & & \text{s.t.} \quad \:& \displaystyle ~~ g_i\left(x, z, y, q\right) \leq 0 &  & \forall\, i \in \mathcal{I}\\
+    & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall\,j \in \mathcal{J}
+    \end{array}
 
 PyROS solves problems of this form using the
 Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_.
