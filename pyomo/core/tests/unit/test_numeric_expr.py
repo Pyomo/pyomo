@@ -4314,18 +4314,9 @@ class TestCloneExpression(unittest.TestCase):
             #
             expr1 = Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
             expr2 = expr1.clone()
-            self.assertNotEqual(id(expr1), id(expr2))
-            self.assertEqual(expr1(), value(self.m.a))
-            self.assertEqual(expr2(), value(self.m.a))
-            self.assertNotEqual(id(expr1._if), id(expr2._if))
-            self.assertEqual(id(expr1._then), id(expr2._then))
-            self.assertEqual(id(expr1._else), id(expr2._else))
-            self.assertEqual(expr1._if(), expr2._if())
-            self.assertEqual(expr1._then(), expr2._then())
-            self.assertEqual(expr1._else(), expr2._else())
-            #
-            total = counter.count - start
-            self.assertEqual(total, 1)
+            assertExpressionsStructurallyEqual(self, expr1, expr2)
+            self.assertIsNot(expr1, expr2)
+            self.assertIsNot(expr1.arg(0), expr2.arg(0))
 
     def test_LinearExpression(self):
         m = ConcreteModel()

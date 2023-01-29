@@ -176,7 +176,10 @@ class Test_polydegree(unittest.TestCase):
 
     def test_bool(self):
         val = False
-        self.assertEqual(0, polynomial_degree(val))
+        with self.assertRaisesRegex(
+                TypeError, "Cannot evaluate the polynomial degree "
+                "of a non-numeric type: bool"):
+            polynomial_degree(val)
 
     def test_float(self):
         val = 1.1
