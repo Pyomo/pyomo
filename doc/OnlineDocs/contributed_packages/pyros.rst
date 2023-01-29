@@ -27,9 +27,9 @@ PyROS is designed to operate on deterministic models of the general form
 
 .. math::
     \begin{array}{clll}
-    \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2(x,z,y; q^0) & \\
-    \displaystyle \text{s.t.} & ~~ g_i(x, z, y; q^0) \leq 0 & \forall\,i \in \mathcal{I} \\
-    & ~~ h_j(x,z,y; q^0) = 0 & \forall\,j \in \mathcal{J} \\
+    \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2(x,z,y; q^{\text{nom}}) & \\
+    \displaystyle \text{s.t.} & ~~ g_i(x, z, y; q^{\text{nom}}) \leq 0 & \forall\,i \in \mathcal{I} \\
+    & ~~ h_j(x,z,y; q^{\text{nom}}) = 0 & \forall\,j \in \mathcal{J} \\
     \end{array}
 
 where:
@@ -42,7 +42,7 @@ where:
   (i.e., second-stage degrees of freedom)
 * :math:`y \in \mathbb{R}^{n_y}` are the "state" variables
 * :math:`q \in \mathbb{R}^{n_q}` is the vector of model parameters considered
-  uncertain, and :math:`q^0` is the vector of nominal values
+  uncertain, and :math:`q^{\text{nom}}` is the vector of nominal values
   associated with those.
 * :math:`f_1\left(x\right)` are the terms of the objective function that depend
   only on design variables
@@ -81,7 +81,7 @@ In order to cast the robust optimization counterpart of the
 we now assume that the uncertain parameters may attain
 any realization in a compact uncertainty set
 :math:`\mathcal{Q} \subseteq \mathbb{R}^{n_q}` containing
-the nominal value :math:`q^0`.
+the nominal value :math:`q^{\text{nom}}`.
 The set :math:`\mathcal{Q}` may be **either continuous or discrete**.
 
 Based on the above notation, the form of the robust counterpart addressed by PyROS is
@@ -576,7 +576,7 @@ as the initial point may affect the performance of sub-solvers.
     and second-stage objective functions.
     If ``objective_focus = ObjectiveType.nominal``,
     second-stage objective and variables are evaluated at
-    the nominal realization of the uncertain parameters, :math:`q^0`.
+    the nominal realization of the uncertain parameters, :math:`q^{\text{nom}}`.
     If ``objective_focus = ObjectiveType.worst_case``, second-stage objective
     and variables are evaluated at the worst-case realization
     of the uncertain parameters, :math:`q^{k^\ast}`
