@@ -189,33 +189,43 @@ PyROS Uncertainty Set Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BoxSet
+    :show-inheritance:
     :special-members: bounds, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
+    :show-inheritance:
     :special-members: origin, positive_deviation, gamma, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
+    :show-inheritance:
     :special-members: coefficients_mat, rhs_vec, origin, budget_membership_mat, budget_rhs_vec, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
+    :show-inheritance:
     :special-members: origin, number_of_factors, psi_mat, beta, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
+    :show-inheritance:
     :special-members: coefficients_mat, rhs_vec, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
+    :show-inheritance:
     :special-members: center, half_lengths, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
+    :show-inheritance:
     :special-members: center, shape_matrix, scale, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
+    :show-inheritance:
     :special-members: parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
+    :show-inheritance:
     :special-members: scenarios, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
+    :show-inheritance:
     :special-members: all_sets, type, parameter_bounds, dim, point_in_set
 
 
