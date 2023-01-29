@@ -357,7 +357,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         col = np.compress(self._hess_lower_mask, self._hess_lag.col)
         return row, col
 
-
     def hessian(self, x, y, obj_factor):
         if not self._hessian_available:
             raise ValueError("Hessian requested, but not supported by the NLP")
