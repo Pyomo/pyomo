@@ -669,8 +669,9 @@ identify robust solutions in light of each of the specified ``BoxSet`` objects.
   ...         == pyros.pyrosTerminationCondition.robust_optimal
   ...     )
   ...     if not is_robust_optimal:
-  ...         print("This instance didn't solve to robust optimality.")
-  ...         robust_optimal_objective.append("-----")
+  ...         print(f"Instance for relative deviation: {relative_deviation} "
+  ...               "not solved to robust optimality.")
+  ...         robust_optimal_objectives.append("-----")
   ...     else:
   ...         robust_optimal_objectives.append(str(results.final_objective_value))
 
