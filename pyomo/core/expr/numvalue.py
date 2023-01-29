@@ -31,6 +31,7 @@ from pyomo.core.expr.expr_common import (
     _ipow, _lt, _le, _eq,
     ExpressionType,
 )
+import pyomo.common.numeric_types as _numeric_types
 # TODO: update imports of these objects to pull from numeric_types
 from pyomo.common.numeric_types import (
     nonpyomo_leaf_types, native_types, native_numeric_types,
@@ -438,7 +439,7 @@ def check_if_numeric_type(obj):
         # numeric type: add it to the native numeric types
         # so that future lookups will be faster.
         #
-        RegisterNumericType(obj_class)
+        _numeric_types.RegisterNumericType(obj_class)
         #
         # Generate a warning, since Pyomo's management of third-party
         # numeric types is more robust when registering explicitly.
