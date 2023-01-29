@@ -1101,6 +1101,9 @@ class PolyhedralSet(UncertaintySet):
     rhs_vec : (M,) array_like
         Right-hand side values for the linear inequality
         constraints defining the polyhedral set.
+        Each entry is an upper bound for the quantity
+        ``lhs_coefficients_mat @ x`` (where `x` is an (N,)
+        array representing any point in the polyhedral set).
     """
 
     def __init__(self, lhs_coefficients_mat, rhs_vec):
@@ -1250,25 +1253,25 @@ class PolyhedralSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the polyhedral set.
+        int : Dimension `N` of the polyhedral set.
         """
         return len(self.coefficients_mat[0])
 
     @property
     def geometry(self):
         """
-        Geometry of the polyhedral set. See the `Geometry` class
-        documentation.
+        Geometry of the polyhedral set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the polyhedral set.
+        Bounds in each dimension of the polyhedral set.
 
-        Currently, an empty list, as the bounds cannot, in general,
-        be computed without access to an optimization solver.
+        Currently, an empty `list` is returned, as the bounds cannot, in
+        general, be computed without access to an optimization solver.
         """
         return []
 
