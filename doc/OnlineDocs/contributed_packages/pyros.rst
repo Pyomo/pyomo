@@ -23,6 +23,8 @@ Below is an overview of the type of optimization models PyROS can accomodate.
 
 PyROS is designed to operate on deterministic models of the general form
 
+.. _deterministic-model:
+
 .. math::
     \begin{align*}
     \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2\left(x,z,y; q^0\right) & \\
@@ -54,7 +56,8 @@ where:
 .. note::
     PyROS accepts models in which bounds are directly imposed on
     ``Var`` objects representing components of the variables :math:`z`
-    and :math:`y`. These models are cast to the form above
+    and :math:`y`. These models are cast to
+    :ref:`the form above <deterministic-model>`
     by reformulating the bounds as inequality constraints.
 
 .. _unique-mapping:
@@ -69,7 +72,8 @@ where:
     and one or more of the :math:`y` variables should be appropriately
     redesignated to be part of either :math:`x` or :math:`z`.
 
-In order to cast the robust optimization counterpart formulation of the above model,
+In order to cast the robust optimization counterpart of the
+:ref:`determinstic model <deterministic-model>`,
 we now assume that the uncertain parameters may attain
 any realization in a compact uncertainty set
 :math:`\mathcal{Q} \subseteq \mathbb{R}^{n_q}` containing
@@ -103,11 +107,14 @@ The required inputs to the PyROS solver are:
 * The uncertainty set
 * Subordinate local and global nonlinear programming (NLP) solvers
 
-These are more elaborately presented in the next section.
+These are more elaborately presented in the
+:ref:`Solver Interface <solver-interface>` section.
 
 .. note::
     Any variables in the model not specified to be first-stage or second-stage
     variables are automatically considered to be state variables.
+
+.. _solver-interface:
 
 PyROS Solver Interface
 -----------------------------
@@ -138,7 +145,7 @@ Custom user-defined uncertainty set types may be implemented by
 subclassing the :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
 class.
 
-:ref:`This table <table-uncertsets>` provides mathematical definitions of
+The table that follows provides mathematical definitions of
 the various abstract and pre-implemented
 :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet` subclasses.
 
