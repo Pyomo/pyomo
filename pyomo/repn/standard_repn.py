@@ -795,15 +795,16 @@ def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic
     return _collect_standard_repn(exp._args_[0], multiplier/denom, idMap, compute_values, verbose, quadratic)
 
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._if.__class__ in native_numeric_types:           # TODO: coverage?
-        if_val = exp._if
-    elif not exp._if.is_potentially_variable():
+    _if, _then, _else = exp.args
+    if _if.__class__ in native_numeric_types:           # TODO: coverage?
+        if_val = _if
+    elif not _if.is_potentially_variable():
         if compute_values:
-            if_val = value(exp._if)
+            if_val = value(_if)
         else:
             return Results(nonl=multiplier*exp)
     else:
-        res = _collect_standard_repn(exp._if, 1, idMap, compute_values, verbose, quadratic)
+        res = _collect_standard_repn(_if, 1, idMap, compute_values, verbose, quadratic)
         if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
             return Results(nonl=multiplier*exp)
         elif res.constant.__class__ in native_numeric_types:
@@ -811,13 +812,13 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
         else:
             return Results(constant=multiplier*exp)
     if if_val:
-        if exp._then.__class__ in native_numeric_types:
-            return Results(constant=multiplier*exp._then)
-        return _collect_standard_repn(exp._then, multiplier, idMap, compute_values, verbose, quadratic)
+        if _then.__class__ in native_numeric_types:
+            return Results(constant=multiplier*_then)
+        return _collect_standard_repn(_then, multiplier, idMap, compute_values, verbose, quadratic)
     else:
-        if exp._else.__class__ in native_numeric_types:
-            return Results(constant=multiplier*exp._else)
-        return _collect_standard_repn(exp._else, multiplier, idMap, compute_values, verbose, quadratic)
+        if _else.__class__ in native_numeric_types:
+            return Results(constant=multiplier*_else)
+        return _collect_standard_repn(_else, multiplier, idMap, compute_values, verbose, quadratic)
 
 def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
     res = _collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
