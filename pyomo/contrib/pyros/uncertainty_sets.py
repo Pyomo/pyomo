@@ -2420,7 +2420,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def scenarios(self):
         """
-        list(tuple) : Uncertain parameter realizations comprising the
+        list of tuples : Uncertain parameter realizations comprising the
         set.  Each tuple is an uncertain parameter realization.
 
         Note that the `scenarios` attribute may be modified, but
