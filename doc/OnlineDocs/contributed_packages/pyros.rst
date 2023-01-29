@@ -57,6 +57,8 @@ where:
     and :math:`y`. These models are cast to the form above
     by reformulating the bounds as inequality constraints.
 
+.. _unique-mapping:
+
 .. note::
     A key requirement of PyROS is that each value of :math:`\left(x, z, q \right)`
     maps to a unique value of :math:`y`, a property that is assumed to
@@ -232,14 +234,33 @@ PyROS Uncertainty Set Classes
 PyROS Usage Example
 -----------------------------
 
-We will use an example to illustrate the usage of PyROS. The problem we will use is called *hydro* and comes from the GAMS example problem database in `The GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_. The model was converted to Pyomo format via the `GAMS Convert tool <https://www.gams.com/latest/docs/S_CONVERT.html>`_.
+We will use an example to illustrate the usage of PyROS.
+The problem we will use is called *hydro* 
+(available `here <https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_hydro.html>`_),
+a QCQP taken from the
+`GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_.
+The model was converted to Pyomo format via the
+`GAMS Convert tool <https://www.gams.com/latest/docs/S_CONVERT.html>`_.
 
-This model is a QCQP with 31 variables. Of these variables, 13 represent degrees of freedom, with the additional 18 being state variables.
-The model features 6 linear inequality constraints, 6 linear equality constraints, 6 non-linear (quadratic) equalities, and a quadratic objective.
-We have augmented this model by converting one objective coefficient, two constraint coefficients, and one constraint right-hand side into Param objects so that they can be considered uncertain later on.
+The model *hydro* features 31 variables,
+of which there are 13 are degrees of freedom and 18 state variables.
+The model features 6 linear inequality constraints,
+12 linear equality constraints,
+6 non-linear (quadratic) equality constraints,
+and a quadratic objective.
+We have modified this model by converting one objective coefficient,
+two constraint coefficients, and one constraint
+right-hand side into :class:`Param`
+objects so that they can be considered uncertain later on.
 
 .. note::
-    Per our analysis, the *hydro* problem satisfies the requirement that each value of :math:`\left(x, z, q \right)` maps to a unique value of :math:`y`, which indicates a proper partition of variables between (first- or second-stage) degrees of freedom and state variables.
+    Per our analysis, the *hydro* problem satisfies the requirement that
+    each value of :math:`\left(x, z, q \right)` maps to a unique
+    value of :math:`y`, which in accordance with
+    :ref:`our earlier note <unique-mapping>`,
+    indicates a proper partitioning of the model variables
+    into (first-stage and second-stage) degrees of freedom and
+    state variables.
 
 Step 0: Import Pyomo and the PyROS Module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
