@@ -25,9 +25,9 @@ PyROS is designed to operate on deterministic models of the general form
 
 .. math::
     \begin{align*}
-    \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2\left(x,z,y; q^{\text{nom}}\right) & \\
-    \displaystyle \text{s.t.} \quad \: & ~~ g_i\left(x, z, y; q^{\text{nom}}\right) \leq 0 & \forall i \in \mathcal{I} \\
-    & ~~ h_j\left(x,z,y; q^{\text{nom}}\right) = 0 & \forall j \in \mathcal{J} \\
+    \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2\left(x,z,y; q^0\right) & \\
+    \displaystyle \text{s.t.} \quad \: & ~~ g_i\left(x, z, y; q^0\right) \leq 0 & \forall i \in \mathcal{I} \\
+    & ~~ h_j\left(x,z,y; q^0\right) = 0 & \forall j \in \mathcal{J} \\
     \end{align*}
 
 where:
@@ -40,7 +40,7 @@ where:
   (i.e., second-stage degrees of freedom)
 * :math:`y \in \mathbb{R}^{n_y}` are the "state" variables
 * :math:`q \in \mathbb{R}^{n_q}` is the vector of model parameters considered
-  uncertain, and :math:`q^{\text{nom}}` is the vector of nominal values
+  uncertain, and :math:`q^0` is the vector of nominal values
   associated with those.
 * :math:`f_1\left(x\right)` are the terms of the objective function that depend
   only on design variables
@@ -73,7 +73,7 @@ In order to cast the robust optimization counterpart formulation of the above mo
 we now assume that the uncertain parameters may attain
 any realization in a compact uncertainty set
 :math:`\mathcal{Q} \subseteq \mathbb{R}^{n_q}` containing
-the nominal value :math:`q^{\text{nom}}`.
+the nominal value :math:`q^0`.
 The set :math:`\mathcal{Q}` may be **either continuous or discrete**.
 
 Based on the above notation, the form of the robust counterpart addressed by PyROS is
