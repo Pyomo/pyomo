@@ -2553,12 +2553,12 @@ class DiscreteScenarioSet(UncertaintySet):
 class IntersectionSet(UncertaintySet):
     """
     An intersection of a sequence of uncertainty sets, each of which
-    is represented by an ``UncertaintySet`` object.
+    is represented by an `UncertaintySet` object.
 
     Parameters
     ----------
     **unc_sets : dict
-        PyROS ``UncertaintySet`` objects of which to construct
+        PyROS `UncertaintySet` objects of which to construct
         an intersection. At least two uncertainty sets must
         be provided. All sets must be of the same dimension.
     """
@@ -2584,7 +2584,7 @@ class IntersectionSet(UncertaintySet):
 
         This attribute may be set through any iterable of
         `UncertaintySet` objects, and exhibits similar behavior
-        to a ``list``.
+        to a `list`.
         """
         return self._all_sets
 
