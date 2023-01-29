@@ -11,6 +11,7 @@
 
 import enum
 
+from pyomo.common.numeric_types import native_types
 from pyomo.core.pyomoobject import PyomoObject
 from . import expr_common as common
 from .visitor import (
