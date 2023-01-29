@@ -1102,8 +1102,8 @@ class PolyhedralSet(UncertaintySet):
         Right-hand side values for the linear inequality
         constraints defining the polyhedral set.
         Each entry is an upper bound for the quantity
-        ``lhs_coefficients_mat @ x`` (where `x` is an (N,)
-        array representing any point in the polyhedral set).
+        ``lhs_coefficients_mat @ x``, where `x` is an (N,)
+        array representing any point in the polyhedral set.
     """
 
     def __init__(self, lhs_coefficients_mat, rhs_vec):
