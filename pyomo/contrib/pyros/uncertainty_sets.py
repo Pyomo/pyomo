@@ -2056,7 +2056,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the axis-aligned ellipsoidal set.
+        int : Dimension `N` of the axis-aligned ellipsoidal set.
         """
         return len(self.center)
 
@@ -2071,14 +2071,13 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the axis-aligned
-        ellipsoidal set.
+        Bounds in each dimension of the axis-aligned ellipsoidal set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         nom_value = self.center
