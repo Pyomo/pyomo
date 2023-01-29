@@ -2400,7 +2400,7 @@ class DiscreteScenarioSet(UncertaintySet):
     Parameters
     ----------
     scenarios : (M, N) array_like
-        A sequence of M distinct uncertain parameter realizations.
+        A sequence of `M` distinct uncertain parameter realizations.
     """
 
     def __init__(self, scenarios):
@@ -2454,7 +2454,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the discrete scenario set.
+        int : Dimension `N` of the discrete scenario set.
         """
         return len(self.scenarios[0])
 
@@ -2469,14 +2469,13 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the discrete
-        scenario set.
+        Bounds in each dimension of the discrete scenario set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         parameter_bounds = [(min(s[i] for s in self.scenarios),
