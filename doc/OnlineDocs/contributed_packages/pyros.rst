@@ -49,9 +49,13 @@ where:
 * :math:`f_2\left(x, z, y; q\right)` are the terms of the objective function
   that depend on all variables and the uncertain parameters
 * :math:`g_i\left(x, z, y; q\right)` is the :math:`i^\text{th}`
-  inequality constraint function in set :math:`\mathcal{I}` (see Note)
+  inequality constraint function in set :math:`\mathcal{I}`
+  (see :ref:`Note <var-bounds-to-ineqs>`)
 * :math:`h_j\left(x, z, y; q\right)` is the :math:`j^\text{th}`
-  equality constraint function in set :math:`\mathcal{J}` (see Note)
+  equality constraint function in set :math:`\mathcal{J}`
+  (see :ref:`Note <unique-mapping>`)
+
+.. _var-bounds-to-ineqs:
 
 .. note::
     PyROS accepts models in which bounds are directly imposed on
