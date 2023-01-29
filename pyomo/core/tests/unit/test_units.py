@@ -419,7 +419,8 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_ok(i, uc, None, EXPR.IndexTemplate)
 
         model.mat = Var(model.S, model.S)
-        self._get_check_units_ok(model.mat[i,j+1], uc, None, EXPR.GetItemExpression)
+        self._get_check_units_ok(model.mat[i,j+1], uc, None,
+                                 EXPR.Numeric_GetItemExpression)
 
         # test ExternalFunctionExpression, NPV_ExternalFunctionExpression
         model.ef = ExternalFunction(python_callback_function)

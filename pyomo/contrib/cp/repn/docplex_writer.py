@@ -748,7 +748,13 @@ def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
+        EXPR.Structural_GetItemExpression: _handle_getitem,
+        EXPR.Numeric_GetItemExpression: _handle_getitem,
+        EXPR.Boolean_GetItemExpression: _handle_getitem,
         EXPR.GetAttrExpression: _handle_getattr,
+        EXPR.Structural_GetAttrExpression: _handle_getattr,
+        EXPR.Numeric_GetAttrExpression: _handle_getattr,
+        EXPR.Boolean_GetAttrExpression: _handle_getattr,
         CallExpression: _handle_call,
         EXPR.NegationExpression: _handle_negation_node,
         EXPR.ProductExpression: _handle_product_node,

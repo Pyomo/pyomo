@@ -1066,7 +1066,7 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_viewsumexpression(e, 0)
         self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.SumExpression)
-        self.assertIs(type(temp[1].arg(0)), EXPR.GetItemExpression)
+        self.assertIs(type(temp[1].arg(0)), EXPR.Numeric_GetItemExpression)
         self.assertIs(type(temp[1].arg(1)), EXPR.MonomialTermExpression)
         self.assertEqual(-1, temp[1].arg(1).arg(0))
         self.assertIs(m.y, temp[1].arg(1).arg(1))
@@ -1078,7 +1078,7 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_viewsumexpression(e, 1)
         self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.SumExpression)
-        self.assertIs(type(temp[1].arg(0)), EXPR.GetItemExpression)
+        self.assertIs(type(temp[1].arg(0)), EXPR.Numeric_GetItemExpression)
         self.assertIs(type(temp[1].arg(1)), EXPR.MonomialTermExpression)
         self.assertIs(m.y, temp[1].arg(1).arg(1))
         self.assertIs(type(temp[1].arg(2)), EXPR.MonomialTermExpression)
@@ -1089,7 +1089,7 @@ class TestExpressionCheckers(unittest.TestCase):
         self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
-        self.assertIs(type(temp[1].arg(0).arg(0)), EXPR.GetItemExpression)
+        self.assertIs(type(temp[1].arg(0).arg(0)), EXPR.Numeric_GetItemExpression)
         self.assertIs(m.y, temp[1].arg(0).arg(1).arg(1))
         self.assertIs(m.z, temp[1].arg(0).arg(2).arg(1))
 
