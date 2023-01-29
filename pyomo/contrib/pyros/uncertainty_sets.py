@@ -2316,7 +2316,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the ellipsoidal set.
+        int : Dimension `N` of the ellipsoidal set.
         """
         return len(self.center)
 
@@ -2331,14 +2331,13 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the ellipsoidal
-        set.
+        Bounds in each dimension of the ellipsoidal set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         scale = self.scale
