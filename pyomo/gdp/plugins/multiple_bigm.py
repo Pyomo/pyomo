@@ -162,6 +162,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def __init__(self):
         super().__init__(logger)
+        self.handlers[Suffix] = self._warn_for_active_suffix
         self._arg_list = {}
 
     def _apply_to(self, instance, **kwds):
