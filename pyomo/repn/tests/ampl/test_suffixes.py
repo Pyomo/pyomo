@@ -75,7 +75,8 @@ class SuffixTester(object):
         _test = os.path.join(self.tempdir, "EXPORT_suffixes.test.nl")
         model.write(filename=_test,
                     format=self.nl_version,
-                    io_options={"symbolic_solver_labels": False})
+                    io_options={"symbolic_solver_labels": False,
+                                "file_determinism": 1})
         _base = os.path.join(currdir, "EXPORT_suffixes_int.baseline.nl")
         self.assertEqual(*load_and_compare_nl_baseline(_base, _test))
 
@@ -116,7 +117,8 @@ class SuffixTester(object):
         _test = os.path.join(self.tempdir, "EXPORT_suffixes.test.nl")
         model.write(filename=_test,
                     format=self.nl_version,
-                    io_options={"symbolic_solver_labels" : False})
+                    io_options={"symbolic_solver_labels" : False,
+                                "file_determinism": 1})
         _base = os.path.join(currdir, "EXPORT_suffixes_float.baseline.nl")
         self.assertEqual(*load_and_compare_nl_baseline(_base, _test))
 
