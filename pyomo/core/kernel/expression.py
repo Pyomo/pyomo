@@ -212,6 +212,8 @@ class npv_noclone(noclone):
         reference variables."""
         return False
 
+    def potentially_variable_base_class(self):
+        return noclone
 
 
 class IExpression(ICategorizedObject, IIdentityExpression):
