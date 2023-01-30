@@ -640,14 +640,22 @@ to an affine decision rule.
 
 The Price of Robustness
 """"""""""""""""""""""""
-Using appropriately constructed hierarchies, PyROS allows for the
-facile comparison of robust optimal objectives across sets to determine the
-"price of robustness."
-For the set we considered here, the ``BoxSet``, we can create such
-a hierarchy via an array of ``relative_deviation`` parameters
-to define the size of these uncertainty sets.
-We can then loop through this array and call PyROS within a loop to
-identify robust solutions in light of each of the specified ``BoxSet`` objects.
+In conjunction with standard Python control flow tools,
+PyROS facilitates a "price of robustness" analysis for a model of interest
+through the evaluation and comparison of the robust optimal
+objective function value across any appropriately constructed hierarchy
+of uncertainty sets.
+In this example, we consider a sequence of
+box uncertainty sets centered on the nominal uncertain
+parameter realization, such that each box is parameterized
+by a real value specifying a relative box size.
+To this end, we construct an iterable called ``relative_deviation_list``
+whose entries are ``float`` values representing the relative sizes.
+We then loop through ``relative_deviation_list`` so that for each relative
+size, the corresponding robust optimal objective value
+can be evaluated by creating an appropriate
+:class:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet`
+instance and invoking the PyROS solver:
 
 .. code::
 
@@ -705,18 +713,19 @@ For this example, we obtain the following price of robustness results:
     |   0.40                                   | ``robust_infeasible``        | :math:`\text{-----}`        |
     +------------------------------------------+------------------------------+-----------------------------+
 
-Note how, in the case of the last uncertainty set,
-we were able to utilize PyROS to show the robust infeasibility of the problem.
+Notice that PyROS was successfully able to determine the robust
+infeasibility of the problem under the largest uncertainty set.
 
 :sup:`o` **Relative Deviation from Nominal Realization**
 
 :sup:`x` **Relative to Deterministic Optimal Objective**
 
-This clearly illustrates the impact that the uncertainty set size can have
-on the robust optimal objective values.
-Price of robustness studies like this are easily implemented using PyROS.
+This example clearly illustrates the potential impact of the uncertainty
+set size on the robust optimal objective function value
+and demonstrates the ease of implementing a price of robustness study
+for a given optimization problem under uncertainty.
 
 .. note::
 
     Please provide feedback and/or report any problems by opening an issue on
-    the Pyomo `GitHub page <https://github.com/Pyomo/pyomo/issues/new/choose>`_.
+    the `Pyomo GitHub page <https://github.com/Pyomo/pyomo/issues/new/choose>`_.
