@@ -416,6 +416,7 @@ class _SuffixData(object):
                 "a Var, Constraint, Objective, or the model.  Skipping.")
 
     def _store(self, obj, val):
+        missing_ct = 0
         _id = id(obj)
         if _id in self._column_order:
             self.var[self._column_order[_id]] = val
@@ -427,14 +428,13 @@ class _SuffixData(object):
             self.prob[0] = val
         elif isinstance(obj, PyomoObject):
             if obj.is_indexed():
-                missing_ct = 0
                 for o in obj.values():
                     missing_ct += self._store(o, val)
-                return missing_ct
             else:
-                return 1
+                missing_ct = 1
         else:
-            return -1
+            missing_ct = -1
+        return missing_ct
 
 
 class _NLWriter_impl(object):
