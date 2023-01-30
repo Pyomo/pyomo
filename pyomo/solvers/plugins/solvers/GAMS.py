@@ -261,6 +261,12 @@ class GAMSDirect(_GAMSSolver):
 
         initial_time = time.time()
 
+        # Because GAMS changes the CWD when running the solver, we need
+        # to convert user-provided file names to absolute paths
+        # (relative to the current directory)
+        if logfile is not None:
+            logfile = os.path.abspath(logfile)
+
         ####################################################################
         # Presolve
         ####################################################################
@@ -626,13 +632,16 @@ class GAMSShell(_GAMSSolver):
         return self._run_simple_model(5001)
 
     def _run_simple_model(self, n):
+        solver_exec = self.executable()
+        if solver_exec is None:
+            return False
         tmpdir = mkdtemp()
         try:
             test = os.path.join(tmpdir, 'test.gms')
             with open(test, 'w') as FILE:
                 FILE.write(self._simple_model(n))
             result = subprocess.run(
-                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'],
+                [solver_exec, test, "curdir=" + tmpdir, 'lo=0'],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL)
             return not result.returncode
@@ -734,6 +743,12 @@ class GAMSShell(_GAMSSolver):
         # Pass remaining keywords to writer, which will handle
         # any unrecognized arguments
         initial_time = time.time()
+
+        # Because GAMS changes the CWD when running the solver, we need
+        # to convert user-provided file names to absolute paths
+        # (relative to the current directory)
+        if logfile is not None:
+            logfile = os.path.abspath(logfile)
 
         ####################################################################
         # Presolve

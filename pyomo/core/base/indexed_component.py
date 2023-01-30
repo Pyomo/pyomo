@@ -16,6 +16,9 @@ import logging
 import sys
 import textwrap
 
+from copy import deepcopy
+
+from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, NumericNDArray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
@@ -24,6 +27,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
+from pyomo.common.autoslots import fast_deepcopy
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
@@ -310,41 +314,30 @@ class IndexedComponent(Component):
             self._implicit_subsets = tmp
             self._index_set = tmp[0].cross(*tmp[1:])
 
-    def __getstate__(self):
-        # Special processing of getstate so that we never copy the
-        # UnindexedComponent_set set
-        state = super(IndexedComponent, self).__getstate__()
-        if not self.is_indexed():
-            state['_index_set'] = None
-        return state
-
-    def __setstate__(self, state):
-        # Special processing of setstate so that we never copy the
-        # UnindexedComponent_set set
-        if state['_index_set'] is None:
-            state['_index_set'] = UnindexedComponent_set
-        super(IndexedComponent, self).__setstate__(state)
-
     def _create_objects_for_deepcopy(self, memo, component_list):
-        _id = id(self)
-        if _id not in memo:
+        _new = self.__class__.__new__(self.__class__)
+        _ans = memo.setdefault(id(self), _new)
+        if _ans is _new:
             component_list.append(self)
-            memo[_id] = self.__class__.__new__(self.__class__)
-        # For indexed components, we need to pre-emptively clone all
-        # component data objects as well (as those are the objects that
-        # will be referenced by things like expressions)
-        if self.is_indexed() and not self.is_reference():
-            for obj in self._data.values():
-                # We need to catch things like References and *not*
-                # preemptively clone the data objects.
-                if obj.parent_component() is not self:
-                    continue
-                _id = id(obj)
-                if _id in memo:
-                    continue
-                # But everything else should be cloned.
-                component_list.append(obj)
-                memo[_id] = obj.__class__.__new__(obj.__class__)
+            # For indexed components, we will pre-emptively clone all
+            # component data objects as well (as those are the objects
+            # that will be referenced by things like expressions).  It
+            # is important to only clone "normal" ComponentData obects:
+            # so we will want to skip this for all scalar components
+            # (where the _data points back to self) and references
+            # (where the data may be stored outside this block tree and
+            # therefore may not be cloned)
+            if self.is_indexed() and not self.is_reference():
+                # Because we are already checking / updating the memo
+                # for the _data dict, we can effectively "deepcopy" it
+                # right now (almost for free!)
+                _src = self._data
+                memo[id(_src)] = _new._data = _data = _src.__class__()
+                for idx, obj in _src.items():
+                    _data[fast_deepcopy(idx, memo)] \
+                        = obj._create_objects_for_deepcopy(memo, component_list)
+
+        return _ans
 
     def to_dense_data(self):
         """TODO"""
@@ -565,11 +558,6 @@ You can silence this warning by one of three ways:
                 obj = _NotFound
 
         if obj is _NotFound:
-            # Not good: we have to defer this import to now
-            # due to circular imports (expr imports _VarData
-            # imports indexed_component, but we need expr
-            # here
-            from pyomo.core.expr import current as EXPR
             if index.__class__ is EXPR.GetItemExpression:
                 return index
             validated_index = self._validate_index(index)
@@ -810,7 +798,6 @@ You can silence this warning by one of three ways:
              (Scalar)Component
           3) the index contains an IndexTemplate
         """
-        from pyomo.core.expr import current as EXPR
         #
         # Iterate through the index and look for slices and constant
         # components
@@ -864,7 +851,6 @@ You can silence this warning by one of three ways:
                     # The index is a template expression, so return the
                     # templatized expression.
                     #
-                    from pyomo.core.expr import current as EXPR
                     return EXPR.GetItemExpression((self,) + tuple(idx))
 
                 except EXPR.NonConstantExpressionError:

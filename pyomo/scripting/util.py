@@ -277,8 +277,8 @@ def create_model(data):
         else:
             model_options = data.options.model.options.value()
             tick = time.time()
-            model = ep.service().apply( options = Bunch(*data.options),
-                                       model_options=Bunch(*model_options) )
+            model = ep.service().apply( options = Bunch(**data.options),
+                                       model_options=Bunch(**model_options) )
             if data.options.runtime.report_timing is True:
                 print("      %6.2f seconds required to construct instance" % (time.time() - tick))
                 data.local.time_initial_import = None
@@ -444,7 +444,7 @@ def create_model(data):
         io_options = {}
         if data.options.model.symbolic_solver_labels:
             io_options['symbolic_solver_labels'] = True
-        if data.options.model.file_determinism != 1:
+        if data.options.model.file_determinism is not None:
             io_options['file_determinism'] = data.options.model.file_determinism
         (fname, smap_id) = instance.write(filename=fname,
                                           format=format,
@@ -550,7 +550,7 @@ def apply_optimizer(data, instance=None):
             keywords['keepfiles'] = True
         if data.options.model.symbolic_solver_labels:
             keywords['symbolic_solver_labels'] = True
-        if data.options.model.file_determinism != 1:
+        if data.options.model.file_determinism is not None:
             keywords['file_determinism'] = data.options.model.file_determinism
         keywords['tee'] = data.options.runtime.stream_output
         keywords['timelimit'] = getattr(data.options.solvers[0].options, 'timelimit', 0)

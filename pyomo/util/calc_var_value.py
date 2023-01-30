@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 def calculate_variable_from_constraint(variable, constraint,
                                        eps=1e-8, iterlim=1000,
-                                       linesearch=True, alpha_min=1e-8):
+                                       linesearch=True, alpha_min=1e-8,
+                                       diff_mode=differentiate.Modes.sympy):
     """Calculate the variable value given a specified equality constraint
 
     This function calculates the value of the specified variable
@@ -55,6 +56,8 @@ def calculate_variable_from_constraint(variable, constraint,
         [default=True]
     alpha_min: `float`
         The minimum fractional step to use in the linesearch [default=1e-8].
+    diff_mode: `pyomo.core.expr.calculus.derivatives.Modes`
+        The mode of differentiation
 
     Returns:
     --------
@@ -118,15 +121,17 @@ def calculate_variable_from_constraint(variable, constraint,
             "initial guess.\n\tPlease provide a different initial guess.")
         raise
 
-    variable.set_value(x1 - (residual_1 - upper), skip_validation=True)
-    residual_2 = value(body, exception=False)
-
-    # If we encounter an error while evaluating the expression at the
-    # linear intercept calculated assuming the derivative was 1.  This
-    # is most commonly due to nonlinear expressions (like sqrt())
-    # becoming invalid/complex.  We will skip the rest of the
-    # "shortcuts" that assume the expression is linear and move directly
-    # to using Newton's method.
+    try:
+        variable.set_value(x1 - (residual_1 - upper), skip_validation=True)
+        residual_2 = value(body, exception=False)
+    except OverflowError:
+        # If we encounter an error while evaluating the expression at the
+        # linear intercept calculated assuming the derivative was 1.  This
+        # is most commonly due to nonlinear expressions (like sqrt())
+        # becoming invalid/complex.  We will skip the rest of the
+        # "shortcuts" that assume the expression is linear and move directly
+        # to using Newton's method.
+        residual_2 = None
 
     if residual_2 is not None and type(residual_2) is not complex:
         # if the variable appears linearly with a coefficient of 1, then we
@@ -144,7 +149,8 @@ def calculate_variable_from_constraint(variable, constraint,
         if slope:
             variable.set_value(-intercept/slope, skip_validation=True)
             body_val = value(body, exception=False)
-            if body_val is not None and abs(body_val - upper) < eps:
+            if (body_val is not None and body_val.__class__ is not complex
+                and abs(body_val - upper) < eps):
                 # Re-set the variable value to trigger any warnings WRT
                 # the final variable state
                 variable.set_value(variable.value)
@@ -155,13 +161,21 @@ def calculate_variable_from_constraint(variable, constraint,
     # restore initial value
     variable.set_value(orig_initial_value, skip_validation=True)
     expr = body - upper
-    expr_deriv = differentiate(expr, wrt=variable,
-                               mode=differentiate.Modes.sympy)
 
-    if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
-        raise ValueError("Variable derivative == 0, cannot solve for variable")
+    expr_deriv = None
+    if diff_mode in {differentiate.Modes.sympy, differentiate.Modes.reverse_symbolic}:
+        expr_deriv = differentiate(expr, wrt=variable,
+                                   mode=diff_mode)
 
-    if abs(value(expr_deriv)) < 1e-12:
+        if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
+            raise ValueError("Variable derivative == 0, cannot solve for variable")
+
+    if expr_deriv is None:
+        fp0 = differentiate(expr, wrt=variable, mode=diff_mode)
+    else:
+        fp0 = value(expr_deriv)
+
+    if abs(value(fp0)) < 1e-12:
         raise RuntimeError(
             'Initial value for variable results in a derivative value that is '
             'very close to zero.\n\tPlease provide a different initial guess.')
@@ -190,7 +204,12 @@ def calculate_variable_from_constraint(variable, constraint,
                 "expression.\n\tPlease provide a different initial guess "
                 "or enable the linesearch if you have not.")
             raise
-        fpk = value(expr_deriv)
+
+        if expr_deriv is None:
+            fpk = differentiate(expr, wrt=variable, mode=diff_mode)
+        else:
+            fpk = value(expr_deriv)
+
         if abs(fpk) < 1e-12:
             raise RuntimeError(
                 "Newton's method encountered a derivative that was too "

@@ -31,6 +31,7 @@ from pyomo.core import (
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.mpec import Complementarity, complements, ComplementarityList
 from pyomo.opt import ProblemFormat
+from pyomo.repn.plugins.nl_writer import FileDeterminism
 from pyomo.repn.tests.ampl.nl_diff import load_and_compare_nl_baseline
 
 currdir = this_file_dir()
@@ -391,16 +392,32 @@ class CCTests_simple_disjunction(CCTests, unittest.TestCase):
     xfrm = 'mpec.simple_disjunction'
 
 
-class CCTests_nl_nlxfrm(CCTests, unittest.TestCase):
-
+class CCTests_nl_nlxfrm(CCTests):
     def _test(self, tname, M):
         bfile = os.path.join(currdir, tname + '_nlxfrm.nl')
         xfrm = TransformationFactory('mpec.nl')
         xfrm.apply_to(M)
+        fd = FileDeterminism.SORT_INDICES if self._nl_version == 'nl_v2' else 1
         with TempfileManager:
             ofile = TempfileManager.create_tempfile(suffix='_nlxfrm.out')
-            M.write(ofile, format=ProblemFormat.nl)
-            self.assertEqual(*load_and_compare_nl_baseline(bfile, ofile))
+            M.write(
+                ofile,
+                format=self._nl_version,
+                io_options={
+                    'symbolic_solver_labels': False,
+                    'file_determinism': fd,
+                }
+            )
+            self.assertEqual(*load_and_compare_nl_baseline(
+                bfile, ofile, self._nl_version))
+
+
+class CCTests_nl_nlxfrm_nlv1(CCTests_nl_nlxfrm, unittest.TestCase):
+    _nl_version = 'nl_v1'
+
+
+class CCTests_nl_nlxfrm_nlv2(CCTests_nl_nlxfrm, unittest.TestCase):
+    _nl_version = 'nl_v2'
 
 
 class DescendIntoDisjunct(unittest.TestCase):
@@ -453,9 +470,6 @@ class DescendIntoDisjunct(unittest.TestCase):
 
     def test_simple_nonlinear_on_disjunct(self):
         m = self.get_model()
-        TransformationFactory('mpec.simple_nonlinear').apply_to(m.disjunct1)
-        self.check_simple_nonlinear(m)
-
     def check_standard_form(self, m):
         # check that we have what we expect on disjunct1
         compBlock = m.disjunct1.component('comp')

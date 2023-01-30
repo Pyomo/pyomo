@@ -25,6 +25,7 @@ import pyomo.common
 from pyomo.common.dependencies import attempt_import
 
 request = attempt_import('urllib.request')[0]
+urllib_error = attempt_import('urllib.error')[0]
 ssl = attempt_import('ssl')[0]
 zipfile = attempt_import('zipfile')[0]
 gzip = attempt_import('gzip')[0]
@@ -293,17 +294,27 @@ class FileDownloader(object):
 
     def retrieve_url(self, url):
         """Return the contents of a URL as an io.BytesIO object"""
+        ctx = ssl.create_default_context()
+        if self.cacert:
+            ctx.load_verify_locations(cafile=self.cacert)
+        if self.insecure:
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
         try:
-            ctx = ssl.create_default_context()
-            if self.cacert:
-                ctx.load_verify_locations(cafile=self.cacert)
-            if self.insecure:
-                ctx.check_hostname = False
-                ctx.verify_mode = ssl.CERT_NONE
             fetch = request.urlopen(url, context=ctx)
-        except AttributeError:
-            # Revert to pre-2.7.9 syntax
-            fetch = request.urlopen(url)
+        except urllib_error.HTTPError as e:
+            if e.code != 403: # Forbidden
+                raise
+            fetch = None
+        if fetch is None:
+            # This is a fix implemented if we get stuck behind server
+            # security features (attempting to block "bot" agents).
+            # We are setting a known user-agent to get around that.
+            req = request.Request(
+                url=url,
+                headers={'User-Agent': 'Mozilla/5.0'},
+            )
+            fetch = request.urlopen(req, context=ctx)
         ans = fetch.read()
         logger.info("  ...downloaded %s bytes" % (len(ans),))
         return ans

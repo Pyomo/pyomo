@@ -61,6 +61,33 @@ class CPLEX_utils(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             _validate_file_name(_128, fname, 'xxx')
 
+        # check allowable characters
+        fname = 'foo$$bar.lp'
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
+        fname = 'foo_bar.lp'
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
+        fname = 'foo&bar.lp'
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
+        fname = 'foo~bar.lp'
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
+        fname = 'foo-bar.lp'
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
+
+        # Check unallowable character
+        bad_char = '^'
+        fname = 'foo%sbar.lp' % (bad_char,)
+        msg = r"Unallowed character \(\^\) found in CPLEX xxx file"
+        with self.assertRaisesRegex(ValueError, msg):
+            _validate_file_name(_126, fname, 'xxx')
+        with self.assertRaisesRegex(ValueError, msg):
+            _validate_file_name(_128, fname, 'xxx')
+
+
 
 class CPLEXShellWritePrioritiesFile(unittest.TestCase):
     """ Unit test on writing of priorities via `CPLEXSHELL._write_priorities_file()` """

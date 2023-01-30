@@ -15,6 +15,19 @@
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
+
+"""A module of utilities for collecting timing information
+
+.. autosummary::
+
+    report_timing
+    TicTocTimer
+    tic
+    toc
+    HierarchicalTimer
+
+"""
+
 import functools
 import logging
 import sys
@@ -248,9 +261,13 @@ class TicTocTimer(object):
             msg = "Resetting the tic/toc delta timer"
         if msg is not None:
             if args and '%' not in msg:
+                # Note: specify the parent module scope for the logger
+                # so this does not hit (and get handled by) the local
+                # pyomo.common.timing logger.
                 deprecation_warning(
                     "tic(): 'ostream' and 'logger' should be "
-                    "specified as keyword arguments", version='6.4.2')
+                    "specified as keyword arguments", version='6.4.2',
+                    logger=__package__)
                 ostream, *args = args
                 if args:
                     logger, *args = args
@@ -288,9 +305,13 @@ class TicTocTimer(object):
             msg = 'File "%s", line %s in %s' % \
                   traceback.extract_stack(limit=2)[0][:3]
         if args and msg is not None and '%' not in msg:
+            # Note: specify the parent module scope for the logger
+            # so this does not hit (and get handled by) the local
+            # pyomo.common.timing logger.
             deprecation_warning(
                 "toc(): 'delta', 'ostream', and 'logger' should be "
-                "specified as keyword arguments", version='6.4.2')
+                "specified as keyword arguments", version='6.4.2',
+                logger=__package__)
             delta, *args = args
             if args:
                 ostream, *args = args
@@ -381,6 +402,60 @@ See :py:meth:`TicTocTimer.toc()`.
 """
 
 
+def _move_grandchildren_to_root(root, child):
+    """A helper function to assist with flattening of HierarchicalTimer
+    objects
+
+    Parameters
+    ----------
+    root: HierarchicalTimer or _HierarchicalHelper
+        The root node. Children of `child` will become children of
+        this node
+
+    child: _HierarchicalHelper
+        The child node that will be turned into a leaf by moving
+        its children to the root
+
+    """
+    for gchild_key, gchild_timer in child.timers.items():
+        # For each grandchild, if this key corresponds to a child,
+        # combine the information from these timers. Otherwise,
+        # add the new timer as a child of the root.
+        if gchild_key in root.timers:
+            gchild_total_time = gchild_timer.total_time
+            gchild_n_calls = gchild_timer.n_calls
+            root.timers[gchild_key].total_time += gchild_total_time
+            root.timers[gchild_key].n_calls += gchild_n_calls
+        else:
+            root.timers[gchild_key] = gchild_timer
+    
+        # Subtract the grandchild's total time from the child (which
+        # will no longer be a parent of the grandchild)
+        child.total_time -= gchild_timer.total_time
+    
+    # Clear the child timer's dict to make it a leaf node
+    child.timers.clear()
+
+
+def _clear_timers_except(timer, to_retain):
+    """A helper function for removing keys, except for those specified,
+    from the dictionary of timers
+
+    Parameters
+    ----------
+    timer: HierarchicalTimer or _HierarchichalHelper
+        The timer whose dict of "sub-timers" will be pruned
+
+    to_retain: set
+        Set of keys of the "sub-timers" to retain
+
+    """
+    keys = list(timer.timers.keys())
+    for key in keys:
+        if key not in to_retain:
+            timer.timers.pop(key)
+
+
 class _HierarchicalHelper(object):
     def __init__(self):
         self.tic_toc = TicTocTimer()
@@ -442,9 +517,32 @@ class _HierarchicalHelper(object):
             res.append(_name)
             timer.get_timers(res, _name)
 
+    def flatten(self):
+        # Get keys and values so we don't modify dict while iterating it.
+        items = list(self.timers.items())
+        for child_key, child_timer in items:
+            # Flatten the child timer. Now all grandchildren are leaf nodes
+            child_timer.flatten()
+            # Flatten by removing grandchildren and adding them as children
+            # of the root.
+            _move_grandchildren_to_root(self, child_timer)
+
+    def clear_except(self, *args):
+        to_retain = set(args)
+        _clear_timers_except(self, to_retain)
+
 
 class HierarchicalTimer(object):
-    """A class for hierarchical timing.
+    """A class for collecting and displaying hierarchical timing
+    information
+
+    When implementing an iterative algorithm with nested subroutines
+    (e.g. an optimization solver), we often want to know the cumulative
+    time spent in each subroutine as well as this time as a proportion
+    of time spent in the calling routine. This class collects timing
+    information, for user-specified keys, that accumulates over the life
+    of the timer object and preserves the hierarchical (nested) structure
+    of timing categories.
 
     Examples
     --------
@@ -513,11 +611,106 @@ class HierarchicalTimer(object):
         # doctest: +SKIP
     aa % total: 35.976058
 
+    When implementing an algorithm, it is often useful to collect detailed
+    hierarchical timing information. However, when communicating a timing
+    profile, it is often best to retain only the most relevant information
+    in a flattened data structure. In the following example, suppose we
+    want to compare the time spent in the ``"c"`` and ``"f"`` subroutines.
+    We would like to generate a timing profile that displays only the time
+    spent in these two subroutines, in a flattened structure so that they
+    are easy to compare. To do this, we
+
+    #. Ignore subroutines of ``"c"`` and ``"f"`` that are unnecessary for\
+    this comparison
+
+    #. Flatten the hierarchical timing information
+
+    #. Eliminate all the information we don't care about
+
+    >>> import time
+    >>> from pyomo.common.timing import HierarchicalTimer
+    >>> timer = HierarchicalTimer()
+    >>> timer.start("root")
+    >>> timer.start("a")
+    >>> time.sleep(0.01)
+    >>> timer.start("b")
+    >>> timer.start("c")
+    >>> time.sleep(0.1)
+    >>> timer.stop("c")
+    >>> timer.stop("b")
+    >>> timer.stop("a")
+    >>> timer.start("d")
+    >>> timer.start("e")
+    >>> time.sleep(0.01)
+    >>> timer.start("f")
+    >>> time.sleep(0.05)
+    >>> timer.stop("f")
+    >>> timer.start("c")
+    >>> timer.start("g")
+    >>> timer.start("h")
+    >>> time.sleep(0.1)
+    >>> timer.stop("h")
+    >>> timer.stop("g")
+    >>> timer.stop("c")
+    >>> timer.stop("e")
+    >>> timer.stop("d")
+    >>> timer.stop("root")
+    >>> print(timer) # doctest: +SKIP
+    Identifier                       ncalls   cumtime   percall      %
+    ------------------------------------------------------------------
+    root                                  1     0.290     0.290  100.0
+         -------------------------------------------------------------
+         a                                1     0.118     0.118   40.5
+              --------------------------------------------------------
+              b                           1     0.105     0.105   89.4
+                   ---------------------------------------------------
+                   c                      1     0.105     0.105  100.0
+                   other                n/a     0.000       n/a    0.0
+                   ===================================================
+              other                     n/a     0.013       n/a   10.6
+              ========================================================
+         d                                1     0.173     0.173   59.5
+              --------------------------------------------------------
+              e                           1     0.173     0.173  100.0
+                   ---------------------------------------------------
+                   c                      1     0.105     0.105   60.9
+                        ----------------------------------------------
+                        g                 1     0.105     0.105  100.0
+                             -----------------------------------------
+                             h            1     0.105     0.105  100.0
+                             other      n/a     0.000       n/a    0.0
+                             =========================================
+                        other           n/a     0.000       n/a    0.0
+                        ==============================================
+                   f                      1     0.055     0.055   31.9
+                   other                n/a     0.013       n/a    7.3
+                   ===================================================
+              other                     n/a     0.000       n/a    0.0
+              ========================================================
+         other                          n/a     0.000       n/a    0.0
+         =============================================================
+    ==================================================================
+    >>> # Clear subroutines under "c" that we don't care about
+    >>> timer.timers["root"].timers["d"].timers["e"].timers["c"].timers.clear()
+    >>> # Flatten hierarchy
+    >>> timer.timers["root"].flatten()
+    >>> # Clear except for the subroutines we care about
+    >>> timer.timers["root"].clear_except("c", "f")
+    >>> print(timer) # doctest: +SKIP
+    Identifier   ncalls   cumtime   percall      %
+    ----------------------------------------------
+    root              1     0.290     0.290  100.0
+         -----------------------------------------
+         c            2     0.210     0.105   72.4
+         f            1     0.055     0.055   19.0
+         other      n/a     0.025       n/a    8.7
+         =========================================
+    ==============================================
 
     Notes
     -----
 
-    The :py:class:`HierarchicalTimer` use a stack to track which timers
+    The :py:class:`HierarchicalTimer` uses a stack to track which timers
     are active at any point in time. Additionally, each timer has a
     dictionary of timers for its children timers. Consider
 
@@ -780,3 +973,44 @@ class HierarchicalTimer(object):
             res.append(name)
             timer.get_timers(res, name)
         return res
+
+    def flatten(self):
+        """Flatten the HierarchicalTimer in-place, moving all the timing
+        categories into a single level
+
+        If any timers moved into the same level have the same identifier,
+        the ``total_time`` and ``n_calls`` fields are added together.
+        The ``total_time`` of a "child timer" that is "moved upwards" is
+        subtracted from the ``total_time`` of that timer's original
+        parent.
+
+        """
+        if self.stack:
+            raise RuntimeError(
+                "Cannot flatten a HierarchicalTimer while any timers are"
+                " active. Current active timer is %s. flatten should only"
+                " be called as a post-processing step." % self.stack[-1]
+            )
+        items = list(self.timers.items())
+        for key, timer in items:
+            timer.flatten()
+            _move_grandchildren_to_root(self, timer)
+
+    def clear_except(self, *args):
+        """Prune all "sub-timers" except those specified
+
+        Parameters
+        ----------
+        args: str
+            Keys that will be retained
+
+        """
+        if self.stack:
+            raise RuntimeError(
+                "Cannot clear a HierarchicalTimer while any timers are"
+                " active. Current active timer is %s. clear_except should"
+                " only be called as a post-processing step."
+                % self.stack[-1]
+            )
+        to_retain = set(args)
+        _clear_timers_except(self, to_retain)

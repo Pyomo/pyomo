@@ -16,8 +16,11 @@ Contributed packages distributed with Pyomo:
    :maxdepth: 1
    
    community.rst
+   doe/doe.rst
    gdpopt.rst
+   iis.rst
    mindtpy.rst
+   mpc/index.rst
    multistart.rst
    preprocessing.rst
    parmest/index.rst

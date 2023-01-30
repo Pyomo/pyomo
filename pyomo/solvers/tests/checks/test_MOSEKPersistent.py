@@ -11,6 +11,10 @@ import sys
 diff_tol = 1e-3
 
 mosek_available = check_available_solvers('mosek_direct')
+msk_version = [0]
+if mosek_available:
+    msk_version = pyo.SolverFactory('mosek')._version
+
 
 @unittest.skipIf(not mosek_available, "MOSEK's python bindings are missing.")
 class MOSEKPersistentTests(unittest.TestCase):
@@ -74,6 +78,7 @@ class MOSEKPersistentTests(unittest.TestCase):
         self.assertEqual(opt._solver_model.getnumcon(), 2)
         self.assertRaises(ValueError, opt.remove_constraint, m.c2)
 
+    @unittest.skipIf(msk_version[0] > 9, "MOSEK 10 does not (yet) have a removeacc method.")
     def test_constraint_removal_2(self):
         m = pmo.block()
         m.x = pmo.variable()

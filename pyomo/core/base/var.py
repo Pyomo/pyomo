@@ -17,12 +17,13 @@ import sys
 from pyomo.common.pyomo_typing import overload
 from weakref import ref as weakref_ref
 
-from pyomo.common.collections import Sequence
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
+
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.expr.current import GetItemExpression
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue, value, is_potentially_variable, native_numeric_types,
@@ -34,7 +35,8 @@ from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
 )
-from pyomo.core.base.initializer import Initializer, DefaultInitializer
+from pyomo.core.base.initializer import (
+    Initializer, DefaultInitializer, BoundInitializer)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import (
     Reals, Binary, Set, SetInitializer,
@@ -288,6 +290,7 @@ class _GeneralVarData(_VarData):
     """
 
     __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
+    __autoslot_mappers__ = {'_stale': StaleFlagManager.stale_mapper}
 
     def __init__(self, component=None):
         #
@@ -324,20 +327,6 @@ class _GeneralVarData(_VarData):
         self._stale = src._stale
         self._index = src._index
         return self
-
-    def __getstate__(self):
-        state = super(_GeneralVarData, self).__getstate__()
-        for i in _GeneralVarData.__slots__:
-            state[i] = getattr(self, i)
-        state['_stale'] = StaleFlagManager.is_stale(self._stale)
-        return state
-
-    def __setstate__(self, state):
-        if state.pop('_stale', True):
-            state['_stale'] = 0
-        else:
-            state['_stale'] = StaleFlagManager.get_flag(0)
-        super().__setstate__(state)
 
     #
     # Abstract Interface
@@ -604,7 +593,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     def __init__(self, *indexes, domain=Reals, within=Reals, bounds=None,
                  initialize=None, rule=None, dense=True, units=None,
                  name=None, doc=None): ...
-    
+
     def __init__(self, *args, **kwargs):
         #
         # Default keyword values
@@ -626,24 +615,13 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         #
         # Now that we can call is_indexed(), process bounds initializer
         #
-        if self.is_indexed():
-            treat_bounds_sequences_as_mappings = not (
-                isinstance(_bounds_arg, Sequence)
-                and len(_bounds_arg) == 2
-                and not isinstance(_bounds_arg[0], Sequence)
-            )
-        else:
-            treat_bounds_sequences_as_mappings = False
-            if not self._dense:
-                logger.warning(
-                    "ScalarVar object '%s': dense=False is not allowed "
-                    "for scalar variables; converting to dense=True"
-                    % (self.name,))
-                self._dense = True
-        self._rule_bounds = Initializer(
-            _bounds_arg,
-            treat_sequences_as_mappings=treat_bounds_sequences_as_mappings
-        )
+        if not self.is_indexed() and not self._dense:
+            logger.warning(
+                "ScalarVar object '%s': dense=False is not allowed "
+                "for scalar variables; converting to dense=True"
+                % (self.name,))
+            self._dense = True
+        self._rule_bounds = BoundInitializer(_bounds_arg, self)
 
     def flag_as_stale(self):
         """
@@ -751,8 +729,10 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                     # Empty index!
                     return
                 call_domain_rule = not self._rule_domain.constant()
-                call_bounds_rule = self._rule_bounds is not None and (
-                        not self._rule_bounds.constant())
+                call_bounds_rule = (
+                    self._rule_bounds is not None
+                    and not self._rule_bounds.constant()
+                )
                 call_init_rule = self._rule_init is not None and (
                     not self._rule_init.constant()
                     # If either the domain or bounds change, then we
@@ -866,13 +846,6 @@ class ScalarVar(_GeneralVarData, Var):
         Var.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, we do not
-    # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our
-    # get/set state methods rely on super() to traverse the MRO, this
-    # will automatically pick up both the Component and Data base classes.
-
 
 @disable_methods(_VARDATA_API)
 class AbstractScalarVar(ScalarVar):
@@ -943,6 +916,28 @@ class IndexedVar(Var):
         domain = SetInitializer(domain)(None, None)
         for vardata in self.values():
             vardata.domain = domain
+
+    # Because CP supports indirection [the ability to index objects by
+    # another (inter) Var] for certain types (including Var), we will
+    # catch the normal RuntimeError and return a (variable)
+    # GetItemExpression.
+    #
+    # FIXME: We should integrate this logic into the base implementation
+    # of `__getitem__()`, including the recognition / differentiation
+    # between potentially variable GetItemExpression objects and
+    # "constant" GetItemExpression objects.  That will need to wait for
+    # the expression rework [JDS; Nov 22].
+    def __getitem__(self, args):
+        try:
+            return super().__getitem__(args)
+        except RuntimeError:
+            tmp = args if args.__class__ is tuple else (args,)
+            if any(hasattr(arg, 'is_potentially_variable')
+                   and arg.is_potentially_variable()
+                   for arg in tmp
+               ):
+                return GetItemExpression((self,) + tmp)
+            raise
 
 
 @ModelComponentFactory.register("List of decision variables.")

@@ -45,7 +45,9 @@ from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
 from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
 from pyomo.core.base import Constraint
 
-__version__ =  "1.1.4"
+
+__version__ = "1.2.6"
+
 
 def NonNegIntOrMinusOne(obj):
     '''
@@ -77,7 +79,7 @@ class SolverResolvable(object):
     def __call__(self, obj):
         '''
         if obj is a string, return the Solver object for that solver name
-        if obj is a Solver object, return the Solver
+        if obj is a Solver object, return a copy of the Solver
         if obj is a list, and each element of list is solver resolvable, return list of solvers
         '''
         if isinstance(obj, str):

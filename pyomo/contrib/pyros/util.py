@@ -20,6 +20,8 @@ from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.core.expr.numeric_expr import SumExpression
+from pyomo.environ import SolverFactory
+
 import itertools as it
 import timeit
 from contextlib import contextmanager
@@ -27,11 +29,15 @@ import logging
 from pprint import pprint
 import math
 
+
 # Tolerances used in the code
 PARAM_IS_CERTAIN_REL_TOL = 1e-4
 PARAM_IS_CERTAIN_ABS_TOL = 0
 COEFF_MATCH_REL_TOL = 1e-6
 COEFF_MATCH_ABS_TOL = 0
+ABS_CON_CHECK_FEAS_TOL = 1e-5
+TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
+
 
 '''Code borrowed from gdpopt: time_code, get_main_ellapsed_time, a_logger.'''
 @contextmanager
@@ -62,12 +68,158 @@ def get_main_elapsed_time(timing_data_obj):
                 "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
             )
 
+
+def adjust_solver_time_settings(timing_data_obj, solver, config):
+    """
+    Adjust solver max time setting based on current PyROS elapsed
+    time.
+
+    Parameters
+    ----------
+    timing_data_obj : Bunch
+        PyROS timekeeper.
+    solver : solver type
+        Solver for which to adjust the max time setting.
+    config : ConfigDict
+        PyROS solver config.
+
+    Returns
+    -------
+    original_max_time_setting : float or None
+        If IPOPT or BARON is used, a float is returned.
+        If GAMS is used, the ``options.add_options`` attribute
+        of ``solver`` is returned.
+        Otherwise, None is returned.
+    custom_setting_present : bool or None
+        If IPOPT or BARON is used, True if the max time is
+        specified, False otherwise.
+        If GAMS is used, True if the attribute ``options.add_options``
+        is not None, False otherwise.
+        If ``config.time_limit`` is None, then None is returned.
+
+    Note
+    ----
+    (1) Adjustment only supported for GAMS, BARON, and IPOPT
+        interfaces. This routine can be generalized to other solvers
+        after a generic interface to the time limit setting
+        is introduced.
+    (2) For IPOPT, and probably also BARON, the CPU time limit
+        rather than the wallclock time limit, is adjusted, as
+        no interface to wallclock limit available.
+        For this reason, extra 30s is added to time remaining
+        for subsolver time limit.
+        (The extra 30s is large enough to ensure solver
+        elapsed time is not beneath elapsed time - user time limit,
+        but not so large as to overshoot the user-specified time limit
+        by an inordinate margin.)
+    """
+    if config.time_limit is not None:
+        time_remaining = (
+            config.time_limit - get_main_elapsed_time(timing_data_obj)
+        )
+        if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
+            original_max_time_setting = solver.options["add_options"]
+            custom_setting_present = "add_options" in solver.options
+
+            # adjust GAMS solver time
+            reslim_str = f"option reslim={max(30, 30 + time_remaining)};"
+            if isinstance(solver.options["add_options"], list):
+                solver.options["add_options"].append(reslim_str)
+            else:
+                solver.options["add_options"] = [reslim_str]
+        else:
+            # determine name of option to adjust
+            if isinstance(solver, SolverFactory.get_class("baron")):
+                options_key = "MaxTime"
+            elif isinstance(solver, SolverFactory.get_class("ipopt")):
+                options_key = "max_cpu_time"
+            else:
+                options_key = None
+
+            if options_key is not None:
+                custom_setting_present = options_key in solver.options
+                original_max_time_setting = solver.options[options_key]
+
+                # ensure positive value assigned to avoid application error
+                solver.options[options_key] = max(30, 30 + time_remaining)
+            else:
+                custom_setting_present = False
+                original_max_time_setting = None
+                config.progress_logger.warning(
+                    "Subproblem time limit setting not adjusted for "
+                    f"subsolver of type:\n    {type(solver)}.\n"
+                    "    PyROS time limit may not be honored "
+                )
+
+        return original_max_time_setting, custom_setting_present
+    else:
+        return None, None
+
+
+def revert_solver_max_time_adjustment(
+        solver,
+        original_max_time_setting,
+        custom_setting_present,
+        config,
+        ):
+    """
+    Revert solver `options` attribute to its state prior to a
+    time limit adjustment performed via
+    the routine `adjust_solver_time_settings`.
+
+    Parameters
+    ----------
+    solver : solver type
+        Solver of interest.
+    original_max_time_setting : float, list, or None
+        Original solver settings. Type depends on the
+        solver type.
+    custom_setting_present : bool or None
+        Was the max time, or other custom solver settings,
+        specified prior to the adjustment?
+        Can be None if ``config.time_limit`` is None.
+    config : ConfigDict
+        PyROS solver config.
+    """
+    if config.time_limit is not None:
+        assert isinstance(custom_setting_present, bool)
+
+        # determine name of option to adjust
+        if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
+            options_key = "add_options"
+        elif isinstance(solver, SolverFactory.get_class("baron")):
+            options_key = "MaxTime"
+        elif isinstance(solver, SolverFactory.get_class("ipopt")):
+            options_key = "max_cpu_time"
+        else:
+            options_key = None
+
+        if options_key is not None:
+            if custom_setting_present:
+                # restore original setting
+                solver.options[options_key] = original_max_time_setting
+
+                # if GAMS solver used, need to remove the last entry
+                # of 'add_options', which contains the max time setting
+                # added by PyROS
+                if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
+                    solver.options[options_key].pop()
+            else:
+                # remove the max time specification introduced.
+                # All lines are needed here to completely remove the option
+                # from access through getattr and dictionary reference.
+                delattr(solver.options, options_key)
+                if options_key in solver.options.keys():
+                    del solver.options[options_key]
+
+
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
     if isinstance(str_or_logger, logging.Logger):
         return str_or_logger
     else:
         return logging.getLogger(str_or_logger)
+
 
 def ValidEnum(enum_class):
     '''
@@ -193,22 +345,43 @@ def turn_bounds_to_constraints(variable, model, config=None):
 
 
 def get_time_from_solver(results):
-    '''
-    Based on the solver used (GAMS or other pyomo solver) the time is named differently. This function gets the time
-    based on which sub-solver type is used.
-    :param results: the results returned from the solver
-    :return: time
-    '''
-    if hasattr(results.solver, "name"):
-        if type(results.solver.name) == str:
-            if "GAMS" in results.solver.name:
-                return results.solver.user_time
-            else:
-                raise ValueError("Accessing the time for this type of solver is not supported by get_time_from_solver.")
-        else:
-            return results.solver.time
-    else:
-        return results.solver.time
+    """
+    Obtain solver time from a Pyomo `SolverResults` object.
+
+    Returns
+    -------
+    : float
+        Solver time. May be CPU time or elapsed time,
+        depending on the solver. If no time attribute
+        is found, then `float("nan")` is returned.
+
+    NOTE
+    ----
+    This method attempts to access solver time through the
+    attributes of `results.solver` in the following order
+    of precedence:
+    1) `'user_time'` if the results object was returned by a GAMS
+       solver, `'time'` otherwise.
+    2) a custom-added attribute (with name
+       `pyros.util.TIC_TOC_SOLVE_TIME_ATTR`), which contains
+       an estimate of the elapsed solve time obtained using the Pyomo
+       `TicTocTimer` at the point the solver from which the results
+       object is derived was invoked.
+    """
+    solver_name = getattr(results.solver, "name", None)
+
+    # is this sufficient to confirm GAMS solver used?
+    from_gams = (
+        solver_name is not None
+        and str(solver_name).startswith("GAMS ")
+    )
+    time_attr_name = "user_time" if from_gams else "time"
+    for attr_name in [time_attr_name, TIC_TOC_SOLVE_TIME_ATTR]:
+        solve_time = getattr(results.solver, attr_name, None)
+        if solve_time is not None:
+            break
+
+    return float("nan") if solve_time is None else solve_time
 
 
 def validate_uncertainty_set(config):
@@ -984,7 +1157,8 @@ def output_logger(config, **kwargs):
             version = str(kwargs["version"])
             preamble = "===========================================================================================\n" \
                        "PyROS: Pyomo Robust Optimization Solver v.%s \n" \
-                       "Developed by Natalie M. Isenberg (1), John D. Siirola (2), Chrysanthos E. Gounaris (1) \n" \
+                       "Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1), \n"\
+                       "              John D. Siirola (2), Chrysanthos E. Gounaris (1) \n" \
                        "(1) Carnegie Mellon University, Department of Chemical Engineering \n" \
                        "(2) Sandia National Laboratories, Center for Computing Research\n\n" \
                        "The developers gratefully acknowledge support from the U.S. Department of Energy's \n" \

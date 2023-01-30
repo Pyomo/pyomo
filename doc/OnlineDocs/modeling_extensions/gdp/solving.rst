@@ -29,15 +29,25 @@ Logical constraints
 
 .. note::
 
-    Historically it was required to convert logical propositions to
-    algebraic form prior to use of the MI(N)LP reformulations and the
-    GDPopt solver. However, this is mathematically incorrect since these
-    reformulations convert logical formulations to algebraic formulations.
-    It is therefore recommended to use both the MI(N)LP reformulations
-    and GDPopt directly to transform or solve GDPs that include logical
-    propositions.
+    Historically users needed to explicitly convert logical propositions
+    to algebraic form prior to invoking the GDP MI(N)LP reformulations
+    or the GDPopt solver. However, this is mathematically incorrect
+    since the GDP MI(N)LP reformulations themselves convert logical
+    formulations to algebraic formulations.  The current recommended
+    practice is to pass the entire (mixed logical / algebraic) model to
+    the MI(N)LP reformulations or GDPopt directly.
 
-The following transforms logical propositions on the model to algebraic form:
+There are several approaches to convert logical constraints into
+algebraic form.
+
+Conjunctive Normal Form
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The first transformation (`core.logical_to_linear`) leverages the
+`sympy` package to generate the conjunctive normal form of the logical
+constraints and then adds the equivalent as a list algebraic
+constraints.  The following transforms logical propositions on the model
+to algebraic form:
 
 .. code::
 
@@ -61,6 +71,29 @@ Following solution of the GDP model, values of the Boolean variables may be upda
 
 .. autofunction:: pyomo.core.plugins.transform.logical_to_linear.update_boolean_vars_from_binary
 
+Factorable Programming
+^^^^^^^^^^^^^^^^^^^^^^
+
+The second transformation (`contrib.logical_to_disjunctive`) leverages
+ideas from factorable programming to first generate an equivalent set of
+"factored" logical constraints form by traversing each logical
+proposition and replacing each logical operator with an additional
+Boolean variable and then adding the "simple" logical constraint that
+equates the new Boolean variable with the single logical operator.
+
+The resulting "simple" logical constraints are converted to either MIP
+or GDP form: if the constraint contains only Boolean variables, then
+then MIP representation is emitted.  Logical constraints with mixed
+integer-Boolean arguments (e.g., `atmost`, `atleast`, `exactly`, etc.)
+are converted to a disjunctive representation.
+
+As this transformation both avoids the conversion into `sympy` and only
+requires a single traversal of each logical constraint,
+`contrib.logical_to_disjunctive` is significantly faster than
+`core.logical_to_linear` at the cost of a larger model.  In practice,
+the cost of the larger model is negated by the effectiveness of the MIP
+presolve in most solvers.
+
 Reformulation to MI(N)LP
 ------------------------
 
@@ -77,7 +110,6 @@ By default, the BM transformation will estimate reasonably tight M values for yo
 For nonlinear models where finite expression bounds may be inferred from variable bounds, the BM transformation may also be able to automatically compute M values for you.
 For all other models, you will need to provide the M values through a "BigM" Suffix, or through the `bigM` argument to the transformation.
 We will raise a ``GDP_Error`` for missing M values.
-We implement the multiple-parameter Big-M (MBM) approach described in literature\ [#gdp-mbm]_.
 
 To apply the BM reformulation within a python script, use:
 
@@ -86,6 +118,27 @@ To apply the BM reformulation within a python script, use:
     TransformationFactory('gdp.bigm').apply_to(model)
 
 From the Pyomo command line, include the ``--transform pyomo.gdp.bigm`` option.
+
+Multiple Big-M (MBM) Reformulation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We also implement the multiple-parameter Big-M (MBM) approach described in literature\ [#gdp-mbm]_.
+By default, the MBM transformation will solve continuous subproblems in order to calculate M values.
+This process can be time-consuming, so the transformation also provides a method to export the M values used as a dictionary and allows for M values to be provided through the `bigM` argument.
+
+For example, to apply the transformation and store the M values, use:
+
+.. code::
+
+    mbigm = TransformationFactory('gdp.mbigm')
+    mbigm.apply_to(model)
+
+    # These can be stored...
+    M_values = mbigm.get_all_M_values(model)
+    # ...so that in future runs, you can write:
+    mbigm.apply_to(m, bigM=M_values)
+
+From the Pyomo command line, include the ``--transform pyomo.gdp.mbigm`` option.
 
 Hull Reformulation (HR)
 ^^^^^^^^^^^^^^^^^^^^^^^

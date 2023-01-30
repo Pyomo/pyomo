@@ -14,6 +14,15 @@ class _StaleFlagManager(object):
         self._current = 0
         self.mark_all_as_stale()
 
+    def stale_mapper(self, encode, value):
+        if encode:
+            return self.is_stale(value)
+        else:
+            if value:
+                return 0
+            else:
+                return self.get_flag(0)
+
     def _get_flag(self, current_flag):
         """Return the current global stale flag value"""
         return self._current

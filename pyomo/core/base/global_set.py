@@ -73,6 +73,10 @@ class _UnindexedComponent_set(GlobalSetBase):
         return [ self ]
     def construct(self):
         pass
+    def bounds(self):
+        return (None, None)
+    def get_interval(self):
+        return (None, None, None)
     def __len__(self):
         return 1
     def __eq__(self, other):

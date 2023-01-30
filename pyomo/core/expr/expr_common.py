@@ -9,6 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import enum
+
+from pyomo.common.backports import nullcontext
+from pyomo.common.deprecation import deprecated
+
 TO_STRING_VERBOSE=False
 
 _add = 1
@@ -32,26 +37,6 @@ _idiv = _inplace+_div
 _rpow =         -_pow
 _ipow = _inplace+_pow
 
-_old_etype_strings = {
-    'add'  :          _add,
-    'radd' :         -_add,
-    'iadd' : _inplace+_add,
-    'sub'  :          _sub,
-    'rsub' :         -_sub,
-    'isub' : _inplace+_sub,
-    'mul'  :          _mul,
-    'rmul' :         -_mul,
-    'imul' : _inplace+_mul,
-    'div'  :          _div,
-    'rdiv' :         -_div,
-    'idiv' : _inplace+_div,
-    'pow'  :          _pow,
-    'rpow' :         -_pow,
-    'ipow' : _inplace+_pow,
-    'neg'  :          _neg,
-    'abs'  :          _abs,
-    }
-
 _eq = 0
 _le = 1
 _lt = 2
@@ -63,3 +48,49 @@ _inv = 2
 _equiv = 3
 _xor = 4
 _impl = 5
+
+class OperatorAssociativity(enum.IntEnum):
+    """Enum for indicating the associativity of an operator.
+
+    LEFT_TO_RIGHT(1) if this operator is left-to-right associative or
+    RIGHT_TO_LEFT(-1) if it is right-to-left associative.  Any other
+    values will be interpreted as "not associative" (implying any
+    arguments that are at this operator's PRECEDENCE will be enclosed
+    in parens).
+
+    """
+
+    RIGHT_TO_LEFT = -1
+    NON_ASSOCIATIVE = 0
+    LEFT_TO_RIGHT = 1
+
+
+class ExpressionType(enum.Enum):
+    NUMERIC = 0
+    RELATIONAL = 1
+    LOGICAL = 2
+
+
+@deprecated("""The clone counter has been removed and will always return 0.
+
+Beginning with Pyomo5 expressions, expression cloning (detangling) no
+longer occurs automatically within expression generation.  As a result,
+the 'clone counter' has lost its utility and is no longer supported.
+This context manager will always report 0.""", version='6.4.3')
+class clone_counter(nullcontext):
+    """ Context manager for counting cloning events.
+
+    This context manager counts the number of times that the
+    :func:`clone_expression <pyomo.core.expr.current.clone_expression>`
+    function is executed.
+    """
+    _count = 0
+
+    def __init__(self):
+        super().__init__(enter_result=self)
+
+    @property
+    def count(self):
+        """A property that returns the clone count value.
+        """
+        return clone_counter._count

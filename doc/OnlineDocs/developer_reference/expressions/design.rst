@@ -119,7 +119,7 @@ the named expression.
 .. note::
 
     The named expression classes are not implemented as sub-classes
-    of :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>`.
+    of :class:`NumericExpression <pyomo.core.expr.current.NumericExpression>`.
     This reflects design constraints related to the fact that these
     are modeling components that belong to class hierarchies other
     than the expression class hierarchy, and Pyomo's design prohibits

@@ -18,8 +18,17 @@ from pyomo.core.expr.current import (replace_expressions,
                                      identify_variables)
 from pyomo.contrib.pyros.util import get_main_elapsed_time, is_certain_parameter
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
+from pyomo.common.errors import ApplicationError
+from pyomo.contrib.pyros.util import ABS_CON_CHECK_FEAS_TOL
+from pyomo.common.timing import TicTocTimer
+from pyomo.contrib.pyros.util import (
+    TIC_TOC_SOLVE_TIME_ATTR,
+    adjust_solver_time_settings,
+    revert_solver_max_time_adjustment,
+)
 import os
 from copy import deepcopy
+
 
 def add_uncertainty_set_constraints(model, config):
     """
@@ -363,50 +372,130 @@ def get_absolute_tol(model_data, config):
     return denom * tol, nom_value
 
 
-def is_violation(model_data, config, solve_data):
+def update_solve_data_violations(model_data, config, solve_data):
+    """
+    Evaluate the inequality constraint function violations
+    of the current separation model solution, and store the
+    results in a given `SeparationResult` object.
+    Also, determine whether the separation solution violates
+    the inequality constraint whose body is the model's
+    active objective.
+
+    Parameters
+    ----------
+    model_data : SeparationProblemData
+        Object containing the separation model.
+    config : ConfigDict
+        PyROS solver settings.
+    solve_data : SeparationResult
+        Result for most recent separation problem.
+
+    Returns
+    -------
+    : bool
+        True if constraint is violated, False otherwise.
+    """
 
     nom_value = model_data.master_nominal_scenario_value
     denom = float(max(1, abs(nom_value)))
     tol = config.robust_feasibility_tolerance
-    active_objective = next(model_data.separation_model.component_data_objects(Objective, active=True))
-
-    if value(active_objective)/denom > tol:
-
-        violating_param_realization = list(
-            p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
+    active_objective = next(
+        model_data.separation_model.component_data_objects(
+            Objective,
+            active=True
         )
-        list_of_violations = get_all_sep_objective_values(model_data=model_data, config=config)
-        solve_data.violating_param_realization = violating_param_realization
-        solve_data.list_of_scaled_violations = [l/denom for l in list_of_violations]
-        solve_data.found_violation = True
-        return True
-    else:
-        violating_param_realization = list(
-            p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
-        )
-        list_of_violations = get_all_sep_objective_values(model_data=model_data, config=config)
-        solve_data.violating_param_realization = violating_param_realization
-        solve_data.list_of_scaled_violations = [l/denom for l in list_of_violations]
-        solve_data.found_violation = False
-        return False
+    )
+
+    # update solve data attributes
+    solve_data.violating_param_realization = list(
+        p.value for p in
+        model_data.separation_model.util.uncertain_param_vars.values()
+    )
+    list_of_violations = get_all_sep_objective_values(
+        model_data=model_data,
+        config=config,
+    )
+    solve_data.list_of_scaled_violations = [
+        l/denom for l in list_of_violations
+    ]
+
+    return value(active_objective) / denom > tol
 
 
 def initialize_separation(model_data, config):
     """
-    Fix the separation problem variables to the optimal master problem solution
-    In the case of the static_approx decision rule, control vars are treated
-    as design vars are therefore fixed to the optimum from the master.
+    Initialize separation problem variables, and fix all first-stage
+    variables to their corresponding values from most recent
+    master problem solution.
+
+    Parameters
+    ----------
+    model_data : SeparationProblemData
+        Separation problem data.
+    config : ConfigDict
+        PyROS solver settings.
+
+    Note
+    ----
+    If a static DR policy is used, then all second-stage variables
+    are fixed and the decision rule equations are deactivated.
+
+    The point to which the separation model is initialized should,
+    in general, be feasible, provided the set does not have a
+    discrete geometry (as there is no master model block corresponding
+    to any of the remaining discrete scenarios against which we
+    separate).
     """
+    # initialize to values from nominal block if nominal objective.
+    # else, initialize to values from latest block added to master
+    if config.objective_focus == ObjectiveType.nominal:
+        block_num = 0
+    else:
+        block_num = model_data.iteration
+
+    master_blk = model_data.master_model.scenarios[block_num, 0]
+    master_blks = list(model_data.master_model.scenarios.values())
+    fsv_set = ComponentSet(master_blk.util.first_stage_variables)
+    sep_model = model_data.separation_model
+
+    def get_parent_master_blk(var):
+        """
+        Determine the master model scenario block of which
+        a given variable is a child component (or descendant).
+        """
+        parent = var.parent_block()
+        while parent not in master_blks:
+            parent = parent.parent_block()
+        return parent
+
+    for master_var in master_blk.component_data_objects(Var, active=True):
+        # parent block of the variable need not be `master_blk`
+        # (e.g. for first stage and decision rule variables, it
+        # may be the nominal block)
+        parent_master_blk = get_parent_master_blk(master_var)
+        sep_var_name = master_var.getname(
+            relative_to=parent_master_blk,
+            fully_qualified=True,
+        )
+
+        # initialize separation problem var to value from master block
+        sep_var = sep_model.find_component(sep_var_name)
+        sep_var.set_value(value(master_var, exception=False))
+
+        # fix first-stage variables (including decision rule vars)
+        if master_var in fsv_set:
+            sep_var.fix()
+
+    # initialize uncertain parameter variables to most recent
+    # point added to master
     if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
-        for idx, p in list(model_data.separation_model.util.uncertain_param_vars.items()):
-            p.set_value(config.nominal_uncertain_param_vals[idx],
-                        skip_validation=True)
-    for idx, v in enumerate(model_data.separation_model.util.first_stage_variables):
-        v.fix(model_data.opt_fsv_vals[idx])
+        param_vars = sep_model.util.uncertain_param_vars
+        latest_param_values = model_data.points_added_to_master[block_num]
+        for param_var, val in zip(param_vars.values(), latest_param_values):
+            param_var.set_value(val)
 
-    for idx, c in enumerate(model_data.separation_model.util.second_stage_variables):
-        c.set_value(model_data.opt_ssv_vals[idx], skip_validation=True)
-
+    # if static approximation, fix second-stage variables
+    # and deactivate the decision rule equations
     for c in model_data.separation_model.util.second_stage_variables:
         if config.decision_rule_order != 0:
             c.unfix()
@@ -419,68 +508,164 @@ def initialize_separation(model_data, config):
             v.fix()
 
     if any(c.active for c in model_data.separation_model.util.h_x_q_constraints):
-        raise AttributeError("All h(x,q) type constraints must be deactivated in separation.")
+        raise AttributeError(
+            "All h(x,q) type constraints must be deactivated in separation."
+        )
 
-    return
+    # check: initial point feasible?
+    for con in sep_model.component_data_objects(Constraint, active=True):
+        lb, val, ub = value(con.lb), value(con.body), value(con.ub)
+        lb_viol = (
+            val < lb - ABS_CON_CHECK_FEAS_TOL if lb is not None else False
+        )
+        ub_viol = (
+            val > ub + ABS_CON_CHECK_FEAS_TOL if ub is not None else False
+        )
+        if lb_viol or ub_viol:
+            config.progress_logger.debug(con.name, lb, val, ub)
+
 
 locally_acceptable = {tc.optimal, tc.locallyOptimal, tc.globallyOptimal}
 globally_acceptable = {tc.optimal, tc.globallyOptimal}
 
+
 def solver_call_separation(model_data, config, solver, solve_data, is_global):
     """
-    Solve the separation problem.
-    """
-    save_dir = config.subproblem_file_directory
+    Invoke subordinate solver(s) on separation problem.
 
+    Parameters
+    ----------
+    model_data : SeparationProblemData
+        Separation problem data.
+    config : ConfigDict
+        PyROS solver settings.
+    solver : solver type
+        Primary subordinate optimizer with which to solve
+        the model.
+    solve_data : SeparationResult
+        Container for separation problem result.
+    is_global : bool
+        Is separation problem to be solved globally.
+
+    Returns
+    -------
+    : bool
+        True if separation problem was not solved to an appropriate
+        optimality status by any of the solvers available or the
+        PyROS elapsed time limit is exceeded, False otherwise.
+    """
     if is_global:
         backup_solvers = deepcopy(config.backup_global_solvers)
     else:
         backup_solvers = deepcopy(config.backup_local_solvers)
     backup_solvers.insert(0, solver)
+
     solver_status_dict = {}
-    while len(backup_solvers) > 0:
-        solver = backup_solvers.pop(0)
-        nlp_model = model_data.separation_model
+    nlp_model = model_data.separation_model
 
-        # === Fix to Master solution
-        initialize_separation(model_data, config)
+    # === Initialize separation problem; fix first-stage variables
+    initialize_separation(model_data, config)
 
-        if not solver.available():
-            raise RuntimeError("Solver %s is not available." %
-                               solver)
+    timer = TicTocTimer()
+    for opt in backup_solvers:
+        orig_setting, custom_setting_present = adjust_solver_time_settings(
+            model_data.timing,
+            opt,
+            config,
+        )
+        timer.tic(msg=None)
         try:
-            results = solver.solve(nlp_model, tee=config.tee)
-        except ValueError as err:
-            if 'Cannot load a SolverResults object with bad status: error' in str(err):
-                solve_data.termination_condition = tc.error
-                return True
-            else:
-                raise
-        solver_status_dict[str(solver)] = results.solver.termination_condition
+            results = opt.solve(
+                nlp_model,
+                tee=config.tee,
+                load_solutions=False,
+                symbolic_solver_labels=True,
+            )
+        except ApplicationError:
+            # account for possible external subsolver errors
+            # (such as segmentation faults, function evaluation
+            # errors, etc.)
+            config.progress_logger.error(
+                f"Solver {repr(opt)} encountered exception attempting to "
+                f"optimize master problem in iteration {model_data.iteration}"
+            )
+            raise
+        else:
+            setattr(
+                results.solver,
+                TIC_TOC_SOLVE_TIME_ATTR,
+                timer.toc(msg=None),
+            )
+        finally:
+            revert_solver_max_time_adjustment(
+                opt,
+                orig_setting,
+                custom_setting_present,
+                config,
+            )
+
+        # record termination condition for this particular solver
+        solver_status_dict[str(opt)] = results.solver.termination_condition
         solve_data.termination_condition = results.solver.termination_condition
         solve_data.results = results
-        # === Process result
-        is_violation(model_data, config, solve_data)
 
-        if solve_data.termination_condition in globally_acceptable or \
-                (not is_global and solve_data.termination_condition in locally_acceptable):
-            return False
-
-        # Else: continue with backup solvers unless we have hit time limit or not found any acceptable solutions
+        # has PyROS time limit been reached?
         elapsed = get_main_elapsed_time(model_data.timing)
         if config.time_limit:
             if elapsed >= config.time_limit:
+                solve_data.found_violation = False
                 return True
 
-    # === Write this instance to file for user to debug because this separation instance did not return an optimal solution
+        # if separation problem solved to optimality, record results
+        # and exit
+        acceptable_conditions = (
+            globally_acceptable if is_global else locally_acceptable
+        )
+        optimal_termination = (
+            solve_data.termination_condition in acceptable_conditions
+        )
+        if optimal_termination:
+            nlp_model.solutions.load_from(results)
+            solve_data.found_violation = update_solve_data_violations(
+                model_data,
+                config,
+                solve_data,
+            )
+            return False
+
+    # problem not solved successfully, so no violation found
+    solve_data.found_violation = False
+
+    # All subordinate solvers failed to optimize model to appropriate
+    # termination condition. PyROS will terminate with subsolver
+    # error. At this point, export model if desired
+    save_dir = config.subproblem_file_directory
     if save_dir and config.keepfiles:
-        objective = str(list(nlp_model.component_data_objects(Objective, active=True))[0].name)
-        name = os.path.join(save_dir,
-                            config.uncertainty_set.type + "_" + nlp_model.name + "_separation_" +
-                            str(model_data.iteration) + "_obj_" + objective + ".bar")
+        objective = str(
+            list(nlp_model.component_data_objects(Objective, active=True))[0].name
+        )
+        name = os.path.join(
+            save_dir,
+            (
+                config.uncertainty_set.type
+                + "_"
+                + nlp_model.name
+                + "_separation_"
+                + str(model_data.iteration)
+                + "_obj_"
+                + objective
+                + ".bar"
+            ),
+        )
         nlp_model.write(name, io_options={'symbolic_solver_labels':True})
-        output_logger(config=config, separation_error=True, filename=name, iteration=model_data.iteration, objective=objective,
-                      status_dict=solver_status_dict)
+        output_logger(
+            config=config,
+            separation_error=True,
+            filename=name,
+            iteration=model_data.iteration,
+            objective=objective,
+            status_dict=solver_status_dict,
+        )
     return True
 
 

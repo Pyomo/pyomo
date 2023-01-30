@@ -16,11 +16,12 @@ from pyomo.core.expr.numeric_expr import (
     NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
     Expr_ifExpression, AbsExpression
 )
-from pyomo.core.expr.logical_expr import (
+from pyomo.core.expr.relational_expr import (
     InequalityExpression, EqualityExpression, RangedExpression
 )
 from pyomo.core.expr.compare import (
-    convert_expression_to_prefix_notation, compare_expressions
+    convert_expression_to_prefix_notation, compare_expressions,
+    assertExpressionsEqual, assertExpressionsStructurallyEqual,
 )
 from pyomo.common.getGSL import find_GSL
 
@@ -159,3 +160,28 @@ class TestConvertToPrefixNotation(unittest.TestCase):
                     m.x,
                     1]
         self.assertEqual(pn, expected)
+
+    def test_assertExpressionsEqual(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.e1 = pe.Expression(expr=m.x**2 + m.x - 1)
+        m.e2 = pe.Expression(expr=m.x**2 + m.x - 1)
+        m.f = pe.Expression(expr=m.x**2 + 2*m.x - 1)
+        m.g = pe.Expression(expr=m.x**2 + m.x - 2)
+
+        assertExpressionsEqual(self, m.e1.expr, m.e2.expr)
+        assertExpressionsStructurallyEqual(self, m.e1.expr, m.e2.expr)
+        with self.assertRaisesRegex(
+                AssertionError, 'Expressions not equal:'):
+            assertExpressionsEqual(self, m.e1.expr, m.f.expr)
+        with self.assertRaisesRegex(
+                AssertionError, 'Expressions not structurally equal:'):
+            assertExpressionsStructurallyEqual(self, m.e1.expr, m.f.expr)
+
+        # Structurally equal will compare across clones, whereas strict
+        # equality will not
+        i = m.clone()
+        with self.assertRaisesRegex(
+                AssertionError, 'Expressions not equal:'):
+            assertExpressionsEqual(self, m.e1.expr, i.e1.expr)
+        assertExpressionsStructurallyEqual(self, m.e1.expr, i.e1.expr)

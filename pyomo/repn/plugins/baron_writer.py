@@ -44,77 +44,68 @@ from pyomo.repn.util import valid_expr_ctypes_minlp, \
 
 logger = logging.getLogger('pyomo.core')
 
+
+def _handle_PowExpression(visitor, node, values):
+    # Per the BARON manual, x ^ y is allowed as long as x and y are not
+    # both variables.  There is an issue that if one of the arguments
+    # contains "0*var", Pyomo will see that as fixed, but Baron will see
+    # it as variable.  We will work around that by resolving any fixed
+    # expressions to their corresponding fixed value.
+    unfixed_count = 0
+    for i, arg in enumerate(node.args):
+        if type(arg) in native_types:
+            pass
+        elif arg.is_fixed():
+            values[i] = ftoa(value(arg))
+        else:
+            unfixed_count += 1
+
+    if unfixed_count < 2:
+        return f"{values[0]} ^ {values[1]}"
+    else:
+        return f"exp(({values[0]}) * log({values[1]}))"
+
+_allowableUnaryFunctions = {
+    'exp', 'log10', 'log', 'sqrt',
+}
+
+_log10_e = ftoa(math.log10(math.e))
+def _handle_UnaryFunctionExpression(visitor, node, values):
+    if node.name == "sqrt":
+        # Parens are necessary because sqrt() and "^" have different
+        # precedence levels.  Instead of parsing the arg, be safe and
+        # explicitly add parens
+        return f"(({values[0]}) ^ 0.5)"
+    elif node.name == 'log10':
+        return f"({_log10_e} * log({values[0]}))"
+    elif node.name not in _allowableUnaryFunctions:
+        raise RuntimeError(
+            'The BARON .BAR format does not support the unary '
+            'function "%s".' % (node.name,))
+    return node._to_string(values, visitor.verbose, visitor.smap)
+
+def _handle_AbsExpression(visitor, node, values):
+    # Parens are necessary because abs() and "^" have different
+    # precedence levels.  Instead of parsing the arg, be safe and
+    # explicitly add parens
+    return f"((({values[0]}) ^ 2) ^ 0.5)"
+
+_plusMinusOne = {-1, 1}
 #
 # A visitor pattern that creates a string for an expression
 # that is compatible with the BARON syntax.
 #
-class ToBaronVisitor(EXPR.ExpressionValueVisitor):
+class ToBaronVisitor(EXPR._ToStringVisitor):
+
+    _expression_handlers = {
+        EXPR.PowExpression: _handle_PowExpression,
+        EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,
+        EXPR.AbsExpression: _handle_AbsExpression,
+    }
 
     def __init__(self, variables, smap):
-        super(ToBaronVisitor, self).__init__()
+        super(ToBaronVisitor, self).__init__(False, smap)
         self.variables = variables
-        self.smap = smap
-
-    def visit(self, node, values):
-        """ Visit nodes that have been expanded """
-        tmp = []
-        for i,val in enumerate(values):
-            arg = node._args_[i]
-
-            if arg is None:
-                tmp.append('Undefined')                 # TODO: coverage
-            else:
-                parens = False
-                if val and val[0] in '-+':
-                    parens = True
-                elif arg.__class__ in native_numeric_types:
-                    pass
-                elif arg.__class__ in nonpyomo_leaf_types:
-                    val = "'{0}'".format(val)
-                elif arg.is_expression_type():
-                    if node._precedence() < arg._precedence():
-                        parens = True
-                    elif node._precedence() == arg._precedence():
-                        if i == 0:
-                            parens = node._associativity() != 1
-                        elif i == len(node._args_)-1:
-                            parens = node._associativity() != -1
-                        else:
-                            parens = True
-                if parens:
-                    tmp.append("({0})".format(val))
-                else:
-                    tmp.append(val)
-
-        if node.__class__ is EXPR.PowExpression:
-            x,y = node.args
-            if type(x) not in native_types and not x.is_fixed() and \
-               type(y) not in native_types and not y.is_fixed():
-                # Per the BARON manual, x ^ y is allowed as long as x
-                # and y are not both variables
-                return "exp(({1}) * log({0}))".format(tmp[0], tmp[1])
-            else:
-                return "{0} ^ {1}".format(tmp[0], tmp[1])
-        elif node.__class__ is EXPR.UnaryFunctionExpression:
-            if node.name == "sqrt":
-                # Parens are necessary because sqrt() and "^" have
-                # different precedence levels.  Instead of parsing the
-                # arg, be safe and explicitly add parens
-                return "(({0}) ^ 0.5)".format(tmp[0])
-            elif node.name == 'log10':
-                return "({0} * log({1}))".format(math.log10(math.e), tmp[0])
-            elif node.name in {'exp','log'}:
-                pass
-            else:
-                raise RuntimeError(
-                    'The BARON .BAR format does not support the unary '
-                    'function "%s".' % (node.name,))
-        elif node.__class__ is EXPR.AbsExpression:
-            # Parens are necessary because abs() and "^" have different
-            # precedence levels.  Instead of parsing the arg, be safe
-            # and explicitly add parens
-            return "((({0}) ^ 2) ^ 0.5)".format(tmp[0])
-        return node._to_string(tmp, None, self.smap, True)
 
     def visiting_potential_leaf(self, node):
         """
@@ -122,16 +113,13 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        #print("ISLEAF")
-        #print(node.__class__)
-
         if node.__class__ in native_types:
-            return True, ftoa(node)
+            return True, ftoa(node, True)
 
         if node.is_expression_type():
             # Special handling if NPV and semi-NPV types:
             if not node.is_potentially_variable():
-                return True, ftoa(value(node))
+                return True, ftoa(node(), True)
             if node.__class__ is EXPR.MonomialTermExpression:
                 return True, self._monomial_to_string(node)
             if node.__class__ is EXPR.LinearExpression:
@@ -150,7 +138,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                     % (node.name, node.ctype.__name__))
 
         if node.is_fixed():
-            return True, ftoa(value(node))
+            return True, ftoa(node(), True)
         else:
             assert node.is_variable_type()
             self.variables.add(id(node))
@@ -158,36 +146,34 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
     def _monomial_to_string(self, node):
         const, var = node.args
-        const = value(const)
+        if const.__class__ not in native_types:
+            const = value(const)
         if var.is_fixed():
-            return ftoa(const * var.value)
-        self.variables.add(id(var))
+            return ftoa(const * var.value, True)
         # Special handling: ftoa is slow, so bypass _to_string when this
         # is a trivial term
-        if const in {-1, 1}:
+        if not const:
+            return '0'
+        self.variables.add(id(var))
+        if const in _plusMinusOne:
             if const < 0:
                 return '-' + self.smap.getSymbol(var)
             else:
                 return self.smap.getSymbol(var)
-        return node._to_string((ftoa(const), self.smap.getSymbol(var)),
-                               False, self.smap, True)
+        return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
         iter_ = iter(node.args)
         values = []
         if node.constant:
             next(iter_)
-            values.append(ftoa(node.constant))
+            values.append(ftoa(node.constant, True))
         values.extend(map(self._monomial_to_string, iter_))
-        return node._to_string(values, False, self.smap, True)
+        return node._to_string(values, False, self.smap)
 
-def expression_to_string(expr, variables, labeler=None, smap=None):
-    if labeler is not None:
-        if smap is None:
-            smap = SymbolMap()
-        smap.default_labeler = labeler
-    visitor = ToBaronVisitor(variables, smap)
-    return visitor.dfs_postorder_stack(expr)
+
+def expression_to_string(expr, variables, smap):
+    return ToBaronVisitor(variables, smap).dfs_postorder_stack(expr)
 
 
 
@@ -397,37 +383,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
                     for param_data in param_data_iter:
                         yield param_data
-
-        if False:
-            #
-            # This was part of a merge from master that caused
-            # test failures.  But commenting this out didn't cause additional failures!?!
-            #
-            vstring_to_var_dict = {}
-            vstring_to_bar_dict = {}
-            pstring_to_bar_dict = {}
-            for block in all_blocks_list:
-                for var_data in active_components_data_var[id(block)]:
-                    variable_stream = StringIO()
-                    var_data.to_string(ostream=variable_stream, verbose=False)
-                    variable_string = variable_stream.getvalue()
-                    variable_string = ' '+variable_string+' '
-                    vstring_to_var_dict[variable_string] = var_data
-                    if output_fixed_variable_bounds or (not var_data.fixed):
-                        vstring_to_bar_dict[variable_string] = \
-                            ' '+object_symbol_dictionary[id(var_data)]+' '
-                    else:
-                        assert var_data.value is not None
-                        vstring_to_bar_dict[variable_string] = \
-                            ftoa(var_data.value)
-
-                for param_data in mutable_param_gen(block):
-                    param_stream = StringIO()
-                    param_data.to_string(ostream=param_stream, verbose=False)
-                    param_string = param_stream.getvalue()
-
-                    param_string = ' '+param_string+' '
-                    pstring_to_bar_dict[param_string] = ftoa(param_data())
 
         # Equation Definition
         output_file.write('c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;\n');
@@ -760,13 +715,13 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
             if var_data.fixed:
                 if output_fixed_variable_bounds:
-                    var_data_lb = ftoa(var_data.value)
+                    var_data_lb = ftoa(var_data.value, False)
                 else:
                     var_data_lb = None
             else:
                 var_data_lb = None
                 if var_data.has_lb():
-                    var_data_lb = ftoa(var_data.lb)
+                    var_data_lb = ftoa(var_data.lb, False)
 
             if var_data_lb is not None:
                 name_to_output = symbol_map.getSymbol(var_data)
@@ -790,13 +745,13 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
             if var_data.fixed:
                 if output_fixed_variable_bounds:
-                    var_data_ub = ftoa(var_data.value)
+                    var_data_ub = ftoa(var_data.value, False)
                 else:
                     var_data_ub = None
             else:
                 var_data_ub = None
                 if var_data.has_ub():
-                    var_data_ub = ftoa(var_data.ub)
+                    var_data_ub = ftoa(var_data.ub, False)
 
             if var_data_ub is not None:
                 name_to_output = symbol_map.getSymbol(var_data)
@@ -854,7 +809,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             if starting_point is not None:
                 var_name = symbol_map.getSymbol(var_data)
                 tmp[var_name] = "%s: %s;\n" % (
-                    var_name, ftoa(starting_point))
+                    var_name, ftoa(starting_point, False))
 
         output_file.write("".join( tmp[key] for key in sorted(tmp.keys()) ))
         output_file.write('}\n\n')

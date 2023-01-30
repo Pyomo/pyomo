@@ -33,6 +33,10 @@ class TestUtilComponents(unittest.TestCase):
         model.b.bx = pyo.Var([1,2,3], initialize=42)
         model.b.bz = pyo.Var(initialize=42)
 
+        model.x_ref = pyo.Reference(model.x)
+        model.zcon_ref = pyo.Reference(model.zcon)
+        model.b.bx_ref = pyo.Reference(model.b.bx[2])
+
         c_list = list(model.component_objects(ctype=[pyo.Var,pyo.Constraint,pyo.Objective]))
         name_map = rename_components(model=model,
                                      component_list=c_list,
@@ -43,6 +47,9 @@ class TestUtilComponents(unittest.TestCase):
         self.assertEqual(name_map[model.scaled_con], 'con')
         self.assertEqual(name_map[model.scaled_zcon], 'zcon')
         self.assertEqual(name_map[model.b.scaled_bz], 'b.bz')
+        self.assertEqual(name_map[model.scaled_x_ref], 'x_ref')
+        self.assertEqual(name_map[model.scaled_zcon_ref], 'zcon_ref')
+        self.assertEqual(name_map[model.b.scaled_bx_ref], 'b.bx_ref')
 
         self.assertEqual(model.scaled_obj.name, 'scaled_obj')
         self.assertEqual(model.scaled_x.name, 'scaled_x')
@@ -50,6 +57,14 @@ class TestUtilComponents(unittest.TestCase):
         self.assertEqual(model.scaled_zcon.name, 'scaled_zcon')
         self.assertEqual(model.b.name, 'b')
         self.assertEqual(model.b.scaled_bz.name, 'b.scaled_bz')
+
+        assert hasattr(model, "scaled_x_ref")
+        for i in model.scaled_x_ref:
+            assert model.scaled_x_ref[i] is model.scaled_x[i]
+        assert hasattr(model, "scaled_zcon_ref")
+        assert model.scaled_zcon_ref[None] is model.scaled_zcon
+        assert hasattr(model.b, "scaled_bx_ref")
+        assert model.b.scaled_bx_ref[None] is model.b.scaled_bx[2]
 
     def assertSameComponents(self, obj, other_obj):
         for i, j in zip_longest(obj, other_obj):

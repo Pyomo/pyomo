@@ -20,8 +20,7 @@ class _OAAlgorithmMixIn(object):
     def _fix_discrete_soln_solve_subproblem_and_add_cuts(
             self, discrete_prob_util_block, subprob_util_block, config):
         with fix_discrete_problem_solution_in_subproblem(
-                discrete_prob_util_block, subprob_util_block, self, config,
-                config.force_subproblem_nlp):
+                discrete_prob_util_block, subprob_util_block, self, config):
             nlp_termination = solve_subproblem(subprob_util_block, self,
                                                config)
             if nlp_termination in {tc.optimal, tc.feasible}:
@@ -36,7 +35,7 @@ class _OAAlgorithmMixIn(object):
                                                    config, self.timing)
             elif nlp_termination == tc.unbounded:
                 # the whole problem is unbounded, we can stop
-                self._update_primal_bound_to_unbounded()
+                self._update_primal_bound_to_unbounded(config)
 
         return nlp_termination not in {tc.infeasible, tc.unbounded}
 

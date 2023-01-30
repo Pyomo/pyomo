@@ -18,6 +18,7 @@ import logging
 import sys
 import weakref
 import textwrap
+from contextlib import contextmanager
 
 from inspect import isclass
 from itertools import filterfalse
@@ -25,7 +26,8 @@ from operator import itemgetter, attrgetter
 from io import StringIO
 from pyomo.common.pyomo_typing import overload
 
-from pyomo.common.collections import Mapping, OrderedDict
+from pyomo.common.autoslots import AutoSlots
+from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, RenamedClass,
 )
@@ -332,7 +334,7 @@ class _BlockConstruction(object):
     data = {}
 
 
-class PseudoMap(object):
+class PseudoMap(AutoSlots.Mixin):
     """
     This class presents a "mock" dict interface to the internal
     _BlockData data structures.  We return this object to the
@@ -571,6 +573,10 @@ class _BlockData(ActiveComponentData):
     """
     _Block_reserved_words = set()
 
+    # If a writer cached a repn on this block, remove it when cloning
+    #  TODO: remove repn caching from the model
+    __autoslot_mappers = {'_repn': AutoSlots.encode_as_none}
+
     def __init__(self, component):
         #
         # BLOCK DATA ELEMENTS
@@ -613,27 +619,6 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_ctypes', {})
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
-
-    def __getstate__(self):
-        # Note: _BlockData is NOT slot-ized, so we must pickle the
-        # entire __dict__.  However, we want the base class's
-        # __getstate__ to override our blanket approach here (i.e., it
-        # will handle the _component weakref), so we will call the base
-        # class's __getstate__ and allow it to overwrite the catch-all
-        # approach we use here.
-        ans = dict(self.__dict__)
-        ans.update(super(_BlockData, self).__getstate__())
-        # Note sure why we are deleting these...
-        if '_repn' in ans:
-            del ans['_repn']
-        return ans
-
-    #
-    # The base class __setstate__ is sufficient (assigning all the
-    # pickled attributes to the object is appropriate
-    #
-    # def __setstate__(self, state):
-    #    pass
 
     def __getattr__(self, val):
         if val in ModelComponentFactory:
@@ -882,30 +867,45 @@ class _BlockData(ActiveComponentData):
                 p_block = p_block.parent_block()
             # record the components and the non-component objects added
             # to the block
-            src_comp_map = src.component_map()
-            src_raw_dict = {k:v for k,v in src.__dict__.items()
-                            if k not in src_comp_map}
+            src_comp_map = dict(src.component_map().items())
+            src_raw_dict = src.__dict__
+            del_src_comp = src.del_component
         elif isinstance(src, Mapping):
-            src_comp_map = {}
+            src_comp_map = {k: v for k, v in src.items()
+                            if isinstance(v, Component)}
             src_raw_dict = src
+            del_src_comp = lambda x: None
         else:
             raise ValueError(
                 "_BlockData.transfer_attributes_from(): expected a "
                 "Block or dict; received %s" % (type(src).__name__,))
 
+        if src_comp_map:
+            # Filter out any components from src
+            src_raw_dict = {k: v for k, v in src_raw_dict.items()
+                            if k not in src_comp_map}
+
         # Use component_map for the components to preserve decl_order
-        for k,v in src_comp_map.items():
-            if k in self._decl:
-                self.del_component(k)
-            src.del_component(k)
-            self.add_component(k,v)
+        # Note that we will move any reserved components over as well as
+        # any user-defined components.  There is a bit of trust here
+        # that the user knows what they are doing.
+        with self._declare_reserved_components():
+            for k,v in src_comp_map.items():
+                if k in self._decl:
+                    self.del_component(k)
+                del_src_comp(k)
+                self.add_component(k,v)
         # Because Blocks are not slotized and we allow the
         # assignment of arbitrary data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
-        for k in sorted(src_raw_dict.keys()):
-            if k not in self._Block_reserved_words or not hasattr(self, k) \
-               or k in self._decl:
-                setattr(self, k, src_raw_dict[k])
+        for k, v in src_raw_dict.items():
+            if ( k not in self._Block_reserved_words # user-defined
+                 or not hasattr(self, k) # reserved, but not present
+                 or k in self._decl # reserved, but a component and the
+                                    # incoming thing is data (attempt to
+                                    # set the value)
+            ):
+                setattr(self, k, v)
 
     def _add_implicit_sets(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -1028,6 +1028,14 @@ class _BlockData(ActiveComponentData):
             cuid = ComponentUID(label_or_component)
         return cuid.find_component_on(self)
 
+    @contextmanager
+    def _declare_reserved_components(self):
+        # Temporarily mask the class reserved words like with a local
+        # instance attribute
+        self._Block_reserved_words = ()
+        yield
+        del self._Block_reserved_words
+
     def add_component(self, name, val):
         """
         Add a component 'name' to the block.
@@ -1040,7 +1048,7 @@ class _BlockData(ActiveComponentData):
         if not val.valid_model_component():
             raise RuntimeError(
                 "Cannot add '%s' as a component to a block" % str(type(val)))
-        if name in self._Block_reserved_words and hasattr(self, name):
+        if name in self._Block_reserved_words:
             raise ValueError("Attempting to declare a block component using "
                              "the name of a reserved attribute:\n\t%s"
                              % (name,))
@@ -1240,6 +1248,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #    return
 
         name = obj.local_name
+        if name in self._Block_reserved_words:
+            raise ValueError(
+                "Attempting to delete a reserved block component:\n\t%s"
+                % (obj.name,))
 
         # Replace the component in the master list with a None placeholder
         idx = self._decl[name]
@@ -1336,7 +1348,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             self._decl_order[prev] = (self._decl_order[prev][0], idx)
             self._decl_order[idx] = (obj, tmp)
 
-    def clone(self):
+    def clone(self, memo=None):
         """
         TODO
         """
@@ -1353,22 +1365,23 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # NonNegativeReals, etc) that are not "owned" by any blocks and
         # should be preserved as singletons.
         #
-        try:
-            new_block = copy.deepcopy(
-                self, {
-                    '__block_scope__': {id(self): True, id(None): False},
-                    '__paranoid__': False,
-                    })
-        except:
-            new_block = copy.deepcopy(
-                self, {
-                    '__block_scope__': {id(self): True, id(None): False},
-                    '__paranoid__': True,
-                    })
+        pc = self.parent_component()
+        if pc is self:
+            parent = self.parent_block()
+        else:
+            parent = pc
+
+        if memo is None:
+            memo = {}
+        memo['__block_scope__'] = {id(self): True, id(None): False}
+        memo[id(parent)] = parent
+
+        with PauseGC():
+            new_block = copy.deepcopy(self, memo)
 
         # We need to "detangle" the new block from the original block
         # hierarchy
-        if self.parent_component() is self:
+        if pc is self:
             new_block._parent = None
         else:
             new_block._component = None
@@ -2026,14 +2039,18 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return filename, smap_id
 
     def _create_objects_for_deepcopy(self, memo, component_list):
-        super()._create_objects_for_deepcopy(memo, component_list)
-        # Blocks (and block-like things) need to pre-populate all
-        # Components / ComponentData objects to help prevent deepcopy()
-        # from violating the Python recursion limit.  This step is
-        # recursive; however, we do not expect "super deep" Pyomo block
-        # hierarchies, so should be okay.
-        for comp in self.component_objects(descend_into=False):
-            comp._create_objects_for_deepcopy(memo, component_list)
+        _new = self.__class__.__new__(self.__class__)
+        _ans = memo.setdefault(id(self), _new)
+        if _ans is _new:
+            component_list.append(self)
+            # Blocks (and block-like things) need to pre-populate all
+            # Components / ComponentData objects to help prevent
+            # deepcopy() from violating the Python recursion limit.
+            # This step is recursive; however, we do not expect "super
+            # deep" Pyomo block hierarchies, so should be okay.
+            for comp in self.component_map().values():
+                comp._create_objects_for_deepcopy(memo, component_list)
+        return _ans
 
 
 @ModelComponentFactory.register("A component that contains one or more model components.")
@@ -2303,7 +2320,7 @@ def components_data(block, ctype,
 
 #
 # Create a Block and record all the default attributes, methods, etc.
-# These will be assumes to be the set of illegal component names.
+# These will be assumed to be the set of illegal component names.
 #
 _BlockData._Block_reserved_words = set(dir(Block()))
 

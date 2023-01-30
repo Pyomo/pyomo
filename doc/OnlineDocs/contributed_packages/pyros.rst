@@ -5,7 +5,8 @@ PyROS Solver
 PyROS (Pyomo Robust Optimization Solver) is a metasolver capability within Pyomo for solving non-convex,
 two-stage optimization models using adjustable robust optimization.
 
-It was developed by **Natalie M. Isenberg** and **Chrysanthos E. Gounaris** of Carnegie Mellon University,
+It was developed by **Natalie M. Isenberg**, **Jason A. F. Sherman**,
+and **Chrysanthos E. Gounaris** of Carnegie Mellon University,
 in collaboration with **John D. Siirola** of Sandia National Labs.
 The developers gratefully acknowledge support from the U.S. Department of Energy's
 `Institute for the Design of Advanced Energy Systems (IDAES) <https://idaes.org>`_.
@@ -60,7 +61,7 @@ Based on the above notation, the form of the robust counterpart addressed in PyR
     \end{align*}
 
 In order to solve problems of the above type, PyROS implements the
-Generalized Robust Cutting-Set algorithm developed in [GRCSPaper]_.
+Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_.
 
 When using PyROS, please consider citing the above paper.
 
@@ -124,32 +125,43 @@ via the ``IntersectionSet`` class.  Custom user-specified sets can also be defin
 
 Mathematical representations of the sets are shown below, followed by the class descriptions.
 
-.. list-table:: PyROS Uncertainty Sets
+.. list-table:: Mathematical definitions of PyROS uncertainty sets
    :header-rows: 1
    :class: tight-table
 
    * - Uncertainty Set Type
-     - Set Representation
+     - Input Data
+     - Mathematical Definition
    * - ``BoxSet``
-     - :math:`Q_X = \left\{q \in \mathbb{R}^n : q^\ell \leq q \leq q^u\right\} \\ q^\ell \in \mathbb{R}^n \\ q^u \in \mathbb{R}^n : \left\{q^\ell \leq q^u\right\}`
+     - :math:`\begin{array}{l} q ^{\text{L}} \in \mathbb{R}^{n}, \\ q^{\text{U}} \in \mathbb{R}^{n}: q^{\text{L}} \leq q^{\text{U}} \end{array}`
+     - :math:`\{q \in \mathbb{R}^n \mid q^\mathrm{L} \leq q \leq q^\mathrm{U}\}`
    * - ``CardinalitySet``
-     - :math:`Q_C = \left\{q \in \mathbb{R}^n : q = q^0 + (\hat{q} \circ \xi) \text{ for some } \xi \in \Xi_C\right\}\\ \Xi_C = \left\{\xi \in [0, 1]^n : \displaystyle\sum_{i=1}^{n} \xi_i \leq \Gamma\right\} \\ \Gamma \in [0, n] \\ \hat{q} \in \mathbb{R}^{n}_{+} \\ q^0 \in \mathbb{R}^n`
+     - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ \hat{q} \in \mathbb{R}_{+}^{n}, \\ \Gamma \in [0, n] \end{array}`
+     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} q = q^{0} + \hat{q} \odot \xi \\ \displaystyle \sum_{i=1}^{n} \xi_{i} \leq \Gamma \\ \xi \in [0, 1]^{n} \end{array} \right\}`
    * - ``BudgetSet``
-     - :math:`Q_B = \left\{q \in \mathbb{R}^n_+: \displaystyle\sum_{i \in B_\ell} q_i \leq b_\ell \ \forall \ell \in \left\{1,\ldots,L\right\} \right\} \\ b_\ell \in \mathbb{R}^{L}_+`
+     - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ b \in \mathbb{R}_{+}^{L}, \\ B \in \{0, 1\}^{L \times n} \end{array}`
+     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \begin{pmatrix} B \\ -I \end{pmatrix} q \leq \begin{pmatrix}  b + Bq^{0} \\ -q^{0} \end{pmatrix}  \end{array} \right\}`
    * - ``FactorModelSet``
-     - :math:`Q_F = \left\{q \in \mathbb{R}^n: \displaystyle q = q^0 + \Psi \xi \text{ for some }\xi \in \Xi_F\right\} \\ \Xi_F = \left\{ \xi \in \left[-1, 1\right]^F, \left\lvert \displaystyle \sum_{f=1}^{F} \xi_f\right\rvert \leq \beta F \right\} \\ \beta \in [0,1] \\ \Psi \in \mathbb{R}^{n \times F}_+ \\ q^0 \in \mathbb{R}^n`
+     - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ \Psi \in \mathbb{R}^{n \times F}, \\ \beta \in [0, 1] \end{array}`
+     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} q = q^{0} + \Psi \xi \\ \displaystyle\bigg| \sum_{j=1}^{F} \xi_{j} \bigg| \leq \beta F \\ \xi \in [-1, 1]^{F} \\ \end{array} \right\}`
    * - ``PolyhedralSet``
-     - :math:`Q_P = \left\{q \in \mathbb{R}^n: \displaystyle A q \leq b \right\} \\ A \in \mathbb{R}^{m \times n} \\ b \in \mathbb{R}^{m} \\ q^0 \in \mathbb{R}^n: {Aq^0 \leq b}`
+     - :math:`\begin{array}{l} A \in \mathbb{R}^{m \times n}, \\ b \in \mathbb{R}^{m}\end{array}`
+     - :math:`\{q \in \mathbb{R}^{n} \mid A q \leq b\}`
    * - ``AxisAlignedEllipsoidalSet``
-     - :math:`Q_A = \left\{q \in \mathbb{R}^n: \displaystyle \sum\limits_{i=1 : \atop \left\{ \alpha_i > 0 \right\} } \left(\frac{q_i - q_i^0}{\alpha_i} \right)^2 \leq 1 , \quad q_i = q^0_i \quad \forall i : \left\{\alpha_i=0\right\}\right\} \\ \alpha \in \mathbb{R}^n_+, \\ q^0 \in \mathbb{R}^n`
+     - :math:`\begin{array}{l} \alpha \in \mathbb{R}_{+}^{n}, \\ q^{0} \in \mathbb{R}^{n} \end{array}`
+     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \displaystyle\sum_{\substack{i = 1 \\ \alpha_{i} > 0}}^{n}  \left(\frac{q_{i} - q_{i}^{0}}{\alpha_{i}}\right)^2 \leq 1 \\ q_{i} = q_{i}^{0} \,\forall\,i : \alpha_{i} = 0 \end{array} \right\}`
    * - ``EllipsoidalSet``
-     - :math:`Q_E = \left\{q \in \mathbb{R}^n: \displaystyle q = q^0 + P^{1/2} \xi \text{ for some } \xi \in \Xi_E \right\} \\ \Xi_E = \left\{\xi \in \mathbb{R} : \xi^T\xi \leq s \right\} \\ P \in \mathbb{S}^{n\times n}_+ \\ s \in \mathbb{R}_+ \\ q^0 \in \mathbb{R}^n`
+     - :math:`\begin{array}{l} P \in \mathbb{S}_{++}^{n}, \\ s \in \mathbb{R}_{+}, \\ q^{0} \in \mathbb{R}^{n} \end{array}`
+     - :math:`\{q \in \mathbb{R}^{n} \mid (q - q^{0})^{\intercal} P^{-1} (q - q^{0}) \leq s\}`
    * - ``UncertaintySet``
-     - :math:`Q_U = \left\{q \in \mathbb{R}^n: \displaystyle g_i(q) \leq 0 \quad \forall i \in \left\{1,\ldots,m \right\}\right\} \\ m \in \mathbb{N}_+ \\ g_i : \mathbb{R}^n \mapsto \mathbb{R} \, \forall i \in \left\{1,\ldots,m\right\}, \\ q^0 \in \mathbb{R}^n : \left\{g_i(q^0) \leq 0  \ \forall i \in \left\{1,\ldots,m\right\}\right\}`
+     - :math:`g: \mathbb{R}^{n} \to \mathbb{R}^{m}`
+     - :math:`\{q \in \mathbb{R}^{n} \mid g(q) \leq 0\}`
    * - ``DiscreteScenariosSet``
-     - :math:`Q_D = \left\{q^s : s = 0,\ldots,D \right\} \\ D \in \mathbb{N} \\ q^s \in \mathbb{R}^n \forall s \in \left\{ 0,\ldots,D\right\}`
+     - :math:`q^{1}, q^{2},\dots , q^{S} \in \mathbb{R}^{n}`
+     - :math:`\{q^{1}, q^{2}, \dots , q^{S}\}`
    * - ``IntersectionSet``
-     - :math:`Q_I = \left\{q \in \mathbb{R}^n: \displaystyle q \in \bigcap_{i \in \left\{1,\ldots,m\right\}} Q_i\right\} \\ Q_i \subset \mathbb{R}^n \quad \forall i \in \left\{1,\ldots,m\right\}`
+     - :math:`\mathcal{Q}_{1}, \mathcal{Q}_{2}, \dots , \mathcal{Q}_{m} \subset \mathbb{R}^{n}`
+     - :math:`\displaystyle \bigcap_{i=1}^{m} \mathcal{Q}_{i}`
 
 .. note::
     Each of the PyROS uncertainty set classes inherits from the ``UncertaintySet`` base class.
@@ -158,34 +170,34 @@ PyROS Uncertainty Set Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BoxSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: bounds, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: origin, positive_deviation, gamma, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: coefficients_mat, rhs_vec, origin, budget_membership_mat, budget_rhs_vec, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: origin, number_of_factors, psi_mat, beta, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: coefficients_mat, rhs_vec, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: center, half_lengths, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: center, shape_matrix, scale, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: scenarios, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: all_sets, type, parameter_bounds, dim, point_in_set
 
 
 PyROS Usage Example

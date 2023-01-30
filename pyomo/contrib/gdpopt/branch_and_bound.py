@@ -24,7 +24,9 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_transformed_boolean_variable_list)
 from pyomo.contrib.gdpopt.config_options import (
     _add_nlp_solver_configs, _add_BB_configs, _add_mip_solver_configs,
-    _add_tolerance_configs)
+    _add_tolerance_configs, _add_nlp_solve_configs)
+from pyomo.contrib.gdpopt.nlp_initialization import (
+    restore_vars_to_original_values)
 from pyomo.contrib.gdpopt.util import (
     copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time)
 from pyomo.contrib.satsolver.satsolver import satisfiable
@@ -60,6 +62,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
+    _add_nlp_solve_configs(
+        CONFIG, default_nlp_init_method=restore_vars_to_original_values)
     _add_tolerance_configs(CONFIG)
     _add_BB_configs(CONFIG)
 
@@ -84,12 +88,12 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         add_boolean_variable_lists(util_block)
 
         root_node = TransformationFactory(
-            'core.logical_to_linear').create_using(model)
+            'contrib.logical_to_disjunctive').create_using(model)
         root_util_blk = root_node.component(
             self.original_util_block.name)
         # Add to root utility block what we will need during the algorithm
         add_disjunction_list(root_util_blk)
-        # Now that logical_to_linear has been called.
+        # Now that logical_to_disjunctive has been called.
         add_transformed_boolean_variable_list(root_util_blk)
 
         # Map unfixed disjunct -> list of deactivated constraints

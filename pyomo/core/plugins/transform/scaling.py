@@ -10,7 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentMap
-from pyomo.core.base import Var, Constraint, Objective, _ConstraintData, _ObjectiveData, Suffix, value
+from pyomo.core.base import (
+    Block, Var, Constraint, Objective, _ConstraintData, _ObjectiveData,
+    Suffix, value,
+)
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import replace_expressions
@@ -81,16 +84,91 @@ class ScaleModel(Transformation):
         self._apply_to(scaled_model, **kwds)
         return scaled_model
 
-    def _get_float_scaling_factor(self, instance, component_data):
-        scaling_factor = None
-        if component_data in instance.scaling_factor:
-            scaling_factor = instance.scaling_factor[component_data]
-        elif component_data.parent_component() in instance.scaling_factor:
-            scaling_factor = instance.scaling_factor[component_data.parent_component()]
+    def _suffix_finder(self, component_data, suffix_name, root=None):
+        """Find suffix value for a given component data object in model tree
 
+        Suffixes are searched by traversing the model hierarchy in three passes:
+
+        1. Search for a Suffix matching the specific component_data,
+           starting at the `root` and descending down the tree to
+           the component_data.  Return the first match found.
+        2. Search for a Suffix matching the component_data's container,
+           starting at the `root` and descending down the tree to
+           the component_data.  Return the first match found.
+        3. Search for a Suffix with key `None`, starting from the
+           component_data and working up the tree to the `root`.
+           Return the first match found.
+        4. Return None
+
+        Parameters
+        ----------
+        component_data: ComponentDataBase
+
+            Component or component data object to find suffix value for.
+
+        suffix_name: str
+
+            Name of Suffix to search for.
+
+        root: BlockData
+
+            When searching up the block hierarchy, stop at this
+            BlockData instead of traversing all the way to the
+            `component_data.model()` Block.  If the `component_data` is
+            not in the subtree defined by `root`, then the search will
+            proceed up to `component_data.model()`.
+
+        Returns
+        -------
+        The value for Suffix associated with component data if found, else None.
+
+        """
+        # Prototype for Suffix finder
+
+        # We want to *include* the root (if it is not None), so if
+        # it is not None, we want to stop as soon as we get to its
+        # parent.
+        if root is not None:
+            if root.ctype is not Block and not issubclass(root.ctype, Block):
+                raise ValueError("_find_suffix: root must be a BlockData "
+                                 f"(found {root.ctype.__name__}: {root})")
+            if root.is_indexed():
+                raise ValueError(
+                    "_find_suffix: root must be a BlockData "
+                    f"(found {type(root).__name__}: {root})")
+            root = root.parent_block()
+        # Walk parent tree and search for suffixes
+        parent = component_data.parent_block()
+        suffixes = []
+        while parent is not root:
+            s = parent.component(suffix_name)
+            if s is not None and s.ctype is Suffix:
+                suffixes.append(s)
+            parent = parent.parent_block()
+        # Pass 1: look for the component_data, working root to leaf
+        for s in reversed(suffixes):
+            if component_data in s:
+                return s[component_data]
+        # Pass 2: look for the component container, working root to leaf
+        parent_comp = component_data.parent_component()
+        if parent_comp is not component_data:
+            for s in reversed(suffixes):
+                if parent_comp in s:
+                    return s[parent_comp]
+        # Pass 3: look for None, working leaf to root
+        for s in suffixes:
+            if None in s:
+                return s[None]
+        return None
+
+    def _get_float_scaling_factor(self, instance, component_data):
+        scaling_factor = self._suffix_finder(component_data, "scaling_factor")
+
+        # If still no scaling factor, return 1.0
         if scaling_factor is None:
             return 1.0
 
+        # Make sure scaling factor is a float
         try:
             scaling_factor = float(scaling_factor)
         except ValueError:
@@ -106,11 +184,6 @@ class ScaleModel(Transformation):
 
         # if the scaling_method is 'user', get the scaling parameters from the suffixes
         if self._scaling_method == 'user':
-            # perform some checks to make sure we have the necessary suffixes
-            if type(model.component('scaling_factor')) is not Suffix:
-                raise ValueError("ScaleModel transformation called with scaling_method='user'"
-                                 ", but cannot find the suffix 'scaling_factor' on the model")
-
             # get the scaling factors
             for c in model.component_data_objects(ctype=(Var, Constraint, Objective), descend_into=True):
                 component_scaling_factor_map[c] = self._get_float_scaling_factor(model, c)
@@ -140,6 +213,10 @@ class ScaleModel(Transformation):
         variable_substitution_map = ComponentMap()
         already_scaled = set()
         for variable in [var for var in model.component_objects(ctype=Var, descend_into=True)]:
+            if variable.is_reference():
+                # Skip any references - these should get picked up when handling the actual variable
+                continue
+
             # set the bounds/value for the scaled variable
             for k in variable:
                 v = variable[k]
@@ -170,13 +247,17 @@ class ScaleModel(Transformation):
             scale_constraint_dual = True
 
         # translate the variable_substitution_map (ComponentMap)
-        # to variable_substition_dict (key: id() of component)
+        # to variable_substitution_dict (key: id() of component)
         # ToDo: We should change replace_expressions to accept a ComponentMap as well
         variable_substitution_dict = {id(k):variable_substitution_map[k]
                                       for k in variable_substitution_map}
 
         already_scaled = set()
         for component in model.component_objects(ctype=(Constraint, Objective), descend_into=True):
+            if component.is_reference():
+                # Skip any references - these should get picked up when handling the actual component
+                continue
+
             for k in component:
                 c = component[k]
                 if id(c) in already_scaled:
@@ -206,7 +287,7 @@ class ScaleModel(Transformation):
                         dual_value = model.dual[c]
                         if dual_value is not None:
                             model.dual[c] = dual_value / scaling_factor
-                    
+
                     if c.equality:
                         c.set_value((lower, body))
                     else:
@@ -255,16 +336,21 @@ class ScaleModel(Transformation):
         component_scaling_factor_map = scaled_model.component_scaling_factor_map
         scaled_component_to_original_name_map = scaled_model.scaled_component_to_original_name_map
 
-        # get the objective scaling factor
-        scaled_objectives = list(scaled_model.component_data_objects(ctype=Objective, active=True, descend_into=True))
-        if len(scaled_objectives) != 1:
-            raise NotImplementedError(
-                'ScaleModel.propagate_solution requires a single active objective function, but %d objectives found.' % (
-                    len(objectives)))
-        objective_scaling_factor = component_scaling_factor_map[scaled_objectives[0]]
-
         # transfer the variable values and reduced costs
         check_reduced_costs = type(scaled_model.component('rc')) is Suffix
+        check_dual = type(scaled_model.component('dual')) is Suffix and type(original_model.component('dual')) is Suffix
+
+        if check_reduced_costs or check_dual:
+            # get the objective scaling factor
+            scaled_objectives = list(
+                scaled_model.component_data_objects(ctype=Objective, active=True, descend_into=True))
+            if len(scaled_objectives) != 1:
+                raise NotImplementedError(
+                    'ScaleModel.propagate_solution requires a single active objective function, but %d objectives found.' % (
+                        len(scaled_objectives)))
+            else:
+                objective_scaling_factor = component_scaling_factor_map[scaled_objectives[0]]
+
         for scaled_v in scaled_model.component_objects(ctype=Var, descend_into=True):
             # get the unscaled_v from the original model
             original_v_path = scaled_component_to_original_name_map[scaled_v]
@@ -281,7 +367,7 @@ class ScaleModel(Transformation):
                         scaled_v[k]] / objective_scaling_factor
 
         # transfer the duals
-        if type(scaled_model.component('dual')) is Suffix and type(original_model.component('dual')) is Suffix:
+        if check_dual:
             for scaled_c in scaled_model.component_objects(ctype=Constraint, descend_into=True):
                 original_c = original_model.find_component(scaled_component_to_original_name_map[scaled_c])
 
