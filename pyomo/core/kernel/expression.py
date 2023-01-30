@@ -165,7 +165,10 @@ class noclone(IIdentityExpression):
 
     def __new__(cls, expr=NOTSET):
         if expr is NOTSET or isinstance(expr, NumericValue):
-            return super(noclone, cls).__new__(cls)
+            if not is_potentially_variable(expr):
+                return super().__new__(npv_noclone)
+            else:
+                return super().__new__(cls)
         else:
             return expr
 
@@ -197,11 +200,19 @@ class noclone(IIdentityExpression):
     def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
-        return is_potentially_variable(self._expr)
+        return True
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
         return self
+
+class npv_noclone(noclone):
+    def is_potentially_variable(self):
+        """A boolean indicating whether this expression can
+        reference variables."""
+        return False
+
+
 
 class IExpression(ICategorizedObject, IIdentityExpression):
     """
