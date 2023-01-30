@@ -642,9 +642,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         sort=sortOrder,
                         descend_into=False):
 
-                    print(constraint_data.name,
-                          constraint_data.has_lb(),
-                          constraint_data.has_ub())
                     if (not constraint_data.has_lb()) and \
                        (not constraint_data.has_ub()):
                         assert not constraint_data.equality
@@ -662,7 +659,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             )
                         if gen_con_repn:
                             block_repn[constraint_data] = repn
-                    print('REPN', repn)
+
                     yield constraint_data, repn
 
         if row_order is not None:
