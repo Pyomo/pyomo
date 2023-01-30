@@ -379,7 +379,7 @@ class _SuffixData(object):
                 if missing > 0:
                     missing_component += missing
                 else:
-                    missing_other += missing
+                    missing_other -= missing
         if missing_component:
             logger.warning(
                 f"model contains export suffix '{suffix.name}' that "
