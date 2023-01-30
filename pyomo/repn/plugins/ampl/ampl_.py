@@ -647,9 +647,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
             elif exp_type is EXPR.Expr_ifExpression:
                 OUTPUT.write(self._op_string[EXPR.Expr_ifExpression])
-                self._print_nonlinear_terms_NL(exp._if)
-                self._print_nonlinear_terms_NL(exp._then)
-                self._print_nonlinear_terms_NL(exp._else)
+                for arg in exp.args:
+                    self._print_nonlinear_terms_NL(arg)
 
             elif exp_type is EXPR.InequalityExpression:
                 and_str, lt_str, le_str = \
