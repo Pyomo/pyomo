@@ -382,14 +382,14 @@ class _SuffixData(object):
                     missing_other += missing
         if missing_component:
             logger.warning(
-                f"model contained export suffix {suffix.name} that "
-                f"contained {missing_component} component keys that are "
+                f"model contains export suffix '{suffix.name}' that "
+                f"contains {missing_component} component keys that are "
                 "not exported as part of the NL file.  "
                 "Skipping.")
         if missing_other:
             logger.warning(
-                f"model contained export suffix {suffix.name} that "
-                f"contained {missing_other} keys that are not "
+                f"model contains export suffix '{suffix.name}' that "
+                f"contains {missing_other} keys that are not "
                 "Var, Constraint, Objective, or the model.  Skipping.")
 
     def store(self, obj, val):
@@ -398,20 +398,20 @@ class _SuffixData(object):
             return
         if missing == 1:
             logger.warning(
-                f"model contained export suffix {self._name} with "
+                f"model contains export suffix '{self._name}' with "
                 f"{obj.ctype.__name__} key '{obj.name}', but that "
                 "object is not exported as part of the NL file.  "
                 "Skipping.")
         elif missing > 1:
             logger.warning(
-                f"model contained export suffix {self._name} with "
+                f"model contains export suffix '{self._name}' with "
                 f"{obj.ctype.__name__} key '{obj.name}', but that "
                 "object contained {missing} data objects that are "
                 "not exported as part of the NL file.  "
                 "Skipping.")
         else:
             logger.warning(
-                f"model contained export suffix {self._name} with "
+                f"model contains export suffix '{self._name}' with "
                 f"{obj.__class__.__name__} key '{obj}' that is not "
                 "a Var, Constraint, Objective, or the model.  Skipping.")
 
