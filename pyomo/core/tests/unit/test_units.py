@@ -32,7 +32,8 @@ from pyomo.core.expr.numvalue import NumericConstant
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (
     pint_available, pint_module, _DeferredUnitsSingleton,
-    InconsistentUnitsError, UnitsError, PyomoUnitsContainer, as_quantity
+    InconsistentUnitsError, UnitsError, PyomoUnitsContainer, as_quantity,
+    _PyomoUnit,
 )
 from io import StringIO
 
@@ -275,7 +276,7 @@ class TestPyomoUnit(unittest.TestCase):
 
         # test PowExpression, NPV_PowExpression
         self._get_check_units_ok(kg**2, uc, 'kg**2', EXPR.NPV_PowExpression)
-        self._get_check_units_ok(model.p**model.p, uc, 'None', EXPR.NPV_PowExpression)
+        self._get_check_units_ok(model.p**model.p, uc, 'dimensionless', EXPR.NPV_PowExpression)
         self._get_check_units_ok(kg**model.p, uc, 'kg**42', EXPR.NPV_PowExpression)
         self._get_check_units_ok((model.x*kg**2)**3, uc, 'kg**6', EXPR.PowExpression)
         self._get_check_units_fail(kg**model.x, uc, EXPR.PowExpression, UnitsError)
@@ -295,51 +296,51 @@ class TestPyomoUnit(unittest.TestCase):
 
         # test the different UnaryFunctionExpression / NPV_UnaryFunctionExpression types
         # log
-        self._get_check_units_ok(log(3.0*model.x), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(log(3.0*model.x), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(log(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(log(3.0*model.p), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(log(3.0*model.p), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(log(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # log10
-        self._get_check_units_ok(log10(3.0*model.x), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(log10(3.0*model.x), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(log10(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(log10(3.0*model.p), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(log10(3.0*model.p), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(log10(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # sin
-        self._get_check_units_ok(sin(3.0*model.x), uc, None, EXPR.UnaryFunctionExpression)
-        self._get_check_units_ok(sin(3.0*model.x*uc.radians), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(sin(3.0*model.x), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(sin(3.0*model.x*uc.radians), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(sin(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
         self._get_check_units_fail(sin(3.0*kg*model.x*uc.kg), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(sin(3.0*model.p*uc.radians), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(sin(3.0*model.p*uc.radians), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(sin(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # cos
-        self._get_check_units_ok(cos(3.0*model.x*uc.radians), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(cos(3.0*model.x*uc.radians), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(cos(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
         self._get_check_units_fail(cos(3.0*kg*model.x*uc.kg), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(cos(3.0*model.p*uc.radians), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(cos(3.0*model.p*uc.radians), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(cos(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # tan
-        self._get_check_units_ok(tan(3.0*model.x*uc.radians), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(tan(3.0*model.x*uc.radians), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(tan(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
         self._get_check_units_fail(tan(3.0*kg*model.x*uc.kg), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(tan(3.0*model.p*uc.radians), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(tan(3.0*model.p*uc.radians), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(tan(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # sin
-        self._get_check_units_ok(sinh(3.0*model.x*uc.radians), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(sinh(3.0*model.x*uc.radians), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(sinh(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
         self._get_check_units_fail(sinh(3.0*kg*model.x*uc.kg), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(sinh(3.0*model.p*uc.radians), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(sinh(3.0*model.p*uc.radians), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(sinh(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # cos
-        self._get_check_units_ok(cosh(3.0*model.x*uc.radians), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(cosh(3.0*model.x*uc.radians), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(cosh(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
         self._get_check_units_fail(cosh(3.0*kg*model.x*uc.kg), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(cosh(3.0*model.p*uc.radians), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(cosh(3.0*model.p*uc.radians), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(cosh(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # tan
-        self._get_check_units_ok(tanh(3.0*model.x*uc.radians), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(tanh(3.0*model.x*uc.radians), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(tanh(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
         self._get_check_units_fail(tanh(3.0*kg*model.x*uc.kg), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(tanh(3.0*model.p*uc.radians), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(tanh(3.0*model.p*uc.radians), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(tanh(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # asin
         self._get_check_units_ok(asin(3.0*model.x), uc, 'rad', EXPR.UnaryFunctionExpression)
@@ -357,15 +358,15 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_ok(atan(3.0*model.p), uc, 'rad', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(atan(3.0*model.p*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # exp
-        self._get_check_units_ok(exp(3.0*model.x), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(exp(3.0*model.x), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(exp(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
-        self._get_check_units_ok(exp(3.0*model.p), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(exp(3.0*model.p), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(exp(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # sqrt
-        self._get_check_units_ok(sqrt(3.0*model.x), uc, None, EXPR.UnaryFunctionExpression)
+        self._get_check_units_ok(sqrt(3.0*model.x), uc, 'dimensionless', EXPR.UnaryFunctionExpression)
         self._get_check_units_ok(sqrt(3.0*model.x*kg**2), uc, 'kg', EXPR.UnaryFunctionExpression)
         self._get_check_units_ok(sqrt(3.0*model.x*kg), uc, 'kg**0.5', EXPR.UnaryFunctionExpression)
-        self._get_check_units_ok(sqrt(3.0*model.p), uc, None, EXPR.NPV_UnaryFunctionExpression)
+        self._get_check_units_ok(sqrt(3.0*model.p), uc, 'dimensionless', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_ok(sqrt(3.0*model.p*kg**2), uc, 'kg', EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_ok(sqrt(3.0*model.p*kg), uc, 'kg**0.5', EXPR.NPV_UnaryFunctionExpression)
         # asinh
@@ -401,7 +402,7 @@ class TestPyomoUnit(unittest.TestCase):
                                  uc, 'kg', EXPR.Expr_ifExpression)
         # consistent if, unitless then/else
         self._get_check_units_ok(EXPR.Expr_if(IF=model.x*kg + kg >= 2.0*kg, THEN=model.x, ELSE=model.x),
-                                 uc, None, EXPR.Expr_ifExpression)
+                                 uc, 'dimensionless', EXPR.Expr_ifExpression)
         # inconsistent then/else
         self._get_check_units_fail(EXPR.Expr_if(IF=model.x >= 2.0, THEN=model.x*m, ELSE=model.y*kg),
                                  uc, EXPR.Expr_ifExpression)
@@ -416,16 +417,16 @@ class TestPyomoUnit(unittest.TestCase):
         model.S = Set()
         i = EXPR.IndexTemplate(model.S)
         j = EXPR.IndexTemplate(model.S)
-        self._get_check_units_ok(i, uc, None, EXPR.IndexTemplate)
+        self._get_check_units_ok(i, uc, 'dimensionless', EXPR.IndexTemplate)
 
         model.mat = Var(model.S, model.S)
-        self._get_check_units_ok(model.mat[i,j+1], uc, None,
-                                 EXPR.Numeric_GetItemExpression)
+        self._get_check_units_ok(
+            model.mat[i,j+1], uc, 'dimensionless', EXPR.Numeric_GetItemExpression)
 
         # test ExternalFunctionExpression, NPV_ExternalFunctionExpression
         model.ef = ExternalFunction(python_callback_function)
-        self._get_check_units_ok(model.ef(model.x, model.y), uc, None, EXPR.ExternalFunctionExpression)
-        self._get_check_units_ok(model.ef(1.0, 2.0), uc, None, EXPR.NPV_ExternalFunctionExpression)
+        self._get_check_units_ok(model.ef(model.x, model.y), uc, 'dimensionless', EXPR.ExternalFunctionExpression)
+        self._get_check_units_ok(model.ef(1.0, 2.0), uc, 'dimensionless', EXPR.NPV_ExternalFunctionExpression)
         self._get_check_units_fail(model.ef(model.x*kg, model.y), uc, EXPR.ExternalFunctionExpression, UnitsError)
         self._get_check_units_fail(model.ef(2.0*kg, 1.0), uc, EXPR.NPV_ExternalFunctionExpression, UnitsError)
 
@@ -457,7 +458,7 @@ class TestPyomoUnit(unittest.TestCase):
         # test LinearExpression
         # ToDo: Once this test is working correctly, this code should be moved to the test above
         model.vv = Var(['A', 'B', 'C'])
-        self._get_check_units_ok(sum_product(model.vv), uc, None, EXPR.LinearExpression)
+        self._get_check_units_ok(sum_product(model.vv), uc, 'dimensionless', EXPR.LinearExpression)
 
         linex1 = sum_product(model.vv, {'A': kg, 'B': kg, 'C':kg}, index=['A', 'B', 'C'])
         self._get_check_units_ok(linex1, uc, 'kg', EXPR.LinearExpression)
@@ -483,10 +484,16 @@ class TestPyomoUnit(unittest.TestCase):
         uc = units
         kg = uc.kg
         dless = uc.dimensionless
-        self._get_check_units_ok(2.0 == 2.0*dless, uc, None, EXPR.EqualityExpression)
-        self.assertEqual(uc.get_units(2.0*dless), uc.get_units(2.0))
-        self.assertIsNone(uc.get_units(2.0*dless))
-        self.assertIsNone(uc.get_units(kg/kg))
+        self._get_check_units_ok(2.0 == 2.0*dless, uc, 'dimensionless', EXPR.EqualityExpression)
+        x = uc.get_units(2.0)
+        self.assertIs(type(x), _PyomoUnit)
+        self.assertEqual(x, dless)
+        x = uc.get_units(2.0*dless)
+        self.assertIs(type(x), _PyomoUnit)
+        self.assertEqual(x, dless)
+        x = uc.get_units(kg/kg)
+        self.assertIs(type(x), _PyomoUnit)
+        self.assertEqual(x, dless)
 
     def test_temperatures(self):
         uc = units
@@ -834,6 +841,44 @@ class TestPyomoUnit(unittest.TestCase):
         q = as_quantity(ef)
         self.assertIs(q.__class__, Quantity)
         self.assertAlmostEqual(q, 3 * _pint.kg)
+
+    def test_var_set_value(self):
+        # Tests for #1570
+        m = ConcreteModel()
+
+        # Un-united variables just strip the units
+        m.x = Var()
+        m.x.value = 10
+        self.assertEqual(m.x.value, 10)
+        m.x.value = 20*units.kg
+        self.assertEqual(m.x.value, 20)
+        m.x.value = 30*units.dimensionless
+        self.assertEqual(m.x.value, 30)
+        del m.x
+
+        # Dimensionless variables require dimensionless args
+        m.x = Var(units=units.dimensionless)
+        m.x.value = 10
+        self.assertEqual(m.x.value, 10)
+        with self.assertRaisesRegex(
+                UnitsError, 'Cannot convert kg to dimensionless'):
+            m.x.value = 20*units.kg
+        self.assertEqual(m.x.value, 10)
+        m.x.value = 30*units.dimensionless
+        self.assertEqual(m.x.value, 30)
+        del m.x
+
+        # Dimensioned variables require bare or dimensioned args
+        m.x = Var(units=units.gram)
+        m.x.value = 10
+        self.assertEqual(m.x.value, 10)
+        m.x.value = 20*units.kg
+        self.assertEqual(m.x.value, 20000)
+        with self.assertRaisesRegex(
+                UnitsError, 'Cannot convert dimensionless to g'):
+            m.x.value = 30*units.dimensionless
+        self.assertEqual(m.x.value, 20000)
+        del m.x
 
 
 if __name__ == "__main__":
