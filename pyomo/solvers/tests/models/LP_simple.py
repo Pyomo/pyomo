@@ -90,12 +90,7 @@ class LP_simple_kernel(LP_simple):
         model.c2 = pmo.constraint((2.0, model.x/model.a3 - model.y, 10))
         model.c3 = pmo.constraint((0, model.z1 + 1, 10))
         model.c4 = pmo.constraint((-10, model.z2 + 1, 0))
-        print(model.c1.expr, model.c1.expr.to_string(verbose=True))
-        e = model.c1.expr
-        print(type(e.arg(0)), type(e.arg(1)))
-        print(type(e.arg(0).arg(0)), type(e.arg(0).arg(1)))
-        print(type(e.arg(0).arg(1).arg(0)))
-
+        print(model.c1.expr)
         print(model.c2.expr)
         print(model.c3.expr)
         print(model.c4.expr)
