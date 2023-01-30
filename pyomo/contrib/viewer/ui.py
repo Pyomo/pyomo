@@ -65,13 +65,14 @@ for _err in myqt.import_errors:
     _log.error(_err)
 
 
-def get_mainwindow(model=None, show=True, testing=False):
+def get_mainwindow(model=None, show=True, ask_close=True, testing=False):
     """
     Create a UI MainWindow.
 
     Args:
         model: A Pyomo model to work with
         show: show the window after it is created
+        ask_close: confirm close window
         testing: if True, expect testing
     Returns:
         (ui, model): ui is the MainWindow widget, and model is the linked Pyomo
@@ -79,7 +80,7 @@ def get_mainwindow(model=None, show=True, testing=False):
     """
     if model is None:
         model = pyo.ConcreteModel(name="Default")
-    ui = MainWindow(model=model, testing=testing)
+    ui = MainWindow(model=model, ask_close=ask_close, testing=testing)
     try:
         get_ipython().events.register("post_execute", ui.refresh_on_execute)
     except AttributeError:
@@ -92,7 +93,8 @@ def get_mainwindow(model=None, show=True, testing=False):
 class MainWindow(_MainWindow, _MainWindowUI):
     def __init__(self, *args, **kwargs):
         model = self.model = kwargs.pop("model", None)
-        main = self.model = kwargs.pop("main", None)
+        main = self.main = kwargs.pop("main", None)
+        ask_close = self.ask_close = kwargs.pop("ask_close", True)
         self.testing = kwargs.pop("testing", False)
         flags = kwargs.pop("flags", 0)
         self.ui_data = UIData(model=model)
@@ -106,7 +108,6 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.expressions = None
         self.parameters = None
         self.residuals = None
-
         self.update_model()
 
         self.ui_data.updated.connect(self.update_model)
@@ -276,6 +277,9 @@ class MainWindow(_MainWindow, _MainWindowUI):
         """
         Handle the close event by asking for confirmation
         """
+        if not self.ask_close:
+            event.accept()
+            return
         msg = myqt.QMessageBox()
         self._dialog = msg
         msg.setIcon(myqt.QMessageBox.Question)

@@ -40,14 +40,16 @@ from pyomo.environ import (
 )
 import pyomo.environ as pyo
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
-from pyomo.contrib.viewer.qt import available
+import pyomo.contrib.viewer.qt as myqt
 from pyomo.common.dependencies import DeferredImportError
 
 try:
-    x = pyo.units.m
+    _x = pyo.units.m
     units_available = True
 except DeferredImportError:
     units_available = False
+
+available = myqt.available
 
 if available:
     from pyomo.contrib.viewer.ui_data import UIData
@@ -67,7 +69,7 @@ class TestDataModel(unittest.TestCase):
         # Borrowed this test model from the trust region tests
         m = ConcreteModel(name="tm")
         m.y = BooleanVar(range(3), initialize=False)
-        m.z = Var(range(3), domain=Reals, initialize=2.0, units=pyo.units.m)
+        m.z = Var(range(3), domain=Reals, initialize=2.0, units=pyo.units.m, doc="test doc")
         m.x = Var(range(2), initialize=2.0, units=pyo.units.m)
         m.x[1] = 1.0
 
@@ -90,6 +92,11 @@ class TestDataModel(unittest.TestCase):
             expr=m.x[0] * m.z[0] ** 2 + self.bb(m.x[0], m.x[1]) == 2 * sqrt(2.0)
         )
         m.c2 = Constraint(expr=m.z[2] ** 4 * m.z[1] ** 2 + m.z[1] == 8 + sqrt(2.0))
+
+        # Add a few items to test more
+        m.b2 = Block([1,2])
+        m.b2[1].w = Var(initialize=4)
+        m.b2[2].w = Var(initialize=4)
         self.m = m.clone()
 
     def test_create_tree_var(self):
@@ -138,6 +145,10 @@ class TestDataModel(unittest.TestCase):
         assert data_model.data(idx) == "z[1]"
         idx = data_model.index(1, 1, parent=zidx)
         assert abs(data_model.data(idx) - 2.0) < 0.0001
+        #tooltip gives doc
+        assert "test doc" == data_model.data(zidx, role=myqt.Qt.ItemDataRole.ToolTipRole)
+        assert myqt.QtCore.Qt.blue == data_model.data(zidx, role=myqt.Qt.ItemDataRole.ForegroundRole)
+        assert myqt.QtCore.Qt.black == data_model.data(root_index, role=myqt.Qt.ItemDataRole.ForegroundRole)
 
     def test_create_tree_con(self):
         ui_data = UIData(model=self.m)
@@ -172,6 +183,12 @@ class TestDataModel(unittest.TestCase):
         assert data_model.data(idx) == "c1"
         idx = data_model.index(2, 0, parent=root_index)
         assert data_model.data(idx) == "c2"
+        c2 = idx.internalPointer()
+        c2.set("active", False)
+        assert not self.m.c2.active
+        c2.set("active", True)
+        assert self.m.c2.active
+        assert "z[2]" in data_model.data(idx, role=myqt.Qt.ItemDataRole.ToolTipRole)
 
     def test_create_tree_expr(self):
         ui_data = UIData(model=self.m)

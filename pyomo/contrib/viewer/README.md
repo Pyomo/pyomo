@@ -54,17 +54,17 @@ be updated, since for very large models the time required may be significant.
 ### Opening the Stand-Alone Version
 
 Run ```pyomo model-viewer``` to get a stand-alone model viewer. The standalone
-viewer is based on the example code at
-https://github.com/jupyter/qtconsole/blob/master/examples/embed_qtconsole.py.
-The viewer will start with an empty Pyomo ConcreteModel called ```model```. The
-advantage of the stand-alone viewer is that it will automatically set up the
-environment and start the UI, saving typing a few lines of code. It also has a
-few menu items to help do common tasks. In the kernel, ``pyomo.environ`` is
-imported as ```pyo```. An empty ConcreteModel is available as ```model``` and
-linked to the viewer. To launch the model viewer select "Show/Start Model Viewer"
-from the "View" menu in the qtconsole window. After launching the model viewer
-it is available as ```ui```.  This provides a useful ability to script UI
-actions. You can link the model viewer to other models.
+viewer is the standard Jupyter qtconsole app with a few minor modifications. The
+file menu, contains a run script action. This will allow you to run a script
+to build a Pyomo model (this is the same as using the %run magic). The view 
+menu has two addtional items to show and hide the Pyomo model viewer. When a 
+new Jupyter kernel is started, it will automatically set up the Pyomo model 
+viewer and ```import pyomo.environ as pyo```.
+
+Once the Pyomo model viewer is opened, the model viewer main window object is
+available in the kernel as ```ui```. You can interact with the UI through the
+Qt API, allowing you to add or modify UI elements at run time. In the qtconsole
+app you can run multiple kernels and have multiple model viewers open. 
 
 ### Setting the Model
 
@@ -112,5 +112,11 @@ You can even add widgets and customize the interface while it is running.
 
 ## Known Bugs
 
-Sometimes the QtConsole in the stand-alone model viewer does not display the
-first prompt until you press enter. 
+If you use the Qt interface in the qtconsole app, the automatic documentation
+for Qt functions doesn't work properly.  To fix this, you need to ```import PySide6``` 
+or ```import PyQt5``` as appropriate.
+
+If you use the Qt API to modify the Pyomo modelviewer on the fly, it is 
+fairly easy to crash the kernel by providing the wrong arguments to a 
+function.  Use caution and if you have a UI modification you regularly
+use, it is probably best to run a canned script.   

@@ -245,7 +245,7 @@ class ComponentDataItem(object):
 
     def _get_value_callback(self):
         if isinstance(self.data, _ParamData):
-            v = value(self.data)
+            v = value_no_exception(self.data, div0="divide_by_0")
             # Check the param value for numpy float and int, sometimes numpy
             # values can sneak in especially if you set parameters from data
             # and for whatever reason numpy values don't display
@@ -257,7 +257,15 @@ class ComponentDataItem(object):
         elif isinstance(
             self.data, (Var._ComponentDataClass, BooleanVar._ComponentDataClass)
         ):
-            return value(self.data, exception=False)
+            v = value_no_exception(self.data)
+            # Check the param value for numpy float and int, sometimes numpy
+            # values can sneak in especially if you set parameters from data
+            # and for whatever reason numpy values don't display
+            if isinstance(v, float):  # includes numpy float
+                v = float(v)
+            elif isinstance(v, int):  # includes numpy int
+                v = int(v)
+            return v
         elif isinstance(self.data, (float, int)):
             return self.data
         else:

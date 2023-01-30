@@ -27,6 +27,7 @@ UI Tests
 from pyomo.environ import (
     ConcreteModel,
     Var,
+    BooleanVar,
     Param,
     Constraint,
     Objective,
@@ -37,6 +38,7 @@ from pyomo.environ import (
     sin,
     sqrt,
     log,
+    value,
 )
 import pyomo.common.unittest as unittest
 import pyomo.contrib.viewer.qt as myqt
@@ -59,6 +61,7 @@ else:
 def get_model():
     # Borrowed this test model from the trust region tests
     m = ConcreteModel()
+    m.y = BooleanVar(range(3), initialize=False)
     m.z = Var(range(3), domain=Reals, initialize=2.0)
     m.x = Var(range(4), initialize=2.0)
     m.x[1] = 1.0
@@ -177,12 +180,56 @@ def test_residual_table(qtbot):
     mw.residuals.sort()
     assert dm.data(dm.index(0, 0)) == "c5"
 
+@unittest.skipIf(not available, "Qt packages are not available.")
+def test_var_tree(qtbot):
+    m = get_model()
+    mw, m = get_mainwindow(model=m, testing=True)
+    qtbot.addWidget(mw)
+    mw.variables.treeView.expandAll()
+    root_index = mw.variables.datmodel.index(0,0)
+    z_index = mw.variables.datmodel.index(1, 0, parent=root_index)
+    z_val_index = mw.variables.datmodel.index(1, 1, parent=root_index)
+    z1_val_index = mw.variables.datmodel.index(0, 1, parent=z_index)
+    assert mw.variables.datmodel.data(z1_val_index) == 2.0
+    mw.variables.treeView.setCurrentIndex(z1_val_index)
+    mw.variables.treeView.openPersistentEditor(z1_val_index)
+    d = mw.variables.treeView.itemDelegateForIndex(z1_val_index)
+    w = mw.variables.treeView.indexWidget(z1_val_index)
+    w.setText("Not a number")
+    d.setModelData(w, mw.variables.datmodel, z1_val_index)
+    assert (value(m.z[0]) - 2.0) < 1e-6 # unchanged
+    w.setText("1e5")
+    d.setModelData(w, mw.variables.datmodel, z1_val_index)
+    assert (value(m.z[0]) - 1e5) < 1e-6 # set float
+    w.setText("false")
+    d.setModelData(w, mw.variables.datmodel, z1_val_index)
+    assert (value(m.z[0]) - 0) < 1e-6 # bool to 0
+    w.setText("true")
+    d.setModelData(w, mw.variables.datmodel, z1_val_index)
+    assert (value(m.z[0]) - 1) < 1e-6 # bool to 1
+    mw.variables.treeView.closePersistentEditor(z1_val_index)
+    w.setText("2")
+    d.setModelData(w, mw.variables.datmodel, z1_val_index)
+    assert (value(m.z[0]) - 2) < 1e-6 # set int
+    mw.variables.treeView.closePersistentEditor(z1_val_index)
+
+def test_bad_view(qtbot):
+    m = get_model()
+    mw, m = get_mainwindow(model=m, testing=True)
+    err = None
+    try:
+        mw.badTree = mw._tree_restart(
+            w=mw.variables, standard="Bad Stuff", ui_data=mw.ui_data
+        )
+    except ValueError:
+        err = "ValueError"
+    assert err == "ValueError"
 
 @unittest.skipIf(not available, "Qt packages are not available.")
-def test_qtconsole_viewer(qtbot):
-    km, kc = pv._start_kernel()
-    mw = pv.MainWindow(kernel_manager=km, kernel_client=kc)
-    kc.execute("model.display()", silent=True)
-    mw.show_ui()
-    mw.hide_ui()
-    mw.shutdown_kernel()
+def test_qtconsole_app(qtbot):
+    app = pv.QtApp()
+    # empty list to prevent picking up args from pytest
+    app.initialize([])
+    app.show_ui()
+    app.hide_ui()
+
