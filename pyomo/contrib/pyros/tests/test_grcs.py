@@ -3406,6 +3406,7 @@ class RegressionTest(unittest.TestCase):
         m.working_model.util.second_stage_variables = [m.z1, m.z2]
         m.working_model.util.uncertain_params = [m.p1, m.p2]
         m.working_model.util.first_stage_variables = []
+        m.working_model.util.state_vars = []
 
         m.working_model.util.first_stage_variables = []
         config = Block()

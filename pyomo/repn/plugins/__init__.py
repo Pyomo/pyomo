@@ -19,4 +19,4 @@ def load():
 
     from pyomo.opt import WriterFactory
     WriterFactory.register('nl', 'Generate the corresponding AMPL NL file.')(
-        WriterFactory.get_class('nl_v1'))
+        WriterFactory.get_class('nl_v2'))

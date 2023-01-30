@@ -147,7 +147,7 @@ class TestExternalInputOutputModel(unittest.TestCase):
                                         inputs=[m.Pin, m.c1, m.c2, m.F],
                                         outputs=[m.P1, m.P2],
                                         outputs_eqn_scaling=[10.0, 11.0],
-                                        nl_file_options={'file_determinism': 3},
+                                        nl_file_options={'file_determinism': 2},
             )
 
         # solve the problem
@@ -220,7 +220,7 @@ class TestExternalInputOutputModel(unittest.TestCase):
                 inputs=[m.Pin, m.c1, m.c2, m.F],
                 outputs=[m.P1, m.P2],
                 outputs_eqn_scaling=np.asarray([10.0, 11.0], dtype=np.float64),
-                nl_file_options={'file_determinism': 3},
+                nl_file_options={'file_determinism': 2},
             )
 
         # solve the problem
