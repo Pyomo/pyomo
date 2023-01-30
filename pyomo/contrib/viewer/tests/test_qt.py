@@ -213,6 +213,7 @@ def test_var_tree(qtbot):
     assert (value(m.z[0]) - 2) < 1e-6 # set int
     mw.variables.treeView.closePersistentEditor(z1_val_index)
 
+@unittest.skipIf(not available, "Qt packages are not available.")
 def test_bad_view(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
