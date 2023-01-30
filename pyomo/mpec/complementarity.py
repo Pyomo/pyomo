@@ -77,10 +77,11 @@ class _ComplementarityData(_BlockData):
         # the form:
         #       l1 <= v1 <= u1   OR   l2 <= v2 <= u2
         #
-        # Note that this transformation creates more variables and constraints
-        # than are strictly necessary.  However, we don't have a complete list of
-        # the variables used in a model's complementarity conditions when adding
-        # a single condition, so we add additional variables.
+        # Note that this transformation creates more variables and
+        # constraints than are strictly necessary.  However, we don't
+        # have a complete list of the variables used in a model's
+        # complementarity conditions when adding a single condition, so
+        # we add additional variables.
         #
         # This has the form:
         #
@@ -144,14 +145,14 @@ class _ComplementarityData(_BlockData):
             # The ComplementarityTuple has a fixed length, so we initialize
             # the _args component and return
             #
-            self._args = ( as_numeric(cc.arg0), as_numeric(cc.arg1) )
+            self._args = ( cc.arg0, cc.arg1 )
         #
         elif cc.__class__ is tuple:
             if len(cc) != 2:
                 raise ValueError(
                     "Invalid tuple for Complementarity %s (expected 2-tuple):"
                     "\n\t%s" % (self.name, cc) )
-            self._args = tuple( as_numeric(x) for x in cc )
+            self._args = cc
         elif cc is Complementarity.Skip:
             del self.parent_component()[self.index()]
         elif cc.__class__ is list:

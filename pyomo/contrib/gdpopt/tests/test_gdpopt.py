@@ -1578,10 +1578,13 @@ class TestConfigOptions(unittest.TestCase):
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertEqual(opt.config.mip_solver, 'gurobi')
 
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         'Gurobi not available')
     def test_no_default_algorithm(self):
         m = self.make_model()
 
         opt = SolverFactory('gdpopt')
+
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, algorithm='RIC', tee=True, mip_solver=mip_solver,
@@ -1592,7 +1595,7 @@ class TestConfigOptions(unittest.TestCase):
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
-                      nlp_solver=nlp_solver)
+                      nlp_solver=nlp_solver, minlp_solver='gurobi')
         self.assertIn('using LBB algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
 
