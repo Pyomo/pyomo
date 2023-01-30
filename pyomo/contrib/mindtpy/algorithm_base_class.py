@@ -239,8 +239,12 @@ class _MindtPyAlgorithm(object):
                 return False
 
         # Set up dual value reporting
-        if not hasattr(m, 'dual') and config.calculate_dual_at_solution:
-            m.dual = Suffix(direction=Suffix.IMPORT)
+        if config.calculate_dual_at_solution:
+            if not hasattr(m, 'dual'):
+                m.dual = Suffix(direction=Suffix.IMPORT)
+            elif not isinstance(m.dual, Suffix):
+                raise ValueError("dual is not defined as a Suffix in the original model.")
+
 
         # TODO if any continuous variables are multiplied with binary ones,
         #  need to do some kind of transformation (Glover?) or throw an error message
