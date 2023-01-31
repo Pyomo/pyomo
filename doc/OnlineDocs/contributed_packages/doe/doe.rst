@@ -4,13 +4,12 @@ Pyomo.DoE
 **Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
 
 Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_.
-project, funded through the U.S. Department Of Energy Office of Fossil Energy.
+project, funded through the U.S. Department Of Energy Office of Fossil Energy. Special thank you to John Siirola and Bethany Nicholson for extensive code reviews, suggestions, and improvements to Pyomo.DoE.
 
 If you use Pyomo.DoE, please cite:
 
-[Wang and Dowling, 2022] Wang, Jialu, and Alexander W. Dowling. 
-"Pyomo. DOE: An open‐source package for model‐based design of experiments in Python." 
-AIChE Journal 68.12 (2022): e17813. `https://doi.org/10.1002/aic.17813`
+Jialu Wang and Alexander W. Dowling (2022). "Pyomo.DOE: An open‐source package for model‐based design of experiments in Python." 
+*AIChE Journal* 68(12), e17813. `https://doi.org/10.1002/aic.17813`
 
 Methodology Overview
 ---------------------
@@ -20,9 +19,9 @@ Model-based Design of Experiments (MBDoE) is a technique to maximize the informa
 .. figure:: flowchart.png
    :scale: 25 %
 
-   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DoE focused on increasing parameter precision.
+   Pyomo.DoE integrates exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DoE focused on increasing parameter precision.
 
-Pyomo.DoE provides the exploratory analysis and MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
+Pyomo.DoE provides science-based MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
 the allowable design spaces for design variables, and the assumed observation error model.
 During exploratory analysis, Pyomo.DoE checks if the model parameters can be inferred from the postulated measurements or preliminary data.
 MBDoE then recommends optimized experimental conditions for collecting more data.
