@@ -36,20 +36,27 @@ from pyomo.common.dependencies import (
 class Measurements:
     def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
         """
-        This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
-        This includes the functionality to specify indices for these measurement variables. 
-        For example, with a partial differential algebraic equation model, 
-        these measurement index sets can specify which spatial and temporal coordinates each measurement is available. 
-        Moreover, this class supports defining the covariance matrix for all measurements.
+        This class stores information on which algebraic and differential 
+        variables in the Pyomo model are considered measurements. 
+
+        This includes the functionality to specify indices for these
+        measurement variables.  For example, with a partial differential
+        algebraic equation model, these measurement index sets can
+        specify which spatial and temporal coordinates each measurement
+        is available.  Moreover, this class supports defining the
+        covariance matrix for all measurements.
 
         Parameters
         ----------
         measurement_index_time:
             a ``dict``, keys are measurement variable names, 
-                if there are extra index, for e.g., Var[scenario, extra_index, time]:
-                    values are a dictionary, keys are its extra index, values are its measuring time points. 
-                if there are no extra index, for e.g., Var[scenario, time]:
-                    values are a list of measuring time point.
+
+            * if there are extra index, for e.g., Var[scenario, extra_index, time]:
+              values are a dictionary, keys are its extra index, values are its 
+              measuring time points. 
+            * if there are no extra index, for e.g., Var[scenario, time]:
+              values are a list of measuring time point.
+
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
             so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
         variance:
