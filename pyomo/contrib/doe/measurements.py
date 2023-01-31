@@ -60,6 +60,7 @@ class Measurements:
         ind_string:
             a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
             For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
+        
         """
         self.measurement_all_info = measurement_index_time
         self.ind_string = ind_string
