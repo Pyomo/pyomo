@@ -9,8 +9,8 @@ Pyomo.DoE
 
 
 
-Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_.
-project, funded through the U.S. Department Of Energy Office of Fossil Energy. Special thank you to John Siirola and Bethany Nicholson for extensive code reviews, suggestions, and improvements to Pyomo.DoE.
+Pyomo.DoE was developed by **Jialu Wang** and **Alexander Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_
+project, funded through the U.S. Department of Energy Office of Fossil Energy and Carbon Management. Special thank you to John Siirola and Bethany Nicholson for extensive code reviews, suggestions, and improvements to Pyomo.DoE.
 
 If you use Pyomo.DoE, please cite:
 
@@ -124,7 +124,7 @@ Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the size of FIM
       -   :math:`\text{cond}({\mathbf{M}})`
       - Ratio of the longest axis to the shortest axis of the confidence ellipse
 
-In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
+In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. See `Wang and Dowling (2022)<https://doi.org/10.1002/aic.17813>`_ for details.
 
 Pyomo.DoE Required Inputs
 --------------------------------
