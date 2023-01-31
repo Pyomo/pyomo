@@ -315,8 +315,9 @@ class DesignOfExperiments:
         """
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
         It calculates FIM with sensitivity information from four modes:
+
             1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. 
-            Sensitivity info estimated by finite difference
+                Sensitivity info estimated by finite difference
             2.  sequential_sipopt: calculate sensitivity by sIPOPT [Experimental]
             3.  sequential_kaug: calculate sensitivity by k_aug [Experimental]
             4.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity
@@ -838,8 +839,9 @@ class DesignOfExperiments:
         Enumerate through full grid search for any number of design variables;
         solve square problems sequentially to compute FIMs.
         It calculates FIM with sensitivity information from four modes:
+
             1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. 
-            Sensitivity info estimated by finite difference
+                Sensitivity info estimated by finite difference
             2.  sequential_sipopt: calculate sensitivity by sIPOPT [Experimental]
             3.  sequential_kaug: calculate sensitivity by k_aug [Experimental]
             4.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity

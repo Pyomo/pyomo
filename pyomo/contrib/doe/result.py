@@ -328,8 +328,8 @@ class GridSearchResult:
         This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
         Can choose to draw 1D sensitivity curves and 2D heatmaps.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         design_ranges:
             a ``dict`` whose keys are design variable names, values are a list of design variable values to go over
         design_dimension_names:
