@@ -170,10 +170,10 @@ Pyomo.DoE Solver Interface
 .. autoclass:: pyomo.contrib.doe.scenario.Scenario_generator
     :special-members: __init__
 
-.. autoclass:: pyomo.contrib.doe.result.FIM_result
+.. autoclass:: pyomo.contrib.doe.result.FisherResults
     :special-members: __init__, calculate_FIM
 
-.. autoclass:: pyomo.contrib.doe.result.Grid_Search_Result
+.. autoclass:: pyomo.contrib.doe.result.GridSearchResult
     :special-members: __init__
 
 
