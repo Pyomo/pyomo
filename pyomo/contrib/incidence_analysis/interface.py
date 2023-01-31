@@ -29,12 +29,13 @@ from pyomo.contrib.incidence_analysis.triangularize import (
     block_triangularize,
     get_diagonal_blocks,
     get_blocks_from_maps,
-    )
+)
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
     RowPartition,
     ColPartition,
-    )
+)
+
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
@@ -50,10 +51,9 @@ def _check_unindexed(complist):
     for comp in complist:
         if comp.is_indexed():
             raise ValueError(
-                    "Variables and constraints must be unindexed "
-                    "ComponentData objects. Got %s, which is indexed."
-                    % comp.name
-                    )
+                "Variables and constraints must be unindexed "
+                "ComponentData objects. Got %s, which is indexed." % comp.name
+            )
 
 
 def get_incidence_graph(variables, constraints, include_fixed=True):
@@ -72,14 +72,14 @@ def get_incidence_graph(variables, constraints, include_fixed=True):
     Returns:
     --------
     NetworkX Graph
-        
+
     """
-    _check_unindexed(variables+constraints)
+    _check_unindexed(variables + constraints)
     N, M = len(variables), len(constraints)
     graph = nx.Graph()
     graph.add_nodes_from(range(M), bipartite=0)
-    graph.add_nodes_from(range(M, M+N), bipartite=1)
-    var_node_map = ComponentMap((v, M+i) for i, v in enumerate(variables))
+    graph.add_nodes_from(range(M, M + N), bipartite=1)
+    var_node_map = ComponentMap((v, M + i) for i, v in enumerate(variables))
     for i, con in enumerate(constraints):
         for var in identify_variables(con.expr, include_fixed=include_fixed):
             if var in var_node_map:
@@ -115,19 +115,21 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     Entries are 1.0.
 
     """
-    _check_unindexed(variables+constraints)
+    _check_unindexed(variables + constraints)
     N, M = len(variables), len(constraints)
     var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
     rows = []
     cols = []
     for i, con in enumerate(constraints):
-        cols.extend(var_idx_map[v] for v in
-                identify_variables(con.expr, include_fixed=include_fixed)
-                if v in var_idx_map)
-        rows.extend([i]*(len(cols) - len(rows)))
+        cols.extend(
+            var_idx_map[v]
+            for v in identify_variables(con.expr, include_fixed=include_fixed)
+            if v in var_idx_map
+        )
+        rows.extend([i] * (len(cols) - len(rows)))
     assert len(rows) == len(cols)
-    data = [1.0]*len(rows)
-    matrix = sp.sparse.coo_matrix( (data, (rows, cols)), shape=(M, N) )
+    data = [1.0] * len(rows)
+    matrix = sp.sparse.coo_matrix((data, (rows, cols)), shape=(M, N))
     return matrix
 
 
@@ -155,14 +157,13 @@ class IncidenceGraphInterface(object):
     """
 
     def __init__(
-            self,
-            model=None,
-            active=True,
-            include_fixed=False,
-            include_inequality=True,
-            ):
-        """
-        """
+        self,
+        model=None,
+        active=True,
+        include_fixed=False,
+        include_inequality=True,
+    ):
+        """ """
         # If the user gives us a model or an NLP, we assume they want us
         # to cache the incidence matrix for fast analysis of submatrices
         # later on.
@@ -188,9 +189,11 @@ class IncidenceGraphInterface(object):
             self.variables = nlp.get_pyomo_variables()
             self.constraints = nlp.get_pyomo_constraints()
             self.var_index_map = ComponentMap(
-                    (var, idx) for idx, var in enumerate(self.variables))
+                (var, idx) for idx, var in enumerate(self.variables)
+            )
             self.con_index_map = ComponentMap(
-                    (con, idx) for idx, con in enumerate(self.constraints))
+                (con, idx) for idx, con in enumerate(self.constraints)
+            )
             if include_inequality:
                 self.incidence_matrix = nlp.evaluate_jacobian()
             else:
@@ -198,8 +201,8 @@ class IncidenceGraphInterface(object):
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
             self.constraints = [
-                con for con in
-                model.component_data_objects(Constraint, active=active)
+                con
+                for con in model.component_data_objects(Constraint, active=active)
                 if include_inequality or isinstance(con.expr, EqualityExpression)
             ]
             self.variables = list(
@@ -208,19 +211,20 @@ class IncidenceGraphInterface(object):
                 )
             )
             self.var_index_map = ComponentMap(
-                    (var, i) for i, var in enumerate(self.variables))
+                (var, i) for i, var in enumerate(self.variables)
+            )
             self.con_index_map = ComponentMap(
-                    (con, i) for i, con in enumerate(self.constraints))
+                (con, i) for i, con in enumerate(self.constraints)
+            )
             self.incidence_matrix = get_structural_incidence_matrix(
-                    self.variables,
-                    self.constraints,
-                    )
+                self.variables,
+                self.constraints,
+            )
         else:
             raise TypeError(
                 "Unsupported type for incidence matrix. Expected "
-                "%s or %s but got %s."
-                % (PyomoNLP, Block, type(model))
-                )
+                "%s or %s but got %s." % (PyomoNLP, Block, type(model))
+            )
 
         self.row_block_map = None
         self.col_block_map = None
@@ -228,36 +232,34 @@ class IncidenceGraphInterface(object):
     def _validate_input(self, variables, constraints):
         if variables is None:
             if self.cached is IncidenceMatrixType.NONE:
-                raise ValueError(
-                        "Neither variables nor a model have been provided."
-                        )
+                raise ValueError("Neither variables nor a model have been provided.")
             else:
                 variables = self.variables
         if constraints is None:
             if self.cached is IncidenceMatrixType.NONE:
-                raise ValueError(
-                        "Neither constraints nor a model have been provided."
-                        )
+                raise ValueError("Neither constraints nor a model have been provided.")
             else:
                 constraints = self.constraints
 
-        _check_unindexed(variables+constraints)
+        _check_unindexed(variables + constraints)
         return variables, constraints
 
     def _extract_submatrix(self, variables, constraints):
         # Assumes variables and constraints are valid
         if self.cached is IncidenceMatrixType.NONE:
             return get_structural_incidence_matrix(
-                    variables,
-                    constraints,
-                    include_fixed=False,
-                    )
+                variables,
+                constraints,
+                include_fixed=False,
+            )
         else:
             N, M = len(variables), len(constraints)
-            old_new_var_indices = dict((self.var_index_map[v], i)
-                    for i, v in enumerate(variables))
-            old_new_con_indices = dict((self.con_index_map[c], i)
-                    for i, c in enumerate(constraints))
+            old_new_var_indices = dict(
+                (self.var_index_map[v], i) for i, v in enumerate(variables)
+            )
+            old_new_con_indices = dict(
+                (self.con_index_map[c], i) for i, c in enumerate(constraints)
+            )
             coo = self.incidence_matrix
             new_row = []
             new_col = []
@@ -268,9 +270,9 @@ class IncidenceGraphInterface(object):
                     new_col.append(old_new_var_indices[c])
                     new_data.append(e)
             return sp.sparse.coo_matrix(
-                    (new_data, (new_row, new_col)),
-                    shape=(M, N),
-                    )
+                (new_data, (new_row, new_col)),
+                shape=(M, N),
+            )
 
     def maximum_matching(self, variables=None, constraints=None):
         """
@@ -283,8 +285,7 @@ class IncidenceGraphInterface(object):
         matching = maximum_matching(matrix.tocoo())
         # Matching maps row (constraint) indices to column (variable) indices
 
-        return ComponentMap((constraints[i], variables[j])
-                for i, j in matching.items())
+        return ComponentMap((constraints[i], variables[j]) for i, j in matching.items())
 
     def get_connected_components(self, variables=None, constraints=None):
         """
@@ -317,10 +318,12 @@ class IncidenceGraphInterface(object):
         # future.
         self.row_block_map = row_block_map
         self.col_block_map = col_block_map
-        con_block_map = ComponentMap((constraints[i], idx)
-                for i, idx in row_block_map.items())
-        var_block_map = ComponentMap((variables[j], idx)
-                for j, idx in col_block_map.items())
+        con_block_map = ComponentMap(
+            (constraints[i], idx) for i, idx in row_block_map.items()
+        )
+        var_block_map = ComponentMap(
+            (variables[j], idx) for j, idx in col_block_map.items()
+        )
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
@@ -370,11 +373,11 @@ class IncidenceGraphInterface(object):
 
         row_partition, col_partition = dulmage_mendelsohn(matrix.tocoo())
         con_partition = RowPartition(
-                *[[constraints[i] for i in subset] for subset in row_partition]
-                )
+            *[[constraints[i] for i in subset] for subset in row_partition]
+        )
         var_partition = ColPartition(
-                *[[variables[i] for i in subset] for subset in col_partition]
-                )
+            *[[variables[i] for i in subset] for subset in col_partition]
+        )
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_partition, con_partition
@@ -411,9 +414,7 @@ class IncidenceGraphInterface(object):
         to_exclude.update(constraints)
         vars_to_include = [v for v in self.variables if v not in to_exclude]
         cons_to_include = [c for c in self.constraints if c not in to_exclude]
-        incidence_matrix = self._extract_submatrix(
-            vars_to_include, cons_to_include
-        )
+        incidence_matrix = self._extract_submatrix(vars_to_include, cons_to_include)
         # update attributes
         self.variables = vars_to_include
         self.constraints = cons_to_include

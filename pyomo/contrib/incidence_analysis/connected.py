@@ -13,8 +13,7 @@ from pyomo.common.dependencies import networkx as nx
 
 
 def get_independent_submatrices(matrix):
-    """
-    """
+    """ """
     nxc = nx.algorithms.components
     nxb = nx.algorithms.bipartite
     from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
@@ -27,11 +26,10 @@ def get_independent_submatrices(matrix):
     # nodes have values in [N, N+M-1].
     # We could also check the "bipartite" attribute of each node...
     row_blocks = [
-        sorted([node for node in comp if node < N])
-        for comp in connected_components
+        sorted([node for node in comp if node < N]) for comp in connected_components
     ]
     col_blocks = [
-        sorted([node-N for node in comp if node >= N])
+        sorted([node - N for node in comp if node >= N])
         for comp in connected_components
     ]
     return row_blocks, col_blocks

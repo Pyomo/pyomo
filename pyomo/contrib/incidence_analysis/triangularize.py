@@ -39,10 +39,10 @@ def block_triangularize(matrix, matching=None):
 
     M, N = matrix.shape
     if M != N:
-        raise ValueError("block_triangularize does not currently "
-           "support non-square matrices. Got matrix with shape %s."
-           % (matrix.shape,)
-           )
+        raise ValueError(
+            "block_triangularize does not currently "
+            "support non-square matrices. Got matrix with shape %s." % (matrix.shape,)
+        )
     bg = from_biadjacency_matrix(matrix)
 
     if matching is None:
@@ -50,10 +50,11 @@ def block_triangularize(matrix, matching=None):
 
     len_matching = len(matching)
     if len_matching != M:
-        raise ValueError("block_triangularize only supports matrices "
-                "that have a perfect matching of rows and columns. "
-                "Cardinality of maximal matching is %s" % len_matching
-                )
+        raise ValueError(
+            "block_triangularize only supports matrices "
+            "that have a perfect matching of rows and columns. "
+            "Cardinality of maximal matching is %s" % len_matching
+        )
 
     # Construct directed graph of rows
     dg = nx.DiGraph()
@@ -109,7 +110,7 @@ def get_blocks_from_maps(row_block_map, col_block_map):
     Arguments
     ---------
     row_block_map: dict
-        Dict mapping each row coordinate to the coordinate of the 
+        Dict mapping each row coordinate to the coordinate of the
         block it belongs to
 
     col_block_map: dict
@@ -160,8 +161,6 @@ def get_diagonal_blocks(matrix, matching=None):
         diagonal blocks.
 
     """
-    row_block_map, col_block_map = block_triangularize(
-        matrix, matching=matching
-    )
+    row_block_map, col_block_map = block_triangularize(matrix, matching=matching)
     block_rows, block_cols = get_blocks_from_maps(row_block_map, col_block_map)
     return block_rows, block_cols
