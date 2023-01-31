@@ -1679,10 +1679,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
         This is roughly equivalent to
 
+        .. code-block:: python
+
             iter(block for block in itertools.chain(
-                [self], self.component_data_objects(descend_into, ...))
-                if block.active == active
-            )
+                 [self], self.component_data_objects(descend_into, ...))
+                 if block.active == active)
 
         Notes
         -----
