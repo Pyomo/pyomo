@@ -18,6 +18,7 @@ from pyomo.contrib.incidence_analysis.interface import (
     get_structural_incidence_matrix,
     get_numeric_incidence_matrix,
     get_incidence_graph,
+    get_bipartite_incidence_graph,
 )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
@@ -32,6 +33,7 @@ from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 if networkx_available:
+    import networkx as nx
     from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
 from pyomo.contrib.pynumero.asl import AmplInterface
 
@@ -1236,6 +1238,122 @@ class TestIncludeInequality(unittest.TestCase):
         nlp = PyomoNLP(m)
         igraph = IncidenceGraphInterface(nlp, include_inequality=True)
         self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestGetIncidenceGraph(unittest.TestCase):
+
+    def make_test_model(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3, 4])
+        m.v = pyo.Var(m.I, bounds=(0, None))
+        m.eq1 = pyo.Constraint(expr=m.v[1]**2 + m.v[2]**2 == 1.0)
+        m.eq2 = pyo.Constraint(expr=m.v[1] + 2.0 == m.v[3])
+        m.ineq1 = pyo.Constraint(expr=m.v[2] - m.v[3]**0.5 + m.v[4]**2 <= 1.0)
+        m.ineq2 = pyo.Constraint(expr=m.v[2]*m.v[4] >= 1.0)
+        m.ineq3 = pyo.Constraint(expr=m.v[1] >= m.v[4]**4)
+        m.obj = pyo.Objective(expr=-m.v[1] - m.v[2] + m.v[3]**2 + m.v[4]**2)
+        return m
+
+    def test_bipartite_incidence_graph(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.ineq1
+        #   3: m.ineq2
+        #   4: m.ineq3
+        #   5: m.v[1]
+        #   6: m.v[2]
+        #   7: m.v[3]
+        #   8: m.v[4]
+
+        # Assert some basic structure
+        self.assertEqual(len(graph.nodes), 9)
+        self.assertEqual(len(graph.edges), 11)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {5, 6})
+        self.assertEqual(set(graph[1]), {5, 7})
+        self.assertEqual(set(graph[2]), {6, 7, 8})
+        self.assertEqual(set(graph[3]), {6, 8})
+        self.assertEqual(set(graph[4]), {5, 8})
+        self.assertEqual(set(graph[5]), {0, 1, 4})
+        self.assertEqual(set(graph[6]), {0, 2, 3})
+        self.assertEqual(set(graph[7]), {1, 2})
+        self.assertEqual(set(graph[8]), {2, 3, 4})
+
+    def test_unused_var(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.v[1]
+        #   3: m.v[2]
+        #   4: m.v[3]
+        #   5: m.v[4]
+
+        self.assertEqual(len(graph.nodes), 6)
+        self.assertEqual(len(graph.edges), 4)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {2, 3})
+        self.assertEqual(set(graph[1]), {2, 4})
+        self.assertEqual(set(graph[2]), {0, 1})
+        self.assertEqual(set(graph[3]), {0})
+        self.assertEqual(set(graph[4]), {1})
+        self.assertEqual(set(graph[5]), set())
+
+    def test_fixed_vars(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        m.v[1].fix()
+        m.v[4].fix()
+
+        # Slightly odd situation where we provide fixed variables, but
+        # then tell the graph to not include them. Nodes will be created
+        # for these vars, but they will not have any edges.
+        graph = get_bipartite_incidence_graph(
+            variables, constraints, include_fixed=False
+        )
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.ineq1
+        #   3: m.ineq2
+        #   4: m.ineq3
+        #   5: m.v[1]
+        #   6: m.v[2]
+        #   7: m.v[3]
+        #   8: m.v[4]
+
+        self.assertEqual(len(graph.nodes), 9)
+        self.assertEqual(len(graph.edges), 5)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {6})
+        self.assertEqual(set(graph[1]), {7})
+        self.assertEqual(set(graph[2]), {6, 7})
+        self.assertEqual(set(graph[3]), {6})
+        self.assertEqual(set(graph[4]), set())
+        self.assertEqual(set(graph[5]), set())
+        self.assertEqual(set(graph[6]), {0, 2, 3})
+        self.assertEqual(set(graph[7]), {1, 2})
+        self.assertEqual(set(graph[8]), set())
 
 
 if __name__ == "__main__":

@@ -58,6 +58,12 @@ def _check_unindexed(complist):
 
 
 def get_incidence_graph(variables, constraints, include_fixed=True):
+    return get_bipartite_incidence_graph(
+        variables, constraints, include_fixed=include_fixed
+    )
+
+
+def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     """Return the bipartite incidence graph of Pyomo variables and constraints.
 
     Each node in the returned graph is an integer. The convention is that,
@@ -271,7 +277,7 @@ class IncidenceGraphInterface(object):
             # If a model is provided, cache a graph instead of a matrix.
             # This allows for faster lookups.
             #
-            self.incidence_graph = get_incidence_graph(
+            self.incidence_graph = get_bipartite_incidence_graph(
                 self.variables,
                 self.constraints,
                 # TODO: include_fixed=include_fixed?
@@ -336,7 +342,7 @@ class IncidenceGraphInterface(object):
 
     def _extract_subgraph(self, variables, constraints):
         if self.cached is IncidenceMatrixType.NONE:
-            return get_incidence_graph(
+            return get_bipartite_incidence_graph(
                 # Does include_fixed matter here if I'm providing the variables?
                 variables, constraints, include_fixed=False
             )
