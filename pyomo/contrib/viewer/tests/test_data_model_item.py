@@ -244,7 +244,7 @@ class TestDataModelItem(unittest.TestCase):
         self.assertEqual(cdi.get("expr"), None)
         self.assertIsNone(cdi.set("value", 5))
         self.assertEqual(cdi.get("value"), 3.2)
-        self.assertEqual(cdi.get("units"), "None")
+        self.assertEqual(cdi.get("units"), "dimensionless")
         cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.p4)
         self.assertIsNone(cdi.set("value", 6))
         cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.p4[1])
