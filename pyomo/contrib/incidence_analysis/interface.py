@@ -45,6 +45,7 @@ class IncidenceMatrixType(enum.Enum):
     NONE = 0
     STRUCTURAL = 1
     NUMERIC = 2
+    # GRAPH = 3
 
 
 def _check_unindexed(complist):
@@ -172,6 +173,7 @@ class IncidenceGraphInterface(object):
         if model is None:
             self.cached = IncidenceMatrixType.NONE
         elif isinstance(model, PyomoNLP):
+            # TODO: If PyomoNLP is provided, cache a weighted incidence graph
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "
@@ -216,9 +218,14 @@ class IncidenceGraphInterface(object):
             self.con_index_map = ComponentMap(
                 (con, i) for i, con in enumerate(self.constraints)
             )
-            self.incidence_matrix = get_structural_incidence_matrix(
+            #self.incidence_matrix = get_structural_incidence_matrix(
+            #    self.variables,
+            #    self.constraints,
+            #)
+            self.incidence_graph = get_incidence_graph(
                 self.variables,
                 self.constraints,
+                # TODO: include_fixed=include_fixed?
             )
         else:
             raise TypeError(
@@ -245,6 +252,7 @@ class IncidenceGraphInterface(object):
         return variables, constraints
 
     def _extract_submatrix(self, variables, constraints):
+        # TODO: _extract_subgraph
         # Assumes variables and constraints are valid
         if self.cached is IncidenceMatrixType.NONE:
             return get_structural_incidence_matrix(
@@ -253,13 +261,16 @@ class IncidenceGraphInterface(object):
                 include_fixed=False,
             )
         else:
-            N, M = len(variables), len(constraints)
+            N = len(variables)
+            M = len(constraints)
             old_new_var_indices = dict(
                 (self.var_index_map[v], i) for i, v in enumerate(variables)
             )
             old_new_con_indices = dict(
                 (self.con_index_map[c], i) for i, c in enumerate(constraints)
             )
+            # FIXME: This will fail if I don't have an incidence matrix
+            # cached.
             coo = self.incidence_matrix
             new_row = []
             new_col = []
@@ -282,6 +293,7 @@ class IncidenceGraphInterface(object):
         variables, constraints = self._validate_input(variables, constraints)
         matrix = self._extract_submatrix(variables, constraints)
 
+        # TODO: This should just operate on the incidence graph
         matching = maximum_matching(matrix.tocoo())
         # Matching maps row (constraint) indices to column (variable) indices
 
@@ -296,6 +308,8 @@ class IncidenceGraphInterface(object):
         variables, constraints = self._validate_input(variables, constraints)
         matrix = self._extract_submatrix(variables, constraints)
 
+        # TODO: This could operate on a graph, but needs to know which nodes
+        # are variables/constraints
         row_blocks, col_blocks = get_independent_submatrices(matrix.tocoo())
         con_blocks = [[constraints[i] for i in block] for block in row_blocks]
         var_blocks = [[variables[j] for j in block] for block in col_blocks]
@@ -313,6 +327,9 @@ class IncidenceGraphInterface(object):
         variables, constraints = self._validate_input(variables, constraints)
         matrix = self._extract_submatrix(variables, constraints)
 
+        # TODO: block_triangularize does not quite make sense for incidence
+        # graphs, and it is unclear what the graph analog is. (Ordered SCCs
+        # of projection?) We may need to convert to a matrix here.
         row_block_map, col_block_map = block_triangularize(matrix.tocoo())
         # Cache maps in case we want to get diagonal blocks quickly in the
         # future.
@@ -328,6 +345,7 @@ class IncidenceGraphInterface(object):
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
 
+    # TODO: deprecate this method and replace it with a better name.
     def get_diagonal_blocks(self, variables=None, constraints=None):
         """
         Returns the diagonal blocks in a block triangularization of the
@@ -344,6 +362,8 @@ class IncidenceGraphInterface(object):
         variables, constraints = self._validate_input(variables, constraints)
         matrix = self._extract_submatrix(variables, constraints)
 
+        # TODO: Again, this functionality does not really make sense for
+        # general bipartite graphs...
         if self.row_block_map is None or self.col_block_map is None:
             block_rows, block_cols = get_diagonal_blocks(matrix)
         else:
@@ -371,6 +391,7 @@ class IncidenceGraphInterface(object):
         variables, constraints = self._validate_input(variables, constraints)
         matrix = self._extract_submatrix(variables, constraints)
 
+        # TODO: Can just call Dulmage-Mendelsohn on the graph
         row_partition, col_partition = dulmage_mendelsohn(matrix.tocoo())
         con_partition = RowPartition(
             *[[constraints[i] for i in subset] for subset in row_partition]
@@ -414,6 +435,7 @@ class IncidenceGraphInterface(object):
         to_exclude.update(constraints)
         vars_to_include = [v for v in self.variables if v not in to_exclude]
         cons_to_include = [c for c in self.constraints if c not in to_exclude]
+        # TODO: use _extract_subgraph here.
         incidence_matrix = self._extract_submatrix(vars_to_include, cons_to_include)
         # update attributes
         self.variables = vars_to_include
