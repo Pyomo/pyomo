@@ -180,38 +180,40 @@ def test_residual_table(qtbot):
     mw.residuals.sort()
     assert dm.data(dm.index(0, 0)) == "c5"
 
+
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_var_tree(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
     qtbot.addWidget(mw)
     mw.variables.treeView.expandAll()
-    root_index = mw.variables.datmodel.index(0,0)
+    root_index = mw.variables.datmodel.index(0, 0)
     z_index = mw.variables.datmodel.index(1, 0, parent=root_index)
     z_val_index = mw.variables.datmodel.index(1, 1, parent=root_index)
     z1_val_index = mw.variables.datmodel.index(0, 1, parent=z_index)
     assert mw.variables.datmodel.data(z1_val_index) == 2.0
     mw.variables.treeView.setCurrentIndex(z1_val_index)
     mw.variables.treeView.openPersistentEditor(z1_val_index)
-    d = mw.variables.treeView.itemDelegateForIndex(z1_val_index)
+    d = mw.variables.treeView.itemDelegate()
     w = mw.variables.treeView.indexWidget(z1_val_index)
     w.setText("Not a number")
     d.setModelData(w, mw.variables.datmodel, z1_val_index)
-    assert (value(m.z[0]) - 2.0) < 1e-6 # unchanged
+    assert (value(m.z[0]) - 2.0) < 1e-6  # unchanged
     w.setText("1e5")
     d.setModelData(w, mw.variables.datmodel, z1_val_index)
-    assert (value(m.z[0]) - 1e5) < 1e-6 # set float
+    assert (value(m.z[0]) - 1e5) < 1e-6  # set float
     w.setText("false")
     d.setModelData(w, mw.variables.datmodel, z1_val_index)
-    assert (value(m.z[0]) - 0) < 1e-6 # bool to 0
+    assert (value(m.z[0]) - 0) < 1e-6  # bool to 0
     w.setText("true")
     d.setModelData(w, mw.variables.datmodel, z1_val_index)
-    assert (value(m.z[0]) - 1) < 1e-6 # bool to 1
+    assert (value(m.z[0]) - 1) < 1e-6  # bool to 1
     mw.variables.treeView.closePersistentEditor(z1_val_index)
     w.setText("2")
     d.setModelData(w, mw.variables.datmodel, z1_val_index)
-    assert (value(m.z[0]) - 2) < 1e-6 # set int
+    assert (value(m.z[0]) - 2) < 1e-6  # set int
     mw.variables.treeView.closePersistentEditor(z1_val_index)
+
 
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_bad_view(qtbot):
@@ -226,6 +228,7 @@ def test_bad_view(qtbot):
         err = "ValueError"
     assert err == "ValueError"
 
+
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_qtconsole_app(qtbot):
     app = pv.QtApp()
@@ -233,4 +236,3 @@ def test_qtconsole_app(qtbot):
     app.initialize([])
     app.show_ui()
     app.hide_ui()
-

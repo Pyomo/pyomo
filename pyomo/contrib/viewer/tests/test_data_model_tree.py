@@ -69,7 +69,9 @@ class TestDataModel(unittest.TestCase):
         # Borrowed this test model from the trust region tests
         m = ConcreteModel(name="tm")
         m.y = BooleanVar(range(3), initialize=False)
-        m.z = Var(range(3), domain=Reals, initialize=2.0, units=pyo.units.m, doc="test doc")
+        m.z = Var(
+            range(3), domain=Reals, initialize=2.0, units=pyo.units.m, doc="test doc"
+        )
         m.x = Var(range(2), initialize=2.0, units=pyo.units.m)
         m.x[1] = 1.0
 
@@ -94,7 +96,7 @@ class TestDataModel(unittest.TestCase):
         m.c2 = Constraint(expr=m.z[2] ** 4 * m.z[1] ** 2 + m.z[1] == 8 + sqrt(2.0))
 
         # Add a few items to test more
-        m.b2 = Block([1,2])
+        m.b2 = Block([1, 2])
         m.b2[1].w = Var(initialize=4)
         m.b2[2].w = Var(initialize=4)
         self.m = m.clone()
@@ -145,10 +147,16 @@ class TestDataModel(unittest.TestCase):
         assert data_model.data(idx) == "z[1]"
         idx = data_model.index(1, 1, parent=zidx)
         assert abs(data_model.data(idx) - 2.0) < 0.0001
-        #tooltip gives doc
-        assert "test doc" == data_model.data(zidx, role=myqt.Qt.ItemDataRole.ToolTipRole)
-        assert myqt.QtCore.Qt.blue == data_model.data(zidx, role=myqt.Qt.ItemDataRole.ForegroundRole)
-        assert myqt.QtCore.Qt.black == data_model.data(root_index, role=myqt.Qt.ItemDataRole.ForegroundRole)
+        # tooltip gives doc
+        assert "test doc" == data_model.data(
+            zidx, role=myqt.Qt.ItemDataRole.ToolTipRole
+        )
+        assert myqt.QtCore.Qt.blue == data_model.data(
+            zidx, role=myqt.Qt.ItemDataRole.ForegroundRole
+        )
+        assert myqt.QtCore.Qt.black == data_model.data(
+            root_index, role=myqt.Qt.ItemDataRole.ForegroundRole
+        )
 
     def test_create_tree_con(self):
         ui_data = UIData(model=self.m)
