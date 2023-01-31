@@ -3,7 +3,7 @@ Pyomo.DoE
 
 .. figure:: ../../../logos/doe/PyomoDoE-md.png
    :scale: 25 %
-   :align: left
+   :align: right
 
 **Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
 
