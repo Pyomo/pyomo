@@ -233,12 +233,12 @@ def pyros_config():
             Default = `ObjectiveType.nominal`
             Objective focus for the master problems.
 
-            - "`ObjectiveType.nominal`:
-                Optimize the objective function subject to the nominal
-                uncertain parameter realization
-            - "`ObjectiveType.worst_case`:
-                Optimize the objective function subject to the worst-case
-                uncertain parameter realization
+            - `ObjectiveType.nominal`:
+              Optimize the objective function subject to the nominal
+              uncertain parameter realization
+            - `ObjectiveType.worst_case`:
+              Optimize the objective function subject to the worst-case
+              uncertain parameter realization
 
             A worst-case objective focus is required for certification
             of robust optimality of the final solution(s) returned
