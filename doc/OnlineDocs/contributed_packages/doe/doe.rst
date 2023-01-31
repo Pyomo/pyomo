@@ -1,7 +1,13 @@
 Pyomo.DoE
 =========
 
+.. figure:: ../../../logos/doe/PyomoDoE-md.png
+   :scale: 50 %
+   :align: left
+
 **Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
+
+
 
 Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_.
 project, funded through the U.S. Department Of Energy Office of Fossil Energy. Special thank you to John Siirola and Bethany Nicholson for extensive code reviews, suggestions, and improvements to Pyomo.DoE.
@@ -9,7 +15,9 @@ project, funded through the U.S. Department Of Energy Office of Fossil Energy. S
 If you use Pyomo.DoE, please cite:
 
 Jialu Wang and Alexander W. Dowling (2022). "Pyomo.DOE: An open‐source package for model‐based design of experiments in Python." 
-*AIChE Journal* 68(12), e17813. `https://doi.org/10.1002/aic.17813`
+*AIChE Journal* 68(12), e17813. `doi: 10.1002/aic.17813 <https://doi.org/10.1002/aic.17813>`_
+
+
 
 Methodology Overview
 ---------------------
@@ -17,7 +25,7 @@ Methodology Overview
 Model-based Design of Experiments (MBDoE) is a technique to maximize the information gain of experiments by directly using science-based models with physically meaningful parameters. It is one key component in the model calibration and uncertainty quantification workflow shown below:
 
 .. figure:: flowchart.png
-   :scale: 25 %
+   :width: 90 %
 
    Pyomo.DoE integrates exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DoE focused on increasing parameter precision.
 
@@ -387,7 +395,7 @@ Successful run of the above code shows the following figure:
 .. figure:: grid-1.png
    :scale: 35 %
 
-A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design region. Horizontal and vertical axes are two design variables, while the color of each grid shows the experimental information content. Taking the Fig. Reactor case - A optimality as example, A-optimality shows that the most informative region is around $C_{A0}=5.0$ M, $T=300.0$ K, while the least informative region is around $C_{A0}=1.0$ M, $T=700.0$ K.
+A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design region. Horizontal and vertical axes are two design variables, while the color of each grid shows the experimental information content. Taking the Fig. Reactor case - A optimality as example, A-optimality shows that the most informative region is around :math:`C_{A0}=5.0` M, :math:`T=300.0` K, while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=700.0` K.
 
 Step 5: Gradient-based optimization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
