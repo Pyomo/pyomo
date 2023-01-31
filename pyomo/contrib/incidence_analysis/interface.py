@@ -58,8 +58,15 @@ def _check_unindexed(complist):
 
 
 def get_incidence_graph(variables, constraints, include_fixed=True):
-    """
-    This function gets the incidence graph of Pyomo variables and constraints.
+    """Return the bipartite incidence graph of Pyomo variables and constraints.
+
+    Each node in the returned graph is an integer. The convention is that,
+    for a graph with N variables and M constraints, nodes 0 through M-1
+    correspond to constraints and nodes M through M+N-1 correspond to variables.
+    Nodes correspond to variables and constraints in the provided orders.
+    For consistency with NetworkX's "convention", constraint nodes are tagged
+    with `bipartite=0` while variable nodes are tagged with `bipartite=1`,
+    although these attributes are not used.
 
     Arguments:
     ----------
@@ -76,7 +83,8 @@ def get_incidence_graph(variables, constraints, include_fixed=True):
 
     """
     _check_unindexed(variables + constraints)
-    N, M = len(variables), len(constraints)
+    N = len(variables)
+    M = len(constraints)
     graph = nx.Graph()
     graph.add_nodes_from(range(M), bipartite=0)
     graph.add_nodes_from(range(M, M + N), bipartite=1)
@@ -86,6 +94,30 @@ def get_incidence_graph(variables, constraints, include_fixed=True):
             if var in var_node_map:
                 graph.add_edge(i, var_node_map[var])
     return graph
+
+
+# TODO: Test this function
+def extract_bipartite_subgraph(graph, nodes0, nodes1):
+    """
+    """
+    subgraph = nx.Graph()
+    sub_M = len(nodes0)
+    sub_N = len(nodes1)
+    subgraph.add_nodes_from(range(sub_M), bipartite=0)
+    subgraph.add_nodes_from(range(sub_M, sub_M + sub_N), bipartite=1)
+
+    old_new_map = {}
+    for i, node in enumerate(nodes0 + nodes1):
+        if node in old_new_map:
+            raise RuntimeError("Node %s provided more than once.")
+        old_new_map[node] = i
+
+    for (node1, node2) in graph.edges():
+        if node1 in old_new_map and node2 in old_new_map:
+            new_node_1 = old_new_map[node1]
+            new_node_2 = old_new_map[node2]
+            subgraph.add_edge(new_node_1, new_node_2)
+    return subgraph
 
 
 def _generate_variables_in_constraints(constraints, include_fixed=False):
@@ -189,7 +221,10 @@ class IncidenceGraphInterface(object):
             nlp = model
             self.cached = IncidenceMatrixType.NUMERIC
             self.variables = nlp.get_pyomo_variables()
-            self.constraints = nlp.get_pyomo_constraints()
+            self.constraints = [
+                con for con in nlp.get_pyomo_constraints()
+                if include_inequality or isinstance(con.expr, EqualityExpression)
+            ]
             self.var_index_map = ComponentMap(
                 (var, idx) for idx, var in enumerate(self.variables)
             )
@@ -197,9 +232,18 @@ class IncidenceGraphInterface(object):
                 (con, idx) for idx, con in enumerate(self.constraints)
             )
             if include_inequality:
-                self.incidence_matrix = nlp.evaluate_jacobian()
+                incidence_matrix = nlp.evaluate_jacobian()
             else:
-                self.incidence_matrix = nlp.evaluate_jacobian_eq()
+                incidence_matrix = nlp.evaluate_jacobian_eq()
+            #
+            # TODO: If a PyomoNLP is provided, convert it to a weighted
+            # incidence graph.
+            # What advantage does a matrix have over a graph? It can be sent
+            # to linear algebra routines more directly. But this class doesn't
+            # do this, so I see no advantage to storing a Jacobian.
+            #
+            nxb = nx.algorithms.bipartite
+            self.incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
             self.constraints = [
@@ -222,6 +266,11 @@ class IncidenceGraphInterface(object):
             #    self.variables,
             #    self.constraints,
             #)
+
+            #
+            # If a model is provided, cache a graph instead of a matrix.
+            # This allows for faster lookups.
+            #
             self.incidence_graph = get_incidence_graph(
                 self.variables,
                 self.constraints,
@@ -285,16 +334,58 @@ class IncidenceGraphInterface(object):
                 shape=(M, N),
             )
 
+    def _extract_subgraph(self, variables, constraints):
+        if self.cached is IncidenceMatrixType.NONE:
+            return get_incidence_graph(
+                # Does include_fixed matter here if I'm providing the variables?
+                variables, constraints, include_fixed=False
+            )
+        else:
+            constraint_nodes = [self.con_index_map[con] for con in constraints]
+            M = len(self.con_index_map)
+            variable_nodes = [M + self.var_index_map[var] for var in variables]
+            subgraph = extract_bipartite_subgraph(
+                self.incidence_graph, constraint_nodes, variable_nodes
+            )
+            return subgraph
+
+    @property
+    def incidence_matrix(self):
+        if self.cached == IncidenceMatrixType.NONE:
+            return None
+        else:
+            M = len(self.constraints)
+            N = len(self.variables)
+            row = []
+            col = []
+            data = []
+            # Here we assume that the incidence graph is bipartite with nodes
+            # 0 through M-1 forming one of the bipartite sets.
+            for i in range(M):
+                assert self.incidence_graph.nodes[i]["bipartite"] == 0
+                for j in self.incidence_graph[i]:
+                    assert self.incidence_graph.nodes[j]["bipartite"] == 1
+                    row.append(i)
+                    col.append(j-M)
+                    data.append(1.0)
+            return sp.sparse.coo_matrix(
+                (data, (row, col)),
+                shape=(M, N),
+            )
+
     def maximum_matching(self, variables=None, constraints=None):
         """
         Returns a maximal matching between the constraints and variables,
         in terms of a map from constraints to variables.
         """
         variables, constraints = self._validate_input(variables, constraints)
-        matrix = self._extract_submatrix(variables, constraints)
+        #matrix = self._extract_submatrix(variables, constraints)
+        graph = self._extract_subgraph(variables, constraints)
 
         # TODO: This should just operate on the incidence graph
-        matching = maximum_matching(matrix.tocoo())
+        #matching = maximum_matching(matrix.tocoo())
+        con_nodes = list(range(len(constraints)))
+        matching = maximum_matching(graph, top_nodes=con_nodes)
         # Matching maps row (constraint) indices to column (variable) indices
 
         return ComponentMap((constraints[i], variables[j]) for i, j in matching.items())
@@ -436,11 +527,13 @@ class IncidenceGraphInterface(object):
         vars_to_include = [v for v in self.variables if v not in to_exclude]
         cons_to_include = [c for c in self.constraints if c not in to_exclude]
         # TODO: use _extract_subgraph here.
-        incidence_matrix = self._extract_submatrix(vars_to_include, cons_to_include)
+        #incidence_matrix = self._extract_submatrix(vars_to_include, cons_to_include)
+        incidence_graph = self._extract_subgraph(vars_to_include, cons_to_include)
         # update attributes
         self.variables = vars_to_include
         self.constraints = cons_to_include
-        self.incidence_matrix = incidence_matrix
+        #self.incidence_matrix = incidence_matrix
+        self.incidence_graph = incidence_graph
         self.var_index_map = ComponentMap(
             (var, i) for i, var in enumerate(self.variables)
         )
