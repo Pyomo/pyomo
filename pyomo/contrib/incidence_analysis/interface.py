@@ -243,7 +243,6 @@ class IncidenceGraphInterface(object):
             self.cached = IncidenceMatrixType.NONE
             self.incidence_graph = None
         elif isinstance(model, PyomoNLP):
-            self.cached = IncidenceMatrixType.NUMERIC
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "
