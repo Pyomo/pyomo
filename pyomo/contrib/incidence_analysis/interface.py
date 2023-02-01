@@ -47,12 +47,6 @@ if plotly_available:
     go = plotly.graph_objects
 
 
-class IncidenceMatrixType(enum.Enum):
-    NONE = 0
-    STRUCTURAL = 1
-    NUMERIC = 2
-
-
 def _check_unindexed(complist):
     for comp in complist:
         if comp.is_indexed():
@@ -245,7 +239,6 @@ class IncidenceGraphInterface(object):
         # WARNING: This cache will become invalid if the user alters their
         # model.
         if model is None:
-            self.cached = IncidenceMatrixType.NONE
             self.incidence_graph = None
         elif isinstance(model, PyomoNLP):
             if not active:
@@ -261,7 +254,6 @@ class IncidenceGraphInterface(object):
                     "`include_fixed` flag to False."
                 )
             nlp = model
-            self.cached = IncidenceMatrixType.NUMERIC
             self.variables = nlp.get_pyomo_variables()
             self.constraints = [
                 con for con in nlp.get_pyomo_constraints()
@@ -280,7 +272,6 @@ class IncidenceGraphInterface(object):
             nxb = nx.algorithms.bipartite
             self.incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
         elif isinstance(model, Block):
-            self.cached = IncidenceMatrixType.STRUCTURAL
             self.constraints = [
                 con for con in model.component_data_objects(
                     Constraint, active=active
