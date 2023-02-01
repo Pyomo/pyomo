@@ -46,7 +46,6 @@ class IncidenceMatrixType(enum.Enum):
     NONE = 0
     STRUCTURAL = 1
     NUMERIC = 2
-    # GRAPH = 3
 
 
 def _check_unindexed(complist):
@@ -244,6 +243,7 @@ class IncidenceGraphInterface(object):
             self.cached = IncidenceMatrixType.NONE
             self.incidence_graph = None
         elif isinstance(model, PyomoNLP):
+            self.cached = IncidenceMatrixType.NUMERIC
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "
