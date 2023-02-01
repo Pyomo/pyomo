@@ -68,9 +68,7 @@ class ScaleModel(Transformation):
         >>> print(value(scaled_model.scaled_obj))
         101.0
 
-    ToDo
-    ====
-    - implement an option to change the variables names or not
+    .. todo:: Implement an option to change the variables names or not
 
     """
 
