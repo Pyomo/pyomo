@@ -236,14 +236,13 @@ class IncidenceGraphInterface(object):
     ):
         """ """
         # If the user gives us a model or an NLP, we assume they want us
-        # to cache the incidence matrix for fast analysis of submatrices
-        # later on.
+        # to cache the incidence graph for fast analysis later on.
         # WARNING: This cache will become invalid if the user alters their
-        #          model.
+        # model.
         if model is None:
             self.cached = IncidenceMatrixType.NONE
+            self.incidence_graph = None
         elif isinstance(model, PyomoNLP):
-            # TODO: If PyomoNLP is provided, cache a weighted incidence graph
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "
@@ -273,20 +272,14 @@ class IncidenceGraphInterface(object):
                 incidence_matrix = nlp.evaluate_jacobian()
             else:
                 incidence_matrix = nlp.evaluate_jacobian_eq()
-            #
-            # TODO: If a PyomoNLP is provided, convert it to a weighted
-            # incidence graph.
-            # What advantage does a matrix have over a graph? It can be sent
-            # to linear algebra routines more directly. But this class doesn't
-            # do this, so I see no advantage to storing a Jacobian.
-            #
             nxb = nx.algorithms.bipartite
             self.incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
             self.constraints = [
-                con
-                for con in model.component_data_objects(Constraint, active=active)
+                con for con in model.component_data_objects(
+                    Constraint, active=active
+                )
                 if include_inequality or isinstance(con.expr, EqualityExpression)
             ]
             self.variables = list(
@@ -300,15 +293,6 @@ class IncidenceGraphInterface(object):
             self.con_index_map = ComponentMap(
                 (con, i) for i, con in enumerate(self.constraints)
             )
-            #self.incidence_matrix = get_structural_incidence_matrix(
-            #    self.variables,
-            #    self.constraints,
-            #)
-
-            #
-            # If a model is provided, cache a graph instead of a matrix.
-            # This allows for faster lookups.
-            #
             self.incidence_graph = get_bipartite_incidence_graph(
                 self.variables,
                 self.constraints,
@@ -325,12 +309,12 @@ class IncidenceGraphInterface(object):
 
     def _validate_input(self, variables, constraints):
         if variables is None:
-            if self.cached is IncidenceMatrixType.NONE:
+            if self.incidence_graph is None:
                 raise ValueError("Neither variables nor a model have been provided.")
             else:
                 variables = self.variables
         if constraints is None:
-            if self.cached is IncidenceMatrixType.NONE:
+            if self.incidence_graph is None:
                 raise ValueError("Neither constraints nor a model have been provided.")
             else:
                 constraints = self.constraints
@@ -340,7 +324,7 @@ class IncidenceGraphInterface(object):
 
     def _extract_submatrix(self, variables, constraints):
         # Assumes variables and constraints are valid
-        if self.cached is IncidenceMatrixType.NONE:
+        if self.incidence_graph is None:
             return get_structural_incidence_matrix(
                 variables,
                 constraints,
@@ -372,7 +356,7 @@ class IncidenceGraphInterface(object):
             )
 
     def _extract_subgraph(self, variables, constraints):
-        if self.cached is IncidenceMatrixType.NONE:
+        if self.incidence_graph is None:
             return get_bipartite_incidence_graph(
                 # Does include_fixed matter here if I'm providing the variables?
                 variables, constraints, include_fixed=False
@@ -388,7 +372,7 @@ class IncidenceGraphInterface(object):
 
     @property
     def incidence_matrix(self):
-        if self.cached == IncidenceMatrixType.NONE:
+        if self.incidence_graph is None:
             return None
         else:
             M = len(self.constraints)
@@ -427,7 +411,7 @@ class IncidenceGraphInterface(object):
             provided component
 
         """
-        if self.cached == IncidenceMatrixType.NONE:
+        if self.incidence_graph is None:
             raise RuntimeError(
                 "Cannot get components adjacent to %s if an incidence graph"
                 " is not cached." % component
@@ -498,14 +482,17 @@ class IncidenceGraphInterface(object):
         of the incidence matrix.
         """
         variables, constraints = self._validate_input(variables, constraints)
-        matrix = self._extract_submatrix(variables, constraints)
+        graph = self._extract_subgraph(variables, constraints)
 
-        # TODO: block_triangularize does not quite make sense for incidence
-        # graphs, and it is unclear what the graph analog is. (Ordered SCCs
-        # of projection?) We may need to convert to a matrix here.
-        row_block_map, col_block_map = block_triangularize(matrix.tocoo())
+        M = len(constraints)
+        top_nodes = list(range(M))
+        cnode_block_map, vnode_block_map = block_triangularize(
+            graph, top_nodes=top_nodes
+        )
         # Cache maps in case we want to get diagonal blocks quickly in the
         # future.
+        row_block_map = cnode_block_map
+        col_block_map = {j-M: idx for j, idx in vnode_block_map.items()}
         self.row_block_map = row_block_map
         self.col_block_map = col_block_map
         con_block_map = ComponentMap(
@@ -518,7 +505,7 @@ class IncidenceGraphInterface(object):
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
 
-    # TODO: deprecate this method and replace it with a better name.
+    # TODO: Update this method with a new name and deprecate old name.
     def get_diagonal_blocks(self, variables=None, constraints=None):
         """
         Returns the diagonal blocks in a block triangularization of the
@@ -601,7 +588,7 @@ class IncidenceGraphInterface(object):
         """
         if constraints is None:
             constraints = []
-        if self.cached is IncidenceMatrixType.NONE:
+        if self.incidence_graph is None:
             raise RuntimeError(
                 "Attempting to remove variables and constraints from cached "
                 "incidence matrix,\nbut no incidence matrix has been cached."
