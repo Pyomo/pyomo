@@ -456,15 +456,10 @@ class IncidenceGraphInterface(object):
         in terms of a map from constraints to variables.
         """
         variables, constraints = self._validate_input(variables, constraints)
-        #matrix = self._extract_submatrix(variables, constraints)
         graph = self._extract_subgraph(variables, constraints)
-
-        # TODO: This should just operate on the incidence graph
-        #matching = maximum_matching(matrix.tocoo())
         con_nodes = list(range(len(constraints)))
         matching = maximum_matching(graph, top_nodes=con_nodes)
-        # Matching maps row (constraint) indices to column (variable) indices
-
+        # Matching maps constraint indices to variable indices
         return ComponentMap((constraints[i], variables[j]) for i, j in matching.items())
 
     def get_connected_components(self, variables=None, constraints=None):
@@ -474,15 +469,21 @@ class IncidenceGraphInterface(object):
         and constraints.
         """
         variables, constraints = self._validate_input(variables, constraints)
-        matrix = self._extract_submatrix(variables, constraints)
+        graph = self._extract_subgraph(variables, constraints)
+        nxc = nx.algorithms.components
+        M = len(constraints)
+        N = len(variables)
+        connected_components = list(nxc.connected_components(graph))
 
-        # TODO: This could operate on a graph, but needs to know which nodes
-        # are variables/constraints
-        row_blocks, col_blocks = get_independent_submatrices(matrix.tocoo())
-        con_blocks = [[constraints[i] for i in block] for block in row_blocks]
-        var_blocks = [[variables[j] for j in block] for block in col_blocks]
-        # Switch the order of the partitions here to match the method call.
-        # Hopefully this does not get too confusing...
+        con_blocks = [
+            sorted([i for i in comp if i < M]) for comp in connected_components
+        ]
+        con_blocks = [[constraints[i] for i in block] for block in con_blocks]
+        var_blocks = [
+            sorted([j for j in comp if j >= M]) for comp in connected_components
+        ]
+        var_blocks = [[variables[i-M] for i in block] for block in var_blocks]
+
         return var_blocks, con_blocks
 
     def block_triangularize(self, variables=None, constraints=None):
@@ -557,15 +558,17 @@ class IncidenceGraphInterface(object):
 
         """
         variables, constraints = self._validate_input(variables, constraints)
-        matrix = self._extract_submatrix(variables, constraints)
-
-        # TODO: Can just call Dulmage-Mendelsohn on the graph
-        row_partition, col_partition = dulmage_mendelsohn(matrix.tocoo())
+        graph = self._extract_subgraph(variables, constraints)
+        M = len(constraints)
+        top_nodes = list(range(M))
+        row_partition, col_partition = dulmage_mendelsohn(
+            graph, top_nodes=top_nodes
+        )
         con_partition = RowPartition(
             *[[constraints[i] for i in subset] for subset in row_partition]
         )
         var_partition = ColPartition(
-            *[[variables[i] for i in subset] for subset in col_partition]
+            *[[variables[i-M] for i in subset] for subset in col_partition]
         )
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
@@ -603,13 +606,10 @@ class IncidenceGraphInterface(object):
         to_exclude.update(constraints)
         vars_to_include = [v for v in self.variables if v not in to_exclude]
         cons_to_include = [c for c in self.constraints if c not in to_exclude]
-        # TODO: use _extract_subgraph here.
-        #incidence_matrix = self._extract_submatrix(vars_to_include, cons_to_include)
         incidence_graph = self._extract_subgraph(vars_to_include, cons_to_include)
         # update attributes
         self.variables = vars_to_include
         self.constraints = cons_to_include
-        #self.incidence_matrix = incidence_matrix
         self.incidence_graph = incidence_graph
         self.var_index_map = ComponentMap(
             (var, i) for i, var in enumerate(self.variables)
