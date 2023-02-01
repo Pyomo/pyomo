@@ -102,9 +102,33 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     return graph
 
 
-# TODO: Test this function
 def extract_bipartite_subgraph(graph, nodes0, nodes1):
-    """
+    """Return the bipartite subgraph of a graph.
+
+    Two lists of nodes to project onto must be provided. These will correspond
+    to the "bipartite sets" in the subgraph. If the two sets provided have
+    M and N nodes, the subgraph will have nodes 0 through M+N, with the first
+    M corresponding to the first set provided and the last M corresponding
+    to the second set.
+
+    Parameters
+    ----------
+    graph: NetworkX Graph
+        The graph from which a subgraph is extracted
+    nodes0: list
+        A list of nodes in the original graph that will form the first
+        bipartite set of the projected graph (and have ``bipartite=0``
+    nodes1: list
+        A list of nodes in the original graph that will form the second
+        bipartite set of the projected graph (and have ``bipartite=1``
+
+    Returns
+    -------
+    subgraph: NetworkX Graph
+        Graph containing integer nodes corresponding to positions in the
+        provided lists, with edges where corresponding nodes are adjacent
+        in the original graph.
+
     """
     subgraph = nx.Graph()
     sub_M = len(nodes0)
@@ -122,6 +146,14 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
         if node1 in old_new_map and node2 in old_new_map:
             new_node_1 = old_new_map[node1]
             new_node_2 = old_new_map[node2]
+            if (
+                subgraph.nodes[new_node_1]["bipartite"]
+                == subgraph.nodes[new_node_2]["bipartite"]
+            ):
+                raise RuntimeError(
+                    "Subgraph is not bipartite. Found an edge between nodes"
+                    " %s and %s (in the original graph)." % (node1, node2)
+                )
             subgraph.add_edge(new_node_1, new_node_2)
     return subgraph
 

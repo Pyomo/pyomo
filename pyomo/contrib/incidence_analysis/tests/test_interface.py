@@ -19,6 +19,7 @@ from pyomo.contrib.incidence_analysis.interface import (
     get_numeric_incidence_matrix,
     get_incidence_graph,
     get_bipartite_incidence_graph,
+    extract_bipartite_subgraph,
 )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
@@ -1354,6 +1355,52 @@ class TestGetIncidenceGraph(unittest.TestCase):
         self.assertEqual(set(graph[6]), {0, 2, 3})
         self.assertEqual(set(graph[7]), {1, 2})
         self.assertEqual(set(graph[8]), set())
+
+    def test_extract_subgraph(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        sg_cons = [0, 2]
+        sg_vars = [i + len(constraints) for i in [2, 0, 3]]
+
+        subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+        # Subgraph nodes:
+        #   0: m.eq1
+        #   1: m.ineq1
+        #   2: m.v[3]
+        #   3: m.v[1]
+        #   4: m.v[4]
+
+        self.assertEqual(len(subgraph.nodes), 5)
+        self.assertEqual(len(subgraph.edges), 3)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(subgraph))
+
+        self.assertEqual(set(subgraph[0]), {3})
+        self.assertEqual(set(subgraph[1]), {2, 4})
+        self.assertEqual(set(subgraph[2]), {1})
+        self.assertEqual(set(subgraph[3]), {0})
+        self.assertEqual(set(subgraph[4]), {1})
+
+    def test_extract_exceptions(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        sg_cons = [0, 2, 5]
+        sg_vars = [i + len(constraints) for i in [2, 3]]
+        msg = "Subgraph is not bipartite"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+        sg_cons = [0, 2, 5]
+        sg_vars = [i + len(constraints) for i in [2, 0, 3]]
+        msg = "provided more than once"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
 
 
 if __name__ == "__main__":
