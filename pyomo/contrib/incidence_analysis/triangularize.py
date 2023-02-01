@@ -91,10 +91,14 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
     # Reverse for compatibility
     scc_order.reverse()
 
-    scc_idx_map = {c: i for i, c in enumerate(scc_order)}
-    top_idx_map = {n: scc_idx_map[c] for n, c in node_scc_map.items()}
-    bot_idx_map = {matching[n]: scc_idx_map[c] for n, c in node_scc_map.items()}
-    return top_idx_map, bot_idx_map
+    # The "natural" return type, here, is a list of lists. Each inner list
+    # is an SCC, and contains tuples of nodes. The "top node", and its matched
+    # "bottom node".
+    ordered_node_subsets = [
+        sorted([(i, matching[i]) for i in scc_list[scc_idx]])
+        for scc_idx in scc_order
+    ]
+    return ordered_node_subsets
 
 
 def block_triangularize(matrix, matching=None, top_nodes=None):
@@ -123,17 +127,14 @@ def block_triangularize(matrix, matching=None, top_nodes=None):
     M, N = matrix.shape
     if M != N:
         raise ValueError(
-            "block_triangularize does not currently "
-            "support non-square matrices. Got matrix with shape %s."
-            % ((M, N),)
+            "block_triangularize does not currently support non-square"
+            " matrices. Got matrix with shape %s." % ((M, N),)
         )
     graph = from_biadjacency_matrix(matrix)
     row_nodes = list(range(M))
-    rnode_idx_map, cnode_idx_map = get_scc_of_projection(
-        graph, row_nodes, matching=matching
-    )
-    row_idx_map = rnode_idx_map
-    col_idx_map = {n-M: idx for n, idx in cnode_idx_map.items()}
+    sccs = get_scc_of_projection(graph, row_nodes, matching=matching)
+    row_idx_map = {r: idx for idx, scc in enumerate(sccs) for r, _ in scc}
+    col_idx_map = {c-M: idx for idx, scc in enumerate(sccs) for _, c in scc}
     return row_idx_map, col_idx_map
 
 

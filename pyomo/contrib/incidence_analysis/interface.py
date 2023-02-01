@@ -487,16 +487,13 @@ class IncidenceGraphInterface(object):
 
         M = len(constraints)
         con_nodes = list(range(M))
-        cnode_block_map, vnode_block_map = get_scc_of_projection(
-            graph, con_nodes
-        )
-        #cnode_block_map, vnode_block_map = block_triangularize(
-        #    graph, top_nodes=con_nodes
-        #)
+        sccs = get_scc_of_projection(graph, con_nodes)
+        row_idx_map = {r: idx for idx, scc in enumerate(sccs) for r, _ in scc}
+        col_idx_map = {c-M: idx for idx, scc in enumerate(sccs) for _, c in scc}
         # Cache maps in case we want to get diagonal blocks quickly in the
         # future.
-        row_block_map = cnode_block_map
-        col_block_map = {j-M: idx for j, idx in vnode_block_map.items()}
+        row_block_map = row_idx_map
+        col_block_map = {j-M: idx for j, idx in col_idx_map.items()}
         self.row_block_map = row_block_map
         self.col_block_map = col_block_map
         con_block_map = ComponentMap(
