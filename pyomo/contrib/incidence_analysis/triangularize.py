@@ -13,7 +13,10 @@ from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.common.dependencies import networkx as nx
 
 
-def block_triangularize(matrix, matching=None):
+# TODO: get_scc_of_projection(bipartite_graph, top_nodes, matching)
+
+
+def block_triangularize(matrix, matching=None, top_nodes=None):
     """
     Computes the necessary information to permute a matrix to block-lower
     triangular form, i.e. a partition of rows and columns into an ordered
@@ -37,16 +40,37 @@ def block_triangularize(matrix, matching=None):
     nxd = nx.algorithms.dag
     from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
-    M, N = matrix.shape
+    if isinstance(matrix, nx.Graph):
+        graph_provided = True
+        if top_nodes is None:
+            raise RuntimeError(
+                "top_nodes argument must be set if a graph is provided."
+            )
+        bg = matrix
+        M = len(top_nodes)
+        N = len(bg.nodes) - M
+        if not nxb.is_bipartite(bg):
+            raise RuntimeError("Provided graph is not bipartite.")
+    else:
+        graph_provided = False
+        M, N = matrix.shape
+        bg = from_biadjacency_matrix(matrix)
+
     if M != N:
         raise ValueError(
             "block_triangularize does not currently "
-            "support non-square matrices. Got matrix with shape %s." % (matrix.shape,)
+            "support non-square matrices. Got matrix with shape %s."
+            % ((M, N),)
         )
-    bg = from_biadjacency_matrix(matrix)
 
     if matching is None:
-        matching = maximum_matching(matrix)
+        matching = maximum_matching(matrix, top_nodes=top_nodes)
+
+    if not graph_provided:
+        # If we provided a matrix, the matching maps row indices to column
+        # indices. Update the matching to map to nodes in the graph derived
+        # from the matrix.
+        matching = {r: c+M for r, c in matching.items()}
 
     len_matching = len(matching)
     if len_matching != M:
@@ -58,10 +82,12 @@ def block_triangularize(matrix, matching=None):
 
     # Construct directed graph of rows
     dg = nx.DiGraph()
-    dg.add_nodes_from(range(M))
+    if graph_provided:
+        dg.add_nodes_from(top_nodes)
+    else:
+        dg.add_nodes_from(range(M))
     for n in dg.nodes:
-        col_idx = matching[n]
-        col_node = col_idx + M
+        col_node = matching[n]
         # For all rows that share this column
         for neighbor in bg[col_node]:
             if neighbor != n:
@@ -93,10 +119,15 @@ def block_triangularize(matrix, matching=None):
     # ^ This maps row indices to the blocks they belong to.
 
     # Invert the matching to map row indices to column indices
-    col_row_map = {c: r for r, c in matching.items()}
+    if graph_provided:
+        col_row_map = {c: r for r, c in matching.items()}
+        col_block_map = {
+            c: row_block_map[col_row_map[c]] for c in matching.values()
+        }
+    else:
+        col_row_map = {c-M: r for r, c in matching.items()}
+        col_block_map = {c: row_block_map[col_row_map[c]] for c in range(N)}
     assert len(col_row_map) == M
-
-    col_block_map = {c: row_block_map[col_row_map[c]] for c in range(N)}
 
     return row_block_map, col_block_map
 
