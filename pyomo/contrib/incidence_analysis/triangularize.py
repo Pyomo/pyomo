@@ -10,10 +10,91 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
+from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
+    # TODO: The fact that we import this function here suggests it should be
+    # promoted.
+    _get_projected_digraph,
+)
 from pyomo.common.dependencies import networkx as nx
 
 
-# TODO: get_scc_of_projection(bipartite_graph, top_nodes, matching)
+def get_scc_of_projection(graph, top_nodes, matching=None):
+    """Return the topologically ordered strongly connected components of a
+    bipartite graph, projected with respect to a perfect matching
+
+    The provided undirected bipartite graph is projected into a directed graph
+    on the set of "top nodes" by treating "matched edges" as in-edges and
+    "unmatched edges" as out-edges. Then the strongly connected components of
+    the directed graph are computed. These strongly connected components are
+    unique, regardless of the choice of perfect matching. The strongly connected
+    components form a directed acyclic graph, and are returned in a topological
+    order. The order is unique, as ambiguities are resolved "lexicographically".
+
+    Parameters
+    ----------
+    graph: NetworkX Graph
+        A bipartite graph
+    top_nodes: list
+        One of the bipartite sets in the graph
+    matching: dict
+        Maps each node in ``top_nodes`` to its matched node
+
+    Returns
+    -------
+
+    """
+    nxb = nx.algorithms.bipartite
+    nxc = nx.algorithms.components
+    nxd = nx.algorithms.dag
+    if not nxb.is_bipartite(graph):
+        raise RuntimeError("Provided graph is not bipartite.")
+    M = len(top_nodes)
+    N = len(graph.nodes) - M
+    if M != N:
+        raise ValueError(
+            "get_scc_of_projection does not support bipartite graphs with"
+            " bipartite sets of different cardinalities. Got sizes %s and"
+            " %s." % (M, N)
+        )
+    if matching is None:
+        # This matching maps top nodes to "other nodes" *and* other nodes
+        # back to top nodes.
+        matching = nxb.maximum_matching(graph, top_nodes=top_nodes)
+    if len(matching) != 2*M:
+        raise ValueError(
+            "get_scc_of_projection does not support bipartite graphs without"
+            " a perfect matching. Got a graph with %s nodes per bipartite set"
+            " and a matching of cardinality %s." % (M, (len(matching)/2))
+        )
+    dg = _get_projected_digraph(graph, matching, top_nodes)
+    scc_list = list(nxc.strongly_connected_components(dg))
+    n_scc = len(scc_list)
+    node_scc_map = {n: idx for idx, scc in enumerate(scc_list) for n in scc}
+
+    # Now we need to put the SCCs in the right order. We do this by performing
+    # a topological sort on the DAG of SCCs.
+    dag = nx.DiGraph()
+    dag.add_nodes_from(range(n_scc))
+    for n in dg.nodes:
+        source_scc = node_scc_map[n]
+        for neighbor in dg[n]:
+            target_scc = node_scc_map[neighbor]
+            if target_scc != source_scc:
+                dag.add_edge(source_scc, target_scc)
+
+                #dag.add_edge(target_scc, source_scc)
+                # Reverse direction of edge. This corresponds to creating
+                # a block lower triangular matrix.
+
+    scc_order = list(nxd.lexicographical_topological_sort(dag))
+
+    # Reverse for compatibility
+    scc_order.reverse()
+
+    scc_idx_map = {c: i for i, c in enumerate(scc_order)}
+    top_idx_map = {n: scc_idx_map[c] for n, c in node_scc_map.items()}
+    bot_idx_map = {matching[n]: scc_idx_map[c] for n, c in node_scc_map.items()}
+    return top_idx_map, bot_idx_map
 
 
 def block_triangularize(matrix, matching=None, top_nodes=None):
@@ -39,97 +120,21 @@ def block_triangularize(matrix, matching=None, top_nodes=None):
     nxc = nx.algorithms.components
     nxd = nx.algorithms.dag
     from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
-
-    if isinstance(matrix, nx.Graph):
-        graph_provided = True
-        if top_nodes is None:
-            raise RuntimeError(
-                "top_nodes argument must be set if a graph is provided."
-            )
-        bg = matrix
-        M = len(top_nodes)
-        N = len(bg.nodes) - M
-        if not nxb.is_bipartite(bg):
-            raise RuntimeError("Provided graph is not bipartite.")
-    else:
-        graph_provided = False
-        M, N = matrix.shape
-        bg = from_biadjacency_matrix(matrix)
-
+    M, N = matrix.shape
     if M != N:
         raise ValueError(
             "block_triangularize does not currently "
             "support non-square matrices. Got matrix with shape %s."
             % ((M, N),)
         )
-
-    if matching is None:
-        matching = maximum_matching(matrix, top_nodes=top_nodes)
-
-    if not graph_provided:
-        # If we provided a matrix, the matching maps row indices to column
-        # indices. Update the matching to map to nodes in the graph derived
-        # from the matrix.
-        matching = {r: c+M for r, c in matching.items()}
-
-    len_matching = len(matching)
-    if len_matching != M:
-        raise ValueError(
-            "block_triangularize only supports matrices "
-            "that have a perfect matching of rows and columns. "
-            "Cardinality of maximal matching is %s" % len_matching
-        )
-
-    # Construct directed graph of rows
-    dg = nx.DiGraph()
-    if graph_provided:
-        dg.add_nodes_from(top_nodes)
-    else:
-        dg.add_nodes_from(range(M))
-    for n in dg.nodes:
-        col_node = matching[n]
-        # For all rows that share this column
-        for neighbor in bg[col_node]:
-            if neighbor != n:
-                # Add an edge towards this column's matched row
-                dg.add_edge(neighbor, n)
-
-    # Partition the rows into strongly connected components (diagonal blocks)
-    scc_list = list(nxc.strongly_connected_components(dg))
-    node_scc_map = {n: idx for idx, scc in enumerate(scc_list) for n in scc}
-
-    # Now we need to put the SCCs in the right order. We do this by performing
-    # a topological sort on the DAG of SCCs.
-    dag = nx.DiGraph()
-    for i, c in enumerate(scc_list):
-        dag.add_node(i)
-    for n in dg.nodes:
-        source_scc = node_scc_map[n]
-        for neighbor in dg[n]:
-            target_scc = node_scc_map[neighbor]
-            if target_scc != source_scc:
-                dag.add_edge(target_scc, source_scc)
-                # Reverse direction of edge. This corresponds to creating
-                # a block lower triangular matrix.
-
-    scc_order = list(nxd.lexicographical_topological_sort(dag))
-
-    scc_block_map = {c: i for i, c in enumerate(scc_order)}
-    row_block_map = {n: scc_block_map[c] for n, c in node_scc_map.items()}
-    # ^ This maps row indices to the blocks they belong to.
-
-    # Invert the matching to map row indices to column indices
-    if graph_provided:
-        col_row_map = {c: r for r, c in matching.items()}
-        col_block_map = {
-            c: row_block_map[col_row_map[c]] for c in matching.values()
-        }
-    else:
-        col_row_map = {c-M: r for r, c in matching.items()}
-        col_block_map = {c: row_block_map[col_row_map[c]] for c in range(N)}
-    assert len(col_row_map) == M
-
-    return row_block_map, col_block_map
+    graph = from_biadjacency_matrix(matrix)
+    row_nodes = list(range(M))
+    rnode_idx_map, cnode_idx_map = get_scc_of_projection(
+        graph, row_nodes, matching=matching
+    )
+    row_idx_map = rnode_idx_map
+    col_idx_map = {n-M: idx for n, idx in cnode_idx_map.items()}
+    return row_idx_map, col_idx_map
 
 
 def get_blocks_from_maps(row_block_map, col_block_map):

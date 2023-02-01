@@ -26,6 +26,7 @@ from pyomo.contrib.incidence_analysis.connected import (
     get_independent_submatrices,
 )
 from pyomo.contrib.incidence_analysis.triangularize import (
+    get_scc_of_projection,
     block_triangularize,
     get_diagonal_blocks,
     get_blocks_from_maps,
@@ -485,10 +486,13 @@ class IncidenceGraphInterface(object):
         graph = self._extract_subgraph(variables, constraints)
 
         M = len(constraints)
-        top_nodes = list(range(M))
-        cnode_block_map, vnode_block_map = block_triangularize(
-            graph, top_nodes=top_nodes
+        con_nodes = list(range(M))
+        cnode_block_map, vnode_block_map = get_scc_of_projection(
+            graph, con_nodes
         )
+        #cnode_block_map, vnode_block_map = block_triangularize(
+        #    graph, top_nodes=con_nodes
+        #)
         # Cache maps in case we want to get diagonal blocks quickly in the
         # future.
         row_block_map = cnode_block_map
