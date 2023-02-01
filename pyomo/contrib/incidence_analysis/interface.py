@@ -363,7 +363,10 @@ class IncidenceGraphInterface(object):
             )
         else:
             constraint_nodes = [self.con_index_map[con] for con in constraints]
-            M = len(self.con_index_map)
+
+            # Note that this is the number of constraints in the original graph,
+            # not the subgraph.
+            M = len(self.constraints)
             variable_nodes = [M + self.var_index_map[var] for var in variables]
             subgraph = extract_bipartite_subgraph(
                 self.incidence_graph, constraint_nodes, variable_nodes
