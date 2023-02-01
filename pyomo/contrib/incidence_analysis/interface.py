@@ -459,8 +459,12 @@ class IncidenceGraphInterface(object):
         graph = self._extract_subgraph(variables, constraints)
         con_nodes = list(range(len(constraints)))
         matching = maximum_matching(graph, top_nodes=con_nodes)
-        # Matching maps constraint indices to variable indices
-        return ComponentMap((constraints[i], variables[j]) for i, j in matching.items())
+        # Matching maps constraint nodes to variable nodes. Here we need to
+        # know the convention according to which the graph was constructed.
+        M = len(constraints)
+        return ComponentMap(
+            (constraints[i], variables[j-M]) for i, j in matching.items()
+        )
 
     def get_connected_components(self, variables=None, constraints=None):
         """
