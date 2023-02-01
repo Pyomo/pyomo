@@ -220,11 +220,6 @@ def get_numeric_incidence_matrix(variables, constraints):
 
 
 class IncidenceGraphInterface(object):
-    """
-    The purpose of this class is to allow the user to easily
-    analyze graphs of variables and contraints in a Pyomo
-    model without constructing multiple PyomoNLPs.
-    """
 
     def __init__(
         self,
@@ -233,7 +228,6 @@ class IncidenceGraphInterface(object):
         include_fixed=False,
         include_inequality=True,
     ):
-        """ """
         # If the user gives us a model or an NLP, we assume they want us
         # to cache the incidence graph for fast analysis later on.
         # WARNING: This cache will become invalid if the user alters their
