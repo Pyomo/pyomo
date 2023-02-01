@@ -339,7 +339,6 @@ class IncidenceGraphInterface(object):
         return variables, constraints
 
     def _extract_submatrix(self, variables, constraints):
-        # TODO: _extract_subgraph
         # Assumes variables and constraints are valid
         if self.cached is IncidenceMatrixType.NONE:
             return get_structural_incidence_matrix(
@@ -410,6 +409,46 @@ class IncidenceGraphInterface(object):
                 (data, (row, col)),
                 shape=(M, N),
             )
+
+    def get_adjacent_to(self, component):
+        """Return a list of components adjacent to the provided component
+        in the cached bipartite incidence graph of variables and constraints
+
+        Parameters
+        ----------
+        component: ComponentData
+            The variable or constraint data object whose adjacent components
+            are returned
+
+        Returns
+        -------
+        list of ComponentData
+            List of constraint or variable data objects adjacent to the
+            provided component
+
+        """
+        if self.cached == IncidenceMatrixType.NONE:
+            raise RuntimeError(
+                "Cannot get components adjacent to %s if an incidence graph"
+                " is not cached." % component
+            )
+        _check_unindexed([component])
+        M = len(self.constraints)
+        N = len(self.variables)
+        if component in self.var_index_map:
+            vnode = M + self.var_index_map[component]
+            adj = self.incidence_graph[vnode]
+            adj_comps = [self.constraints[i] for i in adj]
+        elif component in self.con_index_map:
+            cnode = self.con_index_map[component]
+            adj = self.incidence_graph[cnode]
+            adj_comps = [self.variables[j-M] for j in adj]
+        else:
+            raise RuntimeError(
+                "Cannot find component %s in the cached incidence graph."
+                % component
+            )
+        return adj_comps
 
     def maximum_matching(self, variables=None, constraints=None):
         """
