@@ -55,7 +55,7 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
     M = len(top_nodes)
     N = len(graph.nodes) - M
     if M != N:
-        raise ValueError(
+        raise RuntimeError(
             "get_scc_of_projection does not support bipartite graphs with"
             " bipartite sets of different cardinalities. Got sizes %s and"
             " %s." % (M, N)
@@ -65,7 +65,7 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
         # back to top nodes.
         matching = nxb.maximum_matching(graph, top_nodes=top_nodes)
     if len(matching) != 2*M:
-        raise ValueError(
+        raise RuntimeError(
             "get_scc_of_projection does not support bipartite graphs without"
             " a perfect matching. Got a graph with %s nodes per bipartite set"
             " and a matching of cardinality %s." % (M, (len(matching)/2))
