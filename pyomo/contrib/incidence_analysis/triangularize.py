@@ -41,6 +41,10 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
 
     Returns
     -------
+    list of lists
+        The outer list is a list of strongly connected components. Each
+        strongly connected component is a list of tuples of matched nodes.
+        The first node is a "top node", and the second is an "other node".
 
     """
     nxb = nx.algorithms.bipartite
@@ -81,10 +85,6 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
             target_scc = node_scc_map[neighbor]
             if target_scc != source_scc:
                 dag.add_edge(source_scc, target_scc)
-
-                #dag.add_edge(target_scc, source_scc)
-                # Reverse direction of edge. This corresponds to creating
-                # a block lower triangular matrix.
 
     scc_order = list(nxd.lexicographical_topological_sort(dag))
 
