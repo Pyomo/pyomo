@@ -1449,5 +1449,31 @@ class TestGetAdjacent(unittest.TestCase):
             adj_cons = igraph.get_adjacent_to(m.x[1])
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestInterface(unittest.TestCase):
+
+    def test_subgraph_with_fewer_var_or_con(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2])
+        m.v = pyo.Var(m.I)
+        m.eq1 = pyo.Constraint(expr=m.v[1] + m.v[2] == 1)
+        m.ineq1 = pyo.Constraint(expr=m.v[1] - m.v[2] <= 2)
+
+        # Defensively set include_inequality=True, which is the current
+        # default, in case this default changes.
+        igraph = IncidenceGraphInterface(m, include_inequality=True)
+
+        variables = list(m.v.values())
+        constraints = [m.ineq1]
+        matching = igraph.maximum_matching(variables, constraints)
+        self.assertEqual(len(matching), 1)
+
+        variables = [m.v[2]]
+        constraints = [m.eq1, m.ineq1]
+        matching = igraph.maximum_matching(variables, constraints)
+        self.assertEqual(len(matching), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
