@@ -74,11 +74,11 @@ where:
     * Process models provided to Pyomo.DoE should define an extra scenario index for all state variables and all parameters, as the first index before any other index. The next version of Pyomo.DoE will remove this requirement.
     * Process models must include an index for time, named ``t``. For steady-state models, ``t`` should be ``[0]``.
     * Measurements can have an extra index (e.g., spatial domain) besides time.
-    * Parameters and design variables should be defined as Pyomo ``var`` components on the model to use ``direct_kaug`` mode. Other modes allow these to be defines as Pyomo ``Param`` objects.
+    * Parameters and design variables should be defined as Pyomo ``var`` components on the model to use ``direct_kaug`` mode. Other modes allow these to be defined as Pyomo ``Param`` objects.
     * Create model function should take scenarios as the first argument of this function.
     * Design variables are defined with and only with a time index.
 
-Pyomo.DoE solves the following DAE-constrainted optimizaiton problem:
+Pyomo.DoE solves the following DAE-constrainted optimization problem:
 
 .. math::
     \begin{equation}
