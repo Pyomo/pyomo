@@ -65,11 +65,12 @@ class GurobiParameterTests(GurobiBase):
         with SolverFactory(
             "gurobi_direct",
             manage_env=True,
-            options={"ComputeServer": "/url/to/server"},
+            options={"ComputeServer": "my-cs-url"},
         ) as opt:
-            # Check that the error comes from an attempted connection, not from setting
-            # the parameter after the environment is started.
-            with self.assertRaisesRegex(ApplicationError, "Could not resolve host"):
+            # Check that the error comes from an attempted connection, (i.e. error
+            # message reports the hostname) and not from setting the parameter after
+            # the environment is started.
+            with self.assertRaisesRegex(ApplicationError, "my-cs-url"):
                 opt.solve(self.model)
 
     def test_set_once(self):
