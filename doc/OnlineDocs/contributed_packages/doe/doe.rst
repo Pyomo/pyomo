@@ -124,7 +124,7 @@ Pyomo.DoE provides four design criteria  :math:`\Psi(\cdot)` to measure the size
       -   :math:`\text{cond}({\mathbf{M}})`
       - Ratio of the longest axis to the shortest axis of the confidence ellipse
 
-In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. See `Wang and Dowling (2022) <https://doi.org/10.1002/aic.17813>`_ for details.
+Pyomo.DoE reformulates the above optimization problem as a stochastic program. The scenarios are perturbations of the model parameters :math:`\boldsymbol{\theta}` to compute the sensitivities :math:`\mathbf{Q}` via finite difference. See `Wang and Dowling (2022) <https://doi.org/10.1002/aic.17813>`_ for details.
 
 Pyomo.DoE Required Inputs
 --------------------------------
@@ -213,6 +213,7 @@ Here :math:`C_A(t), C_B(t), C_C(t)` are the time-varying concentrations of the s
 The goal of MBDoE is to optimize the experiment design variables :math:`\boldsymbol{\varphi} = (C_{A0}, T(t))`, where :math:`C_{A0},T(t)` are the initial concentration of species A and the time-varying reactor temperature, to maximize the precision of unknown model parameters :math:`\boldsymbol{\theta} = (A_1, E_1, A_2, E_2)` by measuring :math:`\mathbf{y}(t)=(C_A(t), C_B(t), C_C(t))`.
 The observation errors are assumed to be independent in both time and across measurements with a constant standard deviation of 1 M for each species. Thus the measurement covariance matrix is the identity matrix.
 
+See this `Jupyter notebook <https://github.com/Pyomo/pyomo/blob/main/pyomo/contrib/doe/fim_doe_tutorial.ipynb>`_ for an extended version of this example.
 
 Step 0: Import Pyomo and the Pyomo.DoE module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
