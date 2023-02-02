@@ -107,8 +107,8 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
 
     Two lists of nodes to project onto must be provided. These will correspond
     to the "bipartite sets" in the subgraph. If the two sets provided have
-    M and N nodes, the subgraph will have nodes 0 through M+N, with the first
-    M corresponding to the first set provided and the last M corresponding
+    M and N nodes, the subgraph will have nodes 0 through M+N-1, with the first
+    M corresponding to the first set provided and the last N corresponding
     to the second set.
 
     Parameters
@@ -117,10 +117,10 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
         The graph from which a subgraph is extracted
     nodes0: list
         A list of nodes in the original graph that will form the first
-        bipartite set of the projected graph (and have ``bipartite=0``
+        bipartite set of the projected graph (and have ``bipartite=0``)
     nodes1: list
         A list of nodes in the original graph that will form the second
-        bipartite set of the projected graph (and have ``bipartite=1``
+        bipartite set of the projected graph (and have ``bipartite=1``)
 
     Returns
     -------
@@ -296,7 +296,8 @@ class IncidenceGraphInterface(object):
             self.incidence_graph = get_bipartite_incidence_graph(
                 self.variables,
                 self.constraints,
-                # TODO: include_fixed=include_fixed?
+                # Note that include_fixed is not necessary here. We have
+                # already checked this condition above.
             )
         else:
             raise TypeError(
@@ -358,8 +359,9 @@ class IncidenceGraphInterface(object):
     def _extract_subgraph(self, variables, constraints):
         if self.incidence_graph is None:
             return get_bipartite_incidence_graph(
-                # Does include_fixed matter here if I'm providing the variables?
-                variables, constraints, include_fixed=False
+                variables, constraints
+                # Note that, as variables are explicitly specified, there
+                # is no need for an include_fixed argument.
             )
         else:
             constraint_nodes = [self.con_index_map[con] for con in constraints]
