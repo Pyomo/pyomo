@@ -189,7 +189,7 @@ Pyomo.DoE Solver Interface
 Pyomo.DoE Usage Example
 ------------------------
 
-We illustrate the Pyomo.DoE interface with a reaction kinetics example when feed A is converts to species B and C (Wang and Dowling, 2022).
+We illustrate the Pyomo.DoE interface with a reaction kinetics example when feed A is converted to species B and C (Wang and Dowling, 2022).
 Assuming an Arrhenius temperature dependence for the reaction rates :math:`k_1, k_2`, first-order reaction mechanisms, and only species A is fed to the reactor gives the following DAE model:
 
 
@@ -303,7 +303,7 @@ Next we define a function to discretize the model.
     The first argument of the ``create_model`` function should be ``scena``.
 
 .. note::
-    To use ``direct_kaug`` mode, the model parameters (  :math:`A_1, A_2, E_1, E_2`) definitations should be changes from ``Param`` to ``Var`` objects.
+    To use ``direct_kaug`` mode, the model parameters (  :math:`A_1, A_2, E_1, E_2`) definitions should be changed from ``Param`` to ``Var`` objects.
 
 Step 2: Define the inputs for Pyomo.DoE
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
