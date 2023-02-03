@@ -2284,6 +2284,41 @@ class EllipsoidalSet(UncertaintySet):
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
         matrix). The default is `1`.
+
+    Examples
+    --------
+    3D origin-centered unit hypersphere:
+
+    >>> import numpy as np
+    >>> hypersphere = EllipsoidalSet(
+    ...     center=[0, 0, 0],
+    ...     shape_matrix=np.eye(3),
+    ...     scale=1,
+    ... )
+    >>> hypersphere.center
+    array([0, 0, 0])
+    >>> hypersphere.shape_matrix
+    array([[1., 0., 0.],
+           [0., 1., 0.],
+           [0., 0., 1.]])
+    >>> hypersphere.scale
+    1
+
+    A 2D ellipsoid with custom rotation and scaling:
+
+    >>> rotated_ellipsoid = EllipsoidalSet(
+    ...     center=[1, 1, 1],
+    ...     shape_matrix=[[4, 2], [2, 4]],
+    ...     scale=0.5,
+    ... )
+    >>> rotated_ellipsoid.center
+    array([1, 1, 1])
+    >>> rotated_ellipsoid.shape_matrix
+    array([[4, 2],
+           [2, 4]])
+    >>> rotated_ellipsoid.scale
+    0.5
+
     """
 
     def __init__(self, center, shape_matrix, scale=1):
