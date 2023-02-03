@@ -748,20 +748,20 @@ class BoxSet(UncertaintySet):
 
     Examples
     --------
-    1-D box set (interval):
+    1D box set (interval):
 
     >>> interval = BoxSet(bounds=[(1, 2)])
     >>> box_set.bounds
     array([[1, 2]])
 
-    2-D box set:
+    2D box set:
 
     >>> box_set = BoxSet(bounds=[[1, 2], [3, 4]])
     >>> box_set.bounds
     array([[1, 2],
            [3, 4]])
 
-    5-D hypercube with bounds 0 and 1 in each dimension:
+    5D hypercube with bounds 0 and 1 in each dimension:
 
     >>> hypercube_5d = BoxSet(bounds=[[0, 1] for idx in range(5)])
     >>> hypercube_5d.bounds
@@ -902,7 +902,7 @@ class CardinalitySet(UncertaintySet):
 
     Examples
     --------
-    A 3-D cardinality set:
+    A 3D cardinality set:
 
     >>> gamma_set = CardinalitySet(
     ...     origin=[0, 0, 0],
@@ -1398,8 +1398,8 @@ class BudgetSet(UncertaintySet):
 
     Examples
     --------
-    3-D budget set with one budget constraint and
-    no origin chosen (hence origin defaults to 3-D zero vector):
+    3D budget set with one budget constraint and
+    no origin chosen (hence origin defaults to 3D zero vector):
 
     >>> budget_set = BudgetSet(
     ...     budget_membership_mat=[[1, 1, 1]],
@@ -1412,7 +1412,7 @@ class BudgetSet(UncertaintySet):
     >>> budget_set.origin
     array([0., 0., 0.])
 
-    3-D budget set with two budget constraints and custom origin:
+    3D budget set with two budget constraints and custom origin:
 
     >>> budget_custom = BudgetSet(
     ...     budget_membership_mat=[[1, 0, 1], [0, 1, 0]],
