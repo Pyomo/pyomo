@@ -1145,6 +1145,22 @@ class PolyhedralSet(UncertaintySet):
         Each entry is an upper bound for the quantity
         ``lhs_coefficients_mat @ x``, where `x` is an (N,)
         array representing any point in the polyhedral set.
+
+    Examples
+    --------
+    2D polyhedral set with 4 defining inequalities:
+
+    >>> pset = pyros.PolyhedralSet(
+    ...     lhs_coefficients_mat=[[-1, 0], [0, -1], [-1, 1], [1, 0]],
+    ...     rhs_vec=[0, 0, 0, 1],
+    ... )
+    >>> pset.coefficients_mat
+    array([[-1,  0],
+           [ 0, -1],
+           [-1,  1],
+           [ 1,  0]])
+    >>> pset.rhs_vec
+    array([0, 0, 0, 1])
     """
 
     def __init__(self, lhs_coefficients_mat, rhs_vec):
