@@ -2561,6 +2561,17 @@ class DiscreteScenarioSet(UncertaintySet):
     ----------
     scenarios : (M, N) array_like
         A sequence of `M` distinct uncertain parameter realizations.
+
+    Examples
+    --------
+    2D set with three scenarios:
+
+    >>> discrete_set = pyros.DiscreteScenarioSet(
+    ...     scenarios=[[1, 1], [2, 1], [1, 2]],
+    ... )
+    >>> discrete_set.scenarios
+    [(1, 1), (2, 1), (1, 2)]
+
     """
 
     def __init__(self, scenarios):
