@@ -2,7 +2,7 @@
 PyROS Solver
 ############
 
-PyROS (Pyomo Robust Optimization Solver) is a Pyomo-based metasolver
+PyROS (Pyomo Robust Optimization Solver) is a Pyomo-based meta-solver
 for non-convex, two-stage adjustable robust optimization problems.
 
 It was developed by **Natalie M. Isenberg**, **Jason A. F. Sherman**,
@@ -17,9 +17,14 @@ Methodology Overview
 Below is an overview of the type of optimization models PyROS can accomodate.
 
 
-* PyROS is suitable for optimization models of **continuous variables** that may feature non-linearities (including **non-convexities**) in both the variables and uncertain parameters.
-* PyROS can handle **equality constraints** defining state variables, including implicit state variables that cannot be eliminated via reformulation.
-* PyROS allows for **two-stage** optimization problems that may feature both first-stage and second-stage degrees of freedom.
+* PyROS is suitable for optimization models of **continuous variables**
+  that may feature non-linearities (including **non-convexities**) in
+  both the variables and uncertain parameters.
+* PyROS can handle **equality constraints** defining state variables,
+  including implicit state variables that cannot be eliminated via
+  reformulation.
+* PyROS allows for **two-stage** optimization problems that may
+  feature both first-stage and second-stage degrees of freedom.
 
 PyROS is designed to operate on deterministic models of the general form
 
