@@ -1006,7 +1006,7 @@ class CardinalitySet(UncertaintySet):
         numeric type : Upper bound for the number of uncertain
         parameters which may maximally deviate from their respective
         origin values simultaneously. Must be a numerical value ranging
-        from 0 to the set dimension.
+        from 0 to the set dimension `N`.
 
         Note that, mathematically, setting `gamma` to 0 reduces the set
         to a singleton containing the center, while setting `gamma` to
