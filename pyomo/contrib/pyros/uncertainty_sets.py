@@ -745,6 +745,31 @@ class BoxSet(UncertaintySet):
     ----------
     bounds : (N, 2) array_like
         Lower and upper bounds for each dimension of the set.
+
+    Examples
+    --------
+    1-D box set (interval):
+
+    >>> interval = BoxSet(bounds=[(1, 2)])
+    >>> box_set.bounds
+    array([[1, 2]])
+
+    2-D box set:
+
+    >>> box_set = BoxSet(bounds=[[1, 2], [3, 4]])
+    >>> box_set.bounds
+    array([[1, 2],
+           [3, 4]])
+
+    5-D hypercube with bounds 0 and 1 in each dimension:
+
+    >>> hypercube_5d = BoxSet(bounds=[[0, 1] for idx in range(5)])
+    >>> hypercube_5d.bounds
+    array([[0, 1],
+           [0, 1],
+           [0, 1],
+           [0, 1],
+           [0, 1]])
     """
 
     def __init__(self, bounds):
