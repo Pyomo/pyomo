@@ -2732,6 +2732,22 @@ class IntersectionSet(UncertaintySet):
         PyROS `UncertaintySet` objects of which to construct
         an intersection. At least two uncertainty sets must
         be provided. All sets must be of the same dimension.
+
+    Examples
+    --------
+    Intersection of origin-centered 2D box (square) and 2D
+    hypersphere (circle):
+
+    >>> square = BoxSet(bounds=[[-1.5, 1.5], [-1.5, 1.5]])
+    >>> circle = AxisAlignedEllipsoidalSet(
+    ...     center=[0, 0],
+    ...     half_lengths=[2, 2],
+    ... )
+    >>> # to construct intersection, pass sets as keyword arguments
+    >>> intersection = IntersectionSet(set1=square, set2=circle)
+    >>> intersection.all_sets
+    UncertaintySetList([...])
+
     """
 
     def __init__(self, **unc_sets):
