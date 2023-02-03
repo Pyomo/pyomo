@@ -2078,6 +2078,20 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         Center of the ellipsoid.
     half_lengths : (N,) aray_like
         Semi-axis lengths of the ellipsoid.
+
+    Examples
+    --------
+    3D origin-centered unit hypersphere:
+
+    >>> hypersphere = AxisAlignedEllipsoidalSet(
+    >>>     center=[0, 0, 0],
+    >>>     half_lengths=[1, 1, 1],
+    >>> )
+    >>> hypersphere.center
+    array([0, 0, 0])
+    >>> hypersphere.half_lengths
+    array([1, 1, 1])
+
     """
 
     def __init__(self, center, half_lengths):
