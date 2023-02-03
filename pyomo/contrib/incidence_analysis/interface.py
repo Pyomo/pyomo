@@ -323,37 +323,6 @@ class IncidenceGraphInterface(object):
         _check_unindexed(variables + constraints)
         return variables, constraints
 
-    def _extract_submatrix(self, variables, constraints):
-        # Assumes variables and constraints are valid
-        if self.incidence_graph is None:
-            # Note that, as variables are explicitly specified, there
-            # is no need for an include_fixed argument.
-            return get_structural_incidence_matrix(variables, constraints)
-        else:
-            N = len(variables)
-            M = len(constraints)
-            old_new_var_indices = dict(
-                (self.var_index_map[v], i) for i, v in enumerate(variables)
-            )
-            old_new_con_indices = dict(
-                (self.con_index_map[c], i) for i, c in enumerate(constraints)
-            )
-            # FIXME: This will fail if I don't have an incidence matrix
-            # cached.
-            coo = self.incidence_matrix
-            new_row = []
-            new_col = []
-            new_data = []
-            for r, c, e in zip(coo.row, coo.col, coo.data):
-                if r in old_new_con_indices and c in old_new_var_indices:
-                    new_row.append(old_new_con_indices[r])
-                    new_col.append(old_new_var_indices[c])
-                    new_data.append(e)
-            return sp.sparse.coo_matrix(
-                (new_data, (new_row, new_col)),
-                shape=(M, N),
-            )
-
     def _extract_subgraph(self, variables, constraints):
         if self.incidence_graph is None:
             # Note that, as variables are explicitly specified, there
@@ -521,18 +490,12 @@ class IncidenceGraphInterface(object):
 
         """
         variables, constraints = self._validate_input(variables, constraints)
-        matrix = self._extract_submatrix(variables, constraints)
-
-        # TODO: Again, this functionality does not really make sense for
-        # general bipartite graphs...
-        if self.row_block_map is None or self.col_block_map is None:
-            block_rows, block_cols = get_diagonal_blocks(matrix)
-        else:
-            block_rows, block_cols = get_blocks_from_maps(
-                self.row_block_map, self.col_block_map
-            )
-        block_cons = [[constraints[i] for i in block] for block in block_rows]
-        block_vars = [[variables[i] for i in block] for block in block_cols]
+        graph = self._extract_subgraph(variables, constraints)
+        M = len(constraints)
+        con_nodes = list(range(M))
+        sccs = get_scc_of_projection(graph, con_nodes)
+        block_cons = [[constraints[i] for i, _ in scc] for scc in sccs]
+        block_vars = [[variables[j-M] for _, j in scc] for scc in sccs]
         return block_vars, block_cons
 
     def dulmage_mendelsohn(self, variables=None, constraints=None):
