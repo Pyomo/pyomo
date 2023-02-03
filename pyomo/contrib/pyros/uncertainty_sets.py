@@ -1395,6 +1395,37 @@ class BudgetSet(UncertaintySet):
     origin : (N,) array_like or None, optional
         Origin of the budget set. If `None` is provided, then
         the origin is set to the zero vector.
+
+    Examples
+    --------
+    3-D budget set with one budget constraint and
+    no origin chosen (hence origin defaults to 3-D zero vector):
+
+    >>> budget_set = BudgetSet(
+    ...     budget_membership_mat=[[1, 1, 1]],
+    ...     rhs_vec=[2],
+    ... )
+    >>> budget_set.budget_membership_mat
+    array([[1, 1, 1]])
+    >>> budget_set.budget_rhs_vec
+    array([2])
+    >>> budget_set.origin
+    array([0., 0., 0.])
+
+    3-D budget set with two budget constraints and custom origin:
+
+    >>> budget_custom = BudgetSet(
+    ...     budget_membership_mat=[[1, 0, 1], [0, 1, 0]],
+    ...     rhs_vec=[1, 1],
+    ...     origin=[2, 2, 2],
+    ... )
+    >>> budget_custom.budget_membership_mat
+    array([[1, 0, 1],
+           [0, 1, 0]])
+    >>> budget_custom.budget_rhs_vec
+    array([1, 1])
+    >>> budget_custom.origin
+    array([2, 2, 2])
     """
 
     def __init__(self, budget_membership_mat, rhs_vec, origin=None):
