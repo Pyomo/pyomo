@@ -1010,8 +1010,9 @@ class CardinalitySet(UncertaintySet):
 
         Note that, mathematically, setting `gamma` to 0 reduces the set
         to a singleton containing the center, while setting `gamma` to
-        the set dimension `N` reduces the set to a hyperrectangle with
-        bounds ``[origin, origin + positive_deviation]``.
+        the set dimension `N` makes the set mathematically equivalent
+        to a `BoxSet` with bounds
+        ``numpy.array([origin, origin + positive_deviation]).T``.
         """
         return self._gamma
 
