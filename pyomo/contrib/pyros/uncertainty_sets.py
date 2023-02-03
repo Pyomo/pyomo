@@ -899,6 +899,22 @@ class CardinalitySet(UncertaintySet):
         Upper bound for the number of uncertain parameters which
         may realize their maximal deviations from the origin
         simultaneously.
+
+    Examples
+    --------
+    A 3-D cardinality set:
+
+    >>> gamma_set = CardinalitySet(
+    ...     origin=[0, 0, 0],
+    ...     positive_deviation=[1.0, 2.0, 1.5],
+    ...     gamma=1,
+    ... )
+    >>> gamma_set.origin
+    array([0, 0, 0])
+    >>> gamma_set.positive_deviation
+    array([1. , 2. , 1.5])
+    >>> gamma_set.gamma
+    1
     """
 
     def __init__(self, origin, positive_deviation, gamma):
