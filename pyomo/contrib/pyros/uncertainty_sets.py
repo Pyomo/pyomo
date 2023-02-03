@@ -1742,6 +1742,29 @@ class FactorModelSet(UncertaintySet):
         Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
         their extreme values.
+
+    Examples
+    --------
+    A 4D factor model set with a 2D factor space:
+
+    >>> import numpy as np
+    >>> fset = FactorModelSet(
+    ...     origin=np.zeros(4),
+    ...     number_of_factors=5,
+    ...     psi_mat=np.full(shape=(4, 2), fill_value=0.1),
+    ...     beta=0.5,
+    ... )
+    >>> fset.origin
+    array([0., 0., 0., 0.])
+    >>> fset.number_of_factors
+    5
+    >>> fset.psi_mat
+    array([[0.1, 0.1],
+           [0.1, 0.1],
+           [0.1, 0.1],
+           [0.1, 0.1]])
+    >>> fset.beta
+    0.5
     """
 
     def __init__(self, origin, number_of_factors, psi_mat, beta):
