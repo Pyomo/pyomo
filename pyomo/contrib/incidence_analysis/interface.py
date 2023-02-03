@@ -326,11 +326,9 @@ class IncidenceGraphInterface(object):
     def _extract_submatrix(self, variables, constraints):
         # Assumes variables and constraints are valid
         if self.incidence_graph is None:
-            return get_structural_incidence_matrix(
-                variables,
-                constraints,
-                include_fixed=False,
-            )
+            # Note that, as variables are explicitly specified, there
+            # is no need for an include_fixed argument.
+            return get_structural_incidence_matrix(variables, constraints)
         else:
             N = len(variables)
             M = len(constraints)
@@ -358,11 +356,9 @@ class IncidenceGraphInterface(object):
 
     def _extract_subgraph(self, variables, constraints):
         if self.incidence_graph is None:
-            return get_bipartite_incidence_graph(
-                variables, constraints
-                # Note that, as variables are explicitly specified, there
-                # is no need for an include_fixed argument.
-            )
+            # Note that, as variables are explicitly specified, there
+            # is no need for an include_fixed argument.
+            return get_bipartite_incidence_graph(variables, constraints)
         else:
             constraint_nodes = [self.con_index_map[con] for con in constraints]
 
