@@ -791,7 +791,7 @@ class BoxSet(UncertaintySet):
         (N, 2) numpy.ndarray : Lower and upper bounds for each dimension
         of the set.
 
-        The bounds of a ``BoxSet`` instance can be changed, such that
+        The bounds of a `BoxSet` instance can be changed, such that
         the dimension of the set remains unchanged.
         """
         return self._bounds
@@ -842,8 +842,7 @@ class BoxSet(UncertaintySet):
     def parameter_bounds(self):
         """
         Bounds in each dimension of the box set.
-        This is numerically equivalent to
-        :attr:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet.bounds`.
+        This is numerically equivalent to the `bounds` attribute.
 
         Returns
         -------
