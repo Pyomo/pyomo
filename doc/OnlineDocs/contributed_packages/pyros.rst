@@ -625,16 +625,16 @@ In this example, we select affine decision rules by setting
   ...
   INFO: Robust optimal solution identified. Exiting PyROS.
 
-  >>> # === Compare final objective to the singe-stage solution
+  >>> # === Compare final objective to the single-stage solution
   >>> two_stage_final_objective = round(
-  >>>     pyo.value(results_2.final_objective_value),
-  >>>     -1,
-  >>> )
+  ...     pyo.value(results_2.final_objective_value),
+  ...     -1,
+  ... )
   >>> percent_difference = 100 * (
-  >>>     two_stage_final_objective - single_stage_final_objective
-  >>> ) / (single_stage_final_objective)
+  ...     two_stage_final_objective - single_stage_final_objective
+  ... ) / (single_stage_final_objective)
   >>> print("Percent objective change relative to constant decision rules "
-  >>>       f"objective: {percent_difference:.2f}")
+  ...       f"objective: {percent_difference:.2f}")
   Percent objective change relative to constant decision rules objective: -24...
 
 For this example, we notice a ~25% decrease in the final objective
