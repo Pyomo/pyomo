@@ -101,7 +101,7 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
     return ordered_node_subsets
 
 
-def block_triangularize(matrix, matching=None, top_nodes=None):
+def block_triangularize(matrix, matching=None):
     """
     Computes the necessary information to permute a matrix to block-lower
     triangular form, i.e. a partition of rows and columns into an ordered
