@@ -305,6 +305,9 @@ class IncidenceGraphInterface(object):
                 "%s or %s but got %s." % (PyomoNLP, Block, type(model))
             )
 
+        # Note that these attributes are no longer used in get_diagonal_blocks,
+        # and should be removed. However, they are tested, so we will leave
+        # them in until a breaking change.
         self.row_block_map = None
         self.col_block_map = None
 
