@@ -750,8 +750,9 @@ class BoxSet(UncertaintySet):
     --------
     1D box set (interval):
 
+    >>> from pyomo.contrib.pyros import BoxSet
     >>> interval = BoxSet(bounds=[(1, 2)])
-    >>> box_set.bounds
+    >>> interval.bounds
     array([[1, 2]])
 
     2D box set:
@@ -904,6 +905,7 @@ class CardinalitySet(UncertaintySet):
     --------
     A 3D cardinality set:
 
+    >>> from pyomo.contrib.pyros import CardinalitySet
     >>> gamma_set = CardinalitySet(
     ...     origin=[0, 0, 0],
     ...     positive_deviation=[1.0, 2.0, 1.5],
@@ -1150,7 +1152,8 @@ class PolyhedralSet(UncertaintySet):
     --------
     2D polyhedral set with 4 defining inequalities:
 
-    >>> pset = pyros.PolyhedralSet(
+    >>> from pyomo.contrib.pyros import PolyhedralSet
+    >>> pset = PolyhedralSet(
     ...     lhs_coefficients_mat=[[-1, 0], [0, -1], [-1, 1], [1, 0]],
     ...     rhs_vec=[0, 0, 0, 1],
     ... )
@@ -1417,6 +1420,7 @@ class BudgetSet(UncertaintySet):
     3D budget set with one budget constraint and
     no origin chosen (hence origin defaults to 3D zero vector):
 
+    >>> from pyomo.contrib.pyros import BudgetSet
     >>> budget_set = BudgetSet(
     ...     budget_membership_mat=[[1, 1, 1]],
     ...     rhs_vec=[2],
@@ -1763,17 +1767,18 @@ class FactorModelSet(UncertaintySet):
     --------
     A 4D factor model set with a 2D factor space:
 
+    >>> from pyomo.contrib.pyros import FactorModelSet
     >>> import numpy as np
     >>> fset = FactorModelSet(
     ...     origin=np.zeros(4),
-    ...     number_of_factors=5,
+    ...     number_of_factors=2,
     ...     psi_mat=np.full(shape=(4, 2), fill_value=0.1),
     ...     beta=0.5,
     ... )
     >>> fset.origin
     array([0., 0., 0., 0.])
     >>> fset.number_of_factors
-    5
+    2
     >>> fset.psi_mat
     array([[0.1, 0.1],
            [0.1, 0.1],
@@ -2083,13 +2088,14 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     --------
     3D origin-centered unit hypersphere:
 
-    >>> hypersphere = AxisAlignedEllipsoidalSet(
-    >>>     center=[0, 0, 0],
-    >>>     half_lengths=[1, 1, 1],
-    >>> )
-    >>> hypersphere.center
+    >>> from pyomo.contrib.pyros import AxisAlignedEllipsoidalSet
+    >>> sphere = AxisAlignedEllipsoidalSet(
+    ...     center=[0, 0, 0],
+    ...     half_lengths=[1, 1, 1]
+    ... )
+    >>> sphere.center
     array([0, 0, 0])
-    >>> hypersphere.half_lengths
+    >>> sphere.half_lengths
     array([1, 1, 1])
 
     """
@@ -2289,6 +2295,7 @@ class EllipsoidalSet(UncertaintySet):
     --------
     3D origin-centered unit hypersphere:
 
+    >>> from pyomo.contrib.pyros import EllipsoidalSet
     >>> import numpy as np
     >>> hypersphere = EllipsoidalSet(
     ...     center=[0, 0, 0],
@@ -2307,12 +2314,12 @@ class EllipsoidalSet(UncertaintySet):
     A 2D ellipsoid with custom rotation and scaling:
 
     >>> rotated_ellipsoid = EllipsoidalSet(
-    ...     center=[1, 1, 1],
+    ...     center=[1, 1],
     ...     shape_matrix=[[4, 2], [2, 4]],
     ...     scale=0.5,
     ... )
     >>> rotated_ellipsoid.center
-    array([1, 1, 1])
+    array([1, 1])
     >>> rotated_ellipsoid.shape_matrix
     array([[4, 2],
            [2, 4]])
@@ -2566,7 +2573,8 @@ class DiscreteScenarioSet(UncertaintySet):
     --------
     2D set with three scenarios:
 
-    >>> discrete_set = pyros.DiscreteScenarioSet(
+    >>> from pyomo.contrib.pyros import DiscreteScenarioSet
+    >>> discrete_set = DiscreteScenarioSet(
     ...     scenarios=[[1, 1], [2, 1], [1, 2]],
     ... )
     >>> discrete_set.scenarios
@@ -2738,6 +2746,9 @@ class IntersectionSet(UncertaintySet):
     Intersection of origin-centered 2D box (square) and 2D
     hypersphere (circle):
 
+    >>> from pyomo.contrib.pyros import (
+    ...     BoxSet, AxisAlignedEllipsoidalSet, IntersectionSet,
+    ... )
     >>> square = BoxSet(bounds=[[-1.5, 1.5], [-1.5, 1.5]])
     >>> circle = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0],
