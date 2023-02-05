@@ -10,8 +10,12 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
-from pyomo.common.dependencies import networkx_available
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import (
+    networkx_available,
+    scipy_available,
+    attempt_import,
+)
+plotly, plotly_available = attempt_import("plotly")
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
@@ -1474,6 +1478,7 @@ class TestInterface(unittest.TestCase):
         matching = igraph.maximum_matching(variables, constraints)
         self.assertEqual(len(matching), 1)
 
+    @unittest.skipUnless(plotly_available, "Plotly is not available")
     def test_plot(self):
         """
         Unfortunately, this test only ensures the code runs without errors.
@@ -1491,7 +1496,7 @@ class TestInterface(unittest.TestCase):
         igraph = IncidenceGraphInterface(
             m, include_inequality=True, include_fixed=True
         )
-        igraph.plot(title='test plot', show=True)
+        igraph.plot(title='test plot', show=False)
 
 
 if __name__ == "__main__":
