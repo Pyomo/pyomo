@@ -106,8 +106,8 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
 
     Two lists of nodes to project onto must be provided. These will correspond
     to the "bipartite sets" in the subgraph. If the two sets provided have
-    M and N nodes, the subgraph will have nodes 0 through M+N, with the first
-    M corresponding to the first set provided and the last M corresponding
+    M and N nodes, the subgraph will have nodes 0 through M+N-1, with the first
+    M corresponding to the first set provided and the last N corresponding
     to the second set.
 
     Parameters
@@ -116,10 +116,10 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
         The graph from which a subgraph is extracted
     nodes0: list
         A list of nodes in the original graph that will form the first
-        bipartite set of the projected graph (and have ``bipartite=0``
+        bipartite set of the projected graph (and have ``bipartite=0``)
     nodes1: list
         A list of nodes in the original graph that will form the second
-        bipartite set of the projected graph (and have ``bipartite=1``
+        bipartite set of the projected graph (and have ``bipartite=1``)
 
     Returns
     -------
@@ -286,7 +286,8 @@ class IncidenceGraphInterface(object):
             self.incidence_graph = get_bipartite_incidence_graph(
                 self.variables,
                 self.constraints,
-                # TODO: include_fixed=include_fixed?
+                # Note that include_fixed is not necessary here. We have
+                # already checked this condition above.
             )
         else:
             raise TypeError(
@@ -294,6 +295,9 @@ class IncidenceGraphInterface(object):
                 "%s or %s but got %s." % (PyomoNLP, Block, type(model))
             )
 
+        # Note that these attributes are no longer used in get_diagonal_blocks,
+        # and should be removed. However, they are tested, so we will leave
+        # them in until a breaking change.
         self.row_block_map = None
         self.col_block_map = None
 
@@ -312,45 +316,11 @@ class IncidenceGraphInterface(object):
         _check_unindexed(variables + constraints)
         return variables, constraints
 
-    def _extract_submatrix(self, variables, constraints):
-        # Assumes variables and constraints are valid
-        if self.incidence_graph is None:
-            return get_structural_incidence_matrix(
-                variables,
-                constraints,
-                include_fixed=False,
-            )
-        else:
-            N = len(variables)
-            M = len(constraints)
-            old_new_var_indices = dict(
-                (self.var_index_map[v], i) for i, v in enumerate(variables)
-            )
-            old_new_con_indices = dict(
-                (self.con_index_map[c], i) for i, c in enumerate(constraints)
-            )
-            # FIXME: This will fail if I don't have an incidence matrix
-            # cached.
-            coo = self.incidence_matrix
-            new_row = []
-            new_col = []
-            new_data = []
-            for r, c, e in zip(coo.row, coo.col, coo.data):
-                if r in old_new_con_indices and c in old_new_var_indices:
-                    new_row.append(old_new_con_indices[r])
-                    new_col.append(old_new_var_indices[c])
-                    new_data.append(e)
-            return sp.sparse.coo_matrix(
-                (new_data, (new_row, new_col)),
-                shape=(M, N),
-            )
-
     def _extract_subgraph(self, variables, constraints):
         if self.incidence_graph is None:
-            return get_bipartite_incidence_graph(
-                # Does include_fixed matter here if I'm providing the variables?
-                variables, constraints, include_fixed=False
-            )
+            # Note that, as variables are explicitly specified, there
+            # is no need for an include_fixed argument.
+            return get_bipartite_incidence_graph(variables, constraints)
         else:
             constraint_nodes = [self.con_index_map[con] for con in constraints]
 
@@ -513,18 +483,12 @@ class IncidenceGraphInterface(object):
 
         """
         variables, constraints = self._validate_input(variables, constraints)
-        matrix = self._extract_submatrix(variables, constraints)
-
-        # TODO: Again, this functionality does not really make sense for
-        # general bipartite graphs...
-        if self.row_block_map is None or self.col_block_map is None:
-            block_rows, block_cols = get_diagonal_blocks(matrix)
-        else:
-            block_rows, block_cols = get_blocks_from_maps(
-                self.row_block_map, self.col_block_map
-            )
-        block_cons = [[constraints[i] for i in block] for block in block_rows]
-        block_vars = [[variables[i] for i in block] for block in block_cols]
+        graph = self._extract_subgraph(variables, constraints)
+        M = len(constraints)
+        con_nodes = list(range(M))
+        sccs = get_scc_of_projection(graph, con_nodes)
+        block_cons = [[constraints[i] for i, _ in scc] for scc in sccs]
+        block_vars = [[variables[j-M] for _, j in scc] for scc in sccs]
         return block_vars, block_cons
 
     def dulmage_mendelsohn(self, variables=None, constraints=None):
