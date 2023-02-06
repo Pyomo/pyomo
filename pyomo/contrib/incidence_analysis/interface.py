@@ -361,7 +361,7 @@ class IncidenceGraphInterface(object):
             return None
         else:
             M = len(self.constraints)
-            N = len(self._variables)
+            N = len(self.variables)
             row = []
             col = []
             data = []
@@ -403,7 +403,7 @@ class IncidenceGraphInterface(object):
             )
         _check_unindexed([component])
         M = len(self.constraints)
-        N = len(self._variables)
+        N = len(self.variables)
         if component in self.var_index_map:
             vnode = M + self.var_index_map[component]
             adj = self._incidence_graph[vnode]
@@ -411,7 +411,7 @@ class IncidenceGraphInterface(object):
         elif component in self.con_index_map:
             cnode = self.con_index_map[component]
             adj = self._incidence_graph[cnode]
-            adj_comps = [self._variables[j-M] for j in adj]
+            adj_comps = [self.variables[j-M] for j in adj]
         else:
             raise RuntimeError(
                 "Cannot find component %s in the cached incidence graph."
@@ -572,15 +572,15 @@ class IncidenceGraphInterface(object):
             )
         to_exclude = ComponentSet(nodes)
         to_exclude.update(constraints)
-        vars_to_include = [v for v in self._variables if v not in to_exclude]
+        vars_to_include = [v for v in self.variables if v not in to_exclude]
         cons_to_include = [c for c in self.constraints if c not in to_exclude]
         incidence_graph = self._extract_subgraph(vars_to_include, cons_to_include)
         # update attributes
-        self._variables = vars_to_include
+        self.variables = vars_to_include
         self._constraints = cons_to_include
         self._incidence_graph = incidence_graph
         self.var_index_map = ComponentMap(
-            (var, i) for i, var in enumerate(self._variables)
+            (var, i) for i, var in enumerate(self.variables)
         )
         self.con_index_map = ComponentMap(
             (con, i) for i, con in enumerate(self._constraints)
