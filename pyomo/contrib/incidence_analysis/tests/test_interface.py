@@ -26,7 +26,7 @@ from pyomo.contrib.incidence_analysis.interface import (
     extract_bipartite_subgraph,
 )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.triangularize import map_coords_to_blocks
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
 )
@@ -248,7 +248,7 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
         con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
-        row_block_map, col_block_map = block_triangularize(imat)
+        row_block_map, col_block_map = map_coords_to_blocks(imat)
         var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
                 for v in variables)
         con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
@@ -404,7 +404,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
         con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
-        row_block_map, col_block_map = block_triangularize(imat)
+        row_block_map, col_block_map = map_coords_to_blocks(imat)
         var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
                 for v in variables)
         con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])

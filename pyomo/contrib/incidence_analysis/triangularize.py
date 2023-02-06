@@ -138,8 +138,14 @@ def block_triangularize(matrix, matching=None):
     graph = from_biadjacency_matrix(matrix)
     row_nodes = list(range(M))
     sccs = get_scc_of_projection(graph, row_nodes, matching=matching)
+    rc_partition = [[(i, j-M) for i, j in scc] for scc in sccs]
+    return rc_partition
+
+
+def map_coords_to_blocks(matrix, matching=None):
+    sccs = block_triangularize(matrix, matching=matching)
     row_idx_map = {r: idx for idx, scc in enumerate(sccs) for r, _ in scc}
-    col_idx_map = {c-M: idx for idx, scc in enumerate(sccs) for _, c in scc}
+    col_idx_map = {c: idx for idx, scc in enumerate(sccs) for _, c in scc}
     return row_idx_map, col_idx_map
 
 
@@ -203,6 +209,7 @@ def get_diagonal_blocks(matrix, matching=None):
         diagonal blocks.
 
     """
-    row_block_map, col_block_map = block_triangularize(matrix, matching=matching)
-    block_rows, block_cols = get_blocks_from_maps(row_block_map, col_block_map)
-    return block_rows, block_cols
+    sccs = block_triangularize(matrix, matching=matching)
+    row_blocks = [[i for i, _ in scc] for scc in sccs]
+    col_blocks = [[j for _, j in scc] for scc in sccs]
+    return row_blocks, col_blocks
