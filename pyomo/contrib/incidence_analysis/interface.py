@@ -458,7 +458,9 @@ class IncidenceGraphInterface(object):
 
         return var_blocks, con_blocks
 
-    def block_triangularize(self, variables=None, constraints=None):
+    # Should this be deprecated? *Probably* not. I have too much code that
+    # relies on this functionality, however poorly thought out.
+    def map_nodes_to_blocks(self, variables=None, constraints=None):
         """
         Returns two ComponentMaps. A map from variables to their blocks
         in a block triangularization of the incidence matrix, and a
@@ -486,6 +488,32 @@ class IncidenceGraphInterface(object):
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
+
+    def block_triangularize(self, variables=None, constraints=None):
+        """Partition the provided variables and constraints such that their
+        incidence matrix is block lower triangular.
+
+        These correspond to the strongly connected components of the bipartite
+        incidence graph, projected with respect to a maximum matching.
+
+        Returns
+        -------
+        List of lists
+            The outer list contains strongly connected components and is
+            ordered topologically. The inner lists contain tuples of matched
+            variables and constraints.
+
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        graph = self._extract_subgraph(variables, constraints)
+
+        M = len(constraints)
+        con_nodes = list(range(M))
+        sccs = get_scc_of_projection(graph, con_nodes)
+        vc_partition = [
+            [(variables[j-M], constraints[i]) for i, j in scc] for scc in sccs
+        ]
+        return vc_partition
 
     # TODO: Update this method with a new name and deprecate old name.
     def get_diagonal_blocks(self, variables=None, constraints=None):

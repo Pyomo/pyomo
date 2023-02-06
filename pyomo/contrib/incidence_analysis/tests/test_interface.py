@@ -498,8 +498,9 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_block_map, con_block_map = igraph.map_nodes_to_blocks(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
@@ -599,8 +600,9 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_block_map, con_block_map = igraph.map_nodes_to_blocks(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
@@ -646,8 +648,9 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         constraints.extend(model.ebal[i] for i in model.streams
                 if i > half)
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_block_map, con_block_map = igraph.map_nodes_to_blocks(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), (N-half)+1)
@@ -790,8 +793,9 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_block_map, con_block_map = igraph.map_nodes_to_blocks(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
