@@ -131,7 +131,6 @@ def load_nl_baseline(baseline, testfile, version='nl'):
         _tmp = baseline.split('.nl.', 1)
     _tmp.insert(1, f'expr{int(EXPR._mode)}')
     _tmp.insert(2, version)
-    print('.'.join(_tmp))
     if not os.path.exists('.'.join(_tmp)):
         _tmp.pop(1)
         if not os.path.exists('.'.join(_tmp)):
