@@ -268,7 +268,6 @@ class IncidenceGraphInterface(object):
             else:
                 incidence_matrix = nlp.evaluate_jacobian_eq()
             nxb = nx.algorithms.bipartite
-            # Keep incidence_graph as a public attribute for now.
             self._incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
         elif isinstance(model, Block):
             self._constraints = [
