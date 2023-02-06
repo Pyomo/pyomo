@@ -18,6 +18,56 @@ from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
 from pyomo.common.dependencies import networkx as nx
 
 
+# TODO: get_scc_dag_of_projection function?
+def get_scc_dag_of_projection(graph, top_nodes, matching):
+    nxb = nx.algorithms.bipartite
+    nxc = nx.algorithms.components
+    nxd = nx.algorithms.dag
+    if not nxb.is_bipartite(graph):
+        raise RuntimeError("Provided graph is not bipartite.")
+    M = len(top_nodes)
+    N = len(graph.nodes) - M
+    if M != N:
+        raise RuntimeError(
+            "get_scc_of_projection does not support bipartite graphs with"
+            " bipartite sets of different cardinalities. Got sizes %s and"
+            " %s." % (M, N)
+        )
+    if matching is None:
+        # This matching maps top nodes to "other nodes" *and* other nodes
+        # back to top nodes.
+        matching = nxb.maximum_matching(graph, top_nodes=top_nodes)
+    if len(matching) != 2*M:
+        raise RuntimeError(
+            "get_scc_of_projection does not support bipartite graphs without"
+            " a perfect matching. Got a graph with %s nodes per bipartite set"
+            " and a matching of cardinality %s." % (M, (len(matching)/2))
+        )
+
+    # _get_projected_digraph treats matched edges as "in-edges", so we
+    # reverse the direction of edges here.
+    dg = _get_projected_digraph(graph, matching, top_nodes).reverse()
+
+    scc_list = list(nxc.strongly_connected_components(dg))
+    n_scc = len(scc_list)
+    node_scc_map = {n: idx for idx, scc in enumerate(scc_list) for n in scc}
+
+    # Now we need to put the SCCs in the right order. We do this by performing
+    # a topological sort on the DAG of SCCs.
+    dag = nx.DiGraph()
+    dag.add_nodes_from(range(n_scc))
+    for n in dg.nodes:
+        source_scc = node_scc_map[n]
+        for neighbor in dg[n]:
+            target_scc = node_scc_map[neighbor]
+            if target_scc != source_scc:
+                dag.add_edge(source_scc, target_scc)
+
+    # The matching is required to interpret scc_list, so maybe the matching
+    # needs to be provided to this function
+    return scc_list, dag
+
+
 def get_scc_of_projection(graph, top_nodes, matching=None):
     """Return the topologically ordered strongly connected components of a
     bipartite graph, projected with respect to a perfect matching
