@@ -576,7 +576,7 @@ class IncidenceGraphInterface(object):
         cons_to_include = [c for c in self.constraints if c not in to_exclude]
         incidence_graph = self._extract_subgraph(vars_to_include, cons_to_include)
         # update attributes
-        self.variables = vars_to_include
+        self._variables = vars_to_include
         self._constraints = cons_to_include
         self._incidence_graph = incidence_graph
         self.var_index_map = ComponentMap(
