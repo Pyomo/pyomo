@@ -15,6 +15,7 @@ import re
 
 from difflib import SequenceMatcher, unified_diff
 
+import pyomo.core.expr.current as EXPR
 import pyomo.repn.plugins.nl_writer as nl_writer
 
 template = nl_writer.text_nl_debug_template
@@ -125,11 +126,18 @@ def load_nl_baseline(baseline, testfile, version='nl'):
     with open(testfile, 'r') as FILE:
         test = FILE.read()
     if baseline.endswith('.nl'):
-        _tmp = baseline[:-2] + version
+        _tmp = [baseline[:-3]]
     else:
-        _tmp = baseline.replace('.nl.', f'.{version}.')
-    if os.path.exists(_tmp):
-        baseline = _tmp
+        _tmp = baseline.split('.nl.', 1)
+    _tmp.insert(1, f'expr{int(EXPR._mode)}')
+    _tmp.insert(2, version)
+    print('.'.join(_tmp))
+    if not os.path.exists('.'.join(_tmp)):
+        _tmp.pop(1)
+        if not os.path.exists('.'.join(_tmp)):
+            _tmp = []
+    if _tmp:
+        baseline = '.'.join(_tmp)
     with open(baseline, 'r') as FILE:
         base = FILE.read()
     return base, test
