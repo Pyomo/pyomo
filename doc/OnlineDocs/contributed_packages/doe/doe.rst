@@ -333,7 +333,7 @@ Step 3: Compute the FIM of a square MBDoE problem
 This method computes an MBDoE optimization problem with no degree of freedom.
 
 This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_finite``.
-``direct_kaug`` mode requires the installation of the solver `k_aug <https://github.com/dthierry/k_aug>`_ which is availabe through the `IDAES-PSE extensions <https://idaes-pse.readthedocs.io/en/stable/reference_guides/commands/get_extensions.html>`_.
+``direct_kaug`` mode requires the installation of the solver `k_aug <https://github.com/dthierry/k_aug>`_ which is available through the `IDAES-PSE extensions <https://idaes-pse.readthedocs.io/en/stable/reference_guides/commands/get_extensions.html>`_.
 
 .. doctest::
 
@@ -405,7 +405,7 @@ Step 5: Gradient-based optimization
 
 Pyomo.DoE formulates a two-stage stochastic_program to compute A- and D-optimality designs.
 
-This function solves twice to ensure reliable intialization: first, Pyomo.DoE solves a square problem. Next, Pyomo.DoE unfixes the design variables (adds degrees of freedoms) and solves again.
+This function solves twice to ensure reliable intialization: first, Pyomo.DoE solves a square problem. Next, Pyomo.DoE unfixes the design variables (adds degrees of freedom) and solves again.
 
 .. doctest::
 
