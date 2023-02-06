@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
+import enum
 import math
 
 #
@@ -20,9 +20,16 @@ from pyomo.core.expr import expr_common as common
 #
 # Provide a global value that indicates which expression system is being used
 #
-class Mode(object):
-    pyomo5_trees = (3,)
-_mode = Mode.pyomo5_trees
+class Mode(enum.IntEnum):
+    coopr_trees = 1  # Original Coopr/Pyomo expression system
+    pyomo4_trees = 4 # rewrite: refrence count-based reduced cloning
+    pyomo5_trees = 5 # rewrite: expressions are immutable by contract
+    pyomo6_trees = 6 # multiple-dispatch generation; improved LinearExpression
+
+_mode = Mode.pyomo6_trees
+# We no longer support concurrent expression systems.  _mode is left
+# primarily so we can support expression system-specific baselines
+assert _mode == Mode.pyomo6_trees
 
 #
 # Pull symbols from the appropriate expression system
@@ -30,130 +37,125 @@ _mode = Mode.pyomo5_trees
 from pyomo.core.expr import numvalue as _numvalue
 from pyomo.core.expr import boolean_value as _logicalvalue
 
-# Pyomo5
-if _mode == Mode.pyomo5_trees:
-    from pyomo.core.expr import numeric_expr as _numeric_expr
-    from .base import ExpressionBase
-    from pyomo.core.expr.numeric_expr import (_add, _sub, _mul, _div, _pow,
-                                              _neg, _abs, _inplace, _unary,
-                                              NumericExpression,
-                                              NumericValue, native_types,
-                                              nonpyomo_leaf_types, 
-                                              native_numeric_types,
-                                              as_numeric, value,
-                                              evaluate_expression,
-                                              expression_to_string,
-                                              polynomial_degree,
-                                              clone_expression,
-                                              sizeof_expression,
-                                              _expression_is_fixed,
-                                              clone_counter,
-                                              nonlinear_expression,
-                                              linear_expression,
-                                              NegationExpression,
-                                              NPV_NegationExpression,
-                                              ExternalFunctionExpression,
-                                              NPV_ExternalFunctionExpression,
-                                              PowExpression, NPV_PowExpression,
-                                              ProductExpression,
-                                              NPV_ProductExpression,
-                                              MonomialTermExpression,
-                                              DivisionExpression,
-                                              NPV_DivisionExpression,
-                                              SumExpressionBase,
-                                              NPV_SumExpression, SumExpression,
-                                              _MutableSumExpression,
-                                              Expr_ifExpression,
-                                              NPV_Expr_ifExpression,
-                                              UnaryFunctionExpression,
-                                              NPV_UnaryFunctionExpression,
-                                              AbsExpression, NPV_AbsExpression,
-                                              LinearExpression,
-                                              _MutableLinearExpression,
-                                              decompose_term,
-                                              LinearDecompositionError,
-                                              _decompose_linear_terms,
-                                              _process_arg,
-                                              _balanced_parens,
-                                              NPV_expression_types,
-                                              _fcn_dispatcher,
-    )
-    from pyomo.core.expr import logical_expr as _logical_expr
-    from pyomo.core.expr.logical_expr import (native_logical_types, BooleanValue,
-                                              BooleanConstant,
-                                              _and, _or, _equiv, _inv, _xor,
-                                              _impl,
-                                              _generate_logical_proposition,
-                                              BooleanExpressionBase, lnot,
-                                              equivalent, xor, implies,
-                                              _flattened, land, lor, exactly,
-                                              atmost, atleast,
-                                              UnaryBooleanExpression,
-                                              NotExpression,
-                                              BinaryBooleanExpression,
-                                              EquivalenceExpression,
-                                              XorExpression,
-                                              ImplicationExpression,
-                                              NaryBooleanExpression,
-                                              _add_to_and_or_expression,
-                                              AndExpression, OrExpression,
-                                              ExactlyExpression,
-                                              AtMostExpression,
-                                              AtLeastExpression,
-                                              special_boolean_atom_types)
-    from pyomo.core.expr.relational_expr import (
-        RelationalExpression,
-        RangedExpression, InequalityExpression, EqualityExpression,
-        inequality,
-    )
-    from pyomo.core.expr.template_expr import (TemplateExpressionError,
-                                               _NotSpecified,
-                                               GetItemExpression,
-                                               Numeric_GetItemExpression,
-                                               Boolean_GetItemExpression,
-                                               Structural_GetItemExpression,
-                                               NPV_Numeric_GetItemExpression,
-                                               NPV_Boolean_GetItemExpression,
-                                               NPV_Structural_GetItemExpression,
-                                               GetAttrExpression,
-                                               Numeric_GetAttrExpression,
-                                               Boolean_GetAttrExpression,
-                                               Structural_GetAttrExpression,
-                                               NPV_Numeric_GetAttrExpression,
-                                               NPV_Boolean_GetAttrExpression,
-                                               NPV_Structural_GetAttrExpression,
-                                               CallExpression,
-                                               _TemplateSumExpression_argList,
-                                               TemplateSumExpression,
-                                               IndexTemplate, resolve_template,
-                                               ReplaceTemplateExpression,
-                                               substitute_template_expression,
-                                               _GetItemIndexer,
-                                               substitute_getitem_with_param,
-                                               substitute_template_with_value,
-                                               _set_iterator_template_generator,
-                                               _template_iter_context,
-                                               templatize_rule,
-                                               templatize_constraint)
-    from pyomo.core.expr import visitor as _visitor
-    from pyomo.core.expr.visitor import (SymbolMap, StreamBasedExpressionVisitor,
-                                         SimpleExpressionVisitor,
-                                         ExpressionValueVisitor,
-                                         replace_expressions,
-                                         ExpressionReplacementVisitor,
-                                         _EvaluationVisitor,
-                                         FixedExpressionError,
-                                         NonConstantExpressionError,
-                                         _EvaluateConstantExpressionVisitor,
-                                         _ComponentVisitor, identify_components,
-                                         _VariableVisitor, identify_variables,
-                                         _MutableParamVisitor,
-                                         identify_mutable_parameters,
-                                         _PolynomialDegreeVisitor,
-                                         _IsFixedVisitor, _ToStringVisitor)
-
-else:
-    raise ValueError("No other expression systems are supported in Pyomo right now.")    #pragma: no cover
+from pyomo.core.expr import numeric_expr as _numeric_expr
+from .base import ExpressionBase
+from pyomo.core.expr.numeric_expr import (_add, _sub, _mul, _div, _pow,
+                                          _neg, _abs, _inplace, _unary,
+                                          NumericExpression,
+                                          NumericValue, native_types,
+                                          nonpyomo_leaf_types,
+                                          native_numeric_types,
+                                          as_numeric, value,
+                                          evaluate_expression,
+                                          expression_to_string,
+                                          polynomial_degree,
+                                          clone_expression,
+                                          sizeof_expression,
+                                          _expression_is_fixed,
+                                          clone_counter,
+                                          nonlinear_expression,
+                                          linear_expression,
+                                          NegationExpression,
+                                          NPV_NegationExpression,
+                                          ExternalFunctionExpression,
+                                          NPV_ExternalFunctionExpression,
+                                          PowExpression, NPV_PowExpression,
+                                          ProductExpression,
+                                          NPV_ProductExpression,
+                                          MonomialTermExpression,
+                                          DivisionExpression,
+                                          NPV_DivisionExpression,
+                                          SumExpressionBase,
+                                          NPV_SumExpression, SumExpression,
+                                          _MutableSumExpression,
+                                          Expr_ifExpression,
+                                          NPV_Expr_ifExpression,
+                                          UnaryFunctionExpression,
+                                          NPV_UnaryFunctionExpression,
+                                          AbsExpression, NPV_AbsExpression,
+                                          LinearExpression,
+                                          _MutableLinearExpression,
+                                          decompose_term,
+                                          LinearDecompositionError,
+                                          _decompose_linear_terms,
+                                          _process_arg,
+                                          _balanced_parens,
+                                          NPV_expression_types,
+                                          _fcn_dispatcher,
+)
+from pyomo.core.expr import logical_expr as _logical_expr
+from pyomo.core.expr.logical_expr import (native_logical_types, BooleanValue,
+                                          BooleanConstant,
+                                          _and, _or, _equiv, _inv, _xor,
+                                          _impl,
+                                          _generate_logical_proposition,
+                                          BooleanExpressionBase, lnot,
+                                          equivalent, xor, implies,
+                                          _flattened, land, lor, exactly,
+                                          atmost, atleast,
+                                          UnaryBooleanExpression,
+                                          NotExpression,
+                                          BinaryBooleanExpression,
+                                          EquivalenceExpression,
+                                          XorExpression,
+                                          ImplicationExpression,
+                                          NaryBooleanExpression,
+                                          _add_to_and_or_expression,
+                                          AndExpression, OrExpression,
+                                          ExactlyExpression,
+                                          AtMostExpression,
+                                          AtLeastExpression,
+                                          special_boolean_atom_types)
+from pyomo.core.expr.relational_expr import (
+    RelationalExpression,
+    RangedExpression, InequalityExpression, EqualityExpression,
+    inequality,
+)
+from pyomo.core.expr.template_expr import (TemplateExpressionError,
+                                           _NotSpecified,
+                                           GetItemExpression,
+                                           Numeric_GetItemExpression,
+                                           Boolean_GetItemExpression,
+                                           Structural_GetItemExpression,
+                                           NPV_Numeric_GetItemExpression,
+                                           NPV_Boolean_GetItemExpression,
+                                           NPV_Structural_GetItemExpression,
+                                           GetAttrExpression,
+                                           Numeric_GetAttrExpression,
+                                           Boolean_GetAttrExpression,
+                                           Structural_GetAttrExpression,
+                                           NPV_Numeric_GetAttrExpression,
+                                           NPV_Boolean_GetAttrExpression,
+                                           NPV_Structural_GetAttrExpression,
+                                           CallExpression,
+                                           _TemplateSumExpression_argList,
+                                           TemplateSumExpression,
+                                           IndexTemplate, resolve_template,
+                                           ReplaceTemplateExpression,
+                                           substitute_template_expression,
+                                           _GetItemIndexer,
+                                           substitute_getitem_with_param,
+                                           substitute_template_with_value,
+                                           _set_iterator_template_generator,
+                                           _template_iter_context,
+                                           templatize_rule,
+                                           templatize_constraint)
+from pyomo.core.expr import visitor as _visitor
+from pyomo.core.expr.visitor import (SymbolMap, StreamBasedExpressionVisitor,
+                                     SimpleExpressionVisitor,
+                                     ExpressionValueVisitor,
+                                     replace_expressions,
+                                     ExpressionReplacementVisitor,
+                                     _EvaluationVisitor,
+                                     FixedExpressionError,
+                                     NonConstantExpressionError,
+                                     _EvaluateConstantExpressionVisitor,
+                                     _ComponentVisitor, identify_components,
+                                     _VariableVisitor, identify_variables,
+                                     _MutableParamVisitor,
+                                     identify_mutable_parameters,
+                                     _PolynomialDegreeVisitor,
+                                     _IsFixedVisitor, _ToStringVisitor)
 
 
 def Expr_if(IF=None, THEN=None, ELSE=None):
