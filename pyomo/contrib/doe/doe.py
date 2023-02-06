@@ -316,8 +316,8 @@ class DesignOfExperiments:
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
         It calculates FIM with sensitivity information from four modes:
 
-            1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. 
-                Sensitivity info estimated by finite difference
+            1.  sequential_finite: Calculates a single-scenario model which is solved many times in series to estimate 
+                sensitivity information by finite difference
             2.  sequential_sipopt: calculate sensitivity by sIPOPT [Experimental]
             3.  sequential_kaug: calculate sensitivity by k_aug [Experimental]
             4.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity
@@ -866,7 +866,7 @@ class DesignOfExperiments:
             scale all elements in Jacobian matrix, default is 1.
         store_name:
             a string of file name. If not None, store results with this name.
-            Since there are maultiple experiments, results are numbered with a scalar number, 
+            Since there are multiple experiments, results are numbered with a scalar number, 
             and the result for one grid is 'store_name(count).csv' (count is the number of count).
         read_name: 
             a string of file name. If not None, read result files. 

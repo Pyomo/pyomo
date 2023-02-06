@@ -28,7 +28,7 @@ Model-based Design of Experiments (MBDoE) is a technique to maximize the informa
    :width: 99 %
    :align: center
 
-   Pyomo.DoE integrates exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DoE focused on increasing parameter precision.
+   Pyomo.DoE integrates exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DoE focuses on increasing parameter precision.
 
 Pyomo.DoE provides science-based MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
 the allowable design spaces for design variables, and the assumed observation error structure (e.g., covariance matrix).
@@ -96,7 +96,7 @@ Pyomo.DoE solves the following DAE-constrainted optimization problem:
 
 where:
 
-*  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. It should consist of one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}`. With a proper model formulation, the timepoints for control or measurements :math:`\mathbf{t}` can also be degrees of freedom.
+*  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. :math:`\boldsymbol{\varphi}` should consist of one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}`. With a proper model formulation, the timepoints for control or measurements :math:`\mathbf{t}` can also be degrees of freedom.
 *  :math:`\mathbf{M}` is the Fisher information matrix (FIM), estimated as the inverse of the covariance matrix of parameter estimates  :math:`\boldsymbol{\hat{\theta}}`. A large FIM indicates more information contained in the experiment for parameter estimation.
 *  :math:`\mathbf{Q}` is the dynamic sensitivity matrix, containing the partial derivatives of  :math:`\mathbf{y}` with respect to  :math:`\boldsymbol{\theta}`.
 *  :math:`\Psi(\cdot)` is the design criteria computed from the FIM.
@@ -131,7 +131,7 @@ Pyomo.DoE Required Inputs
 Pyomo.DoE requires the following inputs:
 
 * A Python function that creates the process model. This is similar to interface for `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_.
-* Dictionary of parameters and their nominal value
+* Dictionary of parameters and their nominal values
 * Dictionary of measurements and their measurement time points
 * Dictionary of design variables and their control time points
 * A Numpy ``array`` containing the prior FIM
@@ -140,10 +140,10 @@ Pyomo.DoE requires the following inputs:
 Below is a list of arguments that Pyomo.DoE expects the user to provide.
 
 param_init : ``dictionary``
-    A ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index in a nested ``Dictionary``.
+    A ``dictionary`` of parameter names and values. If they are indexed variables, put the variable names and indexes in a nested ``Dictionary``.
 
 design_variable_timepoints : ``dictionary``
-    A ``dictionary`` of design variable names and its control time points. If this design var is independent of time (constant), set the time to [0]
+    A ``dictionary`` of design variable names and their control time points. If the design variable are time-invariant (constant), set the time to ``[0]``
 
 measurement_object : ``object``
     An ``object`` of the measurements, provided by the measurement class.
@@ -363,7 +363,7 @@ Step 4: Exploratory analysis (Enumeration)
 Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
 
 Pyomo.DoE accomplishes the exploratory analysis with the ``run_grid_search`` function.
-It allows users to define any number of design decisions. Heatmaps (or lines) are used the visualize the sensitivity of the DoE criteria to changes in two (or one) design variables with any other design variables held constant.
+It allows users to define any number of design decisions. Heatmaps (or lines) are used to visualize the sensitivity of the DoE criteria to changes in two (or one) design variables with any other design variables held constant.
 The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method. Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
 
 
