@@ -143,7 +143,7 @@ param_init : ``dictionary``
     A ``dictionary`` of parameter names and values. If they are indexed variables, put the variable names and indexes in a nested ``Dictionary``.
 
 design_variable_timepoints : ``dictionary``
-    A ``dictionary`` of design variable names and their control time points. If the design variable are time-invariant (constant), set the time to ``[0]``
+    A ``dictionary`` of design variable names and their control time points. If the design variables are time-invariant (constant), set the time to ``[0]``
 
 measurement_object : ``object``
     An ``object`` of the measurements, provided by the measurement class.
