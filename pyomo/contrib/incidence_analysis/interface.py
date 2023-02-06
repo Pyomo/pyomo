@@ -233,7 +233,7 @@ class IncidenceGraphInterface(object):
         # WARNING: This cache will become invalid if the user alters their
         # model.
         if model is None:
-            self.incidence_graph = None
+            self._incidence_graph = None
             self._variables = None
             self._constraints = None
         elif isinstance(model, PyomoNLP):
@@ -269,7 +269,7 @@ class IncidenceGraphInterface(object):
                 incidence_matrix = nlp.evaluate_jacobian_eq()
             nxb = nx.algorithms.bipartite
             # Keep incidence_graph as a public attribute for now.
-            self.incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
+            self._incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
         elif isinstance(model, Block):
             self._constraints = [
                 con for con in model.component_data_objects(
@@ -290,7 +290,7 @@ class IncidenceGraphInterface(object):
             )
             self.var_index_map = self._var_index_map
             self.con_index_map = self._con_index_map
-            self.incidence_graph = get_bipartite_incidence_graph(
+            self._incidence_graph = get_bipartite_incidence_graph(
                 self._variables,
                 self._constraints,
                 # Note that include_fixed is not necessary here. We have
@@ -304,49 +304,33 @@ class IncidenceGraphInterface(object):
 
     @property
     def variables(self):
-        if self.incidence_graph is None:
+        if self._incidence_graph is None:
             raise RuntimeError("Cannot get variables when nothing is cached")
         return self._variables
 
     @property
     def constraints(self):
-        if self.incidence_graph is None:
+        if self._incidence_graph is None:
             raise RuntimeError("Cannot get constraints when nothing is cached")
         return self._constraints
 
     @property
-    def n_variables(self):
-        if self.incidence_graph is None:
-            raise RuntimeError(
-                "Cannot get number of variables when nothing is cached"
-            )
-        return len(self._variables)
-
-    @property
-    def n_constraints(self):
-        if self.incidence_graph is None:
-            raise RuntimeError(
-                "Cannot get number of constraints when nothing is cached"
-            )
-        return len(self._constraints)
-
-    @property
     def n_edges(self):
         # The number of structural nonzeros in the incidence matrix
-        if self.incidence_graph is None:
+        if self._incidence_graph is None:
             raise RuntimeError(
                 "Cannot get number of edges (nonzeros) when nothing is cached"
             )
-        return len(self.incidence_graph.edges)
+        return len(self._incidence_graph.edges)
 
     def _validate_input(self, variables, constraints):
         if variables is None:
-            if self.incidence_graph is None:
+            if self._incidence_graph is None:
                 raise ValueError("Neither variables nor a model have been provided.")
             else:
                 variables = self.variables
         if constraints is None:
-            if self.incidence_graph is None:
+            if self._incidence_graph is None:
                 raise ValueError("Neither constraints nor a model have been provided.")
             else:
                 constraints = self.constraints
@@ -355,7 +339,7 @@ class IncidenceGraphInterface(object):
         return variables, constraints
 
     def _extract_subgraph(self, variables, constraints):
-        if self.incidence_graph is None:
+        if self._incidence_graph is None:
             # Note that, as variables are explicitly specified, there
             # is no need for an include_fixed argument.
             return get_bipartite_incidence_graph(variables, constraints)
@@ -367,13 +351,13 @@ class IncidenceGraphInterface(object):
             M = len(self.constraints)
             variable_nodes = [M + self.var_index_map[var] for var in variables]
             subgraph = extract_bipartite_subgraph(
-                self.incidence_graph, constraint_nodes, variable_nodes
+                self._incidence_graph, constraint_nodes, variable_nodes
             )
             return subgraph
 
     @property
     def incidence_matrix(self):
-        if self.incidence_graph is None:
+        if self._incidence_graph is None:
             return None
         else:
             M = len(self.constraints)
@@ -384,9 +368,9 @@ class IncidenceGraphInterface(object):
             # Here we assume that the incidence graph is bipartite with nodes
             # 0 through M-1 forming one of the bipartite sets.
             for i in range(M):
-                assert self.incidence_graph.nodes[i]["bipartite"] == 0
-                for j in self.incidence_graph[i]:
-                    assert self.incidence_graph.nodes[j]["bipartite"] == 1
+                assert self._incidence_graph.nodes[i]["bipartite"] == 0
+                for j in self._incidence_graph[i]:
+                    assert self._incidence_graph.nodes[j]["bipartite"] == 1
                     row.append(i)
                     col.append(j-M)
                     data.append(1.0)
@@ -412,7 +396,7 @@ class IncidenceGraphInterface(object):
             provided component
 
         """
-        if self.incidence_graph is None:
+        if self._incidence_graph is None:
             raise RuntimeError(
                 "Cannot get components adjacent to %s if an incidence graph"
                 " is not cached." % component
@@ -422,11 +406,11 @@ class IncidenceGraphInterface(object):
         N = len(self._variables)
         if component in self.var_index_map:
             vnode = M + self.var_index_map[component]
-            adj = self.incidence_graph[vnode]
+            adj = self._incidence_graph[vnode]
             adj_comps = [self.constraints[i] for i in adj]
         elif component in self.con_index_map:
             cnode = self.con_index_map[component]
-            adj = self.incidence_graph[cnode]
+            adj = self._incidence_graph[cnode]
             adj_comps = [self._variables[j-M] for j in adj]
         else:
             raise RuntimeError(
@@ -581,7 +565,7 @@ class IncidenceGraphInterface(object):
         """
         if constraints is None:
             constraints = []
-        if self.incidence_graph is None:
+        if self._incidence_graph is None:
             raise RuntimeError(
                 "Attempting to remove variables and constraints from cached "
                 "incidence matrix,\nbut no incidence matrix has been cached."
@@ -594,7 +578,7 @@ class IncidenceGraphInterface(object):
         # update attributes
         self._variables = vars_to_include
         self._constraints = cons_to_include
-        self.incidence_graph = incidence_graph
+        self._incidence_graph = incidence_graph
         self.var_index_map = ComponentMap(
             (var, i) for i, var in enumerate(self._variables)
         )
