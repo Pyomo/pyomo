@@ -51,10 +51,10 @@ class Measurements:
         measurement_index_time:
             a ``dict``, keys are measurement variable names, 
 
-            * if there are extra index, for e.g., Var[scenario, extra_index, time]:
+            * if there are extra indices, for e.g., Var[scenario, extra_index, time]:
               values are a dictionary, keys are its extra index, values are its 
               measuring time points. 
-            * if there are no extra index, for e.g., Var[scenario, time]:
+            * if there are no extra indices, for e.g., Var[scenario, time]:
               values are a list of measuring time point.
 
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
