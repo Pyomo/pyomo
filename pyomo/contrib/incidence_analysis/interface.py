@@ -513,9 +513,12 @@ class IncidenceGraphInterface(object):
         vc_partition = [
             [(variables[j-M], constraints[i]) for i, j in scc] for scc in sccs
         ]
+        # TODO: Is this the right return value? I think I usually want lists
+        # of variables and constraints separately.
         return vc_partition
 
-    # TODO: Update this method with a new name and deprecate old name.
+    # This method has been superceded by block_triangularize.
+    # TODO: Deprecate.
     def get_diagonal_blocks(self, variables=None, constraints=None):
         """
         Returns the diagonal blocks in a block triangularization of the
