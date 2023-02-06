@@ -498,6 +498,47 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
+        partition = igraph.block_triangularize(variables, constraints)
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
+        N = 5
+        model = make_gas_expansion_model(N)
+        model.obj = pyo.Objective(expr=0)
+        nlp = PyomoNLP(model)
+        igraph = IncidenceGraphInterface(nlp)
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
         var_block_map, con_block_map = igraph.map_nodes_to_blocks(
             variables, constraints
         )
@@ -600,6 +641,49 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
+        partition = igraph.block_triangularize(variables, constraints)
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
+        """
+        This tests the maps from variables and constraints to their diagonal
+        blocks returned by map_nodes_to_blocks
+        """
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface(model)
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
         var_block_map, con_block_map = igraph.map_nodes_to_blocks(
             variables, constraints
         )
@@ -623,8 +707,59 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
                 self.assertEqual(con_block_map[model.ebal[i]], i)
 
     def test_triangularize_submatrix(self):
-        # This test exercises the extraction of a somewhat nontrivial
+        # This test exercises triangularization of a somewhat nontrivial
         # submatrix from a cached incidence matrix.
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface(model)
+
+        # These are the variables and constraints of a square,
+        # nonsingular subsystem
+        variables = []
+        half = N//2
+        variables.extend(model.P[i] for i in model.streams if i >= half)
+        variables.extend(model.T[i] for i in model.streams if i > half)
+        variables.extend(model.rho[i] for i in model.streams if i > half)
+        variables.extend(model.F[i] for i in model.streams if i > half)
+
+        constraints = []
+        constraints.extend(model.ideal_gas[i] for i in model.streams
+                if i >= half)
+        constraints.extend(model.expansion[i] for i in model.streams
+                if i > half)
+        constraints.extend(model.mbal[i] for i in model.streams
+                if i > half)
+        constraints.extend(model.ebal[i] for i in model.streams
+                if i > half)
+
+        partition = igraph.block_triangularize(
+            variables, constraints
+        )
+        self.assertEqual(len(partition), (N-half)+1)
+
+        for i in model.streams:
+            idx = i - half
+            variables = ComponentSet([var for var, _ in partition[idx]])
+            constraints = ComponentSet([con for _, con in partition[idx]])
+            if i == half:
+                self.assertEqual(variables, ComponentSet([model.P[half]]))
+            elif i > half:
+                pred_var = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_con = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(variables, pred_var)
+                self.assertEqual(constraints, pred_con)
+
+    def test_maps_from_triangularization_submatrix(self):
+        # This test exercises the var/con-block-maps obtained from
+        # triangularization of a somewhat nontrivial submatrix from a cached
+        # incidence matrix.
         N = 5
         model = make_gas_expansion_model(N)
         igraph = IncidenceGraphInterface(model)
@@ -776,6 +911,45 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         self.assertIs(matching[model.ideal_gas[0]], model.P[0])
 
     def test_triangularize(self):
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface()
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        partition = igraph.block_triangularize(variables, constraints)
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
         N = 5
         model = make_gas_expansion_model(N)
         igraph = IncidenceGraphInterface()

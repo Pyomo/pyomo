@@ -189,6 +189,8 @@ def block_triangularize(matrix, matching=None):
     row_nodes = list(range(M))
     sccs = get_scc_of_projection(graph, row_nodes, matching=matching)
     rc_partition = [[(i, j-M) for i, j in scc] for scc in sccs]
+    # Is this the right return value? I think I usually want one list of rows,
+    # and one list of columns, not a tuple of (row, column).
     return rc_partition
 
 
