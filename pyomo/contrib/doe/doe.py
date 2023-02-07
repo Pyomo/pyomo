@@ -37,8 +37,10 @@ import pickle
 from itertools import permutations, product
 import logging
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
-from pyomo.contrib.doe.scenario import Scenario_generator
-from pyomo.contrib.doe.result import FisherResults, GridSearchResult
+#from pyomo.contrib.doe.scenario import Scenario_generator
+#from pyomo.contrib.doe.result import FisherResults, GridSearchResult
+from scenario import Scenario_generator
+from result import FisherResults, GridSearchResult
 
 class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_object, create_model, solver=None,
@@ -87,9 +89,10 @@ class DesignOfExperiments:
 
         # create the measurement information object
         self.measure = measurement_object
-        self.flatten_measure_name = self.measure.flatten_measure_name
-        self.flatten_variance = self.measure.flatten_variance
-        self.flatten_measure_timeset = self.measure.flatten_measure_timeset
+        self.measure_name = self.measure.measurement_name
+        #self.flatten_measure_name = self.measure.flatten_measure_name
+        #self.flatten_variance = self.measure.flatten_variance
+        #self.flatten_measure_timeset = self.measure.flatten_measure_timeset
 
         # check if user-defined solver is given
         if solver:
@@ -396,12 +399,6 @@ class DesignOfExperiments:
             raise ValueError(self.mode+' is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
 
     def _sequential_finite(self, read_output, extract_single_model, store_output):
-        time00 = time.time()
-
-        # if using sequential model
-        # call generator function to get scenario dictionary
-        scena_gen = Scenario_generator(self.param, formula=self.formula, step=self.step)
-        scena_gen.generate_sequential_para()
 
         # if measurements are provided
         if read_output:
@@ -412,66 +409,88 @@ class DesignOfExperiments:
 
         # if measurements are not provided
         else:
+            scena_object = Scenario_generator(self.param, formula=self.formula, step=self.step)
+            scena_gen = scena_object.simultaneous_scenario()
+            print(scena_gen)
+            self.scenario_list = scena_gen["scenario"]
+            self.scenario_num = scena_gen["scena_num"]
             # dict for storing model outputs
             output_record = {}
 
-            # dict for storing Jacobian
-            models = []
-            time_allbuild = []
-            time_allsolve = []
-            # loop over each scenario
-            for no_s in (scena_gen.scena_keys):
+            mod = pyo.ConcreteModel()
 
-                scenario_iter = scena_gen.next_sequential_scenario(no_s)
-                # create the model
-                time0_build = time.time()
-                mod = self.create_model(scenario_iter, args=self.args)
-                time1_build = time.time()
-                time_allbuild.append(time1_build-time0_build)
+            mod.scena = pyo.Set(initialize=list(range(len(self.scenario_list))))
 
-                # discretize if needed
-                if self.discretize_model:
-                    mod = self.discretize_model(mod)
+            # Allow user to self-define complex design variables
+            #mod.t0 = pyo.Set(initialize=[0])
+            #mod.t_con = pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
+            #mod.CA0 = pyo.Var(mod.t0, bounds=[1,5], within=pyo.NonNegativeReals)
+            #mod.T = pyo.Var(mod.t_con, bounds=[300, 700], within=pyo.NonNegativeReals)
 
-                # solve model
-                time0_solve = time.time()
-                square_result = self._solve_doe(mod, fix=True)
-                time1_solve = time.time()
-                time_allsolve.append(time1_solve-time0_solve)
-                models.append(mod)
+            mod.add_component('t0', pyo.Set(initialize=[0]))
+            mod.add_component('t_con', pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]))
+            mod.add_component('CA0', pyo.Var(mod.t0, bounds=[1,5], within=pyo.NonNegativeReals))
+            mod.add_component('T', pyo.Var(mod.t_con, bounds=[300, 700], within=pyo.NonNegativeReals))
 
-                if extract_single_model:
-                    mod_name = store_output + str(no_s) + '.csv'
-                    dataframe = extract_single_model(mod, square_result)
-                    dataframe.to_csv(mod_name)
+            def block_build(b,s):
+                self.create_model(m=b)
+                
+                for par in self.param:
+                    par_strname = eval('b.'+str(par))
+                    par_strname.fix(scena_gen["scenario"][s][par])
 
+            mod.lsb = pyo.Block(mod.scena, rule=block_build)
+
+            # discretize the model        
+            if self.discretize_model:
+                mod = self.discretize_model(mod)
+
+            # force all design variables in blocks be the same as global design variables
+            def fix_design1(m,s):
+                return m.lsb[s].CA0[0]  == m.CA0[0]
+            
+            def fix_design2(m,s,t):
+                return m.lsb[s].T[t] == m.T[t]
+            
+            mod.fix_con1 = pyo.Constraint(mod.scena, rule=fix_design1)
+            mod.fix_con2 = pyo.Constraint(mod.scena, mod.t_con, rule=fix_design2)
+
+            # solve model
+            square_result = self._solve_doe(mod, fix=True)
+
+            if extract_single_model:
+                mod_name = store_output + '.csv'
+                dataframe = extract_single_model(mod, square_result)
+                dataframe.to_csv(mod_name)
+
+            # loop over blocks for results
+            for s in range(len(self.scenario_list)):
                 # loop over measurement item and time to store model measurements
                 output_iter = []
 
-                for j in self.flatten_measure_name:
-                    for t in self.flatten_measure_timeset[j]:
-                        measure_string_name = self.measure.SP_measure_name(j,t,mode='sequential_finite')
-                        C_value = pyo.value(eval(measure_string_name))
-                        output_iter.append(C_value)
+                for r in self.measure_name:
+                    cuid = pyo.ComponentUID(r)
+                    var_up = cuid.find_component_on(mod.lsb[s])
+                    output_iter.append(pyo.value(var_up))
 
-                output_record[no_s] = output_iter
+                output_record[s] = output_iter
 
-            output_record['design'] = self.design_values
-            if store_output:
-                f = open(store_output, 'wb')
-                pickle.dump(output_record, f)
-                f.close()
-
+                output_record['design'] = self.design_values
+                
+                if store_output:
+                    f = open(store_output, 'wb')
+                    pickle.dump(output_record, f)
+                    f.close()
             # calculate jacobian
             jac = self._finite_calculation(output_record, scena_gen)
 
-            time11 = time.time()
-            self.logger.info('Build time with sequential_finite mode [s]:  %s', sum(time_allbuild))
-            self.logger.info('Solve time with sequential_finite mode [s]:  %s', sum(time_allsolve))
-            self.logger.info('Total wall clock time [s]:  %s', time11-time00)
-
             # return all models formed
-            self.models = models
+            self.model = mod
+
+            # Store the Jacobian information for access by users, not necessarily call result object to achieve jacobian information
+            # It is the overall set of Jacobian information, 
+            # while in the result object the jacobian can be cut to achieve part of the FIM information
+            self.jac = jac
 
         # Assemble and analyze results
         if self.specified_prior is None:
@@ -482,170 +501,7 @@ class DesignOfExperiments:
         FIM_analysis = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac,
                                     prior_FIM=prior_in_use, store_FIM=self.FIM_store_name, scale_constant_value=self.scale_constant_value)
 
-        # Store the Jacobian information for access by users, not necessarily call result object to achieve jacobian information
-        # It is the overall set of Jacobian information, 
-        # while in the result object the jacobian can be cut to achieve part of the FIM information
-        self.jac = jac
-
-        if read_output is None:
-            FIM_analysis.build_time = sum(time_allbuild)
-            FIM_analysis.solve_time = sum(time_allsolve)
-
-        return FIM_analysis
-
-    def _sequential_sipopt(self,read_output):
-        time00 = time.time()
-        # create scenario class for a base case
-        scena_gen = Scenario_generator(self.param, formula=None, step=self.step)
-        scenario_all = scena_gen.simultaneous_scenario()
-
-        # sipopt only uses backward difference scheme
-        # store measurements for scenarios
-        all_perturb_measure = []
-        all_base_measure = []
-        # store jacobian info
-        jac={}
-
-        # if measurements are provided
-        if read_output:
-            with open(read_output, 'rb') as f:
-                output_record = pickle.load(f)
-                f.close()
-            jac = self._finite_calculation(output_record, scena_gen)
-
-        else:
-            # time building time and solving time store list
-            time_allbuild = []
-            time_allsolve = []
-            # loop over parameters
-            for pa in range(len(list(self.param.keys()))):
-                perturb_mea = []
-                base_mea = []
-
-                # create model
-                time0_build = time.time()
-                mod = self.create_model(scenario_all, self.args)
-                time1_build = time.time()
-                time_allbuild.append(time1_build - time0_build)
-
-                # discretize if needed
-                if self.discretize_model:
-                    mod = self.discretize_model(mod)
-
-                # For sIPOPT, fix model DOF
-                if self.mode =='sequential_sipopt':
-                    mod = self._fix_design(mod, self.design_values, fix_opt=True)
-
-                # add sIPOPT perturbation parameters
-                mod = self._add_parameter(mod, perturb=pa)
-
-                # solve the square problem with the original parameters for k_aug mode, since k_aug does not calculate these
-                if self.mode == 'sequential_kaug':
-                    self._solve_doe(mod, fix=True)
-
-                # parameter name lists for sipopt
-                list_original = []
-                list_perturb = []
-                for ele in list(self.param.keys()):
-                    # [0] is added as the scenario name
-                    list_original.append(getattr(mod, ele)[0])
-                for elem in self.perturb_names:
-                    list_perturb.append(getattr(mod, elem)[0])
-
-                # solve model
-                if self.mode =='sequential_sipopt':
-                    time0_solve = time.time()
-                    m_sipopt = sensitivity_calculation('sipopt', mod, list_original, list_perturb, tee=self.tee_opt, solver_options='ma57')
-                else:
-                    time0_solve = time.time()
-                    m_sipopt = sensitivity_calculation('k_aug', mod, list_original, list_perturb, tee=self.tee_opt, solver_options='ma57')
-
-                time1_solve = time.time()
-                time_allsolve.append(time1_solve - time0_solve)
-
-                # extract sipopt result
-                for j in self.flatten_measure_name:
-                    # check if this variable needs split name
-                    if self.measure.ind_string in j:
-                        measure_name = j.split(self.measure.ind_string)[0]
-                        measure_index = j.split(self.measure.ind_string)[1]
-                        # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
-                        if type(measure_index) is str:
-                            measure_index_doublequotes = '"' + measure_index + '"'
-                        for t in self.flatten_measure_timeset[j]:
-                            measure_var = getattr(m_sipopt, measure_name)
-                            # check if this variable is fixed
-                            if (measure_var[0,measure_index,t].fixed == True):
-                                perturb_value = value(measure_var[0,measure_index,t])
-                            else:
-                                # if it is not fixed, record its perturbed value
-                                if self.mode =='sequential_sipopt':
-                                    perturb_value = getattr(m_sipopt.sens_sol_state_1)[getattr(m_sipopt, measure_name)[0, measure_index_doublequotes,t]]
-                                else:
-                                    perturb_value = getattr(m_sipopt, measure_name)[0, measure_index_doublequotes, t]
-                            # base case values
-                            if self.mode == 'sequential_sipopt':
-                                base_value = getattr(m_sipopt, measure_name)[0, measure_index_doublequotes, t]
-                            else:
-                                base_value = getattr(mod, measure_name)[0, measure_index_doublequotes, t]
-                            perturb_mea.append(perturb_value)
-                            base_mea.append(base_value)
-
-                    else:
-                        # fetch the measurement variable
-                        measure_var = getattr(m_sipopt, j)
-                        for t in self.flatten_measure_timeset[j]:
-                            if (measure_var[0,t].fixed == True):
-                                perturb_value = value(measure_var[0, t])
-                            else:
-                                # if it is not fixed, record its perturbed value
-                                if self.mode == 'sequential_sipopt':
-                                    perturb_value = getattr(m_sipopt.sens_sol_state_1)[getattr(m_sipopt, j)[0,t]]
-                                else:
-                                    perturb_value = getattr(m_sipopt, j)[0,t]
-
-                            # base case values
-                            if self.mode == 'sequential_sipopt':
-                                base_value = pyo.value(getattr(m_sipopt, j)[0,t])
-                            else:
-                                base_value = pyo.value(getattr(mod,j)[0,t])
-
-                            perturb_mea.append(perturb_value)
-                            base_mea.append(base_value)
-
-                # store extracted measurements
-                all_perturb_measure.append(perturb_mea)
-                all_base_measure.append(base_mea)
-
-            # After collecting outputs from all scenarios, calculate sensitivity
-            for count, para in enumerate(list(self.param.keys())):
-                list_jac = []
-                for i in range(len(all_perturb_measure[0])):
-                    sensi = -(all_perturb_measure[count][i] - all_base_measure[count][i]) / self.step * self.scale_constant_value
-                    if not self.scale_nominal_param_value:
-                        sensi /= self.param[para]
-                    list_jac.append(sensi)
-                # get Jacobian dict, keys are parameter name, values are sensitivity info
-                jac[para] = list_jac
-
-        # check if another prior experiment FIM is provided other than the user-specified one
-        if specified_prior is None:
-            prior_in_use = self.prior_FIM
-        else:
-            prior_in_use = specified_prior
-
-        # Assemble and analyze results
-        FIM_analysis = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac,
-                                    prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
-
-        time11 = time.time()
-        self.logger.info('Build time with sequential_sipopt or kaug mode [s]:  %s', sum(time_allbuild))
-        self.logger.info('Solve time with sequential_sipopt or kaug mode [s]:  %s', sum(time_allsolve))
-        self.logger.info('Total wall clock time [s]:  %s', time11-time00)
-
-        self.jac = jac
-        FIM_analysis.build_time = sum(time_allbuild)
-        FIM_analysis.solve_time = sum(time_allsolve)
+        
 
         return FIM_analysis
 
@@ -793,14 +649,14 @@ class DesignOfExperiments:
         # After collecting outputs from all scenarios, calculate sensitivity
         for para in list(self.param.keys()):
             # extract involved scenario No. for each parameter from scenario class
-            involved_s = scena_gen.scenario_para[para]
+            involved_s = scena_gen['scena_num'][para]
 
             # each parameter has two involved scenarios
-            s1 = involved_s[0]
-            s2 = involved_s[1]
+            s1 = involved_s[0] # upper perturbation
+            s2 = involved_s[1] # loweer perturbation
             list_jac = []
             for i in range(len(output_record[s1])):
-                sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[para] * self.scale_constant_value
+                sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen['eps-abs'][para] * self.scale_constant_value
                 if self.scale_nominal_param_value:
                     sensi *= self.param[para]
                 list_jac.append(sensi)
