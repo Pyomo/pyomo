@@ -16,6 +16,7 @@ from pyomo.opt import *
 import random
 import copy
 
+
 @plugin_factory
 class MySolver(object):
 
@@ -42,13 +43,13 @@ class MySolver(object):
         soln.value = val
         soln.status = SolutionStatus.feasible
         for j in sequence(n):
-            soln.variable[instance.y[j].name] = {"Value" : sol[j-1], "Id" : j}
+            soln.variable[instance.y[j].name] = {"Value": sol[j - 1], "Id": j}
         # Return results
         return results
 
     # Perform a random search
     def _random(self, instance):
-        sol = [0]*instance.N.value
+        sol = [0] * instance.N.value
         for j in range(instance.P.value):
             sol[j] = 1
         # Generate 100 random solutions, and keep the best
@@ -57,12 +58,16 @@ class MySolver(object):
         for kk in range(100):
             random.shuffle(sol)
             # Compute value
-            val=0.0
+            val = 0.0
             for j in sequence(instance.M.value):
-                val += min([instance.d[i,j].value
-                            for i in sequence(instance.N.value)
-                            if sol[i-1] == 1])
+                val += min(
+                    [
+                        instance.d[i, j].value
+                        for i in sequence(instance.N.value)
+                        if sol[i - 1] == 1
+                    ]
+                )
             if best is None or val < best:
-                best=val
-                best_sol=copy.copy(sol)
+                best = val
+                best_sol = copy.copy(sol)
         return [best, best_sol]

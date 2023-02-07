@@ -16,7 +16,7 @@ assert pmo.value(p**2) == 16
 assert pmo.value(p - 1) == 3
 
 v = pmo.variable()
-c = pmo.constraint((p-1, v, p+1))
+c = pmo.constraint((p - 1, v, p + 1))
 assert pmo.value(c.lb) == 3
 assert pmo.value(c.ub) == 5
 

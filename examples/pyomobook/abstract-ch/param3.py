@@ -14,12 +14,12 @@ instance = model.create_instance('param3.dat')
 print('B')
 keys = instance.B.keys()
 for key in sorted(keys):
-    print(str(key)+" "+str(pyo.value(instance.B[key])))
+    print(str(key) + " " + str(pyo.value(instance.B[key])))
 print('C')
 keys = instance.C.keys()
 for key in sorted(keys):
-    print(str(key)+" "+str(pyo.value(instance.C[key])))
+    print(str(key) + " " + str(pyo.value(instance.C[key])))
 print('D')
 keys = instance.D.keys()
 for key in sorted(keys):
-    print(str(key)+" "+str(pyo.value(instance.D[key])))
+    print(str(key) + " " + str(pyo.value(instance.D[key])))
