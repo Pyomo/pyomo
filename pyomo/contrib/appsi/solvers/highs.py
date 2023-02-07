@@ -165,11 +165,13 @@ class Highs(PersistentBase, PersistentSolver):
     @property
     def highs_options(self):
         """
+        A dictionary mapping solver options to values for those options. These
+        are solver specific.
+
         Returns
         -------
-        highs_options: dict
-            A dictionary mapping solver options to values for those options. These
-            are solver specific.
+        dict
+           A dictionary mapping solver options to values for those options
         """
         return self._solver_options
 
