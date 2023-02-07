@@ -532,14 +532,14 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # we of course get tremendous amounts of garbage, but we make sure that
         # what should be here is:
         self.check_hull_projected_constraints(m, constraints, [23, 19, 8, 10,
-                                                               55, 67, 36, 3, 4,
+                                                               54, 67, 35, 3, 4,
                                                                1, 2])
         # and when we filter, it's still there.
         constraints = filtered._pyomo_contrib_fme_transformation.\
                       projected_constraints
         self.check_hull_projected_constraints(filtered, constraints, [10, 8, 5,
-                                                                      6, 16, 19,
-                                                                      12, 3, 4,
+                                                                      6, 15, 19,
+                                                                      11, 3, 4,
                                                                       1, 2])
     
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
@@ -556,8 +556,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # They should be the same as the above, but now these are *all* the
         # constraints
-        self.check_hull_projected_constraints(m, constraints, [10, 8, 5, 6, 16,
-                                                               19, 12, 3, 4, 1,
+        self.check_hull_projected_constraints(m, constraints, [10, 8, 5, 6, 15,
+                                                               19, 11, 3, 4, 1,
                                                                2])
 
         # and check that we didn't change the model

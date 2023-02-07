@@ -300,7 +300,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             GDP_Error,
             r"Big-M \([^)]*\) for constraint d\[0\].c is not of "
             r"length two. Expected either a single value or "
-            r"tuple or list of length two for M.*",
+            r"tuple or list of length two specifying M values for the lower "
+            "and upper sides of the constraint respectively.*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM=(-18, 19.2, 3))
@@ -327,7 +328,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             GDP_Error,
             r"Big-M \[[^\]]*\] for constraint d\[0\].c is not of "
             r"length two. Expected either a single value or "
-            r"tuple or list of length two for M.*",
+            r"tuple or list of length two*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM=[-18, 19.2, 3])
@@ -393,7 +394,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             GDP_Error,
             r"Big-M \(-20, 19, 32\) for constraint d\[0\].c is not of "
             r"length two. Expected either a single value or "
-            r"tuple or list of length two for M.*",
+            r"tuple or list of length two*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM={None: M})
@@ -405,7 +406,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             GDP_Error,
             r"Big-M \[-20, 19, 34\] for constraint d\[0\].c is not of "
             r"length two. Expected either a single value or "
-            r"tuple or list of length two for M.*",
+            r"tuple or list of length two*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM={None: M})
