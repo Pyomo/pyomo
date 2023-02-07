@@ -8,6 +8,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+"""Utility functions and a utility class for interfacing Pyomo components with
+useful graph algorithms.
+
+"""
 
 import enum
 import textwrap
@@ -73,8 +77,8 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     with `bipartite=0` while variable nodes are tagged with `bipartite=1`,
     although these attributes are not used.
 
-    Arguments:
-    ----------
+    Parameters
+    ---------
     variables: List of Pyomo VarData objects
         Variables that will appear in incidence graph
     constraints: List of Pyomo ConstraintData objects
@@ -82,9 +86,9 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     include_fixed: Bool
         Flag for whether fixed variable should be included in the incidence
 
-    Returns:
-    --------
-    NetworkX Graph
+    Returns
+    -------
+    ``networkx.Graph``
 
     """
     _check_unindexed(variables + constraints)
@@ -123,7 +127,7 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
 
     Returns
     -------
-    subgraph: NetworkX Graph
+    subgraph: ``networkx.Graph``
         Graph containing integer nodes corresponding to positions in the
         provided lists, with edges where corresponding nodes are adjacent
         in the original graph.
@@ -167,10 +171,9 @@ def _generate_variables_in_constraints(constraints, include_fixed=False):
 
 
 def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
-    """
-    This function gets the incidence matrix of Pyomo constraints and variables.
+    """Return the incidence matrix of Pyomo constraints and variables
 
-    Arguments
+    Parameters
     ---------
     variables: List of Pyomo VarData objects
     constraints: List of Pyomo ConstraintData objects
@@ -180,9 +183,10 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
 
     Returns
     -------
-    A scipy.sparse coo matrix. Rows are indices into the user-provided list of
-    constraints, columns are indices into the user-provided list of variables.
-    Entries are 1.0.
+    ``scipy.sparse.coo_matrix``
+        COO matrix. Rows are indices into the user-provided list of constraints,
+        columns are indices into the user-provided list of variables.
+        Entries are 1.0.
 
     """
     _check_unindexed(variables + constraints)
@@ -204,9 +208,27 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
 
 
 def get_numeric_incidence_matrix(variables, constraints):
-    """
-    This function gets the numeric incidence matrix (Jacobian) of Pyomo
-    constraints with respect to variables.
+    """Return the "numeric incidence matrix" (Jacobian) of Pyomo variables
+    and constraints.
+
+    Each matrix value is the derivative of a constraint body with respect
+    to a variable. Rows correspond to constraints and columns correspond to
+    variables. Entries are included even if the value of the derivative is
+    zero.
+    Only active constraints and unfixed variables that participate in these
+    constraints are included.
+
+    Parameters
+    ---------
+    variables: List of Pyomo VarData objects
+    constraints: List of Pyomo ConstraintData objects
+
+    Returns
+    -------
+    ``scipy.sparse.coo_matrix``
+        COO matrix. Rows are indices into the user-provided list of constraints,
+        columns are indices into the user-provided list of variables.
+
     """
     # NOTE: There are several ways to get a numeric incidence matrix
     # from a Pyomo model. Here we get the numeric incidence matrix by
@@ -220,6 +242,29 @@ def get_numeric_incidence_matrix(variables, constraints):
 
 
 class IncidenceGraphInterface(object):
+    """An interface for applying graph algorithms to Pyomo variables and
+    constraints
+
+    Parameters
+    ----------
+    model: Pyomo BlockData or PyNumero PyomoNLP, default ``None``
+        An object from which an incidence graph will be constructed.
+    active: Bool, default ``True``
+        Whether only active constraints should be included in the incidence
+        graph. Cannot be set to ``False`` if the ``model`` is provided as
+        a PyomoNLP.
+    include_fixed: Bool, default ``False``
+        Whether to include fixed variables in the incidence graph. Cannot
+        be set to ``False`` if ``model`` is a PyomoNLP.
+    include_inequality: Bool, default ``True``
+        Whether to include inequality constraints (those whose expressions
+        are not instances of ``EqualityExpression``) in the incidence graph.
+        If a PyomoNLP is provided, setting to ``False`` uses the
+        ``evaluate_jacobian_eq`` method instead of ``evaluate_jacobian``
+        rather than checking constraint expression types.
+
+
+    """
 
     def __init__(
         self,
@@ -228,6 +273,8 @@ class IncidenceGraphInterface(object):
         include_fixed=False,
         include_inequality=True,
     ):
+        """Construct an IncidenceGraphInterface object
+        """
         # If the user gives us a model or an NLP, we assume they want us
         # to cache the incidence graph for fast analysis later on.
         # WARNING: This cache will become invalid if the user alters their
@@ -303,18 +350,25 @@ class IncidenceGraphInterface(object):
 
     @property
     def variables(self):
+        """The variables participating in the incidence graph
+        """
         if self._incidence_graph is None:
             raise RuntimeError("Cannot get variables when nothing is cached")
         return self._variables
 
     @property
     def constraints(self):
+        """The constraints participating in the incidence graph
+        """
         if self._incidence_graph is None:
             raise RuntimeError("Cannot get constraints when nothing is cached")
         return self._constraints
 
     @property
     def n_edges(self):
+        """The number of edges in the incidence graph, or the number of
+        structural nonzeros in the incidence matrix
+        """
         # The number of structural nonzeros in the incidence matrix
         if self._incidence_graph is None:
             raise RuntimeError(
@@ -356,6 +410,12 @@ class IncidenceGraphInterface(object):
 
     @property
     def incidence_matrix(self):
+        """The structural incidence matrix of variables and constraints.
+
+        Variables correspond to columns and constraints correspond to rows.
+        All matrix entries have value 1.0.
+
+        """
         if self._incidence_graph is None:
             return None
         else:
@@ -419,9 +479,15 @@ class IncidenceGraphInterface(object):
         return adj_comps
 
     def maximum_matching(self, variables=None, constraints=None):
-        """
-        Returns a maximal matching between the constraints and variables,
-        in terms of a map from constraints to variables.
+        """Return a maximum cardinality matching of variables and constraints.
+
+        The matching maps constraints to their matched variables.
+
+        Returns
+        -------
+        ``ComponentMap``
+            A map from constraints to their matched variables.
+
         """
         variables, constraints = self._validate_input(variables, constraints)
         graph = self._extract_subgraph(variables, constraints)
@@ -435,10 +501,19 @@ class IncidenceGraphInterface(object):
         )
 
     def get_connected_components(self, variables=None, constraints=None):
-        """
-        Return lists of lists of variables and constraints that appear in
-        different connected components of the bipartite graph of variables
-        and constraints.
+        """Partition variables and constraints into weakly connected components
+        of the incidence graph
+
+        These correspond to diagonal blocks in a block diagonalization of the
+        incidence matrix.
+
+        Returns
+        -------
+        var_blocks: list of lists of variables
+            Partition of variables into connected components
+        con_blocks: list of lists of constraints
+            Partition of constraints into corresponding connected components
+
         """
         variables, constraints = self._validate_input(variables, constraints)
         graph = self._extract_subgraph(variables, constraints)
@@ -461,11 +536,18 @@ class IncidenceGraphInterface(object):
     # Should this be deprecated? *Probably* not. I have too much code that
     # relies on this functionality, however poorly thought out.
     def map_nodes_to_blocks(self, variables=None, constraints=None):
-        """
-        Returns two ComponentMaps. A map from variables to their blocks
-        in a block triangularization of the incidence matrix, and a
-        map from constraints to their blocks in a block triangularization
-        of the incidence matrix.
+        """Map variables and constraints to their diagonal blocks in a block
+        lower triangular permutation
+
+        Returns
+        -------
+        var_block_map: ``ComponentMap``
+            Map from variables to their diagonal blocks in a block
+            triangularization
+        con_block_map: ``ComponentMap``
+            Map from constraints to their diagonal blocks in a block
+            triangularization
+
         """
         variables, constraints = self._validate_input(variables, constraints)
         graph = self._extract_subgraph(variables, constraints)
@@ -499,9 +581,9 @@ class IncidenceGraphInterface(object):
         Returns
         -------
         List of lists
-            The outer list contains strongly connected components and is
-            ordered topologically. The inner lists contain tuples of matched
-            variables and constraints.
+            List containing subsets, in the form of inner lists, of
+            variable-constraint tuples. Subsets are strongly connected
+            components, ordered topologically.
 
         """
         variables, constraints = self._validate_input(variables, constraints)
@@ -520,18 +602,6 @@ class IncidenceGraphInterface(object):
     # This method has been superceded by block_triangularize.
     # TODO: Deprecate.
     def get_diagonal_blocks(self, variables=None, constraints=None):
-        """
-        Returns the diagonal blocks in a block triangularization of the
-        incidence matrix of the provided constraints with respect to the
-        provided variables.
-
-        Returns
-        -------
-        tuple of lists
-        The first list contains lists that partition the variables,
-        the second lists contains lists that partition the constraints.
-
-        """
         variables, constraints = self._validate_input(variables, constraints)
         graph = self._extract_subgraph(variables, constraints)
         M = len(constraints)
@@ -542,17 +612,37 @@ class IncidenceGraphInterface(object):
         return block_vars, block_cons
 
     def dulmage_mendelsohn(self, variables=None, constraints=None):
-        """
-        Returns the Dulmage-Mendelsohn partition of the incidence graph
-        of the provided variables and constraints.
+        """Partition variables and constraints according to the Dulmage-
+        Mendelsohn characterization of the incidence graph
 
-        Returns:
-        --------
-        ColPartition namedtuple and RowPartition namedtuple.
-        The ColPartition is returned first to match the order of variables
-        and constraints in the method arguments.
-        These partition variables (columns) and constraints (rows)
-        into overconstrained, underconstrained, unmatched, and square.
+        Variables are partitioned into the following subsets:
+
+        - **unmatched** - Variables not matched in a particular maximum
+          cardinality matching
+        - **underconstrained** - Variables that *could possibly be* unmatched
+          in a maximum cardinality matching
+        - **square** - Variables in the well-constrained subsystem
+        - **overconstrained** - Variables matched with constraints that can
+          possibly be unmatched
+
+        Constraints are partitioned into the following subsets:
+
+        - **underconstrained** - Constraints matched with variables that can
+          possibly be unmatched
+        - **square** - Constraints in the well-constrained subsystem
+        - **overconstrained** - Constraints that *can possibly be* unmatched
+          with a maximum cardinality matching
+        - **unmatched** - Constraints that were not matched in a particular
+          maximum cardinality matching
+
+        Returns
+        -------
+        var_partition: ``ColPartition`` named tuple
+            Partitions variables into square, underconstrained, overconstrained,
+            and unmatched.
+        con_partition: ``RowPartition`` named tuple
+            Partitions constraints into square, underconstrained,
+            overconstrained, and unmatched.
 
         """
         variables, constraints = self._validate_input(variables, constraints)
@@ -573,22 +663,21 @@ class IncidenceGraphInterface(object):
         return var_partition, con_partition
 
     def remove_nodes(self, nodes, constraints=None):
-        """
-        Removes the specified variables and constraints (columns and
-        rows) from the cached incidence matrix. This is a "projection"
-        of the variable and constraint vectors, rather than something
-        like a vertex elimination.
-        For the puropse of this method, there is no need to distinguish
-        between variables and constraints. However, we provide the
-        "constraints" argument so a call signature similar to other methods
-        in this class is still valid.
+        """Removes the specified variables and constraints (columns and
+        rows) from the cached incidence matrix.
 
-        Arguments:
+        This is a "projection" of the variable and constraint vectors, rather
+        than something like a vertex elimination. For the puropse of this
+        method, there is no need to distinguish between variables and
+        constraints. However, we provide the "constraints" argument so a call
+        signature similar to other methods in this class is still valid.
+
+        Parameters
         ----------
-        nodes: List
+        nodes: list
             VarData or ConData objects whose columns or rows will be
             removed from the incidence matrix.
-        constraints: List
+        constraints: list
             VarData or ConData objects whose columns or rows will be
             removed from the incidence matrix.
 

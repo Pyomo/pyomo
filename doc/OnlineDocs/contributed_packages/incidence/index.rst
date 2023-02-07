@@ -10,6 +10,7 @@ This documentation contains the following resources:
    :maxdepth: 1
 
    overview.rst
+   api.rst
 
 If you are wondering what Incidence Analysis is and would like to learn more,
 please see the overview. If you already know what Incidence Analysis is and
