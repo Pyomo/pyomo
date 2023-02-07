@@ -801,7 +801,11 @@ def coefficient_matching(model, constraint, uncertain_params, config):
         if val.constant is not None:
             if type(val.constant) not in native_types:
                 temp_expr = replace_expressions(val.constant, substitution_map=var_to_param_substitution_map_reverse)
-                if temp_expr.is_potentially_variable():
+                # We will use generate_standard_repn to generate a
+                # simplified expression (in particular, to remove any
+                # "0*..." terms)
+                temp_expr = generate_standard_repn(temp_expr).to_expression()
+                if temp_expr.__class__ not in native_types:
                     model.coefficient_matching_constraints.add(expr=temp_expr == 0)
                 elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
                     pass
@@ -817,7 +821,11 @@ def coefficient_matching(model, constraint, uncertain_params, config):
             for coeff in val.linear_coefs:
                 if type(coeff) not in native_types:
                     temp_expr = replace_expressions(coeff, substitution_map=var_to_param_substitution_map_reverse)
-                    if temp_expr.is_potentially_variable():
+                    # We will use generate_standard_repn to generate a
+                    # simplified expression (in particular, to remove any
+                    # "0*..." terms)
+                    temp_expr = generate_standard_repn(temp_expr).to_expression()
+                    if temp_expr.__class__ not in native_types:
                         model.coefficient_matching_constraints.add(expr=temp_expr == 0)
                     elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
                         pass
@@ -833,7 +841,11 @@ def coefficient_matching(model, constraint, uncertain_params, config):
             for coeff in val.quadratic_coefs:
                 if type(coeff) not in native_types:
                     temp_expr = replace_expressions(coeff, substitution_map=var_to_param_substitution_map_reverse)
-                    if temp_expr.is_potentially_variable():
+                    # We will use generate_standard_repn to generate a
+                    # simplified expression (in particular, to remove any
+                    # "0*..." terms)
+                    temp_expr = generate_standard_repn(temp_expr).to_expression()
+                    if temp_expr.__class__ not in native_types:
                         model.coefficient_matching_constraints.add(expr=temp_expr == 0)
                     elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
                         pass
