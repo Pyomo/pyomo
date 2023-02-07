@@ -13,10 +13,12 @@
 #
 
 import sys
+
 try:
     import pip
+
     pip_version = pip.__version__.split('.')
-    for i,s in enumerate(pip_version):
+    for i, s in enumerate(pip_version):
         try:
             pip_version[i] = int(s)
         except:
@@ -29,7 +31,7 @@ except ImportError:
 
 print("Installing Pyomo ...")
 
-cmd = ['install',]
+cmd = ['install']
 # Disable the PIP download cache
 if pip_version[0] >= 6:
     cmd.append('--no-cache-dir')
@@ -37,7 +39,7 @@ else:
     cmd.append('--download-cache')
     cmd.append('')
 # Allow the user to provide extra options
-cmd.extend( sys.argv[1:] )
+cmd.extend(sys.argv[1:])
 # install Pyomo
 cmd.append('Pyomo')
 
