@@ -36,20 +36,27 @@ from pyomo.common.dependencies import (
 class Measurements:
     def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
         """
-        This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
-        This includes the functionality to specify indices for these measurement variables. 
-        For example, with a partial differential algebraic equation model, 
-        these measurement index sets can specify which spatial and temporal coordinates each measurement is available. 
-        Moreover, this class supports defining the covariance matrix for all measurements.
+        This class stores information on which algebraic and differential 
+        variables in the Pyomo model are considered measurements. 
+
+        This includes the functionality to specify indices for these
+        measurement variables.  For example, with a partial differential
+        algebraic equation model, these measurement index sets can
+        specify which spatial and temporal coordinates each measurement
+        is available.  Moreover, this class supports defining the
+        covariance matrix for all measurements.
 
         Parameters
         ----------
         measurement_index_time:
             a ``dict``, keys are measurement variable names, 
-                if there are extra index, for e.g., Var[scenario, extra_index, time]:
-                    values are a dictionary, keys are its extra index, values are its measuring time points. 
-                if there are no extra index, for e.g., Var[scenario, time]:
-                    values are a list of measuring time point.
+
+            * if there are extra indices, for e.g., Var[scenario, extra_index, time]:
+              values are a dictionary, keys are its extra index, values are its 
+              measuring time points. 
+            * if there are no extra indices, for e.g., Var[scenario, time]:
+              values are a list of measuring time point.
+
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
             so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
         variance:
@@ -60,6 +67,7 @@ class Measurements:
         ind_string:
             a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
             For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
+        
         """
         self.measurement_all_info = measurement_index_time
         self.ind_string = ind_string
@@ -85,12 +93,14 @@ class Measurements:
         """
         Generate a dictionary, keys are the variable names, values are the indexes of this variable.
         For e.g., name_and_index = {'C': ['CA', 'CB', 'CC']}
+
         Parameters
-        ---------
+        ----------
         all_info: a dictionary, keys are measurement variable names,
-                values are a dictionary, keys are its extra index, values are its measuring time points
-                values are a list of measuring time point if there is no extra index for this measurement
+            values are a dictionary, keys are its extra index, values are its measuring time points
+            values are a list of measuring time point if there is no extra index for this measurement
             Note: all_info can be the self.measurement_all_info, but does not have to be it.
+        
         """
         measurement_name = list(all_info.keys())
         # a list of measurement extra indexes
@@ -108,13 +118,15 @@ class Measurements:
     def _generate_flatten_name(self, measure_name_and_index):
         """
         Generate measurement flattened names
+
         Parameters
-        ----------
+        -----------
         measure_name_and_index: a dictionary, keys are measurement names, values are lists of extra indexes
 
         Returns
-        ------
+        -------
         jac_involved_name: a list of flattened measurement names
+
         """
         flatten_names = []
         for j in measure_name_and_index.keys():
@@ -130,6 +142,7 @@ class Measurements:
     def _generate_variance(self, flatten_measure_name, variance, name_and_index):
         """
         Generate the variance dictionary
+
         Parameters
         ----------
         flatten_measure_name: flattened measurement names. For e.g., flattenning {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
@@ -141,6 +154,7 @@ class Measurements:
             If there is no extra index, it is a dict, keys are measurement variable names, values are its variance as a scalar number.
         name_and_index:
             a dictionary, keys are measurement names, values are a list of extra indexes.
+        
         """
         flatten_variance = {}
         for i in flatten_measure_name:
@@ -201,6 +215,7 @@ class Measurements:
 
     def SP_measure_name(self, j, t,scenario_all=None, p=None, mode='sequential_finite', legal_t=True):
         """Return pyomo string name for different modes
+
         Arguments
         ---------
         j: flatten measurement name
@@ -210,11 +225,12 @@ class Measurements:
         mode: mode name, can be 'simultaneous_finite' or 'sequential_finite'
         legal_t: if the time point is legal for this measurement. default is True
         
-        Return
-        ------
+        Returns
+        -------
         up_C, lo_C: two measurement pyomo string names for simultaneous mode
         legal_t: if the time point is legal for this measurement 
         string_name: one measurement pyomo string name for sequential 
+
         """
         if mode=='simultaneous_finite':
             # check extra index
@@ -252,6 +268,8 @@ class Measurements:
         """
         Check if the subset is correctly defined with right name, index and time.
 
+        Parameters
+        ----------
         subset:
             a ''dict'' where measurement name and index are involved in jacobian calculation
         throw_error:
