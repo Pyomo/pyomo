@@ -26,15 +26,15 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.common.dependencies import (
-    numpy as np, numpy_available,
-    pandas as pd, pandas_available,
-    matplotlib as plt, matplotlib_available,
-)
+#from pyomo.common.dependencies import (
+#    numpy as np, numpy_available,
+#    pandas as pd, pandas_available,
+#    matplotlib as plt, matplotlib_available,
+#)
 
 
 class Measurements:
-    def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
+    def __init__(self, self_define_res=None, measurement_index_time=None, variance=None, ind_string='_index_'):
         """
         This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
         This includes the functionality to specify indices for these measurement variables. 
@@ -61,24 +61,30 @@ class Measurements:
             a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
             For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
         """
-        self.measurement_all_info = measurement_index_time
-        self.ind_string = ind_string
-        # a list of measurement names
-        self.measurement_name = list(measurement_index_time.keys())
-        # begin flatten
-        self._name_and_index_generator(self.measurement_all_info)
-        self._generate_flatten_name(self.name_and_index)
-        self._generate_variance(self.flatten_measure_name, variance, self.name_and_index)
-        self._generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
-        self._model_measure_name()
+        if self_define_res:
+            self.measurement_name = self_define_res
+        else:
+            if not measurement_index_time:
+                raise AttributeError("If self-defined response names are not given, measurement time and indexes need to be defined.")
 
-        # generate the overall measurement time points set, including the measurement time for all measurements
-        flatten_timepoint = list(self.flatten_measure_timeset.values())
-        overall_time = []
-        for i in flatten_timepoint:
-            overall_time += i
-            timepoint_overall_set = list(set(overall_time))
-        self.timepoint_overall_set = timepoint_overall_set
+            self.measurement_all_info = measurement_index_time
+            self.ind_string = ind_string
+            # a list of measurement names
+            self.measurement_name = list(measurement_index_time.keys())
+            # begin flatten
+            self._name_and_index_generator(self.measurement_all_info)
+            self._generate_flatten_name(self.name_and_index)
+            self._generate_variance(self.flatten_measure_name, variance, self.name_and_index)
+            self._generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
+            self._model_measure_name()
+
+            # generate the overall measurement time points set, including the measurement time for all measurements
+            flatten_timepoint = list(self.flatten_measure_timeset.values())
+            overall_time = []
+            for i in flatten_timepoint:
+                overall_time += i
+                timepoint_overall_set = list(set(overall_time))
+            self.timepoint_overall_set = timepoint_overall_set
 
 
     def _name_and_index_generator(self, all_info):

@@ -252,6 +252,12 @@ class Scenario_data:
             if formula ='forward', it will return:
             scena_dict = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 
             'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
+
+            V2 added:
+            'scenario': [{'P':101, 'D':20}, {'P':99, 'D':20}, 
+            {'P':100, 'D':20.2}, {'P':100, 'D':19.8}]
+            'scena_num': {'P':[0,1], 'D':[2,3]}
+
         """
         # overall dict to return
         scenario_dict = {}
@@ -259,9 +265,27 @@ class Scenario_data:
         jac_index = {}
         # dict for parameter perturbation step size
         eps_abs = {}
+        # scenario dict for block
+        scenario = []
+        # number of scenario 
+        scena_num = {}
 
         # loop over parameter name
         for p, para in enumerate(self.para_names):
+
+            if self.formula == "central":
+                scena_num[para] = [2*p, 2*p+1]
+                scena_dict_up, scena_dict_lo = self.para_dict.copy(), self.para_dict.copy()
+                scena_dict_up[para] *= (1+self.step)
+                scena_dict_lo[para] *= (1-self.step)
+
+                scenario.append(scena_dict_up)
+                scenario.append(scena_dict_lo)
+
+            elif self.formula == "forward":
+                # TODO: add Forward formulation 
+                print("Todo")
+
             scena_p = {}
             for n in self.scena_keys:
                 scena_p[n] = self.scena[n][para]
@@ -286,5 +310,8 @@ class Scenario_data:
         scenario_dict['jac-index'] = jac_index
         scenario_dict['eps-abs'] = eps_abs
         scenario_dict['scena-name'] = self.scena_keys
+        scenario_dict['scenario'] = scenario 
+        scenario_dict['scena_num'] = scena_num
+
 
         return scenario_dict
