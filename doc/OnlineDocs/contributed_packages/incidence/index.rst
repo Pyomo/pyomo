@@ -4,7 +4,13 @@ Incidence Analysis
 Tools for constructing and analyzing the incidence graph of variables
 and constraints.
 
+This documentation contains the following resources:
+
 .. toctree::
    :maxdepth: 1
 
    overview.rst
+
+If you are wondering what Incidence Analysis is and would like to learn more,
+please see the overview. If you already know what Incidence Analysis is and
+are here for reference, see the tutorial or API reference as needed.
