@@ -894,7 +894,7 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     linear[key] = multiplier*c
                     linear_vars[key] = v
     for id_, coef in linear.items():
-        if not coef:
+        if coef.__class__ in native_numeric_types and not coef:
             continue
         if id_ in idMap[None]:
             key = idMap[None][id_]
