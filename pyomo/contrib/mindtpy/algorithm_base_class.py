@@ -2588,8 +2588,8 @@ class _MindtPyAlgorithm(object):
                 self.mip, string_zero=True)
             copy_var_list_values(
                 main_mip.MindtPy_utils.variable_list,
-                self.working_model.MindtPy_utils.variable_list,
-                config)
+                self.fixed_nlp.MindtPy_utils.variable_list,
+                config, skip_fixed=False)
             if self.curr_int_sol not in set(self.integer_list):
                 fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
                 self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
