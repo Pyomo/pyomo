@@ -27,10 +27,13 @@ def generate_strongly_connected_components(
     variables=None,
     include_fixed=False,
 ):
-    """Performs a block triangularization of the incidence matrix
-    of the provided constraints and variables, and yields a block that
-    contains the constraints and variables of each diagonal block
-    (strongly connected component).
+    """Yield in order ``_BlockData`` that each contain the variables and
+    constraints of a single diagonal block in a block lower triangularization
+    of the incidence matrix of constraints and variables
+
+    These diagonal blocks correspond to strongly connected components of the
+    bipartite incidence graph, projected with respect to a perfect matching
+    into a directed graph.
 
     Parameters
     ----------
@@ -45,9 +48,10 @@ def generate_strongly_connected_components(
 
     Yields
     ------
-    Blocks containing the variables and constraints of every strongly
-    connected component, in a topological order, as well as the
-    "input variables" for that block
+    ``_BlockData``
+        Blocks containing the variables and constraints of every strongly
+        connected component, in a topological order, as well as the
+        "input variables" for that block
 
     """
     if variables is None:
@@ -86,8 +90,9 @@ def solve_strongly_connected_components(
     solve_kwds=None,
     calc_var_kwds=None,
 ):
-    """This function solves a square block of variables and equality
-    constraints by solving strongly connected components individually.
+    """Solve a square system of variables and equality constraints by
+    solving strongly connected components individually.
+
     Strongly connected components (of the directed graph of constraints
     obtained from a perfect matching of variables and constraints) are
     the diagonal blocks in a block triangularization of the incidence
