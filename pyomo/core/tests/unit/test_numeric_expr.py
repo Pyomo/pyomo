@@ -1550,7 +1550,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         m.d = Var()
 
         #
-        # Check the structure of nested products
+        # Check the structure of nested sums
         #
         #            *
         #          /   \
@@ -1581,8 +1581,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
             ))
         )
         # Verify shared args...
-        self.assertIs(e.arg(0)._args_, e1._args_)
-        self.assertIsNot(e.arg(1)._args_, e1._args_)
+        self.assertIsNot(e1._args_, e2._args_)
+        self.assertIs(e1._args_, e3._args_)
+        self.assertIs(e1._args_, e.arg(1)._args_)
         self.assertIs(e.arg(0).arg(0), e.arg(1).arg(0))
         self.assertIs(e.arg(0).arg(1), e.arg(1).arg(1))
 
