@@ -592,12 +592,15 @@ class IncidenceGraphInterface(object):
         M = len(constraints)
         con_nodes = list(range(M))
         sccs = get_scc_of_projection(graph, con_nodes)
-        vc_partition = [
-            [(variables[j-M], constraints[i]) for i, j in scc] for scc in sccs
-        ]
+        var_partition = [[variables[j-M] for _, j in scc] for scc in sccs]
+        con_partition = [[constraints[i] for i, _ in scc] for scc in sccs]
+        return var_partition, con_partition
+        #vc_partition = [
+        #    [(variables[j-M], constraints[i]) for i, j in scc] for scc in sccs
+        #]
         # TODO: Is this the right return value? I think I usually want lists
         # of variables and constraints separately.
-        return vc_partition
+        #return vc_partition
 
     # This method has been superceded by block_triangularize.
     # TODO: Deprecate.

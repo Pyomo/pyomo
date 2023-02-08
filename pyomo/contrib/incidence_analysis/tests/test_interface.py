@@ -498,7 +498,13 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        partition = igraph.block_triangularize(variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
         self.assertEqual(len(partition), N+1)
 
         for i in model.streams:
@@ -641,7 +647,13 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        partition = igraph.block_triangularize(variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
         self.assertEqual(len(partition), N+1)
 
         for i in model.streams:
@@ -732,9 +744,13 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         constraints.extend(model.ebal[i] for i in model.streams
                 if i > half)
 
-        partition = igraph.block_triangularize(
+        var_blocks, con_blocks = igraph.block_triangularize(
             variables, constraints
         )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
         self.assertEqual(len(partition), (N-half)+1)
 
         for i in model.streams:
@@ -928,7 +944,13 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        partition = igraph.block_triangularize(variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
         self.assertEqual(len(partition), N+1)
 
         for i in model.streams:

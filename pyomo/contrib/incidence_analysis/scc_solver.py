@@ -68,12 +68,11 @@ def generate_strongly_connected_components(
 
     assert len(variables) == len(constraints)
     igraph = IncidenceGraphInterface()
-    vc_partition = igraph.block_triangularize(
+    var_blocks, con_blocks = igraph.block_triangularize(
         variables=variables, constraints=constraints
     )
     subsets = [
-        ([con for _, con in block], [var for var, _ in block])
-        for block in vc_partition
+        (cblock, vblock) for vblock, cblock in zip(var_blocks, con_blocks)
     ]
     for block, inputs in generate_subsystem_blocks(
         subsets,

@@ -174,6 +174,7 @@ def block_triangularize(matrix, matching=None):
     block-lower triangular permutation of the matrix. The second maps each
     column index to the index of its block in a block-lower triangular
     permutation of the matrix.
+
     """
     nxb = nx.algorithms.bipartite
     nxc = nx.algorithms.components
@@ -188,16 +189,19 @@ def block_triangularize(matrix, matching=None):
     graph = from_biadjacency_matrix(matrix)
     row_nodes = list(range(M))
     sccs = get_scc_of_projection(graph, row_nodes, matching=matching)
-    rc_partition = [[(i, j-M) for i, j in scc] for scc in sccs]
-    # Is this the right return value? I think I usually want one list of rows,
-    # and one list of columns, not a tuple of (row, column).
-    return rc_partition
+    row_partition = [[i for i, j in scc] for scc in sccs]
+    col_partition = [[j-M for i, j in scc] for scc in sccs]
+    return row_partition, col_partition
 
 
 def map_coords_to_blocks(matrix, matching=None):
-    sccs = block_triangularize(matrix, matching=matching)
-    row_idx_map = {r: idx for idx, scc in enumerate(sccs) for r, _ in scc}
-    col_idx_map = {c: idx for idx, scc in enumerate(sccs) for _, c in scc}
+    row_blocks, col_blocks = block_triangularize(matrix, matching=matching)
+    row_idx_map = {
+        r: idx for idx, rblock in enumerate(row_blocks) for r in rblock
+    }
+    col_idx_map = {
+        c: idx for idx, cblock in enumerate(col_blocks) for c in cblock
+    }
     return row_idx_map, col_idx_map
 
 
@@ -261,7 +265,4 @@ def get_diagonal_blocks(matrix, matching=None):
         diagonal blocks.
 
     """
-    sccs = block_triangularize(matrix, matching=matching)
-    row_blocks = [[i for i, _ in scc] for scc in sccs]
-    col_blocks = [[j for _, j in scc] for scc in sccs]
-    return row_blocks, col_blocks
+    return block_triangularize(matrix, matching=matching)
