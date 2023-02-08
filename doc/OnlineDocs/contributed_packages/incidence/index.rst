@@ -13,5 +13,6 @@ This documentation contains the following resources:
    api.rst
 
 If you are wondering what Incidence Analysis is and would like to learn more,
-please see the overview. If you already know what Incidence Analysis is and
-are here for reference, see the tutorial or API reference as needed.
+please see :ref:`incidence_overview`. If you already know what
+Incidence Analysis is and are here for reference, see the tutorial
+or :ref:`incidence_api` as needed.
