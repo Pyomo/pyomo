@@ -127,7 +127,7 @@ class TestExprGen(unittest.TestCase):
                             assertExpressionsEqual(self, orig_args[i], arg)
                             self.assertIs(arg.__class__, classes[i])
                 except TypeError:
-                    if result is not NotImplemented and result is not TypeError:
+                    if result is not NotImplemented:
                         raise
                 finally:
                     for i, arg in enumerate(args):
@@ -141,13 +141,14 @@ class TestExprGen(unittest.TestCase):
             )
             raise
 
-    def test_product_invalid(self):
+    def test_mul_invalid(self):
         tests = [
-            # "invalid(str) * {invalid(str), 0, 1, native}" should never
-            # hit the Pyomo expression system
-            #
-            # (self.invalid, self.invalid, NotImplemented),
+            (self.invalid, self.invalid, NotImplemented),
             (self.invalid, self.asbinary, NotImplemented),
+            # "invalid(str) * {0, 1, native}" are legitimate Python
+            # operations and should never hit the Pyomo expression
+            # system
+            #
             # (self.invalid, self.zero, NotImplemented),
             # (self.invalid, self.one, NotImplemented),
             # 4:
@@ -171,11 +172,11 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_asbinary(self):
+    def test_mul_asbinary(self):
         tests = [
             (self.asbinary, self.invalid, NotImplemented),
             # BooleanVar objects do not support multiplication
-            (self.asbinary, self.asbinary, TypeError),
+            (self.asbinary, self.asbinary, NotImplemented),
             (self.asbinary, self.zero, MonomialTermExpression((0, self.bin))),
             (self.asbinary, self.one, self.bin),
             # 4:
@@ -223,10 +224,10 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_zero(self):
+    def test_mul_zero(self):
         tests = [
-            # "Zero * invalid(str)" (i.e., Pyomo doesn't support it)
-            # should never hit the Pyomo expression system:
+            # "Zero * invalid(str)" is a legitimate Python operation and
+            # should never hit the Pyomo expression system
             #
             # (self.zero, self.invalid, NotImplemented),
             (self.zero, self.asbinary, MonomialTermExpression((0, self.bin))),
@@ -284,10 +285,10 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_one(self):
+    def test_mul_one(self):
         tests = [
-            # "One * invalid(str)" (i.e., Pyomo doesn't support it)
-            # should never hit the Pyomo expression system:
+            # "One * invalid(str)" is a legitimate Python operation and
+            # should never hit the Pyomo expression system
             #
             # (self.one, self.invalid, NotImplemented),
             (self.one, self.asbinary, self.bin),
@@ -314,10 +315,10 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_native(self):
+    def test_mul_native(self):
         tests = [
-            # "Native * invalid(str) (i.e., Pyomo doesn't support it)
-            # should never hit the Pyomo expression system:
+            # "Native * invalid(str) is a legitimate Python operation and
+            # should never hit the Pyomo expression system
             #
             # (self.native, self.invalid, NotImplemented),
             (self.native, self.asbinary, MonomialTermExpression((5, self.bin))),
@@ -375,7 +376,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_npv(self):
+    def test_mul_npv(self):
         tests = [
             (self.npv, self.invalid, NotImplemented),
             (self.npv, self.asbinary, MonomialTermExpression((self.npv, self.bin))),
@@ -444,7 +445,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_param(self):
+    def test_mul_param(self):
         tests = [
             (self.param, self.invalid, NotImplemented),
             (self.param, self.asbinary, MonomialTermExpression((6, self.bin))),
@@ -502,7 +503,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_param_mut(self):
+    def test_mul_param_mut(self):
         tests = [
             (self.param_mut, self.invalid, NotImplemented),
             (
@@ -603,7 +604,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_var(self):
+    def test_mul_var(self):
         tests = [
             (self.var, self.invalid, NotImplemented),
             (self.var, self.asbinary, ProductExpression((self.var, self.bin))),
@@ -638,7 +639,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_mon_native(self):
+    def test_mul_mon_native(self):
         tests = [
             (self.mon_native, self.invalid, NotImplemented),
             (
@@ -731,7 +732,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_mon_param(self):
+    def test_mul_mon_param(self):
         tests = [
             (self.mon_param, self.invalid, NotImplemented),
             (
@@ -844,7 +845,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_mon_npv(self):
+    def test_mul_mon_npv(self):
         tests = [
             (self.mon_npv, self.invalid, NotImplemented),
             (self.mon_npv, self.asbinary, ProductExpression((self.mon_npv, self.bin))),
@@ -945,7 +946,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_linear(self):
+    def test_mul_linear(self):
         tests = [
             (self.linear, self.invalid, NotImplemented),
             (self.linear, self.asbinary, ProductExpression((self.linear, self.bin))),
@@ -992,7 +993,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_sum(self):
+    def test_mul_sum(self):
         tests = [
             (self.sum, self.invalid, NotImplemented),
             (self.sum, self.asbinary, ProductExpression((self.sum, self.bin))),
@@ -1023,7 +1024,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_other(self):
+    def test_mul_other(self):
         tests = [
             (self.other, self.invalid, NotImplemented),
             (self.other, self.asbinary, ProductExpression((self.other, self.bin))),
@@ -1070,7 +1071,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_mutable_l0(self):
+    def test_mul_mutable_l0(self):
         tests = [
             (self.mutable_l0, self.invalid, NotImplemented),
             (self.mutable_l0, self.asbinary, MonomialTermExpression((0, self.bin))),
@@ -1132,7 +1133,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_mutable_l1(self):
+    def test_mul_mutable_l1(self):
         tests = [
             (self.mutable_l1, self.invalid, NotImplemented),
             (
@@ -1253,7 +1254,7 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
-    def test_product_mutable_l2(self):
+    def test_mul_mutable_l2(self):
         tests = [
             (self.mutable_l2, self.invalid, NotImplemented),
             (
