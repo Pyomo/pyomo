@@ -35,4 +35,12 @@ How can I cite Incidence Analysis?
 We are working on a journal article about Incidence Analysis and the underlying
 methods. In the meantime, if you use Incidence Analysis in your research, you
 may cite the following conference paper:
-TODO
+
+.. code-block:: bibtex
+
+    @inproceedings{Parker2023Dulmage,
+      title={{An application of the Dulmage-Mendelsohn partition to the analysis of a discretized dynamic chemical looping combustion reactor model}},
+      author={Robert Parker and Chinedu Okoli and Bethany Nicholson and John Siirola and Lorenz Biegler},
+      booktitle={Proceedings of FOCAPO/CPC 2023},
+      year={2023}
+    }
