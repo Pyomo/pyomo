@@ -587,7 +587,7 @@ class SumExpression(NumericExpression):
     @property
     def args(self):
         if len(self._args_) != self._nargs:
-            return self._args_ = self._args_[:self._nargs]
+            self._args_ = self._args_[:self._nargs]
         return self._args_
 
     def create_node_with_local_data(self, args, classtype=None):
