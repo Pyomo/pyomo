@@ -32,8 +32,8 @@ def generate_strongly_connected_components(
     contains the constraints and variables of each diagonal block
     (strongly connected component).
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     constraints: List of Pyomo constraint data objects
         Constraints used to generate strongly connected components.
     variables: List of Pyomo variable data objects
@@ -98,8 +98,8 @@ def solve_strongly_connected_components(
     calculate_variable_from_constraint function, while higher-dimension
     blocks are solved using the user-provided solver object.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     block: Pyomo Block
         The Pyomo block whose variables and constraints will be solved
     solver: Pyomo solver object
