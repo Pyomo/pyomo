@@ -737,7 +737,7 @@ class LinearExpression(SumExpression):
         if classtype is not None:
             return classtype(args)
         else:
-            for arg in args:
+            for i, arg in enumerate(args):
                 if arg.__class__ in self._allowable_linear_expr_arg_types:
                     # 99% of the time, the arg type hasn't changed
                     continue
