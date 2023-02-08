@@ -9,3 +9,4 @@ API Reference
    connected.rst
    triangularize.rst
    dulmage_mendelsohn.rst
+   scc_solver.rst
