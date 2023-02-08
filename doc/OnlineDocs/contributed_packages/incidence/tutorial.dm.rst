@@ -1,3 +1,5 @@
+.. _incidence_tutorial_dm:
+
 Debugging a structural singularity with the Dulmage-Mendelsohn partition
 ========================================================================
 
