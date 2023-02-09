@@ -2897,6 +2897,8 @@ def _pow_param_native(a, b):
     return NPV_PowExpression((a, b))
 
 def _pow_param_npv(a, b):
+    if a.is_constant():
+        a = a.value
     return NPV_PowExpression((a, b))
 
 def _pow_param_param(a, b):
