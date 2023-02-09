@@ -179,6 +179,12 @@ class TestExprGen(unittest.TestCase):
         ]
         self._run_cases(tests, operator.mul)
 
+    #
+    #
+    # MULTIPLICATION
+    #
+    #
+
     def test_mul_asbinary(self):
         tests = [
             (self.asbinary, self.invalid, NotImplemented),
@@ -190,7 +196,7 @@ class TestExprGen(unittest.TestCase):
             (
                 self.asbinary,
                 self.native,
-                MonomialTermExpression((self.native, self.bin)),
+                MonomialTermExpression((5, self.bin)),
             ),
             (self.asbinary, self.npv, MonomialTermExpression((self.npv, self.bin))),
             (self.asbinary, self.param, MonomialTermExpression((6, self.bin))),
@@ -390,7 +396,7 @@ class TestExprGen(unittest.TestCase):
             (self.npv, self.zero, NPV_ProductExpression((self.npv, 0))),
             (self.npv, self.one, self.npv),
             # 4:
-            (self.npv, self.native, NPV_ProductExpression((self.npv, self.native))),
+            (self.npv, self.native, NPV_ProductExpression((self.npv, 5))),
             (self.npv, self.npv, NPV_ProductExpression((self.npv, self.npv))),
             (self.npv, self.param, NPV_ProductExpression((self.npv, 6))),
             (
@@ -524,7 +530,7 @@ class TestExprGen(unittest.TestCase):
             (
                 self.param_mut,
                 self.native,
-                NPV_ProductExpression((self.param_mut, self.native)),
+                NPV_ProductExpression((self.param_mut, 5)),
             ),
             (
                 self.param_mut,
@@ -618,7 +624,7 @@ class TestExprGen(unittest.TestCase):
             (self.var, self.zero, MonomialTermExpression((0, self.var))),
             (self.var, self.one, self.var),
             # 4:
-            (self.var, self.native, MonomialTermExpression((self.native, self.var))),
+            (self.var, self.native, MonomialTermExpression((5, self.var))),
             (self.var, self.npv, MonomialTermExpression((self.npv, self.var))),
             (self.var, self.param, MonomialTermExpression((6, self.var))),
             (
@@ -764,7 +770,7 @@ class TestExprGen(unittest.TestCase):
                 self.native,
                 MonomialTermExpression(
                     (
-                        NPV_ProductExpression((self.mon_param.arg(0), self.native)),
+                        NPV_ProductExpression((self.mon_param.arg(0), 5)),
                         self.mon_param.arg(1),
                     )
                 ),
@@ -873,7 +879,7 @@ class TestExprGen(unittest.TestCase):
                 self.native,
                 MonomialTermExpression(
                     (
-                        NPV_ProductExpression((self.mon_npv.arg(0), self.native)),
+                        NPV_ProductExpression((self.mon_npv.arg(0), 5)),
                         self.mon_npv.arg(1),
                     )
                 ),
@@ -960,7 +966,7 @@ class TestExprGen(unittest.TestCase):
             (self.linear, self.zero, ProductExpression((self.linear, self.zero))),
             (self.linear, self.one, self.linear),
             # 4:
-            (self.linear, self.native, ProductExpression((self.linear, self.native))),
+            (self.linear, self.native, ProductExpression((self.linear, 5))),
             (self.linear, self.npv, ProductExpression((self.linear, self.npv))),
             (self.linear, self.param, ProductExpression((self.linear, 6))),
             (
@@ -1007,7 +1013,7 @@ class TestExprGen(unittest.TestCase):
             (self.sum, self.zero, ProductExpression((self.sum, self.zero))),
             (self.sum, self.one, self.sum),
             # 4:
-            (self.sum, self.native, ProductExpression((self.sum, self.native))),
+            (self.sum, self.native, ProductExpression((self.sum, 5))),
             (self.sum, self.npv, ProductExpression((self.sum, self.npv))),
             (self.sum, self.param, ProductExpression((self.sum, 6))),
             (self.sum, self.param_mut, ProductExpression((self.sum, self.param_mut))),
@@ -1038,7 +1044,7 @@ class TestExprGen(unittest.TestCase):
             (self.other, self.zero, ProductExpression((self.other, self.zero))),
             (self.other, self.one, self.other),
             # 4:
-            (self.other, self.native, ProductExpression((self.other, self.native))),
+            (self.other, self.native, ProductExpression((self.other, 5))),
             (self.other, self.npv, ProductExpression((self.other, self.npv))),
             (self.other, self.param, ProductExpression((self.other, 6))),
             (
@@ -1165,7 +1171,7 @@ class TestExprGen(unittest.TestCase):
                 self.native,
                 MonomialTermExpression(
                     (
-                        NPV_ProductExpression((self.mon_npv.arg(0), self.native)),
+                        NPV_ProductExpression((self.mon_npv.arg(0), 5)),
                         self.mon_npv.arg(1),
                     )
                 ),
@@ -1275,7 +1281,7 @@ class TestExprGen(unittest.TestCase):
             (
                 self.mutable_l2,
                 self.native,
-                ProductExpression((self.mutable_l2, self.native)),
+                ProductExpression((self.mutable_l2, 5)),
             ),
             (self.mutable_l2, self.npv, ProductExpression((self.mutable_l2, self.npv))),
             (self.mutable_l2, self.param, ProductExpression((self.mutable_l2, 6))),
