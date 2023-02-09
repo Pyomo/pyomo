@@ -399,6 +399,7 @@ class IncidenceGraphInterface(object):
         Parameters
         ----------
         component: ``ComponentData``
+            Component whose coordinate to locate
         
         Returns
         -------
