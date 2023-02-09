@@ -10,4 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.deprecation import relocated_module
-relocated_module("pyomo.contrib.incidence_analysis.scc_solver")
+msg = (
+    "The 'pyomo.contrib.incidence_analysis.util' module has been moved to"
+    " 'pyomo.contrib.incidence_analysis.scc_solver'. However, we recommend"
+    " importing this functionality (e.g. solve_strongly_connected_components)"
+    " directly from 'pyomo.contrib.incidence_analysis'."
+)
+relocated_module("pyomo.contrib.incidence_analysis.scc_solver", msg=msg)
