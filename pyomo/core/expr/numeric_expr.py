@@ -2586,6 +2586,7 @@ def _div_var_param(a, b):
         b = b.value
         if b == 1:
             return a
+        return MonomialTermExpression((1/b, a))
     return MonomialTermExpression((NPV_DivisionExpression((1, b)), a))
 
 def _div_var_var(a, b):
@@ -2621,6 +2622,7 @@ def _div_monomial_param(a, b):
         b = b.value
         if b == 1:
             return a
+        return MonomialTermExpression((a._args_[0]/b, a._args_[1]))
     return MonomialTermExpression((
         NPV_DivisionExpression((a._args_[0], b)), a._args_[1]))
 
