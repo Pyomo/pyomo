@@ -598,8 +598,7 @@ class IncidenceGraphInterface(object):
 
         return var_blocks, con_blocks
 
-    # Should this be deprecated? *Probably* not. I have too much code that
-    # relies on this functionality, however poorly thought out.
+    # NOTE: That this replaces the <=6.4.4 block_triangularize function
     def map_nodes_to_blocks(self, variables=None, constraints=None):
         """Map variables and constraints to their diagonal blocks in a block
         lower triangular permutation
