@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.common.collections import ComponentSet
@@ -20,6 +22,8 @@ from pyomo.util.subsystems import (
         generate_subsystem_blocks,
         )
 from pyomo.contrib.incidence_analysis.interface import IncidenceGraphInterface
+
+_log = logging.getLogger(__name__)
 
 
 def generate_strongly_connected_components(
@@ -91,6 +95,7 @@ def solve_strongly_connected_components(
         solver=None,
         solve_kwds=None,
         calc_var_kwds=None,
+        tee=False
         ):
     """ This function solves a square block of variables and equality
     constraints by solving strongly connected components individually.
@@ -116,6 +121,9 @@ def solve_strongly_connected_components(
         Keyword arguments for the solver's solve method
     calc_var_kwds: Dictionary
         Keyword arguments for calculate_variable_from_constraint
+    tee: bool
+        Set tee argument on solver.solve calls for strongly connected
+        components of size greater than one constraint.
 
     Returns
     -------
@@ -144,6 +152,7 @@ def solve_strongly_connected_components(
             ):
         with TemporarySubsystemManager(to_fix=inputs):
             if len(scc.vars) == 1:
+                _log.info(f"Solving 1x1 block: {scc.cons[0].name}.")
                 results = calculate_variable_from_constraint(
                     scc.vars[0], scc.cons[0], **calc_var_kwds
                 )
@@ -161,6 +170,7 @@ def solve_strongly_connected_components(
                         "a DAG).\nGot an SCC with components: \n%s\n%s"
                         % (vars, cons)
                         )
-                results = solver.solve(scc, **solve_kwds)
+                _log.info(f"Solving {len(scc.cons)}x{len(scc.cons)} block.")
+                results = solver.solve(scc, **solve_kwds, tee=tee)
                 res_list.append(results)
     return res_list
