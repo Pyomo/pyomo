@@ -389,6 +389,22 @@ class IncidenceGraphInterface(object):
     def con_index_map(self):
         return self._con_index_map
 
+    @property
+    @deprecated(
+        msg="The ``row_block_map`` attribute is deprecated and will be removed.",
+        version="TBD",
+    )
+    def row_block_map(self):
+        return None
+
+    @property
+    @deprecated(
+        msg="The ``col_block_map`` attribute is deprecated and will be removed.",
+        version="TBD",
+    )
+    def col_block_map(self):
+        return None
+
     def get_matrix_coord(self, component):
         """Return the row or column coordinate of the component in the incidence
         *matrix* of variables and constraints
@@ -533,8 +549,8 @@ class IncidenceGraphInterface(object):
             vnode = M + self._var_index_map[component]
             adj = self._incidence_graph[vnode]
             adj_comps = [self.constraints[i] for i in adj]
-        elif component in self.con_index_map:
-            cnode = self.con_index_map[component]
+        elif component in self._con_index_map:
+            cnode = self._con_index_map[component]
             adj = self._incidence_graph[cnode]
             adj_comps = [self.variables[j-M] for j in adj]
         else:

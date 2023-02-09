@@ -1060,55 +1060,33 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
                 self.assertEqual(pred_var_set, var_set)
                 self.assertEqual(pred_con_set, con_set)
 
-    #def test_diagonal_blocks_with_cached_maps(self):
-    #    N = 5
-    #    model = make_gas_expansion_model(N)
-    #    igraph = IncidenceGraphInterface()
+    def test_diagonal_blocks_with_cached_maps(self):
+        # NOTE: This functionality has been deprecated.
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface()
 
-    #    # These are the variables and constraints of the square,
-    #    # nonsingular subsystem
-    #    variables = []
-    #    variables.extend(model.P.values())
-    #    variables.extend(model.T[i] for i in model.streams
-    #            if i != model.streams.first())
-    #    variables.extend(model.rho[i] for i in model.streams
-    #            if i != model.streams.first())
-    #    variables.extend(model.F[i] for i in model.streams
-    #            if i != model.streams.first())
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
 
-    #    constraints = list(model.component_data_objects(pyo.Constraint))
+        constraints = list(model.component_data_objects(pyo.Constraint))
 
-    #    igraph.block_triangularize(variables, constraints)
-    #    var_blocks, con_blocks = igraph.get_diagonal_blocks(
-    #        variables, constraints
-    #    )
-    #    #self.assertIsNot(igraph.row_block_map, None)
-    #    #self.assertIsNot(igraph.col_block_map, None)
-    #    self.assertEqual(len(var_blocks), N+1)
-    #    self.assertEqual(len(con_blocks), N+1)
-
-    #    for i, (vars, cons) in enumerate(zip(var_blocks, con_blocks)):
-    #        var_set = ComponentSet(vars)
-    #        con_set = ComponentSet(cons)
-
-    #        if i == 0:
-    #            pred_var_set = ComponentSet([model.P[0]])
-    #            self.assertEqual(pred_var_set, var_set)
-    #            pred_con_set = ComponentSet([model.ideal_gas[0]])
-    #            self.assertEqual(pred_con_set, con_set)
-
-    #        else:
-    #            pred_var_set = ComponentSet([
-    #                model.rho[i], model.T[i], model.P[i], model.F[i]
-    #            ])
-    #            pred_con_set = ComponentSet([
-    #                model.ideal_gas[i],
-    #                model.expansion[i],
-    #                model.mbal[i],
-    #                model.ebal[i],
-    #            ])
-    #            self.assertEqual(pred_var_set, var_set)
-    #            self.assertEqual(pred_con_set, con_set)
+        igraph.block_triangularize(variables, constraints)
+        var_blocks, con_blocks = igraph.get_diagonal_blocks(
+            variables, constraints
+        )
+        # NOTE: row/col_block_map have been deprecated.
+        # However, they still return None for now.
+        self.assertIs(igraph.row_block_map, None)
+        self.assertIs(igraph.col_block_map, None)
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
