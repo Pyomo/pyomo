@@ -25,14 +25,6 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
-
-#from pyomo.common.dependencies import (
-#    numpy as np, numpy_available,
-#    pandas as pd, pandas_available,
-#    matplotlib as plt, matplotlib_available,
-#)
-
-
 class Measurements:
     def __init__(self, self_define_res=None, measurement_index_time=None, variance=None, ind_string='_index_'):
         """

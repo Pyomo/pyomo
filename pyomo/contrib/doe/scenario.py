@@ -27,7 +27,7 @@
 
 import pickle
 
-class Scenario_generator:
+class ScenarioGenerator:
     def __init__(self, para_dict, formula='central', step=0.001, store=False):
         """Generate scenarios.
         DoE library first calls this function to generate scenarios.

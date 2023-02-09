@@ -39,7 +39,7 @@ import logging
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
 #from pyomo.contrib.doe.scenario import Scenario_generator
 #from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-from scenario import Scenario_generator
+from scenario import ScenarioGenerator
 from result import FisherResults, GridSearchResult
 
 class DesignOfExperiments:
@@ -399,6 +399,8 @@ class DesignOfExperiments:
             raise ValueError(self.mode+' is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
 
     def _sequential_finite(self, read_output, extract_single_model, store_output):
+        """ Sequential_finite mode uses Pyomo Block to evaluate the sensitivity information.
+        """
 
         # if measurements are provided
         if read_output:
@@ -409,7 +411,7 @@ class DesignOfExperiments:
 
         # if measurements are not provided
         else:
-            scena_object = Scenario_generator(self.param, formula=self.formula, step=self.step)
+            scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
             scena_gen = scena_object.simultaneous_scenario()
             print(scena_gen)
             self.scenario_list = scena_gen["scenario"]
@@ -508,7 +510,7 @@ class DesignOfExperiments:
     def _direct_kaug(self):
         time00 = time.time()
         # create scenario class for a base case
-        scena_gen = Scenario_generator(self.param, formula=None, step=self.step)
+        scena_gen = ScenarioGenerator(self.param, formula=None, step=self.step)
         scenario_all = scena_gen.simultaneous_scenario()
 
         # create model
@@ -867,7 +869,7 @@ class DesignOfExperiments:
         m: the DOE model
         """
         # call generator function to get scenario dictionary
-        scena_gen = Scenario_generator(self.param, formula=self.formula, step=self.step, store=True)
+        scena_gen = ScenarioGenerator(self.param, formula=self.formula, step=self.step, store=True)
         scenario_all = scena_gen.simultaneous_scenario()
         
         # create model
