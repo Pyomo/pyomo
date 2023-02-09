@@ -1303,14 +1303,8 @@ class TestConnectedComponents(unittest.TestCase):
 
         # The variables in these blocks need to be sorted by their coordinates
         # in the underlying incidence matrix
-        var_idx_map = ComponentMap(
-            (var, i) for i, var in enumerate(igraph.variables)
-        )
-        con_idx_map = ComponentMap(
-            (con, i) for i, con in enumerate(igraph.constraints)
-        )
-        var_key = lambda var: var_idx_map[var]
-        con_key = lambda con: con_idx_map[con]
+        var_key = lambda var: igraph.get_matrix_coord(var)
+        con_key = lambda con: igraph.get_matrix_coord(con)
         var_blocks = [
             tuple(sorted(t0_vars, key=var_key)),
             tuple(sorted(

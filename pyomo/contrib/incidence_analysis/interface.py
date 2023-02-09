@@ -309,8 +309,6 @@ class IncidenceGraphInterface(object):
             self._con_index_map = ComponentMap(
                 (con, idx) for idx, con in enumerate(self._constraints)
             )
-            self.var_index_map = self._var_index_map
-            self.con_index_map = self._con_index_map
             if include_inequality:
                 incidence_matrix = nlp.evaluate_jacobian()
             else:
@@ -335,8 +333,6 @@ class IncidenceGraphInterface(object):
             self._con_index_map = ComponentMap(
                 (con, i) for i, con in enumerate(self._constraints)
             )
-            self.var_index_map = self._var_index_map
-            self.con_index_map = self._con_index_map
             self._incidence_graph = get_bipartite_incidence_graph(
                 self._variables,
                 self._constraints,
@@ -377,6 +373,60 @@ class IncidenceGraphInterface(object):
             )
         return len(self._incidence_graph.edges)
 
+    @property
+    @deprecated(
+        msg="``var_idx_map`` is deprecated. Please use get_matrix_coord instead.",
+        version="TBD",
+    )
+    def var_index_map(self):
+        return self._var_index_map
+
+    @property
+    @deprecated(
+        msg="``con_idx_map`` is deprecated. Please use get_matrix_coord instead.",
+        version="TBD",
+    )
+    def con_index_map(self):
+        return self._con_index_map
+
+    def get_matrix_coord(self, component):
+        """Return the row or column coordinate of the component in the incidence
+        *matrix* of variables and constraints
+
+        Variables will return a column coordinate and constraints will return
+        a row coordinate.
+
+        Parameters
+        ----------
+        component: ``ComponentData``
+        
+        Returns
+        -------
+        ``int``
+            Column or row coordinate of the provided variable or constraint
+
+        """
+        if self._incidence_graph is None:
+            raise RuntimeError(
+                "Cannot get the coordinate of %s if an incidence graph"
+                " is not cached." % component.name
+            )
+        _check_unindexed([component])
+        if component in self._var_index_map and component in self._con_index_map:
+            raise RuntimeError(
+                "%s is in both variable and constraint maps."
+                " This should not happen." % component.name
+            )
+        elif component in self._var_index_map:
+            return self._var_index_map[component]
+        elif component in self._con_index_map:
+            return self._con_index_map[component]
+        else:
+            raise RuntimeError(
+                "%s is not included in the incidence graph"
+                % component.name
+            )
+
     def _validate_input(self, variables, constraints):
         if variables is None:
             if self._incidence_graph is None:
@@ -398,12 +448,12 @@ class IncidenceGraphInterface(object):
             # is no need for an include_fixed argument.
             return get_bipartite_incidence_graph(variables, constraints)
         else:
-            constraint_nodes = [self.con_index_map[con] for con in constraints]
+            constraint_nodes = [self._con_index_map[con] for con in constraints]
 
             # Note that this is the number of constraints in the original graph,
             # not the subgraph.
             M = len(self.constraints)
-            variable_nodes = [M + self.var_index_map[var] for var in variables]
+            variable_nodes = [M + self._var_index_map[var] for var in variables]
             subgraph = extract_bipartite_subgraph(
                 self._incidence_graph, constraint_nodes, variable_nodes
             )
@@ -478,8 +528,8 @@ class IncidenceGraphInterface(object):
         _check_unindexed([component])
         M = len(self.constraints)
         N = len(self.variables)
-        if component in self.var_index_map:
-            vnode = M + self.var_index_map[component]
+        if component in self._var_index_map:
+            vnode = M + self._var_index_map[component]
             adj = self._incidence_graph[vnode]
             adj_comps = [self.constraints[i] for i in adj]
         elif component in self.con_index_map:
@@ -746,10 +796,10 @@ class IncidenceGraphInterface(object):
         self._variables = vars_to_include
         self._constraints = cons_to_include
         self._incidence_graph = incidence_graph
-        self.var_index_map = ComponentMap(
+        self._var_index_map = ComponentMap(
             (var, i) for i, var in enumerate(self.variables)
         )
-        self.con_index_map = ComponentMap(
+        self._con_index_map = ComponentMap(
             (con, i) for i, con in enumerate(self._constraints)
         )
 
