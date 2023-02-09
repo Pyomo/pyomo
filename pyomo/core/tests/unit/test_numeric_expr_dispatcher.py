@@ -2340,3 +2340,724 @@ class TestExprGen(unittest.TestCase):
             ),
         ]
         self._run_cases(tests, operator.truediv)
+
+    #
+    #
+    # EXPONENTIATION
+    #
+    #
+
+    def test_pow_invalid(self):
+        tests = [
+            (self.invalid, self.invalid, NotImplemented),
+            (self.invalid, self.asbinary, NotImplemented),
+            (self.invalid, self.zero, NotImplemented),
+            (self.invalid, self.one, NotImplemented),
+            # 4:
+            (self.invalid, self.native, NotImplemented),
+            (self.invalid, self.npv, NotImplemented),
+            (self.invalid, self.param, NotImplemented),
+            (self.invalid, self.param_mut, NotImplemented),
+            # 8:
+            (self.invalid, self.var, NotImplemented),
+            (self.invalid, self.mon_native, NotImplemented),
+            (self.invalid, self.mon_param, NotImplemented),
+            (self.invalid, self.mon_npv, NotImplemented),
+            # 12:
+            (self.invalid, self.linear, NotImplemented),
+            (self.invalid, self.sum, NotImplemented),
+            (self.invalid, self.other, NotImplemented),
+            (self.invalid, self.mutable_l0, NotImplemented),
+            # 16:
+            (self.invalid, self.mutable_l1, NotImplemented),
+            (self.invalid, self.mutable_l2, NotImplemented),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_asbinary(self):
+        tests = [
+            (self.asbinary, self.invalid, NotImplemented),
+            # BooleanVar objects do not support division
+            (self.asbinary, self.asbinary, NotImplemented),
+            (self.asbinary, self.zero, 1),
+            (self.asbinary, self.one, self.bin),
+            # 4:
+            (self.asbinary, self.native, PowExpression((self.bin, 5))),
+            (self.asbinary, self.npv, PowExpression((self.bin, self.npv))),
+            (self.asbinary, self.param, PowExpression((self.bin, 6))),
+            (self.asbinary, self.param_mut, PowExpression((self.bin, self.param_mut))),
+            # 8:
+            (self.asbinary, self.var, PowExpression((self.bin, self.var))),
+            (
+                self.asbinary,
+                self.mon_native,
+                PowExpression((self.bin, self.mon_native)),
+            ),
+            (self.asbinary, self.mon_param, PowExpression((self.bin, self.mon_param))),
+            (self.asbinary, self.mon_npv, PowExpression((self.bin, self.mon_npv))),
+            # 12:
+            (self.asbinary, self.linear, PowExpression((self.bin, self.linear))),
+            (self.asbinary, self.sum, PowExpression((self.bin, self.sum))),
+            (self.asbinary, self.other, PowExpression((self.bin, self.other))),
+            (self.asbinary, self.mutable_l0, 1),
+            # 16:
+            (
+                self.asbinary,
+                self.mutable_l1,
+                PowExpression((self.bin, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.asbinary,
+                self.mutable_l2,
+                PowExpression((self.bin, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_zero(self):
+        tests = [
+            (self.zero, self.invalid, NotImplemented),
+            (self.zero, self.asbinary, PowExpression((0, self.bin))),
+            (self.zero, self.zero, 1),
+            (self.zero, self.one, 0),
+            # 4:
+            (self.zero, self.native, 0),
+            (self.zero, self.npv, NPV_PowExpression((0, self.npv))),
+            (self.zero, self.param, 0),
+            (self.zero, self.param_mut, NPV_PowExpression((0, self.param_mut))),
+            # 8:
+            (self.zero, self.var, PowExpression((0, self.var))),
+            (self.zero, self.mon_native, PowExpression((0, self.mon_native))),
+            (self.zero, self.mon_param, PowExpression((0, self.mon_param))),
+            (self.zero, self.mon_npv, PowExpression((0, self.mon_npv))),
+            # 12:
+            (self.zero, self.linear, PowExpression((0, self.linear))),
+            (self.zero, self.sum, PowExpression((0, self.sum))),
+            (self.zero, self.other, PowExpression((0, self.other))),
+            (self.zero, self.mutable_l0, 1),
+            # 16:
+            (self.zero, self.mutable_l1, PowExpression((0, self.mutable_l1.arg(0)))),
+            (self.zero, self.mutable_l2, PowExpression((0, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_one(self):
+        tests = [
+            (self.one, self.invalid, NotImplemented),
+            (self.one, self.asbinary, PowExpression((1, self.bin))),
+            (self.one, self.zero, 1),
+            (self.one, self.one, 1),
+            # 4:
+            (self.one, self.native, 1),
+            (self.one, self.npv, NPV_PowExpression((1, self.npv))),
+            (self.one, self.param, 1),
+            (self.one, self.param_mut, NPV_PowExpression((1, self.param_mut))),
+            # 8:
+            (self.one, self.var, PowExpression((1, self.var))),
+            (self.one, self.mon_native, PowExpression((1, self.mon_native))),
+            (self.one, self.mon_param, PowExpression((1, self.mon_param))),
+            (self.one, self.mon_npv, PowExpression((1, self.mon_npv))),
+            # 12:
+            (self.one, self.linear, PowExpression((1, self.linear))),
+            (self.one, self.sum, PowExpression((1, self.sum))),
+            (self.one, self.other, PowExpression((1, self.other))),
+            (self.one, self.mutable_l0, 1),
+            # 16:
+            (self.one, self.mutable_l1, PowExpression((1, self.mutable_l1.arg(0)))),
+            (self.one, self.mutable_l2, PowExpression((1, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_native(self):
+        tests = [
+            (self.native, self.invalid, NotImplemented),
+            (self.native, self.asbinary, PowExpression((5, self.bin))),
+            (self.native, self.zero, 1),
+            (self.native, self.one, 5),
+            # 4:
+            (self.native, self.native, 3125),
+            (self.native, self.npv, NPV_PowExpression((5, self.npv))),
+            (self.native, self.param, 15625),
+            (self.native, self.param_mut, NPV_PowExpression((5, self.param_mut))),
+            # 8:
+            (self.native, self.var, PowExpression((5, self.var))),
+            (self.native, self.mon_native, PowExpression((5, self.mon_native))),
+            (self.native, self.mon_param, PowExpression((5, self.mon_param))),
+            (self.native, self.mon_npv, PowExpression((5, self.mon_npv))),
+            # 12:
+            (self.native, self.linear, PowExpression((5, self.linear))),
+            (self.native, self.sum, PowExpression((5, self.sum))),
+            (self.native, self.other, PowExpression((5, self.other))),
+            (self.native, self.mutable_l0, 1),
+            # 16:
+            (self.native, self.mutable_l1, PowExpression((5, self.mutable_l1.arg(0)))),
+            (self.native, self.mutable_l2, PowExpression((5, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_npv(self):
+        tests = [
+            (self.npv, self.invalid, NotImplemented),
+            (self.npv, self.asbinary, PowExpression((self.npv, self.bin))),
+            (self.npv, self.zero, 1),
+            (self.npv, self.one, self.npv),
+            # 4:
+            (self.npv, self.native, NPV_PowExpression((self.npv, 5))),
+            (self.npv, self.npv, NPV_PowExpression((self.npv, self.npv))),
+            (self.npv, self.param, NPV_PowExpression((self.npv, 6))),
+            (self.npv, self.param_mut, NPV_PowExpression((self.npv, self.param_mut))),
+            # 8:
+            (self.npv, self.var, PowExpression((self.npv, self.var))),
+            (self.npv, self.mon_native, PowExpression((self.npv, self.mon_native))),
+            (self.npv, self.mon_param, PowExpression((self.npv, self.mon_param))),
+            (self.npv, self.mon_npv, PowExpression((self.npv, self.mon_npv))),
+            # 12:
+            (self.npv, self.linear, PowExpression((self.npv, self.linear))),
+            (self.npv, self.sum, PowExpression((self.npv, self.sum))),
+            (self.npv, self.other, PowExpression((self.npv, self.other))),
+            (self.npv, self.mutable_l0, 1),
+            # 16:
+            (
+                self.npv,
+                self.mutable_l1,
+                PowExpression((self.npv, self.mutable_l1.arg(0))),
+            ),
+            (self.npv, self.mutable_l2, PowExpression((self.npv, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_param(self):
+        tests = [
+            (self.param, self.invalid, NotImplemented),
+            (self.param, self.asbinary, PowExpression((6, self.bin))),
+            (self.param, self.zero, 1),
+            (self.param, self.one, self.param),
+            # 4:
+            (self.param, self.native, 7776),
+            (self.param, self.npv, NPV_PowExpression((6, self.npv))),
+            (self.param, self.param, 46656),
+            (self.param, self.param_mut, NPV_PowExpression((6, self.param_mut))),
+            # 8:
+            (self.param, self.var, PowExpression((6, self.var))),
+            (self.param, self.mon_native, PowExpression((6, self.mon_native))),
+            (self.param, self.mon_param, PowExpression((6, self.mon_param))),
+            (self.param, self.mon_npv, PowExpression((6, self.mon_npv))),
+            # 12:
+            (self.param, self.linear, PowExpression((6, self.linear))),
+            (self.param, self.sum, PowExpression((6, self.sum))),
+            (self.param, self.other, PowExpression((6, self.other))),
+            (self.param, self.mutable_l0, 1),
+            # 16:
+            (self.param, self.mutable_l1, PowExpression((6, self.mutable_l1.arg(0)))),
+            (self.param, self.mutable_l2, PowExpression((6, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_param_mut(self):
+        tests = [
+            (self.param_mut, self.invalid, NotImplemented),
+            (self.param_mut, self.asbinary, PowExpression((self.param_mut, self.bin))),
+            (self.param_mut, self.zero, 1),
+            (self.param_mut, self.one, self.param_mut),
+            # 4:
+            (
+                self.param_mut,
+                self.native,
+                NPV_PowExpression((self.param_mut, self.native)),
+            ),
+            (self.param_mut, self.npv, NPV_PowExpression((self.param_mut, self.npv))),
+            (self.param_mut, self.param, NPV_PowExpression((self.param_mut, 6))),
+            (
+                self.param_mut,
+                self.param_mut,
+                NPV_PowExpression((self.param_mut, self.param_mut)),
+            ),
+            # 8:
+            (self.param_mut, self.var, PowExpression((self.param_mut, self.var))),
+            (
+                self.param_mut,
+                self.mon_native,
+                PowExpression((self.param_mut, self.mon_native)),
+            ),
+            (
+                self.param_mut,
+                self.mon_param,
+                PowExpression((self.param_mut, self.mon_param)),
+            ),
+            (
+                self.param_mut,
+                self.mon_npv,
+                PowExpression((self.param_mut, self.mon_npv)),
+            ),
+            # 12:
+            (self.param_mut, self.linear, PowExpression((self.param_mut, self.linear))),
+            (self.param_mut, self.sum, PowExpression((self.param_mut, self.sum))),
+            (self.param_mut, self.other, PowExpression((self.param_mut, self.other))),
+            (self.param_mut, self.mutable_l0, 1),
+            # 16:
+            (
+                self.param_mut,
+                self.mutable_l1,
+                PowExpression((self.param_mut, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.param_mut,
+                self.mutable_l2,
+                PowExpression((self.param_mut, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_var(self):
+        tests = [
+            (self.var, self.invalid, NotImplemented),
+            (self.var, self.asbinary, PowExpression((self.var, self.bin))),
+            (self.var, self.zero, 1),
+            (self.var, self.one, self.var),
+            # 4:
+            (self.var, self.native, PowExpression((self.var, 5))),
+            (self.var, self.npv, PowExpression((self.var, self.npv))),
+            (self.var, self.param, PowExpression((self.var, 6))),
+            (self.var, self.param_mut, PowExpression((self.var, self.param_mut))),
+            # 8:
+            (self.var, self.var, PowExpression((self.var, self.var))),
+            (self.var, self.mon_native, PowExpression((self.var, self.mon_native))),
+            (self.var, self.mon_param, PowExpression((self.var, self.mon_param))),
+            (self.var, self.mon_npv, PowExpression((self.var, self.mon_npv))),
+            # 12:
+            (self.var, self.linear, PowExpression((self.var, self.linear))),
+            (self.var, self.sum, PowExpression((self.var, self.sum))),
+            (self.var, self.other, PowExpression((self.var, self.other))),
+            (self.var, self.mutable_l0, 1),
+            # 16:
+            (
+                self.var,
+                self.mutable_l1,
+                PowExpression((self.var, self.mutable_l1.arg(0))),
+            ),
+            (self.var, self.mutable_l2, PowExpression((self.var, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_mon_native(self):
+        tests = [
+            (self.mon_native, self.invalid, NotImplemented),
+            (
+                self.mon_native,
+                self.asbinary,
+                PowExpression((self.mon_native, self.bin)),
+            ),
+            (self.mon_native, self.zero, 1),
+            (self.mon_native, self.one, self.mon_native),
+            # 4:
+            (self.mon_native, self.native, PowExpression((self.mon_native, 5))),
+            (self.mon_native, self.npv, PowExpression((self.mon_native, self.npv))),
+            (self.mon_native, self.param, PowExpression((self.mon_native, 6))),
+            (
+                self.mon_native,
+                self.param_mut,
+                PowExpression((self.mon_native, self.param_mut)),
+            ),
+            # 8:
+            (self.mon_native, self.var, PowExpression((self.mon_native, self.var))),
+            (
+                self.mon_native,
+                self.mon_native,
+                PowExpression((self.mon_native, self.mon_native)),
+            ),
+            (
+                self.mon_native,
+                self.mon_param,
+                PowExpression((self.mon_native, self.mon_param)),
+            ),
+            (
+                self.mon_native,
+                self.mon_npv,
+                PowExpression((self.mon_native, self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.mon_native,
+                self.linear,
+                PowExpression((self.mon_native, self.linear)),
+            ),
+            (self.mon_native, self.sum, PowExpression((self.mon_native, self.sum))),
+            (self.mon_native, self.other, PowExpression((self.mon_native, self.other))),
+            (self.mon_native, self.mutable_l0, 1),
+            # 16:
+            (
+                self.mon_native,
+                self.mutable_l1,
+                PowExpression((self.mon_native, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.mon_native,
+                self.mutable_l2,
+                PowExpression((self.mon_native, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_mon_param(self):
+        tests = [
+            (self.mon_param, self.invalid, NotImplemented),
+            (self.mon_param, self.asbinary, PowExpression((self.mon_param, self.bin))),
+            (self.mon_param, self.zero, 1),
+            (self.mon_param, self.one, self.mon_param),
+            # 4:
+            (self.mon_param, self.native, PowExpression((self.mon_param, 5))),
+            (self.mon_param, self.npv, PowExpression((self.mon_param, self.npv))),
+            (self.mon_param, self.param, PowExpression((self.mon_param, 6))),
+            (
+                self.mon_param,
+                self.param_mut,
+                PowExpression((self.mon_param, self.param_mut)),
+            ),
+            # 8:
+            (self.mon_param, self.var, PowExpression((self.mon_param, self.var))),
+            (
+                self.mon_param,
+                self.mon_native,
+                PowExpression((self.mon_param, self.mon_native)),
+            ),
+            (
+                self.mon_param,
+                self.mon_param,
+                PowExpression((self.mon_param, self.mon_param)),
+            ),
+            (
+                self.mon_param,
+                self.mon_npv,
+                PowExpression((self.mon_param, self.mon_npv)),
+            ),
+            # 12:
+            (self.mon_param, self.linear, PowExpression((self.mon_param, self.linear))),
+            (self.mon_param, self.sum, PowExpression((self.mon_param, self.sum))),
+            (self.mon_param, self.other, PowExpression((self.mon_param, self.other))),
+            (self.mon_param, self.mutable_l0, 1),
+            # 16:
+            (
+                self.mon_param,
+                self.mutable_l1,
+                PowExpression((self.mon_param, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.mon_param,
+                self.mutable_l2,
+                PowExpression((self.mon_param, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_mon_npv(self):
+        tests = [
+            (self.mon_npv, self.invalid, NotImplemented),
+            (self.mon_npv, self.asbinary, PowExpression((self.mon_npv, self.bin))),
+            (self.mon_npv, self.zero, 1),
+            (self.mon_npv, self.one, self.mon_npv),
+            # 4:
+            (self.mon_npv, self.native, PowExpression((self.mon_npv, 5))),
+            (self.mon_npv, self.npv, PowExpression((self.mon_npv, self.npv))),
+            (self.mon_npv, self.param, PowExpression((self.mon_npv, 6))),
+            (
+                self.mon_npv,
+                self.param_mut,
+                PowExpression((self.mon_npv, self.param_mut)),
+            ),
+            # 8:
+            (self.mon_npv, self.var, PowExpression((self.mon_npv, self.var))),
+            (
+                self.mon_npv,
+                self.mon_native,
+                PowExpression((self.mon_npv, self.mon_native)),
+            ),
+            (
+                self.mon_npv,
+                self.mon_param,
+                PowExpression((self.mon_npv, self.mon_param)),
+            ),
+            (self.mon_npv, self.mon_npv, PowExpression((self.mon_npv, self.mon_npv))),
+            # 12:
+            (self.mon_npv, self.linear, PowExpression((self.mon_npv, self.linear))),
+            (self.mon_npv, self.sum, PowExpression((self.mon_npv, self.sum))),
+            (self.mon_npv, self.other, PowExpression((self.mon_npv, self.other))),
+            (self.mon_npv, self.mutable_l0, 1),
+            # 16:
+            (
+                self.mon_npv,
+                self.mutable_l1,
+                PowExpression((self.mon_npv, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.mon_npv,
+                self.mutable_l2,
+                PowExpression((self.mon_npv, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_linear(self):
+        tests = [
+            (self.linear, self.invalid, NotImplemented),
+            (self.linear, self.asbinary, PowExpression((self.linear, self.bin))),
+            (self.linear, self.zero, 1),
+            (self.linear, self.one, self.linear),
+            # 4:
+            (self.linear, self.native, PowExpression((self.linear, self.native))),
+            (self.linear, self.npv, PowExpression((self.linear, self.npv))),
+            (self.linear, self.param, PowExpression((self.linear, 6))),
+            (self.linear, self.param_mut, PowExpression((self.linear, self.param_mut))),
+            # 8:
+            (self.linear, self.var, PowExpression((self.linear, self.var))),
+            (
+                self.linear,
+                self.mon_native,
+                PowExpression((self.linear, self.mon_native)),
+            ),
+            (self.linear, self.mon_param, PowExpression((self.linear, self.mon_param))),
+            (self.linear, self.mon_npv, PowExpression((self.linear, self.mon_npv))),
+            # 12:
+            (self.linear, self.linear, PowExpression((self.linear, self.linear))),
+            (self.linear, self.sum, PowExpression((self.linear, self.sum))),
+            (self.linear, self.other, PowExpression((self.linear, self.other))),
+            (self.linear, self.mutable_l0, 1),
+            # 16:
+            (
+                self.linear,
+                self.mutable_l1,
+                PowExpression((self.linear, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.linear,
+                self.mutable_l2,
+                PowExpression((self.linear, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_sum(self):
+        tests = [
+            (self.sum, self.invalid, NotImplemented),
+            (self.sum, self.asbinary, PowExpression((self.sum, self.bin))),
+            (self.sum, self.zero, 1),
+            (self.sum, self.one, self.sum),
+            # 4:
+            (self.sum, self.native, PowExpression((self.sum, self.native))),
+            (self.sum, self.npv, PowExpression((self.sum, self.npv))),
+            (self.sum, self.param, PowExpression((self.sum, 6))),
+            (self.sum, self.param_mut, PowExpression((self.sum, self.param_mut))),
+            # 8:
+            (self.sum, self.var, PowExpression((self.sum, self.var))),
+            (self.sum, self.mon_native, PowExpression((self.sum, self.mon_native))),
+            (self.sum, self.mon_param, PowExpression((self.sum, self.mon_param))),
+            (self.sum, self.mon_npv, PowExpression((self.sum, self.mon_npv))),
+            # 12:
+            (self.sum, self.linear, PowExpression((self.sum, self.linear))),
+            (self.sum, self.sum, PowExpression((self.sum, self.sum))),
+            (self.sum, self.other, PowExpression((self.sum, self.other))),
+            (self.sum, self.mutable_l0, 1),
+            # 16:
+            (
+                self.sum,
+                self.mutable_l1,
+                PowExpression((self.sum, self.mutable_l1.arg(0))),
+            ),
+            (self.sum, self.mutable_l2, PowExpression((self.sum, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_other(self):
+        tests = [
+            (self.other, self.invalid, NotImplemented),
+            (self.other, self.asbinary, PowExpression((self.other, self.bin))),
+            (self.other, self.zero, 1),
+            (self.other, self.one, self.other),
+            # 4:
+            (self.other, self.native, PowExpression((self.other, self.native))),
+            (self.other, self.npv, PowExpression((self.other, self.npv))),
+            (self.other, self.param, PowExpression((self.other, 6))),
+            (self.other, self.param_mut, PowExpression((self.other, self.param_mut))),
+            # 8:
+            (self.other, self.var, PowExpression((self.other, self.var))),
+            (self.other, self.mon_native, PowExpression((self.other, self.mon_native))),
+            (self.other, self.mon_param, PowExpression((self.other, self.mon_param))),
+            (self.other, self.mon_npv, PowExpression((self.other, self.mon_npv))),
+            # 12:
+            (self.other, self.linear, PowExpression((self.other, self.linear))),
+            (self.other, self.sum, PowExpression((self.other, self.sum))),
+            (self.other, self.other, PowExpression((self.other, self.other))),
+            (self.other, self.mutable_l0, 1),
+            # 16:
+            (
+                self.other,
+                self.mutable_l1,
+                PowExpression((self.other, self.mutable_l1.arg(0))),
+            ),
+            (self.other, self.mutable_l2, PowExpression((self.other, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_mutable_l0(self):
+        tests = [
+            (self.mutable_l0, self.invalid, NotImplemented),
+            (self.mutable_l0, self.asbinary, PowExpression((0, self.bin))),
+            (self.mutable_l0, self.zero, 1),
+            (self.mutable_l0, self.one, 0),
+            # 4:
+            (self.mutable_l0, self.native, 0),
+            (self.mutable_l0, self.npv, NPV_PowExpression((0, self.npv))),
+            (self.mutable_l0, self.param, 0),
+            (self.mutable_l0, self.param_mut, NPV_PowExpression((0, self.param_mut))),
+            # 8:
+            (self.mutable_l0, self.var, PowExpression((0, self.var))),
+            (self.mutable_l0, self.mon_native, PowExpression((0, self.mon_native))),
+            (self.mutable_l0, self.mon_param, PowExpression((0, self.mon_param))),
+            (self.mutable_l0, self.mon_npv, PowExpression((0, self.mon_npv))),
+            # 12:
+            (self.mutable_l0, self.linear, PowExpression((0, self.linear))),
+            (self.mutable_l0, self.sum, PowExpression((0, self.sum))),
+            (self.mutable_l0, self.other, PowExpression((0, self.other))),
+            (self.mutable_l0, self.mutable_l0, 1),
+            # 16:
+            (
+                self.mutable_l0,
+                self.mutable_l1,
+                PowExpression((0, self.mutable_l1.arg(0))),
+            ),
+            (self.mutable_l0, self.mutable_l2, PowExpression((0, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_mutable_l1(self):
+        tests = [
+            (self.mutable_l1, self.invalid, NotImplemented),
+            (self.mutable_l1, self.asbinary, PowExpression((self.mon_npv, self.bin))),
+            (self.mutable_l1, self.zero, 1),
+            (self.mutable_l1, self.one, self.mon_npv),
+            # 4:
+            (self.mutable_l1, self.native, PowExpression((self.mutable_l1.arg(0), 5))),
+            (
+                self.mutable_l1,
+                self.npv,
+                PowExpression((self.mutable_l1.arg(0), self.npv)),
+            ),
+            (self.mutable_l1, self.param, PowExpression((self.mutable_l1.arg(0), 6))),
+            (
+                self.mutable_l1,
+                self.param_mut,
+                PowExpression((self.mutable_l1.arg(0), self.param_mut)),
+            ),
+            # 8:
+            (
+                self.mutable_l1,
+                self.var,
+                PowExpression((self.mutable_l1.arg(0), self.var)),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_native,
+                PowExpression((self.mutable_l1.arg(0), self.mon_native)),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_param,
+                PowExpression((self.mutable_l1.arg(0), self.mon_param)),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_npv,
+                PowExpression((self.mutable_l1.arg(0), self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.mutable_l1,
+                self.linear,
+                PowExpression((self.mutable_l1.arg(0), self.linear)),
+            ),
+            (
+                self.mutable_l1,
+                self.sum,
+                PowExpression((self.mutable_l1.arg(0), self.sum)),
+            ),
+            (
+                self.mutable_l1,
+                self.other,
+                PowExpression((self.mutable_l1.arg(0), self.other)),
+            ),
+            (self.mutable_l1, self.mutable_l0, 1),
+            # 16:
+            (
+                self.mutable_l1,
+                self.mutable_l1,
+                PowExpression((self.mon_npv, self.mon_npv)),
+            ),
+            (
+                self.mutable_l1,
+                self.mutable_l2,
+                PowExpression((self.mon_npv, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.pow)
+
+    def test_pow_mutable_l2(self):
+        tests = [
+            (self.mutable_l2, self.invalid, NotImplemented),
+            (
+                self.mutable_l2,
+                self.asbinary,
+                PowExpression((self.mutable_l2, self.bin)),
+            ),
+            (self.mutable_l2, self.zero, 1),
+            (self.mutable_l2, self.one, self.mutable_l2),
+            # 4:
+            (
+                self.mutable_l2,
+                self.native,
+                PowExpression((self.mutable_l2, self.native)),
+            ),
+            (self.mutable_l2, self.npv, PowExpression((self.mutable_l2, self.npv))),
+            (self.mutable_l2, self.param, PowExpression((self.mutable_l2, 6))),
+            (
+                self.mutable_l2,
+                self.param_mut,
+                PowExpression((self.mutable_l2, self.param_mut)),
+            ),
+            # 8:
+            (self.mutable_l2, self.var, PowExpression((self.mutable_l2, self.var))),
+            (
+                self.mutable_l2,
+                self.mon_native,
+                PowExpression((self.mutable_l2, self.mon_native)),
+            ),
+            (
+                self.mutable_l2,
+                self.mon_param,
+                PowExpression((self.mutable_l2, self.mon_param)),
+            ),
+            (
+                self.mutable_l2,
+                self.mon_npv,
+                PowExpression((self.mutable_l2, self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.mutable_l2,
+                self.linear,
+                PowExpression((self.mutable_l2, self.linear)),
+            ),
+            (self.mutable_l2, self.sum, PowExpression((self.mutable_l2, self.sum))),
+            (self.mutable_l2, self.other, PowExpression((self.mutable_l2, self.other))),
+            (self.mutable_l2, self.mutable_l0, 1),
+            # 16:
+            (
+                self.mutable_l2,
+                self.mutable_l1,
+                PowExpression((self.mutable_l2, self.mon_npv)),
+            ),
+            (
+                self.mutable_l2,
+                self.mutable_l2,
+                PowExpression((self.mutable_l2, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.pow)
