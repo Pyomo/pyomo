@@ -557,15 +557,11 @@ class IncidenceGraphInterface(object):
         sccs = get_scc_of_projection(graph, con_nodes)
         row_idx_map = {r: idx for idx, scc in enumerate(sccs) for r, _ in scc}
         col_idx_map = {c-M: idx for idx, scc in enumerate(sccs) for _, c in scc}
-        # Cache maps in case we want to get diagonal blocks quickly in the
-        # future.
-        row_block_map = row_idx_map
-        col_block_map = {j-M: idx for j, idx in col_idx_map.items()}
         con_block_map = ComponentMap(
-            (constraints[i], idx) for i, idx in row_block_map.items()
+            (constraints[i], idx) for i, idx in row_idx_map.items()
         )
         var_block_map = ComponentMap(
-            (variables[j], idx) for j, idx in col_block_map.items()
+            (variables[j], idx) for j, idx in col_idx_map.items()
         )
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
