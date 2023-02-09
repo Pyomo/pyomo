@@ -375,7 +375,7 @@ class IncidenceGraphInterface(object):
 
     @property
     @deprecated(
-        msg="``var_idx_map`` is deprecated. Please use get_matrix_coord instead.",
+        msg="``var_index_map`` is deprecated. Please use ``get_matrix_coord`` instead.",
         version="TBD",
     )
     def var_index_map(self):
@@ -383,7 +383,7 @@ class IncidenceGraphInterface(object):
 
     @property
     @deprecated(
-        msg="``con_idx_map`` is deprecated. Please use get_matrix_coord instead.",
+        msg="``con_index_map`` is deprecated. Please use ``get_matrix_coord`` instead.",
         version="TBD",
     )
     def con_index_map(self):
