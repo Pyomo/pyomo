@@ -1649,7 +1649,7 @@ class AMPLRepn(object):
         elif nterms == 1:
             return prefix + nl_sum, args, named_exprs
         else: # nterms == 0
-            return prefix + (template.const % 0), [], named_exprs
+            return prefix + (template.const % 0), args, named_exprs
 
     def compile_nonlinear_fragment(self, visitor):
         if not self.nonlinear:
