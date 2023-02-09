@@ -445,7 +445,7 @@ class IncidenceGraphInterface(object):
 
         Parameters
         ----------
-        component: ComponentData
+        component: ``ComponentData``
             The variable or constraint data object whose adjacent components
             are returned
 
@@ -454,6 +454,20 @@ class IncidenceGraphInterface(object):
         list of ComponentData
             List of constraint or variable data objects adjacent to the
             provided component
+
+        Example
+        -------
+        >>> import pyomo.environ as pyo 
+        >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
+        >>> m = pyo.ConcreteModel()
+        >>> m.x = pyo.Var([1, 2]) 
+        >>> m.eq1 = pyo.Constraint(expr=m.x[1]**2 == 7)
+        >>> m.eq2 = pyo.Constraint(expr=m.x[1]*m.x[2] == 3)
+        >>> m.eq3 = pyo.Constraint(expr=m.x[1] + 2*m.x[2] == 5)
+        >>> igraph = IncidenceGraphInterface(m)
+        >>> adj_to_x2 = igraph.get_adjacent_to(m.x[2])
+        >>> print([c.name for c in adj_to_x2])
+        ['eq2', 'eq3']
 
         """
         if self._incidence_graph is None:
@@ -569,18 +583,34 @@ class IncidenceGraphInterface(object):
         return var_block_map, con_block_map
 
     def block_triangularize(self, variables=None, constraints=None):
-        """Partition the provided variables and constraints such that their
-        incidence matrix is block lower triangular.
+        """Compute an ordered partition of the provided variables and
+        constraints such that their incidence matrix is block lower triangular
 
-        These correspond to the strongly connected components of the bipartite
-        incidence graph, projected with respect to a maximum matching.
+        Subsets in the partition correspond to the strongly connected components
+        of the bipartite incidence graph, projected with respect to a perfect
+        matching.
 
         Returns
         -------
-        List of lists
-            List containing subsets, in the form of inner lists, of
-            variable-constraint tuples. Subsets are strongly connected
-            components, ordered topologically.
+        var_partition: list of lists
+            Partition of variables. The inner lists hold unindexed variables.
+        con_partition: list of lists
+            Partition of constraints. The inner lists hold unindexed constraints.
+
+        Example
+        -------
+        >>> import pyomo.environ as pyo
+        >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
+        >>> m = pyo.ConcreteModel()
+        >>> m.x = pyo.Var([1, 2])
+        >>> m.eq1 = pyo.Constraint(expr=m.x[1]**2 == 7)
+        >>> m.eq2 = pyo.Constraint(expr=m.x[1]*m.x[2] == 3)
+        >>> igraph = IncidenceGraphInterface(m)
+        >>> vblocks, cblocks = igraph.block_triangularize()
+        >>> print([[v.name for v in vb] for vb in vblocks])
+        [['x[1]'], ['x[2]']]
+        >>> print([[c.name for c in cb] for cb in cblocks])
+        [['eq1'], ['eq2']]
 
         """
         variables, constraints = self._validate_input(variables, constraints)
@@ -595,8 +625,9 @@ class IncidenceGraphInterface(object):
 
     @deprecated(
         msg=(
-            "'IncidenceGraphInterface.get_diagonal_blocks' is deprecated."
-            " Please use 'IncidenceGraphInterface.block_triangularize' instead."
+            "``IncidenceGraphInterface.get_diagonal_blocks`` is deprecated."
+            " Please use ``IncidenceGraphInterface.block_triangularize``"
+            " instead."
         ),
         version="TBD",
     )
@@ -642,6 +673,24 @@ class IncidenceGraphInterface(object):
         con_partition: ``RowPartition`` named tuple
             Partitions constraints into square, underconstrained,
             overconstrained, and unmatched.
+
+        Example
+        -------
+        >>> import pyomo.environ as pyo 
+        >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
+        >>> m = pyo.ConcreteModel()
+        >>> m.x = pyo.Var([1, 2]) 
+        >>> m.eq1 = pyo.Constraint(expr=m.x[1]**2 == 7)
+        >>> m.eq2 = pyo.Constraint(expr=m.x[1]*m.x[2] == 3)
+        >>> m.eq3 = pyo.Constraint(expr=m.x[1] + 2*m.x[2] == 5)
+        >>> igraph = IncidenceGraphInterface(m)
+        >>> var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+        >>> print([v.name for v in var_dmp.overconstrained])
+        ['x[1]', 'x[2]']
+        >>> print([c.name for c in con_dmp.overconstrained])
+        ['eq1', 'eq2']
+        >>> print([c.name for c in con_dmp.unmatched])
+        ['eq3']
 
         """
         variables, constraints = self._validate_input(variables, constraints)

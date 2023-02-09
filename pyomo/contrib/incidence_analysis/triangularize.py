@@ -123,23 +123,26 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
 
 
 def block_triangularize(matrix, matching=None):
-    """
-    Computes the necessary information to permute a matrix to block-lower
-    triangular form, i.e. a partition of rows and columns into an ordered
-    set of diagonal blocks in such a permutation.
+    """Compute ordered partitions of the matrix's rows and columns that
+    permute the matrix to block lower triangular form
 
-    Arguments
-    ---------
-    matrix: A SciPy sparse matrix
-    matching: A perfect matching of rows and columns, in the form of a dict
-              mapping row indices to column indices
+    Subsets in the partition correspond to diagonal blocks in the block
+    triangularization. The order is topological, with ties broken
+    "lexicographically".
+
+    Parameters
+    ----------
+    matrix: ``scipy.sparse.coo_matrix``
+        Matrix whose rows and columns will be permuted
+    matching: ``dict``
+        A perfect matching. Maps rows to columns *and* columns back to rows.
 
     Returns
     -------
-    Two dicts. The first maps each row index to the index of its block in a
-    block-lower triangular permutation of the matrix. The second maps each
-    column index to the index of its block in a block-lower triangular
-    permutation of the matrix.
+    row_partition: list of lists
+        A partition of rows. The inner lists hold integer row coordinates.
+    col_partition: list of lists
+        A partition of columns. The inner lists hold integer column coordinates.
 
     """
     nxb = nx.algorithms.bipartite
@@ -173,8 +176,8 @@ def map_coords_to_blocks(matrix, matching=None):
 
 @deprecated(
     msg=(
-        "'get_blocks_from_maps' is deprecated. This functionality has been"
-        " incorporated into 'block_triangularize'."
+        "``get_blocks_from_maps`` is deprecated. This functionality has been"
+        " incorporated into ``block_triangularize``."
     ),
     version="TBD",
 )
@@ -184,8 +187,8 @@ def get_blocks_from_maps(row_block_map, col_block_map):
     block triangularization from maps of row/column coordinates to
     block indices.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     row_block_map: dict
         Dict mapping each row coordinate to the coordinate of the
         block it belongs to
@@ -217,8 +220,8 @@ def get_blocks_from_maps(row_block_map, col_block_map):
 
 @deprecated(
     msg=(
-        "'get_diagonal_blocks' has been deprecated. Please use"
-        " 'block_triangularize' instead."
+        "``get_diagonal_blocks`` has been deprecated. Please use"
+        " ``block_triangularize`` instead."
     ),
     version="TBD",
 )
@@ -227,8 +230,8 @@ def get_diagonal_blocks(matrix, matching=None):
     Gets the diagonal blocks of a block triangularization of the provided
     matrix.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     coo_matrix
         Matrix to get the diagonal blocks of
 
