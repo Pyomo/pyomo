@@ -74,7 +74,7 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     correspond to constraints and nodes M through M+N-1 correspond to variables.
     Nodes correspond to variables and constraints in the provided orders.
     For consistency with NetworkX's "convention", constraint nodes are tagged
-    with `bipartite=0` while variable nodes are tagged with `bipartite=1`,
+    with ``bipartite=0`` while variable nodes are tagged with ``bipartite=1``,
     although these attributes are not used.
 
     Parameters
