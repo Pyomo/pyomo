@@ -11,4 +11,4 @@ Incidence Analysis:
 
    tutorial.dm.rst
    tutorial.bt.rst
-   tutorial.bt_solve.rst
+   tutorial.btsolve.rst
