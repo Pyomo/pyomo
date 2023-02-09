@@ -54,7 +54,7 @@ if plotly_available:
 def _check_unindexed(complist):
     for comp in complist:
         if comp.is_indexed():
-            raise ValueError(
+            raise RuntimeError(
                 "Variables and constraints must be unindexed "
                 "ComponentData objects. Got %s, which is indexed." % comp.name
             )

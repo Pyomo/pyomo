@@ -573,13 +573,13 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
         nlp = PyomoNLP(model)
         igraph = IncidenceGraphInterface(nlp)
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.maximum_matching(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.block_triangularize(variables, constraints)
@@ -826,13 +826,13 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         model = make_gas_expansion_model()
         igraph = IncidenceGraphInterface(model)
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.maximum_matching(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.block_triangularize(variables, constraints)
