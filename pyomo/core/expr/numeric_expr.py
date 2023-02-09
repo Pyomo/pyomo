@@ -2482,6 +2482,8 @@ def _div_native_other(a, b):
 def _div_npv_native(a, b):
     if b == 1:
         return a
+    if not b:
+        raise ZeroDivisionError()
     return NPV_DivisionExpression((a, b))
 
 def _div_npv_npv(a, b):
@@ -2492,6 +2494,8 @@ def _div_npv_param(a, b):
         b = b.value
         if b == 1:
             return a
+        if not b:
+            raise ZeroDivisionError()
     return NPV_DivisionExpression((a, b))
 
 def _div_npv_var(a, b):
@@ -2518,6 +2522,8 @@ def _div_param_native(a, b):
         return a.value / b
     if b == 1:
         return a
+    if not b:
+        raise ZeroDivisionError()
     return NPV_DivisionExpression((a, b))
 
 def _div_param_npv(a, b):
@@ -2534,6 +2540,8 @@ def _div_param_param(a, b):
         b = b.value
         if b == 1:
             return a
+        if not b:
+            raise ZeroDivisionError()
     return NPV_DivisionExpression((a, b))
 
 def _div_param_var(a, b):
@@ -2638,6 +2646,8 @@ def _div_monomial_other(a, b):
 def _div_linear_native(a, b):
     if b == 1:
         return a
+    if not b:
+        raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
 def _div_linear_npv(a, b):
@@ -2648,6 +2658,8 @@ def _div_linear_param(a, b):
         b = b.value
         if b == 1:
             return a
+        if not b:
+            raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
 def _div_linear_var(a, b):
@@ -2672,6 +2684,8 @@ def _div_linear_other(a, b):
 def _div_sum_native(a, b):
     if b == 1:
         return a
+    if not b:
+        raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
 def _div_sum_npv(a, b):
@@ -2682,6 +2696,8 @@ def _div_sum_param(a, b):
         b = b.value
         if b == 1:
             return a
+        if not b:
+            raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
 def _div_sum_var(a, b):
@@ -2706,6 +2722,8 @@ def _div_sum_other(a, b):
 def _div_other_native(a, b):
     if b == 1:
         return a
+    if not b:
+        raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
 def _div_other_npv(a, b):
@@ -2716,6 +2734,8 @@ def _div_other_param(a, b):
         b = b.value
         if b == 1:
             return a
+        if not b:
+            raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
 def _div_other_var(a, b):
