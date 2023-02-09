@@ -109,7 +109,7 @@ def help_writers():
 
 def help_checkers():
     import pyomo.environ
-    import pyomo.common.plugin
+    import pyomo.common.plugin_base
     from pyomo.checker import IModelChecker
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '
@@ -117,7 +117,7 @@ def help_checkers():
     print("")
     print("Pyomo Model Checkers")
     print("--------------------")
-    ep = pyomo.common.plugin.ExtensionPoint(IModelChecker)
+    ep = pyomo.common.plugin_base.ExtensionPoint(IModelChecker)
     tmp = {}
     for checker in ep.extensions():
         for alias in getattr(checker, '_factory_aliases', set()):
