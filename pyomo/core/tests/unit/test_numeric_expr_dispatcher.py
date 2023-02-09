@@ -16,6 +16,7 @@ import operator
 
 import pyomo.common.unittest as unittest
 
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
@@ -108,16 +109,19 @@ class TestExprGen(unittest.TestCase):
         # self._run_cases(tests, operator.mul)
 
     def _run_cases(self, tests, op):
-        ans = None
         try:
             for test_num, test in enumerate(tests):
+                ans = None
                 args = test[:-1]
                 result = test[-1]
                 orig_args = [clone_expression(arg) for arg in args]
                 try:
                     mutable = [isinstance(arg, _MutableSumExpression) for arg in args]
                     classes = [arg.__class__ for arg in args]
-                    ans = op(*args)
+                    with LoggingIntercept() as LOG:
+                        ans = op(*args)
+                    if not any(arg is self.asbinary for arg in args):
+                        self.assertEqual(LOG.getvalue(), "")
                     assertExpressionsEqual(self, result, ans)
                     for i, arg in enumerate(args):
                         self.assertFalse(isinstance(arg, _MutableSumExpression))
@@ -128,6 +132,9 @@ class TestExprGen(unittest.TestCase):
                             self.assertIs(arg.__class__, classes[i])
                 except TypeError:
                     if result is not NotImplemented:
+                        raise
+                except ZeroDivisionError:
+                    if result is not ZeroDivisionError:
                         raise
                 finally:
                     for i, arg in enumerate(args):
