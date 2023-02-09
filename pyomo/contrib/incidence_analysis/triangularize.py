@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import deprecated
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
     # TODO: The fact that we import this function here suggests it should be
@@ -170,6 +171,13 @@ def map_coords_to_blocks(matrix, matching=None):
     return row_idx_map, col_idx_map
 
 
+@deprecated(
+    msg=(
+        "'get_blocks_from_maps' is deprecated. This functionality has been"
+        " incorporated into 'block_triangularize'."
+    ),
+    version="TBD",
+)
 def get_blocks_from_maps(row_block_map, col_block_map):
     """
     Gets the row and column coordinates of each diagonal block in a
@@ -207,6 +215,13 @@ def get_blocks_from_maps(row_block_map, col_block_map):
     return block_rows, block_cols
 
 
+@deprecated(
+    msg=(
+        "'get_diagonal_blocks' has been deprecated. Please use"
+        " 'block_triangularize' instead."
+    ),
+    version="TBD",
+)
 def get_diagonal_blocks(matrix, matching=None):
     """
     Gets the diagonal blocks of a block triangularization of the provided

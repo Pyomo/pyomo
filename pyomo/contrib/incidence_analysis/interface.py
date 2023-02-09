@@ -26,6 +26,7 @@ from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available, attempt_import
 from pyomo.common.dependencies import networkx as nx
+from pyomo.common.deprecation import deprecated
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import (
     get_independent_submatrices,
@@ -592,8 +593,13 @@ class IncidenceGraphInterface(object):
         con_partition = [[constraints[i] for i, _ in scc] for scc in sccs]
         return var_partition, con_partition
 
-    # This method has been superceded by block_triangularize.
-    # TODO: Deprecate.
+    @deprecated(
+        msg=(
+            "'IncidenceGraphInterface.get_diagonal_blocks' is deprecated."
+            " Please use 'IncidenceGraphInterface.block_triangularize' instead."
+        ),
+        version="TBD",
+    )
     def get_diagonal_blocks(self, variables=None, constraints=None):
         variables, constraints = self._validate_input(variables, constraints)
         graph = self._extract_subgraph(variables, constraints)
