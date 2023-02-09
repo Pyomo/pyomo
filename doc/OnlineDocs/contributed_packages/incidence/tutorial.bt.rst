@@ -2,7 +2,7 @@ Debugging a numeric singularity using block triangularization
 =============================================================
 
 We start with some imports. To debug a *numeric* singularity, we will need
-``PyomoNLP`` from PyNumero (TODO: link) to get the constraint Jacobian,
+``PyomoNLP`` from :ref:`pynumero` to get the constraint Jacobian,
 and will need NumPy to compute condition numbers.
 
 .. doctest::
