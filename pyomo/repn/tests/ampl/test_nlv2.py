@@ -213,6 +213,43 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
+    def test_pow(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=2)
+        m.x = Var()
+
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, ('o5\nv%s\nn2\n', [id(m.x)]))
+
+        m.p = 1
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.x): 1})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.p = 0
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 1)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
     def test_errors_divide_by_0_mult_by_0(self):
         # Note: we may elect to deprecate this functionality in the future
         #
