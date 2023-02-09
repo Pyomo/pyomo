@@ -14,7 +14,7 @@ from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import (
     get_scc_of_projection,
     block_triangularize,
-    map_coords_to_blocks,
+    map_coords_to_block_triangular_indices,
     get_diagonal_blocks,
 )
 from pyomo.common.dependencies import (
@@ -155,7 +155,7 @@ class TestTriangularize(unittest.TestCase):
     def test_identity(self):
         N = 5
         matrix = sps.identity(N).tocoo()
-        row_block_map, col_block_map = map_coords_to_blocks(matrix)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
 
@@ -204,7 +204,7 @@ class TestTriangularize(unittest.TestCase):
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
-        row_block_map, col_block_map = map_coords_to_blocks(matrix)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
         
@@ -242,7 +242,7 @@ class TestTriangularize(unittest.TestCase):
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
-        row_block_map, col_block_map = map_coords_to_blocks(matrix)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
         
@@ -286,7 +286,7 @@ class TestTriangularize(unittest.TestCase):
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
-        row_block_map, col_block_map = map_coords_to_blocks(matrix)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
 
@@ -329,7 +329,7 @@ class TestTriangularize(unittest.TestCase):
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
-        row_block_map, col_block_map = map_coords_to_blocks(matrix)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
 
@@ -377,7 +377,7 @@ class TestTriangularize(unittest.TestCase):
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
-        row_block_map, col_block_map = map_coords_to_blocks(matrix)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
 
@@ -432,7 +432,7 @@ class TestTriangularize(unittest.TestCase):
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
-        row_block_map, col_block_map = map_coords_to_blocks(matrix)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
 

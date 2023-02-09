@@ -163,7 +163,7 @@ def block_triangularize(matrix, matching=None):
     return row_partition, col_partition
 
 
-def map_coords_to_blocks(matrix, matching=None):
+def map_coords_to_block_triangular_indices(matrix, matching=None):
     row_blocks, col_blocks = block_triangularize(matrix, matching=matching)
     row_idx_map = {
         r: idx for idx, rblock in enumerate(row_blocks) for r in rblock

@@ -26,7 +26,9 @@ from pyomo.contrib.incidence_analysis.interface import (
     extract_bipartite_subgraph,
 )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.contrib.incidence_analysis.triangularize import map_coords_to_blocks
+from pyomo.contrib.incidence_analysis.triangularize import (
+    map_coords_to_block_triangular_indices,
+)
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
 )
@@ -248,7 +250,7 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
         con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
-        row_block_map, col_block_map = map_coords_to_blocks(imat)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(imat)
         var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
                 for v in variables)
         con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
@@ -404,7 +406,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
         con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
-        row_block_map, col_block_map = map_coords_to_blocks(imat)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(imat)
         var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
                 for v in variables)
         con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
@@ -545,7 +547,7 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.map_nodes_to_blocks(
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
             variables, constraints
         )
         var_values = set(var_block_map.values())
@@ -677,7 +679,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
     def test_maps_from_triangularization(self):
         """
         This tests the maps from variables and constraints to their diagonal
-        blocks returned by map_nodes_to_blocks
+        blocks returned by map_nodes_to_block_triangular_indices
         """
         N = 5
         model = make_gas_expansion_model(N)
@@ -696,7 +698,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.map_nodes_to_blocks(
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
             variables, constraints
         )
         var_values = set(var_block_map.values())
@@ -799,7 +801,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         constraints.extend(model.ebal[i] for i in model.streams
                 if i > half)
 
-        var_block_map, con_block_map = igraph.map_nodes_to_blocks(
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
             variables, constraints
         )
         var_values = set(var_block_map.values())
@@ -989,7 +991,7 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.map_nodes_to_blocks(
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
             variables, constraints
         )
         var_values = set(var_block_map.values())
