@@ -22,6 +22,8 @@ from pyomo.core.expr.compare import (
     assertExpressionsStructurallyEqual,
 )
 from pyomo.core.expr.current import (
+    DivisionExpression,
+    NPV_DivisionExpression,
     LinearExpression,
     SumExpression,
     MonomialTermExpression,
@@ -193,11 +195,7 @@ class TestExprGen(unittest.TestCase):
             (self.asbinary, self.zero, MonomialTermExpression((0, self.bin))),
             (self.asbinary, self.one, self.bin),
             # 4:
-            (
-                self.asbinary,
-                self.native,
-                MonomialTermExpression((5, self.bin)),
-            ),
+            (self.asbinary, self.native, MonomialTermExpression((5, self.bin))),
             (self.asbinary, self.npv, MonomialTermExpression((self.npv, self.bin))),
             (self.asbinary, self.param, MonomialTermExpression((6, self.bin))),
             (
@@ -527,11 +525,7 @@ class TestExprGen(unittest.TestCase):
             (self.param_mut, self.zero, NPV_ProductExpression((self.param_mut, 0))),
             (self.param_mut, self.one, self.param_mut),
             # 4:
-            (
-                self.param_mut,
-                self.native,
-                NPV_ProductExpression((self.param_mut, 5)),
-            ),
+            (self.param_mut, self.native, NPV_ProductExpression((self.param_mut, 5))),
             (
                 self.param_mut,
                 self.npv,
@@ -1278,11 +1272,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l2, self.zero, ProductExpression((self.mutable_l2, 0))),
             (self.mutable_l2, self.one, self.mutable_l2),
             # 4:
-            (
-                self.mutable_l2,
-                self.native,
-                ProductExpression((self.mutable_l2, 5)),
-            ),
+            (self.mutable_l2, self.native, ProductExpression((self.mutable_l2, 5))),
             (self.mutable_l2, self.npv, ProductExpression((self.mutable_l2, self.npv))),
             (self.mutable_l2, self.param, ProductExpression((self.mutable_l2, 6))),
             (
@@ -1333,3 +1323,1020 @@ class TestExprGen(unittest.TestCase):
             ),
         ]
         self._run_cases(tests, operator.mul)
+
+    #
+    #
+    # DIVISION
+    #
+    #
+
+    def test_div_invalid(self):
+        tests = [
+            (self.invalid, self.invalid, NotImplemented),
+            (self.invalid, self.asbinary, NotImplemented),
+            (self.invalid, self.zero, NotImplemented),
+            (self.invalid, self.one, NotImplemented),
+            # 4:
+            (self.invalid, self.native, NotImplemented),
+            (self.invalid, self.npv, NotImplemented),
+            (self.invalid, self.param, NotImplemented),
+            (self.invalid, self.param_mut, NotImplemented),
+            # 8:
+            (self.invalid, self.var, NotImplemented),
+            (self.invalid, self.mon_native, NotImplemented),
+            (self.invalid, self.mon_param, NotImplemented),
+            (self.invalid, self.mon_npv, NotImplemented),
+            # 12:
+            (self.invalid, self.linear, NotImplemented),
+            (self.invalid, self.sum, NotImplemented),
+            (self.invalid, self.other, NotImplemented),
+            (self.invalid, self.mutable_l0, NotImplemented),
+            # 16:
+            (self.invalid, self.mutable_l1, NotImplemented),
+            (self.invalid, self.mutable_l2, NotImplemented),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_asbinary(self):
+        tests = [
+            (self.asbinary, self.invalid, NotImplemented),
+            # BooleanVar objects do not support division
+            (self.asbinary, self.asbinary, NotImplemented),
+            (self.asbinary, self.zero, ZeroDivisionError),
+            (self.asbinary, self.one, self.bin),
+            # 4:
+            (self.asbinary, self.native, MonomialTermExpression((0.2, self.bin))),
+            (
+                self.asbinary,
+                self.npv,
+                MonomialTermExpression(
+                    (NPV_DivisionExpression((1, self.npv)), self.bin)
+                ),
+            ),
+            (self.asbinary, self.param, MonomialTermExpression((1 / 6, self.bin))),
+            (
+                self.asbinary,
+                self.param_mut,
+                MonomialTermExpression(
+                    (NPV_DivisionExpression((1, self.param_mut)), self.bin)
+                ),
+            ),
+            # 8:
+            (self.asbinary, self.var, DivisionExpression((self.bin, self.var))),
+            (
+                self.asbinary,
+                self.mon_native,
+                DivisionExpression((self.bin, self.mon_native)),
+            ),
+            (
+                self.asbinary,
+                self.mon_param,
+                DivisionExpression((self.bin, self.mon_param)),
+            ),
+            (self.asbinary, self.mon_npv, DivisionExpression((self.bin, self.mon_npv))),
+            # 12:
+            (self.asbinary, self.linear, DivisionExpression((self.bin, self.linear))),
+            (self.asbinary, self.sum, DivisionExpression((self.bin, self.sum))),
+            (self.asbinary, self.other, DivisionExpression((self.bin, self.other))),
+            (self.asbinary, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.asbinary,
+                self.mutable_l1,
+                DivisionExpression((self.bin, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.asbinary,
+                self.mutable_l2,
+                DivisionExpression((self.bin, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_zero(self):
+        tests = [
+            (self.zero, self.invalid, NotImplemented),
+            (self.zero, self.asbinary, DivisionExpression((0, self.bin))),
+            (self.zero, self.zero, ZeroDivisionError),
+            (self.zero, self.one, 0.0),
+            # 4:
+            (self.zero, self.native, 0.0),
+            (self.zero, self.npv, NPV_DivisionExpression((0, self.npv))),
+            (self.zero, self.param, 0.0),
+            (self.zero, self.param_mut, NPV_DivisionExpression((0, self.param_mut))),
+            # 8:
+            (self.zero, self.var, DivisionExpression((0, self.var))),
+            (self.zero, self.mon_native, DivisionExpression((0, self.mon_native))),
+            (self.zero, self.mon_param, DivisionExpression((0, self.mon_param))),
+            (self.zero, self.mon_npv, DivisionExpression((0, self.mon_npv))),
+            # 12:
+            (self.zero, self.linear, DivisionExpression((0, self.linear))),
+            (self.zero, self.sum, DivisionExpression((0, self.sum))),
+            (self.zero, self.other, DivisionExpression((0, self.other))),
+            (self.zero, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.zero,
+                self.mutable_l1,
+                DivisionExpression((0, self.mutable_l1.arg(0))),
+            ),
+            (self.zero, self.mutable_l2, DivisionExpression((0, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_one(self):
+        tests = [
+            (self.one, self.invalid, NotImplemented),
+            (self.one, self.asbinary, DivisionExpression((1, self.bin))),
+            (self.one, self.zero, ZeroDivisionError),
+            (self.one, self.one, 1.0),
+            # 4:
+            (self.one, self.native, 0.2),
+            (self.one, self.npv, NPV_DivisionExpression((1, self.npv))),
+            (self.one, self.param, 1 / 6),
+            (self.one, self.param_mut, NPV_DivisionExpression((1, self.param_mut))),
+            # 8:
+            (self.one, self.var, DivisionExpression((1, self.var))),
+            (self.one, self.mon_native, DivisionExpression((1, self.mon_native))),
+            (self.one, self.mon_param, DivisionExpression((1, self.mon_param))),
+            (self.one, self.mon_npv, DivisionExpression((1, self.mon_npv))),
+            # 12:
+            (self.one, self.linear, DivisionExpression((1, self.linear))),
+            (self.one, self.sum, DivisionExpression((1, self.sum))),
+            (self.one, self.other, DivisionExpression((1, self.other))),
+            (self.one, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.one,
+                self.mutable_l1,
+                DivisionExpression((1, self.mutable_l1.arg(0))),
+            ),
+            (self.one, self.mutable_l2, DivisionExpression((1, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_native(self):
+        tests = [
+            (self.native, self.invalid, NotImplemented),
+            (self.native, self.asbinary, DivisionExpression((5, self.bin))),
+            (self.native, self.zero, ZeroDivisionError),
+            (self.native, self.one, 5.0),
+            # 4:
+            (self.native, self.native, 1.0),
+            (self.native, self.npv, NPV_DivisionExpression((5, self.npv))),
+            (self.native, self.param, 5 / 6),
+            (self.native, self.param_mut, NPV_DivisionExpression((5, self.param_mut))),
+            # 8:
+            (self.native, self.var, DivisionExpression((5, self.var))),
+            (self.native, self.mon_native, DivisionExpression((5, self.mon_native))),
+            (self.native, self.mon_param, DivisionExpression((5, self.mon_param))),
+            (self.native, self.mon_npv, DivisionExpression((5, self.mon_npv))),
+            # 12:
+            (self.native, self.linear, DivisionExpression((5, self.linear))),
+            (self.native, self.sum, DivisionExpression((5, self.sum))),
+            (self.native, self.other, DivisionExpression((5, self.other))),
+            (self.native, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.native,
+                self.mutable_l1,
+                DivisionExpression((5, self.mutable_l1.arg(0))),
+            ),
+            (self.native, self.mutable_l2, DivisionExpression((5, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_npv(self):
+        tests = [
+            (self.npv, self.invalid, NotImplemented),
+            (self.npv, self.asbinary, DivisionExpression((self.npv, self.bin))),
+            (self.npv, self.zero, ZeroDivisionError),
+            (self.npv, self.one, self.npv),
+            # 4:
+            (self.npv, self.native, NPV_DivisionExpression((self.npv, 5))),
+            (self.npv, self.npv, NPV_DivisionExpression((self.npv, self.npv))),
+            (self.npv, self.param, NPV_DivisionExpression((self.npv, 6))),
+            (
+                self.npv,
+                self.param_mut,
+                NPV_DivisionExpression((self.npv, self.param_mut)),
+            ),
+            # 8:
+            (self.npv, self.var, DivisionExpression((self.npv, self.var))),
+            (
+                self.npv,
+                self.mon_native,
+                DivisionExpression((self.npv, self.mon_native)),
+            ),
+            (self.npv, self.mon_param, DivisionExpression((self.npv, self.mon_param))),
+            (self.npv, self.mon_npv, DivisionExpression((self.npv, self.mon_npv))),
+            # 12:
+            (self.npv, self.linear, DivisionExpression((self.npv, self.linear))),
+            (self.npv, self.sum, DivisionExpression((self.npv, self.sum))),
+            (self.npv, self.other, DivisionExpression((self.npv, self.other))),
+            (self.npv, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.npv,
+                self.mutable_l1,
+                DivisionExpression((self.npv, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.npv,
+                self.mutable_l2,
+                DivisionExpression((self.npv, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_param(self):
+        tests = [
+            (self.param, self.invalid, NotImplemented),
+            (self.param, self.asbinary, DivisionExpression((6, self.bin))),
+            (self.param, self.zero, ZeroDivisionError),
+            (self.param, self.one, 6.0),
+            # 4:
+            (self.param, self.native, 1.2),
+            (self.param, self.npv, NPV_DivisionExpression((6, self.npv))),
+            (self.param, self.param, 1.0),
+            (self.param, self.param_mut, NPV_DivisionExpression((6, self.param_mut))),
+            # 8:
+            (self.param, self.var, DivisionExpression((6, self.var))),
+            (self.param, self.mon_native, DivisionExpression((6, self.mon_native))),
+            (self.param, self.mon_param, DivisionExpression((6, self.mon_param))),
+            (self.param, self.mon_npv, DivisionExpression((6, self.mon_npv))),
+            # 12:
+            (self.param, self.linear, DivisionExpression((6, self.linear))),
+            (self.param, self.sum, DivisionExpression((6, self.sum))),
+            (self.param, self.other, DivisionExpression((6, self.other))),
+            (self.param, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.param,
+                self.mutable_l1,
+                DivisionExpression((6, self.mutable_l1.arg(0))),
+            ),
+            (self.param, self.mutable_l2, DivisionExpression((6, self.mutable_l2))),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_param_mut(self):
+        tests = [
+            (self.param_mut, self.invalid, NotImplemented),
+            (
+                self.param_mut,
+                self.asbinary,
+                DivisionExpression((self.param_mut, self.bin)),
+            ),
+            (self.param_mut, self.zero, ZeroDivisionError),
+            (self.param_mut, self.one, self.param_mut),
+            # 4:
+            (
+                self.param_mut,
+                self.native,
+                NPV_DivisionExpression((self.param_mut, self.native)),
+            ),
+            (
+                self.param_mut,
+                self.npv,
+                NPV_DivisionExpression((self.param_mut, self.npv)),
+            ),
+            (self.param_mut, self.param, NPV_DivisionExpression((self.param_mut, 6))),
+            (
+                self.param_mut,
+                self.param_mut,
+                NPV_DivisionExpression((self.param_mut, self.param_mut)),
+            ),
+            # 8:
+            (self.param_mut, self.var, DivisionExpression((self.param_mut, self.var))),
+            (
+                self.param_mut,
+                self.mon_native,
+                DivisionExpression((self.param_mut, self.mon_native)),
+            ),
+            (
+                self.param_mut,
+                self.mon_param,
+                DivisionExpression((self.param_mut, self.mon_param)),
+            ),
+            (
+                self.param_mut,
+                self.mon_npv,
+                DivisionExpression((self.param_mut, self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.param_mut,
+                self.linear,
+                DivisionExpression((self.param_mut, self.linear)),
+            ),
+            (self.param_mut, self.sum, DivisionExpression((self.param_mut, self.sum))),
+            (
+                self.param_mut,
+                self.other,
+                DivisionExpression((self.param_mut, self.other)),
+            ),
+            (self.param_mut, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.param_mut,
+                self.mutable_l1,
+                DivisionExpression((self.param_mut, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.param_mut,
+                self.mutable_l2,
+                DivisionExpression((self.param_mut, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_var(self):
+        tests = [
+            (self.var, self.invalid, NotImplemented),
+            (self.var, self.asbinary, DivisionExpression((self.var, self.bin))),
+            (self.var, self.zero, ZeroDivisionError),
+            (self.var, self.one, self.var),
+            # 4:
+            (self.var, self.native, MonomialTermExpression((0.2, self.var))),
+            (
+                self.var,
+                self.npv,
+                MonomialTermExpression(
+                    (NPV_DivisionExpression((1, self.npv)), self.var)
+                ),
+            ),
+            (self.var, self.param, MonomialTermExpression((1 / 6.0, self.var))),
+            (
+                self.var,
+                self.param_mut,
+                MonomialTermExpression(
+                    (NPV_DivisionExpression((1, self.param_mut)), self.var)
+                ),
+            ),
+            # 8:
+            (self.var, self.var, DivisionExpression((self.var, self.var))),
+            (
+                self.var,
+                self.mon_native,
+                DivisionExpression((self.var, self.mon_native)),
+            ),
+            (self.var, self.mon_param, DivisionExpression((self.var, self.mon_param))),
+            (self.var, self.mon_npv, DivisionExpression((self.var, self.mon_npv))),
+            # 12:
+            (self.var, self.linear, DivisionExpression((self.var, self.linear))),
+            (self.var, self.sum, DivisionExpression((self.var, self.sum))),
+            (self.var, self.other, DivisionExpression((self.var, self.other))),
+            (self.var, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.var,
+                self.mutable_l1,
+                DivisionExpression((self.var, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.var,
+                self.mutable_l2,
+                DivisionExpression((self.var, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_mon_native(self):
+        tests = [
+            (self.mon_native, self.invalid, NotImplemented),
+            (
+                self.mon_native,
+                self.asbinary,
+                DivisionExpression((self.mon_native, self.bin)),
+            ),
+            (self.mon_native, self.zero, ZeroDivisionError),
+            (self.mon_native, self.one, self.mon_native),
+            # 4:
+            (
+                self.mon_native,
+                self.native,
+                MonomialTermExpression((0.6, self.mon_native.arg(1))),
+            ),
+            (
+                self.mon_native,
+                self.npv,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_native.arg(0), self.npv)),
+                        self.mon_native.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mon_native,
+                self.param,
+                MonomialTermExpression((0.5, self.mon_native.arg(1))),
+            ),
+            (
+                self.mon_native,
+                self.param_mut,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression(
+                            (self.mon_native.arg(0), self.param_mut)
+                        ),
+                        self.mon_native.arg(1),
+                    )
+                ),
+            ),
+            # 8:
+            (
+                self.mon_native,
+                self.var,
+                DivisionExpression((self.mon_native, self.var)),
+            ),
+            (
+                self.mon_native,
+                self.mon_native,
+                DivisionExpression((self.mon_native, self.mon_native)),
+            ),
+            (
+                self.mon_native,
+                self.mon_param,
+                DivisionExpression((self.mon_native, self.mon_param)),
+            ),
+            (
+                self.mon_native,
+                self.mon_npv,
+                DivisionExpression((self.mon_native, self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.mon_native,
+                self.linear,
+                DivisionExpression((self.mon_native, self.linear)),
+            ),
+            (
+                self.mon_native,
+                self.sum,
+                DivisionExpression((self.mon_native, self.sum)),
+            ),
+            (
+                self.mon_native,
+                self.other,
+                DivisionExpression((self.mon_native, self.other)),
+            ),
+            (self.mon_native, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.mon_native,
+                self.mutable_l1,
+                DivisionExpression((self.mon_native, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.mon_native,
+                self.mutable_l2,
+                DivisionExpression((self.mon_native, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_mon_param(self):
+        tests = [
+            (self.mon_param, self.invalid, NotImplemented),
+            (
+                self.mon_param,
+                self.asbinary,
+                DivisionExpression((self.mon_param, self.bin)),
+            ),
+            (self.mon_param, self.zero, ZeroDivisionError),
+            (self.mon_param, self.one, self.mon_param),
+            # 4:
+            (
+                self.mon_param,
+                self.native,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_param.arg(0), self.native)),
+                        self.mon_param.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mon_param,
+                self.npv,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_param.arg(0), self.npv)),
+                        self.mon_param.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mon_param,
+                self.param,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_param.arg(0), 6)),
+                        self.mon_param.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mon_param,
+                self.param_mut,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_param.arg(0), self.param_mut)),
+                        self.mon_param.arg(1),
+                    )
+                ),
+            ),
+            # 8:
+            (self.mon_param, self.var, DivisionExpression((self.mon_param, self.var))),
+            (
+                self.mon_param,
+                self.mon_native,
+                DivisionExpression((self.mon_param, self.mon_native)),
+            ),
+            (
+                self.mon_param,
+                self.mon_param,
+                DivisionExpression((self.mon_param, self.mon_param)),
+            ),
+            (
+                self.mon_param,
+                self.mon_npv,
+                DivisionExpression((self.mon_param, self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.mon_param,
+                self.linear,
+                DivisionExpression((self.mon_param, self.linear)),
+            ),
+            (self.mon_param, self.sum, DivisionExpression((self.mon_param, self.sum))),
+            (
+                self.mon_param,
+                self.other,
+                DivisionExpression((self.mon_param, self.other)),
+            ),
+            (self.mon_param, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.mon_param,
+                self.mutable_l1,
+                DivisionExpression((self.mon_param, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.mon_param,
+                self.mutable_l2,
+                DivisionExpression((self.mon_param, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_mon_npv(self):
+        tests = [
+            (self.mon_npv, self.invalid, NotImplemented),
+            (self.mon_npv, self.asbinary, DivisionExpression((self.mon_npv, self.bin))),
+            (self.mon_npv, self.zero, ZeroDivisionError),
+            (self.mon_npv, self.one, self.mon_npv),
+            # 4:
+            (
+                self.mon_npv,
+                self.native,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_npv.arg(0), self.native)),
+                        self.mon_npv.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mon_npv,
+                self.npv,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_npv.arg(0), self.npv)),
+                        self.mon_npv.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mon_npv,
+                self.param,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_npv.arg(0), 6)),
+                        self.mon_npv.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mon_npv,
+                self.param_mut,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_npv.arg(0), self.param_mut)),
+                        self.mon_npv.arg(1),
+                    )
+                ),
+            ),
+            # 8:
+            (self.mon_npv, self.var, DivisionExpression((self.mon_npv, self.var))),
+            (
+                self.mon_npv,
+                self.mon_native,
+                DivisionExpression((self.mon_npv, self.mon_native)),
+            ),
+            (
+                self.mon_npv,
+                self.mon_param,
+                DivisionExpression((self.mon_npv, self.mon_param)),
+            ),
+            (
+                self.mon_npv,
+                self.mon_npv,
+                DivisionExpression((self.mon_npv, self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.mon_npv,
+                self.linear,
+                DivisionExpression((self.mon_npv, self.linear)),
+            ),
+            (self.mon_npv, self.sum, DivisionExpression((self.mon_npv, self.sum))),
+            (self.mon_npv, self.other, DivisionExpression((self.mon_npv, self.other))),
+            (self.mon_npv, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.mon_npv,
+                self.mutable_l1,
+                DivisionExpression((self.mon_npv, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.mon_npv,
+                self.mutable_l2,
+                DivisionExpression((self.mon_npv, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_linear(self):
+        tests = [
+            (self.linear, self.invalid, NotImplemented),
+            (self.linear, self.asbinary, DivisionExpression((self.linear, self.bin))),
+            (self.linear, self.zero, ZeroDivisionError),
+            (self.linear, self.one, self.linear),
+            # 4:
+            (self.linear, self.native, DivisionExpression((self.linear, self.native))),
+            (self.linear, self.npv, DivisionExpression((self.linear, self.npv))),
+            (self.linear, self.param, DivisionExpression((self.linear, 6))),
+            (
+                self.linear,
+                self.param_mut,
+                DivisionExpression((self.linear, self.param_mut)),
+            ),
+            # 8:
+            (self.linear, self.var, DivisionExpression((self.linear, self.var))),
+            (
+                self.linear,
+                self.mon_native,
+                DivisionExpression((self.linear, self.mon_native)),
+            ),
+            (
+                self.linear,
+                self.mon_param,
+                DivisionExpression((self.linear, self.mon_param)),
+            ),
+            (
+                self.linear,
+                self.mon_npv,
+                DivisionExpression((self.linear, self.mon_npv)),
+            ),
+            # 12:
+            (self.linear, self.linear, DivisionExpression((self.linear, self.linear))),
+            (self.linear, self.sum, DivisionExpression((self.linear, self.sum))),
+            (self.linear, self.other, DivisionExpression((self.linear, self.other))),
+            (self.linear, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.linear,
+                self.mutable_l1,
+                DivisionExpression((self.linear, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.linear,
+                self.mutable_l2,
+                DivisionExpression((self.linear, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_sum(self):
+        tests = [
+            (self.sum, self.invalid, NotImplemented),
+            (self.sum, self.asbinary, DivisionExpression((self.sum, self.bin))),
+            (self.sum, self.zero, ZeroDivisionError),
+            (self.sum, self.one, self.sum),
+            # 4:
+            (self.sum, self.native, DivisionExpression((self.sum, self.native))),
+            (self.sum, self.npv, DivisionExpression((self.sum, self.npv))),
+            (self.sum, self.param, DivisionExpression((self.sum, 6))),
+            (self.sum, self.param_mut, DivisionExpression((self.sum, self.param_mut))),
+            # 8:
+            (self.sum, self.var, DivisionExpression((self.sum, self.var))),
+            (
+                self.sum,
+                self.mon_native,
+                DivisionExpression((self.sum, self.mon_native)),
+            ),
+            (self.sum, self.mon_param, DivisionExpression((self.sum, self.mon_param))),
+            (self.sum, self.mon_npv, DivisionExpression((self.sum, self.mon_npv))),
+            # 12:
+            (self.sum, self.linear, DivisionExpression((self.sum, self.linear))),
+            (self.sum, self.sum, DivisionExpression((self.sum, self.sum))),
+            (self.sum, self.other, DivisionExpression((self.sum, self.other))),
+            (self.sum, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.sum,
+                self.mutable_l1,
+                DivisionExpression((self.sum, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.sum,
+                self.mutable_l2,
+                DivisionExpression((self.sum, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_other(self):
+        tests = [
+            (self.other, self.invalid, NotImplemented),
+            (self.other, self.asbinary, DivisionExpression((self.other, self.bin))),
+            (self.other, self.zero, ZeroDivisionError),
+            (self.other, self.one, self.other),
+            # 4:
+            (self.other, self.native, DivisionExpression((self.other, self.native))),
+            (self.other, self.npv, DivisionExpression((self.other, self.npv))),
+            (self.other, self.param, DivisionExpression((self.other, 6))),
+            (
+                self.other,
+                self.param_mut,
+                DivisionExpression((self.other, self.param_mut)),
+            ),
+            # 8:
+            (self.other, self.var, DivisionExpression((self.other, self.var))),
+            (
+                self.other,
+                self.mon_native,
+                DivisionExpression((self.other, self.mon_native)),
+            ),
+            (
+                self.other,
+                self.mon_param,
+                DivisionExpression((self.other, self.mon_param)),
+            ),
+            (self.other, self.mon_npv, DivisionExpression((self.other, self.mon_npv))),
+            # 12:
+            (self.other, self.linear, DivisionExpression((self.other, self.linear))),
+            (self.other, self.sum, DivisionExpression((self.other, self.sum))),
+            (self.other, self.other, DivisionExpression((self.other, self.other))),
+            (self.other, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.other,
+                self.mutable_l1,
+                DivisionExpression((self.other, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.other,
+                self.mutable_l2,
+                DivisionExpression((self.other, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_mutable_l0(self):
+        tests = [
+            (self.mutable_l0, self.invalid, NotImplemented),
+            (self.mutable_l0, self.asbinary, DivisionExpression((0, self.bin))),
+            (self.mutable_l0, self.zero, ZeroDivisionError),
+            (self.mutable_l0, self.one, 0.0),
+            # 4:
+            (self.mutable_l0, self.native, 0.0),
+            (self.mutable_l0, self.npv, NPV_DivisionExpression((0, self.npv))),
+            (self.mutable_l0, self.param, 0.0),
+            (
+                self.mutable_l0,
+                self.param_mut,
+                NPV_DivisionExpression((0, self.param_mut)),
+            ),
+            # 8:
+            (self.mutable_l0, self.var, DivisionExpression((0, self.var))),
+            (
+                self.mutable_l0,
+                self.mon_native,
+                DivisionExpression((0, self.mon_native)),
+            ),
+            (self.mutable_l0, self.mon_param, DivisionExpression((0, self.mon_param))),
+            (self.mutable_l0, self.mon_npv, DivisionExpression((0, self.mon_npv))),
+            # 12:
+            (self.mutable_l0, self.linear, DivisionExpression((0, self.linear))),
+            (self.mutable_l0, self.sum, DivisionExpression((0, self.sum))),
+            (self.mutable_l0, self.other, DivisionExpression((0, self.other))),
+            (self.mutable_l0, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.mutable_l0,
+                self.mutable_l1,
+                DivisionExpression((0, self.mutable_l1.arg(0))),
+            ),
+            (
+                self.mutable_l0,
+                self.mutable_l2,
+                DivisionExpression((0, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_mutable_l1(self):
+        tests = [
+            (self.mutable_l1, self.invalid, NotImplemented),
+            (
+                self.mutable_l1,
+                self.asbinary,
+                DivisionExpression((self.mon_npv, self.bin)),
+            ),
+            (self.mutable_l1, self.zero, ZeroDivisionError),
+            (self.mutable_l1, self.one, self.mon_npv),
+            # 4:
+            (
+                self.mutable_l1,
+                self.native,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_npv.arg(0), self.native)),
+                        self.mon_npv.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mutable_l1,
+                self.npv,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_npv.arg(0), self.npv)),
+                        self.mon_npv.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mutable_l1,
+                self.param,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_npv.arg(0), 6)),
+                        self.mon_npv.arg(1),
+                    )
+                ),
+            ),
+            (
+                self.mutable_l1,
+                self.param_mut,
+                MonomialTermExpression(
+                    (
+                        NPV_DivisionExpression((self.mon_npv.arg(0), self.param_mut)),
+                        self.mon_npv.arg(1),
+                    )
+                ),
+            ),
+            # 8:
+            (
+                self.mutable_l1,
+                self.var,
+                DivisionExpression((self.mutable_l1.arg(0), self.var)),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_native,
+                DivisionExpression((self.mutable_l1.arg(0), self.mon_native)),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_param,
+                DivisionExpression((self.mutable_l1.arg(0), self.mon_param)),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_npv,
+                DivisionExpression((self.mutable_l1.arg(0), self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.mutable_l1,
+                self.linear,
+                DivisionExpression((self.mutable_l1.arg(0), self.linear)),
+            ),
+            (
+                self.mutable_l1,
+                self.sum,
+                DivisionExpression((self.mutable_l1.arg(0), self.sum)),
+            ),
+            (
+                self.mutable_l1,
+                self.other,
+                DivisionExpression((self.mutable_l1.arg(0), self.other)),
+            ),
+            (self.mutable_l1, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.mutable_l1,
+                self.mutable_l1,
+                DivisionExpression((self.mon_npv, self.mon_npv)),
+            ),
+            (
+                self.mutable_l1,
+                self.mutable_l2,
+                DivisionExpression((self.mon_npv, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
+
+    def test_div_mutable_l2(self):
+        tests = [
+            (self.mutable_l2, self.invalid, NotImplemented),
+            (
+                self.mutable_l2,
+                self.asbinary,
+                DivisionExpression((self.mutable_l2, self.bin)),
+            ),
+            (self.mutable_l2, self.zero, ZeroDivisionError),
+            (self.mutable_l2, self.one, self.mutable_l2),
+            # 4:
+            (
+                self.mutable_l2,
+                self.native,
+                DivisionExpression((self.mutable_l2, self.native)),
+            ),
+            (
+                self.mutable_l2,
+                self.npv,
+                DivisionExpression((self.mutable_l2, self.npv)),
+            ),
+            (self.mutable_l2, self.param, DivisionExpression((self.mutable_l2, 6))),
+            (
+                self.mutable_l2,
+                self.param_mut,
+                DivisionExpression((self.mutable_l2, self.param_mut)),
+            ),
+            # 8:
+            (
+                self.mutable_l2,
+                self.var,
+                DivisionExpression((self.mutable_l2, self.var)),
+            ),
+            (
+                self.mutable_l2,
+                self.mon_native,
+                DivisionExpression((self.mutable_l2, self.mon_native)),
+            ),
+            (
+                self.mutable_l2,
+                self.mon_param,
+                DivisionExpression((self.mutable_l2, self.mon_param)),
+            ),
+            (
+                self.mutable_l2,
+                self.mon_npv,
+                DivisionExpression((self.mutable_l2, self.mon_npv)),
+            ),
+            # 12:
+            (
+                self.mutable_l2,
+                self.linear,
+                DivisionExpression((self.mutable_l2, self.linear)),
+            ),
+            (
+                self.mutable_l2,
+                self.sum,
+                DivisionExpression((self.mutable_l2, self.sum)),
+            ),
+            (
+                self.mutable_l2,
+                self.other,
+                DivisionExpression((self.mutable_l2, self.other)),
+            ),
+            (self.mutable_l2, self.mutable_l0, ZeroDivisionError),
+            # 16:
+            (
+                self.mutable_l2,
+                self.mutable_l1,
+                DivisionExpression((self.mutable_l2, self.mon_npv)),
+            ),
+            (
+                self.mutable_l2,
+                self.mutable_l2,
+                DivisionExpression((self.mutable_l2, self.mutable_l2)),
+            ),
+        ]
+        self._run_cases(tests, operator.truediv)
