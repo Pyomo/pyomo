@@ -20,7 +20,7 @@ from pyomo.util.subsystems import (
         identify_external_functions,
         add_local_external_functions,
         )
-from pyomo.common.getGSL import find_GSL
+from pyomo.common.gsl import find_GSL
 
 
 def _make_simple_model():

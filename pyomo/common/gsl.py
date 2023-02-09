@@ -9,8 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from . import download
-from . import getGSL
+import logging
+import platform
+from pyomo.common import Library
 
-def load():
-    download.DownloadFactory.register('gsl')(getGSL.get_gsl)
+logger = logging.getLogger('pyomo.common')
+
+
+def find_GSL():
+    # FIXME: the GSL interface is currently broken in PyPy:
+    if platform.python_implementation().lower().startswith('pypy'):
+        return None
+    return Library('amplgsl.dll').path()
