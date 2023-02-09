@@ -95,7 +95,6 @@ def solve_strongly_connected_components(
         solver=None,
         solve_kwds=None,
         calc_var_kwds=None,
-        tee=False
         ):
     """ This function solves a square block of variables and equality
     constraints by solving strongly connected components individually.
@@ -121,9 +120,6 @@ def solve_strongly_connected_components(
         Keyword arguments for the solver's solve method
     calc_var_kwds: Dictionary
         Keyword arguments for calculate_variable_from_constraint
-    tee: bool
-        Set tee argument on solver.solve calls for strongly connected
-        components of size greater than one constraint.
 
     Returns
     -------
@@ -171,6 +167,6 @@ def solve_strongly_connected_components(
                         % (vars, cons)
                         )
                 _log.info(f"Solving {len(scc.cons)}x{len(scc.cons)} block.")
-                results = solver.solve(scc, **solve_kwds, tee=tee)
+                results = solver.solve(scc, **solve_kwds)
                 res_list.append(results)
     return res_list
