@@ -1883,10 +1883,6 @@ class _MindtPyAlgorithm(object):
         ----------
         config : ConfigBlock
             The specific configurations for MindtPy.
-        fp : bool
-            Whether it is in the loop of feasibility pump.
-        regularization_problem : bool
-            Whether it is solving a regularization problem.
         """
         MindtPy = self.mip.MindtPy_utils
 
