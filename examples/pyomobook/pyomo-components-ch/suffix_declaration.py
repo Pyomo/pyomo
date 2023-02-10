@@ -11,8 +11,7 @@ model = pyo.ConcreteModel()
 
 # @suffixdecl:
 # Export integer data
-model.priority = pyo.Suffix(direction=pyo.Suffix.EXPORT, 
-                        datatype=pyo.Suffix.INT)
+model.priority = pyo.Suffix(direction=pyo.Suffix.EXPORT, datatype=pyo.Suffix.INT)
 
 # Export and import floating point data
 model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
@@ -25,20 +24,23 @@ model = pyo.AbstractModel()
 model.x = pyo.Var()
 model.c = pyo.Constraint(expr=model.x >= 1)
 
+
 def foo_rule(m):
-   return ((m.x, 2.0), (m.c, 3.0))
+    return ((m.x, 2.0), (m.c, 3.0))
+
+
 model.foo = pyo.Suffix(initialize=foo_rule)
 # @:suffixinitrule
 model.pprint()
 
-del foo_rule # Needed to avoid implicit rule warning in next example
+del foo_rule  # Needed to avoid implicit rule warning in next example
 
 print('')
 print('*** suffix1 ***')
 # @suffix1:
 model = pyo.ConcreteModel()
 model.x = pyo.Var()
-model.y = pyo.Var([1,2,3])
+model.y = pyo.Var([1, 2, 3])
 model.foo = pyo.Suffix()
 # @:suffix1
 print('suffix1a')
@@ -50,7 +52,7 @@ model.x.set_suffix_value('foo', 1.0)
 model.x.set_suffix_value(model.foo, 2.0)
 
 # Get the value of suffix 'foo' for model.x
-print(model.x.get_suffix_value('foo'))          # 2.0
+print(model.x.get_suffix_value('foo'))  # 2.0
 # @:suffix1a
 print('suffix1b')
 # @suffix1b:
@@ -61,17 +63,17 @@ model.y.set_suffix_value(model.foo, 3.0)
 model.y[2].set_suffix_value(model.foo, 4.0)
 
 # Get the value of suffix 'foo' for model.y
-print(model.y.get_suffix_value(model.foo))      # None
-print(model.y[1].get_suffix_value(model.foo))   # 3.0
-print(model.y[2].get_suffix_value(model.foo))   # 4.0
-print(model.y[3].get_suffix_value(model.foo))   # 3.0
+print(model.y.get_suffix_value(model.foo))  # None
+print(model.y[1].get_suffix_value(model.foo))  # 3.0
+print(model.y[2].get_suffix_value(model.foo))  # 4.0
+print(model.y[3].get_suffix_value(model.foo))  # 3.0
 # @:suffix1b
 
 # @suffix1d:
 model.y[3].clear_suffix_value(model.foo)
 
-print(model.y.get_suffix_value(model.foo))      # None
-print(model.y[1].get_suffix_value(model.foo))   # 3.0
-print(model.y[2].get_suffix_value(model.foo))   # 4.0
-print(model.y[3].get_suffix_value(model.foo))   # None
+print(model.y.get_suffix_value(model.foo))  # None
+print(model.y[1].get_suffix_value(model.foo))  # 3.0
+print(model.y[2].get_suffix_value(model.foo))  # 4.0
+print(model.y[3].get_suffix_value(model.foo))  # None
 # @:suffix1d

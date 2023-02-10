@@ -68,6 +68,7 @@ extensions = [
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
+    'sphinx.ext.todo',
     'sphinx_copybutton',
     #'sphinx.ext.githubpages',
 ]
@@ -121,7 +122,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = False
+todo_include_todos = True
 
 # If true, doctest flags (comments looking like # doctest: FLAG, ...) at
 # the ends of lines and <BLANKLINE> markers are removed for all code
