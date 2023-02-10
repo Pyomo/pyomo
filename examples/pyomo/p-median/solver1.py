@@ -11,7 +11,7 @@
 
 # Imports from Pyomo
 from pyomo.core import *
-from pyomo.common.plugin import *
+from pyomo.common.plugin_base import *
 from pyomo.opt import *
 
 

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import ast
-import pyomo.common.plugin
+import pyomo.common.plugin_base
 
 from pyomo.checker.plugins.model import ModelTrackerHook
 from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
@@ -18,7 +18,7 @@ from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
 
 class ModelValue(_ModelRuleChecker, ModelTrackerHook):
 
-    pyomo.common.plugin.alias('model.value', 'Check if comparisons are done using the "value()" function.')
+    pyomo.common.plugin_base.alias('model.value', 'Check if comparisons are done using the "value()" function.')
 
     def checkerDoc(self):
         return """\

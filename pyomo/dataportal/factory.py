@@ -16,7 +16,7 @@ __all__ = [
 
 import logging
 from pyomo.common import Factory
-from pyomo.common.plugin import PluginError
+from pyomo.common.plugin_base import PluginError
 
 logger = logging.getLogger('pyomo.core')
 
