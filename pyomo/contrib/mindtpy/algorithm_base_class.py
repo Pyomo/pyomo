@@ -516,19 +516,28 @@ class _MindtPyAlgorithm(object):
                           obj_handleable_polynomial_degree={0, 1},
                           constr_handleable_polynomial_degree={0, 1}):
         """Process model objective function.
+
         Check that the model has only 1 valid objective.
         If the objective is nonlinear, move it into the constraints.
-        If no objective function exists, emit a warning and create a dummy 
-        objective.
+        If no objective function exists, emit a warning and create a dummy objective.
+
         Parameters
         ----------
-        config (ConfigBlock): solver configuration options
-        move_objective (bool): if True, move even linear
-            objective functions to the constraints
-        update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated. 
-            This arg is set to True by default. Currently, update_var_con_list will be set to False only when
-            add_regularization is not None in MindtPy.
-        partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
+        config : ConfigBlock
+            Solver configuration options
+        move_objective : bool, optional
+            Whether to move even linear objective functions to the constraints, by default False.
+        use_mcpp : bool, optional
+            Whether to use mcpp to tighten the bound of slack variables., by default False.
+        update_var_con_list : bool, optional
+            Whether to update the variable/constraint/objective lists, by default True.
+            Currently, update_var_con_list will be set to False only when add_regularization is not None in MindtPy. 
+        partition_nonlinear_terms : bool, optional
+            Whether to partition sum of nonlinear terms in the objective function, by default True.
+        obj_handleable_polynomial_degree : dict, optional
+            The polynomial degree of the objective function that will be regarded as linear, by default {0, 1}.
+        constr_handleable_polynomial_degree : dict, optional
+            The polynomial degree of the constraints that will be regarded as linear, by default {0, 1}.
         """
         m = self.working_model
         util_blk = getattr(m, self.util_block_name)
