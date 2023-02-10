@@ -13,7 +13,7 @@ import sys
 import re
 import textwrap
 
-from pyomo.common.plugin import SingletonPlugin, implements, ExtensionPoint
+from pyomo.common.plugin_base import SingletonPlugin, implements, ExtensionPoint
 from pyomo.checker import IModelChecker, IPreCheckHook, IPostCheckHook
 
 
