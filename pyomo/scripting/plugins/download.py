@@ -36,6 +36,9 @@ class GroupDownloader(object):
         returncode = 0
         self.downloader.cacert = args.cacert
         self.downloader.insecure = args.insecure
+        logger.info("As of February 9, 2023, AMPL GSL can no longer be downloaded\
+                    through download-extensions. Visit https://portal.ampl.com/\
+                    to download the AMPL GSL binaries.")
         for target in DownloadFactory:
             try:
                 ext = DownloadFactory(target, downloader=self.downloader)

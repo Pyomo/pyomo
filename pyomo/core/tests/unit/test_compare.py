@@ -23,7 +23,7 @@ from pyomo.core.expr.compare import (
     convert_expression_to_prefix_notation, compare_expressions,
     assertExpressionsEqual, assertExpressionsStructurallyEqual,
 )
-from pyomo.common.getGSL import find_GSL
+from pyomo.common.gsl import find_GSL
 
 
 class TestConvertToPrefixNotation(unittest.TestCase):

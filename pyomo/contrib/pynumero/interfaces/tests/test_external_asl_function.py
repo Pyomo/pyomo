@@ -20,7 +20,7 @@ if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run NLP tests")
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.common.getGSL import find_GSL
+from pyomo.common.gsl import find_GSL
 from pyomo.environ import ConcreteModel, ExternalFunction, Var, Objective
 
 class TestAMPLExternalFunction(unittest.TestCase):

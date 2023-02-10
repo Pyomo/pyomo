@@ -1,7 +1,7 @@
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.common.getGSL import find_GSL
+from pyomo.common.gsl import find_GSL
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')

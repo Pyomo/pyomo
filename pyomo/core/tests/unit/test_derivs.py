@@ -11,8 +11,8 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
-from pyomo.common.getGSL import find_GSL
-from pyomo.core.expr.calculus.derivatives import differentiate, Modes
+from pyomo.common.gsl import find_GSL
+from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.calculus.diff_with_pyomo import (
     reverse_ad, reverse_sd, DifferentiationException,
 )

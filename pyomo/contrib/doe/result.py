@@ -43,7 +43,7 @@ class FisherResults:
         """Analyze the FIM result for a single run
 
         Parameters
-        -----------
+        ----------
         para_name:
             A ``list`` of parameter names
         measure_object:
@@ -328,8 +328,8 @@ class GridSearchResult:
         This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
         Can choose to draw 1D sensitivity curves and 2D heatmaps.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         design_ranges:
             a ``dict`` whose keys are design variable names, values are a list of design variable values to go over
         design_dimension_names:
@@ -356,7 +356,7 @@ class GridSearchResult:
         """
         Extract design criteria values for every 'grid' (design variable combination) searched.
 
-        Returns:
+        Returns
         -------
         self.store_all_results_dataframe: a pandas dataframe with columns as design variable names and A, D, E, ME-criteria names.
             Each row contains the design variable value for this 'grid', and the 4 design criteria value for this 'grid'.
