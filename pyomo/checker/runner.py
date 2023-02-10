@@ -11,7 +11,7 @@
 
 import ast
 
-from pyomo.common.plugin import ExtensionPoint
+from pyomo.common.plugin_base import ExtensionPoint
 from pyomo.checker.checker import IModelChecker
 from pyomo.checker.script import ModelScript
 
