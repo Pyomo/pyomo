@@ -10,30 +10,20 @@
 #  ___________________________________________________________________________
 
 import itertools
-from pyomo.environ import SolverFactory
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.collections import ComponentSet
-from pyomo.core.base.suffix import Suffix
-from pyomo.util.calc_var_value import calculate_variable_from_constraint
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.util.subsystems import (
     create_subsystem_block,
-    TemporarySubsystemManager,
 )
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
     ExternalGreyBoxModel,
 )
-from pyomo.contrib.pynumero.interfaces.nlp_projections import ProjectedNLP
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    cyipopt_available,
-    CyIpoptNLP,
-    CyIpoptSolver,
-)
-from pyomo.contrib.incidence_analysis.util import (
-    generate_strongly_connected_components,
+from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
+    SccImplicitFunctionSolver,
 )
 import numpy as np
 import scipy.sparse as sps
@@ -143,14 +133,16 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
     """
 
-    def __init__(self,
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
-            use_cyipopt=None,
-            solver=None,
-            ):
+    def __init__(
+        self,
+        input_vars,
+        external_vars,
+        residual_cons,
+        external_cons,
+        solver_class=None,
+        solver_options=None,
+        timer=None,
+    ):
         """
         Arguments:
         ----------
@@ -164,94 +156,46 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         external_cons: list
             List of equality constraints used to solve for the external
             variables
-        use_cyipopt: bool
-            Whether to use CyIpopt to solve strongly connected components of
-            the implicit function that have dimension greater than one.
-        solver: Pyomo solver object
-            Used to solve strongly connected components of the implicit function
-            that have dimension greater than one. Only used if use_cyipopt
-            is False.
+        solver_class: Subclass of ImplicitFunctionSolver
+            The solver object that is used to converge the system of
+            equations defining the implicit function.
+        solver_options: dict
+            Options dict for the ImplicitFunctionSolver
+        timer: HierarchicalTimer
+            HierarchicalTimer object to which new timing categories introduced
+            will be attached. If None, a new timer will be created.
 
         """
-        if use_cyipopt is None:
-            use_cyipopt = cyipopt_available
-        if use_cyipopt and not cyipopt_available:
-            raise RuntimeError(
-                "Constructing an ExternalPyomoModel with CyIpopt unavailable. "
-                "Please set the use_cyipopt argument to False."
-            )
-        if solver is not None and use_cyipopt:
-            raise RuntimeError(
-                "Constructing an ExternalPyomoModel with a solver specified "
-                "and use_cyipopt set to True. Please set use_cyipopt to False "
-                "to use the desired solver."
-            )
-        elif solver is None and not use_cyipopt:
-            solver = SolverFactory("ipopt")
-        # If use_cyipopt is True, this solver is None and will not be used.
-        self._solver = solver
-        self._use_cyipopt = use_cyipopt
+        if timer is None:
+            timer = HierarchicalTimer()
+        self._timer = timer
+        if solver_class is None:
+            solver_class = SccImplicitFunctionSolver
+        self._solver_class = solver_class
+        if solver_options is None:
+            solver_options = {}
+
+        self._timer.start("__init__")
 
         # We only need this block to construct the NLP, which wouldn't
         # be necessary if we could compute Hessians of Pyomo constraints.
         self._block = create_subsystem_block(
-                residual_cons+external_cons,
-                input_vars+external_vars,
-                )
+            residual_cons+external_cons,
+            input_vars+external_vars,
+        )
         self._block._obj = Objective(expr=0.0)
+        self._timer.start("PyomoNLP")
         self._nlp = PyomoNLP(self._block)
+        self._timer.stop("PyomoNLP")
 
-        self._scc_list = list(generate_strongly_connected_components(
-            external_cons, variables=external_vars
-        ))
-
-        if use_cyipopt:
-            # Using CyIpopt allows us to solve inner problems without
-            # costly rewriting of the nl file. It requires quite a bit
-            # of preprocessing, however, to construct the ProjectedNLP
-            # for each block of the decomposition.
-
-            # Get "vector-valued" SCCs, those of dimension > 0.
-            # We will solve these with a direct IPOPT interface, which requires
-            # some preprocessing.
-            self._vector_scc_list = [
-                (scc, inputs) for scc, inputs in self._scc_list
-                if len(scc.vars) > 1
-            ]
-
-            # Need a dummy objective to create an NLP
-            for scc, inputs in self._vector_scc_list:
-                scc._obj = Objective(expr=0.0)
-
-                # I need scaling_factor so Pyomo NLPs I create from these blocks
-                # don't break when ProjectedNLP calls get_primals_scaling
-                scc.scaling_factor = Suffix(direction=Suffix.EXPORT)
-                # HACK: scaling_factor just needs to be nonempty.
-                scc.scaling_factor[scc._obj] = 1.0
-
-            # These are the "original NLPs" that will be projected
-            self._vector_scc_nlps = [
-                PyomoNLP(scc) for scc, inputs in self._vector_scc_list
-            ]
-            self._vector_scc_var_names = [
-                [var.name for var in scc.vars.values()]
-                for scc, inputs in self._vector_scc_list
-            ]
-            self._vector_proj_nlps = [
-                ProjectedNLP(nlp, names) for nlp, names in
-                zip(self._vector_scc_nlps, self._vector_scc_var_names)
-            ]
-
-            # We will solve the ProjectedNLPs rather than the original NLPs
-            self._cyipopt_nlps = [CyIpoptNLP(nlp) for nlp in self._vector_proj_nlps]
-            self._cyipopt_solvers = [
-                CyIpoptSolver(nlp) for nlp in self._cyipopt_nlps
-            ]
-            self._vector_scc_input_coords = [
-                nlp.get_primal_indices(inputs)
-                for nlp, (scc, inputs) in
-                zip(self._vector_scc_nlps, self._vector_scc_list)
-            ]
+        # Instantiate a solver with the ImplicitFunctionSolver API:
+        self._solver = self._solver_class(
+            external_vars,
+            external_cons,
+            input_vars,
+            timer=self._timer,
+            **solver_options,
+        )
 
         assert len(external_vars) == len(external_cons)
 
@@ -262,6 +206,12 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         self.residual_con_multipliers = [None for _ in residual_cons]
         self.residual_scaling_factors = None
+
+        self._input_output_coords = self._nlp.get_primal_indices(
+            input_vars + external_vars
+        )
+
+        self._timer.stop("__init__")
 
     def n_inputs(self):
         return len(self.input_vars)
@@ -276,73 +226,26 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return ["residual_%i" % i for i in range(self.n_equality_constraints())]
 
     def set_input_values(self, input_values):
+        self._timer.start("set_inputs")
+
         solver = self._solver
         external_cons = self.external_cons
         external_vars = self.external_vars
         input_vars = self.input_vars
 
-        for var, val in zip(input_vars, input_values):
-            var.set_value(val, skip_validation=True)
+        solver.set_parameters(input_values)
+        outputs = solver.evaluate_outputs()
+        solver.update_pyomo_model()
 
-        vector_scc_idx = 0
-        for block, inputs in self._scc_list:
-            if len(block.vars) == 1:
-                calculate_variable_from_constraint(
-                    block.vars[0], block.cons[0]
-                )
-            else:
-                if self._use_cyipopt:
-                    # Transfer variable values into the projected NLP, solve,
-                    # and extract values.
-
-                    nlp = self._vector_scc_nlps[vector_scc_idx]
-                    proj_nlp = self._vector_proj_nlps[vector_scc_idx]
-                    input_coords = self._vector_scc_input_coords[vector_scc_idx]
-                    cyipopt = self._cyipopt_solvers[vector_scc_idx]
-                    _, local_inputs = self._vector_scc_list[vector_scc_idx]
-
-                    primals = nlp.get_primals()
-                    variables = nlp.get_pyomo_variables()
-
-                    # Set values and bounds from inputs to the SCC.
-                    # This works because values have been set in the original
-                    # pyomo model, either by a previous SCC solve, or from the
-                    # "global inputs"
-                    for i, var in zip(input_coords, local_inputs):
-                        # Set primals (inputs) in the original NLP
-                        primals[i] = var.value
-                    # This affects future evaluations in the ProjectedNLP
-                    nlp.set_primals(primals)
-                    x0 = proj_nlp.get_primals()
-                    sol, _ = cyipopt.solve(x0=x0)
-
-                    # Set primals from solution in projected NLP. This updates
-                    # values in the original NLP
-                    proj_nlp.set_primals(sol)
-                    # I really only need to set new primals for the variables in
-                    # the ProjectedNLP. However, I can only get a list of variables
-                    # from the original Pyomo NLP, so here some of the values I'm
-                    # setting are redundant.
-                    new_primals = nlp.get_primals()
-                    assert len(new_primals) == len(variables)
-                    for var, val in zip(variables, new_primals):
-                        var.set_value(val, skip_validation=True)
-
-                else:
-                    # Use a Pyomo solver to solve this strongly connected
-                    # component.
-                    with TemporarySubsystemManager(to_fix=inputs):
-                        solver.solve(block)
-
-                vector_scc_idx += 1
-
+        #
         # Send updated variable values to NLP for dervative evaluation
+        #
         primals = self._nlp.get_primals()
-        to_update = input_vars + external_vars
-        indices = self._nlp.get_primal_indices(to_update)
-        values = np.fromiter((var.value for var in to_update), float)
-        primals[indices] = values
+        values = np.concatenate((input_values, outputs))
+        primals[self._input_output_coords] = values
         self._nlp.set_primals(primals)
+
+        self._timer.stop("set_inputs")
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
         """
@@ -435,6 +338,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return self._nlp.extract_subvector_constraints(self.residual_cons)
 
     def evaluate_jacobian_equality_constraints(self):
+        self._timer.start("jacobian")
+
         nlp = self._nlp
         x = self.input_vars
         y = self.external_vars
@@ -459,7 +364,10 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         # be nonzero. Here, this is all of the entries.
         dfdx = jfx + jfy.dot(dydx)
 
-        return _dense_to_full_sparse(dfdx)
+        full_sparse = _dense_to_full_sparse(dfdx)
+
+        self._timer.stop("jacobian")
+        return full_sparse
 
     def evaluate_jacobian_external_variables(self):
         nlp = self._nlp
@@ -570,6 +478,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         due to these equality constraints.
 
         """
+        self._timer.start("hessian")
+
         # External multipliers must be calculated after both primals and duals
         # are set, and are only necessary for this Hessian calculation.
         # We know this Hessian calculation wants to use the most recently
@@ -585,7 +495,9 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         # Hessian-of-Lagrangian term in the full space.
         hess_lag = self.calculate_reduced_hessian_lagrangian(hlxx, hlxy, hlyy)
         sparse = _dense_to_full_sparse(hess_lag)
-        return sps.tril(sparse)
+        lower_triangle = sps.tril(sparse)
+        self._timer.stop("hessian")
+        return lower_triangle
 
     def set_equality_constraint_scaling_factors(self, scaling_factors):
         """
