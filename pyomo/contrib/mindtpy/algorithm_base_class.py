@@ -134,7 +134,7 @@ class _MindtPyAlgorithm(object):
             'For more information, please visit \n'
             'https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html')
         self.config.logger.info(
-            'If you use this software, you may cite the following:\n'
+            'If you use this software, please cite the following:\n'
             'Bernal, David E., et al. Mixed-integer nonlinear decomposition toolbox for Pyomo (MindtPy).\n'
             'Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 895-900.\n')
 
@@ -447,7 +447,7 @@ class _MindtPyAlgorithm(object):
     def update_dual_bound(self, bound_value):
         """Update the dual bound.
 
-        Call after solving relaxed problem, including relaxed NLP and MIP master problem.
+        Call after solving relaxed problem, including relaxed NLP and MIP main problem.
         Use the optimal primal bound of the relaxed problem to update the dual bound.
 
         Parameters

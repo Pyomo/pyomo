@@ -634,7 +634,7 @@ def update_gap(solve_data):
 def update_dual_bound(solve_data, bound_value):
     """Update the dual bound.
 
-    Call after solving relaxed problem, including relaxed NLP and MIP master problem.
+    Call after solving relaxed problem, including relaxed NLP and MIP main problem.
     Use the optimal primal bound of the relaxed problem to update the dual bound.
 
     Parameters
