@@ -510,14 +510,14 @@ class DesignOfExperiments:
     def _direct_kaug(self):
         time00 = time.time()
         # create scenario class for a base case
-        scena_gen = ScenarioGenerator(self.param, formula=None, step=self.step)
-        scenario_all = scena_gen.simultaneous_scenario()
+        scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
+        scena_gen = scena_object.simultaneous_scenario()
+        print(scena_gen)
+        self.scenario_list = scena_gen["scenario"]
+        self.scenario_num = scena_gen["scena_num"]
 
         # create model
-        time0_build = time.time()
-        mod = self.create_model(scenario_all, args=self.args)
-        time1_build = time.time()
-        time_build = time1_build - time0_build
+        mod = self.create_model(args=self.args)
 
         # discretize if needed
         if self.discretize_model:
