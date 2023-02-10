@@ -13,4 +13,5 @@ status = solver.solve(model)
 
 print(status)
 import verify_scont
+
 verify_scont.verify_model(model)

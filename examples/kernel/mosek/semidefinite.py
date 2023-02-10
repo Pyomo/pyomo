@@ -20,7 +20,7 @@ from pyomo.core import sum_product
 def primal_sdo1():
     # Problem data
     d = 3
-    n = int(d*(d+1)/2)
+    n = int(d * (d + 1) / 2)
 
     # PSD matrices
     # NOTE: As the matrices are symmetric (required)
@@ -38,25 +38,31 @@ def primal_sdo1():
 
     # CONSTRAINTS
     # Linear
-    model.c1 = pmo.constraint(sum_product(
-        barA1, model.X, index=list(range(n))) + model.x[0] == 1)
-    model.c2 = pmo.constraint(sum_product(
-        barA2, model.X, index=list(range(n))) + model.x[1] + model.x[2] == 0.5)
+    model.c1 = pmo.constraint(
+        sum_product(barA1, model.X, index=list(range(n))) + model.x[0] == 1
+    )
+    model.c2 = pmo.constraint(
+        sum_product(barA2, model.X, index=list(range(n))) + model.x[1] + model.x[2]
+        == 0.5
+    )
     # Conic
     model.quad_cone = pmo.conic.quadratic(r=model.x[0], x=model.x[1:])
     # Off-diagonal elements need to be scaled by sqrt(2) in SVEC_PSD domain
     scale = [1, np.sqrt(2), np.sqrt(2), 1, np.sqrt(2), 1]
     model.psd_cone = pmo.conic.svec_psdcone.as_domain(
-        x=[model.X[i]*scale[i] for i in range(n)])
+        x=[model.X[i] * scale[i] for i in range(n)]
+    )
 
     # OBJECTIVE
-    model.obj = pmo.objective(sum_product(
-        barC, model.X, index=list(range(n))) + model.x[0])
+    model.obj = pmo.objective(
+        sum_product(barC, model.X, index=list(range(n))) + model.x[0]
+    )
 
     msk = pmo.SolverFactory('mosek')
     results = msk.solve(model, tee=True)
 
     return results
+
 
 # GENERAL SDP (DUAL FORM)
 #
@@ -70,12 +76,10 @@ def primal_sdo1():
 def dual_sdo1():
     # Problem data
     d = 3
-    n = int(d*(d+1)/2)
+    n = int(d * (d + 1) / 2)
 
     c = [1, 0, 0]
-    a_T = [[1, 0],
-           [0, 1],
-           [0, 1]]
+    a_T = [[1, 0], [0, 1], [0, 1]]
 
     # PSD matrices
     barC = [2, np.sqrt(2), 0, 2, np.sqrt(2), 2]
@@ -88,16 +92,20 @@ def dual_sdo1():
     model.y = pmo.variable_list(pmo.variable() for i in range(2))
 
     # CONSTRAINTS
-    e1 = pmo.expression_list(pmo.expression(
-        barC[i] - model.y[0]*barA1[i] - model.y[1]*barA2[i]) for i in range(n))
+    e1 = pmo.expression_list(
+        pmo.expression(barC[i] - model.y[0] * barA1[i] - model.y[1] * barA2[i])
+        for i in range(n)
+    )
     model.psd_cone = pmo.conic.svec_psdcone.as_domain(x=e1)
 
-    e2 = pmo.expression_list(pmo.expression(
-        c[i] - sum_product(a_T[i], model.y, index=[0, 1])) for i in range(3))
+    e2 = pmo.expression_list(
+        pmo.expression(c[i] - sum_product(a_T[i], model.y, index=[0, 1]))
+        for i in range(3)
+    )
     model.quad_cone = pmo.conic.quadratic.as_domain(r=e2[0], x=e2[1:])
 
     # OBJECTIVE
-    model.obj = pmo.objective(model.y[0] + 0.5*model.y[1], sense=-1)
+    model.obj = pmo.objective(model.y[0] + 0.5 * model.y[1], sense=-1)
 
     msk = pmo.SolverFactory('mosek')
     results = msk.solve(model, tee=True)
