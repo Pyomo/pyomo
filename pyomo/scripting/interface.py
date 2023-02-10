@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import (
+from pyomo.common.plugin_base import (
     Interface, DeprecatedInterface, Plugin, SingletonPlugin,
     ExtensionPoint, implements, alias
 )
