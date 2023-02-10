@@ -13,8 +13,12 @@ opt = pyo.SolverFactory('cplex')
 model = pyo.AbstractModel()
 model.n = pyo.Param(default=4)
 model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
+
+
 def o_rule(model):
     return pyo.summation(model.x)
+
+
 model.o = pyo.Objective(rule=o_rule)
 model.c = pyo.ConstraintList()
 

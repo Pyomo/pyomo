@@ -1,6 +1,6 @@
 from pyomo.environ import *
 
-#---------------------------------------------
+# ---------------------------------------------
 # @categories
 m = ConcreteModel()
 m.p = Param(default=10, mutable=False)
@@ -11,18 +11,18 @@ m.y.fixed = True
 # @categories
 m.pprint()
 
-#---------------------------------------------
+# ---------------------------------------------
 # @named_expression
 M = ConcreteModel()
 M.v = Var()
 M.w = Var()
 
-M.e = Expression(expr=2*M.v)
-f = M.e + 3                     # f == 2*v + 3
-M.e += M.w                      # f == 2*v + 3 + w
+M.e = Expression(expr=2 * M.v)
+f = M.e + 3  # f == 2*v + 3
+M.e += M.w  # f == 2*v + 3 + w
 # @named_expression
 
-#---------------------------------------------
+# ---------------------------------------------
 # @cm1
 M = ConcreteModel()
 M.x = Var(range(5))
@@ -39,7 +39,7 @@ print(s)
 print(e)
 
 
-#---------------------------------------------
+# ---------------------------------------------
 # @cm2
 M = ConcreteModel()
 M.x = Var(range(5))
@@ -51,4 +51,3 @@ with linear_expression() as e:
 # @cm2
 print("cm2")
 print(e)
-
