@@ -1397,10 +1397,6 @@ class _MindtPyAlgorithm(object):
         ----------
         config : ConfigBlock
             The specific configurations for MindtPy.
-        fp : bool, optional
-            Whether it is in the loop of feasibility pump, by default False.
-        regularization_problem : bool, optional
-            Whether it is solving a regularization problem, by default False.
 
         Returns
         -------
@@ -1459,10 +1455,6 @@ class _MindtPyAlgorithm(object):
         ----------
         config : ConfigBlock
             The specific configurations for MindtPy.
-        fp : bool, optional
-            Whether it is in the loop of feasibility pump, by default False.
-        regularization_problem : bool, optional
-            Whether it is solving a regularization problem, by default False.
 
         Returns
         -------
@@ -1501,10 +1493,6 @@ class _MindtPyAlgorithm(object):
         ----------
         config : ConfigBlock
             The specific configurations for MindtPy.
-        fp : bool, optional
-            Whether it is in the loop of feasibility pump, by default False.
-        regularization_problem : bool, optional
-            Whether it is solving a regularization problem, by default False.
 
         Returns
         -------
