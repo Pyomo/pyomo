@@ -11,6 +11,7 @@
 
 import pytest
 
+
 def pytest_runtest_setup(item):
     """
     This method overrides pytest's default behavior for marked tests.
@@ -45,8 +46,9 @@ def pytest_runtest_setup(item):
     elif markeroption:
         return
     elif item_markers:
-        if (not set(implicit_markers).issubset(item_markers)
-            and not item_markers.issubset(set(extended_implicit_markers))):
+        if not set(implicit_markers).issubset(
+            item_markers
+        ) and not item_markers.issubset(set(extended_implicit_markers)):
             pytest.skip('SKIPPED: Only running default, solver, and unmarked tests.')
 
 

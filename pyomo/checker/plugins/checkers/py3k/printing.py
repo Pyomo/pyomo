@@ -10,13 +10,13 @@
 #  ___________________________________________________________________________
 
 import re
-import pyomo.common.plugin
+import pyomo.common.plugin_base
 from pyomo.checker.plugins.checker import IterativeDataChecker
 
 
 class PrintParens(IterativeDataChecker):
 
-    pyomo.common.plugin.alias('py3k.print_parens', 'Check if print statements have parentheses.')
+    pyomo.common.plugin_base.alias('py3k.print_parens', 'Check if print statements have parentheses.')
 
     def __init__(self):
         self.current_lineno = 0
