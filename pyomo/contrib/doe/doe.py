@@ -508,24 +508,16 @@ class DesignOfExperiments:
         return FIM_analysis
 
     def _direct_kaug(self):
-        time00 = time.time()
-        # create scenario class for a base case
-        scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
-        scena_gen = scena_object.simultaneous_scenario()
-        print(scena_gen)
-        self.scenario_list = scena_gen["scenario"]
-        self.scenario_num = scena_gen["scena_num"]
-
         # create model
-        mod = self.create_model(args=self.args)
+        mod = self.create_model()
 
         # discretize if needed
         if self.discretize_model:
-            mod = self.discretize_model(mod)
+            mod = self.discretize_model(mod, block=False)
 
-        time_set_attr = getattr(mod, self.t)
+        #time_set_attr = getattr(mod, self.t)
         # get all time
-        t_all = list(time_set_attr)
+        #t_all = list(time_set_attr)
 
         # add objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
@@ -533,6 +525,7 @@ class DesignOfExperiments:
         # Check if measurement time points are in this time set
         # Also correct the measurement time points
         # For e.g. if a measurement time point is 0.0 in the model but is given as 0, it is corrected here
+        '''
         measurement_accurate_time = self.flatten_measure_timeset.copy()
 
         for j in self.flatten_measure_name:
@@ -541,10 +534,11 @@ class DesignOfExperiments:
                     self.logger.warning('A measurement time point not measured by this model:  %s', tt)
                 else:
                     measurement_accurate_time[j][no_t] = t_all[t_all.index(tt)]
-
+        '''
         # set ub and lb to parameters
         for par in list(self.param.keys()):
-            component = getattr(mod, par)[0]
+            component = getattr(mod, par)
+            print(component)
             component.setlb(self.param[par])
             component.setub(self.param[par])
 
@@ -553,15 +547,12 @@ class DesignOfExperiments:
         var_dict = {}
         for name in list(self.param.keys()):
             # [0] is the scenario index
-            var_name.append(name+'[0]')
-            var_dict[name+'[0]'] = self.param[name]
+            var_name.append(name)
+            var_dict[name] = self.param[name]
 
         # call k_aug get_dsdp function
-        time0_solve = time.time()
         square_result = self._solve_doe(mod, fix=True)
         dsdp_re, col = get_dsdp(mod, var_name, var_dict, tee=self.tee_opt)
-        time1_solve = time.time()
-        time_solve = time1_solve - time0_solve
 
         # analyze result
         dsdp_array = dsdp_re.toarray().T
@@ -573,26 +564,24 @@ class DesignOfExperiments:
         measurement_index = []
         # produce the sensitivity for fixed variables
         zero_sens = np.zeros(len(self.param))
+        print(col)
 
         # loop over measurement variables and their time points
-        for measurement_name in self.measure.model_measure_name:
-            # get right line number in kaug results
-            if self.discretize_model:
-                # for DAE model, some variables are fixed
-                try:
-                    kaug_no = col.index(measurement_name)
-                    measurement_index.append(kaug_no)
-                    # get right line of dsdp
-                    dsdp_extract.append(dsdp_array[kaug_no])
-                except:
-                    self.logger.debug('The variable is fixed:  %s', measurement_name)
-                    # for fixed variables, the sensitivity are a zero vector
-                    dsdp_extract.append(zero_sens)
-            else:
-                kaug_no = col.index(measurement_name)
+        for mname in self.measure_name:
+            i=0
+            while i<len(mname):
+                if mname[i] =='"' or mname[i]=="'":
+                    mname = mname[:i] + mname[i+1:]
+                i += 1 
+            try: 
+                kaug_no = col.index(mname)
                 measurement_index.append(kaug_no)
                 # get right line of dsdp
                 dsdp_extract.append(dsdp_array[kaug_no])
+            except: 
+                self.logger.debug('The variable is fixed:  %s', mname)
+                # for fixed variables, the sensitivity are a zero vector
+                dsdp_extract.append(zero_sens)
 
         # Extract and calculate sensitivity if scaled by constants or parameters.
         # Convert sensitivity to a dictionary
@@ -607,11 +596,6 @@ class DesignOfExperiments:
                 if self.scale_nominal_param_value:
                     sensi *= self.param[par]
                 jac[par].append(sensi)
-
-        time11 = time.time()
-        self.logger.info('Build time with direct kaug mode [s]:  %s', time_build)
-        self.logger.info('Solve time with direct kaug mode [s]:  %s', time_solve)
-        self.logger.info('Total wall clock time [s]:  %s', time11-time00)
             
         # check if another prior experiment FIM is provided other than the user-specified one
         if self.specified_prior is None:
@@ -625,10 +609,7 @@ class DesignOfExperiments:
                                     scale_constant_value=self.scale_constant_value)
         
         self.jac = jac
-        FIM_analysis.build_time = time_build
-        FIM_analysis.solve_time = time_solve
         
-
         return FIM_analysis
 
 
