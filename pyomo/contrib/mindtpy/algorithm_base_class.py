@@ -257,32 +257,32 @@ class _MindtPyAlgorithm(object):
         forth.
 
         """
-        util_blk = getattr(model, self.util_block_name)
+        util_block = getattr(model, self.util_block_name)
         var_set = ComponentSet()
         setattr(
-            util_blk, 'constraint_list', list(
+            util_block, 'constraint_list', list(
                 model.component_data_objects(
                     ctype=Constraint, active=True,
                     descend_into=(Block))))
         setattr(
-            util_blk, 'linear_constraint_list', list(
+            util_block, 'linear_constraint_list', list(
                 c for c in model.component_data_objects(
                     ctype=Constraint, active=True, descend_into=(Block))
                 if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree))
         setattr(
-            util_blk, 'nonlinear_constraint_list', list(
+            util_block, 'nonlinear_constraint_list', list(
                 c for c in model.component_data_objects(
                     ctype=Constraint, active=True, descend_into=(Block))
                 if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree))
         setattr(
-            util_blk, 'objective_list', list(
+            util_block, 'objective_list', list(
                 model.component_data_objects(
                     ctype=Objective, active=True,
                     descend_into=(Block))))
 
         # Identify the non-fixed variables in (potentially) active constraints and
         # objective functions
-        for constr in getattr(util_blk, 'constraint_list'):
+        for constr in getattr(util_block, 'constraint_list'):
             for v in EXPR.identify_variables(constr.body, include_fixed=False):
                 var_set.add(v)
         for obj in model.component_data_objects(ctype=Objective, active=True):
@@ -295,17 +295,17 @@ class _MindtPyAlgorithm(object):
             v for v in model.component_data_objects(
                 ctype=Var, descend_into=(Block))
             if v in var_set)
-        setattr(util_blk, 'variable_list', var_list)
+        setattr(util_block, 'variable_list', var_list)
         discrete_variable_list = list(
             v for v in model.component_data_objects(
                 ctype=Var, descend_into=(Block))
             if v in var_set and v.is_integer())
-        setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
+        setattr(util_block, 'discrete_variable_list', discrete_variable_list)
         continuous_variable_list = list(
             v for v in model.component_data_objects(
                 ctype=Var, descend_into=(Block))
             if v in var_set and v.is_continuous())
-        setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
+        setattr(util_block, 'continuous_variable_list', continuous_variable_list)
 
     def add_cuts_components(self, model):
         config = self.config
@@ -540,7 +540,7 @@ class _MindtPyAlgorithm(object):
             The polynomial degree of the constraints that will be regarded as linear, by default {0, 1}.
         """
         m = self.working_model
-        util_blk = getattr(m, self.util_block_name)
+        util_block = getattr(m, self.util_block_name)
         # Handle missing or multiple objectives
         active_objectives = list(m.component_data_objects(
             ctype=Objective, active=True, descend_into=True))
@@ -548,8 +548,8 @@ class _MindtPyAlgorithm(object):
         if len(active_objectives) == 0:
             config.logger.warning(
                 'Model has no active objectives. Adding dummy objective.')
-            util_blk.dummy_objective = Objective(expr=1)
-            main_obj = util_blk.dummy_objective
+            util_block.dummy_objective = Objective(expr=1)
+            main_obj = util_block.dummy_objective
         elif len(active_objectives) > 1:
             raise ValueError('Model has multiple active objectives.')
         else:
@@ -566,8 +566,8 @@ class _MindtPyAlgorithm(object):
             else:
                 config.logger.info(
                     "Objective is nonlinear. Moving it to constraint set.")
-            util_blk.objective_value = VarList(domain=Reals, initialize=0)
-            util_blk.objective_constr = ConstraintList()
+            util_block.objective_value = VarList(domain=Reals, initialize=0)
+            util_block.objective_constr = ConstraintList()
             if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
                 repn = generate_standard_repn(
                     main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree)
@@ -576,36 +576,36 @@ class _MindtPyAlgorithm(object):
                     + sum(coef*var1*var2 for coef, (var1, var2)
                           in zip(repn.quadratic_coefs, repn.quadratic_vars))
                 # only need to generate one epigraph constraint for the sum of all linear terms and constant
-                epigraph_reformulation(linear_subexpr, util_blk.objective_value,
-                                       util_blk.objective_constr, use_mcpp, main_obj.sense)
+                epigraph_reformulation(linear_subexpr, util_block.objective_value,
+                                       util_block.objective_constr, use_mcpp, main_obj.sense)
                 nonlinear_subexpr = repn.nonlinear_expr
                 if nonlinear_subexpr.__class__ is EXPR.SumExpression:
                     for subsubexpr in nonlinear_subexpr.args:
                         epigraph_reformulation(
-                            subsubexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+                            subsubexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
                 else:
                     epigraph_reformulation(
-                        nonlinear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+                        nonlinear_subexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
             else:
-                epigraph_reformulation(main_obj.expr, util_blk.objective_value,
-                                       util_blk.objective_constr, use_mcpp, main_obj.sense)
+                epigraph_reformulation(main_obj.expr, util_block.objective_value,
+                                       util_block.objective_constr, use_mcpp, main_obj.sense)
 
             main_obj.deactivate()
-            util_blk.objective = Objective(
-                expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
+            util_block.objective = Objective(
+                expr=sum(util_block.objective_value[:]), sense=main_obj.sense)
 
             if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or \
                     (move_objective and update_var_con_list):
-                util_blk.variable_list.extend(util_blk.objective_value[:])
-                util_blk.continuous_variable_list.extend(
-                    util_blk.objective_value[:])
-                util_blk.constraint_list.extend(util_blk.objective_constr[:])
-                util_blk.objective_list.append(util_blk.objective)
-                for constr in util_blk.objective_constr[:]:
+                util_block.variable_list.extend(util_block.objective_value[:])
+                util_block.continuous_variable_list.extend(
+                    util_block.objective_value[:])
+                util_block.constraint_list.extend(util_block.objective_constr[:])
+                util_block.objective_list.append(util_block.objective)
+                for constr in util_block.objective_constr[:]:
                     if constr.body.polynomial_degree() in constr_handleable_polynomial_degree:
-                        util_blk.linear_constraint_list.append(constr)
+                        util_block.linear_constraint_list.append(constr)
                     else:
-                        util_blk.nonlinear_constraint_list.append(constr)
+                        util_block.nonlinear_constraint_list.append(constr)
 
     def set_up_solve_data(self, model, config):
         """Set up the solve data.

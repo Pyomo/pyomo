@@ -196,19 +196,19 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm1 objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L1_obj')
-    obj_blk = model.MindtPy_utils.L1_obj = Block()
-    obj_blk.L1_obj_idx = RangeSet(len(model_vars))
-    obj_blk.L1_obj_var = Var(
-        obj_blk.L1_obj_idx, domain=Reals, bounds=(0, None))
-    obj_blk.abs_reform = ConstraintList()
-    for idx, v_model, v_setpoint in zip(obj_blk.L1_obj_idx, model_vars,
+    obj_block = model.MindtPy_utils.L1_obj = Block()
+    obj_block.L1_obj_idx = RangeSet(len(model_vars))
+    obj_block.L1_obj_var = Var(
+        obj_block.L1_obj_idx, domain=Reals, bounds=(0, None))
+    obj_block.abs_reform = ConstraintList()
+    for idx, v_model, v_setpoint in zip(obj_block.L1_obj_idx, model_vars,
                                         setpoint_vars):
-        obj_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -obj_blk.L1_obj_var[idx])
-        obj_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value <= obj_blk.L1_obj_var[idx])
+        obj_block.abs_reform.add(
+            expr=v_model - v_setpoint.value >= -obj_block.L1_obj_var[idx])
+        obj_block.abs_reform.add(
+            expr=v_model - v_setpoint.value <= obj_block.L1_obj_var[idx])
 
-    return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
+    return Objective(expr=sum(obj_block.L1_obj_var[idx] for idx in obj_block.L1_obj_idx))
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
@@ -240,17 +240,17 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm Infinity objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L_infinity_obj')
-    obj_blk = model.MindtPy_utils.L_infinity_obj = Block()
-    obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
-    obj_blk.abs_reform = ConstraintList()
+    obj_block = model.MindtPy_utils.L_infinity_obj = Block()
+    obj_block.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
+    obj_block.abs_reform = ConstraintList()
     for v_model, v_setpoint in zip(model_vars,
                                    setpoint_vars):
-        obj_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -obj_blk.L_infinity_obj_var)
-        obj_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value <= obj_blk.L_infinity_obj_var)
+        obj_block.abs_reform.add(
+            expr=v_model - v_setpoint.value >= -obj_block.L_infinity_obj_var)
+        obj_block.abs_reform.add(
+            expr=v_model - v_setpoint.value <= obj_block.L_infinity_obj_var)
 
-    return Objective(expr=obj_blk.L_infinity_obj_var)
+    return Objective(expr=obj_block.L_infinity_obj_var)
 
 
 def generate_lag_objective_function(model, setpoint_model, config, timing, discrete_only=False):
@@ -366,22 +366,22 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
         filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm1 norm constraint for models with different number of variables'
-    norm_constraint_blk = model.MindtPy_utils.L1_norm_constraint = Block()
-    norm_constraint_blk.L1_slack_idx = RangeSet(len(model_vars))
-    norm_constraint_blk.L1_slack_var = Var(
-        norm_constraint_blk.L1_slack_idx, domain=Reals, bounds=(0, None))
-    norm_constraint_blk.abs_reform = ConstraintList()
-    for idx, v_model, v_setpoint in zip(norm_constraint_blk.L1_slack_idx, model_vars,
+    norm_constraint_block = model.MindtPy_utils.L1_norm_constraint = Block()
+    norm_constraint_block.L1_slack_idx = RangeSet(len(model_vars))
+    norm_constraint_block.L1_slack_var = Var(
+        norm_constraint_block.L1_slack_idx, domain=Reals, bounds=(0, None))
+    norm_constraint_block.abs_reform = ConstraintList()
+    for idx, v_model, v_setpoint in zip(norm_constraint_block.L1_slack_idx, model_vars,
                                         setpoint_vars):
-        norm_constraint_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -norm_constraint_blk.L1_slack_var[idx])
-        norm_constraint_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value <= norm_constraint_blk.L1_slack_var[idx])
+        norm_constraint_block.abs_reform.add(
+            expr=v_model - v_setpoint.value >= -norm_constraint_block.L1_slack_var[idx])
+        norm_constraint_block.abs_reform.add(
+            expr=v_model - v_setpoint.value <= norm_constraint_block.L1_slack_var[idx])
     rhs = config.fp_norm_constraint_coef * \
         sum(abs(v_model.value-v_setpoint.value)
             for v_model, v_setpoint in zip(model_vars, setpoint_vars))
-    norm_constraint_blk.sum_slack = Constraint(
-        expr=sum(norm_constraint_blk.L1_slack_var[idx] for idx in norm_constraint_blk.L1_slack_idx) <= rhs)
+    norm_constraint_block.sum_slack = Constraint(
+        expr=sum(norm_constraint_block.L1_slack_var[idx] for idx in norm_constraint_block.L1_slack_idx) <= rhs)
 
 
 def set_solver_options(opt, timing, config, solver_type, regularization=False):
@@ -899,7 +899,7 @@ def process_objective(solve_data, config, move_objective=False,
     partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
     """
     m = solve_data.working_model
-    util_blk = getattr(m, solve_data.util_block_name)
+    util_block = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
     active_objectives = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
@@ -907,8 +907,8 @@ def process_objective(solve_data, config, move_objective=False,
     if len(active_objectives) == 0:
         config.logger.warning(
             'Model has no active objectives. Adding dummy objective.')
-        util_blk.dummy_objective = Objective(expr=1)
-        main_obj = util_blk.dummy_objective
+        util_block.dummy_objective = Objective(expr=1)
+        main_obj = util_block.dummy_objective
     elif len(active_objectives) > 1:
         raise ValueError('Model has multiple active objectives.')
     else:
@@ -925,38 +925,38 @@ def process_objective(solve_data, config, move_objective=False,
         else:
             config.logger.info(
                 "Objective is nonlinear. Moving it to constraint set.")
-        util_blk.objective_value = VarList(domain=Reals, initialize=0)
-        util_blk.objective_constr = ConstraintList()
+        util_block.objective_value = VarList(domain=Reals, initialize=0)
+        util_block.objective_constr = ConstraintList()
         if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
             repn = generate_standard_repn(main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree)
             # the following code will also work if linear_subexpr is a constant.
             linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars)) \
                 + sum(coef*var1*var2 for coef, (var1, var2) in zip(repn.quadratic_coefs, repn.quadratic_vars))
             # only need to generate one epigraph constraint for the sum of all linear terms and constant
-            epigraph_reformulation(linear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+            epigraph_reformulation(linear_subexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
             nonlinear_subexpr = repn.nonlinear_expr
             if nonlinear_subexpr.__class__ is EXPR.SumExpression:
                 for subsubexpr in nonlinear_subexpr.args:
-                    epigraph_reformulation(subsubexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+                    epigraph_reformulation(subsubexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
             else:
-                epigraph_reformulation(nonlinear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+                epigraph_reformulation(nonlinear_subexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
         else:
-            epigraph_reformulation(main_obj.expr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+            epigraph_reformulation(main_obj.expr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
 
         main_obj.deactivate()
-        util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
+        util_block.objective = Objective(expr=sum(util_block.objective_value[:]), sense=main_obj.sense)
 
         if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or \
            (move_objective and update_var_con_list):
-            util_blk.variable_list.extend(util_blk.objective_value[:])
-            util_blk.continuous_variable_list.extend(util_blk.objective_value[:])
-            util_blk.constraint_list.extend(util_blk.objective_constr[:])
-            util_blk.objective_list.append(util_blk.objective)
-            for constr in util_blk.objective_constr[:]:
+            util_block.variable_list.extend(util_block.objective_value[:])
+            util_block.continuous_variable_list.extend(util_block.objective_value[:])
+            util_block.constraint_list.extend(util_block.objective_constr[:])
+            util_block.objective_list.append(util_block.objective)
+            for constr in util_block.objective_constr[:]:
                 if constr.body.polynomial_degree() in constr_handleable_polynomial_degree:
-                    util_blk.linear_constraint_list.append(constr)
+                    util_block.linear_constraint_list.append(constr)
                 else:
-                    util_blk.nonlinear_constraint_list.append(constr)
+                    util_block.nonlinear_constraint_list.append(constr)
 
 
 def fp_converged(working_model, mip_model, config, discrete_only=True):
