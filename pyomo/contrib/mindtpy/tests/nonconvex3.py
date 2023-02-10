@@ -30,7 +30,6 @@ class Nonconvex3(ConcreteModel):
         m.y3 = Var(within=Binary, bounds=(0, 1), initialize=0)
         m.y4 = Var(within=Binary, bounds=(0, 1), initialize=0)
         m.y5 = Var(within=Binary, bounds=(0, 1), initialize=0)
-        # m.y6 = Var(within=Binary, bounds=(0, 1), initialize=0)
 
         m.objective = Objective(expr=7 * m.x1 + 10 * m.x2, sense=minimize)
 
@@ -50,4 +49,3 @@ class Nonconvex3(ConcreteModel):
         m.optimal_solution[m.y3] = 0.0
         m.optimal_solution[m.y4] = 1.0
         m.optimal_solution[m.y5] = 0.0
-        # m.optimal_solution[m.y6] = 0.0

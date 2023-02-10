@@ -145,8 +145,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         ----------
         config : ConfigBlock
             The specific configurations for MindtPy.
-        check_cycling : bool
-            Whether to check for a special case that causes the discrete variables to loop through the same values.
 
         Returns
         -------

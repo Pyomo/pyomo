@@ -390,11 +390,6 @@ class _MindtPyAlgorithm(object):
         """Calculate the primal integral.
         Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
 
-        Parameters
-        ----------
-        self : MindtPySolveData
-            Data container that holds solve-instance data.
-
         Returns
         -------
         float
@@ -2195,8 +2190,6 @@ class _MindtPyAlgorithm(object):
         ----------
         fp_main_results : SolverResults
             The results from solving the FP main problem.
-        solve_data : MindtPySolveData
-            Data container that holds solve-instance data.
         config : ConfigBlock
             The specific configurations for MindtPy.
 
@@ -2241,8 +2234,6 @@ class _MindtPyAlgorithm(object):
 
         Parameters
         ----------
-        solve_data : MindtPySolveData
-            Data container that holds solve-instance data.
         config : ConfigBlock
             The specific configurations for MindtPy.
 
