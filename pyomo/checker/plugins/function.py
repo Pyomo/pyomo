@@ -11,7 +11,7 @@
 
 import ast
 
-from pyomo.common.plugin import SingletonPlugin, implements
+from pyomo.common.plugin_base import SingletonPlugin, implements
 from pyomo.checker.hooks import IPreCheckHook, IPostCheckHook
 
 

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import ast
-import pyomo.common.plugin
+import pyomo.common.plugin_base
 
 from pyomo.checker.plugins.checker import IterativeTreeChecker
 from pyomo.checker.plugins.model import ModelTrackerHook
@@ -18,7 +18,7 @@ from pyomo.checker.plugins.model import ModelTrackerHook
 
 class ArrayValue(IterativeTreeChecker, ModelTrackerHook):
 
-    pyomo.common.plugin.alias('model.array_value', 'Check if assigning a value to an array of variables')
+    pyomo.common.plugin_base.alias('model.array_value', 'Check if assigning a value to an array of variables')
 
     varArrays = {}
 

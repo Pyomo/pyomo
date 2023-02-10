@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from . import download
-from . import getGSL
-
 def load():
-    download.DownloadFactory.register('gsl')(getGSL.get_gsl)
+    pass
+
