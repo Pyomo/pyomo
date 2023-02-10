@@ -10,14 +10,14 @@
 #  ___________________________________________________________________________
 
 import ast
-import pyomo.common.plugin
+import pyomo.common.plugin_base
 
 from pyomo.checker.plugins.checker import IterativeTreeChecker
 
 
 class ModelName(IterativeTreeChecker):
 
-    pyomo.common.plugin.alias('model.model_name', 'Check that the "model" variable is assigned with a Pyomo model.')
+    pyomo.common.plugin_base.alias('model.model_name', 'Check that the "model" variable is assigned with a Pyomo model.')
 
     def beginChecking(self, runner, script):
         self.modelAssigned = False
@@ -50,7 +50,7 @@ class ModelName(IterativeTreeChecker):
 
 class ModelCreate(IterativeTreeChecker):
 
-    pyomo.common.plugin.alias('model.create', 'Check if a Pyomo model class is being assigned to a variable.')
+    pyomo.common.plugin_base.alias('model.create', 'Check if a Pyomo model class is being assigned to a variable.')
 
     def getTargetStrings(self, assign):
         ls = []
@@ -79,7 +79,7 @@ class ModelCreate(IterativeTreeChecker):
 
 class DeprecatedModel(IterativeTreeChecker):
 
-    pyomo.common.plugin.alias('model.Model_class', 'Check if the deprecated Model class is being used.')
+    pyomo.common.plugin_base.alias('model.Model_class', 'Check if the deprecated Model class is being used.')
 
     def checkerDoc(self):
         return """\
