@@ -24,8 +24,9 @@ from pyomo.core.expr.compare import (
 from pyomo.core.expr.current import (
     DivisionExpression,
     NPV_DivisionExpression,
-    LinearExpression,
     SumExpression,
+    NPV_SumExpression,
+    LinearExpression,
     MonomialTermExpression,
     ProductExpression,
     NPV_ProductExpression,
@@ -150,6 +151,1008 @@ class TestExprGen(unittest.TestCase):
             )
             raise
 
+    #
+    #
+    # ADDITION
+    #
+    #
+
+    def test_add_invalid(self):
+        tests = [
+            # (self.invalid, self.invalid, NotImplemented),
+            (self.invalid, self.asbinary, NotImplemented),
+            (self.invalid, self.zero, NotImplemented),
+            (self.invalid, self.one, NotImplemented),
+            # 4:
+            (self.invalid, self.native, NotImplemented),
+            (self.invalid, self.npv, NotImplemented),
+            (self.invalid, self.param, NotImplemented),
+            (self.invalid, self.param_mut, NotImplemented),
+            # 8:
+            (self.invalid, self.var, NotImplemented),
+            (self.invalid, self.mon_native, NotImplemented),
+            (self.invalid, self.mon_param, NotImplemented),
+            (self.invalid, self.mon_npv, NotImplemented),
+            # 12:
+            (self.invalid, self.linear, NotImplemented),
+            (self.invalid, self.sum, NotImplemented),
+            (self.invalid, self.other, NotImplemented),
+            (self.invalid, self.mutable_l0, NotImplemented),
+            # 16:
+            (self.invalid, self.mutable_l1, NotImplemented),
+            (self.invalid, self.mutable_l2, NotImplemented),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_asbinary(self):
+        tests = [
+            (self.asbinary, self.invalid, NotImplemented),
+            # BooleanVar objects do not support addition
+            (self.asbinary, self.asbinary, NotImplemented),
+            (self.asbinary, self.zero, self.bin),
+            (
+                self.asbinary,
+                self.one,
+                LinearExpression([MonomialTermExpression((1, self.bin)), 1]),
+            ),
+            # 4:
+            (
+                self.asbinary,
+                self.native,
+                LinearExpression([MonomialTermExpression((1, self.bin)), 5]),
+            ),
+            (
+                self.asbinary,
+                self.npv,
+                LinearExpression([MonomialTermExpression((1, self.bin)), self.npv]),
+            ),
+            (
+                self.asbinary,
+                self.param,
+                LinearExpression([MonomialTermExpression((1, self.bin)), 6]),
+            ),
+            (
+                self.asbinary,
+                self.param_mut,
+                LinearExpression(
+                    [MonomialTermExpression((1, self.bin)), self.param_mut]
+                ),
+            ),
+            # 8:
+            (
+                self.asbinary,
+                self.var,
+                LinearExpression(
+                    [
+                        MonomialTermExpression((1, self.bin)),
+                        MonomialTermExpression((1, self.var)),
+                    ]
+                ),
+            ),
+            (
+                self.asbinary,
+                self.mon_native,
+                LinearExpression(
+                    [MonomialTermExpression((1, self.bin)), self.mon_native]
+                ),
+            ),
+            (
+                self.asbinary,
+                self.mon_param,
+                LinearExpression(
+                    [MonomialTermExpression((1, self.bin)), self.mon_param]
+                ),
+            ),
+            (
+                self.asbinary,
+                self.mon_npv,
+                LinearExpression([MonomialTermExpression((1, self.bin)), self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.asbinary,
+                self.linear,
+                LinearExpression(
+                    self.linear.args + [MonomialTermExpression((1, self.bin))]
+                ),
+            ),
+            (self.asbinary, self.sum, SumExpression(self.sum.args + [self.bin])),
+            (self.asbinary, self.other, SumExpression([self.bin, self.other])),
+            (self.asbinary, self.mutable_l0, self.bin),
+            # 16:
+            (
+                self.asbinary,
+                self.mutable_l1,
+                LinearExpression(
+                    [MonomialTermExpression((1, self.bin)), self.mutable_l1.arg(0)]
+                ),
+            ),
+            (
+                self.asbinary,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.bin]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_zero(self):
+        tests = [
+            (self.zero, self.invalid, NotImplemented),
+            (self.zero, self.asbinary, self.bin),
+            (self.zero, self.zero, 0),
+            (self.zero, self.one, 1),
+            # 4:
+            (self.zero, self.native, 5),
+            (self.zero, self.npv, self.npv),
+            (self.zero, self.param, self.param),
+            (self.zero, self.param_mut, self.param_mut),
+            # 8:
+            (self.zero, self.var, self.var),
+            (self.zero, self.mon_native, self.mon_native),
+            (self.zero, self.mon_param, self.mon_param),
+            (self.zero, self.mon_npv, self.mon_npv),
+            # 12:
+            (self.zero, self.linear, self.linear),
+            (self.zero, self.sum, self.sum),
+            (self.zero, self.other, self.other),
+            (self.zero, self.mutable_l0, 0),
+            # 16:
+            (self.zero, self.mutable_l1, self.mutable_l1.arg(0)),
+            (self.zero, self.mutable_l2, self.mutable_l2),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_one(self):
+        tests = [
+            (self.one, self.invalid, NotImplemented),
+            (
+                self.one,
+                self.asbinary,
+                LinearExpression([1, MonomialTermExpression((1, self.bin))]),
+            ),
+            (self.one, self.zero, 1),
+            (self.one, self.one, 2),
+            # 4:
+            (self.one, self.native, 6),
+            (self.one, self.npv, NPV_SumExpression([1, self.npv])),
+            (self.one, self.param, 7),
+            (self.one, self.param_mut, NPV_SumExpression([1, self.param_mut])),
+            # 8:
+            (
+                self.one,
+                self.var,
+                LinearExpression([1, MonomialTermExpression((1, self.var))]),
+            ),
+            (self.one, self.mon_native, LinearExpression([1, self.mon_native])),
+            (self.one, self.mon_param, LinearExpression([1, self.mon_param])),
+            (self.one, self.mon_npv, LinearExpression([1, self.mon_npv])),
+            # 12:
+            (self.one, self.linear, LinearExpression(self.linear.args + [1])),
+            (self.one, self.sum, SumExpression(self.sum.args + [1])),
+            (self.one, self.other, SumExpression([1, self.other])),
+            (self.one, self.mutable_l0, 1),
+            # 16:
+            (self.one, self.mutable_l1, LinearExpression([1] + self.mutable_l1.args)),
+            (self.one, self.mutable_l2, SumExpression(self.mutable_l2.args + [1])),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_native(self):
+        tests = [
+            (self.native, self.invalid, NotImplemented),
+            (
+                self.native,
+                self.asbinary,
+                LinearExpression([5, MonomialTermExpression((1, self.bin))]),
+            ),
+            (self.native, self.zero, 5),
+            (self.native, self.one, 6),
+            # 4:
+            (self.native, self.native, 10),
+            (self.native, self.npv, NPV_SumExpression([5, self.npv])),
+            (self.native, self.param, 11),
+            (self.native, self.param_mut, NPV_SumExpression([5, self.param_mut])),
+            # 8:
+            (
+                self.native,
+                self.var,
+                LinearExpression([5, MonomialTermExpression((1, self.var))]),
+            ),
+            (self.native, self.mon_native, LinearExpression([5, self.mon_native])),
+            (self.native, self.mon_param, LinearExpression([5, self.mon_param])),
+            (self.native, self.mon_npv, LinearExpression([5, self.mon_npv])),
+            # 12:
+            (self.native, self.linear, LinearExpression(self.linear.args + [5])),
+            (self.native, self.sum, SumExpression(self.sum.args + [5])),
+            (self.native, self.other, SumExpression([5, self.other])),
+            (self.native, self.mutable_l0, 5),
+            # 16:
+            (
+                self.native,
+                self.mutable_l1,
+                LinearExpression([5] + self.mutable_l1.args),
+            ),
+            (self.native, self.mutable_l2, SumExpression(self.mutable_l2.args + [5])),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_npv(self):
+        tests = [
+            (self.npv, self.invalid, NotImplemented),
+            (
+                self.npv,
+                self.asbinary,
+                LinearExpression([self.npv, MonomialTermExpression((1, self.bin))]),
+            ),
+            (self.npv, self.zero, self.npv),
+            (self.npv, self.one, NPV_SumExpression([self.npv, 1])),
+            # 4:
+            (self.npv, self.native, NPV_SumExpression([self.npv, 5])),
+            (self.npv, self.npv, NPV_SumExpression([self.npv, self.npv])),
+            (self.npv, self.param, NPV_SumExpression([self.npv, 6])),
+            (self.npv, self.param_mut, NPV_SumExpression([self.npv, self.param_mut])),
+            # 8:
+            (
+                self.npv,
+                self.var,
+                LinearExpression([self.npv, MonomialTermExpression((1, self.var))]),
+            ),
+            (self.npv, self.mon_native, LinearExpression([self.npv, self.mon_native])),
+            (self.npv, self.mon_param, LinearExpression([self.npv, self.mon_param])),
+            (self.npv, self.mon_npv, LinearExpression([self.npv, self.mon_npv])),
+            # 12:
+            (self.npv, self.linear, LinearExpression(self.linear.args + [self.npv])),
+            (self.npv, self.sum, SumExpression(self.sum.args + [self.npv])),
+            (self.npv, self.other, SumExpression([self.npv, self.other])),
+            (self.npv, self.mutable_l0, self.npv),
+            # 16:
+            (
+                self.npv,
+                self.mutable_l1,
+                LinearExpression([self.npv] + self.mutable_l1.args),
+            ),
+            (
+                self.npv,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.npv]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_param(self):
+        tests = [
+            (self.param, self.invalid, NotImplemented),
+            (
+                self.param,
+                self.asbinary,
+                LinearExpression([6, MonomialTermExpression((1, self.bin))]),
+            ),
+            (self.param, self.zero, 6),
+            (self.param, self.one, 7),
+            # 4:
+            (self.param, self.native, 11),
+            (self.param, self.npv, NPV_SumExpression([6, self.npv])),
+            (self.param, self.param, 12),
+            (self.param, self.param_mut, NPV_SumExpression([6, self.param_mut])),
+            # 8:
+            (
+                self.param,
+                self.var,
+                LinearExpression([6, MonomialTermExpression((1, self.var))]),
+            ),
+            (self.param, self.mon_native, LinearExpression([6, self.mon_native])),
+            (self.param, self.mon_param, LinearExpression([6, self.mon_param])),
+            (self.param, self.mon_npv, LinearExpression([6, self.mon_npv])),
+            # 12:
+            (self.param, self.linear, LinearExpression(self.linear.args + [6])),
+            (self.param, self.sum, SumExpression(self.sum.args + [6])),
+            (self.param, self.other, SumExpression([6, self.other])),
+            (self.param, self.mutable_l0, 6),
+            # 16:
+            (self.param, self.mutable_l1, LinearExpression([6] + self.mutable_l1.args)),
+            (self.param, self.mutable_l2, SumExpression(self.mutable_l2.args + [6])),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_param_mut(self):
+        tests = [
+            (self.param_mut, self.invalid, NotImplemented),
+            (
+                self.param_mut,
+                self.asbinary,
+                LinearExpression(
+                    [self.param_mut, MonomialTermExpression((1, self.bin))]
+                ),
+            ),
+            (self.param_mut, self.zero, self.param_mut),
+            (self.param_mut, self.one, NPV_SumExpression([self.param_mut, 1])),
+            # 4:
+            (self.param_mut, self.native, NPV_SumExpression([self.param_mut, 5])),
+            (self.param_mut, self.npv, NPV_SumExpression([self.param_mut, self.npv])),
+            (self.param_mut, self.param, NPV_SumExpression([self.param_mut, 6])),
+            (
+                self.param_mut,
+                self.param_mut,
+                NPV_SumExpression([self.param_mut, self.param_mut]),
+            ),
+            # 8:
+            (
+                self.param_mut,
+                self.var,
+                LinearExpression(
+                    [self.param_mut, MonomialTermExpression((1, self.var))]
+                ),
+            ),
+            (
+                self.param_mut,
+                self.mon_native,
+                LinearExpression([self.param_mut, self.mon_native]),
+            ),
+            (
+                self.param_mut,
+                self.mon_param,
+                LinearExpression([self.param_mut, self.mon_param]),
+            ),
+            (
+                self.param_mut,
+                self.mon_npv,
+                LinearExpression([self.param_mut, self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.param_mut,
+                self.linear,
+                LinearExpression(self.linear.args + [self.param_mut]),
+            ),
+            (self.param_mut, self.sum, SumExpression(self.sum.args + [self.param_mut])),
+            (self.param_mut, self.other, SumExpression([self.param_mut, self.other])),
+            (self.param_mut, self.mutable_l0, self.param_mut),
+            # 16:
+            (
+                self.param_mut,
+                self.mutable_l1,
+                LinearExpression([self.param_mut] + self.mutable_l1.args),
+            ),
+            (
+                self.param_mut,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.param_mut]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_var(self):
+        tests = [
+            (self.var, self.invalid, NotImplemented),
+            (
+                self.var,
+                self.asbinary,
+                LinearExpression(
+                    [
+                        MonomialTermExpression((1, self.var)),
+                        MonomialTermExpression((1, self.bin)),
+                    ]
+                ),
+            ),
+            (self.var, self.zero, self.var),
+            (
+                self.var,
+                self.one,
+                LinearExpression([MonomialTermExpression((1, self.var)), 1]),
+            ),
+            # 4:
+            (
+                self.var,
+                self.native,
+                LinearExpression([MonomialTermExpression((1, self.var)), 5]),
+            ),
+            (
+                self.var,
+                self.npv,
+                LinearExpression([MonomialTermExpression((1, self.var)), self.npv]),
+            ),
+            (
+                self.var,
+                self.param,
+                LinearExpression([MonomialTermExpression((1, self.var)), 6]),
+            ),
+            (
+                self.var,
+                self.param_mut,
+                LinearExpression(
+                    [MonomialTermExpression((1, self.var)), self.param_mut]
+                ),
+            ),
+            # 8:
+            (
+                self.var,
+                self.var,
+                LinearExpression(
+                    [
+                        MonomialTermExpression((1, self.var)),
+                        MonomialTermExpression((1, self.var)),
+                    ]
+                ),
+            ),
+            (
+                self.var,
+                self.mon_native,
+                LinearExpression(
+                    [MonomialTermExpression((1, self.var)), self.mon_native]
+                ),
+            ),
+            (
+                self.var,
+                self.mon_param,
+                LinearExpression(
+                    [MonomialTermExpression((1, self.var)), self.mon_param]
+                ),
+            ),
+            (
+                self.var,
+                self.mon_npv,
+                LinearExpression([MonomialTermExpression((1, self.var)), self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.var,
+                self.linear,
+                LinearExpression(
+                    self.linear.args + [MonomialTermExpression((1, self.var))]
+                ),
+            ),
+            (self.var, self.sum, SumExpression(self.sum.args + [self.var])),
+            (self.var, self.other, SumExpression([self.var, self.other])),
+            (self.var, self.mutable_l0, self.var),
+            # 16:
+            (
+                self.var,
+                self.mutable_l1,
+                LinearExpression(
+                    [MonomialTermExpression((1, self.var))] + self.mutable_l1.args
+                ),
+            ),
+            (
+                self.var,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.var]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_mon_native(self):
+        tests = [
+            (self.mon_native, self.invalid, NotImplemented),
+            (
+                self.mon_native,
+                self.asbinary,
+                LinearExpression(
+                    [self.mon_native, MonomialTermExpression((1, self.bin))]
+                ),
+            ),
+            (self.mon_native, self.zero, self.mon_native),
+            (self.mon_native, self.one, LinearExpression([self.mon_native, 1])),
+            # 4:
+            (self.mon_native, self.native, LinearExpression([self.mon_native, 5])),
+            (self.mon_native, self.npv, LinearExpression([self.mon_native, self.npv])),
+            (self.mon_native, self.param, LinearExpression([self.mon_native, 6])),
+            (
+                self.mon_native,
+                self.param_mut,
+                LinearExpression([self.mon_native, self.param_mut]),
+            ),
+            # 8:
+            (
+                self.mon_native,
+                self.var,
+                LinearExpression(
+                    [self.mon_native, MonomialTermExpression((1, self.var))]
+                ),
+            ),
+            (
+                self.mon_native,
+                self.mon_native,
+                LinearExpression([self.mon_native, self.mon_native]),
+            ),
+            (
+                self.mon_native,
+                self.mon_param,
+                LinearExpression([self.mon_native, self.mon_param]),
+            ),
+            (
+                self.mon_native,
+                self.mon_npv,
+                LinearExpression([self.mon_native, self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.mon_native,
+                self.linear,
+                LinearExpression(self.linear.args + [self.mon_native]),
+            ),
+            (
+                self.mon_native,
+                self.sum,
+                SumExpression(self.sum.args + [self.mon_native]),
+            ),
+            (self.mon_native, self.other, SumExpression([self.mon_native, self.other])),
+            (self.mon_native, self.mutable_l0, self.mon_native),
+            # 16:
+            (
+                self.mon_native,
+                self.mutable_l1,
+                LinearExpression([self.mon_native] + self.mutable_l1.args),
+            ),
+            (
+                self.mon_native,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.mon_native]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_mon_param(self):
+        tests = [
+            (self.mon_param, self.invalid, NotImplemented),
+            (
+                self.mon_param,
+                self.asbinary,
+                LinearExpression(
+                    [self.mon_param, MonomialTermExpression((1, self.bin))]
+                ),
+            ),
+            (self.mon_param, self.zero, self.mon_param),
+            (self.mon_param, self.one, LinearExpression([self.mon_param, 1])),
+            # 4:
+            (self.mon_param, self.native, LinearExpression([self.mon_param, 5])),
+            (self.mon_param, self.npv, LinearExpression([self.mon_param, self.npv])),
+            (self.mon_param, self.param, LinearExpression([self.mon_param, 6])),
+            (
+                self.mon_param,
+                self.param_mut,
+                LinearExpression([self.mon_param, self.param_mut]),
+            ),
+            # 8:
+            (
+                self.mon_param,
+                self.var,
+                LinearExpression(
+                    [self.mon_param, MonomialTermExpression((1, self.var))]
+                ),
+            ),
+            (
+                self.mon_param,
+                self.mon_native,
+                LinearExpression([self.mon_param, self.mon_native]),
+            ),
+            (
+                self.mon_param,
+                self.mon_param,
+                LinearExpression([self.mon_param, self.mon_param]),
+            ),
+            (
+                self.mon_param,
+                self.mon_npv,
+                LinearExpression([self.mon_param, self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.mon_param,
+                self.linear,
+                LinearExpression(self.linear.args + [self.mon_param]),
+            ),
+            (self.mon_param, self.sum, SumExpression(self.sum.args + [self.mon_param])),
+            (self.mon_param, self.other, SumExpression([self.mon_param, self.other])),
+            (self.mon_param, self.mutable_l0, self.mon_param),
+            # 16:
+            (
+                self.mon_param,
+                self.mutable_l1,
+                LinearExpression([self.mon_param] + self.mutable_l1.args),
+            ),
+            (
+                self.mon_param,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.mon_param]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_mon_npv(self):
+        tests = [
+            (self.mon_npv, self.invalid, NotImplemented),
+            (
+                self.mon_npv,
+                self.asbinary,
+                LinearExpression([self.mon_npv, MonomialTermExpression((1, self.bin))]),
+            ),
+            (self.mon_npv, self.zero, self.mon_npv),
+            (self.mon_npv, self.one, LinearExpression([self.mon_npv, 1])),
+            # 4:
+            (self.mon_npv, self.native, LinearExpression([self.mon_npv, 5])),
+            (self.mon_npv, self.npv, LinearExpression([self.mon_npv, self.npv])),
+            (self.mon_npv, self.param, LinearExpression([self.mon_npv, 6])),
+            (
+                self.mon_npv,
+                self.param_mut,
+                LinearExpression([self.mon_npv, self.param_mut]),
+            ),
+            # 8:
+            (
+                self.mon_npv,
+                self.var,
+                LinearExpression([self.mon_npv, MonomialTermExpression((1, self.var))]),
+            ),
+            (
+                self.mon_npv,
+                self.mon_native,
+                LinearExpression([self.mon_npv, self.mon_native]),
+            ),
+            (
+                self.mon_npv,
+                self.mon_param,
+                LinearExpression([self.mon_npv, self.mon_param]),
+            ),
+            (
+                self.mon_npv,
+                self.mon_npv,
+                LinearExpression([self.mon_npv, self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.mon_npv,
+                self.linear,
+                LinearExpression(self.linear.args + [self.mon_npv]),
+            ),
+            (self.mon_npv, self.sum, SumExpression(self.sum.args + [self.mon_npv])),
+            (self.mon_npv, self.other, SumExpression([self.mon_npv, self.other])),
+            (self.mon_npv, self.mutable_l0, self.mon_npv),
+            # 16:
+            (
+                self.mon_npv,
+                self.mutable_l1,
+                LinearExpression([self.mon_npv] + self.mutable_l1.args),
+            ),
+            (
+                self.mon_npv,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.mon_npv]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_linear(self):
+        tests = [
+            (self.linear, self.invalid, NotImplemented),
+            (
+                self.linear,
+                self.asbinary,
+                LinearExpression(
+                    self.linear.args + [MonomialTermExpression((1, self.bin))]
+                ),
+            ),
+            (self.linear, self.zero, self.linear),
+            (self.linear, self.one, LinearExpression(self.linear.args + [1])),
+            # 4:
+            (self.linear, self.native, LinearExpression(self.linear.args + [5])),
+            (self.linear, self.npv, LinearExpression(self.linear.args + [self.npv])),
+            (self.linear, self.param, LinearExpression(self.linear.args + [6])),
+            (
+                self.linear,
+                self.param_mut,
+                LinearExpression(self.linear.args + [self.param_mut]),
+            ),
+            # 8:
+            (
+                self.linear,
+                self.var,
+                LinearExpression(
+                    self.linear.args + [MonomialTermExpression((1, self.var))]
+                ),
+            ),
+            (
+                self.linear,
+                self.mon_native,
+                LinearExpression(self.linear.args + [self.mon_native]),
+            ),
+            (
+                self.linear,
+                self.mon_param,
+                LinearExpression(self.linear.args + [self.mon_param]),
+            ),
+            (
+                self.linear,
+                self.mon_npv,
+                LinearExpression(self.linear.args + [self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.linear,
+                self.linear,
+                LinearExpression(self.linear.args + self.linear.args),
+            ),
+            (self.linear, self.sum, SumExpression(self.sum.args + [self.linear])),
+            (self.linear, self.other, SumExpression([self.linear, self.other])),
+            (self.linear, self.mutable_l0, self.linear),
+            # 16:
+            (
+                self.linear,
+                self.mutable_l1,
+                LinearExpression(self.linear.args + self.mutable_l1.args),
+            ),
+            (
+                self.linear,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.linear]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_sum(self):
+        tests = [
+            (self.sum, self.invalid, NotImplemented),
+            (self.sum, self.asbinary, SumExpression(self.sum.args + [self.bin])),
+            (self.sum, self.zero, self.sum),
+            (self.sum, self.one, SumExpression(self.sum.args + [1])),
+            # 4:
+            (self.sum, self.native, SumExpression(self.sum.args + [5])),
+            (self.sum, self.npv, SumExpression(self.sum.args + [self.npv])),
+            (self.sum, self.param, SumExpression(self.sum.args + [6])),
+            (self.sum, self.param_mut, SumExpression(self.sum.args + [self.param_mut])),
+            # 8:
+            (self.sum, self.var, SumExpression(self.sum.args + [self.var])),
+            (
+                self.sum,
+                self.mon_native,
+                SumExpression(self.sum.args + [self.mon_native]),
+            ),
+            (self.sum, self.mon_param, SumExpression(self.sum.args + [self.mon_param])),
+            (self.sum, self.mon_npv, SumExpression(self.sum.args + [self.mon_npv])),
+            # 12:
+            (self.sum, self.linear, SumExpression(self.sum.args + [self.linear])),
+            (self.sum, self.sum, SumExpression(self.sum.args + self.sum.args)),
+            (self.sum, self.other, SumExpression(self.sum.args + [self.other])),
+            (self.sum, self.mutable_l0, self.sum),
+            # 16:
+            (
+                self.sum,
+                self.mutable_l1,
+                SumExpression(self.sum.args + self.mutable_l1.args),
+            ),
+            (
+                self.sum,
+                self.mutable_l2,
+                SumExpression(self.sum.args + self.mutable_l2.args),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_other(self):
+        tests = [
+            (self.other, self.invalid, NotImplemented),
+            (self.other, self.asbinary, SumExpression([self.other, self.bin])),
+            (self.other, self.zero, self.other),
+            (self.other, self.one, SumExpression([self.other, 1])),
+            # 4:
+            (self.other, self.native, SumExpression([self.other, 5])),
+            (self.other, self.npv, SumExpression([self.other, self.npv])),
+            (self.other, self.param, SumExpression([self.other, 6])),
+            (self.other, self.param_mut, SumExpression([self.other, self.param_mut])),
+            # 8:
+            (self.other, self.var, SumExpression([self.other, self.var])),
+            (self.other, self.mon_native, SumExpression([self.other, self.mon_native])),
+            (self.other, self.mon_param, SumExpression([self.other, self.mon_param])),
+            (self.other, self.mon_npv, SumExpression([self.other, self.mon_npv])),
+            # 12:
+            (self.other, self.linear, SumExpression([self.other, self.linear])),
+            (self.other, self.sum, SumExpression(self.sum.args + [self.other])),
+            (self.other, self.other, SumExpression([self.other, self.other])),
+            (self.other, self.mutable_l0, self.other),
+            # 16:
+            (
+                self.other,
+                self.mutable_l1,
+                SumExpression([self.other, self.mutable_l1.arg(0)]),
+            ),
+            (
+                self.other,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + [self.other]),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_mutable_l0(self):
+        tests = [
+            (self.mutable_l0, self.invalid, NotImplemented),
+            (self.mutable_l0, self.asbinary, self.bin),
+            (self.mutable_l0, self.zero, 0),
+            (self.mutable_l0, self.one, 1),
+            # 4:
+            (self.mutable_l0, self.native, 5),
+            (self.mutable_l0, self.npv, self.npv),
+            (self.mutable_l0, self.param, self.param),
+            (self.mutable_l0, self.param_mut, self.param_mut),
+            # 8:
+            (self.mutable_l0, self.var, self.var),
+            (self.mutable_l0, self.mon_native, self.mon_native),
+            (self.mutable_l0, self.mon_param, self.mon_param),
+            (self.mutable_l0, self.mon_npv, self.mon_npv),
+            # 12:
+            (self.mutable_l0, self.linear, self.linear),
+            (self.mutable_l0, self.sum, self.sum),
+            (self.mutable_l0, self.other, self.other),
+            (self.mutable_l0, self.mutable_l0, 0),
+            # 16:
+            (self.mutable_l0, self.mutable_l1, self.mutable_l1.arg(0)),
+            (self.mutable_l0, self.mutable_l2, self.mutable_l2),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_mutable_l1(self):
+        tests = [
+            (self.mutable_l1, self.invalid, NotImplemented),
+            (
+                self.mutable_l1,
+                self.asbinary,
+                LinearExpression(
+                    self.mutable_l1.args + [MonomialTermExpression((1, self.bin))]
+                ),
+            ),
+            (self.mutable_l1, self.zero, self.mutable_l1.arg(0)),
+            (self.mutable_l1, self.one, LinearExpression(self.mutable_l1.args + [1])),
+            # 4:
+            (
+                self.mutable_l1,
+                self.native,
+                LinearExpression(self.mutable_l1.args + [5]),
+            ),
+            (
+                self.mutable_l1,
+                self.npv,
+                LinearExpression(self.mutable_l1.args + [self.npv]),
+            ),
+            (self.mutable_l1, self.param, LinearExpression(self.mutable_l1.args + [6])),
+            (
+                self.mutable_l1,
+                self.param_mut,
+                LinearExpression(self.mutable_l1.args + [self.param_mut]),
+            ),
+            # 8:
+            (
+                self.mutable_l1,
+                self.var,
+                LinearExpression(
+                    self.mutable_l1.args + [MonomialTermExpression((1, self.var))]
+                ),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_native,
+                LinearExpression(self.mutable_l1.args + [self.mon_native]),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_param,
+                LinearExpression(self.mutable_l1.args + [self.mon_param]),
+            ),
+            (
+                self.mutable_l1,
+                self.mon_npv,
+                LinearExpression(self.mutable_l1.args + [self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.mutable_l1,
+                self.linear,
+                LinearExpression(self.linear.args + self.mutable_l1.args),
+            ),
+            (
+                self.mutable_l1,
+                self.sum,
+                SumExpression(self.sum.args + self.mutable_l1.args),
+            ),
+            (
+                self.mutable_l1,
+                self.other,
+                SumExpression(self.mutable_l1.args + [self.other]),
+            ),
+            (self.mutable_l1, self.mutable_l0, self.mutable_l1.arg(0)),
+            # 16:
+            (
+                self.mutable_l1,
+                self.mutable_l1,
+                LinearExpression(self.mutable_l1.args + self.mutable_l1.args),
+            ),
+            (
+                self.mutable_l1,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + self.mutable_l1.args),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    def test_add_mutable_l2(self):
+        tests = [
+            (self.mutable_l2, self.invalid, NotImplemented),
+            (
+                self.mutable_l2,
+                self.asbinary,
+                SumExpression(self.mutable_l2.args + [self.bin]),
+            ),
+            (self.mutable_l2, self.zero, self.mutable_l2),
+            (self.mutable_l2, self.one, SumExpression(self.mutable_l2.args + [1])),
+            # 4:
+            (self.mutable_l2, self.native, SumExpression(self.mutable_l2.args + [5])),
+            (
+                self.mutable_l2,
+                self.npv,
+                SumExpression(self.mutable_l2.args + [self.npv]),
+            ),
+            (self.mutable_l2, self.param, SumExpression(self.mutable_l2.args + [6])),
+            (
+                self.mutable_l2,
+                self.param_mut,
+                SumExpression(self.mutable_l2.args + [self.param_mut]),
+            ),
+            # 8:
+            (
+                self.mutable_l2,
+                self.var,
+                SumExpression(self.mutable_l2.args + [self.var]),
+            ),
+            (
+                self.mutable_l2,
+                self.mon_native,
+                SumExpression(self.mutable_l2.args + [self.mon_native]),
+            ),
+            (
+                self.mutable_l2,
+                self.mon_param,
+                SumExpression(self.mutable_l2.args + [self.mon_param]),
+            ),
+            (
+                self.mutable_l2,
+                self.mon_npv,
+                SumExpression(self.mutable_l2.args + [self.mon_npv]),
+            ),
+            # 12:
+            (
+                self.mutable_l2,
+                self.linear,
+                SumExpression(self.mutable_l2.args + [self.linear]),
+            ),
+            (
+                self.mutable_l2,
+                self.sum,
+                SumExpression(self.mutable_l2.args + self.sum.args),
+            ),
+            (
+                self.mutable_l2,
+                self.other,
+                SumExpression(self.mutable_l2.args + [self.other]),
+            ),
+            (self.mutable_l2, self.mutable_l0, self.mutable_l2),
+            # 16:
+            (
+                self.mutable_l2,
+                self.mutable_l1,
+                SumExpression(self.mutable_l2.args + self.mutable_l1.args),
+            ),
+            (
+                self.mutable_l2,
+                self.mutable_l2,
+                SumExpression(self.mutable_l2.args + self.mutable_l2.args),
+            ),
+        ]
+        self._run_cases(tests, operator.add)
+
+    #
+    #
+    # MULTIPLICATION
+    #
+    #
+
     def test_mul_invalid(self):
         tests = [
             (self.invalid, self.invalid, NotImplemented),
@@ -180,12 +1183,6 @@ class TestExprGen(unittest.TestCase):
             (self.invalid, self.mutable_l2, NotImplemented),
         ]
         self._run_cases(tests, operator.mul)
-
-    #
-    #
-    # MULTIPLICATION
-    #
-    #
 
     def test_mul_asbinary(self):
         tests = [
