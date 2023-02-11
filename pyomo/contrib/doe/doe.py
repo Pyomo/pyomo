@@ -412,7 +412,7 @@ class DesignOfExperiments:
         # if measurements are not provided
         else:
             scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
-            scena_gen = scena_object.simultaneous_scenario()
+            scena_gen = scena_object.generate_scenario()
             print(scena_gen)
             self.scenario_list = scena_gen["scenario"]
             self.scenario_num = scena_gen["scena_num"]
