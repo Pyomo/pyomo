@@ -419,29 +419,27 @@ class DesignOfExperiments:
             # dict for storing model outputs
             output_record = {}
 
+            # Create a global model 
             mod = pyo.ConcreteModel()
 
             mod.scena = pyo.Set(initialize=list(range(len(self.scenario_list))))
 
             # Allow user to self-define complex design variables
-            #mod.t0 = pyo.Set(initialize=[0])
-            #mod.t_con = pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
-            #mod.CA0 = pyo.Var(mod.t0, bounds=[1,5], within=pyo.NonNegativeReals)
-            #mod.T = pyo.Var(mod.t_con, bounds=[300, 700], within=pyo.NonNegativeReals)
+            self.create_model(mod=mod, model_option="global")
 
-            mod.add_component('t0', pyo.Set(initialize=[0]))
-            mod.add_component('t_con', pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]))
-            mod.add_component('CA0', pyo.Var(mod.t0, bounds=[1,5], within=pyo.NonNegativeReals))
-            mod.add_component('T', pyo.Var(mod.t_con, bounds=[300, 700], within=pyo.NonNegativeReals))
+            #mod.add_component('t0', pyo.Set(initialize=[0]))
+            #mod.add_component('t_con', pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]))
+            #mod.add_component('CA0', pyo.Var(mod.t0, bounds=[1,5], within=pyo.NonNegativeReals))
+            #mod.add_component('T', pyo.Var(mod.t_con, bounds=[300, 700], within=pyo.NonNegativeReals))
 
             def block_build(b,s):
-                self.create_model(m=b)
+                self.create_model(mod=b, model_option="block")
                 
                 for par in self.param:
                     par_strname = eval('b.'+str(par))
                     par_strname.fix(scena_gen["scenario"][s][par])
 
-            mod.lsb = pyo.Block(mod.scena, rule=block_build)
+            mod.block = pyo.Block(mod.scena, rule=block_build)
 
             # discretize the model        
             if self.discretize_model:
@@ -449,10 +447,10 @@ class DesignOfExperiments:
 
             # force all design variables in blocks be the same as global design variables
             def fix_design1(m,s):
-                return m.lsb[s].CA0[0]  == m.CA0[0]
+                return m.block[s].CA0[0]  == m.CA0[0]
             
             def fix_design2(m,s,t):
-                return m.lsb[s].T[t] == m.T[t]
+                return m.block[s].T[t] == m.T[t]
             
             mod.fix_con1 = pyo.Constraint(mod.scena, rule=fix_design1)
             mod.fix_con2 = pyo.Constraint(mod.scena, mod.t_con, rule=fix_design2)
@@ -472,7 +470,7 @@ class DesignOfExperiments:
 
                 for r in self.measure_name:
                     cuid = pyo.ComponentUID(r)
-                    var_up = cuid.find_component_on(mod.lsb[s])
+                    var_up = cuid.find_component_on(mod.block[s])
                     output_iter.append(pyo.value(var_up))
 
                 output_record[s] = output_iter
@@ -509,7 +507,7 @@ class DesignOfExperiments:
 
     def _direct_kaug(self):
         # create model
-        mod = self.create_model()
+        mod = self.create_model(model_option="parmest")
 
         # discretize if needed
         if self.discretize_model:
