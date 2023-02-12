@@ -80,7 +80,7 @@ class Measurements:
         for n in names:
             name_data = str(n)
 
-            # first flatten all indexes into a list 
+            # first combine all indexes into a list 
             all_index_list = [] # contains all index lists
             if self.measure_varname[n][0]:
                 for index_list in self.measure_varname[n][0]:
@@ -99,11 +99,9 @@ class Measurements:
                 for lst in all_index_for_var:
                     name1 = name_data+"["
                     for i, idx in enumerate(lst):
-                        #if idx is str:
-                        #    name1 += "'" + str(idx)+"'"
-                        #else:
                         name1 += str(idx)
 
+                        # if i is the last index, close the []. if not, add a "," for the next index. 
                         if i==len(lst)-1:
                             name1 += "]"
                         else:

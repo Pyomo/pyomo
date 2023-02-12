@@ -90,9 +90,11 @@ class ScenarioGenerator:
         # loop over parameter name
         for p, para in enumerate(self.para_names):
 
+            ## get scenario dictionary
             if self.formula == "central":
                 scena_num[para] = [2*p, 2*p+1]
                 scena_dict_up, scena_dict_lo = self.para_dict.copy(), self.para_dict.copy()
+                # corresponding parameter dictionary for the scenario
                 scena_dict_up[para] *= (1+self.step)
                 scena_dict_lo[para] *= (1-self.step)
 
@@ -112,6 +114,7 @@ class ScenarioGenerator:
                 scenario.append(scena_dict_up)
                 scenario.append(scena_dict_lo)
 
+            ## get perturbation sizes
             # for central difference scheme, perturbation size is two times the step size
             if self.formula == 'central':
                 eps_abs[para] = 2 * self.step * self.para_dict[para]

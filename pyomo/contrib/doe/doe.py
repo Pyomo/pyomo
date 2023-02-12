@@ -90,9 +90,6 @@ class DesignOfExperiments:
         # create the measurement information object
         self.measure = measurement_object
         self.measure_name = self.measure.measurement_name
-        #self.flatten_measure_name = self.measure.flatten_measure_name
-        #self.flatten_variance = self.measure.flatten_variance
-        #self.flatten_measure_timeset = self.measure.flatten_measure_timeset
 
         # check if user-defined solver is given
         if solver:
@@ -313,18 +310,12 @@ class DesignOfExperiments:
     def compute_FIM(self, design_values, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
                     store_output = None, read_output=None, extract_single_model=None,
-                    formula='central', step=0.001,
-                    objective_option='det'):
+                    formula='central', step=0.001):
         """
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
         It calculates FIM with sensitivity information from four modes:
-            1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. 
-            Sensitivity info estimated by finite difference
-            2.  sequential_sipopt: calculate sensitivity by sIPOPT [Experimental]
-            3.  sequential_kaug: calculate sensitivity by k_aug [Experimental]
-            4.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity
-
-        "Simultaneous_finite" mode is not included in this function.
+            1.  sequential_finite: use finite difference scheme to evaluate sensitivity
+            2.  direct_kaug: use k_aug to evaluate sensitivity
 
         Parameters
         -----------
@@ -355,8 +346,6 @@ class DesignOfExperiments:
             choose from 'central', 'forward', 'backward', None. This option is only used for 'sequential_finite' mode.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-        objective_option: 
-            choose from 'det' or 'trace' or 'zero'. Optimization problem maximizes determinant or trace or using 0 as objective function.
 
         Return
         ------
@@ -411,30 +400,32 @@ class DesignOfExperiments:
 
         # if measurements are not provided
         else:
+            # create scenario information for block scenarios
             scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
             scena_gen = scena_object.generate_scenario()
-            print(scena_gen)
+            
+            # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
             self.scenario_list = scena_gen["scenario"]
+            # dictionary, keys are parameter name, values are a list of scenario index where this parameter is perturbed.
             self.scenario_num = scena_gen["scena_num"]
+
             # dict for storing model outputs
             output_record = {}
 
             # Create a global model 
             mod = pyo.ConcreteModel()
 
+            # Set for block/scenarios
             mod.scena = pyo.Set(initialize=list(range(len(self.scenario_list))))
 
             # Allow user to self-define complex design variables
             self.create_model(mod=mod, model_option="global")
 
-            #mod.add_component('t0', pyo.Set(initialize=[0]))
-            #mod.add_component('t_con', pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]))
-            #mod.add_component('CA0', pyo.Var(mod.t0, bounds=[1,5], within=pyo.NonNegativeReals))
-            #mod.add_component('T', pyo.Var(mod.t_con, bounds=[300, 700], within=pyo.NonNegativeReals))
-
             def block_build(b,s):
+                # create block scenarios
                 self.create_model(mod=b, model_option="block")
                 
+                # fix parameter values to perturbed values
                 for par in self.param:
                     par_strname = eval('b.'+str(par))
                     par_strname.fix(scena_gen["scenario"][s][par])
@@ -447,9 +438,13 @@ class DesignOfExperiments:
 
             # force all design variables in blocks be the same as global design variables
             def fix_design1(m,s):
+                """s: scenario index
+                """
                 return m.block[s].CA0[0]  == m.CA0[0]
             
             def fix_design2(m,s,t):
+                """s: scenario index
+                """
                 return m.block[s].T[t] == m.T[t]
             
             mod.fix_con1 = pyo.Constraint(mod.scena, rule=fix_design1)
@@ -468,6 +463,7 @@ class DesignOfExperiments:
                 # loop over measurement item and time to store model measurements
                 output_iter = []
 
+                # extract variable values 
                 for r in self.measure_name:
                     cuid = pyo.ComponentUID(r)
                     var_up = cuid.find_component_on(mod.block[s])
@@ -513,30 +509,12 @@ class DesignOfExperiments:
         if self.discretize_model:
             mod = self.discretize_model(mod, block=False)
 
-        #time_set_attr = getattr(mod, self.t)
-        # get all time
-        #t_all = list(time_set_attr)
-
         # add objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
-        # Check if measurement time points are in this time set
-        # Also correct the measurement time points
-        # For e.g. if a measurement time point is 0.0 in the model but is given as 0, it is corrected here
-        '''
-        measurement_accurate_time = self.flatten_measure_timeset.copy()
-
-        for j in self.flatten_measure_name:
-            for no_t, tt in enumerate(self.flatten_measure_timeset[j]):
-                if tt not in t_all:
-                    self.logger.warning('A measurement time point not measured by this model:  %s', tt)
-                else:
-                    measurement_accurate_time[j][no_t] = t_all[t_all.index(tt)]
-        '''
         # set ub and lb to parameters
         for par in list(self.param.keys()):
             component = getattr(mod, par)
-            print(component)
             component.setlb(self.param[par])
             component.setub(self.param[par])
 
@@ -577,6 +555,7 @@ class DesignOfExperiments:
                 # get right line of dsdp
                 dsdp_extract.append(dsdp_array[kaug_no])
             except: 
+                # k_aug does not provide value for fixed variables
                 self.logger.debug('The variable is fixed:  %s', mname)
                 # for fixed variables, the sensitivity are a zero vector
                 dsdp_extract.append(zero_sens)
