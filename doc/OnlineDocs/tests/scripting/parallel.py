@@ -5,7 +5,9 @@ from mpi4py import MPI
 
 rank = MPI.COMM_WORLD.Get_rank()
 size = MPI.COMM_WORLD.Get_size()
-assert size == 2, 'This example only works with 2 processes; please us mpirun -np 2 python -m mpi4py parallel.py'
+assert (
+    size == 2
+), 'This example only works with 2 processes; please us mpirun -np 2 python -m mpi4py parallel.py'
 
 # Create a solver
 opt = pyo.SolverFactory('cplex_direct')

@@ -8,34 +8,42 @@ import numpy as np
 import pyomo.kernel as pmo
 
 # Vertices of a regular icosahedron with edge length 2
-f = (1+np.sqrt(5))/2
-icosahedron = np.array([[0, 1, f],
-                        [0, -1, f],
-                        [0, 1, -f],
-                        [0, -1, -f],
-                        [1, f, 0],
-                        [1, -f, 0],
-                        [-1, f, 0],
-                        [-1, -f, 0],
-                        [f, 0, 1],
-                        [-f, 0, 1],
-                        [f, 0, -1],
-                        [-f, 0, -1]])
+f = (1 + np.sqrt(5)) / 2
+icosahedron = np.array(
+    [
+        [0, 1, f],
+        [0, -1, f],
+        [0, 1, -f],
+        [0, -1, -f],
+        [1, f, 0],
+        [1, -f, 0],
+        [-1, f, 0],
+        [-1, -f, 0],
+        [f, 0, 1],
+        [-f, 0, 1],
+        [f, 0, -1],
+        [-f, 0, -1],
+    ]
+)
 print(f"Volume of the icosahedron = {2.18169699*8}")
 
 
 def convex_hull_constraint(model, p_v, c_v, v_index):
-    A = np.vstack((np.eye(len(model.p)),   # p-variable coefficients
-                   np.diag(c_v),      # x-variable coefficients
-                   p_v))              # u-variable coefficients
+    A = np.vstack(
+        (
+            np.eye(len(model.p)),  # p-variable coefficients
+            np.diag(c_v),  # x-variable coefficients
+            p_v,
+        )
+    )  # u-variable coefficients
     A = np.transpose(A)
     # Sum(u_i) = 1
-    row = [0]*len(list(model.p)+list(model.x)) + [1]*len(model.u[v_index])
+    row = [0] * len(list(model.p) + list(model.x)) + [1] * len(model.u[v_index])
     A = np.vstack([A, row])
     # x
     var_vector = list(model.p) + list(model.x) + list(model.u[v_index])
     # b
-    b = np.array([0]*A.shape[0])
+    b = np.array([0] * A.shape[0])
     b[-1] = 1
 
     # Matrix constraint ( Ax = b )
@@ -53,8 +61,9 @@ def pyomo_maxVolCuboid(vertices):
     model.p = pmo.variable_list(pmo.variable() for i in range(n))
     model.t = pmo.variable()
 
-    model.u = pmo.variable_list(pmo.variable_list(
-        pmo.variable(lb=0.0) for j in range(m)) for i in range(2**n))
+    model.u = pmo.variable_list(
+        pmo.variable_list(pmo.variable(lb=0.0) for j in range(m)) for i in range(2**n)
+    )
 
     # Maximize: (volume_of_cuboid)**1/n
     model.cuboid_volume = pmo.objective(model.t, sense=-1)
@@ -64,15 +73,16 @@ def pyomo_maxVolCuboid(vertices):
     # K : Convex hull formed by the vertices of the polyhedron
     model.conv_hull = pmo.constraint_list()
     for i in range(2**n):
-        model.conv_hull.append(convex_hull_constraint(
-            model, vertices, model.cuboid_vertices[i], i))
+        model.conv_hull.append(
+            convex_hull_constraint(model, vertices, model.cuboid_vertices[i], i)
+        )
 
     opt = pmo.SolverFactory("mosek")
     result = opt.solve(model, tee=True)
 
     _x = np.array([x.value for x in model.x])
     _p = np.array([p.value for p in model.p])
-    cuboid_vertices = np.array([_p + e*_x for e in model.cuboid_vertices])
+    cuboid_vertices = np.array([_p + e * _x for e in model.cuboid_vertices])
     return cuboid_vertices
 
 
@@ -93,8 +103,9 @@ def inscribed_cuboid_plot(icosahedron, cuboid):
         tri.set_alpha(0.3)
         tri.set_facecolor('red')
         ax.add_collection3d(tri)
-        ax.scatter(icosahedron[:, 0], icosahedron[:, 1],
-                   icosahedron[:, 2], color='darkred')
+        ax.scatter(
+            icosahedron[:, 0], icosahedron[:, 1], icosahedron[:, 2], color='darkred'
+        )
 
     cub_hull = ConvexHull(cuboid)
     for s in cub_hull.simplices:

@@ -13,29 +13,52 @@ import os
 
 import pyomo.common.unittest as unittest
 
-from pyomo.checker import  ModelCheckRunner, ModelScript
-from pyomo.checker.plugins.checker import IModelChecker, ImmediateDataChecker, ImmediateTreeChecker, IterativeDataChecker, IterativeTreeChecker
+from pyomo.checker import ModelCheckRunner, ModelScript
+from pyomo.checker.plugins.checker import (
+    IModelChecker,
+    ImmediateDataChecker,
+    ImmediateTreeChecker,
+    IterativeDataChecker,
+    IterativeTreeChecker,
+)
 
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 
+
 class MockChecker(object):
     checkCount = 0
+
     def check(self, runner, script, info):
         self.checkCount += 1
+
     def _checkerPackage(self):
         return 'mock'
+
     def resetCount(self):
         self.checkCount = 0
+
 
 # Multiple inheritance, because otherwise something weird happens with the plugin system
 # MockChecker MUST BE specified first so that its overridden methods take precedence
 # See http://www.python.org/download/releases/2.3/mro/
 
-class MockImmediateDataChecker(MockChecker, ImmediateDataChecker): pass
-class MockImmediateTreeChecker(MockChecker, ImmediateTreeChecker): pass
-class MockIterativeDataChecker(MockChecker, IterativeDataChecker): pass
-class MockIterativeTreeChecker(MockChecker, IterativeTreeChecker): pass
+
+class MockImmediateDataChecker(MockChecker, ImmediateDataChecker):
+    pass
+
+
+class MockImmediateTreeChecker(MockChecker, ImmediateTreeChecker):
+    pass
+
+
+class MockIterativeDataChecker(MockChecker, IterativeDataChecker):
+    pass
+
+
+class MockIterativeTreeChecker(MockChecker, IterativeTreeChecker):
+    pass
+
 
 class RunnerTest(unittest.TestCase):
     """
@@ -45,7 +68,7 @@ class RunnerTest(unittest.TestCase):
     testScripts = [
         "print('Hello, world!')\n",
         "import sys\nsys.stdout.write('Hello, world!\\n')\n"
-        "for i in range(10):\n\tprint(i)\n"
+        "for i in range(10):\n\tprint(i)\n",
     ]
 
     def test_init(self):
@@ -67,7 +90,7 @@ class RunnerTest(unittest.TestCase):
         for text in self.testScripts:
             self.assertEqual(expectedScriptCount, len(runner.scripts))
 
-            script = ModelScript(text = text)
+            script = ModelScript(text=text)
             runner.addScript(script)
             expectedScriptCount += 1
 
@@ -78,15 +101,21 @@ class RunnerTest(unittest.TestCase):
         "Check that a runner calls check() on an immediate checker"
 
         for text in self.testScripts:
-            
+
             runner = ModelCheckRunner()
-            script = ModelScript(text = text)
+            script = ModelScript(text=text)
             runner.addScript(script)
 
-            runner.run(checkers = {'mock':['MockImmediateDataChecker', 'MockImmediateTreeChecker']})
+            runner.run(
+                checkers={
+                    'mock': ['MockImmediateDataChecker', 'MockImmediateTreeChecker']
+                }
+            )
 
             for klass in [MockImmediateDataChecker, MockImmediateTreeChecker]:
-                mockChecker = list(filter((lambda c : c.__class__ == klass), runner._checkers()))[0]
+                mockChecker = list(
+                    filter((lambda c: c.__class__ == klass), runner._checkers())
+                )[0]
                 self.assertEqual(1, mockChecker.checkCount)
                 mockChecker.resetCount()
 
@@ -94,19 +123,24 @@ class RunnerTest(unittest.TestCase):
         "Check that a runner calls check() on an iterative checker"
 
         for text in self.testScripts:
-            
+
             runner = ModelCheckRunner()
-            script = ModelScript(text = text)
+            script = ModelScript(text=text)
             runner.addScript(script)
 
-            runner.run(checkers = {'mock':['MockIterativeDataChecker', 'MockIterativeTreeChecker']})
+            runner.run(
+                checkers={
+                    'mock': ['MockIterativeDataChecker', 'MockIterativeTreeChecker']
+                }
+            )
 
             for klass in [MockIterativeDataChecker, MockIterativeTreeChecker]:
-                mockChecker = list(filter((lambda c : c.__class__ == klass), runner._checkers()))[0]
+                mockChecker = list(
+                    filter((lambda c: c.__class__ == klass), runner._checkers())
+                )[0]
                 self.assertTrue(mockChecker.checkCount >= 1)
                 mockChecker.resetCount()
 
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import ast
-import pyomo.common.plugin
+import pyomo.common.plugin_base
 
 from pyomo.checker.plugins.model import ModelTrackerHook
 from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
@@ -18,7 +18,9 @@ from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
 
 class ModelValue(_ModelRuleChecker, ModelTrackerHook):
 
-    pyomo.common.plugin.alias('model.value', 'Check if comparisons are done using the "value()" function.')
+    pyomo.common.plugin_base.alias(
+        'model.value', 'Check if comparisons are done using the "value()" function.'
+    )
 
     def checkerDoc(self):
         return """\
@@ -33,11 +35,11 @@ class ModelValue(_ModelRuleChecker, ModelTrackerHook):
 
         # also check global If statements
         if isinstance(info, ast.If):
-            self.checkCompare(info.test, script = script)
+            self.checkCompare(info.test, script=script)
 
     def checkBody(self, funcdef):
         """Check the body of a function definition for model comparisons local
-           to its scope (i.e. using its model argument)."""
+        to its scope (i.e. using its model argument)."""
 
         if not isinstance(funcdef.args.args[0], ast.Name):
             return
@@ -46,15 +48,15 @@ class ModelValue(_ModelRuleChecker, ModelTrackerHook):
         for bodyNode in funcdef.body:
             for node in ast.walk(bodyNode):
                 if isinstance(node, ast.If):
-                    self.checkCompare(node.test, modelName = modelArg)
+                    self.checkCompare(node.test, modelName=modelArg)
 
-    def checkCompare(self, compare, modelName = None, script = None):
+    def checkCompare(self, compare, modelName=None, script=None):
         """Check an AST Compare node - iterate for Attribute nodes and match
-           against modelName argument. Recurse for script's model defs."""
+        against modelName argument. Recurse for script's model defs."""
 
         if modelName is None and script is None:
             return
-        
+
         if modelName is not None:
             valueCallArgs = []
             generatorExps = []
@@ -62,9 +64,16 @@ class ModelValue(_ModelRuleChecker, ModelTrackerHook):
                 if isinstance(node, ast.Attribute):
                     if isinstance(node.value, ast.Name):
                         if node.value.id == modelName:
-                            wrapped = self.checkWrapped(node, valueCallArgs, generatorExps)
+                            wrapped = self.checkWrapped(
+                                node, valueCallArgs, generatorExps
+                            )
                             if not wrapped:
-                                self.problem("Comparison on attribute {0}.{1} not wrapped in value()".format(modelName, node.attr), lineno=compare.lineno)
+                                self.problem(
+                                    "Comparison on attribute {0}.{1} not wrapped in value()".format(
+                                        modelName, node.attr
+                                    ),
+                                    lineno=compare.lineno,
+                                )
                 elif isinstance(node, ast.Call):
                     if isinstance(node.func, ast.Name):
                         if node.func.id == 'value':
@@ -74,12 +83,12 @@ class ModelValue(_ModelRuleChecker, ModelTrackerHook):
 
         if script is not None:
             for name in script.modelVars:
-                self.checkCompare(compare, modelName = name)
+                self.checkCompare(compare, modelName=name)
 
     def checkWrapped(self, attrNode, valueCallArgs, generatorExps):
         """check if the given attribute node has been 'wrapped', either
-           in a value() call or as part of the iterator in a generator
-           expression"""
+        in a value() call or as part of the iterator in a generator
+        expression"""
         for i in range(len(valueCallArgs)):
             for j in range(len(valueCallArgs[i])):
                 # i = call idx (to return), j = arg idx

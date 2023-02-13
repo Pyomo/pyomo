@@ -22,16 +22,16 @@ instance.t.pprint()
 
 # Discretize model using Orthogonal Collocation
 discretizer = TransformationFactory('dae.collocation')
-discretizer.apply_to(instance,nfe=8,ncp=5)
+discretizer.apply_to(instance, nfe=8, ncp=5)
 
-solver=SolverFactory('ipopt')
+solver = SolverFactory('ipopt')
 
-results = solver.solve(instance,tee=True)
+results = solver.solve(instance, tee=True)
 
 x1 = []
 x1_meas = []
-t=[]
-t_meas=[]
+t = []
+t_meas = []
 
 print(sorted(instance.t))
 
@@ -42,11 +42,11 @@ for i in sorted(instance.MEAS_t):
 for i in sorted(instance.t):
     t.append(i)
     x1.append(value(instance.x1[i]))
-    
+
 import matplotlib.pyplot as plt
 
-plt.plot(t,x1)
-plt.plot(t_meas,x1_meas,'o')
+plt.plot(t, x1)
+plt.plot(t_meas, x1_meas, 'o')
 plt.xlabel('t')
 plt.ylabel('x')
 plt.title('Dynamic Parameter Estimation Using Collocation')

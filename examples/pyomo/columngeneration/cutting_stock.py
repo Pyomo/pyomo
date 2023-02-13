@@ -21,45 +21,49 @@ Data from https://en.wikipedia.org/wiki/Cutting_stock_problem
 
 import pyomo.environ as pyo
 
-        # width: number 
-demand = { 1380: 22,
-           1520: 25,
-           1560: 12,
-           1710: 14,
-           1820: 18,
-           1880: 18,
-           1930: 20,
-           2000: 10,
-           2050: 12,
-           2100: 14,
-           2140: 16,
-           2150: 18,
-           2200: 20, 
-         }
+# width: number
+demand = {
+    1380: 22,
+    1520: 25,
+    1560: 12,
+    1710: 14,
+    1820: 18,
+    1880: 18,
+    1930: 20,
+    2000: 10,
+    2050: 12,
+    2100: 14,
+    2140: 16,
+    2150: 18,
+    2200: 20,
+}
 
 # master roll size
 W = 5600
 
+
 def create_base_cutting_stock(demand, W):
 
-    initial_patterns = dict() 
+    initial_patterns = dict()
 
     ## cutting stock base problem
     cs = pyo.ConcreteModel()
 
     cs.pattern = pyo.VarList(domain=pyo.NonNegativeReals)
 
-    # add initial columns for each 
+    # add initial columns for each
     # demanded width
     for i, width in enumerate(demand):
         cs.pattern.add()
-        initial_patterns[i+1] = { width: int( W // width ) }
+        initial_patterns[i + 1] = {width: int(W // width)}
 
     # add the demand constraints; supply initial identity columns;
     # filling in as many of a single width on a pattern as possible
     cs.demand = pyo.Constraint(demand.keys())
     for i, (width, quantity) in enumerate(demand.items()):
-        cs.demand[width] = initial_patterns[i+1][width]*cs.pattern[i+1] >= quantity
+        cs.demand[width] = (
+            initial_patterns[i + 1][width] * cs.pattern[i + 1] >= quantity
+        )
 
     cs.obj = pyo.Objective(expr=pyo.quicksum(cs.pattern.values()), sense=pyo.minimize)
 
@@ -70,19 +74,24 @@ def create_base_cutting_stock(demand, W):
 
     ks.widths = pyo.Var(demand.keys(), within=pyo.NonNegativeIntegers)
 
-    ks.knapsack = pyo.Constraint(expr=pyo.quicksum(width*ks.widths[width] for width in demand) <= W)
+    ks.knapsack = pyo.Constraint(
+        expr=pyo.quicksum(width * ks.widths[width] for width in demand) <= W
+    )
 
     # blank objective, set by the dual values of cs
     ks.obj = pyo.Objective(expr=0, sense=pyo.maximize)
 
     return cs, ks, initial_patterns
 
+
 def solve_cutting_stock(demand, W, solver, iterations=30):
 
     cs, ks, patterns = create_base_cutting_stock(demand, W)
 
     if '_persistent' not in solver:
-        raise RuntimeError('solver must be a string for pyo.SolverFactory and persistent')
+        raise RuntimeError(
+            'solver must be a string for pyo.SolverFactory and persistent'
+        )
 
     cs_s = pyo.SolverFactory(solver)
     ks_s = pyo.SolverFactory(solver)
@@ -94,9 +103,9 @@ def solve_cutting_stock(demand, W, solver, iterations=30):
 
         cs_s.solve()
 
-        duals = { width : cs.dual[cs.demand[width]] for width in demand }
+        duals = {width: cs.dual[cs.demand[width]] for width in demand}
 
-        ks.obj.expr = sum(duals[width]*ks.widths[width] for width in demand)
+        ks.obj.expr = sum(duals[width] * ks.widths[width] for width in demand)
 
         ks_s.set_objective(ks.obj)
 
@@ -108,7 +117,7 @@ def solve_cutting_stock(demand, W, solver, iterations=30):
 
         # else we'll add the column from ks
         new_pattern_var = cs.pattern.add()
-        np_widths = [] 
+        np_widths = []
         np_constraints = []
         pattern = dict()
 
@@ -123,7 +132,7 @@ def solve_cutting_stock(demand, W, solver, iterations=30):
 
         patterns[len(cs.pattern)] = pattern
 
-        cs_s.add_column(cs, new_pattern_var, 1., np_constraints, np_widths)
+        cs_s.add_column(cs, new_pattern_var, 1.0, np_constraints, np_widths)
 
     # heuristically solve the cutting stock problem with integer restrictions
     # to get an integer feasible solution
@@ -137,18 +146,20 @@ def solve_cutting_stock(demand, W, solver, iterations=30):
 
     return cs, patterns
 
+
 if __name__ == '__main__':
     import sys
+
     solver = sys.argv[1]
 
     cs, patterns = solve_cutting_stock(demand, W, solver)
 
-    print('Sheets Required: '+str(int(pyo.value(cs.obj))))
+    print('Sheets Required: ' + str(int(pyo.value(cs.obj))))
     print('Repetition\tPattern')
     for idx, var in cs.pattern.items():
         quantity = int(pyo.value(var))
         if quantity > 0:
-            print_str = str(quantity)+'\t\t'
+            print_str = str(quantity) + '\t\t'
             for width, number in patterns[idx].items():
-                print_str += str(int(number))+':'+str(int(width))+', '
+                print_str += str(int(number)) + ':' + str(int(width)) + ', '
             print(print_str[:-2])

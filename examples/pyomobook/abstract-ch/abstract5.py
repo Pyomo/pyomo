@@ -11,11 +11,16 @@ model.b = pyo.Param(model.M)
 
 model.x = pyo.Var(model.N, within=pyo.NonNegativeReals)
 
+
 def obj_rule(model):
-    return sum(model.c[i]*model.x[i] for i in model.N)
+    return sum(model.c[i] * model.x[i] for i in model.N)
+
+
 model.obj = pyo.Objective(rule=obj_rule)
 
+
 def con_rule(model, m):
-    return sum(model.a[i,m]*model.x[i] for i in model.N) \
-                    >= model.b[m]
+    return sum(model.a[i, m] * model.x[i] for i in model.N) >= model.b[m]
+
+
 model.con = pyo.Constraint(model.M, rule=con_rule)
