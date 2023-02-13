@@ -10,7 +10,7 @@
 #    # @block
 #    print("END HERE")
 #
-# If this file was foo.py, then a file foo_block.spy is created, which 
+# If this file was foo.py, then a file foo_block.spy is created, which
 # contains the lines between the lines starting with "# @".
 #
 # Additionally, the file foo.spy is created, which strips all lines
@@ -24,13 +24,14 @@ import sys
 import os
 import os.path
 
+
 def f(root, file):
     if not file.endswith('.py'):
         return
     prefix = os.path.splitext(file)[0]
-    #print([root, file, prefix])
-    OUTPUT = open(root+'/'+prefix+'.spy','w')
-    INPUT = open(root+'/'+file,'r')
+    # print([root, file, prefix])
+    OUTPUT = open(root + '/' + prefix + '.spy', 'w')
+    INPUT = open(root + '/' + file, 'r')
     flag = False
     block_name = None
     for line in INPUT:
@@ -39,10 +40,13 @@ def f(root, file):
             if flag is False:
                 block_name = tmp[3:]
                 flag = True
-                OUTPUT_ = open(root+'/'+prefix+'_%s.spy' % block_name,'w')
+                OUTPUT_ = open(root + '/' + prefix + '_%s.spy' % block_name, 'w')
             else:
                 if block_name != tmp[3:]:
-                    print("ERROR parsing file '%s': Started block '%s' but ended with '%s'" % (root+'/'+file, block_name, tmp[3:]))
+                    print(
+                        "ERROR parsing file '%s': Started block '%s' but ended with '%s'"
+                        % (root + '/' + file, block_name, tmp[3:])
+                    )
                     sys.exit(1)
                 flag = False
                 block_name is None

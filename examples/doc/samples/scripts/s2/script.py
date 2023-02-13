@@ -1,9 +1,11 @@
 from pyomo.core import *
 import pyomo.opt
 import pyomo.environ
+
 #
 # Import model
 import knapsack
+
 #
 # Create the model instance
 instance = knapsack.model.create_instance("knapsack.dat")
@@ -21,19 +23,19 @@ instance.solutions.store_to(results)
 # Print the results
 i = 0
 for sol in results.solution:
-    print("Solution "+str(i))
+    print("Solution " + str(i))
     #
     print(sorted(sol.variable.keys()))
     for var in sorted(sol.variable.keys()):
-        print("  Variable "+str(var))
-        print("    "+str(sol.variable[var]['Value']))
-        #for key in sorted(sol.variable[var].keys()):
-            #print('     '+str(key)+' '+str(sol.variable[var][key]))
+        print("  Variable " + str(var))
+        print("    " + str(sol.variable[var]['Value']))
+        # for key in sorted(sol.variable[var].keys()):
+        # print('     '+str(key)+' '+str(sol.variable[var][key]))
     #
     for con in sorted(sol.constraint.keys()):
-        print("  Constraint "+str(con))
+        print("  Constraint " + str(con))
         for key in sorted(sol.constraint[con].keys()):
-            print('     '+str(key)+' '+str(sol.constraint[con][key]))
+            print('     ' + str(key) + ' ' + str(sol.constraint[con][key]))
     #
     i += 1
 #
@@ -41,4 +43,4 @@ for sol in results.solution:
 print("")
 print("Dual Values")
 for con in sorted(results.solution(0).constraint.keys()):
-    print(str(con)+' '+str(results.solution(0).constraint[con]["Dual"]))
+    print(str(con) + ' ' + str(results.solution(0).constraint[con]["Dual"]))

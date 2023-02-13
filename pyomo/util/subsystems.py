@@ -24,7 +24,6 @@ from pyomo.core.expr.numvalue import native_types
 
 
 class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
-
     def initializeWalker(self, expr):
         self._functions = []
         self._seen = set()
@@ -57,9 +56,7 @@ def identify_external_functions(expr):
 
 def add_local_external_functions(block):
     ef_exprs = []
-    for comp in block.component_data_objects(
-            (Constraint, Expression), active=True
-            ):
+    for comp in block.component_data_objects((Constraint, Expression), active=True):
         ef_exprs.extend(identify_external_functions(comp.expr))
     unique_functions = []
     fcn_set = set()
@@ -79,7 +76,7 @@ def add_local_external_functions(block):
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
-    """ This function creates a block to serve as a subsystem with the
+    """This function creates a block to serve as a subsystem with the
     specified variables and constraints. To satisfy certain writers, other
     variables that appear in the constraints must be added to the block as
     well. We call these the "input vars." They may be thought of as
@@ -120,7 +117,7 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
 
 
 def generate_subsystem_blocks(subsystems, include_fixed=False):
-    """ Generates blocks that contain subsystems of variables and constraints.
+    """Generates blocks that contain subsystems of variables and constraints.
 
     Arguments
     ---------
@@ -144,7 +141,7 @@ def generate_subsystem_blocks(subsystems, include_fixed=False):
 
 
 class TemporarySubsystemManager(object):
-    """ This class is a context manager for cases when we want to
+    """This class is a context manager for cases when we want to
     temporarily fix or deactivate certain variables or constraints
     in order to perform some solve or calculation with the resulting
     subsystem.
@@ -210,7 +207,7 @@ class TemporarySubsystemManager(object):
 
 
 class ParamSweeper(TemporarySubsystemManager):
-    """ This class enables setting values of variables/parameters
+    """This class enables setting values of variables/parameters
     according to a provided sequence. Iterating over this object
     sets values to the next in the sequence, at which point a
     calculation may be performed and output values compared.
@@ -243,14 +240,15 @@ class ParamSweeper(TemporarySubsystemManager):
 
     """
 
-    def __init__(self,
-            n_scenario,
-            input_values,
-            output_values=None,
-            to_fix=None,
-            to_deactivate=None,
-            to_reset=None,
-            ):
+    def __init__(
+        self,
+        n_scenario,
+        input_values,
+        output_values=None,
+        to_fix=None,
+        to_deactivate=None,
+        to_reset=None,
+    ):
         """
         Parameters
         ----------
@@ -276,7 +274,7 @@ class ParamSweeper(TemporarySubsystemManager):
         self.output_values = output
         self.n_scenario = n_scenario
         self.initial_state_values = None
-        self._ip = -1 # Index pointer for iteration
+        self._ip = -1  # Index pointer for iteration
 
         if to_reset is None:
             # Input values will be set repeatedly by iterating over this
@@ -290,10 +288,8 @@ class ParamSweeper(TemporarySubsystemManager):
             to_reset.extend(var for var in output)
 
         super(ParamSweeper, self).__init__(
-                to_fix=to_fix,
-                to_deactivate=to_deactivate,
-                to_reset=to_reset,
-                )
+            to_fix=to_fix, to_deactivate=to_deactivate, to_reset=to_reset
+        )
 
     def __iter__(self):
         return self
@@ -317,8 +313,8 @@ class ParamSweeper(TemporarySubsystemManager):
                 var.set_value(val)
                 inputs[var] = val
 
-            outputs = ComponentMap([
-                (var, values[i]) for var, values in output_values.items()
-                ])
+            outputs = ComponentMap(
+                [(var, values[i]) for var, values in output_values.items()]
+            )
 
             return inputs, outputs

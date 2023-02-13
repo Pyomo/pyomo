@@ -28,6 +28,7 @@ def create_model():
         if t >= 0.5:
             return 1.0
         return 4.0
+
     m.p1 = Param(m.t, initialize=4.0, default=_p1_init)
     m.p2 = Param(initialize=2.0)
     m.p3 = Param(initialize=40.0)
@@ -50,15 +51,17 @@ def create_model():
 
     def _diffeq1(m, t):
         return m.dza[t] == -m.p1[t] * m.za[t] + m.p2 * m.zb[t]
+
     m.diffeq1 = Constraint(m.t, rule=_diffeq1)
 
     def _diffeq2(m, t):
-        return m.dzb[t] == m.p1[t] * m.za[t] - \
-                           (m.p2 + m.p3) * m.zb[t] + m.p4 * m.zc[t]
+        return m.dzb[t] == m.p1[t] * m.za[t] - (m.p2 + m.p3) * m.zb[t] + m.p4 * m.zc[t]
+
     m.diffeq2 = Constraint(m.t, rule=_diffeq2)
 
     def _algeq1(m, t):
         return m.za[t] + m.zb[t] + m.zc[t] == 1
+
     m.algeq1 = Constraint(m.t, rule=_algeq1)
     return m
 
@@ -66,8 +69,9 @@ def create_model():
 def simulate_model(m):
     # Simulate the model using casadi
     sim = Simulator(m, package='casadi')
-    tsim, profiles = sim.simulate(numpoints=100, integrator='idas',
-                                  varying_inputs=m.var_input)
+    tsim, profiles = sim.simulate(
+        numpoints=100, integrator='idas', varying_inputs=m.var_input
+    )
 
     # Discretize model using Orthogonal Collocation
     discretizer = TransformationFactory('dae.collocation')
@@ -102,6 +106,7 @@ def plot_results(m, sim, tsim, profiles):
     plt.xlabel('t')
     plt.legend(loc='best')
     plt.show()
+
 
 if __name__ == "__main__":
     model = create_model()

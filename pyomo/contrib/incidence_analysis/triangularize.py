@@ -23,12 +23,16 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
     bipartite graph, projected with respect to a perfect matching
 
     The provided undirected bipartite graph is projected into a directed graph
-    on the set of "top nodes" by treating "matched edges" as in-edges and
-    "unmatched edges" as out-edges. Then the strongly connected components of
+    on the set of "top nodes" by treating "matched edges" as out-edges and
+    "unmatched edges" as in-edges. Then the strongly connected components of
     the directed graph are computed. These strongly connected components are
     unique, regardless of the choice of perfect matching. The strongly connected
     components form a directed acyclic graph, and are returned in a topological
     order. The order is unique, as ambiguities are resolved "lexicographically".
+
+    The "direction" of the projection (where matched edges are out-edges)
+    leads to a block *lower* triangular permutation when the top nodes
+    correspond to *rows* in the bipartite graph of a matrix.
 
     Parameters
     ----------
@@ -70,7 +74,11 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
             " a perfect matching. Got a graph with %s nodes per bipartite set"
             " and a matching of cardinality %s." % (M, (len(matching)/2))
         )
-    dg = _get_projected_digraph(graph, matching, top_nodes)
+
+    # _get_projected_digraph treats matched edges as "in-edges", so we
+    # reverse the direction of edges here.
+    dg = _get_projected_digraph(graph, matching, top_nodes).reverse()
+
     scc_list = list(nxc.strongly_connected_components(dg))
     n_scc = len(scc_list)
     node_scc_map = {n: idx for idx, scc in enumerate(scc_list) for n in scc}
@@ -88,9 +96,6 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
 
     scc_order = list(nxd.lexicographical_topological_sort(dag))
 
-    # Reverse for compatibility
-    scc_order.reverse()
-
     # The "natural" return type, here, is a list of lists. Each inner list
     # is an SCC, and contains tuples of nodes. The "top node", and its matched
     # "bottom node".
@@ -101,7 +106,7 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
     return ordered_node_subsets
 
 
-def block_triangularize(matrix, matching=None, top_nodes=None):
+def block_triangularize(matrix, matching=None):
     """
     Computes the necessary information to permute a matrix to block-lower
     triangular form, i.e. a partition of rows and columns into an ordered

@@ -13,7 +13,7 @@ import sys
 import re
 import textwrap
 
-from pyomo.common.plugin import SingletonPlugin, implements, ExtensionPoint
+from pyomo.common.plugin_base import SingletonPlugin, implements, ExtensionPoint
 from pyomo.checker import IModelChecker, IPreCheckHook, IPostCheckHook
 
 
@@ -31,7 +31,7 @@ class PyomoModelChecker(SingletonPlugin):
     def _check(self, runner, script, info):
         self._runner = runner
         self._script = script
-        
+
         for prehook in self._prehooks:
             prehook.precheck(runner, script, info)
 
@@ -84,14 +84,14 @@ class PyomoModelChecker(SingletonPlugin):
     def _checkerPackage(self):
         match = re.search(r"<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
         return match.group(1).split(".")[-3]
-        
+
     def checkerLabel(self):
         return "[" + self._checkerPackage() + "::" + self._checkerName() + "] "
 
     def checkerDoc(self):
         return ""
 
-    def problem(self, message = "Error", runner = None, script = None, lineno = None):
+    def problem(self, message="Error", runner=None, script=None, lineno=None):
         if script is None:
             script = self._currentScript
         if runner is None:
@@ -114,7 +114,7 @@ class PyomoModelChecker(SingletonPlugin):
             if runner.verbose:
                 if len(self.checkerDoc()) > 0:
                     lines = textwrap.dedent(self.checkerDoc()).split("\n")
-                    lines = filter((lambda x : len(x) > 0), lines)
+                    lines = filter((lambda x: len(x) > 0), lines)
                     for line in lines:
                         print(self.checkerLabel() + line)
                 print
