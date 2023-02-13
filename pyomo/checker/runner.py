@@ -17,8 +17,7 @@ from pyomo.checker.script import ModelScript
 
 
 class CheckingNodeVisitor(ast.NodeVisitor):
-    
-    def __init__(self, runner, script, tc = [], dc = [], pt = ""):
+    def __init__(self, runner, script, tc=[], dc=[], pt=""):
         """
         @param tc iterative tree checkers
         @param dc iterative data checkers
@@ -48,7 +47,11 @@ class CheckingNodeVisitor(ast.NodeVisitor):
             if current_lineno > self.running_lineno:
                 self.running_lineno = current_lineno
                 for checker in self.dataCheckers:
-                    checker._check(self.runner, self.script, (current_lineno, self.programLines[current_lineno - 1]))
+                    checker._check(
+                        self.runner,
+                        self.script,
+                        (current_lineno, self.programLines[current_lineno - 1]),
+                    )
 
         for checker in self.treeCheckers:
             checker._check(self.runner, self.script, node)
@@ -64,7 +67,12 @@ class ModelCheckRunner(object):
         self.scripts = []
 
     def run(self, *args, **kwargs):
-        from pyomo.checker.plugins.checker import ImmediateDataChecker, IterativeDataChecker, ImmediateTreeChecker, IterativeTreeChecker
+        from pyomo.checker.plugins.checker import (
+            ImmediateDataChecker,
+            IterativeDataChecker,
+            ImmediateTreeChecker,
+            IterativeTreeChecker,
+        )
 
         # Get args
         script = kwargs.pop("script", None)
@@ -98,16 +106,24 @@ class ModelCheckRunner(object):
                     printable[c._checkerPackage()] = [c._checkerName()]
                 else:
                     printable[c._checkerPackage()].append(c._checkerName())
-            
+
             for package in printable:
                 print("{0}: {1}".format(package, " ".join(printable[package])))
             print("")
 
         # Pre-partition checkers
-        immDataCheckers = [c for c in self._checkers if isinstance(c, ImmediateDataChecker)]
-        iterDataCheckers = [c for c in self._checkers if isinstance(c, IterativeDataChecker)]
-        immTreeCheckers = [c for c in self._checkers if isinstance(c, ImmediateTreeChecker)]
-        iterTreeCheckers = [c for c in self._checkers if isinstance(c, IterativeTreeChecker)]
+        immDataCheckers = [
+            c for c in self._checkers if isinstance(c, ImmediateDataChecker)
+        ]
+        iterDataCheckers = [
+            c for c in self._checkers if isinstance(c, IterativeDataChecker)
+        ]
+        immTreeCheckers = [
+            c for c in self._checkers if isinstance(c, ImmediateTreeChecker)
+        ]
+        iterTreeCheckers = [
+            c for c in self._checkers if isinstance(c, IterativeTreeChecker)
+        ]
 
         for script in self.scripts:
             # Read in the script and call data checkers
@@ -125,7 +141,9 @@ class ModelCheckRunner(object):
                 checker._endChecking(self, script)
 
             # Start walking the tree, calling checkers along the way
-            visitor = CheckingNodeVisitor(self, script, tc=iterTreeCheckers, dc=iterDataCheckers, pt = data)
+            visitor = CheckingNodeVisitor(
+                self, script, tc=iterTreeCheckers, dc=iterDataCheckers, pt=data
+            )
             visitor.sendBegin()
             visitor.visit(tree)
             visitor.sendEnd()

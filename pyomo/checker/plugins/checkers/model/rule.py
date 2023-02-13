@@ -18,39 +18,50 @@ from pyomo.checker.plugins.checker import IterativeTreeChecker
 from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
 
 
-if sys.version_info < (3,0):
+if sys.version_info < (3, 0):
+
     def arg_name(arg):
         return arg.id
-else:   
+
+else:
+
     def arg_name(arg):
         return arg.arg
 
 
 if False:
-  # WEH: I don't think we should complain about this.
+    # WEH: I don't think we should complain about this.
 
-  class ModelShadowing(IterativeTreeChecker, ModelTrackerHook):
+    class ModelShadowing(IterativeTreeChecker, ModelTrackerHook):
 
-    pyomo.common.plugin_base.alias('model.rule.shadowing', 'Ignoring for now')
+        pyomo.common.plugin_base.alias('model.rule.shadowing', 'Ignoring for now')
 
-    def checkerDoc(self):
-        return """\
+        def checkerDoc(self):
+            return """\
         Reusing the name of your model variable in a rule may lead to problems where
         the variable shadows the global value.  In your rule definitions,
         consider changing the name of the model argument.
         """
 
-    def check(self, runner, script, info):
-        if isinstance(info, ast.FunctionDef):
-            for arg in info.args.args:
-                if isinstance(arg, ast.Name):
-                    if arg.id in script.modelVars:
-                        self.problem("Function {0} may shadow model variable {1}".format(info.name, arg.id), lineno=info.lineno)
+        def check(self, runner, script, info):
+            if isinstance(info, ast.FunctionDef):
+                for arg in info.args.args:
+                    if isinstance(arg, ast.Name):
+                        if arg.id in script.modelVars:
+                            self.problem(
+                                "Function {0} may shadow model variable {1}".format(
+                                    info.name, arg.id
+                                ),
+                                lineno=info.lineno,
+                            )
 
 
 class ModelAccess(IterativeTreeChecker, ModelTrackerHook):
 
-    pyomo.common.plugin_base.alias('model.rule.model_access', 'Check that a rule does not reference a global model instance.')
+    pyomo.common.plugin_base.alias(
+        'model.rule.model_access',
+        'Check that a rule does not reference a global model instance.',
+    )
 
     def checkerDoc(self):
         return """\
@@ -63,18 +74,30 @@ class ModelAccess(IterativeTreeChecker, ModelTrackerHook):
 
     def check(self, runner, script, info):
         if isinstance(info, ast.FunctionDef):
-            attrNodes = [x for x in list(ast.walk(info)) if isinstance(x, ast.Attribute)]
+            attrNodes = [
+                x for x in list(ast.walk(info)) if isinstance(x, ast.Attribute)
+            ]
             for attrNode in attrNodes:
                 if attrNode.value.id in script.modelVars:
                     args = getattr(script, 'functionArgs', [])
-                    if len(args) > 0 and not attrNode.value.id in list(arg_name(arg) for arg in args[-1].args):
+                    if len(args) > 0 and not attrNode.value.id in list(
+                        arg_name(arg) for arg in args[-1].args
+                    ):
                         # NOTE: this probably will not catch arguments defined as keyword arguments.
-                        self.problem("Expression '{0}.{1}' may access a model variable that is outside of the function scope".format(attrNode.value.id, attrNode.attr), lineno=attrNode.lineno)
+                        self.problem(
+                            "Expression '{0}.{1}' may access a model variable that is outside of the function scope".format(
+                                attrNode.value.id, attrNode.attr
+                            ),
+                            lineno=attrNode.lineno,
+                        )
 
 
 class ModelArgument(_ModelRuleChecker):
 
-    pyomo.common.plugin_base.alias('model.rule.model_argument', 'Check that the model instance is the first argument for a rule.')
+    pyomo.common.plugin_base.alias(
+        'model.rule.model_argument',
+        'Check that the model instance is the first argument for a rule.',
+    )
 
     def checkerDoc(self):
         return """\
@@ -91,12 +114,19 @@ class ModelArgument(_ModelRuleChecker):
                 if isinstance(node, ast.Attribute):
                     if isinstance(node.value, ast.Name):
                         if node.value.id != arg_name(funcdef.args.args[0]):
-                            self.problem("Model variable '{0}' is used in the rule, but this variable is not first argument in the rule argument list".format(node.value.id), lineno=funcdef.lineno)
+                            self.problem(
+                                "Model variable '{0}' is used in the rule, but this variable is not first argument in the rule argument list".format(
+                                    node.value.id
+                                ),
+                                lineno=funcdef.lineno,
+                            )
 
 
 class NoneReturn(_ModelRuleChecker):
 
-    pyomo.common.plugin_base.alias('model.rule.none_return', 'Check that a rule does not return the value None.')
+    pyomo.common.plugin_base.alias(
+        'model.rule.none_return', 'Check that a rule does not return the value None.'
+    )
 
     def checkerDoc(self):
         return """\
@@ -109,4 +139,9 @@ class NoneReturn(_ModelRuleChecker):
             if isinstance(node, ast.Return):
                 if isinstance(node.value, ast.Name):
                     if node.value.id == 'None':
-                        self.problem("Cannot return None from model rule {0}".format(funcdef.name), lineno=funcdef.lineno)
+                        self.problem(
+                            "Cannot return None from model rule {0}".format(
+                                funcdef.name
+                            ),
+                            lineno=funcdef.lineno,
+                        )

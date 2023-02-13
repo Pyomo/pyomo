@@ -9,8 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-class ModelScript(object):
 
+class ModelScript(object):
     def __init__(self, filename=None, text=None):
         if filename is not None:
             self._filename = filename
