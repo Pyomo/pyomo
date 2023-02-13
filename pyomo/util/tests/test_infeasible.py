@@ -17,9 +17,12 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Var, inequality
-from pyomo.util.infeasible import (log_active_constraints, log_close_to_bounds,
-                                   log_infeasible_bounds,
-                                   log_infeasible_constraints)
+from pyomo.util.infeasible import (
+    log_active_constraints,
+    log_close_to_bounds,
+    log_infeasible_bounds,
+    log_infeasible_constraints,
+)
 
 
 class TestInfeasible(unittest.TestCase):
@@ -42,8 +45,8 @@ class TestInfeasible(unittest.TestCase):
         m.c10 = Constraint(expr=m.y >= 3, doc="Inactive")
         m.c10.deactivate()
         m.c11 = Constraint(expr=m.y <= m.y.value)
-        m.yy = Var(bounds=(0, 1), initialize=1E-7, doc="Close to lower bound")
-        m.y3 = Var(bounds=(0, 1E-7), initialize=0, doc="Bounds too close")
+        m.yy = Var(bounds=(0, 1), initialize=1e-7, doc="Close to lower bound")
+        m.y3 = Var(bounds=(0, 1e-7), initialize=0, doc="Bounds too close")
         m.y4 = Var(bounds=(0, 1), initialize=2, doc="Fixed out of bounds.")
         m.y4.fix()
         return m
@@ -112,12 +115,20 @@ class TestInfeasible(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util', logging.INFO):
             log_active_constraints(m)
         expected_output = [
-            "c1 active", "c2 active", "c3 active", "c4 active",
-            "c5 active", "c6 active", "c7 active", "c8 active",
-            "c9 active", "c11 active"
+            "c1 active",
+            "c2 active",
+            "c3 active",
+            "c4 active",
+            "c5 active",
+            "c6 active",
+            "c7 active",
+            "c8 active",
+            "c9 active",
+            "c11 active",
         ]
-        self.assertEqual(expected_output,
-                         output.getvalue()[len(depr.getvalue()):].splitlines())
+        self.assertEqual(
+            expected_output, output.getvalue()[len(depr.getvalue()) :].splitlines()
+        )
 
     def test_log_close_to_bounds(self):
         """Test logging of variables and constraints near bounds."""
@@ -150,13 +161,20 @@ class TestInfeasible(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_infeasible_constraints(m, log_expression=True)
         expected_output = [
-            "CONSTR c1: 2.0 </= 1", "  - EXPR: 2.0 </= x",
-            "CONSTR c2: 1 =/= 4.0", "  - EXPR: x =/= 4.0",
-            "CONSTR c3: 1 </= 0.0", "  - EXPR: x </= 0.0",
-            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0", "  - EXPR: 5.0 <?= z <?= 10.0",
-            "CONSTR c7: evaluation error =?= 6.0", "  - EXPR: z =?= 6.0",
-            "CONSTR c8: 3.0 </= 1 <= 6.0", "  - EXPR: 3.0 </= x <= 6.0",
-            "CONSTR c9: 0.0 <= 1 </= 0.5", "  - EXPR: 0.0 <= x </= 0.5",
+            "CONSTR c1: 2.0 </= 1",
+            "  - EXPR: 2.0 </= x",
+            "CONSTR c2: 1 =/= 4.0",
+            "  - EXPR: x =/= 4.0",
+            "CONSTR c3: 1 </= 0.0",
+            "  - EXPR: x </= 0.0",
+            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0",
+            "  - EXPR: 5.0 <?= z <?= 10.0",
+            "CONSTR c7: evaluation error =?= 6.0",
+            "  - EXPR: z =?= 6.0",
+            "CONSTR c8: 3.0 </= 1 <= 6.0",
+            "  - EXPR: 3.0 </= x <= 6.0",
+            "CONSTR c9: 0.0 <= 1 </= 0.5",
+            "  - EXPR: 0.0 <= x </= 0.5",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
@@ -167,13 +185,20 @@ class TestInfeasible(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_infeasible_constraints(m, log_variables=True)
         expected_output = [
-            "CONSTR c1: 2.0 </= 1", "  - VAR x: 1",
-            "CONSTR c2: 1 =/= 4.0", "  - VAR x: 1",
-            "CONSTR c3: 1 </= 0.0", "  - VAR x: 1",
-            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0", "  - VAR z: None",
-            "CONSTR c7: evaluation error =?= 6.0", "  - VAR z: None",
-            "CONSTR c8: 3.0 </= 1 <= 6.0", "  - VAR x: 1",
-            "CONSTR c9: 0.0 <= 1 </= 0.5", "  - VAR x: 1",
+            "CONSTR c1: 2.0 </= 1",
+            "  - VAR x: 1",
+            "CONSTR c2: 1 =/= 4.0",
+            "  - VAR x: 1",
+            "CONSTR c3: 1 </= 0.0",
+            "  - VAR x: 1",
+            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0",
+            "  - VAR z: None",
+            "CONSTR c7: evaluation error =?= 6.0",
+            "  - VAR z: None",
+            "CONSTR c8: 3.0 </= 1 <= 6.0",
+            "  - VAR x: 1",
+            "CONSTR c9: 0.0 <= 1 </= 0.5",
+            "  - VAR x: 1",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 

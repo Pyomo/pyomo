@@ -24,12 +24,14 @@ def create_model():
         if t >= 15:
             return 0.025
         return 0.25
+
     m.b = Param(m.t, initialize=0.25, default=_b_default)
 
     def _c_default(m, t):
         if t >= 7:
             return 50
         return 5
+
     m.c = Param(m.t, initialize=5.0, default=_c_default)
 
     m.omega = Var(m.t)
@@ -43,12 +45,13 @@ def create_model():
     m.theta[0] = 3.14 - 0.1
 
     def _diffeq1(m, t):
-        return m.domegadt[t] == -m.b[t] * m.omega[t] - \
-                                m.c[t] * sin(m.theta[t])
+        return m.domegadt[t] == -m.b[t] * m.omega[t] - m.c[t] * sin(m.theta[t])
+
     m.diffeq1 = Constraint(m.t, rule=_diffeq1)
 
     def _diffeq2(m, t):
         return m.dthetadt[t] == m.omega[t]
+
     m.diffeq2 = Constraint(m.t, rule=_diffeq2)
 
     b_profile = {0: 0.25, 15: 0.025}
@@ -66,15 +69,15 @@ def simulate_model(m):
     if False:
         # Simulate the model using casadi
         sim = Simulator(m, package='casadi')
-        tsim, profiles = sim.simulate(numpoints=200,
-                                      integrator='cvodes',
-                                      varying_inputs=m.var_input)
+        tsim, profiles = sim.simulate(
+            numpoints=200, integrator='cvodes', varying_inputs=m.var_input
+        )
     else:
         # Simulate the model using scipy
         sim = Simulator(m, package='scipy')
-        tsim, profiles = sim.simulate(numpoints=200,
-                                      integrator='vode',
-                                      varying_inputs=m.var_input)
+        tsim, profiles = sim.simulate(
+            numpoints=200, integrator='vode', varying_inputs=m.var_input
+        )
 
     # Discretize model using Orthogonal Collocation
     discretizer = TransformationFactory('dae.collocation')
@@ -101,6 +104,7 @@ def plot_result(m, sim, tsim, profiles):
     plt.xlabel('t')
     plt.legend(loc='best')
     plt.show()
+
 
 if __name__ == "__main__":
     model = create_model()

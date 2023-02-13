@@ -25,6 +25,7 @@ from pyomo.common.log import LoggingIntercept, pyomo_formatter
 from pyomo.common.tee import capture_output
 import pyomo.environ as pyo
 
+
 def gurobi_fully_licensed():
     m = pyo.ConcreteModel()
     m.x = pyo.Var(list(range(2001)), within=pyo.NonNegativeReals)
@@ -36,6 +37,7 @@ def gurobi_fully_licensed():
     except:
         return False
 
+
 parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
@@ -44,7 +46,7 @@ if not param_available:
 currdir = this_file_dir()
 datadir = currdir
 
-solver_dependencies =   {
+solver_dependencies = {
     # abstract_ch
     'test_abstract_ch_wl_abstract_script': ['glpk'],
     'test_abstract_ch_pyomo_wl_abstract': ['glpk'],
@@ -63,26 +65,21 @@ solver_dependencies =   {
     'test_abstract_ch_pyomo_AbstractH': ['ipopt'],
     'test_abstract_ch_AbstHLinScript': ['glpk'],
     'test_abstract_ch_pyomo_AbstractHLinear': ['glpk'],
-
     # blocks_ch
     'test_blocks_ch_lotsizing': ['glpk'],
     'test_blocks_ch_blocks_lotsizing': ['glpk'],
-
     # dae_ch
     'test_dae_ch_run_path_constraint_tester': ['ipopt'],
-
     # gdp_ch
     'test_gdp_ch_pyomo_gdp_uc': ['glpk'],
     'test_gdp_ch_pyomo_scont': ['glpk'],
     'test_gdp_ch_pyomo_scont2': ['glpk'],
     'test_gdp_ch_scont_script': ['glpk'],
-
     # intro_ch'
     'test_intro_ch_pyomo_concrete1_generic': ['glpk'],
     'test_intro_ch_pyomo_concrete1': ['glpk'],
     'test_intro_ch_pyomo_coloring_concrete': ['glpk'],
     'test_intro_ch_pyomo_abstract5': ['glpk'],
-
     # mpec_ch
     'test_mpec_ch_path1': ['path'],
     'test_mpec_ch_nlp_ex1b': ['ipopt'],
@@ -94,7 +91,6 @@ solver_dependencies =   {
     'test_mpec_ch_nlp2': ['ipopt'],
     'test_mpec_ch_nlp3': ['ipopt'],
     'test_mpec_ch_mip1': ['glpk'],
-
     # nonlinear_ch
     'test_rosen_rosenbrock': ['ipopt'],
     'test_react_design_ReactorDesign': ['ipopt'],
@@ -103,7 +99,6 @@ solver_dependencies =   {
     'test_multimodal_multimodal_init2': ['ipopt'],
     'test_disease_est_disease_estimation': ['ipopt'],
     'test_deer_DeerProblem': ['ipopt'],
-
     # scripts_ch
     'test_sudoku_sudoku_run': ['glpk'],
     'test_scripts_ch_warehouse_script': ['glpk'],
@@ -111,40 +106,33 @@ solver_dependencies =   {
     'test_scripts_ch_warehouse_cuts': ['glpk'],
     'test_scripts_ch_prob_mod_ex': ['glpk'],
     'test_scripts_ch_attributes': ['glpk'],
-
     # optimization_ch
     'test_optimization_ch_ConcHLinScript': ['glpk'],
-
     # overview_ch
     'test_overview_ch_wl_mutable_excel': ['glpk'],
     'test_overview_ch_wl_excel': ['glpk'],
     'test_overview_ch_wl_concrete_script': ['glpk'],
     'test_overview_ch_wl_abstract_script': ['glpk'],
     'test_overview_ch_pyomo_wl_abstract': ['glpk'],
-
     # performance_ch
     'test_performance_ch_wl': ['gurobi', 'gurobi_persistent', 'gurobi_license'],
     'test_performance_ch_persistent': ['gurobi_persistent'],
 }
-package_dependencies =  {
+package_dependencies = {
     # abstract_ch'
     'test_abstract_ch_pyomo_solve4': ['yaml'],
     'test_abstract_ch_pyomo_solve5': ['yaml'],
-
     # gdp_ch
     'test_gdp_ch_pyomo_scont': ['yaml'],
     'test_gdp_ch_pyomo_scont2': ['yaml'],
     'test_gdp_ch_pyomo_gdp_uc': ['sympy'],
-
     # overview_ch'
     'test_overview_ch_wl_excel': ['pandas', 'xlrd'],
     'test_overview_ch_wl_mutable_excel': ['pandas', 'xlrd'],
-
     # scripts_ch'
     'test_scripts_ch_warehouse_cuts': ['matplotlib'],
-
     # performance_ch'
-    'test_performance_ch_wl': ['numpy','matplotlib'],
+    'test_performance_ch_wl': ['numpy', 'matplotlib'],
 }
 
 
@@ -155,7 +143,7 @@ solvers_used = set(sum(list(solver_dependencies.values()), []))
 available_solvers = check_available_solvers(*solvers_used)
 if gurobi_fully_licensed():
     available_solvers.append('gurobi_license')
-solver_available = {solver_:(solver_ in available_solvers) for solver_ in solvers_used}
+solver_available = {solver_: (solver_ in available_solvers) for solver_ in solvers_used}
 
 package_available = {}
 package_modules = {}
@@ -182,7 +170,8 @@ def check_skip(name):
             return "Solver%s %s %s not available" % (
                 's' if len(_missing) > 1 else '',
                 ", ".join(_missing),
-                'are' if len(_missing) > 1 else 'is',)
+                'are' if len(_missing) > 1 else 'is',
+            )
 
     if name in package_dependencies:
         packages_ = package_dependencies[name]
@@ -195,53 +184,63 @@ def check_skip(name):
             return "Package%s %s %s not available" % (
                 's' if len(_missing) > 1 else '',
                 ", ".join(_missing),
-                'are' if len(_missing) > 1 else 'is',)
+                'are' if len(_missing) > 1 else 'is',
+            )
 
         # This is a hack, xlrd dropped support for .xlsx files in 2.0.1 which
         # causes problems with older versions of Pandas<=1.1.5 so skipping
         # tests requiring both these packages when incompatible versions are found
-        if 'pandas' in package_dependencies[name] and 'xlrd' in package_dependencies[name]:
-            if check_min_version(package_modules['xlrd'], '2.0.1') and \
-               not check_min_version(package_modules['pandas'], '1.1.6'):
+        if (
+            'pandas' in package_dependencies[name]
+            and 'xlrd' in package_dependencies[name]
+        ):
+            if check_min_version(
+                package_modules['xlrd'], '2.0.1'
+            ) and not check_min_version(package_modules['pandas'], '1.1.6'):
                 return "Incompatible versions of xlrd and pandas"
 
     return False
+
 
 def filter(line):
     """
     Ignore certain text when comparing output with baseline
     """
-    for field in ( '[',
-                   'password:',
-                   'http:',
-                   'Job ',
-                   'Importing module',
-                   'Function',
-                   'File',
-                   'Matplotlib',
-                   '-------',
-                   '=======',
-                   '    ^'):
+    for field in (
+        '[',
+        'password:',
+        'http:',
+        'Job ',
+        'Importing module',
+        'Function',
+        'File',
+        'Matplotlib',
+        '-------',
+        '=======',
+        '    ^',
+    ):
         if line.startswith(field):
             return True
-    for field in ( 'Total CPU',
-                   'Ipopt',
-                   'license',
-                   'Status: optimal',
-                   'Status: feasible',
-                   'time:',
-                   'Time:',
-                   'with format cpxlp',
-                   'usermodel = <module',
-                   'execution time=',
-                   'Solver results file:',
-                   'TokenServer',
-                   'function calls',
-                   'List reduced',
-                   '.py:',
-                   '{built-in method',
-                   '{method',
-                   '{pyomo.core.expr.numvalue.as_numeric}'):
+    for field in (
+        'Total CPU',
+        'Ipopt',
+        'license',
+        'Status: optimal',
+        'Status: feasible',
+        'time:',
+        'Time:',
+        'with format cpxlp',
+        'usermodel = <module',
+        'execution time=',
+        'Solver results file:',
+        'TokenServer',
+        'function calls',
+        'List reduced',
+        '.py:',
+        '{built-in method',
+        '{method',
+        '{pyomo.core.expr.numvalue.as_numeric}',
+    ):
         if field in line:
             return True
     return False
@@ -266,7 +265,7 @@ def filter_file_contents(lines):
         # Strip off beginning of lines giving time in seconds
         # Needed for the performance chapter tests
         if "seconds" in line:
-            s = line.find("seconds")+7
+            s = line.find("seconds") + 7
             line = line[s:]
 
         items = line.strip().split()
@@ -290,10 +289,10 @@ def filter_file_contents(lines):
     return filtered
 
 
-py_test_tuples=[]
-sh_test_tuples=[]
+py_test_tuples = []
+sh_test_tuples = []
 
-for testdir in glob.glob(os.path.join(currdir,'*')):
+for testdir in glob.glob(os.path.join(currdir, '*')):
     if not os.path.isdir(testdir):
         continue
     # Only test files in directories ending in -ch. These directories
@@ -303,14 +302,15 @@ for testdir in glob.glob(os.path.join(currdir,'*')):
         continue
 
     # Find all .py files in the test directory
-    for file in list(glob.glob(os.path.join(testdir,'*.py'))) \
-        + list(glob.glob(os.path.join(testdir,'*','*.py'))):
+    for file in list(glob.glob(os.path.join(testdir, '*.py'))) + list(
+        glob.glob(os.path.join(testdir, '*', '*.py'))
+    ):
 
         test_file = os.path.abspath(file)
         bname = os.path.basename(test_file)
         dir_ = os.path.dirname(test_file)
-        name=os.path.splitext(bname)[0]
-        tname = os.path.basename(dir_)+'_'+name
+        name = os.path.splitext(bname)[0]
+        tname = os.path.basename(dir_) + '_' + name
 
         # If there is both a .py and a .sh, defer to the sh
         if os.path.exists(os.path.join(dir_, name + '.sh')):
@@ -320,48 +320,46 @@ for testdir in glob.glob(os.path.join(currdir,'*')):
         # Look for txt and yml file names matching py file names. Add
         # a test for any found
         for suffix_ in ['.txt', '.yml']:
-            if os.path.exists(os.path.join(dir_, name+suffix_)):
+            if os.path.exists(os.path.join(dir_, name + suffix_)):
                 suffix = suffix_
                 break
         if suffix is not None:
-            tname = tname.replace('-','_')
-            tname = tname.replace('.','_')
+            tname = tname.replace('-', '_')
+            tname = tname.replace('.', '_')
 
             # Create list of tuples with (test_name, test_file, baseline_file)
-            py_test_tuples.append(
-                (tname, test_file, os.path.join(dir_, name + suffix))
-            )
+            py_test_tuples.append((tname, test_file, os.path.join(dir_, name + suffix)))
 
     # Find all .sh files in the test directory
-    for file in list(glob.glob(os.path.join(testdir,'*.sh'))) \
-            + list(glob.glob(os.path.join(testdir,'*','*.sh'))):
+    for file in list(glob.glob(os.path.join(testdir, '*.sh'))) + list(
+        glob.glob(os.path.join(testdir, '*', '*.sh'))
+    ):
         test_file = os.path.abspath(file)
         bname = os.path.basename(file)
-        dir_ = os.path.dirname(os.path.abspath(file))+os.sep
-        name='.'.join(bname.split('.')[:-1])
-        tname = os.path.basename(os.path.dirname(dir_))+'_'+name
+        dir_ = os.path.dirname(os.path.abspath(file)) + os.sep
+        name = '.'.join(bname.split('.')[:-1])
+        tname = os.path.basename(os.path.dirname(dir_)) + '_' + name
         suffix = None
         # Look for txt and yml file names matching sh file names. Add
         # a test for any found
         for suffix_ in ['.txt', '.yml']:
-            if os.path.exists(dir_+name+suffix_):
+            if os.path.exists(dir_ + name + suffix_):
                 suffix = suffix_
                 break
         if not suffix is None:
-            tname = tname.replace('-','_')
-            tname = tname.replace('.','_')
+            tname = tname.replace('-', '_')
+            tname = tname.replace('.', '_')
 
             # Create list of tuples with (test_name, test_file, baseline_file)
-            sh_test_tuples.append((tname, test_file, os.path.join(dir_,name+suffix)))
+            sh_test_tuples.append((tname, test_file, os.path.join(dir_, name + suffix)))
 
 
 def custom_name_func(test_func, test_num, test_params):
     func_name = test_func.__name__
-    return "test_%s_%s" %(test_params.args[0], func_name[-2:])
+    return "test_%s_%s" % (test_params.args[0], func_name[-2:])
 
 
-def compare_files(out_file, base_file, abstol, reltol,
-                  exception, formatter):
+def compare_files(out_file, base_file, abstol, reltol, exception, formatter):
     try:
         if filecmp.cmp(out_file, base_file):
             return True
@@ -373,10 +371,8 @@ def compare_files(out_file, base_file, abstol, reltol,
         base_file_contents = f2.read()
 
     # Filter files independently and then compare filtered contents
-    out_filtered = filter_file_contents(
-        out_file_contents.strip().split('\n'))
-    base_filtered = filter_file_contents(
-        base_file_contents.strip().split('\n'))
+    out_filtered = filter_file_contents(out_file_contents.strip().split('\n'))
+    base_filtered = filter_file_contents(base_file_contents.strip().split('\n'))
 
     if len(out_filtered) != len(base_filtered):
         # it is likely that a solver returned a (slightly) nonzero
@@ -387,23 +383,24 @@ def compare_files(out_file, base_file, abstol, reltol,
         while i < len(base_filtered):
             try:
                 unittest.assertStructuredAlmostEqual(
-                    out_filtered[i], base_filtered[i],
-                    abstol=abstol, reltol=reltol,
+                    out_filtered[i],
+                    base_filtered[i],
+                    abstol=abstol,
+                    reltol=reltol,
                     allow_second_superset=False,
-                    exception=exception)
+                    exception=exception,
+                )
                 i += 1
                 continue
             except exception:
                 pass
 
             try:
-                index_of_out_i_in_base = base_filtered.index(
-                    out_filtered[i], i)
+                index_of_out_i_in_base = base_filtered.index(out_filtered[i], i)
             except ValueError:
                 index_of_out_i_in_base = float('inf')
             try:
-                index_of_base_i_in_out = out_filtered.index(
-                    base_filtered[i], i)
+                index_of_base_i_in_out = out_filtered.index(base_filtered[i], i)
             except ValueError:
                 index_of_base_i_in_out = float('inf')
             if index_of_out_i_in_base < index_of_base_i_in_out:
@@ -429,11 +426,15 @@ def compare_files(out_file, base_file, abstol, reltol,
             extra[i:n] = []
 
     try:
-        unittest.assertStructuredAlmostEqual(out_filtered, base_filtered,
-                                             abstol=abstol, reltol=reltol,
-                                             allow_second_superset=False,
-                                             exception=exception,
-                                             formatter=formatter)
+        unittest.assertStructuredAlmostEqual(
+            out_filtered,
+            base_filtered,
+            abstol=abstol,
+            reltol=reltol,
+            allow_second_superset=False,
+            exception=exception,
+            formatter=formatter,
+        )
     except exception:
         # Print helpful information when file comparison fails
         print('---------------------------------')
@@ -450,7 +451,6 @@ def compare_files(out_file, base_file, abstol, reltol,
 
 
 class TestBookExamples(unittest.TestCase):
-
     def compare_files(self, out_file, base_file, abstol=1e-6):
         return compare_files(
             out_file,
@@ -466,14 +466,14 @@ class TestBookExamples(unittest.TestCase):
         bname = os.path.basename(test_file)
         dir_ = os.path.dirname(test_file)
 
-        skip_msg = check_skip('test_'+tname)
+        skip_msg = check_skip('test_' + tname)
         if skip_msg:
             raise unittest.SkipTest(skip_msg)
 
         cwd = os.getcwd()
         try:
             os.chdir(dir_)
-            out_file = os.path.splitext(test_file)[0]+'.out'
+            out_file = os.path.splitext(test_file)[0] + '.out'
             # This is roughly equivalent to:
             #    subprocess.run([sys.executable, bname],
             #                   stdout=f, stderr=f, cwd=dir_)
@@ -483,9 +483,7 @@ class TestBookExamples(unittest.TestCase):
                 # capture_output).  This ensures that log messages and
                 # normal output appear in the correct order.
                 with LoggingIntercept(sys.stdout, formatter=pyomo_formatter):
-                    import_file(
-                        bname, infer_package=False, module_name='__main__'
-                    )
+                    import_file(bname, infer_package=False, module_name='__main__')
         finally:
             os.chdir(cwd)
 
@@ -497,20 +495,22 @@ class TestBookExamples(unittest.TestCase):
         bname = os.path.basename(test_file)
         dir_ = os.path.dirname(test_file)
 
-        skip_msg = check_skip('test_'+tname)
+        skip_msg = check_skip('test_' + tname)
         if skip_msg:
             raise unittest.SkipTest(skip_msg)
 
         # Skip all shell tests on Windows.
         if os.name == 'nt':
-           raise unittest.SkipTest("Shell tests are not runnable on Windows")
+            raise unittest.SkipTest("Shell tests are not runnable on Windows")
 
         cwd = os.getcwd()
         os.chdir(dir_)
-        out_file = os.path.splitext(test_file)[0]+'.out'
+        out_file = os.path.splitext(test_file)[0] + '.out'
         with open(out_file, 'w') as f:
             _env = os.environ.copy()
-            _env['PATH'] = os.pathsep.join([os.path.dirname(sys.executable), _env['PATH']])
+            _env['PATH'] = os.pathsep.join(
+                [os.path.dirname(sys.executable), _env['PATH']]
+            )
             subprocess.run(['bash', bname], stdout=f, stderr=f, cwd=dir_, env=_env)
         os.chdir(cwd)
 
@@ -519,25 +519,30 @@ class TestBookExamples(unittest.TestCase):
 
     def test_test_functions(self):
         with capture_output() as OUT:
-            self.assertTrue(self.compare_files(
-                os.path.join(currdir,'tests','ref1.txt'),
-                os.path.join(currdir,'tests','ref2.txt'),
-            ))
-            self.assertTrue(self.compare_files(
-                os.path.join(currdir,'tests','ref2.txt'),
-                os.path.join(currdir,'tests','ref1.txt'),
-            ))
+            self.assertTrue(
+                self.compare_files(
+                    os.path.join(currdir, 'tests', 'ref1.txt'),
+                    os.path.join(currdir, 'tests', 'ref2.txt'),
+                )
+            )
+            self.assertTrue(
+                self.compare_files(
+                    os.path.join(currdir, 'tests', 'ref2.txt'),
+                    os.path.join(currdir, 'tests', 'ref1.txt'),
+                )
+            )
         self.assertEqual(OUT.getvalue(), "")
 
         with self.assertRaises(self.failureException):
             with capture_output() as OUT:
                 self.compare_files(
-                    os.path.join(currdir,'tests','ref1.txt'),
-                    os.path.join(currdir,'tests','ref2.txt'),
+                    os.path.join(currdir, 'tests', 'ref1.txt'),
+                    os.path.join(currdir, 'tests', 'ref2.txt'),
                     abstol=1e-10,
                 )
         self.assertIn('BASELINE FILE', OUT.getvalue())
         self.assertIn('TEST OUTPUT FILE', OUT.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,7 +3,7 @@ import pyomo.environ as pyo
 model = pyo.ConcreteModel()
 # @body:
 model.x = pyo.Var()
-model.y = pyo.Var(bounds=(-2,4))
+model.y = pyo.Var(bounds=(-2, 4))
 model.z = pyo.Var(initialize=1.0, within=pyo.NonNegativeReals)
 
 model.obj = pyo.Objective(expr=model.x**2 + model.y + model.z)

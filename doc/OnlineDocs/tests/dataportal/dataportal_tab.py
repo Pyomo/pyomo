@@ -50,7 +50,7 @@ instance.pprint()
 # @param2
 model = AbstractModel()
 data = DataPortal()
-model.A = Set(initialize=['A1','A2','A3'])
+model.A = Set(initialize=['A1', 'A2', 'A3'])
 model.y = Param(model.A)
 data.load(filename='Y.tab', param=model.y)
 instance = model.create_instance(data)
@@ -60,10 +60,10 @@ instance.pprint()
 # @param4
 model = AbstractModel()
 data = DataPortal()
-model.A = Set(initialize=['A1','A2','A3'])
+model.A = Set(initialize=['A1', 'A2', 'A3'])
 model.x = Param(model.A)
 model.w = Param(model.A)
-data.load(filename='XW.tab', param=(model.x,model.w))
+data.load(filename='XW.tab', param=(model.x, model.w))
 instance = model.create_instance(data)
 # @param4
 instance.pprint()
@@ -83,8 +83,7 @@ model = AbstractModel()
 data = DataPortal()
 model.A = Set()
 model.w = Param(model.A)
-data.load(filename='XW.tab', select=('A','W'), 
-                param=model.w, index=model.A)
+data.load(filename='XW.tab', select=('A', 'W'), param=model.w, index=model.A)
 instance = model.create_instance(data)
 # @param5
 instance.pprint()
@@ -92,11 +91,10 @@ instance.pprint()
 # @param6
 model = AbstractModel()
 data = DataPortal()
-model.A = Set(initialize=['A1','A2','A3'])
-model.I = Set(initialize=['I1','I2','I3','I4'])
+model.A = Set(initialize=['A1', 'A2', 'A3'])
+model.I = Set(initialize=['I1', 'I2', 'I3', 'I4'])
 model.u = Param(model.I, model.A)
-data.load(filename='U.tab', param=model.u, 
-                                    format='array')
+data.load(filename='U.tab', param=model.u, format='array')
 instance = model.create_instance(data)
 # @param6
 instance.pprint()
@@ -104,11 +102,10 @@ instance.pprint()
 # @param7
 model = AbstractModel()
 data = DataPortal()
-model.A = Set(initialize=['A1','A2','A3'])
-model.I = Set(initialize=['I1','I2','I3','I4'])
+model.A = Set(initialize=['A1', 'A2', 'A3'])
+model.I = Set(initialize=['I1', 'I2', 'I3', 'I4'])
 model.t = Param(model.A, model.I)
-data.load(filename='U.tab', param=model.t, 
-                                    format='transposed_array')
+data.load(filename='U.tab', param=model.t, format='transposed_array')
 instance = model.create_instance(data)
 # @param7
 instance.pprint()
@@ -126,7 +123,7 @@ instance.pprint()
 # @param9
 model = AbstractModel()
 data = DataPortal()
-model.A = Set(initialize=['A1','A2','A3','A4'])
+model.A = Set(initialize=['A1', 'A2', 'A3', 'A4'])
 model.y = Param(model.A)
 data.load(filename='Y.tab', param=model.y)
 instance = model.create_instance(data)
@@ -149,8 +146,8 @@ data = DataPortal()
 model.A = Set()
 model.B = Set()
 model.q = Param(model.A, model.B)
-data.load(filename='PP.tab', param=model.q, index=(model.A,model.B))
-#instance = model.create_instance(data)
+data.load(filename='PP.tab', param=model.q, index=(model.A, model.B))
+# instance = model.create_instance(data)
 # @param11
 # --------------------------------------------------
 # @concrete1
@@ -169,17 +166,17 @@ data.load(filename='Y.tab', param="y", format="table")
 
 model = ConcreteModel()
 model.z = Param(initialize=data['z'])
-model.y = Param(['A1','A2','A3'], initialize=data['y'])
+model.y = Param(['A1', 'A2', 'A3'], initialize=data['y'])
 # @concrete2
 model.pprint()
 # --------------------------------------------------
 # @getitem
 data = DataPortal()
 data.load(filename='A.tab', set="A", format="set")
-print(data['A'])    #['A1', 'A2', 'A3']
+print(data['A'])  # ['A1', 'A2', 'A3']
 
 data.load(filename='Z.tab', param="z", format="param")
-print(data['z'])    #1.1
+print(data['z'])  # 1.1
 
 data.load(filename='Y.tab', param="y", format="table")
 for key in sorted(data['y']):
@@ -191,8 +188,7 @@ model = AbstractModel()
 data = DataPortal()
 model.A = Set(dimen=2)
 model.p = Param(model.A)
-data.load(filename='excel.xls', range='PPtable', 
-                    param=model.p, index=model.A)
+data.load(filename='excel.xls', range='PPtable', param=model.p, index=model.A)
 instance = model.create_instance(data)
 # @excel1
 instance.pprint()
@@ -202,7 +198,7 @@ model = AbstractModel()
 data = DataPortal()
 model.A = Set(dimen=2)
 model.p = Param(model.A)
-#data.load(filename='excel.xls', range='AX2:AZ5', 
+# data.load(filename='excel.xls', range='AX2:AZ5',
 #                    param=model.p, index=model.A)
 instance = model.create_instance(data)
 # @excel2
@@ -213,15 +209,20 @@ model = AbstractModel()
 data = DataPortal()
 model.A = Set(dimen=2)
 model.p = Param(model.A)
-data.load(filename='PP.sqlite', using='sqlite3',
-                   table='PPtable',
-                   param=model.p, index=model.A)
+data.load(
+    filename='PP.sqlite', using='sqlite3', table='PPtable', param=model.p, index=model.A
+)
 instance = model.create_instance(data)
 # @db1
 data = DataPortal()
-data.load(filename='PP.sqlite', using='sqlite3',
-                   table='PPtable',
-                   param=model.p, index=model.A, text_factory=str)
+data.load(
+    filename='PP.sqlite',
+    using='sqlite3',
+    table='PPtable',
+    param=model.p,
+    index=model.A,
+    text_factory=str,
+)
 instance = model.create_instance(data)
 instance.pprint()
 # --------------------------------------------------
@@ -230,15 +231,24 @@ model = AbstractModel()
 data = DataPortal()
 model.A = Set()
 model.p = Param(model.A)
-data.load(filename='PP.sqlite', using='sqlite3',
-                   query="SELECT A,PP FROM PPtable",
-                   param=model.p, index=model.A)
+data.load(
+    filename='PP.sqlite',
+    using='sqlite3',
+    query="SELECT A,PP FROM PPtable",
+    param=model.p,
+    index=model.A,
+)
 instance = model.create_instance(data)
 # @db2
 data = DataPortal()
-data.load(filename='PP.sqlite', using='sqlite3',
-                   query="SELECT A,PP FROM PPtable",
-                   param=model.p, index=model.A, text_factory=str)
+data.load(
+    filename='PP.sqlite',
+    using='sqlite3',
+    query="SELECT A,PP FROM PPtable",
+    param=model.p,
+    index=model.A,
+    text_factory=str,
+)
 instance = model.create_instance(data)
 instance.pprint()
 # --------------------------------------------------
@@ -248,17 +258,24 @@ if False:
     data = DataPortal()
     model.A = Set()
     model.p = Param(model.A)
-    data.load(filename="Driver={MySQL ODBC 5.2 UNICODE Driver}; Database=Pyomo; Server=localhost; User=pyomo;",
-            using='pypyodbc',
-            query="SELECT A,PP FROM PPtable",
-            param=model.p, index=model.A)
+    data.load(
+        filename="Driver={MySQL ODBC 5.2 UNICODE Driver}; Database=Pyomo; Server=localhost; User=pyomo;",
+        using='pypyodbc',
+        query="SELECT A,PP FROM PPtable",
+        param=model.p,
+        index=model.A,
+    )
     instance = model.create_instance(data)
     # @db3
     data = DataPortal()
-    data.load(filename="Driver={MySQL ODBC 5.2 UNICODE Driver}; Database=Pyomo; Server=localhost; User=pyomo;",
-            using='pypyodbc',
-            query="SELECT A,PP FROM PPtable",
-            param=model.p, index=model.A, text_factory=str)
+    data.load(
+        filename="Driver={MySQL ODBC 5.2 UNICODE Driver}; Database=Pyomo; Server=localhost; User=pyomo;",
+        using='pypyodbc',
+        query="SELECT A,PP FROM PPtable",
+        param=model.p,
+        index=model.A,
+        text_factory=str,
+    )
     instance = model.create_instance(data)
     instance.pprint()
 # --------------------------------------------------
@@ -298,11 +315,9 @@ model = AbstractModel()
 model.C = Set(dimen=2)
 data = DataPortal()
 data.load(filename='C.tab', set=model.C, namespace='ns1')
-data.load(filename='D.tab', set=model.C, namespace='ns2', 
-                            format='set_array')
+data.load(filename='D.tab', set=model.C, namespace='ns2', format='set_array')
 instance1 = model.create_instance(data, namespaces=['ns1'])
 instance2 = model.create_instance(data, namespaces=['ns2'])
 # @namespaces1
 instance1.pprint()
 instance2.pprint()
-

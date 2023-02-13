@@ -22,7 +22,3 @@ print(pyo.value(model.obj))
 
 # print the value of a particular variable
 print(pyo.value(model.y['Harlingen']))
-
-
-
-

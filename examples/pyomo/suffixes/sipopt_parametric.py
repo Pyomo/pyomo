@@ -28,9 +28,9 @@ from pyomo.opt import SolverFactory
 ### Create the ipopt_sens solver plugin using the ASL interface
 solver = 'ipopt_sens'
 solver_io = 'nl'
-stream_solver = True    # True prints solver output to screen
-keepfiles =     False    # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver,solver_io=solver_io)
+stream_solver = True  # True prints solver output to screen
+keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
+opt = SolverFactory(solver, solver_io=solver_io)
 ###
 
 if opt is None:
@@ -40,9 +40,9 @@ if opt is None:
     exit(1)
 
 ### Set this data
-nominal_eta1   = 4.5
+nominal_eta1 = 4.5
 perturbed_eta1 = 4.0
-nominal_eta2   = 1.0
+nominal_eta2 = 1.0
 perturbed_eta2 = 1.0
 
 ### Create the model
@@ -55,9 +55,11 @@ model.x3 = Var(initialize=0.0, within=NonNegativeReals)
 model.eta1 = Var()
 model.eta2 = Var()
 # constraints + objective
-model.const1 = Constraint(expr=6*model.x1+3*model.x2+2*model.x3 - model.eta1 == 0)
-model.const2 = Constraint(expr=model.eta2*model.x1+model.x2-model.x3-1 == 0)
-model.cost   = Objective(expr=model.x1**2 + model.x2**2 + model.x3**2)
+model.const1 = Constraint(
+    expr=6 * model.x1 + 3 * model.x2 + 2 * model.x3 - model.eta1 == 0
+)
+model.const2 = Constraint(expr=model.eta2 * model.x1 + model.x2 - model.x3 - 1 == 0)
+model.cost = Objective(expr=model.x1**2 + model.x2**2 + model.x3**2)
 model.consteta1 = Constraint(expr=model.eta1 == nominal_eta1)
 model.consteta2 = Constraint(expr=model.eta2 == nominal_eta2)
 ###
@@ -66,8 +68,8 @@ model.consteta2 = Constraint(expr=model.eta2 == nominal_eta2)
 model.sens_state_0 = Suffix(direction=Suffix.EXPORT)
 model.sens_state_1 = Suffix(direction=Suffix.EXPORT)
 model.sens_state_value_1 = Suffix(direction=Suffix.EXPORT)
-model.sens_sol_state_1  = Suffix(direction=Suffix.IMPORT)
-model.sens_init_constr  = Suffix(direction=Suffix.EXPORT)
+model.sens_sol_state_1 = Suffix(direction=Suffix.IMPORT)
+model.sens_init_constr = Suffix(direction=Suffix.EXPORT)
 ###
 
 ### set sIPOPT data
