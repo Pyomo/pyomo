@@ -1,6 +1,6 @@
 from pyomo.environ import *
 
-#---------------------------------------------
+# ---------------------------------------------
 # @example1
 M = ConcreteModel()
 M.x = Var(range(100))
@@ -17,46 +17,46 @@ for i in range(100):
 # @example1
 print(e)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @example2
 M = ConcreteModel()
 M.p = Param(initialize=3)
-M.q = 1/M.p
+M.q = 1 / M.p
 M.x = Var(range(100))
 
 # The value M.q is cloned every time it is used.
 e = 0
 for i in range(100):
-    e = e + M.x[i]*M.q
+    e = e + M.x[i] * M.q
 # @example2
 print(e)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @tree1
 M = ConcreteModel()
 M.v = Var()
 
-e = f = 2*M.v
+e = f = 2 * M.v
 # @tree1
 print(e)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @tree2
 M = ConcreteModel()
 M.v = Var()
 
-e = 2*M.v
+e = 2 * M.v
 f = e + 3
 # @tree2
 print(e)
 print(f)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @tree3
 M = ConcreteModel()
 M.v = Var()
 
-e = 2*M.v
+e = 2 * M.v
 f = e + 3
 g = e + 4
 # @tree3
@@ -64,13 +64,13 @@ print(e)
 print(f)
 print(g)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @tree4
 M = ConcreteModel()
 M.v = Var()
 M.w = Var()
 
-e = 2*M.v
+e = 2 * M.v
 f = e + 3
 
 e += M.w
@@ -78,16 +78,15 @@ e += M.w
 print(e)
 print(f)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @tree5
 M = ConcreteModel()
 M.v = Var()
 M.w = Var()
 
-M.e = Expression(expr=2*M.v)
+M.e = Expression(expr=2 * M.v)
 f = M.e + 3
 
 M.e += M.w
 # @tree5
 print(M.e)
-

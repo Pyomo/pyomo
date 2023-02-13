@@ -3,6 +3,7 @@ import pyomo.kernel
 # @Nonnegative
 class NonNegativeVariable(pyomo.kernel.variable):
     """A non-negative variable."""
+
     __slots__ = ()
 
     def __init__(self, **kwds):
@@ -19,45 +20,55 @@ class NonNegativeVariable(pyomo.kernel.variable):
     def lb(self):
         # calls the base class property getter
         return pyomo.kernel.variable.lb.fget(self)
+
     @lb.setter
     def lb(self, lb):
         if lb < 0:
             raise ValueError("lower bound must be non-negative")
         # calls the base class property setter
         pyomo.kernel.variable.lb.fset(self, lb)
+
+
 # @Nonnegative
 
 # @Point
 class Point(pyomo.kernel.variable_tuple):
     """A 3-dimensional point in Cartesian space with the
     z coordinate restricted to non-negative values."""
+
     __slots__ = ()
 
     def __init__(self):
         super(Point, self).__init__(
-            (pyomo.kernel.variable(),
-             pyomo.kernel.variable(),
-             NonNegativeVariable()))
+            (pyomo.kernel.variable(), pyomo.kernel.variable(), NonNegativeVariable())
+        )
+
     @property
     def x(self):
         return self[0]
+
     @property
     def y(self):
         return self[1]
+
     @property
     def z(self):
         return self[2]
+
+
 # @Point
 
 # @SOC
 class SOC(pyomo.kernel.constraint):
     """A convex second-order cone constraint"""
+
     __slots__ = ()
 
     def __init__(self, point):
         assert isinstance(point.z, NonNegativeVariable)
-        super(SOC, self).__init__(
-            point.x**2 + point.y**2 <= point.z**2)
+        super(SOC, self).__init__(point.x**2 + point.y**2 <= point.z**2)
+
+
 # @SOC
 
 # @Usage
