@@ -12,6 +12,12 @@
 import argparse
 import pyomo.scripting.pyomo_parser
 import os.path
+from pyomo.common.deprecation import deprecation_warning
+
+deprecation_warning(
+    'The pyomo.checker module has been deprecated.', version='TBD', remove_in='6.6'
+)
+
 
 class EnableDisableAction(argparse.Action):
 
