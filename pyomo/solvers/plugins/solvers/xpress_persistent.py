@@ -18,7 +18,9 @@ from pyomo.opt.base import SolverFactory
 import collections
 
 
-@SolverFactory.register('xpress_persistent', doc='Persistent python interface to Xpress')
+@SolverFactory.register(
+    'xpress_persistent', doc='Persistent python interface to Xpress'
+)
 class XpressPersistent(PersistentSolver, XpressDirect):
     """
     A class that provides a persistent interface to Xpress. Direct solver interfaces do not use any file io.
@@ -75,7 +77,9 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         elif var.is_continuous():
             vartype = 'C'
         else:
-            raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
+            raise ValueError(
+                'Variable domain type is not recognized for {0}'.format(var.domain)
+            )
         return vartype
 
     def update_var(self, var):
@@ -92,12 +96,16 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if var.is_indexed():
+        # if var.is_indexed():
         #    for child_var in var.values():
         #        self.update_var(child_var)
         #    return
         if var not in self._pyomo_var_to_solver_var_map:
-            raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
+            raise ValueError(
+                'The Var provided to update_var needs to be added first: {0}'.format(
+                    var
+                )
+            )
         xpress_var = self._pyomo_var_to_solver_var_map[var]
         qctype = self._xpress_chgcoltype_from_var(var)
         lb, ub = self._xpress_lb_ub_from_var(var)
@@ -109,9 +117,9 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         """Add a column to the solver's model
 
         This will add the Pyomo variable var to the solver's
-        model, and put the coefficients on the associated 
+        model, and put the coefficients on the associated
         constraints in the solver model. If the obj_coef is
-        not zero, it will add obj_coef*var to the objective 
+        not zero, it will add obj_coef*var to the objective
         of the solver's model.
 
         Parameters
@@ -127,13 +135,20 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         vartype = self._xpress_chgcoltype_from_var(var)
         lb, ub = self._xpress_lb_ub_from_var(var)
 
-        self._solver_model.addcols(objx=[obj_coef], mstart=[0,len(coefficients)],
-                                    mrwind=constraints, dmatval=coefficients, 
-                                    bdl=[lb], bdu=[ub], names=[varname], 
-                                    types=[vartype])
+        self._solver_model.addcols(
+            objx=[obj_coef],
+            mstart=[0, len(coefficients)],
+            mrwind=constraints,
+            dmatval=coefficients,
+            bdl=[lb],
+            bdu=[ub],
+            names=[varname],
+            types=[vartype],
+        )
 
         xpress_var = self._solver_model.getVariable(
-                        index=self._solver_model.getIndexFromName(type=2, name=varname))
+            index=self._solver_model.getIndexFromName(type=2, name=varname)
+        )
 
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var

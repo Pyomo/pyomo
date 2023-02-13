@@ -20,8 +20,14 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
 from pyomo.opt import (
-    SolverFactory, OptSolver, ProblemFormat, ResultsFormat, SolverResults,
-    TerminationCondition, SolutionStatus, ProblemSense,
+    SolverFactory,
+    OptSolver,
+    ProblemFormat,
+    ResultsFormat,
+    SolverResults,
+    TerminationCondition,
+    SolutionStatus,
+    ProblemSense,
 )
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
@@ -32,19 +38,19 @@ logger = logging.getLogger('pyomo.solvers')
 # Not sure how better to get these constants, but pulled from GLPK
 # documentation and source code (include/glpk.h)
 
-   # status of auxiliary / structural variables
-GLP_BS = 1   # inactive constraint / basic variable
-GLP_NL = 2   # active constraint or non-basic variable on lower bound
-GLP_NU = 3   # active constraint or non-basic variable on upper bound
-GLP_NF = 4   # active free row or non-basic free variable
-GLP_NS = 5   # active equality constraint or non-basic fixed variable
+# status of auxiliary / structural variables
+GLP_BS = 1  # inactive constraint / basic variable
+GLP_NL = 2  # active constraint or non-basic variable on lower bound
+GLP_NU = 3  # active constraint or non-basic variable on upper bound
+GLP_NF = 4  # active free row or non-basic free variable
+GLP_NS = 5  # active equality constraint or non-basic fixed variable
 
-   # solution status
-GLP_UNDEF  = 'u'  # solution is undefined
-GLP_FEAS   = 'f'  # solution is feasible
+# solution status
+GLP_UNDEF = 'u'  # solution is undefined
+GLP_FEAS = 'f'  # solution is feasible
 GLP_INFEAS = 'i'  # solution is infeasible
 GLP_NOFEAS = 'n'  # no feasible solution exists
-GLP_OPT    = 'o'  # solution is optimal
+GLP_OPT = 'o'  # solution is optimal
 
 
 @SolverFactory.register('glpk', doc='The GLPK LP/MIP solver')
@@ -68,8 +74,8 @@ class GLPK(OptSolver):
 
 
 @SolverFactory.register(
-        '_glpk_shell',
-        doc='Shell interface to the GNU Linear Programming Kit')
+    '_glpk_shell', doc='Shell interface to the GNU Linear Programming Kit'
+)
 class GLPKSHELL(SystemCallSolver):
     """Shell interface to the GLPK LP/MIP solver"""
 
@@ -77,7 +83,7 @@ class GLPKSHELL(SystemCallSolver):
     # version every time we run the solver.
     _known_versions = {}
 
-    def __init__ (self, **kwargs):
+    def __init__(self, **kwargs):
         #
         # Call base constructor
         #
@@ -89,13 +95,15 @@ class GLPKSHELL(SystemCallSolver):
         #
         # Valid problem formats, and valid results for each format
         #
-        self._valid_problem_formats = [ProblemFormat.cpxlp,
-                                       ProblemFormat.mps,
-                                       ProblemFormat.mod]
+        self._valid_problem_formats = [
+            ProblemFormat.cpxlp,
+            ProblemFormat.mps,
+            ProblemFormat.mod,
+        ]
         self._valid_result_formats = {
-          ProblemFormat.mod:   ResultsFormat.soln,
-          ProblemFormat.cpxlp: ResultsFormat.soln,
-          ProblemFormat.mps:   ResultsFormat.soln,
+            ProblemFormat.mod: ResultsFormat.soln,
+            ProblemFormat.cpxlp: ResultsFormat.soln,
+            ProblemFormat.mps: ResultsFormat.soln,
         }
         self.set_problem_format(ProblemFormat.cpxlp)
 
@@ -110,8 +118,10 @@ class GLPKSHELL(SystemCallSolver):
     def _default_executable(self):
         executable = Executable('glpsol')
         if not executable:
-            msg = ("Could not locate the 'glpsol' executable, which is "
-                   "required for solver '%s'")
+            msg = (
+                "Could not locate the 'glpsol' executable, which is "
+                "required for solver '%s'"
+            )
             logger.warning(msg % self.name)
             self.enable = False
             return None
@@ -199,10 +209,10 @@ class GLPKSHELL(SystemCallSolver):
         results = SolverResults()
 
         # For the lazy programmer, handle long variable names
-        prob   = results.problem
-        solv   = results.solver
+        prob = results.problem
+        solv = results.solver
         solv.termination_condition = TerminationCondition.unknown
-        stats  = results.solver.statistics
+        stats = results.solver.statistics
         bbound = stats.branch_and_bound
 
         prob.upper_bound = float('inf')
@@ -222,33 +232,48 @@ class GLPKSHELL(SystemCallSolver):
                     solv.user_time = toks[1]
                 elif len(toks) > 2 and (toks[0], toks[2]) == ("TIME", "EXCEEDED;"):
                     solv.termination_condition = TerminationCondition.maxTimeLimit
-                elif len(toks) > 5 and (toks[:6] == ['PROBLEM', 'HAS', 'NO', 'DUAL', 'FEASIBLE', 'SOLUTION']):
+                elif len(toks) > 5 and (
+                    toks[:6] == ['PROBLEM', 'HAS', 'NO', 'DUAL', 'FEASIBLE', 'SOLUTION']
+                ):
                     solv.termination_condition = TerminationCondition.unbounded
-                elif len(toks) > 5 and (toks[:6] == ['PROBLEM', 'HAS', 'NO', 'PRIMAL', 'FEASIBLE', 'SOLUTION']):
+                elif len(toks) > 5 and (
+                    toks[:6]
+                    == ['PROBLEM', 'HAS', 'NO', 'PRIMAL', 'FEASIBLE', 'SOLUTION']
+                ):
                     solv.termination_condition = TerminationCondition.infeasible
-                elif len(toks) > 4 and (toks[:5] == ['PROBLEM', 'HAS', 'NO', 'FEASIBLE', 'SOLUTION']):
+                elif len(toks) > 4 and (
+                    toks[:5] == ['PROBLEM', 'HAS', 'NO', 'FEASIBLE', 'SOLUTION']
+                ):
                     solv.termination_condition = TerminationCondition.infeasible
-                elif len(toks) > 6 and (toks[:7] == ['LP', 'RELAXATION', 'HAS', 'NO', 'DUAL', 'FEASIBLE', 'SOLUTION']):
+                elif len(toks) > 6 and (
+                    toks[:7]
+                    == ['LP', 'RELAXATION', 'HAS', 'NO', 'DUAL', 'FEASIBLE', 'SOLUTION']
+                ):
                     solv.termination_condition = TerminationCondition.unbounded
 
         return results
 
     def _glpk_get_solution_status(self, status):
-        if GLP_FEAS     == status: return SolutionStatus.feasible
-        elif GLP_INFEAS == status: return SolutionStatus.infeasible
-        elif GLP_NOFEAS == status: return SolutionStatus.infeasible
-        elif GLP_UNDEF  == status: return SolutionStatus.other
-        elif GLP_OPT    == status: return SolutionStatus.optimal
+        if GLP_FEAS == status:
+            return SolutionStatus.feasible
+        elif GLP_INFEAS == status:
+            return SolutionStatus.infeasible
+        elif GLP_NOFEAS == status:
+            return SolutionStatus.infeasible
+        elif GLP_UNDEF == status:
+            return SolutionStatus.other
+        elif GLP_OPT == status:
+            return SolutionStatus.optimal
         raise RuntimeError("Unknown solution status returned by GLPK solver")
 
-    def process_soln_file (self, results):
+    def process_soln_file(self, results):
         pdata = self._glpfile
         psoln = self._rawfile
 
         prob = results.problem
         solv = results.solver
 
-        prob.name = 'unknown'   # will ostensibly get updated
+        prob.name = 'unknown'  # will ostensibly get updated
 
         # Step 1: Make use of the GLPK's machine parseable format (--wglp) to
         #    collect variable and constraint names.
@@ -259,7 +284,7 @@ class GLPKSHELL(SystemCallSolver):
         # order as the --write output.
         # Note that documentation for these formats is available from the GLPK
         # documentation of 'glp_read_prob' and 'glp_write_sol'
-        variable_names = dict()    # cols
+        variable_names = dict()  # cols
         constraint_names = dict()  # rows
         obj_name = 'objective'
 
@@ -272,17 +297,23 @@ class GLPKSHELL(SystemCallSolver):
             pcols = int(pcols)  # fails if not a number; intentional
             pnonz = int(pnonz)  # fails if not a number; intentional
 
-            if pprob != 'p' or \
-               ptype not in ('lp', 'mip') or \
-               psense not in ('max', 'min') or \
-               prows < 0 or pcols < 0 or pnonz < 0:
+            if (
+                pprob != 'p'
+                or ptype not in ('lp', 'mip')
+                or psense not in ('max', 'min')
+                or prows < 0
+                or pcols < 0
+                or pnonz < 0
+            ):
                 raise ValueError
 
-            self.is_integer = ('mip' == ptype and True or False)
-            prob.sense = 'min' == psense and ProblemSense.minimize or ProblemSense.maximize
+            self.is_integer = 'mip' == ptype and True or False
+            prob.sense = (
+                'min' == psense and ProblemSense.minimize or ProblemSense.maximize
+            )
             prob.number_of_constraints = prows
-            prob.number_of_nonzeros    = pnonz
-            prob.number_of_variables   = pcols
+            prob.number_of_nonzeros = pnonz
+            prob.number_of_variables = pcols
 
             for line in f:
                 glp_line_count += 1
@@ -293,20 +324,20 @@ class GLPKSHELL(SystemCallSolver):
                     pass
                 elif 'n' == switch:  # naming some attribute
                     ntype = tokens.pop(0)
-                    name  = tokens.pop()
-                    if 'i' == ntype:      # row
+                    name = tokens.pop()
+                    if 'i' == ntype:  # row
                         row = tokens.pop()
                         constraint_names[int(row)] = name
                         # --write order == --wglp order; store name w/ row no
-                    elif 'j' == ntype:    # var
+                    elif 'j' == ntype:  # var
                         col = tokens.pop()
                         variable_names[int(col)] = name
                         # --write order == --wglp order; store name w/ col no
-                    elif 'z' == ntype:    # objective
+                    elif 'z' == ntype:  # objective
                         obj_name = name
-                    elif 'p' == ntype:    # problem name
+                    elif 'p' == ntype:  # problem name
                         prob.name = name
-                    else:                 # anything else is incorrect.
+                    else:  # anything else is incorrect.
                         raise ValueError
 
                 else:
@@ -325,23 +356,31 @@ class GLPKSHELL(SystemCallSolver):
             row = next(reader)
             try:
                 row = next(reader)
-                while (row[0] == 'c'):
+                while row[0] == 'c':
                     row = next(reader)
                 if not row[0] == 's':
                     raise ValueError("Expecting 's' row after 'c' rows")
 
                 if row[1] == 'bas':
-                    self._process_soln_bas(row, reader, results, obj_name, variable_names, constraint_names)
+                    self._process_soln_bas(
+                        row, reader, results, obj_name, variable_names, constraint_names
+                    )
                 elif row[1] == 'ipt':
-                    self._process_soln_ipt(row, reader, results, obj_name, variable_names, constraint_names)
+                    self._process_soln_ipt(
+                        row, reader, results, obj_name, variable_names, constraint_names
+                    )
                 elif row[1] == 'mip':
-                    self._process_soln_mip(row, reader, results, obj_name, variable_names, constraint_names)
+                    self._process_soln_mip(
+                        row, reader, results, obj_name, variable_names, constraint_names
+                    )
             except Exception:
                 print("ERROR: " + str(sys.exc_info()[1]))
                 msg = "Error parsing solution data file, line %d" % reader.line_num
                 raise ValueError(msg)
 
-    def _process_soln_bas(self, row, reader, results, obj_name, variable_names, constraint_names):
+    def _process_soln_bas(
+        self, row, reader, results, obj_name, variable_names, constraint_names
+    ):
         """
         Process a basic solution
         """
@@ -363,7 +402,7 @@ class GLPKSHELL(SystemCallSolver):
                 solv.termination_condition = TerminationCondition.other
 
         elif pstat == 'f':
-            soln   = results.solution.add()
+            soln = results.solution.add()
             soln.status = SolutionStatus.feasible
             solv.termination_condition = TerminationCondition.optimal
 
@@ -404,11 +443,11 @@ class GLPKSHELL(SystemCallSolver):
                         continue
                     rdual = float(rdual)
                     if cname.startswith('c_'):
-                        soln.constraint[cname] = {"Dual":rdual}
+                        soln.constraint[cname] = {"Dual": rdual}
                     elif cname.startswith('r_l_'):
-                        range_duals.setdefault(cname[4:],[0,0])[0] = rdual
+                        range_duals.setdefault(cname[4:], [0, 0])[0] = rdual
                     elif cname.startswith('r_u_'):
-                        range_duals.setdefault(cname[4:],[0,0])[1] = rdual
+                        range_duals.setdefault(cname[4:], [0, 0])[1] = rdual
 
                 elif rtype == 'j':
                     # NOTE: we are not using the column status (cst) value right now
@@ -418,9 +457,9 @@ class GLPKSHELL(SystemCallSolver):
                         continue
                     cprim = float(cprim)
                     if extract_reduced_costs is False:
-                        soln.variable[vname] = {"Value" : cprim}
+                        soln.variable[vname] = {"Value": cprim}
                     else:
-                        soln.variable[vname] = {"Value" : cprim, "Rc" : float(cdual)}
+                        soln.variable[vname] = {"Value": cprim, "Rc": float(cdual)}
 
                 elif rtype == 'e':
                     break
@@ -429,23 +468,25 @@ class GLPKSHELL(SystemCallSolver):
                     continue
 
                 else:
-                    raise ValueError("Unexpected row type: "+rtype)
+                    raise ValueError("Unexpected row type: " + rtype)
 
             # For the range constraints, supply only the dual with the largest
             # magnitude (at least one should always be numerically zero)
             scon = soln.Constraint
-            for key, (ld,ud) in range_duals.items():
+            for key, (ld, ud) in range_duals.items():
                 if abs(ld) > abs(ud):
-                    scon['r_l_'+key] = {"Dual":ld}
+                    scon['r_l_' + key] = {"Dual": ld}
                 else:
-                    scon['r_l_'+key] = {"Dual":ud}      # Use the same key
+                    scon['r_l_' + key] = {"Dual": ud}  # Use the same key
 
-    def _process_soln_mip(self, row, reader, results, obj_name, variable_names, constraint_names):
+    def _process_soln_mip(
+        self, row, reader, results, obj_name, variable_names, constraint_names
+    ):
         """
         Process a basic solution
         """
-        #prows = int(row[2])
-        #pcols = int(row[3])
+        # prows = int(row[2])
+        # pcols = int(row[3])
         status = row[4]
         obj_val = float(row[5])
 
@@ -461,7 +502,7 @@ class GLPKSHELL(SystemCallSolver):
                 solv.termination_condition = TerminationCondition.unbounded
                 return
 
-            soln   = results.solution.add()
+            soln = results.solution.add()
             if status == 'f':
                 soln.status = SolutionStatus.feasible
                 solv.termination_condition = TerminationCondition.feasible
@@ -496,7 +537,7 @@ class GLPKSHELL(SystemCallSolver):
                     vname = variable_names[int(cid)]
                     if 'ONE_VAR_CONSTANT' == vname:
                         continue
-                    soln.variable[vname] = {"Value" : float(cval)}
+                    soln.variable[vname] = {"Value": float(cval)}
 
                 elif rtype == 'e':
                     break
@@ -505,13 +546,12 @@ class GLPKSHELL(SystemCallSolver):
                     continue
 
                 else:
-                    raise ValueError("Unexpected row type: "+rtype)
+                    raise ValueError("Unexpected row type: " + rtype)
 
 
 @SolverFactory.register('_mock_glpk')
 class MockGLPK(GLPKSHELL, MockMIP):
-    """A Mock GLPK solver used for testing
-    """
+    """A Mock GLPK solver used for testing"""
 
     def __init__(self, **kwds):
         try:
@@ -531,7 +571,7 @@ class MockGLPK(GLPKSHELL, MockMIP):
     def executable(self):
         return MockMIP.executable(self)
 
-    def _execute_command(self,cmd):
+    def _execute_command(self, cmd):
         return MockMIP._execute_command(self, cmd)
 
     def _convert_problem(self, args, pformat, valid_pformats):
