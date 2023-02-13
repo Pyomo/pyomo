@@ -10,8 +10,12 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.plugin_base import Interface
+from pyomo.common.deprecation import deprecated
 
 
+@deprecated(
+    'The pyomo.checker module has been deprecated.', version='TBD', remove_in='6.6'
+)
 class IModelChecker(Interface):
     def check(self, runner, script, info):
         """

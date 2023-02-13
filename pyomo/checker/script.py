@@ -9,7 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import deprecated
 
+
+@deprecated(
+    'The pyomo.checker module has been deprecated.', version='TBD', remove_in='6.6'
+)
 class ModelScript(object):
     def __init__(self, filename=None, text=None):
         if filename is not None:
