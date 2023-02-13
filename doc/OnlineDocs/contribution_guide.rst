@@ -70,10 +70,12 @@ reviewed or merged by the core development team. In addition, any
 active development may be marked 'stale' and closed.
 
 Python Version Support
-----------------------
+++++++++++++++++++++++
 
 By policy, Pyomo supports and tests the currently supported Python versions,
 as can be seen on `Status of Python Versions <https://devguide.python.org/versions/>`_.
+It is expected that tests will pass for all of the supported and tested
+versions of Pyomo, unless otherwise stated.
 
 At the time of the first Pyomo release after the end-of-life of a minor Python
 version, we will remove testing and support for that Python version.
