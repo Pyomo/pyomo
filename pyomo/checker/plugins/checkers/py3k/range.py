@@ -16,7 +16,9 @@ from pyomo.checker.plugins.checker import IterativeTreeChecker
 
 class XRange(IterativeTreeChecker):
 
-    pyomo.common.plugin_base.alias('py3k.xrange', 'Check if the xrange() function is used.')
+    pyomo.common.plugin_base.alias(
+        'py3k.xrange', 'Check if the xrange() function is used.'
+    )
 
     def check(self, runner, script, info):
         if isinstance(info, ast.Name):

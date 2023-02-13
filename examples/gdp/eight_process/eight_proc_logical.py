@@ -25,10 +25,23 @@ http://dx.doi.org/10.1016/0098-1354(95)00219-7
 from __future__ import division
 
 from pyomo.core.expr.logical_expr import land, lor
-from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
+from pyomo.core.plugins.transform.logical_to_linear import (
+    update_boolean_vars_from_binary,
+)
 from pyomo.environ import (
-    ConcreteModel, Constraint, ConstraintList, NonNegativeReals,
-    Objective, Param, RangeSet, Reference, Var, exp, minimize, LogicalConstraint, )
+    ConcreteModel,
+    Constraint,
+    ConstraintList,
+    NonNegativeReals,
+    Objective,
+    Param,
+    RangeSet,
+    Reference,
+    Var,
+    exp,
+    minimize,
+    LogicalConstraint,
+)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 
@@ -44,9 +57,9 @@ def build_eight_process_flowsheet():
     no_unit_zero_flows = {
         1: (2, 3),
         2: (4, 5),
-        3: (9, ),
+        3: (9,),
         4: (12, 14),
-        5: (15, ),
+        5: (15,),
         6: (19, 20),
         7: (21, 22),
         8: (10, 17, 18),
@@ -60,24 +73,53 @@ def build_eight_process_flowsheet():
 
     def fixed_cost_bounds(m, unit):
         return (0, m.CF[unit])
+
     m.yCF = Var(m.units, initialize=0, bounds=fixed_cost_bounds)
 
     # VARIABLE COST COEFF FOR PROCESS UNITS - STREAMS
     # Format: stream #: cost
-    variable_cost = {3: -10, 5: -15, 9: -40, 19: 25, 21: 35, 25: -35,
-                     17: 80, 14: 15, 10: 15, 2: 1, 4: 1, 18: -65, 20: -60,
-                     22: -80}
+    variable_cost = {
+        3: -10,
+        5: -15,
+        9: -40,
+        19: 25,
+        21: 35,
+        25: -35,
+        17: 80,
+        14: 15,
+        10: 15,
+        2: 1,
+        4: 1,
+        18: -65,
+        20: -60,
+        22: -80,
+    }
     CV = m.CV = Param(m.streams, initialize=variable_cost, default=0)
 
     # initial point information for stream flows
-    initX = {2: 2, 3: 1.5, 6: 0.75, 7: 0.5, 8: 0.5, 9: 0.75, 11: 1.5,
-             12: 1.34, 13: 2, 14: 2.5, 17: 2, 18: 0.75, 19: 2, 20: 1.5,
-             23: 1.7, 24: 1.5, 25: 0.5}
+    initX = {
+        2: 2,
+        3: 1.5,
+        6: 0.75,
+        7: 0.5,
+        8: 0.5,
+        9: 0.75,
+        11: 1.5,
+        12: 1.34,
+        13: 2,
+        14: 2.5,
+        17: 2,
+        18: 0.75,
+        19: 2,
+        20: 1.5,
+        23: 1.7,
+        24: 1.5,
+        25: 0.5,
+    }
 
     """Variable declarations"""
     # FLOWRATES OF PROCESS STREAMS
-    m.flow = Var(m.streams, domain=NonNegativeReals, initialize=initX,
-                 bounds=(0, 10))
+    m.flow = Var(m.streams, domain=NonNegativeReals, initialize=initX, bounds=(0, 10))
     # OBJECTIVE FUNCTION CONSTANT TERM
     CONSTANT = m.constant = Param(initialize=122.0)
 
@@ -113,11 +155,9 @@ def build_eight_process_flowsheet():
 
     # Mass balance equations
     m.massbal1 = Constraint(expr=m.flow[13] == m.flow[19] + m.flow[21])
-    m.massbal2 = Constraint(
-        expr=m.flow[17] == m.flow[9] + m.flow[16] + m.flow[25])
+    m.massbal2 = Constraint(expr=m.flow[17] == m.flow[9] + m.flow[16] + m.flow[25])
     m.massbal3 = Constraint(expr=m.flow[11] == m.flow[12] + m.flow[15])
-    m.massbal4 = Constraint(
-        expr=m.flow[3] + m.flow[5] == m.flow[6] + m.flow[11])
+    m.massbal4 = Constraint(expr=m.flow[3] + m.flow[5] == m.flow[6] + m.flow[11])
     m.massbal5 = Constraint(expr=m.flow[6] == m.flow[7] + m.flow[8])
     m.massbal6 = Constraint(expr=m.flow[23] == m.flow[20] + m.flow[22])
     m.massbal7 = Constraint(expr=m.flow[23] == m.flow[14] + m.flow[24])
@@ -133,19 +173,20 @@ def build_eight_process_flowsheet():
     # logical propositions
     m.use1or2 = LogicalConstraint(expr=m.Y[1].xor(m.Y[2]))
     m.use1or2implies345 = LogicalConstraint(
-        expr=lor(m.Y[1], m.Y[2]).implies(lor(m.Y[3], m.Y[4], m.Y[5])))
+        expr=lor(m.Y[1], m.Y[2]).implies(lor(m.Y[3], m.Y[4], m.Y[5]))
+    )
     m.use4implies6or7 = LogicalConstraint(expr=m.Y[4].implies(lor(m.Y[6], m.Y[7])))
     m.use3implies8 = LogicalConstraint(expr=m.Y[3].implies(m.Y[8]))
     m.use6or7implies4 = LogicalConstraint(expr=lor(m.Y[6], m.Y[7]).implies(m.Y[4]))
     m.use6or7 = LogicalConstraint(expr=m.Y[6].xor(m.Y[7]))
 
     """Profit (objective) function definition"""
-    m.profit = Objective(expr=sum(
-        m.yCF[unit]
-        for unit in m.units) +
-        sum(m.flow[stream] * CV[stream]
-            for stream in m.streams) + CONSTANT,
-        sense=minimize)
+    m.profit = Objective(
+        expr=sum(m.yCF[unit] for unit in m.units)
+        + sum(m.flow[stream] * CV[stream] for stream in m.streams)
+        + CONSTANT,
+        sense=minimize,
+    )
 
     """Bound definitions"""
     # x (flow) upper bounds
@@ -161,6 +202,7 @@ def build_eight_process_flowsheet():
 if __name__ == "__main__":
     m = build_eight_process_flowsheet()
     from pyomo.environ import TransformationFactory
+
     TransformationFactory('core.logical_to_linear').apply_to(m)
     SolverFactory('gdpopt.loa').solve(m, tee=True)
     update_boolean_vars_from_binary(m)

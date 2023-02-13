@@ -11,7 +11,7 @@
 #
 # CATEGORY: the category to pass to pytest
 #
-# TEST_SUITES: Paths (module or directory) to be passed to nosetests to
+# TEST_SUITES: Paths (module or directory) to be passed to pytest to
 #     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
 #
 # SLIM: If nonempty, then the virtualenv will only have pip, setuptools,

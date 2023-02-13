@@ -10,4 +10,4 @@ instance = model.create_instance('import1.tab.dat')
 print('Y')
 keys = instance.Y.keys()
 for key in sorted(keys):
-    print(str(key)+" "+str(value(instance.Y[key])))
+    print(str(key) + " " + str(value(instance.Y[key])))

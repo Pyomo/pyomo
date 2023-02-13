@@ -14,8 +14,9 @@ from pyomo.core import *
 import math
 import random
 
-def print_model_stats(options,model):
-    print("-"*40)
+
+def print_model_stats(options, model):
+    print("-" * 40)
     if options is None:
         print("DEFAULT")
     else:
@@ -26,22 +27,23 @@ def print_model_stats(options,model):
     colc = {}
     for i in model.J:
         colc[i] = 0
-    for (i,j) in model.S:
-            rowc[i] += 1        
-            colc[j] += 1        
+    for (i, j) in model.S:
+        rowc[i] += 1
+        colc[j] += 1
     print("Row Counts")
     s = 0.0
     for i in sorted(rowc):
         s += rowc[i]
-    print("Average: %s" % str(s/len(rowc)))
+    print("Average: %s" % str(s / len(rowc)))
     print("Col Counts")
     s = 0.0
     for i in sorted(colc):
         s += colc[i]
-    print("Average: %s" % str(s/len(colc)))
+    print("Average: %s" % str(s / len(colc)))
     print("I %d" % len(model.I))
     print("J %d" % len(model.J))
-    print("-"*40)
+    print("-" * 40)
+
 
 def pyomo_create_model(options=None, model_options=None):
     if model_options is None:
@@ -73,12 +75,13 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in range(1,n+1):
-                tmp = list(range(1,m+1))
-                random.shuffle( tmp )
-                for i in range(0,p):
-                    ans.add( (tmp[i], j) )
+            for j in range(1, n + 1):
+                tmp = list(range(1, m + 1))
+                random.shuffle(tmp)
+                for i in range(0, p):
+                    ans.add((tmp[i], j))
             return ans
+
     elif model_options.type == 'fixed_element_coverage':
         #
         # p   - fixed number of sets that cover each element
@@ -93,12 +96,13 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for i in range(1,m+1):
-                tmp = list(range(1,n+1))
-                random.shuffle( tmp )
-                for j in range(0,p):
-                    ans.add( (i, tmp[j]) )
+            for i in range(1, m + 1):
+                tmp = list(range(1, n + 1))
+                random.shuffle(tmp)
+                for j in range(0, p):
+                    ans.add((i, tmp[j]))
             return ans
+
     elif model_options.type == 'fixed_probability':
         #
         # rho - probability of selecting element for a set
@@ -107,11 +111,12 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in range(1,n+1):
-                for i in range(1,m+1):
-                    if random.uniform(0,1) < rho:
-                        ans.add( (i, j) )
+            for j in range(1, n + 1):
+                for i in range(1, m + 1):
+                    if random.uniform(0, 1) < rho:
+                        ans.add((i, j))
             return ans
+
     elif model_options.type == 'fixed_fill':
         #
         # rho - |S|/(I*J)
@@ -120,11 +125,12 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in range(1,n+1):
-                for i in range(1,m+1):
-                    if random.uniform(0,1) < rho:
-                        ans.add( (i, j) )
+            for j in range(1, n + 1):
+                for i in range(1, m + 1):
+                    if random.uniform(0, 1) < rho:
+                        ans.add((i, j))
             return ans
+
     #
     # CREATE MODEL
     #
@@ -138,10 +144,13 @@ def pyomo_create_model(options=None, model_options=None):
     # some rows or columns of S may not be populated.
     #
     def I_rule(model):
-        return set((i for (i,j) in model.S))
+        return set((i for (i, j) in model.S))
+
     model.I = Set(initialize=I_rule)
+
     def J_rule(model):
-        return set((j for (i,j) in model.S))
+        return set((j for (i, j) in model.S))
+
     model.J = Set(initialize=J_rule)
     #
     # Weights
@@ -156,6 +165,7 @@ def pyomo_create_model(options=None, model_options=None):
     #
     def cost_rule(model):
         return sum_product(model.w, model.x)
+
     model.cost = Objective(rule=cost_rule)
 
     #
@@ -164,23 +174,26 @@ def pyomo_create_model(options=None, model_options=None):
     def cover_rule(model, i):
         expr = 0
         for j in model.x:
-            if (i,j) in model.S:
+            if (i, j) in model.S:
                 expr += model.x[j]
         #
         # WEH - this check is not needed, since I is constructed dynamically
         #
-        #if expr is 0:
-            #return Constraint.Skip
+        # if expr is 0:
+        # return Constraint.Skip
         return expr >= 1
+
     model.cover = Constraint(model.I, rule=cover_rule)
 
     #
     print_model_stats(model_options, model)
     return model
 
+
 def test_model(options=None):
     model = pyomo_create_model(model_options=options)
-    #print_model_stats(options, model)
+    # print_model_stats(options, model)
+
 
 if __name__ == '__main__':
     test_model()
@@ -209,4 +222,3 @@ if __name__ == '__main__':
     options.rho = 0.1
     test_model(options)
     #
-

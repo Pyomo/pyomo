@@ -7,8 +7,8 @@ import pyomo.kernel as pmo
 # collect dual information when the model is solved
 b = pmo.block()
 b.x = pmo.variable()
-b.c = pmo.constraint(expr= b.x >= 1)
-b.o = pmo.objective(expr= b.x)
+b.c = pmo.constraint(expr=b.x >= 1)
+b.o = pmo.objective(expr=b.x)
 b.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
 
 # suffixes behave as dictionaries that map

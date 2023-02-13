@@ -21,6 +21,7 @@ from pyomo.util.blockutil import log_model_constraints
 
 logger = logging.getLogger(__name__)
 
+
 def _check_infeasible(obj, val, tol):
     if val is None:
         # Undefined value due to missing variable value or evaluation error
@@ -42,7 +43,7 @@ def _check_infeasible(obj, val, tol):
     return infeasible
 
 
-def find_infeasible_constraints(m, tol=1E-6):
+def find_infeasible_constraints(m, tol=1e-6):
     """Find the infeasible constraints in the model.
 
     Uses the current model state.
@@ -72,7 +73,8 @@ def find_infeasible_constraints(m, tol=1E-6):
     """
     # Iterate through all active constraints on the model
     for constr in m.component_data_objects(
-            ctype=Constraint, active=True, descend_into=True):
+        ctype=Constraint, active=True, descend_into=True
+    ):
         body_value = value(constr.body, exception=False)
         infeasible = _check_infeasible(constr, body_value, tol)
         if infeasible:
@@ -80,8 +82,7 @@ def find_infeasible_constraints(m, tol=1E-6):
 
 
 def log_infeasible_constraints(
-        m, tol=1E-6, logger=logger,
-        log_expression=False, log_variables=False
+    m, tol=1e-6, logger=logger, log_expression=False, log_variables=False
 ):
     """Logs the infeasible constraints in the model.
 
@@ -154,9 +155,7 @@ def log_infeasible_constraints(
 
         line = f"CONSTR {constr.name}: {lb}{lb_op}{body}{ub_op}{ub}"
         if log_expression:
-            line += (
-                f"\n  - EXPR: {lb_expr}{lb_op}{constr.body}{ub_op}{ub_expr}"
-            )
+            line += f"\n  - EXPR: {lb_expr}{lb_op}{constr.body}{ub_op}{ub_expr}"
         if log_variables:
             line += ''.join(
                 f"\n  - VAR {v.name}: {v.value}"
@@ -166,7 +165,7 @@ def log_infeasible_constraints(
         logger.info(line)
 
 
-def find_infeasible_bounds(m, tol=1E-6):
+def find_infeasible_bounds(m, tol=1e-6):
     """Find variables whose values are outside their bounds
 
     Uses the current model state. Variables with no values are returned
@@ -191,8 +190,7 @@ def find_infeasible_bounds(m, tol=1E-6):
         value or a bound was undefined)
 
     """
-    for var in m.component_data_objects(
-            ctype=Var, descend_into=True):
+    for var in m.component_data_objects(ctype=Var, descend_into=True):
         val = var.value
         infeasible = _check_infeasible(var, val, tol)
         if infeasible:
@@ -206,7 +204,8 @@ _evaluation_errors = {
     7: 'error evaluating lower or upper bounds',
 }
 
-def log_infeasible_bounds(m, tol=1E-6, logger=logger):
+
+def log_infeasible_bounds(m, tol=1e-6, logger=logger):
     """Logs the infeasible variable bounds in the model.
 
     Parameters
@@ -257,7 +256,7 @@ def _check_close(obj, val, tol):
     return close
 
 
-def find_close_to_bounds(m, tol=1E-6):
+def find_close_to_bounds(m, tol=1e-6):
     """Find variables and constraints whose values are close to their bounds.
 
     Uses the current model state. Variables with no values and
@@ -315,7 +314,8 @@ def find_close_to_bounds(m, tol=1E-6):
         yield var, val, close
 
     for con in m.component_data_objects(
-            ctype=Constraint, active=True, descend_into=True):
+        ctype=Constraint, active=True, descend_into=True
+    ):
         if con.equality:
             continue
         val = value(con.body, exception=False)
@@ -330,7 +330,7 @@ def find_close_to_bounds(m, tol=1E-6):
         yield con, val, close
 
 
-def log_close_to_bounds(m, tol=1E-6, logger=logger):
+def log_close_to_bounds(m, tol=1e-6, logger=logger):
     """Print the variables and constraints that are near their bounds.
 
     See :py:func:`find_close_to_bounds()` for a description of the
@@ -362,8 +362,7 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
             elif obj.ctype is Constraint:
                 logger.info(f"Skipping CONSTR {obj.name}: evaluation error.")
             else:
-                logger.error(
-                    f"Object {obj.name} was neither a Var nor Constraint")
+                logger.error(f"Object {obj.name} was neither a Var nor Constraint")
             continue
         if close & 1:
             logger.info(f'{obj.name} near LB of {obj.lb}')
@@ -372,8 +371,10 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
     return
 
 
-@deprecated("log_active_constraints is deprecated.  "
-            "Please use pyomo.util.blockutil.log_model_constraints()",
-            version="5.7.3")
+@deprecated(
+    "log_active_constraints is deprecated.  "
+    "Please use pyomo.util.blockutil.log_model_constraints()",
+    version="5.7.3",
+)
 def log_active_constraints(m, logger=logger):
     log_model_constraints(m, logger)

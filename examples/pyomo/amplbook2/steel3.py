@@ -32,14 +32,23 @@ model.commit = Param(model.PROD, within=NonNegativeReals)
 
 model.market = Param(model.PROD, within=NonNegativeReals)
 
+
 def Make_bounds(model, i):
-    return (model.commit[i],model.market[i])
+    return (model.commit[i], model.market[i])
+
+
 model.Make = Var(model.PROD, bounds=Make_bounds)
+
 
 def Objective_rule(model):
     return sum_product(model.profit, model.Make)
+
+
 model.totalprofit = Objective(rule=Objective_rule, sense=maximize)
+
 
 def Time_rule(model):
     return sum_product(model.Make, denom=(model.rate)) < model.avail
+
+
 model.Time = Constraint(rule=Time_rule)
