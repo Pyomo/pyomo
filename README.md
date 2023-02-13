@@ -54,6 +54,11 @@ Pyomo is currently tested with the following Python implementations:
 * CPython: 3.7, 3.8, 3.9, 3.10, 3.11
 * PyPy: 3.7, 3.8, 3.9
 
+_Testing and support policy_:
+
+At the time of the first Pyomo release after the end-of-life of a minor Python
+version, we will remove testing for that Python version.
+
 ### Installation
 
 #### PyPI [![PyPI version](https://img.shields.io/pypi/v/pyomo.svg?maxAge=3600)](https://pypi.org/project/Pyomo/) [![PyPI downloads](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=21600)](https://pypistats.org/packages/pyomo)
