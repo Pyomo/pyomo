@@ -68,7 +68,9 @@ def _print_coefficients(comp_map):
     return s
 
 
-def _check_coefficents(comp, expr, too_large, too_small, largs_coef_map, small_coef_map):
+def _check_coefficents(
+    comp, expr, too_large, too_small, largs_coef_map, small_coef_map
+):
     ders = reverse_sd(expr)
     for _v, _der in ders.items():
         if isinstance(_v, _GeneralVarData):
@@ -87,7 +89,9 @@ def _check_coefficents(comp, expr, too_large, too_small, largs_coef_map, small_c
                     small_coef_map[comp].append((_v, der_lb, der_ub))
 
 
-def report_scaling(m: _BlockData, too_large: float = 5e4, too_small: float = 1e-6) -> bool:
+def report_scaling(
+    m: _BlockData, too_large: float = 5e4, too_small: float = 1e-6
+) -> bool:
     """
     This function logs potentially poorly scaled parts of the model.
     It requires that all variables be bounded.
@@ -125,7 +129,14 @@ def report_scaling(m: _BlockData, too_large: float = 5e4, too_small: float = 1e-
     objs_with_small_coefficients = pyo.ComponentMap()
 
     for c in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
-        _check_coefficents(c, c.body, too_large, too_small, cons_with_large_coefficients, cons_with_small_coefficients)
+        _check_coefficents(
+            c,
+            c.body,
+            too_large,
+            too_small,
+            cons_with_large_coefficients,
+            cons_with_small_coefficients,
+        )
 
     for c in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
         c_lb, c_ub = compute_bounds_on_expr(c.body)
@@ -134,7 +145,14 @@ def report_scaling(m: _BlockData, too_large: float = 5e4, too_small: float = 1e-
             cons_with_large_bounds[c] = (c_lb, c_ub)
 
     for c in m.component_data_objects(pyo.Objective, active=True, descend_into=True):
-        _check_coefficents(c, c.expr, too_large, too_small, objs_with_large_coefficients, objs_with_small_coefficients)
+        _check_coefficents(
+            c,
+            c.expr,
+            too_large,
+            too_small,
+            objs_with_large_coefficients,
+            objs_with_small_coefficients,
+        )
 
     s = '\n\n'
 
@@ -168,13 +186,15 @@ def report_scaling(m: _BlockData, too_large: float = 5e4, too_small: float = 1e-
         for c, (c_lb, c_ub) in cons_with_large_bounds.items():
             s += f'{c_lb:>12.2e}{c_ub:>12.2e}    {str(c)}\n'
 
-    if (len(vars_without_bounds) > 0
-            or len(vars_with_large_bounds) > 0
-            or len(cons_with_large_coefficients) > 0
-            or len(cons_with_small_coefficients) > 0
-            or len(objs_with_small_coefficients) > 0
-            or len(objs_with_large_coefficients) > 0
-            or len(cons_with_large_bounds) > 0):
+    if (
+        len(vars_without_bounds) > 0
+        or len(vars_with_large_bounds) > 0
+        or len(cons_with_large_coefficients) > 0
+        or len(cons_with_small_coefficients) > 0
+        or len(objs_with_small_coefficients) > 0
+        or len(objs_with_large_coefficients) > 0
+        or len(cons_with_large_bounds) > 0
+    ):
         logger.info(s)
         return False
     return True

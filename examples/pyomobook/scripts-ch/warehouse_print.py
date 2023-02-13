@@ -32,7 +32,7 @@ for i in model.WH:
 # @:printloopset
 
 # @printslicing:
-for v in model.x['Ashland',:]:
+for v in model.x['Ashland', :]:
     print('{0} = {1}'.format(v, pyo.value(v)))
 # @:printslicing
 

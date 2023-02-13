@@ -17,5 +17,4 @@ model.x = Var()
 model.b = Block()
 model.b.x = Var()
 
-model.o = Objective(expr=(model.x-1.0)**2 + (model.b.x - 2.0)**2)
-
+model.o = Objective(expr=(model.x - 1.0) ** 2 + (model.b.x - 2.0) ** 2)
