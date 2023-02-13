@@ -18,6 +18,7 @@ from pyomo.checker import ModelScript
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 
+
 class ScriptTest(unittest.TestCase):
     """
     Test the ModelScript class. Checks both raw text and file-based
@@ -27,14 +28,14 @@ class ScriptTest(unittest.TestCase):
     testScripts = [
         "print('Hello, world!')\n",
         "import sys\nsys.stdout.write('Hello, world!\\n')\n"
-        "for i in range(10):\n\tprint(i)\n"
+        "for i in range(10):\n\tprint(i)\n",
     ]
 
     def testScriptText(self):
         "Check ModelScript handling of raw text scripts"
 
         for text in self.testScripts:
-            script = ModelScript(text = text)
+            script = ModelScript(text=text)
             self.assertEqual(text, script.read())
             self.assertEqual("<unknown>", script.filename())
 
@@ -47,7 +48,7 @@ class ScriptTest(unittest.TestCase):
             with os.fdopen(file, 'w') as f:
                 f.write(text)
 
-            script = ModelScript(filename = filename)
+            script = ModelScript(filename=filename)
 
             self.assertEqual(text, script.read())
             self.assertEqual(filename, script.filename())
@@ -57,4 +58,3 @@ class ScriptTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
