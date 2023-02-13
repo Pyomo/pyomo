@@ -14,6 +14,7 @@ import ast
 from pyomo.common.plugin_base import ExtensionPoint
 from pyomo.checker.checker import IModelChecker
 from pyomo.checker.script import ModelScript
+from pyomo.common.deprecation import deprecated
 
 
 class CheckingNodeVisitor(ast.NodeVisitor):
@@ -59,6 +60,9 @@ class CheckingNodeVisitor(ast.NodeVisitor):
         super(CheckingNodeVisitor, self).generic_visit(node)
 
 
+@deprecated(
+    'The pyomo.checker module has been deprecated.', version='TBD', remove_in='6.6'
+)
 class ModelCheckRunner(object):
 
     _checkers = ExtensionPoint(IModelChecker)
