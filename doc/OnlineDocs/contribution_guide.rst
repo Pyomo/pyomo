@@ -83,7 +83,7 @@ version, we will remove testing and support for that Python version.
 This will also result in a bump in the minor Pyomo version.
 
 For example, assume Python 3.A is declared end-of-life while Pyomo is on
-version 6.3.Y. After the release of Pyomo 6.3.Z, Python 3.A will be removed,
+version 6.3.Y. After the release of Pyomo 6.3.(Y+1), Python 3.A will be removed,
 and the next Pyomo release will be 6.4.0.
 
 Working on Forks and Branches
