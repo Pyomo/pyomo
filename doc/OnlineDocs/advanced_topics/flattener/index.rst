@@ -23,7 +23,7 @@ These methods are very useful, but it is still challenging to use them
 to access specific components.
 Specifically, we often want to access "all components indexed by some set,"
 or "all component data at a particular index of this set."
-In addition, we often want to generate even the components in a block that
+In addition, we often want to generate the components in a block that
 is indexed by our particular set, as these components may be thought of as
 "implicitly indexed" by this set.
 The ``pyomo.dae.flatten`` module aims to address this use case by providing
@@ -36,7 +36,7 @@ preserving all user-specified indexing sets."**
 Data structures
 ---------------
 The components returned are either ``ComponentData`` objects, for components
-not indexed by any of the provided sets, and references-to-slices, for
+not indexed by any of the provided sets, or references-to-slices, for
 components indexed, explicitly or implicitly, by the provided sets.
 Slices are necessary as they can encode "implicit indexing" -- where a
 component is contained in an indexed block. It is natural to return references

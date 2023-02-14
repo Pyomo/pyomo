@@ -278,6 +278,10 @@ def generate_sliced_components(
         to contain every set in the sliced sets, it must not contain any
         sets that will not be sliced.
 
+    active: Bool or None
+        If not None, this is a boolean flag used to filter component objects
+        by their active status.
+
     Yields
     ------
     
@@ -372,7 +376,7 @@ def generate_sliced_components(
         for idx, new_slice in slice_component_along_sets(
             sub, sets, context_slice=context_slice, normalize=False
         ):
-            # TODO: Can this branch happen outsside of the loop?
+            # TODO: Can this branch happen outside of the loop?
             # If it's not indexed, we don't need to slice...
             if sub.is_indexed():
                 # fill any remaining placeholders with the "index" of our slice
