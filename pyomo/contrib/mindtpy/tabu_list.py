@@ -1,5 +1,4 @@
 from cplex.callbacks import IncumbentCallback
-from pyomo.core import Var
 
 
 class IncumbentCallback_cplex(IncumbentCallback):
