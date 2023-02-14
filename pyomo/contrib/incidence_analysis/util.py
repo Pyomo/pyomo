@@ -142,13 +142,15 @@ def solve_strongly_connected_components(
                 var_set.add(var)
 
     res_list = []
+    log_blocks = _log.isEnabledFor(logging.DEBUG)
     for scc, inputs in generate_strongly_connected_components(
             constraints,
             variables,
             ):
         with TemporarySubsystemManager(to_fix=inputs):
             if len(scc.vars) == 1:
-                _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
+                if log_blocks:
+                    _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
                 results = calculate_variable_from_constraint(
                     scc.vars[0], scc.cons[0], **calc_var_kwds
                 )
@@ -166,7 +168,8 @@ def solve_strongly_connected_components(
                         "a DAG).\nGot an SCC with components: \n%s\n%s"
                         % (vars, cons)
                         )
-                _log.debug(f"Solving {len(scc.cons)}x{len(scc.cons)} block.")
+                if log_blocks:
+                    _log.debug(f"Solving {len(scc.cons)}x{len(scc.cons)} block.")
                 results = solver.solve(scc, **solve_kwds)
                 res_list.append(results)
     return res_list
