@@ -1649,7 +1649,7 @@ class AMPLRepn(object):
         elif nterms == 1:
             return prefix + nl_sum, args, named_exprs
         else: # nterms == 0
-            return prefix + (template.const % 0), [], named_exprs
+            return prefix + (template.const % 0), args, named_exprs
 
     def compile_nonlinear_fragment(self, visitor):
         if not self.nonlinear:
@@ -1924,8 +1924,13 @@ def handle_division_node(visitor, node, arg1, arg2):
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_pow_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return _apply_node_operation(node, (arg1[1], arg2[1]))
+    if arg2[0] is _CONSTANT:
+        if arg1[0] is _CONSTANT:
+            return _apply_node_operation(node, (arg1[1], arg2[1]))
+        elif not arg2[1]:
+            return _CONSTANT, 1
+        elif arg2[1] == 1:
+            return arg1
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.pow)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)

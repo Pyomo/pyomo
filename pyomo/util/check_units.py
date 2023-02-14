@@ -15,10 +15,23 @@ This module has some helpful methods to support checking units on Pyomo
 module objects.
 """
 from pyomo.core.base.units_container import units, UnitsError
-from pyomo.core.base import (Objective, Constraint, Var, Param,
-                             Suffix, Set, SetOf, RangeSet, Block,
-                             ExternalFunction, Expression,
-                             value, BooleanVar, BuildAction, BuildCheck)
+from pyomo.core.base import (
+    Objective,
+    Constraint,
+    Var,
+    Param,
+    Suffix,
+    Set,
+    SetOf,
+    RangeSet,
+    Block,
+    ExternalFunction,
+    Expression,
+    value,
+    BooleanVar,
+    BuildAction,
+    BuildCheck,
+)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.network import Port, Arc
 from pyomo.mpec import Complementarity
@@ -26,6 +39,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.components import iter_component
+
 
 def check_units_equivalent(*args):
     """
@@ -51,6 +65,7 @@ def check_units_equivalent(*args):
     except UnitsError:
         return False
 
+
 def assert_units_equivalent(*args):
     """
     Raise an exception if the units are inconsistent within an
@@ -73,7 +88,10 @@ def assert_units_equivalent(*args):
         if not units._equivalent_pint_units(pint_unit_compare, pint_unit):
             raise UnitsError(
                 "Units between {} and {} are not consistent.".format(
-                    str(pint_unit_compare), str(pint_unit)))
+                    str(pint_unit_compare), str(pint_unit)
+                )
+            )
+
 
 def _assert_units_consistent_constraint_data(condata):
     """
@@ -99,6 +117,7 @@ def _assert_units_consistent_constraint_data(condata):
     else:
         assert_units_equivalent(*args)
 
+
 def _assert_units_consistent_arc_data(arcdata):
     """
     Raise an exception if the any units do not match for the connected ports
@@ -123,12 +142,14 @@ def _assert_units_consistent_arc_data(arcdata):
         else:
             assert_units_equivalent(svar, dvar)
 
+
 def _assert_units_consistent_property_expr(obj):
     """
     Check the .expr property of the object and raise
     an exception if the units are not consistent
     """
     _assert_units_consistent_expression(obj.expr)
+
 
 def _assert_units_consistent_expression(expr):
     """
@@ -139,11 +160,12 @@ def _assert_units_consistent_expression(expr):
     pint_unit = units._get_pint_units(expr)
     # pyomo_unit = units.get_units(expr)
 
+
 # Complementarities that are not in standard form do not
 # current work with the checking code. The Units container
 # should be modified to allow sum and relationals with zero
 # terms (e.g., unitless). Then this code can be enabled.
-#def _assert_units_complementarity(cdata):
+# def _assert_units_complementarity(cdata):
 #    """
 #    Raise an exception if any units in either of the complementarity
 #    expressions are inconsistent, and also check the standard block
@@ -155,6 +177,7 @@ def _assert_units_consistent_expression(expr):
 #        pyomo_unit, pint_unit = units._get_units_tuple(cdata._args[1])
 #    _assert_units_consistent_block(cdata)
 
+
 def _assert_units_consistent_block(obj):
     """
     This method gets all the components from the block
@@ -164,9 +187,10 @@ def _assert_units_consistent_block(obj):
     for component in obj.component_objects(descend_into=False, active=True):
         assert_units_consistent(component)
 
+
 _component_data_handlers = {
     Objective: _assert_units_consistent_property_expr,
-    Constraint:  _assert_units_consistent_constraint_data,
+    Constraint: _assert_units_consistent_constraint_data,
     Var: _assert_units_consistent_expression,
     DerivativeVar: _assert_units_consistent_expression,
     Port: None,
@@ -192,7 +216,8 @@ _component_data_handlers = {
     # complementarities that are not in normal form are not working yet
     # see comment in test_check_units
     # TODO: Complementarity: _assert_units_complementarity
-    }
+}
+
 
 def assert_units_consistent(obj):
     """
@@ -224,7 +249,9 @@ def assert_units_consistent(obj):
 
     # if object is not in our component handler, raise an exception
     if obj.ctype not in _component_data_handlers:
-        raise TypeError("Units checking not supported for object of type {}.".format(obj.ctype))
+        raise TypeError(
+            "Units checking not supported for object of type {}.".format(obj.ctype)
+        )
 
     # get the function form the list of handlers
     handler = _component_data_handlers[obj.ctype]
@@ -243,6 +270,5 @@ def assert_units_consistent(obj):
         try:
             handler(obj)
         except UnitsError:
-                print('Error in units when checking {}'.format(obj))
-                raise
-            
+            print('Error in units when checking {}'.format(obj))
+            raise

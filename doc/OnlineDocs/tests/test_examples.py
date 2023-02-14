@@ -8,16 +8,17 @@ import pyomo.environ
 
 try:
     import yaml
-    yaml_available=True
+
+    yaml_available = True
 except:
-    yaml_available=False
+    yaml_available = False
 
 # Find all *.txt files, and use them to define baseline tests
 currdir = os.path.dirname(os.path.abspath(__file__))
 datadir = currdir
-testdirs = [currdir, ]
+testdirs = [currdir]
 
-solver_dependencies =   {
+solver_dependencies = {
     'Test_nonlinear_ch': {
         'test_rosen_pyomo_rosen': 'ipopt',
         'test_react_design_run_pyomo_reactor_table': 'ipopt',
@@ -28,18 +29,14 @@ solver_dependencies =   {
         'test_disease_est_run_disease_callback': 'ipopt',
         'test_deer_run_deer': 'ipopt',
     },
-    'Test_mpec_ch': {
-        'test_mpec_ch_path1': 'path',
-    },
-    'Test_dae_ch': {
-        'test_run_path_constraint_tester': 'ipopt',
-    },
+    'Test_mpec_ch': {'test_mpec_ch_path1': 'path'},
+    'Test_dae_ch': {'test_run_path_constraint_tester': 'ipopt'},
 }
-package_dependencies =  {
+package_dependencies = {
     'Test_data': {
-        'test_data_ABCD9': ['pyodbc',],
-        'test_data_ABCD8': ['pyodbc',],
-        'test_data_ABCD7': ['win32com',],
+        'test_data_ABCD9': ['pyodbc'],
+        'test_data_ABCD8': ['pyodbc'],
+        'test_data_ABCD7': ['win32com'],
     },
     'Test_dataportal': {
         'test_dataportal_dataportal_tab': ['xlrd'],
@@ -52,9 +49,12 @@ package_available = {}
 
 only_book_tests = set(['Test_nonlinear_ch', 'Test_scripts_ch'])
 
+
 def _check_available(name):
     from pyomo.opt.base.solvers import check_available_solvers
+
     return bool(check_available_solvers(name))
+
 
 def check_skip(tfname_, name):
     #
@@ -85,12 +85,15 @@ def check_skip(tfname_, name):
     # Return a boolean if the test should be skipped
     #
     if tfname_ in solver_dependencies:
-        if name in solver_dependencies[tfname_] and \
-           not solver_available[solver_dependencies[tfname_][name]]:
+        if (
+            name in solver_dependencies[tfname_]
+            and not solver_available[solver_dependencies[tfname_][name]]
+        ):
             # Skip the test because a solver is not available
-            # print('Skipping %s because of missing solver' %(name)) 
+            # print('Skipping %s because of missing solver' %(name))
             return 'Solver "%s" is not available' % (
-                solver_dependencies[tfname_][name], )
+                solver_dependencies[tfname_][name],
+            )
     if tfname_ in package_dependencies:
         if name in package_dependencies[tfname_]:
             packages_ = package_dependencies[tfname_][name]
@@ -104,7 +107,8 @@ def check_skip(tfname_, name):
                 return "Package%s %s %s not available" % (
                     's' if len(_missing) > 1 else '',
                     ", ".join(_missing),
-                    'are' if len(_missing) > 1 else 'is',)
+                    'are' if len(_missing) > 1 else 'is',
+                )
     return False
 
 
@@ -112,135 +116,156 @@ def filter(line):
     # Ignore certain text when comparing output with baseline
 
     # Ipopt 3.12.4 puts BACKSPACE (chr(8) / ^H) into the output.
-    line = line.strip(" \n\t"+chr(8))
+    line = line.strip(" \n\t" + chr(8))
 
     if not line:
         return True
-    for field in ( '[',
-                   'password:',
-                   'http:',
-                   'Job ',
-                   'Importing module',
-                   'Function',
-                   'File',):
+    for field in (
+        '[',
+        'password:',
+        'http:',
+        'Job ',
+        'Importing module',
+        'Function',
+        'File',
+    ):
         if line.startswith(field):
             return True
-    for field in ( 'Total CPU',
-                   'Ipopt',
-                   'Status: optimal',
-                   'Status: feasible',
-                   'time:',
-                   'Time:',
-                   'with format cpxlp',
-                   'usermodel = <module',
-                   'execution time=',
-                   'Solver results file:' ):
+    for field in (
+        'Total CPU',
+        'Ipopt',
+        'Status: optimal',
+        'Status: feasible',
+        'time:',
+        'Time:',
+        'with format cpxlp',
+        'usermodel = <module',
+        'execution time=',
+        'Solver results file:',
+    ):
         if field in line:
             return True
     return False
 
+
 for tdir in testdirs:
 
-  for testdir in glob.glob(os.path.join(tdir,'*')):
-    if not os.path.isdir(testdir):
-        continue
+    for testdir in glob.glob(os.path.join(tdir, '*')):
+        if not os.path.isdir(testdir):
+            continue
 
-    # print("Testing ",testdir)
+        # print("Testing ",testdir)
 
-    #
-    # JDS: This is crazy fragile.  If testdirs is ever anything BUT
-    # "pyomobook" you will be creating invalid class names
-    #
-    #testdir_ = testdir.replace('-','_')
-    #testClassName = 'Test_'+testdir_.split("pyomobook"+os.sep)[1]
-    testClassName = 'Test_'+os.path.basename(testdir).replace('-', '_')
-    assert '.' not in testClassName
-    Test = globals()[testClassName] = type(
-        testClassName, (unittest.TestCase,), {})
-    # Adding the marker to the class instance
-    if testClassName in only_book_tests:
-        Test = unittest.pytest.mark.book(Test)
-    else:
-        Test = unittest.pytest.mark.book(Test)
-        Test = unittest.pytest.mark.default(Test)
-    
-    # Find all .py files in the test directory
-    for file in list(glob.glob(os.path.join(testdir,'*.py'))) \
-        + list(glob.glob(os.path.join(testdir,'*','*.py'))):
-    
-        test_file = os.path.abspath(file)
-        bname = os.path.basename(test_file)
-        dir_ = os.path.dirname(test_file)
-        name=os.path.splitext(bname)[0]
-        tname = os.path.basename(dir_)+'_'+name
-    
-        suffix = None
-        # Look for txt and yml file names matching py file names. Add
-        # a test for any found
-        for suffix_ in ['.txt', '.yml']:
-            if os.path.exists(os.path.join(dir_,name+suffix_)):
-                suffix = suffix_
-                break
-            elif os.path.exists(os.path.join(dir_,name+'.py2'+suffix_)) \
-                 and sys.version_info[0] == 2:
-                suffix = '.py2'+suffix_
-                break
-            elif os.path.exists(os.path.join(dir_, name+'.py3'+suffix_)) \
-                 and sys.version_info[0] == 3:
-                suffix = '.py3'+suffix_
-                break
-        if not suffix is None:
-            cwd = os.getcwd()
-            tname = tname.replace('-','_')
-            tname = tname.replace('.','_')
-            # print(tname)
-            forceskip = check_skip(testClassName, 'test_'+tname)
-            Test.add_baseline_test(
-                cmd=(sys.executable, test_file),
-                cwd = dir_,
-                baseline=os.path.join(dir_,name+suffix),
-                name=tname,
-                filter=filter,
-                tolerance=1e-3,
-                forceskip=forceskip)
-            os.chdir(cwd)
+        #
+        # JDS: This is crazy fragile.  If testdirs is ever anything BUT
+        # "pyomobook" you will be creating invalid class names
+        #
+        # testdir_ = testdir.replace('-','_')
+        # testClassName = 'Test_'+testdir_.split("pyomobook"+os.sep)[1]
+        testClassName = 'Test_' + os.path.basename(testdir).replace('-', '_')
+        assert '.' not in testClassName
+        Test = globals()[testClassName] = type(testClassName, (unittest.TestCase,), {})
+        # Adding the marker to the class instance
+        if testClassName in only_book_tests:
+            Test = unittest.pytest.mark.book(Test)
+        else:
+            Test = unittest.pytest.mark.book(Test)
+            Test = unittest.pytest.mark.default(Test)
 
-    # Find all .sh files in the test directory
-    for file in list(glob.glob(os.path.join(testdir,'*.sh'))) \
-            + list(glob.glob(os.path.join(testdir,'*','*.sh'))):
-        bname = os.path.basename(file)
-        dir_ = os.path.dirname(os.path.abspath(file))+os.sep
-        name='.'.join(bname.split('.')[:-1])
-        tname = os.path.basename(os.path.dirname(dir_))+'_'+name
-        suffix = None
-        # Look for txt and yml file names matching sh file names. Add
-        # a test for any found
-        for suffix_ in ['.txt', '.yml']:
-            if os.path.exists(dir_+name+suffix_):
-                suffix = suffix_
-                break
-            elif os.path.exists(dir_+name+'.py2'+suffix_) and sys.version_info[0] == 2:
-                suffix = '.py2'+suffix_
-                break
-            elif os.path.exists(dir_+name+'.py3'+suffix_) and sys.version_info[0] == 3:
-                suffix = '.py3'+suffix_
-                break
-        if not suffix is None:
-            cwd = os.getcwd()
-            os.chdir(dir_)
-            tname = tname.replace('-','_')
-            tname = tname.replace('.','_')
-            # For now, skip all shell tests on Windows.
-            if os.name == 'nt':
-                forceskip = "Shell tests are not runnable on Windows"
-            else:
-                forceskip = check_skip(testClassName, 'test_'+tname)
-            Test.add_baseline_test(cmd='cd %s; %s' % (dir_,
-                                                      os.path.abspath(bname)), baseline=dir_+name+suffix,
-                                   name=tname, filter=filter, tolerance=1e-3,
-                                   forceskip=forceskip)
-            os.chdir(cwd)
-    Test = None
+        # Find all .py files in the test directory
+        for file in list(glob.glob(os.path.join(testdir, '*.py'))) + list(
+            glob.glob(os.path.join(testdir, '*', '*.py'))
+        ):
+
+            test_file = os.path.abspath(file)
+            bname = os.path.basename(test_file)
+            dir_ = os.path.dirname(test_file)
+            name = os.path.splitext(bname)[0]
+            tname = os.path.basename(dir_) + '_' + name
+
+            suffix = None
+            # Look for txt and yml file names matching py file names. Add
+            # a test for any found
+            for suffix_ in ['.txt', '.yml']:
+                if os.path.exists(os.path.join(dir_, name + suffix_)):
+                    suffix = suffix_
+                    break
+                elif (
+                    os.path.exists(os.path.join(dir_, name + '.py2' + suffix_))
+                    and sys.version_info[0] == 2
+                ):
+                    suffix = '.py2' + suffix_
+                    break
+                elif (
+                    os.path.exists(os.path.join(dir_, name + '.py3' + suffix_))
+                    and sys.version_info[0] == 3
+                ):
+                    suffix = '.py3' + suffix_
+                    break
+            if not suffix is None:
+                cwd = os.getcwd()
+                tname = tname.replace('-', '_')
+                tname = tname.replace('.', '_')
+                # print(tname)
+                forceskip = check_skip(testClassName, 'test_' + tname)
+                Test.add_baseline_test(
+                    cmd=(sys.executable, test_file),
+                    cwd=dir_,
+                    baseline=os.path.join(dir_, name + suffix),
+                    name=tname,
+                    filter=filter,
+                    tolerance=1e-3,
+                    forceskip=forceskip,
+                )
+                os.chdir(cwd)
+
+        # Find all .sh files in the test directory
+        for file in list(glob.glob(os.path.join(testdir, '*.sh'))) + list(
+            glob.glob(os.path.join(testdir, '*', '*.sh'))
+        ):
+            bname = os.path.basename(file)
+            dir_ = os.path.dirname(os.path.abspath(file)) + os.sep
+            name = '.'.join(bname.split('.')[:-1])
+            tname = os.path.basename(os.path.dirname(dir_)) + '_' + name
+            suffix = None
+            # Look for txt and yml file names matching sh file names. Add
+            # a test for any found
+            for suffix_ in ['.txt', '.yml']:
+                if os.path.exists(dir_ + name + suffix_):
+                    suffix = suffix_
+                    break
+                elif (
+                    os.path.exists(dir_ + name + '.py2' + suffix_)
+                    and sys.version_info[0] == 2
+                ):
+                    suffix = '.py2' + suffix_
+                    break
+                elif (
+                    os.path.exists(dir_ + name + '.py3' + suffix_)
+                    and sys.version_info[0] == 3
+                ):
+                    suffix = '.py3' + suffix_
+                    break
+            if not suffix is None:
+                cwd = os.getcwd()
+                os.chdir(dir_)
+                tname = tname.replace('-', '_')
+                tname = tname.replace('.', '_')
+                # For now, skip all shell tests on Windows.
+                if os.name == 'nt':
+                    forceskip = "Shell tests are not runnable on Windows"
+                else:
+                    forceskip = check_skip(testClassName, 'test_' + tname)
+                Test.add_baseline_test(
+                    cmd='cd %s; %s' % (dir_, os.path.abspath(bname)),
+                    baseline=dir_ + name + suffix,
+                    name=tname,
+                    filter=filter,
+                    tolerance=1e-3,
+                    forceskip=forceskip,
+                )
+                os.chdir(cwd)
+        Test = None
 
 # Execute the tests
 if __name__ == '__main__':

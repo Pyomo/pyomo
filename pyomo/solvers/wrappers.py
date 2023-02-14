@@ -9,9 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 class MIPSolverWrapper(object):
-
-    def add(self, constraint):      #pragma:nocover
+    def add(self, constraint):  # pragma:nocover
         pass
-
-

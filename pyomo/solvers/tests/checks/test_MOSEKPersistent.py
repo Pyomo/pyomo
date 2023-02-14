@@ -1,7 +1,9 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.opt import (
-    TerminationCondition, SolutionStatus, SolverStatus,
+    TerminationCondition,
+    SolutionStatus,
+    SolverStatus,
     check_available_solvers,
 )
 import pyomo.environ as pyo
@@ -18,7 +20,6 @@ if mosek_available:
 
 @unittest.skipIf(not mosek_available, "MOSEK's python bindings are missing.")
 class MOSEKPersistentTests(unittest.TestCase):
-
     def setUp(self):
         self.stderr = sys.stderr
         sys.stderr = None
@@ -59,7 +60,7 @@ class MOSEKPersistentTests(unittest.TestCase):
         m.x = pyo.Var()
         m.y = pyo.Var()
         m.z = pyo.Var()
-        m.c1 = pyo.Constraint(expr=2*m.x >= m.y**2)
+        m.c1 = pyo.Constraint(expr=2 * m.x >= m.y**2)
         m.c2 = pyo.Constraint(expr=m.x**2 >= m.y**2 + m.z**2)
         m.c3 = pyo.Constraint(expr=m.z >= 0)
         m.c4 = pyo.Constraint(expr=m.x + m.y >= 0)
@@ -78,7 +79,9 @@ class MOSEKPersistentTests(unittest.TestCase):
         self.assertEqual(opt._solver_model.getnumcon(), 2)
         self.assertRaises(ValueError, opt.remove_constraint, m.c2)
 
-    @unittest.skipIf(msk_version[0] > 9, "MOSEK 10 does not (yet) have a removeacc method.")
+    @unittest.skipIf(
+        msk_version[0] > 9, "MOSEK 10 does not (yet) have a removeacc method."
+    )
     def test_constraint_removal_2(self):
         m = pmo.block()
         m.x = pmo.variable()
@@ -117,10 +120,10 @@ class MOSEKPersistentTests(unittest.TestCase):
         m.x = pyo.Var(bounds=(0, None))
         m.y = pyo.Var(bounds=(0, 10))
         m.z = pyo.Var(bounds=(0, None))
-        m.c1 = pyo.Constraint(expr=3*m.x + m.y + 2*m.z == 30)
-        m.c2 = pyo.Constraint(expr=2*m.x + m.y + 3*m.z >= 15)
-        m.c3 = pyo.Constraint(expr=2*m.y <= 25)
-        m.o = pyo.Objective(expr=3*m.x + m.y + 5*m.z, sense=pyo.maximize)
+        m.c1 = pyo.Constraint(expr=3 * m.x + m.y + 2 * m.z == 30)
+        m.c2 = pyo.Constraint(expr=2 * m.x + m.y + 3 * m.z >= 15)
+        m.c3 = pyo.Constraint(expr=2 * m.y <= 25)
+        m.o = pyo.Objective(expr=3 * m.x + m.y + 5 * m.z, sense=pyo.maximize)
         opt = pyo.SolverFactory('mosek_persistent')
         opt.set_instance(m)
 
@@ -144,9 +147,9 @@ class MOSEKPersistentTests(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var()
-        m.c1 = pyo.Constraint(expr=50*m.x + 31*m.y <= 250)
-        m.c2 = pyo.Constraint(expr=3*m.x - 2*m.y >= -4)
-        m.o = pyo.Objective(expr=m.x + 0.64*m.y, sense=pyo.maximize)
+        m.c1 = pyo.Constraint(expr=50 * m.x + 31 * m.y <= 250)
+        m.c2 = pyo.Constraint(expr=3 * m.x - 2 * m.y >= -4)
+        m.o = pyo.Objective(expr=m.x + 0.64 * m.y, sense=pyo.maximize)
         opt = pyo.SolverFactory('mosek_persistent')
         opt.set_instance(m)
         opt.solve(m)

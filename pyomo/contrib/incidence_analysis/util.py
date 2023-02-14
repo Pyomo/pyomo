@@ -17,21 +17,21 @@ from pyomo.common.collections import ComponentSet
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import (
-        create_subsystem_block,
-        TemporarySubsystemManager,
-        generate_subsystem_blocks,
-        )
+    create_subsystem_block,
+    TemporarySubsystemManager,
+    generate_subsystem_blocks,
+)
 from pyomo.contrib.incidence_analysis.interface import IncidenceGraphInterface
 
 _log = logging.getLogger(__name__)
 
 
 def generate_strongly_connected_components(
-        constraints,
-        variables=None,
-        include_fixed=False,
-        ):
-    """ Performs a block triangularization of the incidence matrix
+    constraints,
+    variables=None,
+    include_fixed=False,
+):
+    """Performs a block triangularization of the incidence matrix
     of the provided constraints and variables, and yields a block that
     contains the constraints and variables of each diagonal block
     (strongly connected component).
@@ -59,9 +59,9 @@ def generate_strongly_connected_components(
         variables = []
         for con in constraints:
             for var in identify_variables(
-                    con.expr,
-                    include_fixed=include_fixed,
-                    ):
+                con.expr,
+                include_fixed=include_fixed,
+            ):
                 if var not in var_set:
                     variables.append(var)
                     var_set.add(var)
@@ -69,9 +69,9 @@ def generate_strongly_connected_components(
     assert len(variables) == len(constraints)
     igraph = IncidenceGraphInterface()
     var_block_map, con_block_map = igraph.block_triangularize(
-            variables=variables,
-            constraints=constraints,
-            )
+        variables=variables,
+        constraints=constraints,
+    )
     blocks = set(var_block_map.values())
     n_blocks = len(blocks)
     var_blocks = [[] for b in range(n_blocks)]
@@ -82,21 +82,21 @@ def generate_strongly_connected_components(
         con_blocks[b].append(con)
     subsets = list(zip(con_blocks, var_blocks))
     for block, inputs in generate_subsystem_blocks(
-            subsets,
-            include_fixed=include_fixed,
-            ):
+        subsets,
+        include_fixed=include_fixed,
+    ):
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
         yield (block, inputs)
 
 
 def solve_strongly_connected_components(
-        block,
-        solver=None,
-        solve_kwds=None,
-        calc_var_kwds=None,
-        ):
-    """ This function solves a square block of variables and equality
+    block,
+    solver=None,
+    solve_kwds=None,
+    calc_var_kwds=None,
+):
+    """This function solves a square block of variables and equality
     constraints by solving strongly connected components individually.
     Strongly connected components (of the directed graph of constraints
     obtained from a perfect matching of variables and constraints) are
@@ -144,9 +144,9 @@ def solve_strongly_connected_components(
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
     for scc, inputs in generate_strongly_connected_components(
-            constraints,
-            variables,
-            ):
+        constraints,
+        variables,
+    ):
         with TemporarySubsystemManager(to_fix=inputs):
             if len(scc.vars) == 1:
                 if log_blocks:
@@ -165,11 +165,11 @@ def solve_strongly_connected_components(
                     raise RuntimeError(
                         "An external solver is required if block has strongly\n"
                         "connected components of size greater than one (is not "
-                        "a DAG).\nGot an SCC with components: \n%s\n%s"
-                        % (vars, cons)
+                        "a DAG).\nGot an SCC with components: \n%s\n%s" % (vars, cons)
                         )
                 if log_blocks:
                     _log.debug(f"Solving {len(scc.cons)}x{len(scc.cons)} block.")
+
                 results = solver.solve(scc, **solve_kwds)
                 res_list.append(results)
     return res_list

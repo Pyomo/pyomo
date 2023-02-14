@@ -25,7 +25,7 @@ from pyomo.dae import *
 
 m = ConcreteModel()
 m.tf = Param(initialize=1)
-m.t = ContinuousSet(bounds=(0,m.tf))
+m.t = ContinuousSet(bounds=(0, m.tf))
 
 m.u = Var(m.t, initialize=0)
 m.x1 = Var(m.t)
@@ -38,32 +38,47 @@ m.dx3 = DerivativeVar(m.x3, wrt=m.t)
 
 m.obj = Objective(expr=m.x3[m.tf])
 
+
 def _x1dot(m, t):
     if t == 0:
         return Constraint.Skip
     return m.dx1[t] == m.x2[t]
+
+
 m.x1dotcon = Constraint(m.t, rule=_x1dot)
+
 
 def _x2dot(m, t):
     if t == 0:
         return Constraint.Skip
 
-    return m.dx2[t] ==  -m.x2[t]+m.u[t]
+    return m.dx2[t] == -m.x2[t] + m.u[t]
+
+
 m.x2dotcon = Constraint(m.t, rule=_x2dot)
+
 
 def _x3dot(m, t):
     if t == 0:
         return Constraint.Skip
 
-    return m.dx3[t] == m.x1[t]**2+m.x2[t]**2+0.005*m.u[t]**2
+    return m.dx3[t] == m.x1[t] ** 2 + m.x2[t] ** 2 + 0.005 * m.u[t] ** 2
+
+
 m.x3dotcon = Constraint(m.t, rule=_x3dot)
 
+
 def _con(m, t):
-    return m.x2[t]-8*(t-0.5)**2+0.5 <= 0
+    return m.x2[t] - 8 * (t - 0.5) ** 2 + 0.5 <= 0
+
+
 m.con = Constraint(m.t, rule=_con)
+
 
 def _init(m):
     yield m.x1[0] == 0
     yield m.x2[0] == -1
     yield m.x3[0] == 0
+
+
 m.init_conditions = ConstraintList(rule=_init)

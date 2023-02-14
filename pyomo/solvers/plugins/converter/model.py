@@ -31,11 +31,13 @@ class PyomoMIPConverter(object):
         #
         # Return True for specific from/to pairs
         #
-        if to_type in (ProblemFormat.nl,
-                       ProblemFormat.cpxlp,
-                       ProblemFormat.osil,
-                       ProblemFormat.bar,
-                       ProblemFormat.mps):
+        if to_type in (
+            ProblemFormat.nl,
+            ProblemFormat.cpxlp,
+            ProblemFormat.osil,
+            ProblemFormat.bar,
+            ProblemFormat.mps,
+        ):
             return True
 
         return False
@@ -63,8 +65,7 @@ class PyomoMIPConverter(object):
             instance = args[2]
 
         if args[1] == ProblemFormat.cpxlp:
-            problem_filename = TempfileManager.\
-                               create_tempfile(suffix = '.pyomo.lp')
+            problem_filename = TempfileManager.create_tempfile(suffix='.pyomo.lp')
             if instance is not None:
                 if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
@@ -72,14 +73,15 @@ class PyomoMIPConverter(object):
                         format=ProblemFormat.cpxlp,
                         _solver_capability=capabilities,
                         _called_by_solver=True,
-                        **io_options)
+                        **io_options
+                    )
                 else:
-                    (problem_filename, symbol_map_id) = \
-                        instance.write(
-                            filename=problem_filename,
-                            format=ProblemFormat.cpxlp,
-                            solver_capability=capabilities,
-                            io_options=io_options)
+                    (problem_filename, symbol_map_id) = instance.write(
+                        filename=problem_filename,
+                        format=ProblemFormat.cpxlp,
+                        solver_capability=capabilities,
+                        io_options=io_options,
+                    )
                 return (problem_filename,), symbol_map_id
             else:
 
@@ -92,25 +94,27 @@ class PyomoMIPConverter(object):
                 if len(io_options):
                     raise ValueError(
                         "The following io_options will be ignored "
-                        "(please create a bug report):\n\t" +
-                        "\n\t".join("%s = %s" % (k,v)
-                                    for k,v in io_options.items()))
+                        "(please create a bug report):\n\t"
+                        + "\n\t".join("%s = %s" % (k, v) for k, v in io_options.items())
+                    )
 
-                ans = pyomo.scripting.convert.\
-                      pyomo2lp(['--output',problem_filename,args[2]])
+                ans = pyomo.scripting.convert.pyomo2lp(
+                    ['--output', problem_filename, args[2]]
+                )
                 if ans.errorcode:
-                    raise RuntimeError("pyomo2lp conversion "
-                                       "returned nonzero error code "
-                                       "(%s)" % ans.errorcode)
+                    raise RuntimeError(
+                        "pyomo2lp conversion "
+                        "returned nonzero error code "
+                        "(%s)" % ans.errorcode
+                    )
 
                 model = ans.retval
                 problem_filename = model.filename
                 symbol_map = model.symbol_map
-                return (problem_filename,),symbol_map
+                return (problem_filename,), symbol_map
 
         elif args[1] == ProblemFormat.bar:
-            problem_filename = TempfileManager.\
-                               create_tempfile(suffix = '.pyomo.bar')
+            problem_filename = TempfileManager.create_tempfile(suffix='.pyomo.bar')
             if instance is not None:
                 if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
@@ -118,14 +122,15 @@ class PyomoMIPConverter(object):
                         format=ProblemFormat.bar,
                         _solver_capability=capabilities,
                         _called_by_solver=True,
-                        **io_options)
+                        **io_options
+                    )
                 else:
-                    (problem_filename, symbol_map_id) = \
-                        instance.write(
-                            filename=problem_filename,
-                            format=ProblemFormat.bar,
-                            solver_capability=capabilities,
-                            io_options=io_options)
+                    (problem_filename, symbol_map_id) = instance.write(
+                        filename=problem_filename,
+                        format=ProblemFormat.bar,
+                        solver_capability=capabilities,
+                        io_options=io_options,
+                    )
                 return (problem_filename,), symbol_map_id
             else:
 
@@ -138,36 +143,37 @@ class PyomoMIPConverter(object):
                 if len(io_options):
                     raise ValueError(
                         "The following io_options will be ignored "
-                        "(please create a bug report):\n\t" +
-                        "\n\t".join("%s = %s" % (k,v)
-                                    for k,v in io_options.items()))
+                        "(please create a bug report):\n\t"
+                        + "\n\t".join("%s = %s" % (k, v) for k, v in io_options.items())
+                    )
 
-                ans = pyomo.scripting.convert.\
-                      pyomo2bar(['--output',problem_filename,args[2]])
+                ans = pyomo.scripting.convert.pyomo2bar(
+                    ['--output', problem_filename, args[2]]
+                )
                 if ans.errorcode:
-                    raise RuntimeError("pyomo2bar conversion "
-                                       "returned nonzero error code "
-                                       "(%s)" % ans.errorcode)
+                    raise RuntimeError(
+                        "pyomo2bar conversion "
+                        "returned nonzero error code "
+                        "(%s)" % ans.errorcode
+                    )
                 model = ans.retval
                 problem_filename = model.filename
                 symbol_map = model.symbol_map
-                return (problem_filename,),symbol_map
+                return (problem_filename,), symbol_map
 
         elif args[1] in [ProblemFormat.mps, ProblemFormat.nl]:
             if args[1] == ProblemFormat.nl:
-                problem_filename = TempfileManager.\
-                                   create_tempfile(suffix = '.pyomo.nl')
+                problem_filename = TempfileManager.create_tempfile(suffix='.pyomo.nl')
                 if io_options.get("symbolic_solver_labels", False):
                     TempfileManager.add_tempfile(
-                        problem_filename[:-3]+".row",
-                        exists=False)
+                        problem_filename[:-3] + ".row", exists=False
+                    )
                     TempfileManager.add_tempfile(
-                        problem_filename[:-3]+".col",
-                        exists=False)
+                        problem_filename[:-3] + ".col", exists=False
+                    )
             else:
                 assert args[1] == ProblemFormat.mps
-                problem_filename = TempfileManager.\
-                                   create_tempfile(suffix = '.pyomo.mps')
+                problem_filename = TempfileManager.create_tempfile(suffix='.pyomo.mps')
             if instance is not None:
                 if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
@@ -175,14 +181,15 @@ class PyomoMIPConverter(object):
                         format=args[1],
                         _solver_capability=capabilities,
                         _called_by_solver=True,
-                        **io_options)
+                        **io_options
+                    )
                 else:
-                    (problem_filename, symbol_map_id) = \
-                        instance.write(
-                            filename=problem_filename,
-                            format=args[1],
-                            solver_capability=capabilities,
-                            io_options=io_options)
+                    (problem_filename, symbol_map_id) = instance.write(
+                        filename=problem_filename,
+                        format=args[1],
+                        solver_capability=capabilities,
+                        io_options=io_options,
+                    )
                 return (problem_filename,), symbol_map_id
             else:
 
@@ -195,22 +202,25 @@ class PyomoMIPConverter(object):
                 if len(io_options):
                     raise ValueError(
                         "The following io_options will be ignored "
-                        "(please create a bug report):\n\t" +
-                        "\n\t".join("%s = %s" % (k,v)
-                                    for k,v in io_options.items()))
+                        "(please create a bug report):\n\t"
+                        + "\n\t".join("%s = %s" % (k, v) for k, v in io_options.items())
+                    )
 
-                ans = pyomo.scripting.convert.\
-                      pyomo2nl(['--output',problem_filename,args[2]])
+                ans = pyomo.scripting.convert.pyomo2nl(
+                    ['--output', problem_filename, args[2]]
+                )
                 if ans.errorcode:
-                    raise RuntimeError("pyomo2nl conversion "
-                                       "returned nonzero error "
-                                       "code (%s)" % ans.errorcode)
+                    raise RuntimeError(
+                        "pyomo2nl conversion "
+                        "returned nonzero error "
+                        "code (%s)" % ans.errorcode
+                    )
                 model = ans.retval
                 problem_filename = model.filename
                 symbol_map = model.symbol_map
 
                 if args[1] == ProblemFormat.nl:
-                    return (problem_filename,),symbol_map
+                    return (problem_filename,), symbol_map
                 #
                 # Convert from NL to MPS
                 #
@@ -221,16 +231,15 @@ class PyomoMIPConverter(object):
                 # NOTE: we should generalize this so it doesn't strictly
                 #       depend on the PICO converter utility.
                 #
-                ans = self.pico_converter.apply(ProblemFormat.nl,
-                                                ProblemFormat.mps,
-                                                problem_filename)
+                ans = self.pico_converter.apply(
+                    ProblemFormat.nl, ProblemFormat.mps, problem_filename
+                )
                 os.remove(problem_filename)
                 return ans
 
         elif args[1] == ProblemFormat.osil:
             if False:
-                problem_filename = TempfileManager.\
-                               create_tempfile(suffix='pyomo.osil')
+                problem_filename = TempfileManager.create_tempfile(suffix='pyomo.osil')
                 if instance:
                     if isinstance(instance, IBlock):
                         symbol_map_id = instance.write(
@@ -238,17 +247,19 @@ class PyomoMIPConverter(object):
                             format=ProblemFormat.osil,
                             _solver_capability=capabilities,
                             _called_by_solver=True,
-                            **io_options)
+                            **io_options
+                        )
                     else:
-                        (problem_filename, symbol_map_id) = \
-                            instance.write(
-                                filename=problem_filename,
-                                format=ProblemFormat.osil,
-                                solver_capability=capabilities,
-                                io_options=io_options)
+                        (problem_filename, symbol_map_id) = instance.write(
+                            filename=problem_filename,
+                            format=ProblemFormat.osil,
+                            solver_capability=capabilities,
+                            io_options=io_options,
+                        )
                     return (problem_filename,), None
             else:
                 raise NotImplementedError(
                     "There is currently no "
                     "script conversion available from "
-                    "Pyomo to OSiL format.")
+                    "Pyomo to OSiL format."
+                )

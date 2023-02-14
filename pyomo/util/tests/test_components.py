@@ -17,8 +17,8 @@ import pyomo.environ as pyo
 import pyomo.kernel as pmo
 from pyomo.util.components import iter_component, rename_components
 
-class TestUtilComponents(unittest.TestCase):
 
+class TestUtilComponents(unittest.TestCase):
     def test_rename_components(self):
         model = pyo.ConcreteModel()
         model.x = pyo.Var([1, 2, 3], bounds=(-10, 10), initialize=5.0)
@@ -27,20 +27,23 @@ class TestUtilComponents(unittest.TestCase):
 
         def con_rule(m, i):
             return m.x[i] + m.z == i
+
         model.con = pyo.Constraint([1, 2, 3], rule=con_rule)
         model.zcon = pyo.Constraint(expr=model.z >= model.x[2])
         model.b = pyo.Block()
-        model.b.bx = pyo.Var([1,2,3], initialize=42)
+        model.b.bx = pyo.Var([1, 2, 3], initialize=42)
         model.b.bz = pyo.Var(initialize=42)
 
         model.x_ref = pyo.Reference(model.x)
         model.zcon_ref = pyo.Reference(model.zcon)
         model.b.bx_ref = pyo.Reference(model.b.bx[2])
 
-        c_list = list(model.component_objects(ctype=[pyo.Var,pyo.Constraint,pyo.Objective]))
-        name_map = rename_components(model=model,
-                                     component_list=c_list,
-                                     prefix='scaled_')
+        c_list = list(
+            model.component_objects(ctype=[pyo.Var, pyo.Constraint, pyo.Objective])
+        )
+        name_map = rename_components(
+            model=model, component_list=c_list, prefix='scaled_'
+        )
 
         self.assertEqual(name_map[model.scaled_obj], 'obj')
         self.assertEqual(name_map[model.scaled_x], 'x')
