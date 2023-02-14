@@ -6,7 +6,7 @@ We start with some imports. To debug a *numeric* singularity, we will need
 and will need NumPy to compute condition numbers.
 
 .. doctest::
-   :skipif: not numpy_available or not scipy_available or not asl_available
+   :skipif: not scipy_available or not asl_available or not networkx_available
 
    >>> import pyomo.environ as pyo 
    >>> from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
@@ -18,7 +18,7 @@ We now build the model we would like to debug. Compared to the model in
 over component flow rates rather than a sum over mass fractions.
 
 .. doctest::
-   :skipif: not numpy_available or not scipy_available or not asl_available
+   :skipif: not scipy_available or not asl_available or not networkx_available
 
    >>> m = pyo.ConcreteModel()
    >>> m.components = pyo.Set(initialize=[1, 2, 3]) 
@@ -44,7 +44,7 @@ We now construct the incidence graph and check unmatched variables and
 constraints to validate structural nonsingularity.
 
 .. doctest::
-   :skipif: not numpy_available or not scipy_available or not asl_available
+   :skipif: not scipy_available or not asl_available or not networkx_available
 
    >>> igraph = IncidenceGraphInterface(m, include_inequality=False)
    >>> var_dmp, con_dmp = igraph.dulmage_mendelsohn()
@@ -57,7 +57,7 @@ Our system is structurally nonsingular. Now we check whether we are numerically
 singular (well-conditioned) by checking the condition number.
 
 .. doctest::
-   :skipif: not numpy_available or not scipy_available or not asl_available
+   :skipif: not scipy_available or not asl_available or not networkx_available
 
    >>> # PyomoNLP requires exactly one objective function
    >>> m._obj = pyo.Objective(expr=0.0)
