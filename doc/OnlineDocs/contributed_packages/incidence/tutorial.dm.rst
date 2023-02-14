@@ -35,7 +35,9 @@ combustion reactor.
    ... })
 
 To check this model for structural singularity, we apply the Dulmage-Mendelsohn
-partition.
+partition. ``var_dm_partition`` and ``con_dm_partition`` are named tuples
+with fields for each of the four subsets defined by the partition:
+``unmatched``, ``overconstrained``, ``square``, and ``underconstrained``.
 
 .. doctest::
    :skipif: not scipy_available or not networkx_available or not asl_available
@@ -46,18 +48,18 @@ partition.
    8
    >>> print(len(igraph.constraints))
    8
-   >>> var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+   >>> var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
 
-If any variables or constraints are unmatched, the (Jacobian of the model)
+If any variables or constraints are unmatched, the (Jacobian of the) model
 is structurally singular.
 
 .. doctest::
    :skipif: not scipy_available or not networkx_available or not asl_available
 
-   >>> for var in var_dmp.unmatched:
+   >>> for var in var_dm_partition.unmatched:
    ...     print(f"  {var.name}")
    flow_comp[1]
-   >>> for con in con_dmp.unmatched:
+   >>> for con in con_dm_partition.unmatched:
    ...     print(f"  {con.name}")
    density_eqn
 
@@ -69,23 +71,23 @@ unique. For example, ``flow_comp[2]`` could have been unmatched instead of
 Unique subsets of variables and constraints that are useful when debugging a
 structural singularity are the underconstrained and overconstrained subsystems.
 The variables in the underconstrained subsystem are contained in the
-``unmatched`` and ``underconstrained`` fields of the ``var_dmp`` named tuple,
+``unmatched`` and ``underconstrained`` fields of the ``var_dm_partition`` named tuple,
 while the constraints are contained in the ``underconstrained`` field of the
-``con_dmp`` named tuple.
+``con_dm_partition`` named tuple.
 The variables in the overconstrained subsystem are contained in the
-``overconstrained`` field of the ``var_dmp`` named tuple, while the constraints
+``overconstrained`` field of the ``var_dm_partition`` named tuple, while the constraints
 are contained in the ``overconstrained`` and ``unmatched`` fields of the
-``con_dmp`` named tuple.
+``con_dm_partition`` named tuple.
 
 We now construct the underconstrained and overconstrained subsystems:
 
 .. doctest::
    :skipif: not scipy_available or not networkx_available or not asl_available
 
-   >>> uc_var = var_dmp.unmatched + var_dmp.underconstrained
-   >>> uc_con = con_dmp.underconstrained
-   >>> oc_var = var_dmp.overconstrained
-   >>> oc_con = con_dmp.overconstrained + con_dmp.unmatched
+   >>> uc_var = var_dm_partition.unmatched + var_dm_partition.underconstrained
+   >>> uc_con = con_dm_partition.underconstrained
+   >>> oc_var = var_dm_partition.overconstrained
+   >>> oc_con = con_dm_partition.overconstrained + con_dm_partition.unmatched
 
 And display the variables and constraints contained in each:
 
@@ -119,7 +121,7 @@ And display the variables and constraints contained in each:
    flow_eqn[2]
    flow_eqn[3]
 
-At this point we must use our intuition about the system being model to
+At this point we must use our intuition about the system being modeled to
 identify "what is causing" the singularity. Looking at the under and over-
 constrained systems, it appears that we are missing an equation to calculate
 ``flow``, the total flow rate, and that ``density`` is over-specified as it
@@ -132,7 +134,7 @@ is actually a *skeletal* density equation. Admittedly, this is difficult to
 figure out without the full context behind this particular system.
 
 The following code constructs a new version of the model and verifies that it
-is structural singularity:
+is structurally nonsingular:
 
 .. doctest::
    :skipif: not scipy_available or not networkx_available or not asl_available
@@ -173,10 +175,10 @@ is structural singularity:
    10
    >>> print(len(igraph.constraints))
    10
-   >>> var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+   >>> var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
 
-   >>> # There are now no unmatched variables and equations
-   >>> for var in var_dmp.unmatched:
-   ...     print(f"  {var.name}")
-   >>> for con in con_dmp.unmatched:
-   ...     print(f"  {con.name}")
+   >>> # There are now no unmatched variables or equations
+   >>> print(len(var_dm_partition.unmatched))
+   0
+   >>> print(len(con_dm_partition.unmatched))
+   0

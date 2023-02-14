@@ -54,7 +54,13 @@ constraints to validate structural nonsingularity.
    0
 
 Our system is structurally nonsingular. Now we check whether we are numerically
-singular (well-conditioned) by checking the condition number.
+nonsingular (well-conditioned) by checking the condition number.
+Admittedly, deciding if a matrix is "singular" by looking at its condition
+number is somewhat of an art. We might define "numerically singular" as having a
+condition number greater than the inverse of machine precision (approximately
+``1e16``), but poorly conditioned matrices can cause problems even if they don't
+meet this definition. Here we use ``1e10`` as a somewhat arbitrary condition
+number threshold to indicate a problem in our system.
 
 .. doctest::
    :skipif: not scipy_available or not asl_available or not networkx_available
@@ -67,7 +73,7 @@ singular (well-conditioned) by checking the condition number.
    >>> print(cond > cond_threshold)
    True
 
-The system is numerically singular. Now we can check diagonal blocks of a block
+The system is poorly conditioned. Now we can check diagonal blocks of a block
 triangularization to determine which blocks are causing the poor conditioning.
 
 .. code-block:: python
