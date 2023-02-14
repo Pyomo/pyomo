@@ -11,6 +11,7 @@
 
 import sys
 import copy
+from pyomo.common.deprecation import deprecation_warning
 
 try:
     import pkg_resources
@@ -55,13 +56,14 @@ def main(args=None):
     #
     if not args:
         args.append('-h')
-    # FIXME: This should use the logger and not print()
     if args[0][0] == '-':
         if args[0] not in ['-h', '--help', '--version']:
-            print("WARNING: converting to the 'pyomo solve' subcommand")
+            deprecation_warning("The '--solvers' option is deprecated. converting to the 'pyomo solve' subcommand",
+                                version='TBD')
             args = ['solve'] + args[0:]
     elif args[0] not in pyomo_parser.subparsers:
-        print("WARNING: converting to the 'pyomo solve' subcommand")
+        deprecation_warning("The '--solvers' option is deprecated. converting to the 'pyomo solve' subcommand",
+                            version='TBD')
         args = ['solve'] + args[0:]
     #
     # Process arguments
