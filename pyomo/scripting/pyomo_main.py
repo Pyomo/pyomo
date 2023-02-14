@@ -58,11 +58,13 @@ def main(args=None):
         args.append('-h')
     if args[0][0] == '-':
         if args[0] not in ['-h', '--help', '--version']:
-            deprecation_warning("No subcommand supplied - converting to the 'pyomo solve' subcommand",
+            deprecation_warning("Running the 'pyomo' script with no subcommand is deprecated."
+                                "Defaulting to 'pyomo solve'",
                                 version='TBD')
             args = ['solve'] + args[0:]
     elif args[0] not in pyomo_parser.subparsers:
-        deprecation_warning("No subcommand supplied - converting to the 'pyomo solve' subcommand",
+        deprecation_warning("Running the 'pyomo' script with no subcommand is deprecated."
+                            "Defaulting to 'pyomo solve'",
                             version='TBD')
         args = ['solve'] + args[0:]
     #
