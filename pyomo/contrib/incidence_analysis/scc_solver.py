@@ -153,15 +153,14 @@ def solve_strongly_connected_components(
                 res_list.append(results)
             else:
                 if solver is None:
-                    # NOTE: Use local name to avoid slow generation of this
-                    # error message if a user provides a large, non-decomposable
-                    # block with no solver.
-                    vars = [var.local_name for var in scc.vars.values()]
-                    cons = [con.local_name for con in scc.cons.values()]
+                    var_names = [var.name for var in scc.vars.values()][:10]
+                    con_names = [con.name for con in scc.cons.values()][:10]
+                    N = len(scc.vars)
                     raise RuntimeError(
                         "An external solver is required if block has strongly\n"
-                        "connected components of size greater than one (is not "
-                        "a DAG).\nGot an SCC with components: \n%s\n%s" % (vars, cons)
+                        "connected components of size greater than one (is not"
+                        " a DAG).\nGot an SCC of size %sx%s including"
+                        " components:\n%s\n%s" % (N, N, var_names, con_names)
                     )
                 _log.info(f"Solving {len(scc.cons)}x{len(scc.vars)} block.")
                 results = solver.solve(scc, **solve_kwds)
