@@ -149,6 +149,12 @@ _ipopt_term_cond = {
 }
 
 class CyIpoptProblemInterface(object, metaclass=abc.ABCMeta):
+    def __init__(self):
+        # We allow this object to know about the cyipopt.Problem it is
+        # associated with. This way, the Problem and its methods may be accessed
+        # e.g. during an intermediate callback.
+        self.__cyipopt_problem = None
+
     @abc.abstractmethod
     def x_init(self):
         """Return the initial values for x as a numpy ndarray
@@ -254,7 +260,15 @@ class CyIpoptProblemInterface(object, metaclass=abc.ABCMeta):
         results. This method is called each iteration
         """
         # TODO: Document the arguments
+        # Note that this call signature is defined by CyIpopt.
         pass
+
+    @property
+    def cyipopt_problem(self):
+        return self.__cyipopt_problem
+
+    def set_cyipopt_problem(self, problem):
+        self.__cyipopt_problem = problem
 
 
 class CyIpoptNLP(CyIpoptProblemInterface):
@@ -266,6 +280,8 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         provides the interface between AmplNLP or PyomoNLP objects
         and the CyIpoptSolver
         """
+        # call super.__init__ to initialize cyipopt_problem
+        super(CyIpoptNLP, self).__init__()
         self._nlp = nlp
         self._intermediate_callback = intermediate_callback
 
@@ -357,7 +373,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         col = np.compress(self._hess_lower_mask, self._hess_lag.col)
         return row, col
 
-
     def hessian(self, x, y, obj_factor):
         if not self._hessian_available:
             raise ValueError("Hessian requested, but not supported by the NLP")
@@ -384,9 +399,25 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             ls_trials
     ):
         if self._intermediate_callback is not None:
-            return self._intermediate_callback(self._nlp, alg_mod, iter_count, obj_value,
-                                               inf_pr, inf_du, mu, d_norm, regularization_size,
-                                               alpha_du, alpha_pr, ls_trials)
+            # This is the call signature that we expect a user's callback
+            # function to implement. Compared to the CyIpopt callback, we
+            # provide additional information in the form of the NLP and
+            # potentially the cyipopt.Problem object itself.
+            return self._intermediate_callback(
+                self._nlp,
+                self.cyipopt_problem,
+                alg_mod,
+                iter_count,
+                obj_value,
+                inf_pr,
+                inf_du,
+                mu,
+                d_norm,
+                regularization_size,
+                alpha_du,
+                alpha_pr,
+                ls_trials,
+            )
         return True
 
 
@@ -428,6 +459,9 @@ class CyIpoptSolver(object):
             cl=gl,
             cu=gu
         )
+        # Attach cyipopt.Problem to the interface so we can use its methods,
+        # e.g. during an intermediate callback
+        self._problem.set_cyipopt_problem(cyipopt_solver)
 
         # check if we need scaling
         obj_scaling, x_scaling, g_scaling = self._problem.scaling_factors()
@@ -568,6 +602,9 @@ class PyomoCyIpoptSolver(object):
             cl=gl,
             cu=gu
         )
+        # Attach cyipopt.Problem to the interface so we can use its methods,
+        # e.g. during an intermediate callback
+        problem.set_cyipopt_problem(cyipopt_solver)
 
         # check if we need scaling
         obj_scaling, x_scaling, g_scaling = problem.scaling_factors()
