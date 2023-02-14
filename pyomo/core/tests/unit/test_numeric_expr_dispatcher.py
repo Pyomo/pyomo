@@ -163,11 +163,25 @@ class TestExprGen(unittest.TestCase):
                         if mutable[i]:
                             arg.__class__ = classes[i]
         except:
-            logger.error(
-                f"Failed test {test_num}:\n\t"
-                + '\n\t'.join(f'{arg}  ({arg.__class__.__name__})' for arg in test)
-                + f'\n\t{ans} (result: {ans.__class__.__name__})'
-            )
+            msg = f"Failed test {test_num}:\n\t"
+            for arg in test:
+                try:
+                    msg += str(arg)
+                except:
+                    msg += '[ERROR]'
+                msg += f'  ({arg.__class__.__name__}'
+                try:
+                    msg += f': {arg.nargs()}'
+                except AttributeError:
+                    pass
+                msg += ')\n\t'
+            msg += f'{ans} (result: {ans.__class__.__name__}'
+            try:
+                msg += f': {ans.nargs()}'
+            except AttributeError:
+                pass
+            msg += ')'
+            logger.error(msg)
             raise
 
     #
