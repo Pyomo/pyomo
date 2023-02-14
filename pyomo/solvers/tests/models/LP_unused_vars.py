@@ -10,8 +10,17 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Var, Objective, Set, ConstraintList, sum_product, Block
+from pyomo.core import (
+    ConcreteModel,
+    Var,
+    Objective,
+    Set,
+    ConstraintList,
+    sum_product,
+    Block,
+)
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
+
 
 @register_model
 class LP_unused_vars(_BaseTestModel):
@@ -26,7 +35,7 @@ class LP_unused_vars(_BaseTestModel):
     def __init__(self):
         _BaseTestModel.__init__(self)
         self.disable_suffix_tests = True
-        self.add_results(self.description+".json")
+        self.add_results(self.description + ".json")
 
     def _generate_model(self):
         self.model = None
@@ -34,7 +43,7 @@ class LP_unused_vars(_BaseTestModel):
         model = self.model
         model._name = self.description
 
-        model.s = Set(initialize=[1,2])
+        model.s = Set(initialize=[1, 2])
 
         model.x_unused = Var()
         model.x_unused.stale = False
@@ -60,18 +69,20 @@ class LP_unused_vars(_BaseTestModel):
             model.X[i].stale = False
             model.X_initialy_stale[i].stale = True
 
-        model.obj = Objective(expr= model.x + \
-                                    model.x_initialy_stale + \
-                                    sum_product(model.X) + \
-                                    sum_product(model.X_initialy_stale))
+        model.obj = Objective(
+            expr=model.x
+            + model.x_initialy_stale
+            + sum_product(model.X)
+            + sum_product(model.X_initialy_stale)
+        )
 
         model.c = ConstraintList()
-        model.c.add( model.x          >= 1 )
-        model.c.add( model.x_initialy_stale    >= 1 )
-        model.c.add( model.X[1]       >= 0 )
-        model.c.add( model.X[2]       >= 1 )
-        model.c.add( model.X_initialy_stale[1] >= 0 )
-        model.c.add( model.X_initialy_stale[2] >= 1 )
+        model.c.add(model.x >= 1)
+        model.c.add(model.x_initialy_stale >= 1)
+        model.c.add(model.X[1] >= 0)
+        model.c.add(model.X[2] >= 1)
+        model.c.add(model.X_initialy_stale[1] >= 0)
+        model.c.add(model.X_initialy_stale[2] >= 1)
 
         # Test that stale flags get set
         # on inactive blocks (where "inactive blocks" mean blocks
@@ -115,26 +126,26 @@ class LP_unused_vars(_BaseTestModel):
             model.X_initialy_stale[i].value = -1.0
             model.X_initialy_stale[i].stale = True
 
+
 @register_model
 class LP_unused_vars_kernel(LP_unused_vars):
-
     def _generate_model(self):
         self.model = None
         self.model = pmo.block()
         model = self.model
         model._name = self.description
 
-        model.s = [1,2]
+        model.s = [1, 2]
         model.x_unused = pmo.variable()
         model.x_unused.stale = False
 
         model.x_unused_initialy_stale = pmo.variable()
         model.x_unused_initialy_stale.stale = True
 
-        model.X_unused = pmo.variable_dict(
-            (i, pmo.variable()) for i in model.s)
+        model.X_unused = pmo.variable_dict((i, pmo.variable()) for i in model.s)
         model.X_unused_initialy_stale = pmo.variable_dict(
-            (i, pmo.variable()) for i in model.s)
+            (i, pmo.variable()) for i in model.s
+        )
 
         for i in model.X_unused:
             model.X_unused[i].stale = False
@@ -146,24 +157,24 @@ class LP_unused_vars_kernel(LP_unused_vars):
         model.x_initialy_stale = pmo.variable()
         model.x_initialy_stale.stale = True
 
-        model.X = pmo.variable_dict(
-            (i, pmo.variable()) for i in model.s)
-        model.X_initialy_stale = pmo.variable_dict(
-            (i, pmo.variable()) for i in model.s)
+        model.X = pmo.variable_dict((i, pmo.variable()) for i in model.s)
+        model.X_initialy_stale = pmo.variable_dict((i, pmo.variable()) for i in model.s)
         for i in model.X:
             model.X[i].stale = False
             model.X_initialy_stale[i].stale = True
 
-        model.obj = pmo.objective(model.x + \
-                                  model.x_initialy_stale + \
-                                  sum(model.X.values()) + \
-                                  sum(model.X_initialy_stale.values()))
+        model.obj = pmo.objective(
+            model.x
+            + model.x_initialy_stale
+            + sum(model.X.values())
+            + sum(model.X_initialy_stale.values())
+        )
 
         model.c = pmo.constraint_dict()
-        model.c[1] = pmo.constraint(model.x          >= 1)
-        model.c[2] = pmo.constraint(model.x_initialy_stale    >= 1)
-        model.c[3] = pmo.constraint(model.X[1]       >= 0)
-        model.c[4] = pmo.constraint(model.X[2]       >= 1)
+        model.c[1] = pmo.constraint(model.x >= 1)
+        model.c[2] = pmo.constraint(model.x_initialy_stale >= 1)
+        model.c[3] = pmo.constraint(model.X[1] >= 0)
+        model.c[4] = pmo.constraint(model.X[2] >= 1)
         model.c[5] = pmo.constraint(model.X_initialy_stale[1] >= 0)
         model.c[6] = pmo.constraint(model.X_initialy_stale[2] >= 1)
 

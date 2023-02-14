@@ -4,6 +4,7 @@ from pyomo.core.expr.taylor_series import taylor_series_expansion
 from pyomo.solvers.plugins.solvers.xpress_direct import xpress_available
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 
+
 class TestXpressPersistent(unittest.TestCase):
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_basics(self):
@@ -11,7 +12,7 @@ class TestXpressPersistent(unittest.TestCase):
         m.x = pe.Var(bounds=(-10, 10))
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=m.y >= 2*m.x + 1)
+        m.c1 = pe.Constraint(expr=m.y >= 2 * m.x + 1)
 
         opt = pe.SolverFactory('xpress_persistent')
         opt.set_instance(m)
@@ -138,7 +139,7 @@ class TestXpressPersistent(unittest.TestCase):
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_sosconstraint(self):
         m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=[1,2,3], ordered=True)
+        m.a = pe.Set(initialize=[1, 2, 3], ordered=True)
         m.x = pe.Var(m.a, within=pe.Binary)
         m.y = pe.Var(within=pe.Binary)
         m.obj = pe.Objective(expr=m.y)
@@ -157,7 +158,7 @@ class TestXpressPersistent(unittest.TestCase):
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_sosconstraint2(self):
         m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=[1,2,3], ordered=True)
+        m.a = pe.Set(initialize=[1, 2, 3], ordered=True)
         m.x = pe.Var(m.a, within=pe.Binary)
         m.y = pe.Var(within=pe.Binary)
         m.obj = pe.Objective(expr=m.y)
@@ -218,7 +219,7 @@ class TestXpressPersistent(unittest.TestCase):
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.c = pe.Constraint(expr=(0, m.x, 1))
-        m.ci = pe.Constraint([1,2], rule=lambda m,i:(0,m.x,i+1))
+        m.ci = pe.Constraint([1, 2], rule=lambda m, i: (0, m.x, i + 1))
         m.cd = pe.Constraint(expr=(0, -m.x, 1))
         m.cd.deactivate()
         m.obj = pe.Objective(expr=-m.x)
@@ -232,7 +233,7 @@ class TestXpressPersistent(unittest.TestCase):
 
         m2 = pe.ConcreteModel()
         m2.y = pe.Var()
-        m2.c = pe.Constraint(expr=(0,m.x,1))
+        m2.c = pe.Constraint(expr=(0, m.x, 1))
 
         # different model than attached to opt
         self.assertRaises(RuntimeError, opt.add_column, m2, m2.y, 0, [], [])
@@ -245,7 +246,7 @@ class TestXpressPersistent(unittest.TestCase):
 
         m.y = pe.Var()
         # len(coefficents) == len(constraints)
-        self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1,2])
+        self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1, 2])
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c, z], [1])
 
         # add indexed constraint
@@ -272,8 +273,7 @@ class TestXpressPersistent(unittest.TestCase):
         m.x2 = pe.Var()
         m.x3 = pe.Var()
 
-        m.obj = pe.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3,
-                             sense=pe.minimize)
+        m.obj = pe.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3, sense=pe.minimize)
         m.equ1 = pe.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == 1)
         m.cone = pe.Constraint(rule=lambda m: m.x2 * m.x2 + m.x3 * m.x3 <= m.x1 * m.x1)
         m.equ2 = pe.Constraint(rule=lambda m: m.x1 >= 0)
@@ -283,7 +283,9 @@ class TestXpressPersistent(unittest.TestCase):
 
         results = opt.solve(m)
         self.assertEqual(results.solver.status, SolverStatus.ok)
-        self.assertEqual(results.solver.termination_condition, TerminationCondition.locallyOptimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.locallyOptimal
+        )
 
         # Cannot test exact values since the may be different depending on
         # random effects. So just test all are non-zero.
@@ -299,8 +301,7 @@ class TestXpressPersistent(unittest.TestCase):
         m.x2 = pe.Var()
         m.x3 = pe.Var()
 
-        m.obj = pe.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3,
-                             sense=pe.minimize)
+        m.obj = pe.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3, sense=pe.minimize)
         m.equ1a = pe.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == 1)
         m.equ1b = pe.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == -1)
         m.cone = pe.Constraint(rule=lambda m: m.x2 * m.x2 + m.x3 * m.x3 <= m.x1 * m.x1)
@@ -311,4 +312,6 @@ class TestXpressPersistent(unittest.TestCase):
 
         results = opt.solve(m)
         self.assertEqual(results.solver.status, SolverStatus.ok)
-        self.assertEqual(results.solver.termination_condition, TerminationCondition.infeasible)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.infeasible
+        )
