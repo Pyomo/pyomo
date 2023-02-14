@@ -544,11 +544,6 @@ class DesignOfExperiments:
 
         # loop over measurement variables and their time points
         for mname in self.measure_name:
-            i=0
-            while i<len(mname):
-                if mname[i] =='"' or mname[i]=="'":
-                    mname = mname[:i] + mname[i+1:]
-                i += 1 
             try: 
                 kaug_no = col.index(mname)
                 measurement_index.append(kaug_no)
