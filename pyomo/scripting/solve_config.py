@@ -20,7 +20,7 @@ class Default_Config(object):
 
 def minlp_config_block(init=False):
     config = ConfigBlock(
-        "Configuration for a canonical model " "construction and optimization sequence"
+        "Configuration for a canonical model construction and optimization sequence"
     )
     blocks = {}
 

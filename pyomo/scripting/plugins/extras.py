@@ -139,5 +139,5 @@ _parser.add_argument(
     "--pip-args",
     dest="args",
     action="append",
-    help=("Arguments that are passed to the 'pip' command when " "installing packages"),
+    help=("Arguments that are passed to the 'pip' command when installing packages"),
 )

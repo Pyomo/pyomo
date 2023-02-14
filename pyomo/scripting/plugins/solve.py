@@ -63,7 +63,8 @@ def create_temporary_parser(solver=False, generate=False):
             action='store',
             dest='solver',
             default=None,
-            help='Solver name.  This option is required unless the solver name is specified in a configuration file.',
+            help='Solver name. This option is required unless the solver name is'
+            'specified in a configuration file.',
         )
         _parser.usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
         _parser.epilog = """
@@ -120,14 +121,16 @@ more configuration options than are available with command-line options.
         action='store',
         nargs='?',
         default='',
-        help="A Python module that defines a Pyomo model, or a configuration file that defines options for 'pyomo solve' (in either YAML or JSON format)",
+        help="A Python module that defines a Pyomo model, or a configuration file "
+        "that defines options for 'pyomo solve' (in either YAML or JSON format)",
     )
     _parser.add_argument(
         'data_files',
         action='store',
         nargs='*',
         default=[],
-        help='Pyomo data files that defined data used to initialize the model (specified in the first argument)',
+        help='Pyomo data files that defined data used to initialize the model '
+        '(specified in the first argument)',
     )
     #
     return _parser
