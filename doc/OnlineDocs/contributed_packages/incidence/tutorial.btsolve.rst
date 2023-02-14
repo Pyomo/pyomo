@@ -5,6 +5,7 @@ We start with imports. The key function from Incidence Analysis we will use is
 ``solve_strongly_connected_components``.
 
 .. doctest::
+   :skipif: not networkx_available or not scipy_available or not asl_available
 
    >>> import pyomo.environ as pyo 
    >>> from pyomo.contrib.incidence_analysis import (
@@ -15,6 +16,7 @@ Now we construct the model we would like to solve. This is a model with the
 same structure as the "fixed model" in :ref:`incidence_tutorial_dm`.
 
 .. doctest::
+   :skipif: not networkx_available or not scipy_available or not asl_available
 
    >>> m = pyo.ConcreteModel()
    >>> m.components = pyo.Set(initialize=[1, 2, 3]) 
@@ -53,6 +55,7 @@ In this case, we specify a solver to use for the diagonal blocks and call
 ``solve_strongly_connected_components``.
 
 .. doctest::
+   :skipif: not networkx_available or not scipy_available or not asl_available
 
    >>> # Suppose a solve like this does not converge
    >>> # pyo.SolverFactory("scipy.fsolve").solve(m)

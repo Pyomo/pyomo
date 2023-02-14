@@ -5,11 +5,12 @@ Debugging a structural singularity with the Dulmage-Mendelsohn partition
 
 We start with some imports and by creating a Pyomo model we would like
 to debug. Usually the model is much larger and more comlicated than this.
-This particular system appeared when debugging a dynamic 1-D partitial
+This particular system appeared when debugging a dynamic 1-D partial
 differential-algebraic equation (PDAE) model representing a chemical looping
 combustion reactor.
 
 .. doctest::
+   :skipif: not scipy_available or not networkx_available or not asl_available
 
    >>> import pyomo.environ as pyo
    >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
@@ -37,6 +38,7 @@ To check this model for structural singularity, we apply the Dulmage-Mendelsohn
 partition.
 
 .. doctest::
+   :skipif: not scipy_available or not networkx_available or not asl_available
 
    >>> igraph = IncidenceGraphInterface(m)
    >>> # Make sure we have a square system
@@ -50,6 +52,7 @@ If any variables or constraints are unmatched, the (Jacobian of the model)
 is structurally singular.
 
 .. doctest::
+   :skipif: not scipy_available or not networkx_available or not asl_available
 
    >>> for var in var_dmp.unmatched:
    ...     print(f"  {var.name}")
@@ -77,6 +80,7 @@ are contained in the ``overconstrained`` and ``unmatched`` fields of the
 We now construct the underconstrained and overconstrained subsystems:
 
 .. doctest::
+   :skipif: not scipy_available or not networkx_available or not asl_available
 
    >>> uc_var = var_dmp.unmatched + var_dmp.underconstrained
    >>> uc_con = con_dmp.underconstrained
@@ -131,6 +135,7 @@ The following code constructs a new version of the model and verifies that it
 is structural singularity:
 
 .. doctest::
+   :skipif: not scipy_available or not networkx_available or not asl_available
 
    >>> import pyomo.environ as pyo
    >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
