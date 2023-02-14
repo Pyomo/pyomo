@@ -9,7 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
+from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
+    DirectOrPersistentSolver,
+)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
@@ -28,6 +30,7 @@ import logging
 
 logger = logging.getLogger('pyomo.solvers')
 
+
 def _convert_to_const(val):
     if val.__class__ in native_numeric_types:
         return val
@@ -35,6 +38,7 @@ def _convert_to_const(val):
         return evaluate_expression(val)
     else:
         return value(val)
+
 
 class PersistentSolver(DirectOrPersistentSolver):
     """
@@ -100,7 +104,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if block.is_indexed():
+        # if block.is_indexed():
         #    for sub_block in block.values():
         #        self._add_block(block)
         #    return
@@ -116,7 +120,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         obj: Objective
         """
         if self._pyomo_model is None:
-            raise RuntimeError('You must call set_instance before calling set_objective.')
+            raise RuntimeError(
+                'You must call set_instance before calling set_objective.'
+            )
         return self._set_objective(obj)
 
     def add_constraint(self, con):
@@ -130,14 +136,16 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         """
         if self._pyomo_model is None:
-            raise RuntimeError('You must call set_instance before calling add_constraint.')
+            raise RuntimeError(
+                'You must call set_instance before calling add_constraint.'
+            )
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if con.is_indexed():
+        # if con.is_indexed():
         #    for child_con in con.values():
         #        self._add_constraint(child_con)
-        #else:
+        # else:
         self._add_constraint(con)
 
     def add_var(self, var):
@@ -157,10 +165,10 @@ class PersistentSolver(DirectOrPersistentSolver):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if var.is_indexed():
+        # if var.is_indexed():
         #    for child_var in var.values():
         #        self._add_var(child_var)
-        #else:
+        # else:
         self._add_var(var)
 
     def add_sos_constraint(self, con):
@@ -174,23 +182,25 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         """
         if self._pyomo_model is None:
-            raise RuntimeError('You must call set_instance before calling add_sos_constraint.')
+            raise RuntimeError(
+                'You must call set_instance before calling add_sos_constraint.'
+            )
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if con.is_indexed():
+        # if con.is_indexed():
         #    for child_con in con.values():
         #        self._add_sos_constraint(child_con)
-        #else:
+        # else:
         self._add_sos_constraint(con)
 
     def add_column(self, model, var, obj_coef, constraints, coefficients):
         """Add a column to the solver's and Pyomo model
 
         This will add the Pyomo variable var to the solver's
-        model, and put the coefficients on the associated 
+        model, and put the coefficients on the associated
         constraints in the solver model. If the obj_coef is
-        not zero, it will add obj_coef*var to the objective 
+        not zero, it will add obj_coef*var to the objective
         of both the Pyomo and solver's model.
 
         Parameters
@@ -198,30 +208,37 @@ class PersistentSolver(DirectOrPersistentSolver):
         model: pyomo ConcreteModel to which the column will be added
         var: Var (scalar Var or single _VarData)
         obj_coef: float, pyo.Param
-        constraints: list of scalar Constraints of single _ConstraintDatas  
+        constraints: list of scalar Constraints of single _ConstraintDatas
         coefficients: list of the coefficient to put on var in the associated constraint
 
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_column.')
         if id(self._pyomo_model) != id(model):
-            raise RuntimeError('The pyomo model which the column is being added to '
-                                'must be the same as the pyomo model attached to this '
-                                'PersistentSolver instance; i.e., the same pyomo model '
-                                'used in set_instance.')
+            raise RuntimeError(
+                'The pyomo model which the column is being added to '
+                'must be the same as the pyomo model attached to this '
+                'PersistentSolver instance; i.e., the same pyomo model '
+                'used in set_instance.'
+            )
         if id(self._pyomo_model) != id(var.model()):
             raise RuntimeError('The pyomo var must be attached to the solver model')
         if var in self._pyomo_var_to_solver_var_map:
-            raise RuntimeError('The pyomo var must not have been already added to '
-                                'the solver model')
+            raise RuntimeError(
+                'The pyomo var must not have been already added to the solver model'
+            )
         if len(constraints) != len(coefficients):
-            raise RuntimeError('The list of constraints and the list of coefficents '
-                               'be of equal length')
+            raise RuntimeError(
+                'The list of constraints and the list of coefficents '
+                'be of equal length'
+            )
         obj_coef, constraints, coefficients = self._add_and_collect_column_data(
-                var, obj_coef, constraints, coefficients)
+            var, obj_coef, constraints, coefficients
+        )
         self._add_column(var, obj_coef, constraints, coefficients)
 
     """ This method should be implemented by subclasses."""
+
     def _add_column(self, var, obj_coef, constraints, coefficients):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
@@ -233,10 +250,10 @@ class PersistentSolver(DirectOrPersistentSolver):
         Returns the column and objective coefficient data to pass to the solver
         """
         ## process the objective
-        if obj_coef.__class__ in native_numeric_types and obj_coef == 0.:
-            pass ## nothing to do
+        if obj_coef.__class__ in native_numeric_types and obj_coef == 0.0:
+            pass  ## nothing to do
         else:
-            self._objective.expr += obj_coef*var
+            self._objective.expr += obj_coef * var
             self._vars_referenced_by_obj.add(var)
             obj_coef = _convert_to_const(obj_coef)
 
@@ -244,8 +261,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ## column information
         coeff_list = list()
         constr_list = list()
-        for val,c in zip(coefficients,constraints):
-            c._body += val*var
+        for val, c in zip(coefficients, constraints):
+            c._body += val * var
             self._vars_referenced_by_con[c].add(var)
 
             cval = _convert_to_const(val)
@@ -255,14 +272,17 @@ class PersistentSolver(DirectOrPersistentSolver):
         return obj_coef, constr_list, coeff_list
 
     """ This method should be implemented by subclasses."""
+
     def _remove_constraint(self, solver_con):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
     """ This method should be implemented by subclasses."""
+
     def _remove_sos_constraint(self, solver_sos_con):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
     """ This method should be implemented by subclasses."""
+
     def _remove_var(self, solver_var):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
@@ -281,18 +301,24 @@ class PersistentSolver(DirectOrPersistentSolver):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if block.is_indexed():
+        # if block.is_indexed():
         #    for sub_block in block.values():
         #        self.remove_block(sub_block)
         #    return
         for sub_block in block.block_data_objects(descend_into=True, active=True):
-            for con in sub_block.component_data_objects(ctype=Constraint, descend_into=False, active=True):
+            for con in sub_block.component_data_objects(
+                ctype=Constraint, descend_into=False, active=True
+            ):
                 self.remove_constraint(con)
 
-            for con in sub_block.component_data_objects(ctype=SOSConstraint, descend_into=False, active=True):
+            for con in sub_block.component_data_objects(
+                ctype=SOSConstraint, descend_into=False, active=True
+            ):
                 self.remove_sos_constraint(con)
 
-        for var in block.component_data_objects(ctype=Var, descend_into=True, active=True):
+        for var in block.component_data_objects(
+            ctype=Var, descend_into=True, active=True
+        ):
             self.remove_var(var)
 
     def remove_constraint(self, con):
@@ -308,7 +334,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if con.is_indexed():
+        # if con.is_indexed():
         #    for child_con in con.values():
         #        self.remove_constraint(child_con)
         #    return
@@ -334,7 +360,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if con.is_indexed():
+        # if con.is_indexed():
         #    for child_con in con.values():
         #        self.remove_sos_constraint(child_con)
         #    return
@@ -360,13 +386,17 @@ class PersistentSolver(DirectOrPersistentSolver):
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
-        #if var.is_indexed():
+        # if var.is_indexed():
         #    for child_var in var.values():
         #        self.remove_var(child_var)
         #    return
         if self._referenced_variables[var] != 0:
-            raise ValueError('Cannot remove Var {0} because it is still referenced by the '.format(var) +
-                             'objective or one or more constraints')
+            raise ValueError(
+                'Cannot remove Var {0} because it is still referenced by the '.format(
+                    var
+                )
+                + 'objective or one or more constraints'
+            )
         solver_var = self._pyomo_var_to_solver_var_map[var]
         self._remove_var(solver_var)
         self._symbol_map.removeSymbol(var)
@@ -375,6 +405,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._solver_var_to_pyomo_var_map[solver_var]
 
     """ This method should be implemented by subclasses."""
+
     def update_var(self, var):
         """
         Update a variable in the solver's model. This will update bounds, fix/unfix the variable as needed, and update
@@ -416,21 +447,28 @@ class PersistentSolver(DirectOrPersistentSolver):
         if len(args) != 0:
             if self._pyomo_model is not args[0]:
                 msg = 'The problem instance provided to the solve method is not the same as the instance provided'
-                msg += ' to the set_instance method in the persistent solver interface. '
+                msg += (
+                    ' to the set_instance method in the persistent solver interface. '
+                )
                 raise ValueError(msg)
 
         self.available(exception_flag=True)
 
         # Collect suffix names to try and import from solution.
         if isinstance(self._pyomo_model, _BlockData):
-            model_suffixes = list(name for (name, comp) in active_import_suffix_generator(self._pyomo_model))
+            model_suffixes = list(
+                name
+                for (name, comp) in active_import_suffix_generator(self._pyomo_model)
+            )
 
         else:
             assert isinstance(self._pyomo_model, IBlock)
-            model_suffixes = list(comp.storage_key for comp in
-                                  import_suffix_generator(self._pyomo_model,
-                                                          active=True,
-                                                          descend_into=False))
+            model_suffixes = list(
+                comp.storage_key
+                for comp in import_suffix_generator(
+                    self._pyomo_model, active=True, descend_into=False
+                )
+            )
 
         if len(model_suffixes) > 0:
             kwds_suffixes = kwds.setdefault('suffixes', [])
@@ -450,7 +488,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         self.options = Bunch()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
-        self.options.update(self._options_string_to_dict(kwds.pop('options_string', '')))
+        self.options.update(
+            self._options_string_to_dict(kwds.pop('options_string', ''))
+        )
         try:
 
             # we're good to go.
@@ -460,7 +500,10 @@ class PersistentSolver(DirectOrPersistentSolver):
 
             presolve_completion_time = time.time()
             if self._report_timing:
-                print("      %6.2f seconds required for presolve" % (presolve_completion_time - initial_time))
+                print(
+                    "      %6.2f seconds required for presolve"
+                    % (presolve_completion_time - initial_time)
+                )
 
             if self._pyomo_model is not None:
                 self._initialize_callbacks(self._pyomo_model)
@@ -472,21 +515,24 @@ class PersistentSolver(DirectOrPersistentSolver):
                 logger.warning(
                     "Solver (%s) did not return a solver status code.\n"
                     "This is indicative of an internal solver plugin error.\n"
-                    "Please report this to the Pyomo developers.")
+                    "Please report this to the Pyomo developers."
+                )
             elif _status.rc:
                 logger.error(
                     "Solver (%s) returned non-zero return code (%s)"
-                    % (self.name, _status.rc,))
+                    % (self.name, _status.rc)
+                )
                 if self._tee:
-                    logger.error(
-                        "See the solver log above for diagnostic information.")
+                    logger.error("See the solver log above for diagnostic information.")
                 elif hasattr(_status, 'log') and _status.log:
                     logger.error("Solver log:\n" + str(_status.log))
-                raise ApplicationError(
-                    "Solver (%s) did not exit normally" % self.name)
+                raise ApplicationError("Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
             if self._report_timing:
-                print("      %6.2f seconds required for solver" % (solve_completion_time - presolve_completion_time))
+                print(
+                    "      %6.2f seconds required for solver"
+                    % (solve_completion_time - presolve_completion_time)
+                )
 
             result = self._postsolve()
             # ***********************************************************
@@ -499,10 +545,12 @@ class PersistentSolver(DirectOrPersistentSolver):
                 if _model:
                     if isinstance(_model, IBlock):
                         if len(result.solution) == 1:
-                            result.solution(0).symbol_map = \
-                                getattr(_model, "._symbol_maps")[result._smap_id]
-                            result.solution(0).default_variable_value = \
-                                self._default_variable_value
+                            result.solution(0).symbol_map = getattr(
+                                _model, "._symbol_maps"
+                            )[result._smap_id]
+                            result.solution(
+                                0
+                            ).default_variable_value = self._default_variable_value
                             if self._load_solutions:
                                 _model.load_solution(result.solution(0))
                         else:
@@ -513,15 +561,15 @@ class PersistentSolver(DirectOrPersistentSolver):
                         assert len(getattr(_model, "._symbol_maps")) == 1
                         delattr(_model, "._symbol_maps")
                         del result._smap_id
-                        if self._load_solutions and \
-                           (len(result.solution) == 0):
+                        if self._load_solutions and (len(result.solution) == 0):
                             logger.error("No solution is available")
                     else:
                         if self._load_solutions:
                             _model.solutions.load_from(
                                 result,
                                 select=self._select_index,
-                                default_variable_value=self._default_variable_value)
+                                default_variable_value=self._default_variable_value,
+                            )
                             result._smap_id = None
                             result.solution.clear()
                         else:
@@ -531,8 +579,10 @@ class PersistentSolver(DirectOrPersistentSolver):
             postsolve_completion_time = time.time()
 
             if self._report_timing:
-                print("      %6.2f seconds required for postsolve" % (postsolve_completion_time -
-                                                                      solve_completion_time))
+                print(
+                    "      %6.2f seconds required for postsolve"
+                    % (postsolve_completion_time - solve_completion_time)
+                )
 
         finally:
             #
