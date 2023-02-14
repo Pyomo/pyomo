@@ -15,6 +15,7 @@ from pyomo.common.deprecation import deprecation_warning
 
 try:
     import pkg_resources
+
     pyomo_commands = pkg_resources.iter_entry_points('pyomo.command')
 except:
     pyomo_commands = []
@@ -28,10 +29,12 @@ for entrypoint in pyomo_commands:
     except Exception:
         exctype, err, tb = sys.exc_info()  # BUG?
         import traceback
-        msg = "Error loading pyomo.command entry point %s:\nOriginal %s: %s\n"\
-              "Traceback:\n%s" \
-              % (entrypoint, exctype.__name__, err,
-                 ''.join(traceback.format_tb(tb)),)
+
+        msg = (
+            "Error loading pyomo.command entry point %s:\nOriginal %s: %s\n"
+            "Traceback:\n%s"
+            % (entrypoint, exctype.__name__, err, ''.join(traceback.format_tb(tb)))
+        )
         # clear local variables to remove circular references
         exctype = err = tb = None
         # TODO: Should this just log an error and re-raise the original
@@ -45,6 +48,7 @@ def main(args=None):
     #
     from pyomo.scripting import pyomo_parser
     import pyomo.environ
+
     #
     # Parse the arguments
     #
@@ -99,6 +103,7 @@ def main_console_script():
         return ans.errorcode
     except AttributeError:
         return ans
+
 
 if __name__ == '__main__':
     sys.exit(main_console_script())

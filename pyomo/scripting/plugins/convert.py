@@ -18,33 +18,34 @@ from pyomo.opt import guess_format
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 from pyomo.scripting.solve_config import Default_Config
 
+
 def create_parser(parser=None):
     #
     # Setup command-line options.
     #
     if parser is None:
         parser = argparse.ArgumentParser(
-                usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
-                )
-    parser.add_argument('--output',
+            usage='%(prog)s [options] <model_or_config_file> [<data_files>]'
+        )
+    parser.add_argument(
+        '--output',
         action='store',
         dest='filename',
         help="Output file name. This option is required unless the file name is specified in a       configuration file.",
-        default=None)
-    parser.add_argument('--format',
-        action='store',
-        dest='format',
-        help="Output format",
-        default=None)
-    parser.add_argument('--generate-config-template',
-        action='store',
-        dest='template',
-        default=None)
+        default=None,
+    )
+    parser.add_argument(
+        '--format', action='store', dest='format', help="Output format", default=None
+    )
+    parser.add_argument(
+        '--generate-config-template', action='store', dest='template', default=None
+    )
     return parser
 
 
 def run_convert(options=Bunch(), parser=None):
     from pyomo.scripting.convert import convert, convert_dakota
+
     if options.model.save_format is None and options.model.save_file:
         options.model.save_format = options.model.save_file.split('.')[-1]
     #
@@ -56,8 +57,10 @@ def run_convert(options=Bunch(), parser=None):
         if options.model.save_format is None:
             raise RuntimeError("Unspecified target conversion format!")
         else:
-            raise RuntimeError("Unrecognized target conversion format (%s)!"
-                               % (options.model.save_format,) )
+            raise RuntimeError(
+                "Unrecognized target conversion format (%s)!"
+                % (options.model.save_format,)
+            )
     else:
         return convert(options, parser, _format)
 
@@ -65,6 +68,7 @@ def run_convert(options=Bunch(), parser=None):
 def convert_exec(args, unparsed):
     #
     import pyomo.scripting.util
+
     #
     # Generate a template file
     #
@@ -79,11 +83,11 @@ def convert_exec(args, unparsed):
         print("  Created template file '%s'" % args.template)
         sys.exit(0)
     #
-    save_filename = getattr(args,'filename',None)
+    save_filename = getattr(args, 'filename', None)
     if save_filename is None:
-        save_format = getattr(args,'format',None)
+        save_format = getattr(args, 'format', None)
         if not save_format is None:
-            save_filename = 'unknown.'+save_format
+            save_filename = 'unknown.' + save_format
     if save_filename is None:
         #
         # Get configuration values if no model file has been specified
@@ -104,7 +108,7 @@ def convert_exec(args, unparsed):
                 pass
             if save_filename is None:
                 try:
-                    save_filename = 'unknown.'+str(val['model']['save format'])
+                    save_filename = 'unknown.' + str(val['model']['save format'])
                 except:
                     pass
     #
@@ -117,7 +121,7 @@ def convert_exec(args, unparsed):
         config, blocks = Default_Config().config_block()
         parser = create_temporary_parser(output=True, generate=True)
         config.initialize_argparse(parser)
-        parser.parse_args(args=unparsed+['-h'])
+        parser.parse_args(args=unparsed + ['-h'])
         sys.exit(1)
     #
     # Parse previously unparsed options
@@ -138,24 +142,29 @@ def convert_exec(args, unparsed):
         config.data.files = _options.data_files
     else:
         val = pyomo.scripting.util.get_config_values(_options.model_or_config_file)
-        config.set_value( val )
+        config.set_value(val)
     #
     # Note that we pass-in pre-parsed options.  The run_command()
     # function knows to not perform a parse, but instead to simply
     # used these parsed values.
     #
-    return pyomo.scripting.util.run_command(command=run_convert, parser=convert_parser, options=config, name='convert')
+    return pyomo.scripting.util.run_command(
+        command=run_convert, parser=convert_parser, options=config, name='convert'
+    )
+
 
 #
 # Add a subparser for the pyomo command
 #
-convert_parser = create_parser(add_subparser('convert',
+convert_parser = create_parser(
+    add_subparser(
+        'convert',
         func=convert_exec,
         help='Convert a Pyomo model to another format',
         add_help=False,
-        description='This pyomo subcommand is used to create a new model file in a specified format from a Pyomo model.'
-        ))
-
+        description='This pyomo subcommand is used to create a new model file in a specified format from a Pyomo model.',
+    )
+)
 
 
 def create_temporary_parser(output=False, generate=False):
@@ -166,28 +175,34 @@ def create_temporary_parser(output=False, generate=False):
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     _subparsers = parser.add_subparsers()
     _parser = _subparsers.add_parser('convert')
-    _parser.formatter_class=CustomHelpFormatter
+    _parser.formatter_class = CustomHelpFormatter
     if generate:
         #
-        # Adding documentation about the two options that are 
+        # Adding documentation about the two options that are
         # defined in the initial parser.
         #
-        _parser.add_argument('--generate-config-template',
+        _parser.add_argument(
+            '--generate-config-template',
             action='store',
             dest='template',
             default=None,
-            help='Create a configuration template file in YAML or JSON and exit.')
+            help='Create a configuration template file in YAML or JSON and exit.',
+        )
     if output:
-        parser.add_argument('--output',
+        parser.add_argument(
+            '--output',
             action='store',
             dest='filename',
             help="Output file name. This option is required unless the file name is specified in a       configuration file.",
-            default=None)
-        parser.add_argument('--format',
+            default=None,
+        )
+        parser.add_argument(
+            '--format',
             action='store',
             dest='format',
             help="Output format",
-            default=None)
+            default=None,
+        )
         _parser.usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
         _parser.epilog = """
 Description:
@@ -229,25 +244,29 @@ more configuration options than are available with command-line options.
 
 """
     #
-    _parser.add_argument('--output',
+    _parser.add_argument(
+        '--output',
         action='store',
         dest='filename',
         help="Output file name. This option is required unless the file name is specified in a       configuration file.",
-        default=None)
-    _parser.add_argument('--format',
+        default=None,
+    )
+    _parser.add_argument(
+        '--format', action='store', dest='format', help="Output format", default=None
+    )
+    _parser.add_argument(
+        'model_or_config_file',
         action='store',
-        dest='format',
-        help="Output format",
-        default=None)
-    _parser.add_argument('model_or_config_file', 
-        action='store', 
-        nargs='?', 
+        nargs='?',
         default='',
-        help="A Python module that defines a Pyomo model, or a configuration file that defines options for 'pyomo convert' (in either YAML or JSON format)")
-    _parser.add_argument('data_files', 
-        action='store', 
-        nargs='*', 
+        help="A Python module that defines a Pyomo model, or a configuration file that defines options for 'pyomo convert' (in either YAML or JSON format)",
+    )
+    _parser.add_argument(
+        'data_files',
+        action='store',
+        nargs='*',
         default=[],
-        help='Pyomo data files that defined data used to initialize the model (specified in the first argument)')
+        help='Pyomo data files that defined data used to initialize the model (specified in the first argument)',
+    )
     #
     return _parser
