@@ -4,6 +4,9 @@ about: Suggest adding an enhancement of a current feature or a new feature in Py
 labels: enhancement
 
 ---
+
+<!-- BEFORE SUBMITTING AN ENHANCEMENT REQUEST - please browse the open issues and the [Archived Design Discussions wiki page](https://github.com/Pyomo/pyomo/wiki/Archived-Design-Discussions).-->
+
 ## Summary
 
 <!-- Please add a concise summary of your suggestion here. -->
