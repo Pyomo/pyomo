@@ -447,8 +447,29 @@ class DesignOfExperiments:
                 """
                 return m.block[s].T[t] == m.T[t]
             
-            mod.fix_con1 = pyo.Constraint(mod.scena, rule=fix_design1)
-            mod.fix_con2 = pyo.Constraint(mod.scena, mod.t_con, rule=fix_design2)
+            
+            design_names = ["CA0[0]", "T[0]", "T[0.125]", "T[0.25]", 
+                             "T[0.375]", "T[0.5]", "T[0.625]", "T[0.75]", "T[0.875]", "T[1]"]
+
+            for name in design_names:
+                
+                #for s in mod.scena:
+                #    design_var = cuid.find_component_on(mod.block[s])
+                #    design_var.fix(design_var_global)
+                def fix1(mod, s):
+                    cuid = pyo.ComponentUID(name)
+                    design_var_global = cuid.find_component_on(mod)
+                    design_var_global = cuid.find_component_on(mod)
+                    design_var = cuid.find_component_on(mod.block[s])
+                    return design_var == design_var_global
+                
+                con_name = "con"+name
+                #mod.con1 = pyo.Constraint(mod.scena,  rule=fix1)
+                mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1))
+
+
+            #mod.fix_con1 = pyo.Constraint(mod.scena, rule=fix_design1)
+            #mod.fix_con2 = pyo.Constraint(mod.scena, mod.t_con, rule=fix_design2)
 
             # solve model
             square_result = self._solve_doe(mod, fix=True)
