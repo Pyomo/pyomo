@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 def load():
     import pyomo.repn.plugins.cpxlp
     import pyomo.repn.plugins.ampl
@@ -18,5 +19,7 @@ def load():
     import pyomo.repn.plugins.nl_writer
 
     from pyomo.opt import WriterFactory
+
     WriterFactory.register('nl', 'Generate the corresponding AMPL NL file.')(
-        WriterFactory.get_class('nl_v2'))
+        WriterFactory.get_class('nl_v2')
+    )
