@@ -140,13 +140,16 @@ def solve_strongly_connected_components(
                 var_set.add(var)
 
     res_list = []
+    log_blocks = _log.isEnabledFor(logging.DEBUG)
     for scc, inputs in generate_strongly_connected_components(
         constraints,
         variables,
     ):
         with TemporarySubsystemManager(to_fix=inputs):
-            if len(scc.vars) == 1:
-                _log.info(f"Solving 1x1 block: {scc.cons[0].name}.")
+            N = len(scc.vars)
+            if N == 1:
+                if log_blocks:
+                    _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
                 results = calculate_variable_from_constraint(
                     scc.vars[0], scc.cons[0], **calc_var_kwds
                 )
@@ -155,14 +158,14 @@ def solve_strongly_connected_components(
                 if solver is None:
                     var_names = [var.name for var in scc.vars.values()][:10]
                     con_names = [con.name for con in scc.cons.values()][:10]
-                    N = len(scc.vars)
                     raise RuntimeError(
                         "An external solver is required if block has strongly\n"
                         "connected components of size greater than one (is not"
                         " a DAG).\nGot an SCC of size %sx%s including"
                         " components:\n%s\n%s" % (N, N, var_names, con_names)
                     )
-                _log.info(f"Solving {len(scc.cons)}x{len(scc.vars)} block.")
+                if log_blocks:
+                    _log.debug(f"Solving {N}x{N} block.")
                 results = solver.solve(scc, **solve_kwds)
                 res_list.append(results)
     return res_list
