@@ -6,7 +6,7 @@ Debugging a structural singularity with the Dulmage-Mendelsohn partition
 We start with some imports and by creating a Pyomo model we would like
 to debug. Usually the model is much larger and more comlicated than this.
 This particular system appeared when debugging a dynamic 1-D partitial
-differential-algebriac equation (PDAE) model representing a chemical looping
+differential-algebraic equation (PDAE) model representing a chemical looping
 combustion reactor.
 
 .. doctest::
