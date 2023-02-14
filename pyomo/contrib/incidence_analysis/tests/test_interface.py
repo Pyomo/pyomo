@@ -10,8 +10,12 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
-from pyomo.common.dependencies import networkx_available
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import (
+    networkx_available,
+    scipy_available,
+    attempt_import,
+)
+plotly, plotly_available = attempt_import("plotly")
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
@@ -1473,6 +1477,26 @@ class TestInterface(unittest.TestCase):
         constraints = [m.eq1, m.ineq1]
         matching = igraph.maximum_matching(variables, constraints)
         self.assertEqual(len(matching), 1)
+
+    @unittest.skipUnless(plotly_available, "Plotly is not available")
+    def test_plot(self):
+        """
+        Unfortunately, this test only ensures the code runs without errors.
+        It does not test for correctness.
+        """
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-1, 1))
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        # NOTE: Objective will not be displayed
+        m.obj = pyo.Objective(expr=m.y**2 + m.z**2)
+        m.c1 = pyo.Constraint(expr=m.y == 2*m.x + 1)
+        m.c2 = pyo.Constraint(expr=m.z >= m.x)
+        m.y.fix()
+        igraph = IncidenceGraphInterface(
+            m, include_inequality=True, include_fixed=True
+        )
+        igraph.plot(title='test plot', show=False)
 
 
 if __name__ == "__main__":

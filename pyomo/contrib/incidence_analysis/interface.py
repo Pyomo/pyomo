@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import enum
+import textwrap
 from pyomo.core.base.block import Block
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
@@ -19,7 +20,7 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.current import EqualityExpression
 from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import scipy_available, attempt_import
 from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import (
@@ -40,6 +41,10 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
+
+plotly, plotly_available = attempt_import("plotly")
+if plotly_available:
+    go = plotly.graph_objects
 
 
 class IncidenceMatrixType(enum.Enum):
@@ -577,3 +582,76 @@ class IncidenceGraphInterface(object):
         )
         self.row_block_map = None
         self.col_block_map = None
+
+    def plot(self, variables=None, constraints=None, title=None, show=True):
+        """Plot the bipartite incidence graph of variables and constraints
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        graph = self._extract_subgraph(variables, constraints)
+        M = len(constraints)
+
+        left_nodes = list(range(M))
+        pos_dict = nx.drawing.bipartite_layout(graph, nodes=left_nodes)
+
+        edge_x = []
+        edge_y = []
+        for start_node, end_node in graph.edges():
+            x0, y0 = pos_dict[start_node]
+            x1, y1 = pos_dict[end_node]
+            edge_x.append(x0)
+            edge_x.append(x1)
+            edge_x.append(None)
+            edge_y.append(y0)
+            edge_y.append(y1)
+            edge_y.append(None)
+        edge_trace = go.Scatter(
+            x=edge_x,
+            y=edge_y,
+            line=dict(width=0.5, color='#888'),
+            hoverinfo='none',
+            mode='lines',
+        )
+
+        node_x = []
+        node_y = []
+        node_text = []
+        node_color = []
+        for node in graph.nodes():
+            x, y = pos_dict[node]
+            node_x.append(x)
+            node_y.append(y)
+            if node < M:
+                # According to convention, we are a constraint node
+                c = constraints[node]
+                node_color.append('red')
+                body_text = '<br>'.join(
+                    textwrap.wrap(
+                        str(c.body), width=120, subsequent_indent="    "
+                    )
+                )
+                node_text.append(
+                    f'{str(c)}<br>lb: {str(c.lower)}<br>body: {body_text}<br>'
+                    f'ub: {str(c.upper)}<br>active: {str(c.active)}'
+                )
+            else:
+                # According to convention, we are a variable node
+                v = variables[node-M]
+                node_color.append('blue')
+                node_text.append(
+                    f'{str(v)}<br>lb: {str(v.lb)}<br>ub: {str(v.ub)}<br>'
+                    f'value: {str(v.value)}<br>domain: {str(v.domain)}<br>'
+                    f'fixed: {str(v.is_fixed())}'
+                )
+        node_trace = go.Scatter(
+            x=node_x,
+            y=node_y,
+            mode='markers',
+            hoverinfo='text',
+            text=node_text,
+            marker=dict(color=node_color, size=10),
+        )
+        fig = go.Figure(data=[edge_trace, node_trace])
+        if title is not None:
+            fig.update_layout(title=dict(text=title))
+        if show:
+            fig.show()
