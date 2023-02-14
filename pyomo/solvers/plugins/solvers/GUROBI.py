@@ -146,7 +146,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                 try:
                     rc = subprocess.run(
                         [solver_exec],
-                        input=('import gurobipy; ' 'gurobipy.Env().dispose(); quit()'),
+                        input=('import gurobipy; gurobipy.Env().dispose(); quit()'),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         universal_newlines=True,
@@ -281,7 +281,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         else:
             results = subprocess.run(
                 [solver_exec],
-                input=('import gurobipy; ' 'print(gurobipy.gurobi.version()); quit()'),
+                input=('import gurobipy; print(gurobipy.gurobi.version()); quit()'),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,

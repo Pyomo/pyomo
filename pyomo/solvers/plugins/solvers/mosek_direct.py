@@ -591,7 +591,7 @@ class MOSEKDirect(DirectSolver):
                 obj_counter += 1
                 if obj_counter > 1:
                     raise ValueError(
-                        "Solver interface does not " "support multiple objectives."
+                        "Solver interface does not support multiple objectives."
                     )
                 self._set_objective(obj)
 

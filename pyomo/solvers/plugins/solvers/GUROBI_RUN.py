@@ -215,7 +215,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         solution_status = 'stoppedByLimit'
     else:
         status = 'error'
-        message = "Unhandled Gurobi solve status " "(" + str(solver_status) + ")"
+        message = "Unhandled Gurobi solve status (" + str(solver_status) + ")"
         term_cond = 'error'
         solution_status = 'error'
     assert solution_status is not None

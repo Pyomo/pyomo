@@ -254,7 +254,7 @@ class GAMSDirect(_GAMSSolver):
 
         if len(args) != 1:
             raise ValueError(
-                'Exactly one model must be passed ' 'to solve method of GAMSSolver.'
+                'Exactly one model must be passed to solve method of GAMSSolver.'
             )
         model = args[0]
 
@@ -768,7 +768,7 @@ class GAMSShell(_GAMSSolver):
 
         if len(args) != 1:
             raise ValueError(
-                'Exactly one model must be passed ' 'to solve method of GAMSSolver.'
+                'Exactly one model must be passed to solve method of GAMSSolver.'
             )
         model = args[0]
 

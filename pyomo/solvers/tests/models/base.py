@@ -205,7 +205,7 @@ class _BaseTestModel(object):
                 assert suf.import_enabled()
         solution = None
         error_str = (
-            "Difference in solution for {0}.{1}:\n\tBaseline " "- {2}\n\tCurrent - {3}"
+            "Difference in solution for {0}.{1}:\n\tBaseline - {2}\n\tCurrent - {3}"
         )
 
         with open(self.results_file, 'r') as f:

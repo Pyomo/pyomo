@@ -362,12 +362,12 @@ class GurobiDirect(DirectSolver):
         if con.has_lb():
             if not is_fixed(con.lower):
                 raise ValueError(
-                    "Lower bound of constraint {0} " "is not constant.".format(con)
+                    "Lower bound of constraint {0} is not constant.".format(con)
                 )
         if con.has_ub():
             if not is_fixed(con.upper):
                 raise ValueError(
-                    "Upper bound of constraint {0} " "is not constant.".format(con)
+                    "Upper bound of constraint {0} is not constant.".format(con)
                 )
 
         if con.equality:
@@ -422,7 +422,7 @@ class GurobiDirect(DirectSolver):
             sos_type = gurobipy.GRB.SOS_TYPE2
         else:
             raise ValueError(
-                "Solver does not support SOS " "level {0} constraints".format(level)
+                "Solver does not support SOS level {0} constraints".format(level)
             )
 
         gurobi_vars = []
@@ -667,7 +667,7 @@ class GurobiDirect(DirectSolver):
         else:
             self.results.solver.status = SolverStatus.error
             self.results.solver.termination_message = (
-                "Unhandled Gurobi solve status " "(" + str(status) + ")"
+                "Unhandled Gurobi solve status (" + str(status) + ")"
             )
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error

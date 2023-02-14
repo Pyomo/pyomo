@@ -225,7 +225,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             raise RuntimeError('The pyomo var must be attached to the solver model')
         if var in self._pyomo_var_to_solver_var_map:
             raise RuntimeError(
-                'The pyomo var must not have been already added to ' 'the solver model'
+                'The pyomo var must not have been already added to the solver model'
             )
         if len(constraints) != len(coefficients):
             raise RuntimeError(

@@ -245,44 +245,44 @@ class DirectOrPersistentSolver(OptSolver):
                 obj_counter += 1
                 if obj_counter > 1:
                     raise ValueError(
-                        "Solver interface does not " "support multiple objectives."
+                        "Solver interface does not support multiple objectives."
                     )
                 self._set_objective(obj)
 
     """ This method should be implemented by subclasses."""
 
     def _set_objective(self, obj):
-        raise NotImplementedError("This method should be implemented " "by subclasses")
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     """ This method should be implemented by subclasses."""
 
     def _add_constraint(self, con):
-        raise NotImplementedError("This method should be implemented " "by subclasses")
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     """ This method should be implemented by subclasses."""
 
     def _add_sos_constraint(self, con):
-        raise NotImplementedError("This method should be implemented " "by subclasses")
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     """ This method should be implemented by subclasses."""
 
     def _add_var(self, var):
-        raise NotImplementedError("This method should be implemented " "by subclasses")
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     """ This method should be implemented by subclasses."""
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
-        raise NotImplementedError("This method should be implemented " "by subclasses")
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     """ This method should be implemented by subclasses."""
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
-        raise NotImplementedError("This method should be implemented " "by subclasses")
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     """ This method should be implemented by subclasses."""
 
     def _load_vars(self, vars_to_load):
-        raise NotImplementedError("This method should be implemented " "by subclasses")
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     def load_vars(self, vars_to_load=None):
         """

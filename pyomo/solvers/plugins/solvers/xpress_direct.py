@@ -298,7 +298,7 @@ class XpressDirect(DirectSolver):
         else:
             results.solver.status = SolverStatus.error
             results.solver.termination_message = (
-                "Unhandled Xpress solve status " "(" + str(status) + ")"
+                "Unhandled Xpress solve status (" + str(status) + ")"
             )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
@@ -401,7 +401,7 @@ class XpressDirect(DirectSolver):
         else:
             results.solver.status = SolverStatus.error
             results.solver.termination_message = (
-                "Unhandled Xpress solve status " "(" + str(status) + ")"
+                "Unhandled Xpress solve status (" + str(status) + ")"
             )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
@@ -686,12 +686,12 @@ class XpressDirect(DirectSolver):
         if con.has_lb():
             if not is_fixed(con.lower):
                 raise ValueError(
-                    "Lower bound of constraint {0} " "is not constant.".format(con)
+                    "Lower bound of constraint {0} is not constant.".format(con)
                 )
         if con.has_ub():
             if not is_fixed(con.upper):
                 raise ValueError(
-                    "Upper bound of constraint {0} " "is not constant.".format(con)
+                    "Upper bound of constraint {0} is not constant.".format(con)
                 )
 
         if con.equality:
@@ -737,7 +737,7 @@ class XpressDirect(DirectSolver):
         level = con.level
         if level not in [1, 2]:
             raise ValueError(
-                "Solver does not support SOS " "level {0} constraints".format(level)
+                "Solver does not support SOS level {0} constraints".format(level)
             )
 
         xpress_vars = []
@@ -1039,6 +1039,8 @@ class XpressDirect(DirectSolver):
             if xpress_con in self._range_constraints:
                 ## for xpress, the slack on a range constraint
                 ## is based on the upper bound
+                ## FIXME: This looks like a bug - there is no variable named
+                ## `con` - there is, however, `xpress_con` and `pyomo_con`
                 lb = con.lb
                 ub = con.ub
                 ub_s = val
