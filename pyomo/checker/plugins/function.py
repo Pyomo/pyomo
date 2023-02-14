@@ -39,7 +39,9 @@ class FunctionTrackerHook(SingletonPlugin):
                 if info.value.id in script.functionDefs:
                     for target in info.targets:
                         if isinstance(target, ast.Name):
-                            script.functionDefs[target.id] = script.functionDefs[info.value.id]
+                            script.functionDefs[target.id] = script.functionDefs[
+                                info.value.id
+                            ]
             else:
                 for target in info.targets:
                     if isinstance(target, ast.Name):
@@ -50,4 +52,3 @@ class FunctionTrackerHook(SingletonPlugin):
         """Remove function args from the stack"""
         if isinstance(info, ast.FunctionDef):
             script.functionArgs.pop()
-

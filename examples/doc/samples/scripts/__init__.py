@@ -1,1 +1,1 @@
-# Dummy file for nose tests
+# Dummy file for pytest

@@ -6,6 +6,8 @@ Pyomo currently supports the following versions of Python:
 * CPython: 3.7, 3.8, 3.9, 3.10, 3.11
 * PyPy: 3
 
+At the time of the first Pyomo release after the end-of-life of a minor Python
+version, Pyomo will remove testing for that Python version.
 
 Using CONDA
 ~~~~~~~~~~~

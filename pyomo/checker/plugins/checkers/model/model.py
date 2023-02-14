@@ -17,7 +17,10 @@ from pyomo.checker.plugins.checker import IterativeTreeChecker
 
 class ModelName(IterativeTreeChecker):
 
-    pyomo.common.plugin_base.alias('model.model_name', 'Check that the "model" variable is assigned with a Pyomo model.')
+    pyomo.common.plugin_base.alias(
+        'model.model_name',
+        'Check that the "model" variable is assigned with a Pyomo model.',
+    )
 
     def beginChecking(self, runner, script):
         self.modelAssigned = False
@@ -50,7 +53,9 @@ class ModelName(IterativeTreeChecker):
 
 class ModelCreate(IterativeTreeChecker):
 
-    pyomo.common.plugin_base.alias('model.create', 'Check if a Pyomo model class is being assigned to a variable.')
+    pyomo.common.plugin_base.alias(
+        'model.create', 'Check if a Pyomo model class is being assigned to a variable.'
+    )
 
     def getTargetStrings(self, assign):
         ls = []
@@ -58,7 +63,9 @@ class ModelCreate(IterativeTreeChecker):
             if isinstance(target, ast.Name):
                 ls.append(target.id)
             elif isinstance(target, ast.Tuple):
-                ls.extend(list(map((lambda x: x.id), target.elts))) # TODO probably not resilient
+                ls.extend(
+                    list(map((lambda x: x.id), target.elts))
+                )  # TODO probably not resilient
         return ls
 
     def checkerDoc(self):
@@ -74,12 +81,19 @@ class ModelCreate(IterativeTreeChecker):
             if 'model' in self.getTargetStrings(info):
                 if isinstance(info.value, ast.Name):
                     if info.value.id in ['Model', 'AbstractModel', 'ConcreteModel']:
-                        self.problem("Possible incorrect assignment of " + info.value.id + " class instead of instance", lineno = info.lineno)
+                        self.problem(
+                            "Possible incorrect assignment of "
+                            + info.value.id
+                            + " class instead of instance",
+                            lineno=info.lineno,
+                        )
 
 
 class DeprecatedModel(IterativeTreeChecker):
 
-    pyomo.common.plugin_base.alias('model.Model_class', 'Check if the deprecated Model class is being used.')
+    pyomo.common.plugin_base.alias(
+        'model.Model_class', 'Check if the deprecated Model class is being used.'
+    )
 
     def checkerDoc(self):
         return """\
@@ -92,4 +106,7 @@ class DeprecatedModel(IterativeTreeChecker):
             if isinstance(info.value, ast.Call):
                 if isinstance(info.value.func, ast.Name):
                     if info.value.func.id == 'Model':
-                        self.problem("Deprecated use of Model class", lineno = info.value.func.lineno)
+                        self.problem(
+                            "Deprecated use of Model class",
+                            lineno=info.value.func.lineno,
+                        )
