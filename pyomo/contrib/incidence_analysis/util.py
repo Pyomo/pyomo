@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.common.collections import ComponentSet
@@ -20,6 +22,8 @@ from pyomo.util.subsystems import (
     generate_subsystem_blocks,
 )
 from pyomo.contrib.incidence_analysis.interface import IncidenceGraphInterface
+
+_log = logging.getLogger(__name__)
 
 
 def generate_strongly_connected_components(
@@ -138,12 +142,15 @@ def solve_strongly_connected_components(
                 var_set.add(var)
 
     res_list = []
+    log_blocks = _log.isEnabledFor(logging.DEBUG)
     for scc, inputs in generate_strongly_connected_components(
         constraints,
         variables,
     ):
         with TemporarySubsystemManager(to_fix=inputs):
             if len(scc.vars) == 1:
+                if log_blocks:
+                    _log.debug(f"Solving 1x1 block: {scc.cons[0].name}.")
                 results = calculate_variable_from_constraint(
                     scc.vars[0], scc.cons[0], **calc_var_kwds
                 )
@@ -159,7 +166,10 @@ def solve_strongly_connected_components(
                         "An external solver is required if block has strongly\n"
                         "connected components of size greater than one (is not "
                         "a DAG).\nGot an SCC with components: \n%s\n%s" % (vars, cons)
-                    )
+                        )
+                if log_blocks:
+                    _log.debug(f"Solving {len(scc.cons)}x{len(scc.cons)} block.")
+
                 results = solver.solve(scc, **solve_kwds)
                 res_list.append(results)
     return res_list
