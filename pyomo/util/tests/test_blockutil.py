@@ -18,9 +18,8 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Var, inequality
-from pyomo.util.blockutil import (
-    log_model_constraints,
-)
+from pyomo.util.blockutil import log_model_constraints
+
 
 class TestBlockutil(unittest.TestCase):
     """Tests block utilities."""
@@ -42,8 +41,8 @@ class TestBlockutil(unittest.TestCase):
         m.c10 = Constraint(expr=m.y >= 3, doc="Inactive")
         m.c10.deactivate()
         m.c11 = Constraint(expr=m.y <= m.y.value)
-        m.yy = Var(bounds=(0, 1), initialize=1E-7, doc="Close to lower bound")
-        m.y3 = Var(bounds=(0, 1E-7), initialize=0, doc="Bounds too close")
+        m.yy = Var(bounds=(0, 1), initialize=1e-7, doc="Close to lower bound")
+        m.y3 = Var(bounds=(0, 1e-7), initialize=0, doc="Bounds too close")
         m.y4 = Var(bounds=(0, 1), initialize=2, doc="Fixed out of bounds.")
         m.y4.fix()
 
@@ -51,8 +50,15 @@ class TestBlockutil(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util', logging.INFO):
             log_model_constraints(m)
         expected_output = [
-            "c1 active", "c2 active", "c3 active", "c4 active",
-            "c5 active", "c6 active", "c7 active", "c8 active",
-            "c9 active", "c11 active"
+            "c1 active",
+            "c2 active",
+            "c3 active",
+            "c4 active",
+            "c5 active",
+            "c6 active",
+            "c7 active",
+            "c8 active",
+            "c9 active",
+            "c11 active",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())

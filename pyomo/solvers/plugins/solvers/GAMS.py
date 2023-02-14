@@ -30,13 +30,21 @@ from pyomo.core.kernel.variable import IVariable
 import pyomo.core.base.suffix
 import pyomo.core.kernel.suffix
 
-from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
-    SolutionStatus, TerminationCondition, ProblemSense)
+from pyomo.opt.results import (
+    SolverResults,
+    SolverStatus,
+    Solution,
+    SolutionStatus,
+    TerminationCondition,
+    ProblemSense,
+)
 
 from pyomo.common.dependencies import attempt_import
+
 gdxcc, gdxcc_available = attempt_import('gdxcc', defer_check=True)
 
 logger = logging.getLogger('pyomo.solvers')
+
 
 class _GAMSSolver(object):
     """Aggregate of common methods for GAMS interfaces"""
@@ -89,17 +97,17 @@ class _GAMSSolver(object):
             index = token.find('=')
             if index == -1:
                 raise ValueError(
-                    "Solver options must have the form option=value: '%s'" % istr)
+                    "Solver options must have the form option=value: '%s'" % istr
+                )
             try:
-                val = eval(token[(index+1):])
+                val = eval(token[(index + 1) :])
             except:
-                val = token[(index+1):]
+                val = token[(index + 1) :]
             ans[token[:index]] = val
         return ans
 
     def _simple_model(self, n):
-        return \
-            """
+        return """
             option limrow = 0;
             option limcol = 0;
             option solprint = off;
@@ -110,7 +118,9 @@ class _GAMSSolver(object):
             obj.. ans =g= sum(I, x(I));
             model test / all /;
             solve test using lp minimizing ans;
-            """ % (n,)
+            """ % (
+            n,
+        )
 
     #
     # Support "with" statements.
@@ -120,7 +130,6 @@ class _GAMSSolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
-
 
 
 @SolverFactory.register('gams', doc='The GAMS modeling language')
@@ -134,6 +143,7 @@ class GAMSSolver(_GAMSSolver):
         solver_io='shell' or 'gms' to use command line to call gams
             Requires the gams executable be on your system PATH.
     """
+
     def __new__(cls, *args, **kwds):
         mode = kwds.pop('solver_io', 'shell')
         if mode is None:
@@ -148,8 +158,9 @@ class GAMSSolver(_GAMSSolver):
             return
 
 
-@SolverFactory.register('_gams_direct',
-        doc='Direct python interface to the GAMS modeling language')
+@SolverFactory.register(
+    '_gams_direct', doc='Direct python interface to the GAMS modeling language'
+)
 class GAMSDirect(_GAMSSolver):
     """
     A generic python interface to GAMS solvers.
@@ -164,14 +175,17 @@ class GAMSDirect(_GAMSSolver):
         except ImportError as e:
             if not exception_flag:
                 return False
-            raise ImportError("Import of gams failed - GAMS direct "
-                              "solver functionality is not available.\n"
-                              "GAMS message: %s" % (e,))
+            raise ImportError(
+                "Import of gams failed - GAMS direct "
+                "solver functionality is not available.\n"
+                "GAMS message: %s" % (e,)
+            )
         avail = self._run_simple_model(1)
         if not avail and exception_flag:
             raise NameError(
                 "'gams' command failed to solve a simple model - "
-                "GAMS shell solver functionality is not available.")
+                "GAMS shell solver functionality is not available."
+            )
         return avail
 
     def license_is_valid(self):
@@ -183,9 +197,10 @@ class GAMSDirect(_GAMSSolver):
         if not self.available(exception_flag=False):
             return _extract_version('')
         from gams import GamsWorkspace
+
         ws = GamsWorkspace()
         version = tuple(int(i) for i in ws._version.split('.')[:4])
-        while(len(version) < 4):
+        while len(version) < 4:
             version += (0,)
         return version
 
@@ -193,8 +208,8 @@ class GAMSDirect(_GAMSSolver):
         tmpdir = mkdtemp()
         try:
             from gams import GamsWorkspace, DebugLevel
-            ws = GamsWorkspace(debug=DebugLevel.Off,
-                          working_directory=tmpdir)
+
+            ws = GamsWorkspace(debug=DebugLevel.Off, working_directory=tmpdir)
             t1 = ws.add_job_from_string(self._simple_model(n))
             t1.run()
             return True
@@ -238,8 +253,9 @@ class GAMSDirect(_GAMSSolver):
         from gams.workspace import GamsExceptionExecution
 
         if len(args) != 1:
-            raise ValueError('Exactly one model must be passed '
-                             'to solve method of GAMSSolver.')
+            raise ValueError(
+                'Exactly one model must be passed to solve method of GAMSSolver.'
+            )
         model = args[0]
 
         # self.options are default for each run, overwritten by kwds
@@ -248,12 +264,12 @@ class GAMSDirect(_GAMSSolver):
         options.update(kwds)
 
         load_solutions = options.pop("load_solutions", True)
-        tee            = options.pop("tee", False)
-        logfile        = options.pop("logfile", None)
-        keepfiles      = options.pop("keepfiles", False)
-        tmpdir         = options.pop("tmpdir", None)
-        report_timing  = options.pop("report_timing", False)
-        io_options     = options.pop("io_options", {})
+        tee = options.pop("tee", False)
+        logfile = options.pop("logfile", None)
+        keepfiles = options.pop("keepfiles", False)
+        tmpdir = options.pop("tmpdir", None)
+        report_timing = options.pop("report_timing", False)
+        io_options = options.pop("io_options", {})
 
         # Pass remaining keywords to writer, which will handle
         # any unrecognized arguments
@@ -277,21 +293,25 @@ class GAMSDirect(_GAMSSolver):
         output_file = StringIO()
         if isinstance(model, IBlock):
             # Kernel blocks have slightly different write method
-            smap_id = model.write(filename=output_file,
-                                  format=ProblemFormat.gams,
-                                  _called_by_solver=True,
-                                  **io_options)
+            smap_id = model.write(
+                filename=output_file,
+                format=ProblemFormat.gams,
+                _called_by_solver=True,
+                **io_options
+            )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
-            (_, smap_id) = model.write(filename=output_file,
-                                       format=ProblemFormat.gams,
-                                       io_options=io_options)
+            (_, smap_id) = model.write(
+                filename=output_file, format=ProblemFormat.gams, io_options=io_options
+            )
             symbolMap = model.solutions.symbol_map[smap_id]
 
         presolve_completion_time = time.time()
         if report_timing:
-            print("      %6.2f seconds required for presolve" %
-                  (presolve_completion_time - initial_time))
+            print(
+                "      %6.2f seconds required for presolve"
+                % (presolve_completion_time - initial_time)
+            )
 
         ####################################################################
         # Apply solver
@@ -306,9 +326,10 @@ class GAMSDirect(_GAMSSolver):
         if tmpdir is not None and os.path.exists(tmpdir):
             newdir = False
 
-        ws = GamsWorkspace(debug=DebugLevel.KeepFiles if keepfiles
-                           else DebugLevel.Off,
-                           working_directory=tmpdir)
+        ws = GamsWorkspace(
+            debug=DebugLevel.KeepFiles if keepfiles else DebugLevel.Off,
+            working_directory=tmpdir,
+        )
 
         t1 = ws.add_job_from_string(output_file.getvalue())
 
@@ -324,8 +345,7 @@ class GAMSDirect(_GAMSSolver):
                 # Always name working directory or delete files,
                 # regardless of any errors.
                 if keepfiles:
-                    print("\nGAMS WORKING DIRECTORY: %s\n" %
-                          ws.working_directory)
+                    print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
                 elif tmpdir is not None:
                     # Garbage collect all references to t1.out_db
                     # So that .gdx file can be deleted
@@ -345,8 +365,10 @@ class GAMSDirect(_GAMSSolver):
 
         solve_completion_time = time.time()
         if report_timing:
-            print("      %6.2f seconds required for solver" %
-                  (solve_completion_time - presolve_completion_time))
+            print(
+                "      %6.2f seconds required for solver"
+                % (solve_completion_time - presolve_completion_time)
+            )
 
         ####################################################################
         # Postsolve
@@ -354,36 +376,40 @@ class GAMSDirect(_GAMSSolver):
 
         # import suffixes must be on the top-level model
         if isinstance(model, IBlock):
-            model_suffixes = list(comp.storage_key for comp \
-                                  in pyomo.core.kernel.suffix.\
-                                  import_suffix_generator(model,
-                                                          active=True,
-                                                          descend_into=False))
+            model_suffixes = list(
+                comp.storage_key
+                for comp in pyomo.core.kernel.suffix.import_suffix_generator(
+                    model, active=True, descend_into=False
+                )
+            )
         else:
-            model_suffixes = list(name for (name,comp) \
-                                  in pyomo.core.base.suffix.\
-                                  active_import_suffix_generator(model))
-        extract_dual = ('dual' in model_suffixes)
-        extract_rc = ('rc' in model_suffixes)
+            model_suffixes = list(
+                name
+                for (
+                    name,
+                    comp,
+                ) in pyomo.core.base.suffix.active_import_suffix_generator(model)
+            )
+        extract_dual = 'dual' in model_suffixes
+        extract_rc = 'rc' in model_suffixes
 
         results = SolverResults()
         results.problem.name = os.path.join(ws.working_directory, t1.name + '.gms')
         results.problem.lower_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.upper_bound = t1.out_db["OBJEST"].find_record().value
-        results.problem.number_of_variables = \
-            t1.out_db["NUMVAR"].find_record().value
-        results.problem.number_of_constraints = \
-            t1.out_db["NUMEQU"].find_record().value
-        results.problem.number_of_nonzeros = \
-            t1.out_db["NUMNZ"].find_record().value
+        results.problem.number_of_variables = t1.out_db["NUMVAR"].find_record().value
+        results.problem.number_of_constraints = t1.out_db["NUMEQU"].find_record().value
+        results.problem.number_of_nonzeros = t1.out_db["NUMNZ"].find_record().value
         results.problem.number_of_binary_variables = None
         # Includes binary vars:
-        results.problem.number_of_integer_variables = \
+        results.problem.number_of_integer_variables = (
             t1.out_db["NUMDVAR"].find_record().value
-        results.problem.number_of_continuous_variables = \
-            t1.out_db["NUMVAR"].find_record().value \
+        )
+        results.problem.number_of_continuous_variables = (
+            t1.out_db["NUMVAR"].find_record().value
             - t1.out_db["NUMDVAR"].find_record().value
-        results.problem.number_of_objectives = 1 # required by GAMS writer
+        )
+        results.problem.number_of_objectives = 1  # required by GAMS writer
         obj = list(model.component_data_objects(Objective, active=True))
         assert len(obj) == 1, 'Only one objective is allowed.'
         obj = obj[0]
@@ -416,7 +442,9 @@ class GAMSDirect(_GAMSSolver):
             results.solver.termination_condition = TerminationCondition.maxEvaluations
         elif solvestat == 7:
             results.solver.status = SolverStatus.aborted
-            results.solver.termination_condition = TerminationCondition.licensingProblems
+            results.solver.termination_condition = (
+                TerminationCondition.licensingProblems
+            )
         elif solvestat == 8:
             results.solver.status = SolverStatus.aborted
             results.solver.termination_condition = TerminationCondition.userInterrupt
@@ -425,7 +453,9 @@ class GAMSDirect(_GAMSSolver):
             results.solver.termination_condition = TerminationCondition.solverFailure
         elif solvestat == 11:
             results.solver.status = SolverStatus.error
-            results.solver.termination_condition = TerminationCondition.internalSolverError
+            results.solver.termination_condition = (
+                TerminationCondition.internalSolverError
+            )
         elif solvestat == 4:
             results.solver.status = SolverStatus.warning
             results.solver.message = "Solver quit with a problem (see LST file)"
@@ -465,13 +495,17 @@ class GAMSDirect(_GAMSSolver):
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
         elif modelstat == 9:
-            results.solver.termination_condition = TerminationCondition.intermediateNonInteger
+            results.solver.termination_condition = (
+                TerminationCondition.intermediateNonInteger
+            )
             soln.status = SolutionStatus.other
         elif modelstat == 11:
             # Should be handled above, if modelstat and solvestat both
             # indicate a licensing problem
             if results.solver.termination_condition is None:
-                results.solver.termination_condition = TerminationCondition.licensingProblems
+                results.solver.termination_condition = (
+                    TerminationCondition.licensingProblems
+                )
             soln.status = SolutionStatus.error
         elif modelstat in [12, 13]:
             if results.solver.termination_condition is None:
@@ -490,8 +524,7 @@ class GAMSDirect(_GAMSSolver):
             # This is just a backup catch, all cases are handled above
             soln.status = SolutionStatus.error
 
-        soln.gap = abs(results.problem.upper_bound \
-                       - results.problem.lower_bound)
+        soln.gap = abs(results.problem.upper_bound - results.problem.lower_bound)
 
         for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
@@ -516,8 +549,7 @@ class GAMSDirect(_GAMSSolver):
 
         if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
-                if c.body.is_fixed() or \
-                   (not (c.has_lb() or c.has_ub())):
+                if c.body.is_fixed() or (not (c.has_lb() or c.has_ub())):
                     # the constraint was not sent to GAMS
                     continue
                 sym = symbolMap.getSymbol(c)
@@ -567,10 +599,12 @@ class GAMSDirect(_GAMSSolver):
         results._smap = None
         if isinstance(model, IBlock):
             if len(results.solution) == 1:
-                results.solution(0).symbol_map = \
-                    getattr(model, "._symbol_maps")[results._smap_id]
-                results.solution(0).default_variable_value = \
-                    self._default_variable_value
+                results.solution(0).symbol_map = getattr(model, "._symbol_maps")[
+                    results._smap_id
+                ]
+                results.solution(
+                    0
+                ).default_variable_value = self._default_variable_value
                 if load_solutions:
                     model.load_solution(results.solution(0))
             else:
@@ -581,8 +615,7 @@ class GAMSDirect(_GAMSSolver):
             assert len(getattr(model, "._symbol_maps")) == 1
             delattr(model, "._symbol_maps")
             del results._smap_id
-            if load_solutions and \
-               (len(results.solution) == 0):
+            if load_solutions and (len(results.solution) == 0):
                 logger.error("No solution is available")
         else:
             if load_solutions:
@@ -595,16 +628,21 @@ class GAMSDirect(_GAMSSolver):
 
         postsolve_completion_time = time.time()
         if report_timing:
-            print("      %6.2f seconds required for postsolve" %
-                  (postsolve_completion_time - solve_completion_time))
-            print("      %6.2f seconds required total" %
-                  (postsolve_completion_time - initial_time))
+            print(
+                "      %6.2f seconds required for postsolve"
+                % (postsolve_completion_time - solve_completion_time)
+            )
+            print(
+                "      %6.2f seconds required total"
+                % (postsolve_completion_time - initial_time)
+            )
 
         return results
 
 
-@SolverFactory.register('_gams_shell',
-        doc='Shell interface to the GAMS modeling language')
+@SolverFactory.register(
+    '_gams_shell', doc='Shell interface to the GAMS modeling language'
+)
 class GAMSShell(_GAMSSolver):
     """A generic shell interface to GAMS solvers."""
 
@@ -616,7 +654,8 @@ class GAMSShell(_GAMSSolver):
                 return False
             raise NameError(
                 "No 'gams' command found on system PATH - GAMS shell "
-                "solver functionality is not available.")
+                "solver functionality is not available."
+            )
         # New versions of GAMS require a license to run anything.
         # Instead of parsing the output, we will try solving a trivial
         # model.
@@ -624,7 +663,8 @@ class GAMSShell(_GAMSSolver):
         if not avail and exception_flag:
             raise NameError(
                 "'gams' command failed to solve a simple model - "
-                "GAMS shell solver functionality is not available.")
+                "GAMS shell solver functionality is not available."
+            )
         return avail
 
     def license_is_valid(self):
@@ -643,7 +683,8 @@ class GAMSShell(_GAMSSolver):
             result = subprocess.run(
                 [solver_exec, test, "curdir=" + tmpdir, 'lo=0'],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL)
+                stderr=subprocess.DEVNULL,
+            )
             return not result.returncode
         finally:
             shutil.rmtree(tmpdir)
@@ -652,8 +693,10 @@ class GAMSShell(_GAMSSolver):
     def _default_executable(self):
         executable = pyomo.common.Executable("gams")
         if not executable:
-            logger.warning("Could not locate the 'gams' executable, "
-                           "which is required for solver gams")
+            logger.warning(
+                "Could not locate the 'gams' executable, "
+                "which is required for solver gams"
+            )
             self.enable = False
             return None
         return executable.path()
@@ -671,9 +714,12 @@ class GAMSShell(_GAMSSolver):
         else:
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
-            results = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT,
-                                     universal_newlines=True)
+            results = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
             return _extract_version(results.stdout)
 
     @staticmethod
@@ -721,8 +767,9 @@ class GAMSShell(_GAMSSolver):
         self.available()
 
         if len(args) != 1:
-            raise ValueError('Exactly one model must be passed '
-                             'to solve method of GAMSSolver.')
+            raise ValueError(
+                'Exactly one model must be passed to solve method of GAMSSolver.'
+            )
         model = args[0]
 
         # self.options are default for each run, overwritten by kwds
@@ -731,12 +778,12 @@ class GAMSShell(_GAMSSolver):
         options.update(kwds)
 
         load_solutions = options.pop("load_solutions", True)
-        tee            = options.pop("tee", False)
-        logfile        = options.pop("logfile", None)
-        keepfiles      = options.pop("keepfiles", False)
-        tmpdir         = options.pop("tmpdir", None)
-        report_timing  = options.pop("report_timing", False)
-        io_options     = options.pop("io_options", {})
+        tee = options.pop("tee", False)
+        logfile = options.pop("logfile", None)
+        keepfiles = options.pop("keepfiles", False)
+        tmpdir = options.pop("tmpdir", None)
+        report_timing = options.pop("report_timing", False)
+        io_options = options.pop("io_options", {})
 
         io_options.update(options)
 
@@ -778,37 +825,38 @@ class GAMSShell(_GAMSSolver):
 
         put_results = "results"
         io_options["put_results"] = put_results
-        io_options.setdefault("put_results_format",
-                              'gdx' if gdxcc_available else 'dat')
+        io_options.setdefault("put_results_format", 'gdx' if gdxcc_available else 'dat')
 
         if io_options['put_results_format'] == 'gdx':
-            results_filename = os.path.join(
-                tmpdir, "GAMS_MODEL_p.gdx")
-            statresults_filename = os.path.join(
-                tmpdir, "%s_s.gdx" % (put_results,))
+            results_filename = os.path.join(tmpdir, "GAMS_MODEL_p.gdx")
+            statresults_filename = os.path.join(tmpdir, "%s_s.gdx" % (put_results,))
         else:
-            results_filename = os.path.join(
-                tmpdir, "%s.dat" % (put_results,))
-            statresults_filename = os.path.join(
-                tmpdir, "%sstat.dat" % (put_results,))
+            results_filename = os.path.join(tmpdir, "%s.dat" % (put_results,))
+            statresults_filename = os.path.join(tmpdir, "%sstat.dat" % (put_results,))
 
         if isinstance(model, IBlock):
             # Kernel blocks have slightly different write method
-            smap_id = model.write(filename=output_filename,
-                                  format=ProblemFormat.gams,
-                                  _called_by_solver=True,
-                                  **io_options)
+            smap_id = model.write(
+                filename=output_filename,
+                format=ProblemFormat.gams,
+                _called_by_solver=True,
+                **io_options
+            )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
-            (_, smap_id) = model.write(filename=output_filename,
-                                       format=ProblemFormat.gams,
-                                       io_options=io_options)
+            (_, smap_id) = model.write(
+                filename=output_filename,
+                format=ProblemFormat.gams,
+                io_options=io_options,
+            )
             symbolMap = model.solutions.symbol_map[smap_id]
 
         presolve_completion_time = time.time()
         if report_timing:
-            print("      %6.2f seconds required for presolve" %
-                  (presolve_completion_time - initial_time))
+            print(
+                "      %6.2f seconds required for presolve"
+                % (presolve_completion_time - initial_time)
+            )
 
         ####################################################################
         # Apply solver
@@ -835,8 +883,7 @@ class GAMSShell(_GAMSSolver):
             if tee:
                 ostreams.append(sys.stdout)
             with TeeStream(*ostreams) as t:
-                result = subprocess.run(command, stdout=t.STDOUT,
-                                        stderr=t.STDERR)
+                result = subprocess.run(command, stdout=t.STDOUT, stderr=t.STDERR)
             rc = result.returncode
             txt = ostreams[0].getvalue()
 
@@ -851,22 +898,27 @@ class GAMSShell(_GAMSSolver):
                     # Run check_expr_evaluation, which errors if necessary
                     check_expr_evaluation(model, symbolMap, 'shell')
                 # If nothing was raised, or for all other cases, raise this
-                logger.error("GAMS encountered an error during solve. "
-                             "Check listing file for details.")
+                logger.error(
+                    "GAMS encountered an error during solve. "
+                    "Check listing file for details."
+                )
                 logger.error(txt)
                 if os.path.exists(lst_filename):
                     with open(lst_filename, 'r') as FILE:
-                        logger.error(
-                            "GAMS Listing file:\n\n%s" % (FILE.read(),))
-                raise RuntimeError("GAMS encountered an error during solve. "
-                                   "Check listing file for details.")
+                        logger.error("GAMS Listing file:\n\n%s" % (FILE.read(),))
+                raise RuntimeError(
+                    "GAMS encountered an error during solve. "
+                    "Check listing file for details."
+                )
 
             if io_options['put_results_format'] == 'gdx':
                 model_soln, stat_vars = self._parse_gdx_results(
-                    results_filename, statresults_filename)
+                    results_filename, statresults_filename
+                )
             else:
                 model_soln, stat_vars = self._parse_dat_results(
-                    results_filename, statresults_filename)
+                    results_filename, statresults_filename
+                )
         finally:
             if not keepfiles:
                 if newdir:
@@ -879,8 +931,10 @@ class GAMSShell(_GAMSSolver):
 
         solve_completion_time = time.time()
         if report_timing:
-            print("      %6.2f seconds required for solver" %
-                  (solve_completion_time - presolve_completion_time))
+            print(
+                "      %6.2f seconds required for solver"
+                % (solve_completion_time - presolve_completion_time)
+            )
 
         ####################################################################
         # Postsolve
@@ -888,17 +942,22 @@ class GAMSShell(_GAMSSolver):
 
         # import suffixes must be on the top-level model
         if isinstance(model, IBlock):
-            model_suffixes = list(comp.storage_key for comp \
-                                  in pyomo.core.kernel.suffix.\
-                                  import_suffix_generator(model,
-                                                          active=True,
-                                                          descend_into=False))
+            model_suffixes = list(
+                comp.storage_key
+                for comp in pyomo.core.kernel.suffix.import_suffix_generator(
+                    model, active=True, descend_into=False
+                )
+            )
         else:
-            model_suffixes = list(name for (name,comp) \
-                                  in pyomo.core.base.suffix.\
-                                  active_import_suffix_generator(model))
-        extract_dual = ('dual' in model_suffixes)
-        extract_rc = ('rc' in model_suffixes)
+            model_suffixes = list(
+                name
+                for (
+                    name,
+                    comp,
+                ) in pyomo.core.base.suffix.active_import_suffix_generator(model)
+            )
+        extract_dual = 'dual' in model_suffixes
+        extract_rc = 'rc' in model_suffixes
 
         results = SolverResults()
         results.problem.name = output_filename
@@ -910,9 +969,10 @@ class GAMSShell(_GAMSSolver):
         results.problem.number_of_binary_variables = None
         # Includes binary vars:
         results.problem.number_of_integer_variables = stat_vars["NUMDVAR"]
-        results.problem.number_of_continuous_variables = stat_vars["NUMVAR"] \
-                                                         - stat_vars["NUMDVAR"]
-        results.problem.number_of_objectives = 1 # required by GAMS writer
+        results.problem.number_of_continuous_variables = (
+            stat_vars["NUMVAR"] - stat_vars["NUMDVAR"]
+        )
+        results.problem.number_of_objectives = 1  # required by GAMS writer
         obj = list(model.component_data_objects(Objective, active=True))
         assert len(obj) == 1, 'Only one objective is allowed.'
         obj = obj[0]
@@ -945,7 +1005,9 @@ class GAMSShell(_GAMSSolver):
             results.solver.termination_condition = TerminationCondition.maxEvaluations
         elif solvestat == 7:
             results.solver.status = SolverStatus.aborted
-            results.solver.termination_condition = TerminationCondition.licensingProblems
+            results.solver.termination_condition = (
+                TerminationCondition.licensingProblems
+            )
         elif solvestat == 8:
             results.solver.status = SolverStatus.aborted
             results.solver.termination_condition = TerminationCondition.userInterrupt
@@ -954,7 +1016,9 @@ class GAMSShell(_GAMSSolver):
             results.solver.termination_condition = TerminationCondition.solverFailure
         elif solvestat == 11:
             results.solver.status = SolverStatus.error
-            results.solver.termination_condition = TerminationCondition.internalSolverError
+            results.solver.termination_condition = (
+                TerminationCondition.internalSolverError
+            )
         elif solvestat == 4:
             results.solver.status = SolverStatus.warning
             results.solver.message = "Solver quit with a problem (see LST file)"
@@ -963,7 +1027,7 @@ class GAMSShell(_GAMSSolver):
         elif solvestat == 6:
             results.solver.status = SolverStatus.unknown
 
-        results.solver.return_code = rc # 0
+        results.solver.return_code = rc  # 0
         # Not sure if this value is actually user time
         # "the elapsed time it took to execute a solve statement in total"
         results.solver.user_time = stat_vars["ETSOLVE"]
@@ -994,13 +1058,17 @@ class GAMSShell(_GAMSSolver):
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
         elif modelstat == 9:
-            results.solver.termination_condition = TerminationCondition.intermediateNonInteger
+            results.solver.termination_condition = (
+                TerminationCondition.intermediateNonInteger
+            )
             soln.status = SolutionStatus.other
         elif modelstat == 11:
             # Should be handled above, if modelstat and solvestat both
             # indicate a licensing problem
             if results.solver.termination_condition is None:
-                results.solver.termination_condition = TerminationCondition.licensingProblems
+                results.solver.termination_condition = (
+                    TerminationCondition.licensingProblems
+                )
             soln.status = SolutionStatus.error
         elif modelstat in [12, 13]:
             if results.solver.termination_condition is None:
@@ -1019,8 +1087,7 @@ class GAMSShell(_GAMSSolver):
             # This is just a backup catch, all cases are handled above
             soln.status = SolutionStatus.error
 
-        soln.gap = abs(results.problem.upper_bound \
-                       - results.problem.lower_bound)
+        soln.gap = abs(results.problem.upper_bound - results.problem.lower_bound)
 
         has_rc_info = True
         for sym, ref in symbolMap.bySymbol.items():
@@ -1053,8 +1120,7 @@ class GAMSShell(_GAMSSolver):
 
         if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
-                if (c.body.is_fixed()) or \
-                   (not (c.has_lb() or c.has_ub())):
+                if (c.body.is_fixed()) or (not (c.has_lb() or c.has_ub())):
                     # the constraint was not sent to GAMS
                     continue
                 sym = symbolMap.getSymbol(c)
@@ -1116,10 +1182,12 @@ class GAMSShell(_GAMSSolver):
         results._smap = None
         if isinstance(model, IBlock):
             if len(results.solution) == 1:
-                results.solution(0).symbol_map = \
-                    getattr(model, "._symbol_maps")[results._smap_id]
-                results.solution(0).default_variable_value = \
-                    self._default_variable_value
+                results.solution(0).symbol_map = getattr(model, "._symbol_maps")[
+                    results._smap_id
+                ]
+                results.solution(
+                    0
+                ).default_variable_value = self._default_variable_value
                 if load_solutions:
                     model.load_solution(results.solution(0))
             else:
@@ -1130,8 +1198,7 @@ class GAMSShell(_GAMSSolver):
             assert len(getattr(model, "._symbol_maps")) == 1
             delattr(model, "._symbol_maps")
             del results._smap_id
-            if load_solutions and \
-               (len(results.solution) == 0):
+            if load_solutions and (len(results.solution) == 0):
                 logger.error("No solution is available")
         else:
             if load_solutions:
@@ -1144,18 +1211,32 @@ class GAMSShell(_GAMSSolver):
 
         postsolve_completion_time = time.time()
         if report_timing:
-            print("      %6.2f seconds required for postsolve" %
-                  (postsolve_completion_time - solve_completion_time))
-            print("      %6.2f seconds required total" %
-                  (postsolve_completion_time - initial_time))
+            print(
+                "      %6.2f seconds required for postsolve"
+                % (postsolve_completion_time - solve_completion_time)
+            )
+            print(
+                "      %6.2f seconds required total"
+                % (postsolve_completion_time - initial_time)
+            )
 
         return results
 
     def _parse_gdx_results(self, results_filename, statresults_filename):
         model_soln = dict()
-        stat_vars = dict.fromkeys(['MODELSTAT', 'SOLVESTAT', 'OBJEST',
-                                   'OBJVAL', 'NUMVAR', 'NUMEQU', 'NUMDVAR',
-                                   'NUMNZ', 'ETSOLVE'])
+        stat_vars = dict.fromkeys(
+            [
+                'MODELSTAT',
+                'SOLVESTAT',
+                'OBJEST',
+                'OBJVAL',
+                'NUMVAR',
+                'NUMEQU',
+                'NUMDVAR',
+                'NUMNZ',
+                'ETSOLVE',
+            ]
+        )
 
         pgdx = gdxcc.new_gdxHandle_tp()
         ret = gdxcc.gdxCreateD(pgdx, os.path.dirname(self.executable()), 128)
@@ -1324,6 +1405,7 @@ def check_expr_evaluation(model, symbolMap, solver_io):
         for var in uninit_vars:
             var.set_value(None)
 
+
 def check_expr(expr, name, solver_io):
     # Check if GAMS will encounter domain violations in presolver
     # operations at current values, which are None (0) by default
@@ -1331,16 +1413,19 @@ def check_expr(expr, name, solver_io):
     try:
         value(expr)
     except (ValueError, ZeroDivisionError):
-        logger.warning("While evaluating model.%s's expression, GAMS solver "
-                       "encountered an error.\nGAMS requires that all "
-                       "equations and expressions evaluate at initial values.\n"
-                       "Ensure variable values do not violate any domains, "
-                       "and use the warmstart=True keyword to solve()." % name)
+        logger.warning(
+            "While evaluating model.%s's expression, GAMS solver "
+            "encountered an error.\nGAMS requires that all "
+            "equations and expressions evaluate at initial values.\n"
+            "Ensure variable values do not violate any domains, "
+            "and use the warmstart=True keyword to solve()." % name
+        )
         if solver_io == 'shell':
             # For shell, there is no previous exception to worry about
             # overwriting, so raise the ValueError.
             # But for direct, the GamsExceptionExecution will be raised.
             raise
+
 
 def file_removal_gams_direct(tmpdir, newdir):
     if newdir:

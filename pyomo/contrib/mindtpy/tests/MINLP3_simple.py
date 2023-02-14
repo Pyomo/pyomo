@@ -29,7 +29,6 @@ Ref:
 
 
 """
-from __future__ import division
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint, Reals,
                            Objective, RangeSet, Var, minimize, log)

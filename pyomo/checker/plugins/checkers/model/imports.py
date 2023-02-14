@@ -17,11 +17,13 @@ from pyomo.checker.plugins.checker import IterativeTreeChecker
 
 class Imports(IterativeTreeChecker):
     """
-    Check that an import for the pyomo.core or pyomo.environ packages 
+    Check that an import for the pyomo.core or pyomo.environ packages
     exists somewhere within the initial imports block
     """
 
-    pyomo.common.plugin_base.alias('model.imports', 'Check if pyomo.core or pyomo.environ has been imported.')
+    pyomo.common.plugin_base.alias(
+        'model.imports', 'Check if pyomo.core or pyomo.environ has been imported.'
+    )
 
     def beginChecking(self, runner, script):
         self.pyomoImported = False

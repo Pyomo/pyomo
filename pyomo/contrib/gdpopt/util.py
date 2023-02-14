@@ -171,7 +171,7 @@ def copy_var_list_values(from_list, to_list, config,
 
 def fix_discrete_var(var, val, config):
     """Fixes the discrete variable var to val, rounding to the nearest integer
-    or not, depending on if rounding is specifed in config and what the integer
+    or not, depending on if rounding is specified in config and what the integer
     tolerance is."""
     if val is None:
         return

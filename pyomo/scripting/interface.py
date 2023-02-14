@@ -10,13 +10,19 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.plugin_base import (
-    Interface, DeprecatedInterface, Plugin, SingletonPlugin,
-    ExtensionPoint, implements, alias
+    Interface,
+    DeprecatedInterface,
+    Plugin,
+    SingletonPlugin,
+    ExtensionPoint,
+    implements,
+    alias,
 )
 
 registered_callback = {}
 
-def pyomo_callback( name ):
+
+def pyomo_callback(name):
     """This is a decorator that declares a function to be
     a callback function.  The callback functions are
     added to the solver when run from the pyomo script.
@@ -27,64 +33,65 @@ def pyomo_callback( name ):
     def my_cut_generator(solver, model):
         ...
     """
+
     def fn(f):
         registered_callback[name] = f
         return f
+
     return fn
 
 
 class IPyomoScriptPreprocess(Interface):
-
     def apply(self, **kwds):
         """Apply preprocessing step in the Pyomo script"""
 
-class IPyomoScriptCreateModel(Interface):
 
+class IPyomoScriptCreateModel(Interface):
     def apply(self, **kwds):
         """Apply model creation step in the Pyomo script"""
 
-class IPyomoScriptModifyInstance(Interface):
 
+class IPyomoScriptModifyInstance(Interface):
     def apply(self, **kwds):
         """Modify and return the model instance"""
 
-class IPyomoScriptCreateDataPortal(Interface):
 
+class IPyomoScriptCreateDataPortal(Interface):
     def apply(self, **kwds):
         """Apply model data creation step in the Pyomo script"""
 
-class IPyomoScriptPrintModel(Interface):
 
+class IPyomoScriptPrintModel(Interface):
     def apply(self, **kwds):
         """Apply model printing step in the Pyomo script"""
 
-class IPyomoScriptPrintInstance(Interface):
 
+class IPyomoScriptPrintInstance(Interface):
     def apply(self, **kwds):
         """Apply instance printing step in the Pyomo script"""
 
-class IPyomoScriptSaveInstance(Interface):
 
+class IPyomoScriptSaveInstance(Interface):
     def apply(self, **kwds):
         """Apply instance saving step in the Pyomo script"""
 
-class IPyomoScriptPrintResults(Interface):
 
+class IPyomoScriptPrintResults(Interface):
     def apply(self, **kwds):
         """Apply results printing step in the Pyomo script"""
 
-class IPyomoScriptSaveResults(Interface):
 
+class IPyomoScriptSaveResults(Interface):
     def apply(self, **kwds):
         """Apply results saving step in the Pyomo script"""
 
-class IPyomoScriptPostprocess(Interface):
 
+class IPyomoScriptPostprocess(Interface):
     def apply(self, **kwds):
         """Apply postprocessing step in the Pyomo script"""
 
-class IPyomoPresolver(Interface):
 
+class IPyomoPresolver(Interface):
     def get_actions(self):
         """Return a list of presolve actions, in the order in which
         they will be applied."""
@@ -104,7 +111,6 @@ class IPyomoPresolver(Interface):
 
 
 class IPyomoPresolveAction(Interface):
-
     def presolve(self, instance):
         """Apply the presolve action to this instance, and return the
         revised instance"""

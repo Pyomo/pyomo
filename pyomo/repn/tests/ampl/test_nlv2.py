@@ -213,6 +213,43 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
+    def test_pow(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=2)
+        m.x = Var()
+
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, ('o5\nv%s\nn2\n', [id(m.x)]))
+
+        m.p = 1
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.x): 1})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.p = 0
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 1)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
     def test_errors_divide_by_0_mult_by_0(self):
         # Note: we may elect to deprecate this functionality in the future
         #
@@ -661,6 +698,31 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, [(id(m.x), 1)])
         self.assertEqual(repn.nonlinear, None)
         self.assertEqual(info, [None, None, False])
+
+    def test_nested_operator_zero_arg(self):
+        # This tests an error encountered when developing the nlv2
+        # writer where var ids were being dropped then the second
+        # argument in a binary operator was 0.  The original case was
+        # for expr**p where p was a variable fixed to 0.  However, since
+        # then, _handle_pow_operator contains special handling for **0
+        # and **1.
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Param(initialize=0, mutable=True)
+        expr = (1/m.x) == m.p
+
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((expr, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(
+            repn.nonlinear,
+            ('o24\no3\nn1\nv%s\nn0\n', [id(m.x)])
+        )
 
 class Test_NLWriter(unittest.TestCase):
     def test_external_function_str_args(self):

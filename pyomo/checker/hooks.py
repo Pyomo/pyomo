@@ -13,13 +13,12 @@ __all__ = ['IPreCheckHook', 'IPostCheckHook']
 
 from pyomo.common.plugin_base import Interface
 
-class IPreCheckHook(Interface):
 
+class IPreCheckHook(Interface):
     def precheck(self, runner, script, info):
         pass
 
 
 class IPostCheckHook(Interface):
-
     def postcheck(self, runner, script, info):
         pass

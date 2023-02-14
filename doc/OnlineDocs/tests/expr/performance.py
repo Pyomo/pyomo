@@ -1,6 +1,6 @@
 from pyomo.environ import *
 
-#---------------------------------------------
+# ---------------------------------------------
 # @loop1
 M = ConcreteModel()
 M.x = Var(range(5))
@@ -11,19 +11,19 @@ for i in range(5):
 # @loop1
 print(s)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @loop2
 s = sum(M.x[i] for i in range(5))
 # @loop2
 print(s)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @loop3
-s = sum(M.x[i] for i in range(5))**2
+s = sum(M.x[i] for i in range(5)) ** 2
 # @loop3
 print(s)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @prod
 M = ConcreteModel()
 M.x = Var(range(5))
@@ -42,30 +42,30 @@ print(e1)
 print(e2)
 print(e3)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @quicksum
 M = ConcreteModel()
 M.x = Var(range(5))
 
 # Summation using the Python sum() function
-e1 = sum(M.x[i]**2 for i in M.x)
+e1 = sum(M.x[i] ** 2 for i in M.x)
 
 # Summation using the Pyomo quicksum function
-e2 = quicksum(M.x[i]**2 for i in M.x)
+e2 = quicksum(M.x[i] ** 2 for i in M.x)
 # @quicksum
 print(e1)
 print(e2)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @warning
 M = ConcreteModel()
 M.x = Var(range(5))
 
-e = quicksum(M.x[i]**2 if i > 0 else M.x[i] for i in range(5))
+e = quicksum(M.x[i] ** 2 if i > 0 else M.x[i] for i in range(5))
 # @warning
 print(e)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @sum_product1
 M = ConcreteModel()
 M.z = RangeSet(5)
@@ -85,7 +85,7 @@ print(e1)
 print(e2)
 print(e3)
 
-#---------------------------------------------
+# ---------------------------------------------
 # @sum_product2
 # Sum the product of x_i/y_i
 e1 = sum_product(M.x, denom=M.y)
@@ -95,4 +95,3 @@ e2 = sum_product(denom=(M.x, M.y))
 # @sum_product2
 print(e1)
 print(e2)
-

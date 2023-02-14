@@ -248,6 +248,7 @@ setup_kwargs = dict(
             'openpyxl',  # dataportals
             #'pathos',   # requested for #963, but PR currently closed
             'pint',  # units
+            'plotly',  # incidence_analysis
             'python-louvain',  # community_detection
             'pyyaml',  # core
             'scipy',

@@ -12,8 +12,10 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.core.expr.taylor_series import taylor_series_expansion
+
 try:
     import gurobipy
+
     m = gurobipy.Model()
     gurobipy_available = True
 except:
@@ -27,7 +29,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pyo.Var(bounds=(-10, 10))
         m.y = pyo.Var()
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pyo.Constraint(expr=m.y >= 2*m.x + 1)
+        m.c1 = pyo.Constraint(expr=m.y >= 2 * m.x + 1)
 
         opt = pyo.SolverFactory('gurobi_persistent')
         opt.set_instance(m)
@@ -192,7 +194,7 @@ class TestGurobiPersistent(unittest.TestCase):
     @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update5(self):
         m = pyo.ConcreteModel()
-        m.a = pyo.Set(initialize=[1,2,3], ordered=True)
+        m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
         m.x = pyo.Var(m.a, within=pyo.Binary)
         m.y = pyo.Var(within=pyo.Binary)
         m.obj = pyo.Objective(expr=m.y)
@@ -214,7 +216,7 @@ class TestGurobiPersistent(unittest.TestCase):
     @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update6(self):
         m = pyo.ConcreteModel()
-        m.a = pyo.Set(initialize=[1,2,3], ordered=True)
+        m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
         m.x = pyo.Var(m.a, within=pyo.Binary)
         m.y = pyo.Var(within=pyo.Binary)
         m.obj = pyo.Objective(expr=m.y)
@@ -295,12 +297,12 @@ class TestGurobiPersistent(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(0, 4))
         m.y = pyo.Var(within=pyo.Integers, bounds=(0, None))
-        m.obj = pyo.Objective(expr=2*m.x + m.y)
+        m.obj = pyo.Objective(expr=2 * m.x + m.y)
         m.cons = pyo.ConstraintList()
 
         def _add_cut(xval):
             m.x.value = xval
-            return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
+            return m.cons.add(m.y >= taylor_series_expansion((m.x - 2) ** 2))
 
         _add_cut(0)
         _add_cut(4)
@@ -313,7 +315,7 @@ class TestGurobiPersistent(unittest.TestCase):
         def _my_callback(cb_m, cb_opt, cb_where):
             if cb_where == gurobipy.GRB.Callback.MIPSOL:
                 cb_opt.cbGetSolution(vars=[m.x, m.y])
-                if m.y.value < (m.x.value - 2)**2 - 1e-6:
+                if m.y.value < (m.x.value - 2) ** 2 - 1e-6:
                     cb_opt.cbLazy(_add_cut(m.x.value))
 
         opt.set_callback(_my_callback)
@@ -346,7 +348,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.c = pyo.Constraint(expr=(0, m.x, 1))
-        m.ci = pyo.Constraint([1,2], rule=lambda m,i:(0,m.x,i+1))
+        m.ci = pyo.Constraint([1, 2], rule=lambda m, i: (0, m.x, i + 1))
         m.cd = pyo.Constraint(expr=(0, -m.x, 1))
         m.cd.deactivate()
         m.obj = pyo.Objective(expr=-m.x)
@@ -360,7 +362,7 @@ class TestGurobiPersistent(unittest.TestCase):
 
         m2 = pyo.ConcreteModel()
         m2.y = pyo.Var()
-        m2.c = pyo.Constraint(expr=(0,m.x,1))
+        m2.c = pyo.Constraint(expr=(0, m.x, 1))
 
         # different model than attached to opt
         self.assertRaises(RuntimeError, opt.add_column, m2, m2.y, 0, [], [])
@@ -373,7 +375,7 @@ class TestGurobiPersistent(unittest.TestCase):
 
         m.y = pyo.Var()
         # len(coefficents) == len(constraints)
-        self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1,2])
+        self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1, 2])
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c, z], [1])
 
         # add indexed constraint

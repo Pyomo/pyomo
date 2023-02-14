@@ -21,7 +21,6 @@ import sys
 # mucking with a non-public API here ...
 #
 class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
-
     def _metavar_formatter(self, action, default_metavar):
         if action.metavar is not None:
             result = action.metavar
@@ -35,7 +34,8 @@ class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
             if isinstance(result, tuple):
                 return result
             else:
-                return (result, ) * tuple_size
+                return (result,) * tuple_size
+
         return format
 
     def _iter_indented_subactions(self, action):
@@ -57,18 +57,21 @@ class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
 def get_version():
     from pyomo.version import version
     import platform
+
     return "Pyomo %s (%s %s on %s %s)" % (
-            version,
-            platform.python_implementation(),
-            '.'.join( str(x) for x in sys.version_info[:3] ),
-            platform.system(),
-            platform.release() )
+        version,
+        platform.python_implementation(),
+        '.'.join(str(x) for x in sys.version_info[:3]),
+        platform.system(),
+        platform.release(),
+    )
+
 
 #
 # Create the argparse parser for Pyomo
 #
-doc="This is the main driver for the Pyomo optimization software."
-epilog="""
+doc = "This is the main driver for the Pyomo optimization software."
+epilog = """
 -------------------------------------------------------------------------
 Pyomo supports a variety of modeling and optimization capabilities,
 which are executed either as subcommands of 'pyomo' or as separate
@@ -86,6 +89,7 @@ _pyomo_subparsers = None
 
 subparsers = []
 
+
 def add_subparser(name, **args):
     """
     Add a subparser to the 'pyomo' command.
@@ -100,6 +104,7 @@ def add_subparser(name, **args):
         parser.set_defaults(func=func)
     return parser
 
+
 def get_parser():
     """
     Return the parser used by the 'pyomo' commmand.
@@ -107,13 +112,11 @@ def get_parser():
     global _pyomo_parser
     if _pyomo_parser is None:
         _pyomo_parser = argparse.ArgumentParser(
-            description=doc,
-            epilog=epilog,
-            formatter_class=CustomHelpFormatter
+            description=doc, epilog=epilog, formatter_class=CustomHelpFormatter
         )
-        _pyomo_parser.add_argument(
-            "--version", action="version", version=get_version())
+        _pyomo_parser.add_argument("--version", action="version", version=get_version())
         global _pyomo_subparsers
         _pyomo_subparsers = _pyomo_parser.add_subparsers(
-            dest='subparser_name', title='subcommands' )
+            dest='subparser_name', title='subcommands'
+        )
     return _pyomo_parser

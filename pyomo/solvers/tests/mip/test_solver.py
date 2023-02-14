@@ -20,18 +20,17 @@ import pyomo.opt
 import pyomo.solvers.plugins.solvers
 from pyomo.solvers.plugins.solvers.CBCplugin import MockCBC
 
-class MockSolver2(pyomo.opt.OptSolver):
 
+class MockSolver2(pyomo.opt.OptSolver):
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
-        pyomo.opt.OptSolver.__init__(self,**kwds)
+        pyomo.opt.OptSolver.__init__(self, **kwds)
 
     def enabled(self):
         return False
 
 
 class OptSolverDebug(unittest.TestCase):
-
     def setUp(self):
         pyomo.opt.SolverFactory.register('stest2')(MockSolver2)
 

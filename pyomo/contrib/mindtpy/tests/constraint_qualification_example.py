@@ -9,7 +9,6 @@ The expected optimal solution value is 3.
                      2  constraints
 
 """
-from __future__ import division
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint, Reals,
                            Objective, Param, RangeSet, Var, exp, minimize, log)

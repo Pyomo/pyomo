@@ -13,14 +13,11 @@ from concrete1 import model
 # so the solver plugin will know which suffixes to collect
 model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
-results = opt.solve(model) # also load results to model
+results = opt.solve(model)  # also load results to model
 
 # display all duals
-print ("Duals")
+print("Duals")
 for c in model.component_objects(pyo.Constraint, active=True):
-    print ("   Constraint",c)
+    print("   Constraint", c)
     for index in c:
-        print ("      ", index, model.dual[c[index]])
-
-
-
+        print("      ", index, model.dual[c[index]])

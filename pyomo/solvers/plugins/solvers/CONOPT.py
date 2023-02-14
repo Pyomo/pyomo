@@ -19,9 +19,10 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverStatus
-from pyomo.opt.solver import  SystemCallSolver
+from pyomo.opt.solver import SystemCallSolver
 
 import logging
+
 logger = logging.getLogger('pyomo.solvers')
 
 
@@ -30,7 +31,6 @@ class CONOPT(SystemCallSolver):
     """
     An interface to the CONOPT optimizer that uses the AMPL Solver Library.
     """
-
 
     def __init__(self, **kwds):
         #
@@ -42,7 +42,7 @@ class CONOPT(SystemCallSolver):
         # Setup valid problem formats, and valid results for each problem format
         # Also set the default problem and results formats.
         #
-        self._valid_problem_formats=[ProblemFormat.nl]
+        self._valid_problem_formats = [ProblemFormat.nl]
         self._valid_result_formats = {}
         self._valid_result_formats[ProblemFormat.nl] = [ResultsFormat.sol]
         self.set_problem_format(ProblemFormat.nl)
@@ -62,8 +62,10 @@ class CONOPT(SystemCallSolver):
     def _default_executable(self):
         executable = Executable("conopt")
         if not executable:
-            logger.warning("Could not locate the 'conopt' executable, "
-                           "which is required for solver %s" % self.name)
+            logger.warning(
+                "Could not locate the 'conopt' executable, "
+                "which is required for solver %s" % self.name
+            )
             self.enable = False
             return None
         return executable.path()
@@ -75,23 +77,25 @@ class CONOPT(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = subprocess.run( [solver_exec], timeout=1,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
+        results = subprocess.run(
+            [solver_exec],
+            timeout=1,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
         return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 
-        assert(self._problem_format == ProblemFormat.nl)
-        assert(self._results_format == ResultsFormat.sol)
+        assert self._problem_format == ProblemFormat.nl
+        assert self._results_format == ResultsFormat.sol
 
         #
         # Define log file
         #
         if self._log_file is None:
-            self._log_file = TempfileManager.\
-                             create_tempfile(suffix="_conopt.log")
+            self._log_file = TempfileManager.create_tempfile(suffix="_conopt.log")
 
         fname = problem_files[0]
         if '.' in fname:
@@ -100,7 +104,7 @@ class CONOPT(SystemCallSolver):
                 fname = '.'.join(tmp[:-1])
             else:
                 fname = tmp[0]
-        self._soln_file = fname+".sol"
+        self._soln_file = fname + ".sol"
 
         #
         # Define results file (since an external parser is used)
@@ -110,7 +114,7 @@ class CONOPT(SystemCallSolver):
         #
         # Define command line
         #
-        env=os.environ.copy()
+        env = os.environ.copy()
         #
         # Merge the PYOMO_AMPLFUNC (externals defined within
         # Pyomo/Pyomo) with any user-specified external function
@@ -130,19 +134,19 @@ class CONOPT(SystemCallSolver):
         # to the command line. I'm not sure what solvers this method of passing options
         # through the envstr variable works for, but it does not seem to work for cplex
         # or gurobi
-        opt=[]
+        opt = []
         for key in self.options:
             if key == 'solver':
                 continue
             if isinstance(self.options[key], str) and ' ' in self.options[key]:
-                opt.append(key+"=\""+str(self.options[key])+"\"")
-                cmd.append(str(key)+"="+str(self.options[key]))
+                opt.append(key + "=\"" + str(self.options[key]) + "\"")
+                cmd.append(str(key) + "=" + str(self.options[key]))
             elif key == 'subsolver':
-                opt.append("solver="+str(self.options[key]))
-                cmd.append(str(key)+"="+str(self.options[key]))
+                opt.append("solver=" + str(self.options[key]))
+                cmd.append(str(key) + "=" + str(self.options[key]))
             else:
-                opt.append(key+"="+str(self.options[key]))
-                cmd.append(str(key)+"="+str(self.options[key]))
+                opt.append(key + "=" + str(self.options[key]))
+                cmd.append(str(key) + "=" + str(self.options[key]))
 
         envstr = "%s_options" % self.options.solver
         # Merge with any options coming in through the environment
@@ -157,7 +161,6 @@ class CONOPT(SystemCallSolver):
         # For some reason it sets the solver_results_num to
         # 100 in this case, which is reserved for cases
         # where "optimal solution indicated, but error likely".
-        if results.solver.id == 100 and \
-            'Locally optimal' in results.solver.message:
+        if results.solver.id == 100 and 'Locally optimal' in results.solver.message:
             results.solver.status = SolverStatus.ok
         return results
