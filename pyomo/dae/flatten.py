@@ -8,14 +8,20 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+"""A module for "flattening" the components in a block-hierarchical model
+with respect to common indexing sets
+
+"""
+
 from pyomo.core.base import Block, Reference
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.block import SubclassOf
 from pyomo.core.base.set import SetProduct
 from pyomo.core.base.indexed_component import (
-        UnindexedComponent_set,
-        normalize_index,
-        )
+    UnindexedComponent_set,
+    normalize_index,
+)
+from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from collections import OrderedDict
 
@@ -124,10 +130,9 @@ def _fill_indices_from_product(partial_index_list, product):
 
 
 def slice_component_along_sets(
-        component, sets, context_slice=None, normalize=None,
-        ):
-    """
-    This function generates all possible slices of the provided component
+    component, sets, context_slice=None, normalize=None,
+):
+    """This function generates all possible slices of the provided component
     along the provided sets. That is, it will iterate over the component's
     other indexing sets and, for each index, yield a slice along the
     sets specified in the call signature.
@@ -234,34 +239,81 @@ def slice_component_along_sets(
         yield (), c_slice
 
 
-def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
-    """
-    Recursively generate sliced components of a block and its subblocks, along
-    with the sets that were sliced for each component.
+def generate_sliced_components(
+    b,
+    index_stack,
+    slice_,
+    sets,
+    ctype,
+    index_map,
+    active=None,
+):
+    """Recursively generate slices of the specified ctype along the
+    specified sets
+    
+    Parameters
+    ----------
 
-    `b` is a _BlockData object.
+    b: _BlockData
+        Block whose components will be sliced
 
-    `index_stack` is a list of indices "above" `b` in the
-    hierarchy. Note that `b` is a data object, so any index
-    of its parent component should be included in the stack.
+    index_stack: list
+        Sets above ``b`` in the block hierachy, including on its parent
+        component, that have been sliced. This is necessary to return the
+        sets that have been sliced.
 
-    `slice_` is the slice generated so far. Our goal here is to
-    yield extensions to `slice_` at this level of the hierarchy.
+    slice_: IndexedComponent_slice or _BlockData
+        Slice generated so far.  This function will yield extensions to
+        this slice at the current level of the block hierarchy.
 
-    `sets` is a ComponentSet of Pyomo sets that should be sliced.
+    sets: ComponentSet of Pyomo sets
+        Sets that will be sliced
 
-    `ctype` is the type we are looking for.
+    ctype: Subclass of Component
+        Type of components to generate
 
-    `index_map` is potentially a map from each set in `sets` to a 
-    "representative index" to use when descending into subblocks.
+    index_map: ComponentMap
+        Map from (some of) the specified sets to a "representative index"
+        to use when descending into subblocks. While this map does not need
+        to contain every set in the sliced sets, it must not contain any
+        sets that will not be sliced.
+
+    active: Bool or None
+        If not None, this is a boolean flag used to filter component objects
+        by their active status.
+
+    Yields
+    ------
+    
+    Tuple of Sets and an IndexedComponent_slice or ComponentData
+        The sets indexing the returned component or slice. If the component
+        is indexed, an IndexedComponent_slice is returned. Otherwise, a
+        ComponentData is returned.
+
     """
     if type(slice_) is IndexedComponent_slice:
         context_slice = slice_.duplicate()
     else:
         context_slice = None
 
-    # Looks for components indexed by these sets immediately in our block
-    for c in b.component_objects(ctype, descend_into=False):
+    # If active argument is specified and does not match the block's
+    # active flag, we return immediately. This matches the behavior of
+    # component_objects. We only need this check as we may modify the
+    # active argument sent to component_objects if ctype is not an
+    # ActiveComponent type.
+    if active is not None and active != b.active:
+        return
+
+    # Define this class so we don't have to call issubclass again later.
+    check_active = issubclass(ctype, ActiveComponent) and (active != None)
+
+    # If active=False and ctype is not an ActiveComponent (e.g. it is Var)
+    # we will not generate any components. To prevent this, only pass the
+    # active argument if we are looking for active components.
+    c_active = active if check_active else None
+
+    # Looks for components indexed by specified sets immediately in our block.
+    for c in b.component_objects(ctype, descend_into=False, active=c_active):
         subsets = list(c.index_set().subsets())
         new_sets = [s for s in subsets if s in sets]
         # Extend our "index stack"
@@ -269,12 +321,30 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
         # Extend our slice with this component
         for idx, new_slice in slice_component_along_sets(
-                c, sets, context_slice=context_slice, normalize=False
-                ):
-            yield sliced_sets, new_slice
+            c, sets, context_slice=context_slice, normalize=False
+        ):
+            # If we have to check activity, check data objects defined by
+            # slice. If any match, we yield the slice. This is done for
+            # compatibility with the behavior when slicing blocks, where
+            # we can only descend into a block that matches our active flag.
+            #
+            # Note that new_slice can be a data object. This happens if the
+            # component doesn't contain any sets we are slicing, i.e. new_sets
+            # is empty.
+            if (
+                # Yield if (a) we're not checking activity
+                not check_active
+                # or (b) we have not sliced and data object activity matches
+                or (not sliced_sets and new_slice.active == c_active)
+                # or (c) we did slice and *any* data object activity matches
+                or (sliced_sets and any(
+                    data.active == c_active for data in new_slice.duplicate()
+                ))
+            ):
+                yield sliced_sets, new_slice
 
     # We now descend into subblocks
-    for sub in b.component_objects(Block, descend_into=False):
+    for sub in b.component_objects(Block, descend_into=False, active=active):
         subsets = list(sub.index_set().subsets())
         new_sets = [s for s in subsets if s in sets]
 
@@ -283,11 +353,20 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
         # Need to construct an index to descend into for each slice-of-block
         # we are about generate.
+        # Note that any remaining _NotAnIndex placeholders after this loop
+        # will be replaced with the corresponding indices of the non-sliced
+        # sets.
         given_descend_idx = [_NotAnIndex for _ in subsets]
         for i, s in enumerate(subsets):
+            # NOTE: index_map better only contain sets that we are slicing.
             if s in index_map:
-                # Use a user-given index if available
+                # Use a user-given index if available.
                 given_descend_idx[i] = index_map[s]
+                if s not in sets:
+                    raise RuntimeError(
+                        "Encountered a specified index for a set %s that we"
+                        " are not slicing. This is not supported" % s
+                    )
             elif s in sets:
                 # Otherwise use a slice. We will advanced the slice iter
                 # to try to get a concrete component from this slice.
@@ -295,8 +374,10 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
         # Generate slices from this sub-block
         for idx, new_slice in slice_component_along_sets(
-                sub, sets, context_slice=context_slice, normalize=False
-                ):
+            sub, sets, context_slice=context_slice, normalize=False
+        ):
+            # TODO: Can this branch happen outside of the loop?
+            # If it's not indexed, we don't need to slice...
             if sub.is_indexed():
                 # fill any remaining placeholders with the "index" of our slice
                 descend_idx = _fill_indices(list(given_descend_idx), idx)
@@ -304,20 +385,42 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
                 descend_data = sub[descend_idx]
                 if type(descend_data) is IndexedComponent_slice:
                     try:
-                        # Attempt to find a data object matching this slice
-                        descend_data = next(iter(descend_data))
+                        slice_iter = iter(descend_data)
+                        # Try to find a data object defined by the slice
+                        # that matches the active argument. In doing so,
+                        # we treat a slice as inactive if all of its data
+                        # objects are inactive. We need to find a data obj
+                        # with the correct active flag, otherwise we run into
+                        # problems when we descend (component_objects will
+                        # not yield anything).
+                        _data = next(slice_iter)
+                        while active is not None and _data.active != active:
+                            _data = next(slice_iter)
+                        descend_data = _data
                     except StopIteration:
-                        # For this particular idx (and given indices), no
-                        # block data object exists to descend into.
-                        # Not sure if we should raise an error here... -RBP
+                        # For this particular idx, we have no BlockData
+                        # to descend into.
                         continue
+                elif active is not None and descend_data.active != active:
+                    # descend_data is a BlockData object. This particular
+                    # BlockData was specified by the index map. In this case,
+                    # we want to respect "activity".
+                    continue
             else:
+                # Have encountered a ScalarBlock. Do not need to check the
+                # active flag as this came straight from component_objects.
                 descend_data = sub
-            
+
             # Recursively generate sliced components from this data object
             for st, v in generate_sliced_components(
-                    descend_data, index_stack, new_slice, sets, ctype, index_map
-                    ):
+                descend_data,
+                index_stack,
+                new_slice,
+                sets,
+                ctype,
+                index_map,
+                active=active,
+            ):
                 yield tuple(st), v
 
         # pop the index sets of the block whose sub-components
@@ -326,25 +429,48 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
             index_stack.pop()
 
 
-def flatten_components_along_sets(m, sets, ctype, indices=None):
-    """
-    This function iterates over components (recursively) contained
+def flatten_components_along_sets(m, sets, ctype, indices=None, active=None):
+    """This function iterates over components (recursively) contained
     in a block and partitions their data objects into components
     indexed only by the specified sets.
 
-    Args:
-        m : Block whose components (and their sub-components) will be
-            partitioned
-        sets : Possible indexing sets for the returned components
-        ctype : Type of component to identify and partition
-        indices : indices of sets to use when descending into subblocks
+    Parameters
+    ----------
 
-    Returns:
-        tuple: The first entry is a list of tuples of Pyomo Sets. The
-               second is a list of lists of components, each indexed by
-               the corresponding sets in the first entry.
-        
+    m: _BlockData
+        Block whose components (and their sub-components) will be
+        partitioned
+
+    sets: Tuple of Pyomo Sets
+        Sets to be sliced. Returned components will be indexed by
+        some combination of these sets, if at all.
+
+    ctype: Subclass of Component
+        Type of component to identify and partition
+
+    indices: Iterable or ComponentMap
+        Indices of sets to use when descending into subblocks. If an
+        iterable is provided, the order corresponds to the order in
+        ``sets``. If a ``ComponentMap`` is provided, the keys must be
+        in ``sets``.
+
+    active: Bool or None
+        If not None, this is a boolean flag used to filter component objects
+        by their active status. A reference-to-slice is returned if any data
+        object defined by the slice matches this flag.
+
+    Returns
+    -------
+
+    List of tuples of Sets, list of lists of Components
+        The first entry is a list of tuples of Pyomo Sets. The second is a
+        list of lists of Components, indexed by the corresponding sets in
+        the first list. If the components are unindexed, ComponentData are
+        returned and the tuple of sets contains only UnindexedComponent_set.
+        If the components are indexed, they are references-to-slices.
+
     """
+    set_of_sets = ComponentSet(sets)
     if indices is None:
         index_map = ComponentMap()
     elif type(indices) is ComponentMap:
@@ -352,20 +478,26 @@ def flatten_components_along_sets(m, sets, ctype, indices=None):
     else:
         index_map = ComponentMap(zip(sets, indices))
     for s, idx in index_map.items():
-        if not idx in s:
+        if idx not in s:
             raise ValueError(
                 "%s is a bad index for set %s. \nPlease provide an index "
                 "that is in the set." % (idx, s.name)
             )
+        if s not in set_of_sets:
+            raise RuntimeError(
+                "Index specified for set %s that is not one of the sets"
+                " that will be sliced. Indices should only be provided"
+                " for sets that will be sliced." % s.name
+            )
     index_stack = []
 
-    set_of_sets = ComponentSet(sets)
     # Using these two `OrderedDict`s is a workaround because I can't
     # reliably use tuples of components as keys in a `ComponentMap`.
     sets_dict = OrderedDict()
     comps_dict = OrderedDict()
-    for index_sets, slice_ in generate_sliced_components(m, index_stack,
-            m, set_of_sets, ctype, index_map):
+    for index_sets, slice_ in generate_sliced_components(
+        m, index_stack, m, set_of_sets, ctype, index_map, active=active
+    ):
         # Note that index_sets should always be a tuple, never a scalar.
 
         # TODO: Potentially re-order sets at this point.
@@ -401,10 +533,44 @@ def flatten_components_along_sets(m, sets, ctype, indices=None):
     return sets_list, comps_list
 
 
-def flatten_dae_components(model, time, ctype, indices=None):
+def flatten_dae_components(model, time, ctype, indices=None, active=None):
+    """Partitions components into ComponentData and Components indexed only
+    by the provided set.
+
+    Parameters
+    ----------
+
+    model: _BlockData
+        Block whose components are partitioned
+
+    time: Set
+        Indexing by this set (and only this set) will be preserved in the
+        returned components.
+
+    ctype: Subclass of Component
+        Type of component to identify, partition, and return
+
+    indices: Tuple or ComponentMap
+        Contains the index of the specified set to be used when descending
+        into blocks
+
+    active: Bool or None
+        If provided, used as a filter to only return components with the
+        specified active flag. A reference-to-slice is returned if any
+        data object defined by the slice matches this flag.
+
+    Returns
+    -------
+    List of ComponentData, list of Component
+        The first list contains ComponentData for all components not
+        indexed by the provided set. The second contains references-to
+        -slices for all components indexed by the provided set.
+
+    """
     target = ComponentSet((time,))
-    sets_list, comps_list = flatten_components_along_sets(model, target, ctype,
-            indices=indices)
+    sets_list, comps_list = flatten_components_along_sets(
+        model, target, ctype, indices=indices, active=active
+    )
     # Initialize these variables as, if no components of either category are
     # found, we expect to get an empty list.
     scalar_comps = []
@@ -412,13 +578,14 @@ def flatten_dae_components(model, time, ctype, indices=None):
     for sets, comps in zip(sets_list, comps_list):
         if len(sets) == 1 and sets[0] is time:
             dae_comps = comps
-        elif len(sets) == 0 or (len(sets) == 1 and 
-                sets[0] is UnindexedComponent_set):
+        elif len(sets) == 0 or (
+            len(sets) == 1 and sets[0] is UnindexedComponent_set
+        ):
             scalar_comps = comps
         else:
             raise RuntimeError(
                 "Invalid model for `flatten_dae_components`.\n"
                 "This can happen if your model has components that are\n"
                 "indexed by time (explicitly or implicitly) multiple times."
-                )
+            )
     return scalar_comps, dae_comps

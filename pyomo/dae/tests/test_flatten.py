@@ -31,6 +31,20 @@ from pyomo.dae.flatten import (
         slice_component_along_sets,
         )
 
+
+class _TestFlattenBase(object):
+    """A base class to hold the common _hashRef utility method.
+    We don't just derive from Test... classes directly as this
+    causes tests to run twice.
+
+    """
+    def _hashRef(self, ref):
+        if not ref.is_indexed():
+            return (id(ref),)
+        else:
+            return tuple(sorted(id(_) for _ in ref.values()))
+
+
 class TestAssumedBehavior(unittest.TestCase):
     """
     These are some behaviors we rely on that weren't
@@ -108,9 +122,7 @@ class TestAssumedBehavior(unittest.TestCase):
         normalize_index.flatten = True
 
 
-class TestCategorize(unittest.TestCase):
-    def _hashRef(self, ref):
-        return tuple(sorted(id(_) for _ in ref.values()))
+class TestCategorize(_TestFlattenBase, unittest.TestCase):
 
     def test_flat_model(self):
         m = ConcreteModel()
@@ -302,13 +314,7 @@ class TestCategorize(unittest.TestCase):
             self.assertIn(self._hashRef(ref), ref_data)
 
 
-class TestFlatten(TestCategorize):
-
-    def _hashRef(self, ref):
-        if not ref.is_indexed():
-            return (id(ref),)
-        else:
-            return tuple(sorted(id(_) for _ in ref.values()))
+class TestFlatten(_TestFlattenBase, unittest.TestCase):
 
     def _model1_1d_sets(self):
         # One-dimensional sets, no skipping.
@@ -1175,6 +1181,344 @@ class TestFlatten(TestCategorize):
             else:
                 raise RuntimeError()
 
+    def test_deactivated_block_active_true(self):
+        m = self._model1_1d_sets()
+        
+        # Deactivating b1 should get rid of both variables directly on it
+        # as well as those on the subblock b_s
+        m.b.b1.deactivate()
+        sets = (m.time,)
+
+        #
+        # Test identifying active components
+        #
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=True
+        )
+
+        expected_unindexed = [ComponentUID(m.v0)]
+        expected_unindexed = set(expected_unindexed)
+        expected_time = [ComponentUID(m.v1[:])]
+        expected_time.extend(ComponentUID(m.v2[:, x]) for x in m.space)
+        expected_time.extend(
+            ComponentUID(m.v3[:, x, j]) for x in m.space for j in m.comp
+        )
+        expected_time.extend(ComponentUID(m.b.b2[:, x].v0) for x in m.space)
+        expected_time.extend(
+            ComponentUID(m.b.b2[:, x].v1[j]) for x in m.space for j in m.comp
+        )
+        expected_time = set(expected_time)
+
+        expected_2time = [ComponentUID(m.v_tt[:, :])]
+        expected_2time.extend(
+            ComponentUID(m.v_tst[:, x, :]) for x in m.space
+        )
+        expected_2time.extend(
+            ComponentUID(m.b.b2[:, x].v2[:, j]) for x in m.space for j in m.comp
+        )
+        expected_2time = set(expected_2time)
+
+        set_id_set = set(tuple(id(s) for s in sets) for sets in sets_list)
+        pred_sets = [(UnindexedComponent_set,), (m.time,), (m.time, m.time)]
+        pred_set_ids = set(tuple(id(s) for s in sets) for sets in pred_sets)
+        self.assertEqual(set_id_set, pred_set_ids)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                comp_set = set(ComponentUID(comp) for comp in comps)
+                self.assertEqual(comp_set, expected_unindexed)
+            elif len(sets) == 1 and sets[0] is m.time:
+                comp_set = set(ComponentUID(comp.referent) for comp in comps)
+                self.assertEqual(comp_set, expected_time)
+            elif len(sets) == 2:
+                self.assertIs(sets[0], m.time)
+                self.assertIs(sets[1], m.time)
+                comp_set = set(ComponentUID(comp.referent) for comp in comps)
+                self.assertEqual(comp_set, expected_2time)
+
+    def test_deactivated_block_active_false(self):
+        m = self._model1_1d_sets()
+        m.deactivate()
+        m.b.deactivate()
+        m.b.b1.deactivate()
+        m.b.b1[:].b_s.deactivate()
+        # Remove components to make this easier to test
+        m.del_component(m.v0)
+        m.del_component(m.v1)
+        m.del_component(m.v3)
+        m.del_component(m.v_tt)
+        m.del_component(m.v_tst)
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=False
+        )
+
+        expected_time = [ComponentUID(m.b.b1[:].v0)]
+        expected_time.extend(
+            ComponentUID(m.v2[:, x]) for x in m.space
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].v1[x]) for x in m.space
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].v2[x, j]) for x in m.space for j in m.comp
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].b_s[x].v0) for x in m.space
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].b_s[x1].v1[x2])
+            for x1 in m.space for x2 in m.space
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].b_s[x1].v2[x2, j])
+            for x1 in m.space for x2 in m.space for j in m.comp
+        )
+        expected_time = set(expected_time)
+
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], m.time)
+
+        self.assertEqual(len(comps_list), 1)
+        comp_set = set(ComponentUID(comp.referent) for comp in comps_list[0])
+        self.assertEqual(comp_set, expected_time)
+
+    def test_partially_deactivated_slice_active_true(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2, 3])
+        m.b = Block(m.time)
+        for t in m.time:
+            m.b[t].v = Var()
+        m.b[0].deactivate()
+        m.b[1].deactivate()
+        # m.b[:] is now a "partially deactivated slice"
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=True
+        )
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), 1)
+        self.assertEqual(
+            ComponentUID(comps_list[0][0].referent), ComponentUID(m.b[:].v)
+        )
+
+    def test_partially_activated_slice_active_false(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2, 3])
+        m.b = Block(m.time)
+        m.deactivate()
+        m.b.deactivate()
+        for t in m.time:
+            m.b[t].v = Var()
+        m.b[0].deactivate()
+        m.b[1].deactivate()
+        # Note that m.b[2] and m.b[3] are active.
+        # m.b[:] is now a "partially activated slice"
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=False
+        )
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), 1)
+        self.assertEqual(
+            ComponentUID(comps_list[0][0].referent), ComponentUID(m.b[:].v)
+        )
+
+    def test_partially_deactivated_slice_specified_index(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2, 3])
+        m.b = Block(m.time)
+        for t in m.time:
+            m.b[t].v = Var()
+        m.b[0].deactivate()
+        m.b[1].deactivate()
+        # m.b[:] is now a "partially deactivated slice"
+        sets = (m.time,)
+
+        # When we specify the index of a deactivated block, we
+        # respect the active argument when descending.
+        indices = (1,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=True, indices=indices
+        )
+        self.assertEqual(len(sets_list), 0)
+        self.assertEqual(len(comps_list), 0)
+
+        indices = (2,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=True, indices=indices
+        )
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), 1)
+        self.assertEqual(
+            ComponentUID(comps_list[0][0].referent), ComponentUID(m.b[:].v)
+        )
+
+    def test_fully_deactivated_slice(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2, 3])
+        m.b = Block(m.time)
+        for t in m.time:
+            m.b[t].v = Var()
+        m.b[:].deactivate()
+        sets = (m.time,)
+
+        # We send active=True, but cannot find an active BlockData
+        # to descend into.
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=True
+        )
+        self.assertEqual(len(sets_list), 0)
+        self.assertEqual(len(comps_list), 0)
+
+    def test_deactivated_model_active_false(self):
+        m = self._model1_1d_sets()
+        m.deactivate()
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=True
+        )
+        self.assertEqual(len(sets_list), 0)
+        self.assertEqual(len(comps_list), 0)
+
+    def test_constraint_with_active_arg(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2, 3])
+        m.b = Block(m.time)
+        for t in m.time:
+            m.b[t].v = Var()
+            m.b[t].c1 = Constraint(expr=m.b[t].v == 1)
+        def c2_rule(m, t):
+            return m.b[t].v == 2
+        m.c2 = Constraint(m.time, rule=c2_rule)
+        m.c2.deactivate()
+
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Constraint, active=True
+        )
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), 1)
+        self.assertEqual(
+            ComponentUID(comps_list[0][0].referent), ComponentUID(m.b[:].c1)
+        )
+
+        m.deactivate()
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Constraint, active=False
+        )
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), 1)
+        self.assertEqual(
+            ComponentUID(comps_list[0][0].referent), ComponentUID(m.c2[:])
+        )
+
+    def test_constraint_partially_deactivated_slice(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2, 3])
+        m.b = Block(m.time)
+        for t in m.time:
+            m.b[t].v = Var()
+        def c2_rule(m, t):
+            return m.b[t].v == 2
+        m.c2 = Constraint(m.time, rule=c2_rule)
+        m.c2[0].deactivate()
+        m.c2[1].deactivate()
+
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Constraint, active=True
+        )
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertIs(sets_list[0][0], m.time)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), 1)
+        self.assertEqual(
+            ComponentUID(comps_list[0][0].referent), ComponentUID(m.c2[:])
+        )
+
+    def test_constraint_fully_deactivated_slice(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2, 3])
+        m.b = Block(m.time)
+        for t in m.time:
+            m.b[t].v = Var()
+        def c2_rule(m, t):
+            return m.b[t].v == 2
+        m.c2 = Constraint(m.time, rule=c2_rule)
+        m.c2[:].deactivate()
+
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Constraint, active=True
+        )
+        # Because all data objects in c2[:] are deactivated, we don't
+        # yield the slice.
+        self.assertEqual(len(sets_list), 0)
+        self.assertEqual(len(comps_list), 0)
+
+    def test_scalar_con_active_true(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2])
+        m.v = Var()
+        m.c = Constraint(expr=m.v == 1)
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Constraint, active=True
+        )
+
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], UnindexedComponent_set)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), 1)
+        self.assertIs(comps_list[0][0], m.c)
+
+    def test_deactivated_scalar_con_active_true(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2])
+        m.comp = Set(initialize=["A", "B"])
+        m.v = Var()
+        def c_rule(m, j):
+            return m.v == 1
+        m.c = Constraint(m.comp, rule=c_rule)
+        m.c[:].deactivate()
+        # Because only the data objects are deactivated, we will generate
+        # this component in the component_objects loop in the flattener.
+        # But because its data objects do not match the active argument,
+        # we hit the clause that checks for slice activity. This checks
+        # the part of the clause that makes sure we have sliced a set.
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Constraint, active=True
+        )
+
+        self.assertEqual(len(sets_list), 0)
+        self.assertEqual(len(comps_list), 0)
+
 
 class TestCUID(unittest.TestCase):
     """
@@ -1412,7 +1756,7 @@ class TestCUID(unittest.TestCase):
                 raise RuntimeError()
 
 
-class TestSliceComponent(TestFlatten):
+class TestSliceComponent(_TestFlattenBase, unittest.TestCase):
 
     def make_model(self):
         m = ConcreteModel()
