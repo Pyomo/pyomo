@@ -69,11 +69,12 @@ elif releaselevel == 'invalid':
 
 version_info = (major, minor, micro, releaselevel, serial)
 
-version = '.'.join(str(x) for x in version_info[:3])
-__version__ = version
-if releaselevel != 'final':
-    version += ' (' + releaselevel + ')'
+__version__ = '.'.join(str(x) for x in version_info[:3])
 if releaselevel.startswith('devel'):
     __version__ += ".dev%d" % (serial,)
 elif releaselevel.startswith('VOTD'):
     __version__ += "a%d" % (serial,)
+
+version = __version__
+if releaselevel != 'final':
+    version += ' (' + releaselevel + ')'
