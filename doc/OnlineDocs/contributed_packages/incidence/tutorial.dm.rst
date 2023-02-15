@@ -4,7 +4,7 @@ Debugging a structural singularity with the Dulmage-Mendelsohn partition
 ========================================================================
 
 We start with some imports and by creating a Pyomo model we would like
-to debug. Usually the model is much larger and more comlicated than this.
+to debug. Usually the model is much larger and more complicated than this.
 This particular system appeared when debugging a dynamic 1-D partial
 differential-algebraic equation (PDAE) model representing a chemical looping
 combustion reactor.
@@ -128,7 +128,7 @@ constrained systems, it appears that we are missing an equation to calculate
 is computed by both the bulk density equation and one of the component density
 equations.
 
-With this knowledge, we can eventually figure out (a) that we need and equation
+With this knowledge, we can eventually figure out (a) that we need an equation
 to calculate ``flow`` from density and (b) that our "bulk density equation"
 is actually a *skeletal* density equation. Admittedly, this is difficult to
 figure out without the full context behind this particular system.
@@ -141,7 +141,7 @@ is structurally nonsingular:
 
    >>> import pyomo.environ as pyo
    >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
-   ... 
+
    >>> m = pyo.ConcreteModel()
    >>> m.components = pyo.Set(initialize=[1, 2, 3])
    >>> m.x = pyo.Var(m.components, initialize=1.0/3.0)
