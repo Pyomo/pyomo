@@ -182,30 +182,6 @@ def map_coords_to_block_triangular_indices(matrix, matching=None):
     version="TBD",
 )
 def get_blocks_from_maps(row_block_map, col_block_map):
-    """
-    Gets the row and column coordinates of each diagonal block in a
-    block triangularization from maps of row/column coordinates to
-    block indices.
-
-    Parameters
-    ----------
-    row_block_map: dict
-        Dict mapping each row coordinate to the coordinate of the
-        block it belongs to
-
-    col_block_map: dict
-        Dict mapping each column coordinate to the coordinate of the
-        block it belongs to
-
-    Returns
-    -------
-    tuple of lists
-        The first list is a list-of-lists of row indices that partitions
-        the indices into diagonal blocks. The second list is a
-        list-of-lists of column indices that partitions the indices into
-        diagonal blocks.
-
-    """
     blocks = set(row_block_map.values())
     assert blocks == set(col_block_map.values())
     n_blocks = len(blocks)
@@ -226,26 +202,4 @@ def get_blocks_from_maps(row_block_map, col_block_map):
     version="TBD",
 )
 def get_diagonal_blocks(matrix, matching=None):
-    """
-    Gets the diagonal blocks of a block triangularization of the provided
-    matrix.
-
-    Parameters
-    ----------
-    coo_matrix
-        Matrix to get the diagonal blocks of
-
-    matching
-        Dict mapping row indices to column indices in the perfect matching
-        to be used by the block triangularization.
-
-    Returns
-    -------
-    tuple of lists
-        The first list is a list-of-lists of row indices that partitions
-        the indices into diagonal blocks. The second list is a
-        list-of-lists of column indices that partitions the indices into
-        diagonal blocks.
-
-    """
     return block_triangularize(matrix, matching=matching)
