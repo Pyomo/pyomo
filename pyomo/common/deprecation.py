@@ -93,8 +93,8 @@ def _wrap_class(cls, msg, logger, version, remove_in):
         if _flagIdx >= 0:
             _doc = _funcDoc[_flagIdx:]
             break
-    # Note: test msg is not None to revert back to the user-supplied
-    # message.  Checking the fields is still useful as it lets us know
+    # Note: test 'msg is not None' to revert back to the user-supplied
+    # message.  Checking the fields above is still useful as it lets us know
     # if there is already a deprecation message on either new or init.
     if msg is not None or _doc is None:
         _doc = _deprecation_docstring(cls, msg, version, remove_in)
@@ -174,8 +174,9 @@ def deprecation_warning(msg, logger=None, version=None,
 
         version (str): [required] the version in which the decorated
             object was deprecated.  General practice is to set version
-            to '' or 'TBD' during development and update it to the
-            actual release as part of the release process.
+            to the current development version (from `pyomo --version`)
+            during development and update it to the actual release as
+            part of the release process.
 
         remove_in (str): the version in which the decorated object will be
             removed from the code.
@@ -249,8 +250,9 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
 
         version (str): [required] the version in which the decorated
             object was deprecated.  General practice is to set version
-            to '' or 'TBD' during development and update it to the
-            actual release as part of the release process.
+            to the current development version (from `pyomo --version`)
+            during development and update it to the actual release as
+            part of the release process.
 
         remove_in (str): the version in which the decorated object will be
             removed from the code.
@@ -304,10 +306,10 @@ def relocated_module(new_name, msg=None, logger=None,
         pyomo package, or "pyomo")
 
     version: str [required]
-        The version in which the module was renamed or moved.
-        General practice is to set version to '' or 'TBD' during
-        development and update it to the actual release as part of the
-        release process.
+        The version in which the module was renamed or moved.  General
+        practice is to set version to the current development version
+        (from `pyomo --version`) during development and update it to the
+        actual release as part of the release process.
 
     remove_in: str
         The version in which the module will be removed from the code.
