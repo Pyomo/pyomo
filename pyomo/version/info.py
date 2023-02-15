@@ -54,6 +54,7 @@ elif releaselevel == 'invalid':
         # sys.argv[0] also fails because it doesn't always contains the path
         from inspect import getfile as _getfile, currentframe as _frame
         from os.path import abspath as _abspath, dirname as _dirname
+
         _rootdir = _join(_dirname(_abspath(_getfile(_frame()))), '..', '..')
 
     if _exists(_join(_rootdir, '.git')):
