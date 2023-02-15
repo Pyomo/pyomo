@@ -107,8 +107,8 @@ def _wrap_class(cls, msg, logger, version, remove_in):
         # find the "most derived" implementation of either __new__ or
         # __init__ and wrap that (breaking ties in favor of __init__)
         field = '__init__'
-        for c in cls.__mro__:
-            for f in ('__init__', '__new__'):
+        for c in reversed(cls.__mro__):
+            for f in ('__new__', '__init__'):
                 if getattr(c, f, None) is not getattr(cls, f, None):
                     field = f
         setattr(cls, field, _wrap_func(
