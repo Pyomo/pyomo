@@ -235,8 +235,7 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
     def __eq__(self, arg):
         # If the other operand is a Boolean, then we want to fall back
         # on the "normal" implementation of __eq__ for Boolean values
-        if isinstance(arg, BooleanValue) \
-           or arg.__class__ in native_logical_types:
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
             return super().__eq__(arg)
         # Otherwise, we will treat this as a binary operand and use the
         # (numeric) relational expression system
@@ -244,48 +243,83 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
     def __ne__(self, arg):
         # If the other operand is a Boolean, then we want to fall back
         # on the "normal" implementation of __ne__ for Boolean values
-        if isinstance(arg, BooleanValue) \
-           or arg.__class__ in native_logical_types:
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
             return super().__ne__(arg)
         # Otherwise, we will treat this as a binary operand and use the
         # (numeric) relational expression system
         return self.as_binary().__ne__(arg)
 
     def __add__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__add__(arg)
     def __div__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__div__(arg)
     def __mul__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__mul__(arg)
     def __pow__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__pow__(arg)
     def __sub__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__sub__(arg)
     def __truediv__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__truediv__(arg)
     def __iadd__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__iadd__(arg)
     def __idiv__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__idiv__(arg)
     def __imul__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__imul__(arg)
     def __ipow__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__ipow__(arg)
     def __isub__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__isub__(arg)
     def __itruediv__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__itruediv__(arg)
     def __radd__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__radd__(arg)
     def __rdiv__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__rdiv__(arg)
     def __rmul__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__rmul__(arg)
     def __rpow__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__rpow__(arg)
     def __rsub__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__rsub__(arg)
     def __rtruediv__(self, arg):
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
         return self.as_binary().__rtruediv__(arg)
     def setlb(self, arg):
         return self.as_binary().setlb(arg)
