@@ -178,6 +178,13 @@ def deprecation_warning(msg, logger=None, version=None,
         calling_frame (frame): the original frame context that triggered
             the deprecation warning.
 
+    Example
+    -------
+    >>> from pyomo.common.deprecation import deprecation_warning
+    >>> deprecation_warning('pyomo.common.deprecation', version='1.2.3')
+    WARNING: DEPRECATED: pyomo.common.deprecation has been deprecated.
+             (deprecated in 1.2.3)
+
     """
     if logger is None:
         if calling_frame is not None:
@@ -224,7 +231,7 @@ else:
 
 
 def deprecated(msg=None, logger=None, version=None, remove_in=None):
-    """Decorator to indicate that a function, method or class is deprecated.
+    """Decorator to indicate that a function, method, or class is deprecated.
 
     This decorator will cause a warning to be logged when the wrapped
     function or method is called, or when the deprecated class is
@@ -246,6 +253,13 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
 
         remove_in (str): the version in which the decorated object will be
             removed from the code.
+
+    Example
+    -------
+    >>> from pyomo.common.deprecation import deprecated
+    >>> @deprecated('pyomo.common.deprecation', version='1.2.3')
+    WARNING: DEPRECATED: pyomo.common.deprecation has been deprecated.
+             (deprecated in 1.2.3)
 
     """
     def wrap(obj):

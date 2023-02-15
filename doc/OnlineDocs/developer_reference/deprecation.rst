@@ -17,14 +17,19 @@ the ``version`` option should be set to ``TBD``, which
 will be changed as of the next release.
 
 .. autoclass:: pyomo.common.deprecation.deprecated
+   :noindex:
 
 .. autoclass:: pyomo.common.deprecation.deprecation_warning
+   :noindex:
 
 .. autoclass:: pyomo.common.deprecation.relocated_module
+   :noindex:
 
 .. autoclass:: pyomo.common.deprecation.relocated_module_attribute
+   :noindex:
 
 .. autoclass:: pyomo.common.deprecation.RenamedClass
+   :noindex:
 
 
 Removal
