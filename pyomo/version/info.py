@@ -36,12 +36,12 @@ if releaselevel == 'final':
 elif '/tags/' in _init_url:  # pragma:nocover
     releaselevel = 'final'
 elif releaselevel == 'invalid':
-    from os.path import exists as _exists, join as _join
+    from os.path import exists as _exists, join as _join, dirname as _dirname
 
     if __file__.endswith('setup.py'):
         # This file is being sourced (exec'ed) from setup.py.
         # dirname(__file__) setup.py's scope is the root source directory
-        _rootdir = dirname(__file__)
+        _rootdir = _dirname(__file__)
     else:
         # Ideally, this should import PYOMO_ROOT_DIR from pyomo.common
         # instead of reimplementing that logic here.  Unfortunately,
@@ -53,7 +53,7 @@ elif releaselevel == 'invalid':
         # __file__ fails if someone does os.chdir() before
         # sys.argv[0] also fails because it doesn't always contains the path
         from inspect import getfile as _getfile, currentframe as _frame
-        from os.path import abspath as _abspath, dirname as _dirname
+        from os.path import abspath as _abspath
 
         _rootdir = _join(_dirname(_abspath(_getfile(_frame()))), '..', '..')
 
