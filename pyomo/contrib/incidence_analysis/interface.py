@@ -530,7 +530,7 @@ class IncidenceGraphInterface(object):
         -------
 
         .. doctest::
-           :skipif: not network_available
+           :skipif: not networkx_available
 
            >>> import pyomo.environ as pyo 
            >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
@@ -677,7 +677,7 @@ class IncidenceGraphInterface(object):
         -------
 
         .. doctest::
-           :skipif: not network_available
+           :skipif: not networkx_available
 
            >>> import pyomo.environ as pyo
            >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
@@ -778,7 +778,7 @@ class IncidenceGraphInterface(object):
         -------
 
         .. doctest::
-           :skipif: not network_available
+           :skipif: not networkx_available
 
            >>> import pyomo.environ as pyo 
            >>> from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
