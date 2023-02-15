@@ -14,7 +14,7 @@ We offer a set of tools to help with deprecation in
 By policy, when deprecating or moving an existing capability,
 one of the following functions should be imported. In use,
 the ``version`` option should be set to current development
-version. This can be found by running `pyomo --version` on
+version. This can be found by running ``pyomo --version`` on
 your local fork/branch.
 
 .. autoclass:: pyomo.common.deprecation.deprecated
