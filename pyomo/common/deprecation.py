@@ -33,7 +33,7 @@ from pyomo.common.errors import DeveloperError
 _doc_flag = '.. deprecated::'
 
 
-def _default_msg(obj, user_msg, version, remove_in):
+def default_deprecation_msg(obj, user_msg, version, remove_in):
     """Generate the default deprecation message.
 
     See deprecated() function for argument details.
@@ -73,8 +73,8 @@ def _deprecation_docstring(obj, msg, version, remove_in):
     if version is None: # or version in ('','tbd','TBD'):
         raise DeveloperError("@deprecated missing initial version")
     return (
-        '%s %s\n   %s\n'
-        % (_doc_flag, version, _default_msg(obj, msg, None, remove_in))
+        f'{_doc_flag} {version}\n'
+        f'   {default_deprecation_msg(obj, msg, None, remove_in)}\n'
     )
 
 
@@ -112,7 +112,7 @@ def _wrap_class(cls, msg, logger, version, remove_in):
 
 
 def _wrap_func(func, msg, logger, version, remove_in):
-    message = _default_msg(func, msg, version, remove_in)
+    message = default_deprecation_msg(func, msg, version, remove_in)
 
     @functools.wraps(func, assigned=(
         '__module__', '__name__', '__qualname__', '__annotations__'))
@@ -196,7 +196,7 @@ def deprecation_warning(msg, logger=None, version=None,
         logger = logging.getLogger(logger)
 
     msg = textwrap.fill(
-        'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
+        f'DEPRECATED: {default_deprecation_msg(None, msg, version, remove_in)}',
         width=70)
     if calling_frame is None:
         # The useful thing to let the user know is what called the
