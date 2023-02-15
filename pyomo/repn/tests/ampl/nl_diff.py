@@ -28,6 +28,7 @@ _norm_negation = re.compile(r'(?m)^o2(\s*#\s*\*)?\nn-1(.0)?\s*\n')
 _norm_timesone = re.compile(r'(?m)^o2(\s*#\s*\*)?\nn1(.0)?\s*\n')
 _norm_double_negation = re.compile(r'(?m)^o16(\s*#\s*-)?\no16(\s*#\s*-)?\n')
 
+
 def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
     base = base.split()
     test = test.split()
@@ -48,6 +49,7 @@ def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
         return False
     return True
 
+
 def _update_subsets(subset, base, test):
     for i, j in zip(*subset):
         # Try checking for numbers
@@ -66,6 +68,7 @@ def _update_subsets(subset, base, test):
                 else:
                     base[i] = test[j]
 
+
 def _preprocess_data(data):
     # Normalize negation (convert " * -1" to the negation operator)
     data = _norm_negation.sub(template.negation, data)
@@ -81,6 +84,7 @@ def _preprocess_data(data):
     data = _norm_integers.sub('', data)
     # return the sequence of lines
     return data.splitlines()
+
 
 def nl_diff(base, test, baseline='baseline', testfile='testfile'):
     if test == base:
@@ -115,12 +119,18 @@ def nl_diff(base, test, baseline='baseline', testfile='testfile'):
     if test == base:
         return [], []
 
-    print(''.join(unified_diff(
-        [_+"\n" for _ in base],
-        [_+"\n" for _ in test],
-        fromfile=baseline,
-        tofile=testfile)))
+    print(
+        ''.join(
+            unified_diff(
+                [_ + "\n" for _ in base],
+                [_ + "\n" for _ in test],
+                fromfile=baseline,
+                tofile=testfile,
+            )
+        )
+    )
     return base, test
+
 
 def load_nl_baseline(baseline, testfile, version='nl'):
     with open(testfile, 'r') as FILE:
@@ -141,12 +151,13 @@ def load_nl_baseline(baseline, testfile, version='nl'):
         base = FILE.read()
     return base, test
 
+
 def load_and_compare_nl_baseline(baseline, testfile, version='nl'):
-    return nl_diff(
-        *load_nl_baseline(baseline, testfile, version), baseline, testfile
-    )
+    return nl_diff(*load_nl_baseline(baseline, testfile, version), baseline, testfile)
+
 
 if __name__ == '__main__':
     import sys
+
     base, test = load_and_compare_nl_baseline(sys.argv[1], sys.argv[2])
     sys.exit(1 if base or test else 0)

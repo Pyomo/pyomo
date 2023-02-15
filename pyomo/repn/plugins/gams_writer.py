@@ -18,53 +18,77 @@ from io import StringIO
 from pyomo.common.gc_manager import PauseGC
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (
-    value, as_numeric, native_types, native_numeric_types,
+    value,
+    as_numeric,
+    native_types,
+    native_numeric_types,
     nonpyomo_leaf_types,
 )
 from pyomo.core.base import (
-    SymbolMap, ShortNameLabeler, NumericLabeler, Constraint, 
-    Objective, Var, minimize, SortComponents)
+    SymbolMap,
+    ShortNameLabeler,
+    NumericLabeler,
+    Constraint,
+    Objective,
+    Var,
+    minimize,
+    SortComponents,
+)
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
-from pyomo.repn.util import valid_expr_ctypes_minlp, \
-    valid_active_ctypes_minlp, ftoa
+from pyomo.repn.util import valid_expr_ctypes_minlp, valid_active_ctypes_minlp, ftoa
 
 import logging
 
 logger = logging.getLogger('pyomo.core')
 
 _legal_unary_functions = {
-    'ceil','floor','exp','log','log10','sqrt',
-    'sin','cos','tan','asin','acos','atan','sinh','cosh','tanh',
+    'ceil',
+    'floor',
+    'exp',
+    'log',
+    'log10',
+    'sqrt',
+    'sin',
+    'cos',
+    'tan',
+    'asin',
+    'acos',
+    'atan',
+    'sinh',
+    'cosh',
+    'tanh',
 }
-_arc_functions = {'acos','asin','atan'}
-_dnlp_functions = {'ceil','floor','abs'}
+_arc_functions = {'acos', 'asin', 'atan'}
+_dnlp_functions = {'ceil', 'floor', 'abs'}
 _zero_one = {0, 1}
 _plusMinusOne = {-1, 1}
+
 
 def _handle_PowExpression(visitor, node, values):
     # If the exponent is a positive integer, use the power() function.
     # Otherwise, use the ** operator.
     exponent = node.arg(1)
-    if (exponent.__class__ in native_numeric_types and
-        exponent == int(exponent)):
+    if exponent.__class__ in native_numeric_types and exponent == int(exponent):
         return f"power({values[0]}, {values[1]})"
     else:
         return f"{values[0]} ** {values[1]}"
 
+
 def _handle_UnaryFunctionExpression(visitor, node, values):
     if node.name not in _legal_unary_functions:
         raise RuntimeError(
-            "GAMS files cannot represent the unary function %s"
-            % ( node.name, ))
+            "GAMS files cannot represent the unary function %s" % (node.name,)
+        )
     if node.name in _dnlp_functions:
         visitor.is_discontinuous = True
     if node.name in _arc_functions:
         return f"arc{node.name[1:]}({values[0]})"
     else:
         return node._to_string(values, False, visitor.smap)
+
 
 def _handle_AbsExpression(visitor, node, values):
     visitor.is_discontinuous = True
@@ -122,14 +146,16 @@ class ToGamsVisitor(EXPR._ToStringVisitor):
                     "Unallowable component '%s' of type %s found in an active "
                     "constraint or objective.\nThe GAMS writer cannot export "
                     "expressions with this component type."
-                    % (node.name, node.ctype.__name__))
+                    % (node.name, node.ctype.__name__)
+                )
             if node.ctype is not Var:
                 # For these, make sure it's on the right model. We can check
                 # Vars later since they don't disappear from the expressions
                 self.treechecker(node)
 
         if node.is_fixed() and not (
-                self.output_fixed_variables and node.is_potentially_variable()):
+            self.output_fixed_variables and node.is_potentially_variable()
+        ):
             return True, ftoa(node(), True)
         else:
             assert node.is_variable_type()
@@ -162,8 +188,7 @@ class ToGamsVisitor(EXPR._ToStringVisitor):
         return node._to_string(values, False, self.smap)
 
 
-def expression_to_string(expr, treechecker, smap=None,
-                         output_fixed_variables=False):
+def expression_to_string(expr, treechecker, smap=None, output_fixed_variables=False):
     visitor = ToGamsVisitor(smap, treechecker, output_fixed_variables)
     expr_str = visitor.dfs_postorder_stack(expr)
     return expr_str, visitor.is_discontinuous
@@ -202,7 +227,8 @@ class Categorizer(object):
             else:
                 raise RuntimeError(
                     "Cannot output variable to GAMS: effective variable "
-                    "domain is not in {Reals, Integers, Binary}")
+                    "domain is not in {Reals, Integers, Binary}"
+                )
 
     def __iter__(self):
         """Iterate over all variables.
@@ -248,8 +274,7 @@ class StorageTreeChecker(object):
     def parent_block(self, comp):
         if isinstance(comp, ICategorizedObject):
             parent = comp.parent
-            while (parent is not None) and \
-                  (not parent._is_heterogeneous_container):
+            while (parent is not None) and (not parent._is_heterogeneous_container):
                 parent = parent.parent
             return parent
         else:
@@ -258,7 +283,8 @@ class StorageTreeChecker(object):
     def raise_error(self, comp):
         raise RuntimeError(
             "GAMS writer: found component '%s' not on same model tree.\n"
-            "All components must have the same parent model." % comp.name)
+            "All components must have the same parent model." % comp.name
+        )
 
 
 def split_long_line(line):
@@ -273,8 +299,7 @@ def split_long_line(line):
             # Walk backwards to find closest space,
             # where it is safe to split to a new line
             if i < 0:
-                raise RuntimeError(
-                    "Found an 80,000+ character string with no spaces")
+                raise RuntimeError("Found an 80,000+ character string with no spaces")
             i -= 1
         new_lines += line[:i] + '\n'
         # the space will be the first character in the next line,
@@ -286,15 +311,10 @@ def split_long_line(line):
 
 @WriterFactory.register('gams', 'Generate the corresponding GAMS file')
 class ProblemWriter_gams(AbstractProblemWriter):
-
     def __init__(self):
         AbstractProblemWriter.__init__(self, ProblemFormat.gams)
 
-    def __call__(self,
-                 model,
-                 output_filename,
-                 solver_capability,
-                 io_options):
+    def __call__(self, model, output_filename, solver_capability, io_options):
         """
         Write a model in the GAMS modeling language format.
 
@@ -372,12 +392,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         # Skip writing constraints whose body section is
         # fixed (i.e., no variables)
-        skip_trivial_constraints = \
-            io_options.pop("skip_trivial_constraints", False)
+        skip_trivial_constraints = io_options.pop("skip_trivial_constraints", False)
 
         # Output fixed variables as variables
-        output_fixed_variables = \
-            io_options.pop("output_fixed_variables", False)
+        output_fixed_variables = io_options.pop("output_fixed_variables", False)
 
         # How much effort do we want to put into ensuring the
         # GAMS file is written deterministically for a Pyomo model:
@@ -385,9 +403,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
         file_determinism = io_options.pop("file_determinism", 1)
-        sorter_map = {0:SortComponents.unsorted,
-                      1:SortComponents.deterministic,
-                      2:SortComponents.sortBoth}
+        sorter_map = {
+            0: SortComponents.unsorted,
+            1: SortComponents.deterministic,
+            2: SortComponents.sortBoth,
+        }
         sort = sorter_map[file_determinism]
 
         # Warmstart by initializing model's variables to their values.
@@ -397,38 +417,59 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # Set to True by GAMSSolver
         put_results = io_options.pop("put_results", None)
         put_results_format = io_options.pop("put_results_format", 'gdx')
-        assert put_results_format in ('gdx','dat')
+        assert put_results_format in ('gdx', 'dat')
 
         if len(io_options):
             raise ValueError(
-                "GAMS writer passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s"
-                            % (k,v) for k,v in io_options.items()))
+                "GAMS writer passed unrecognized io_options:\n\t"
+                + "\n\t".join("%s = %s" % (k, v) for k, v in io_options.items())
+            )
 
         if solver is not None and solver.upper() not in valid_solvers:
-            raise ValueError(
-                "GAMS writer passed unrecognized solver: %s" % solver)
+            raise ValueError("GAMS writer passed unrecognized solver: %s" % solver)
 
         if mtype is not None:
-            valid_mtypes = set([
-                'lp', 'qcp', 'nlp', 'dnlp', 'rmip', 'mip', 'rmiqcp', 'rminlp',
-                'miqcp', 'minlp', 'rmpec', 'mpec', 'mcp', 'cns', 'emp'])
+            valid_mtypes = set(
+                [
+                    'lp',
+                    'qcp',
+                    'nlp',
+                    'dnlp',
+                    'rmip',
+                    'mip',
+                    'rmiqcp',
+                    'rminlp',
+                    'miqcp',
+                    'minlp',
+                    'rmpec',
+                    'mpec',
+                    'mcp',
+                    'cns',
+                    'emp',
+                ]
+            )
             if mtype.lower() not in valid_mtypes:
-                raise ValueError("GAMS writer passed unrecognized "
-                                 "model type: %s" % mtype)
-            if (solver is not None and
-                mtype.upper() not in valid_solvers[solver.upper()]):
-                raise ValueError("GAMS writer passed solver (%s) "
-                                 "unsuitable for given model type (%s)"
-                                 % (solver, mtype))
+                raise ValueError(
+                    "GAMS writer passed unrecognized model type: %s" % mtype
+                )
+            if (
+                solver is not None
+                and mtype.upper() not in valid_solvers[solver.upper()]
+            ):
+                raise ValueError(
+                    "GAMS writer passed solver (%s) "
+                    "unsuitable for given model type (%s)" % (solver, mtype)
+                )
 
         if output_filename is None:
             output_filename = model.name + ".gms"
 
         if symbolic_solver_labels and (labeler is not None):
-            raise ValueError("GAMS writer: Using both the "
-                             "'symbolic_solver_labels' and 'labeler' "
-                             "I/O options is forbidden")
+            raise ValueError(
+                "GAMS writer: Using both the "
+                "'symbolic_solver_labels' and 'labeler' "
+                "I/O options is forbidden"
+            )
 
         if symbolic_solver_labels:
             # Note that the Var and Constraint labelers must use the
@@ -438,8 +479,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
             # to start with a letter.  We will (randomly) choose "s_"
             # (for 'shortened')
             var_labeler = con_labeler = ShortNameLabeler(
-                60, prefix='s_', suffix='_', caseInsensitive=True,
-                legalRegex='^[a-zA-Z]')
+                60,
+                prefix='s_',
+                suffix='_',
+                caseInsensitive=True,
+                legalRegex='^[a-zA-Z]',
+            )
         elif labeler is None:
             var_labeler = NumericLabeler('x')
             con_labeler = NumericLabeler('c')
@@ -458,7 +503,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             return ans
 
         def var_label(obj):
-            #if obj.is_fixed():
+            # if obj.is_fixed():
             #    return str(value(obj))
             return symbolMap.getSymbol(obj, var_recorder)
 
@@ -506,47 +551,48 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         return output_filename, symbolMap
 
-    def _write_model(self,
-                     model,
-                     output_file,
-                     solver_capability,
-                     var_list,
-                     var_label,
-                     symbolMap,
-                     con_labeler,
-                     sort,
-                     skip_trivial_constraints,
-                     output_fixed_variables,
-                     warmstart,
-                     solver,
-                     mtype,
-                     solprint,
-                     limrow,
-                     limcol,
-                     solvelink,
-                     add_options,
-                     put_results,
-                     put_results_format,
-                 ):
+    def _write_model(
+        self,
+        model,
+        output_file,
+        solver_capability,
+        var_list,
+        var_label,
+        symbolMap,
+        con_labeler,
+        sort,
+        skip_trivial_constraints,
+        output_fixed_variables,
+        warmstart,
+        solver,
+        mtype,
+        solprint,
+        limrow,
+        limcol,
+        solvelink,
+        add_options,
+        put_results,
+        put_results_format,
+    ):
         constraint_names = []
         ConstraintIO = StringIO()
         linear = True
-        linear_degree = set([0,1])
+        linear_degree = set([0, 1])
         dnlp = False
 
         # Make sure there are no strange ActiveComponents. The expression
         # walker will handle strange things in constraints later.
         model_ctypes = model.collect_ctypes(active=True)
         invalids = set()
-        for t in (model_ctypes - valid_active_ctypes_minlp):
+        for t in model_ctypes - valid_active_ctypes_minlp:
             if issubclass(t, ActiveComponent):
                 invalids.add(t)
         if len(invalids):
             invalids = [t.__name__ for t in invalids]
             raise RuntimeError(
                 "Unallowable active component(s) %s.\nThe GAMS writer cannot "
-                "export models with this component type." %
-                ", ".join(invalids))
+                "export models with this component type." % ", ".join(invalids)
+            )
 
         tc = StorageTreeChecker(model)
 
@@ -554,13 +600,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # for all active constraints.  Any Vars / Expressions that are
         # encountered will be added to the var_list due to the labeler
         # defined above.
-        for con in model.component_data_objects(Constraint,
-                                                active=True,
-                                                sort=sort):
+        for con in model.component_data_objects(Constraint, active=True, sort=sort):
 
             if not con.has_lb() and not con.has_ub():
                 assert not con.equality
-                continue # non-binding, so skip
+                continue  # non-binding, so skip
 
             con_body = as_numeric(con.body)
             if skip_trivial_constraints and con_body.is_fixed():
@@ -571,55 +615,49 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
             cName = symbolMap.getSymbol(con, con_labeler)
             con_body_str, con_discontinuous = expression_to_string(
-                con_body, tc, smap=symbolMap,
-                output_fixed_variables=output_fixed_variables
+                con_body,
+                tc,
+                smap=symbolMap,
+                output_fixed_variables=output_fixed_variables,
             )
             dnlp |= con_discontinuous
             if con.equality:
                 constraint_names.append('%s' % cName)
-                ConstraintIO.write('%s.. %s =e= %s ;\n' % (
-                    constraint_names[-1],
-                    con_body_str,
-                    ftoa(con.upper)
-                ))
+                ConstraintIO.write(
+                    '%s.. %s =e= %s ;\n'
+                    % (constraint_names[-1], con_body_str, ftoa(con.upper))
+                )
             else:
                 if con.has_lb():
                     constraint_names.append('%s_lo' % cName)
-                    ConstraintIO.write('%s.. %s =l= %s ;\n' % (
-                        constraint_names[-1],
-                        ftoa(con.lower),
-                        con_body_str,
-                    ))
+                    ConstraintIO.write(
+                        '%s.. %s =l= %s ;\n'
+                        % (constraint_names[-1], ftoa(con.lower), con_body_str)
+                    )
                 if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
-                    ConstraintIO.write('%s.. %s =l= %s ;\n' % (
-                        constraint_names[-1],
-                        con_body_str,
-                        ftoa(con.upper)
-                    ))
+                    ConstraintIO.write(
+                        '%s.. %s =l= %s ;\n'
+                        % (constraint_names[-1], con_body_str, ftoa(con.upper))
+                    )
 
-        obj = list(model.component_data_objects(Objective,
-                                                active=True,
-                                                sort=sort))
+        obj = list(model.component_data_objects(Objective, active=True, sort=sort))
         if len(obj) != 1:
             raise RuntimeError(
                 "GAMS writer requires exactly one active objective (found %s)"
-                % (len(obj)))
+                % (len(obj))
+            )
         obj = obj[0]
         if linear:
             if obj.polynomial_degree() not in linear_degree:
                 linear = False
         obj_expr_str, obj_discontinuous = expression_to_string(
-            obj.expr, tc, smap=symbolMap,
-            output_fixed_variables=output_fixed_variables,
+            obj.expr, tc, smap=symbolMap, output_fixed_variables=output_fixed_variables
         )
         dnlp |= obj_discontinuous
         oName = symbolMap.getSymbol(obj, con_labeler)
         constraint_names.append(oName)
-        ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (
-            oName,
-            obj_expr_str,
-        ))
+        ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (oName, obj_expr_str))
 
         # Categorize the variables that we found
         categorized_vars = Categorizer(var_list, symbolMap)
@@ -641,15 +679,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
             output_file.write("\n\t".join(categorized_vars.positive))
         output_file.write(";\n\nVARIABLES\n\tGAMS_OBJECTIVE\n\t")
-        output_file.write("\n\t".join(
-            categorized_vars.reals + categorized_vars.fixed
-        ))
+        output_file.write("\n\t".join(categorized_vars.reals + categorized_vars.fixed))
         output_file.write(";\n\n")
 
         for var in categorized_vars.fixed:
-            output_file.write("%s.fx = %s;\n" % (
-                var, ftoa(value(symbolMap.getObject(var)), False)
-            ))
+            output_file.write(
+                "%s.fx = %s;\n" % (var, ftoa(value(symbolMap.getObject(var)), False))
+            )
         output_file.write("\n")
 
         for line in ConstraintIO.getvalue().splitlines():
@@ -666,49 +702,45 @@ class ProblemWriter_gams(AbstractProblemWriter):
             lb, ub = var.bounds
             if category == 'positive':
                 if ub is not None:
-                    output_file.write("%s.up = %s;\n" %
-                                      (var_name, ftoa(ub, False)))
+                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub, False)))
             elif category == 'ints':
                 if lb is None:
                     warn_int_bounds = True
                     # GAMS doesn't allow -INF lower bound for ints
-                    logger.warning("Lower bound for integer variable %s set "
-                                   "to -1.0E+100." % var.name)
+                    logger.warning(
+                        "Lower bound for integer variable %s set "
+                        "to -1.0E+100." % var.name
+                    )
                     output_file.write("%s.lo = -1.0E+100;\n" % (var_name))
                 elif lb != 0:
-                    output_file.write(
-                        "%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
+                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
                 if ub is None:
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
                     # default upper integer bound, which it applies if the
                     # integer's upper bound is INF. This option maxes out at
                     # 2147483647, so we can go higher by setting the bound.
-                    logger.warning("Upper bound for integer variable %s set "
-                                   "to +1.0E+100." % var.name)
+                    logger.warning(
+                        "Upper bound for integer variable %s set "
+                        "to +1.0E+100." % var.name
+                    )
                     output_file.write("%s.up = +1.0E+100;\n" % (var_name))
                 else:
-                    output_file.write(
-                        "%s.up = %s;\n" % (var_name, ftoa(ub, False)))
+                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub, False)))
             elif category == 'binary':
                 if lb != 0:
-                    output_file.write(
-                        "%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
+                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
                 if ub != 1:
-                    output_file.write(
-                        "%s.up = %s;\n" % (var_name, ftoa(ub, False)))
+                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub, False)))
             elif category == 'reals':
                 if lb is not None:
-                    output_file.write(
-                        "%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
+                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
                 if ub is not None:
-                    output_file.write(
-                        "%s.up = %s;\n" % (var_name, ftoa(ub, False)))
+                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub, False)))
             else:
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
-                output_file.write("%s.l = %s;\n" %
-                                  (var_name, ftoa(var.value, False)))
+                output_file.write("%s.l = %s;\n" % (var_name, ftoa(var.value, False)))
 
         if warn_int_bounds:
             logger.warning(
@@ -716,31 +748,33 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 "is as extreme as GAMS will define, and should be enough to "
                 "appear unbounded. If the solver cannot handle this bound, "
                 "explicitly set a smaller bound on the pyomo model, or try a "
-                "different GAMS solver.")
+                "different GAMS solver."
+            )
 
         model_name = "GAMS_MODEL"
         output_file.write("\nMODEL %s /all/ ;\n" % model_name)
 
         if mtype is None:
-            mtype =  ('lp','nlp','mip','minlp')[
-                (0 if linear else 1) +
-                (2 if (categorized_vars.binary or categorized_vars.ints)
-                 else 0)]
+            mtype = ('lp', 'nlp', 'mip', 'minlp')[
+                (0 if linear else 1)
+                + (2 if (categorized_vars.binary or categorized_vars.ints) else 0)
+            ]
             if mtype == 'nlp' and dnlp:
                 mtype = 'dnlp'
 
         if solver is not None:
             if mtype.upper() not in valid_solvers[solver.upper()]:
-                raise ValueError("GAMS writer passed solver (%s) "
-                                 "unsuitable for model type (%s)"
-                                 % (solver, mtype))
+                raise ValueError(
+                    "GAMS writer passed solver (%s) "
+                    "unsuitable for model type (%s)" % (solver, mtype)
+                )
             output_file.write("option %s=%s;\n" % (mtype, solver))
 
         output_file.write("option solprint=%s;\n" % solprint)
         output_file.write("option limrow=%d;\n" % limrow)
         output_file.write("option limcol=%d;\n" % limcol)
         output_file.write("option solvelink=%d;\n" % solvelink)
-        
+
         if put_results is not None and put_results_format == 'gdx':
             output_file.write("option savepoint=1;\n")
 
@@ -752,20 +786,30 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         output_file.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n\n"
-            % ( model_name,
-                mtype,
-                'min' if obj.sense == minimize else 'max'))
+            % (model_name, mtype, 'min' if obj.sense == minimize else 'max')
+        )
 
         # Set variables to store certain statuses and attributes
-        stat_vars = ['MODELSTAT', 'SOLVESTAT', 'OBJEST', 'OBJVAL', 'NUMVAR',
-                     'NUMEQU', 'NUMDVAR', 'NUMNZ', 'ETSOLVE']
-        output_file.write("Scalars MODELSTAT 'model status', "
-                          "SOLVESTAT 'solve status';\n")
+        stat_vars = [
+            'MODELSTAT',
+            'SOLVESTAT',
+            'OBJEST',
+            'OBJVAL',
+            'NUMVAR',
+            'NUMEQU',
+            'NUMDVAR',
+            'NUMNZ',
+            'ETSOLVE',
+        ]
+        output_file.write(
+            "Scalars MODELSTAT 'model status', SOLVESTAT 'solve status';\n"
+        )
         output_file.write("MODELSTAT = %s.modelstat;\n" % model_name)
         output_file.write("SOLVESTAT = %s.solvestat;\n\n" % model_name)
 
-        output_file.write("Scalar OBJEST 'best objective', "
-                          "OBJVAL 'objective value';\n")
+        output_file.write(
+            "Scalar OBJEST 'best objective', OBJVAL 'objective value';\n"
+        )
         output_file.write("OBJEST = %s.objest;\n" % model_name)
         output_file.write("OBJVAL = %s.objval;\n\n" % model_name)
 
@@ -798,13 +842,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput results;")
                 output_file.write("\nput 'SYMBOL  :  LEVEL  :  MARGINAL' /;")
                 for var in var_list:
-                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;"
-                                      % (var, var, var))
+                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;" % (var, var, var))
                 for con in constraint_names:
-                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;"
-                                      % (con, con, con))
-                output_file.write("\nput GAMS_OBJECTIVE ' ' GAMS_OBJECTIVE.l "
-                                  "' ' GAMS_OBJECTIVE.m;\n")
+                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;" % (con, con, con))
+                output_file.write(
+                    "\nput GAMS_OBJECTIVE ' ' GAMS_OBJECTIVE.l "
+                    "' ' GAMS_OBJECTIVE.m;\n"
+                )
 
                 statresults = put_results + 'stat.dat'
                 output_file.write("\nfile statresults /'%s'/;" % statresults)
@@ -815,86 +859,328 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 for stat in stat_vars:
                     output_file.write("\nput '%s' ' ' %s /;\n" % (stat, stat))
 
+
 valid_solvers = {
-'ALPHAECP': {'MINLP','MIQCP'},
-'AMPL': {'LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP'},
-'ANTIGONE': {'NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'BARON': {'LP','MIP','RMIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'BDMLP': {'LP','MIP','RMIP'},
-'BDMLPD': {'LP','RMIP'},
-'BENCH': {'LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'BONMIN': {'MINLP','MIQCP'},
-'BONMINH': {'MINLP','MIQCP'},
-'CBC': {'LP','MIP','RMIP'},
-'COINBONMIN': {'MINLP','MIQCP'},
-'COINCBC': {'LP','MIP','RMIP'},
-'COINCOUENNE': {'NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'COINIPOPT': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'COINOS': {'LP','MIP','RMIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'COINSCIP': {'MIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'CONOPT': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'CONOPT3': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'CONOPT4': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'CONOPTD': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'CONVERT': {'LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'CONVERTD': {'LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP','EMP'},
-'COUENNE': {'NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'CPLEX': {'LP','MIP','RMIP','QCP','MIQCP','RMIQCP'},
-'CPLEXD': {'LP','MIP','RMIP','QCP','MIQCP','RMIQCP'},
-'CPOPTIMIZER': {'MIP','MINLP','MIQCP'},
-'DE': {'EMP'},
-'DECIS': {'EMP'},
-'DECISC': {'LP'},
-'DECISM': {'LP'},
-'DICOPT': {'MINLP','MIQCP'},
-'DICOPTD': {'MINLP','MIQCP'},
-'EXAMINER': {'LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'EXAMINER2': {'LP','MIP','RMIP','NLP','MCP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'GAMSCHK': {'LP','MIP','RMIP','NLP','MCP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'GLOMIQO': {'QCP','MIQCP','RMIQCP'},
-'GUROBI': {'LP','MIP','RMIP','QCP','MIQCP','RMIQCP'},
-'GUSS': {'LP', 'MIP', 'NLP', 'MCP', 'CNS', 'DNLP', 'MINLP', 'QCP', 'MIQCP'},
-'IPOPT': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'IPOPTH': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'JAMS': {'EMP'},
-'KESTREL': {'LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP','EMP'},
-'KNITRO': {'LP','RMIP','NLP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'LGO': {'LP','RMIP','NLP','DNLP','RMINLP','QCP','RMIQCP'},
-'LGOD': {'LP','RMIP','NLP','DNLP','RMINLP','QCP','RMIQCP'},
-'LINDO': {'LP','MIP','RMIP','NLP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP','EMP'},
-'LINDOGLOBAL': {'LP','MIP','RMIP','NLP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'LINGO': {'LP','MIP','RMIP','NLP','DNLP','RMINLP','MINLP'},
-'LOCALSOLVER': {'MIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'LOGMIP': {'EMP'},
-'LS': {'LP','RMIP'},
-'MILES': {'MCP'},
-'MILESE': {'MCP'},
-'MINOS': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'MINOS5': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'MINOS55': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'MOSEK': {'LP','MIP','RMIP','NLP','DNLP','RMINLP','QCP','MIQCP','RMIQCP'},
-'MPECDUMP': {'LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP'},
-'MPSGE': {},
-'MSNLP': {'NLP','DNLP','RMINLP','QCP','RMIQCP'},
-'NLPEC': {'MCP','MPEC','RMPEC'},
-'OQNLP': {'NLP', 'DNLP', 'MINLP', 'QCP', 'MIQCP'},
-'OS': {'LP','MIP','RMIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'OSICPLEX': {'LP','MIP','RMIP'},
-'OSIGUROBI': {'LP','MIP','RMIP'},
-'OSIMOSEK': {'LP','MIP','RMIP'},
-'OSISOPLEX': {'LP','RMIP'},
-'OSIXPRESS': {'LP','MIP','RMIP'},
-'PATH': {'MCP','CNS'},
-'PATHC': {'MCP','CNS'},
-'PATHNLP': {'LP','RMIP','NLP','DNLP','RMINLP','QCP','RMIQCP'},
-'PYOMO': {'LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP'},
-'QUADMINOS': {'LP'},
-'SBB': {'MINLP','MIQCP'},
-'SCENSOLVER': {'LP','MIP','RMIP','NLP','MCP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'SCIP': {'MIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
-'SHOT': {'MINLP','MIQCP'},
-'SNOPT': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
-'SOPLEX': {'LP','RMIP'},
-'XA': {'LP','MIP','RMIP'},
-'XPRESS': {'LP','MIP','RMIP','QCP','MIQCP','RMIQCP'}
+    'ALPHAECP': {'MINLP', 'MIQCP'},
+    'AMPL': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'MPEC',
+        'RMPEC',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+    },
+    'ANTIGONE': {'NLP', 'CNS', 'DNLP', 'RMINLP', 'MINLP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'BARON': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'BDMLP': {'LP', 'MIP', 'RMIP'},
+    'BDMLPD': {'LP', 'RMIP'},
+    'BENCH': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'MPEC',
+        'RMPEC',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'BONMIN': {'MINLP', 'MIQCP'},
+    'BONMINH': {'MINLP', 'MIQCP'},
+    'CBC': {'LP', 'MIP', 'RMIP'},
+    'COINBONMIN': {'MINLP', 'MIQCP'},
+    'COINCBC': {'LP', 'MIP', 'RMIP'},
+    'COINCOUENNE': {'NLP', 'CNS', 'DNLP', 'RMINLP', 'MINLP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'COINIPOPT': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'COINOS': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'COINSCIP': {
+        'MIP',
+        'NLP',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'CONOPT': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'CONOPT3': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'CONOPT4': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'CONOPTD': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'CONVERT': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'MPEC',
+        'RMPEC',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'CONVERTD': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'MPEC',
+        'RMPEC',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+        'EMP',
+    },
+    'COUENNE': {'NLP', 'CNS', 'DNLP', 'RMINLP', 'MINLP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'CPLEX': {'LP', 'MIP', 'RMIP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'CPLEXD': {'LP', 'MIP', 'RMIP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'CPOPTIMIZER': {'MIP', 'MINLP', 'MIQCP'},
+    'DE': {'EMP'},
+    'DECIS': {'EMP'},
+    'DECISC': {'LP'},
+    'DECISM': {'LP'},
+    'DICOPT': {'MINLP', 'MIQCP'},
+    'DICOPTD': {'MINLP', 'MIQCP'},
+    'EXAMINER': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'MPEC',
+        'RMPEC',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'EXAMINER2': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'GAMSCHK': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'GLOMIQO': {'QCP', 'MIQCP', 'RMIQCP'},
+    'GUROBI': {'LP', 'MIP', 'RMIP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'GUSS': {'LP', 'MIP', 'NLP', 'MCP', 'CNS', 'DNLP', 'MINLP', 'QCP', 'MIQCP'},
+    'IPOPT': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'IPOPTH': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'JAMS': {'EMP'},
+    'KESTREL': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'MPEC',
+        'RMPEC',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+        'EMP',
+    },
+    'KNITRO': {
+        'LP',
+        'RMIP',
+        'NLP',
+        'MPEC',
+        'RMPEC',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'LGO': {'LP', 'RMIP', 'NLP', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'LGOD': {'LP', 'RMIP', 'NLP', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'LINDO': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+        'EMP',
+    },
+    'LINDOGLOBAL': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'LINGO': {'LP', 'MIP', 'RMIP', 'NLP', 'DNLP', 'RMINLP', 'MINLP'},
+    'LOCALSOLVER': {
+        'MIP',
+        'NLP',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'LOGMIP': {'EMP'},
+    'LS': {'LP', 'RMIP'},
+    'MILES': {'MCP'},
+    'MILESE': {'MCP'},
+    'MINOS': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'MINOS5': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'MINOS55': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'MOSEK': {'LP', 'MIP', 'RMIP', 'NLP', 'DNLP', 'RMINLP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'MPECDUMP': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'MPEC',
+        'RMPEC',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+    },
+    'MPSGE': {},
+    'MSNLP': {'NLP', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'NLPEC': {'MCP', 'MPEC', 'RMPEC'},
+    'OQNLP': {'NLP', 'DNLP', 'MINLP', 'QCP', 'MIQCP'},
+    'OS': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'OSICPLEX': {'LP', 'MIP', 'RMIP'},
+    'OSIGUROBI': {'LP', 'MIP', 'RMIP'},
+    'OSIMOSEK': {'LP', 'MIP', 'RMIP'},
+    'OSISOPLEX': {'LP', 'RMIP'},
+    'OSIXPRESS': {'LP', 'MIP', 'RMIP'},
+    'PATH': {'MCP', 'CNS'},
+    'PATHC': {'MCP', 'CNS'},
+    'PATHNLP': {'LP', 'RMIP', 'NLP', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'PYOMO': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'MPEC',
+        'RMPEC',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+    },
+    'QUADMINOS': {'LP'},
+    'SBB': {'MINLP', 'MIQCP'},
+    'SCENSOLVER': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'MCP',
+        'CNS',
+        'DNLP',
+        'RMINLP',
+        'MINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
+    'SCIP': {'MIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'MINLP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'SHOT': {'MINLP', 'MIQCP'},
+    'SNOPT': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'SOPLEX': {'LP', 'RMIP'},
+    'XA': {'LP', 'MIP', 'RMIP'},
+    'XPRESS': {'LP', 'MIP', 'RMIP', 'QCP', 'MIQCP', 'RMIQCP'},
 }

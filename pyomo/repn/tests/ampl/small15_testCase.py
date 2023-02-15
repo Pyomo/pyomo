@@ -31,4 +31,3 @@ model.OBJ = Objective(expr=model.x**2)
 model.CON1 = Constraint(expr=model.b.y**2 == 4)
 
 model.b.deactivate()
-
