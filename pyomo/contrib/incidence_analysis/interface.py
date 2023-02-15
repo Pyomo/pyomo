@@ -692,6 +692,26 @@ class IncidenceGraphInterface(object):
            >>> print([[c.name for c in cb] for cb in cblocks])
            [['eq1'], ['eq2']]
 
+        .. note::
+
+           **Breaking change in Pyomo 6.4.5**
+
+           The pre-6.4.5 ``block_triangularize`` method returned maps from
+           each row or column (constraint or variable) to the index of its block
+           in a block lower triangularization, as the original intent of this
+           function was to identify when variables do or don't share a diagonal
+           block in this partition. Since then, the dominant use case of
+           ``block_triangularize`` has been to partition variables and
+           constraints into these blocks and inspect or solve each block
+           individually. A natural return type for this functionality is the
+           ordered partition of variables and constraints, as lists of lists.
+           This functionality was previously available via the
+           ``get_diagonal_blocks`` method, which was confusing as it did not
+           capture that the partition was the  diagonal of a block
+           *triangularization* (as opposed to diagonalization). The pre-6.4.5
+           functionality of ``block_triangularize`` is still available via the
+           ``map_nodes_to_block_triangular_indices`` method.
+
         """
         variables, constraints = self._validate_input(variables, constraints)
         graph = self._extract_subgraph(variables, constraints)
