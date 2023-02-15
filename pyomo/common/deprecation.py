@@ -182,8 +182,7 @@ def deprecation_warning(msg, logger=None, version=None,
     -------
     >>> from pyomo.common.deprecation import deprecation_warning
     >>> deprecation_warning('This functionality is deprecated.', version='1.2.3')
-    WARNING: DEPRECATED: This functionality is deprecated.
-             (deprecated in 1.2.3)
+    WARNING: DEPRECATED: This functionality is deprecated.  (deprecated in 1.2.3) ...
 
     """
     if logger is None:
@@ -257,11 +256,13 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
     Example
     -------
     >>> from pyomo.common.deprecation import deprecated
-    >>> @deprecated('The sample_function has been deprecated.', version='1.2.3')
-        class sample_function(x):
-            return x
-    WARNING: DEPRECATED: The sample_function has been deprecated.
-             (deprecated in 1.2.3)
+    >>> @deprecated(version='1.2.3')
+    ... def sample_function(x):
+    ...     return 2*x
+    >>> sample_function(5)
+    WARNING: DEPRECATED: This function (sample_function) has been deprecated and
+        may be removed in a future release.  (deprecated in 1.2.3) ...
+    10
 
     """
     def wrap(obj):
