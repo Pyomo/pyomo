@@ -13,8 +13,9 @@ We offer a set of tools to help with deprecation in
 
 By policy, when deprecating or moving an existing capability,
 one of the following functions should be imported. In use,
-the ``version`` option should be set to ``TBD``, which
-will be changed as of the next release.
+the ``version`` option should be set to current development
+version. This can be found by running `pyomo --version` on
+your local fork/branch.
 
 .. autoclass:: pyomo.common.deprecation.deprecated
    :noindex:
@@ -37,13 +38,13 @@ Removal
 
 By policy, functionality should be deprecated with reasonable
 warning, pending extenuating circumstances. The functionality should
-be deprecatd, following the information above.
+be deprecated, following the information above.
 
 If the functionality is documented in the most recent
-edition of [`Pyomo - Optimization in Python`_], it may not be removed
+edition of [`Pyomo - Optimization Modeling in Python`_], it may not be removed
 until the next major version release.
 
-.. _Pyomo - Optimization in Python: https://doi.org/10.1007/978-3-030-68928-5
+.. _Pyomo - Optimization Modeling in Python: https://doi.org/10.1007/978-3-030-68928-5
 
 For other functionality, it is preferred that ample time is given
 before removing the functionality. At minimum, significant functionality

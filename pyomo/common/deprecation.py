@@ -181,8 +181,8 @@ def deprecation_warning(msg, logger=None, version=None,
     Example
     -------
     >>> from pyomo.common.deprecation import deprecation_warning
-    >>> deprecation_warning('pyomo.common.deprecation', version='1.2.3')
-    WARNING: DEPRECATED: pyomo.common.deprecation has been deprecated.
+    >>> deprecation_warning('This functionality is deprecated.', version='1.2.3')
+    WARNING: DEPRECATED: This functionality is deprecated.
              (deprecated in 1.2.3)
 
     """
@@ -257,8 +257,10 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
     Example
     -------
     >>> from pyomo.common.deprecation import deprecated
-    >>> @deprecated('pyomo.common.deprecation', version='1.2.3')
-    WARNING: DEPRECATED: pyomo.common.deprecation has been deprecated.
+    >>> @deprecated('The sample_function has been deprecated.', version='1.2.3')
+        class sample_function(x):
+            return x
+    WARNING: DEPRECATED: The sample_function has been deprecated.
              (deprecated in 1.2.3)
 
     """

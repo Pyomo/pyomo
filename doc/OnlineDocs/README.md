@@ -17,16 +17,4 @@ Preview Changes Locally
    $ make latexpdf  # Option 2
    ```
 
-   **NOTE**:  If the local python is not on your path, then you may need to 
-   invoke `make` differently.  For example, using the PyUtilib `lbin` command:
-   
-   ```bash
-   $ lbin make html
-   ```
-
-1. Preview your work
-
-   ```bash
-   $ cd _build/html
-   $ open index.html
-   ```
+1. View `_build/html/index.html` in your browser
