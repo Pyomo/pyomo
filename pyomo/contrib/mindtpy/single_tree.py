@@ -9,23 +9,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
 from pyomo.common.dependencies import attempt_import
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
 from pyomo.contrib.mindtpy.mip_solve import handle_main_optimal, solve_main, handle_regularization_main_tc
-from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
-import logging
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
-import pyomo.environ as pyo
 from math import copysign
 from pyomo.contrib.mindtpy.util import get_integer_solution, update_dual_bound, update_primal_bound
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem, handle_nlp_subproblem_tc
 from pyomo.opt import TerminationCondition as tc
-from pyomo.core import Constraint, minimize, value, maximize
+from pyomo.core import minimize, value
 from pyomo.core.expr.current import identify_variables
 cplex, cplex_available = attempt_import('cplex')
 
@@ -256,7 +252,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                              rhs=ub_int - cplex_convex_rhs)
                     counter += 1
 
-            config.logger.info('Added %s affine cuts' % counter)
+            config.logger.debug('Added %s affine cuts' % counter)
 
     def add_lazy_no_good_cuts(self, var_values, solve_data, config, opt, feasible=False):
         """Adds no-good cuts.
@@ -284,7 +280,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         if not config.add_no_good_cuts:
             return
 
-        config.logger.info('Adding no-good cuts')
+        config.logger.debug('Adding no-good cuts')
         with time_code(solve_data.timing, 'No-good cut generation'):
             m = solve_data.mip
             MindtPy = m.MindtPy_utils
@@ -401,7 +397,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             self.add_lazy_oa_cuts(
                 solve_data.mip, dual_values, solve_data, config, opt)
             if config.add_regularization is not None:
-                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+                add_oa_cuts(solve_data.mip, dual_values, solve_data.jacobians, solve_data.objective_sense,
+                            solve_data.mip_constraint_polynomial_degree, solve_data.mip_iter, config, solve_data.timing)
         elif config.strategy == 'GOA':
             self.add_lazy_affine_cuts(solve_data, config, opt)
         if config.add_no_good_cuts:
@@ -451,7 +448,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             self.add_lazy_oa_cuts(
                 solve_data.mip, dual_values, solve_data, config, opt)
             if config.add_regularization is not None:
-                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+                add_oa_cuts(solve_data.mip, dual_values, solve_data.jacobians, solve_data.objective_sense,
+                            solve_data.mip_constraint_polynomial_degree, solve_data.mip_iter, config, solve_data.timing)
         elif config.strategy == 'GOA':
             self.add_lazy_affine_cuts(solve_data, config, opt)
         if config.add_no_good_cuts:
@@ -697,7 +695,9 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
 
         if config.add_cuts_at_incumbent:
             if config.strategy == 'OA':
-                add_oa_cuts(solve_data.mip, None, solve_data, config, cb_opt)
+                add_oa_cuts(solve_data.mip, None, solve_data.jacobians, solve_data.objective_sense,
+                            solve_data.mip_constraint_polynomial_degree, solve_data.mip_iter, config,
+                            solve_data.timing, cb_opt=cb_opt)
 
         # Regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
@@ -734,7 +734,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
                 if config.add_no_good_cuts:
                     var_values = list(
                         v.value for v in solve_data.working_model.MindtPy_utils.variable_list)
-                    add_no_good_cuts(var_values, solve_data, config)
+                    add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing, mip_iter=solve_data.mip_iter, cb_opt=cb_opt)
                 return
             elif config.strategy == 'OA':
                 return

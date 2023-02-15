@@ -26,11 +26,27 @@ from pyomo.common.fileutils import find_library
 from pyomo.common.gc_manager import PauseGC
 from pyomo.opt import ProblemFormat, AbstractProblemWriter, WriterFactory
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import (NumericConstant,
-                                      native_numeric_types,
-                                      value,
-                                      is_fixed)
-from pyomo.core.base import SymbolMap, NameLabeler, _ExpressionData, SortComponents, var, param, Var, ExternalFunction, ComponentMap, Objective, Constraint, SOSConstraint, Suffix
+from pyomo.core.expr.numvalue import (
+    NumericConstant,
+    native_numeric_types,
+    value,
+    is_fixed,
+)
+from pyomo.core.base import (
+    SymbolMap,
+    NameLabeler,
+    _ExpressionData,
+    SortComponents,
+    var,
+    param,
+    Var,
+    ExternalFunction,
+    ComponentMap,
+    Objective,
+    Constraint,
+    SOSConstraint,
+    Suffix,
+)
 import pyomo.core.base.suffix
 from pyomo.repn.standard_repn import generate_standard_repn
 
@@ -64,11 +80,11 @@ def set_pyomo_amplfunc_env(external_libs):
         _abs_lib = find_library(_lib)
         if _abs_lib is not None:
             _lib = _abs_lib
-        if ( ' ' not in _lib
-             or ( _lib[0]=='"' and _lib[-1]=='"'
-                  and '"' not in _lib[1:-1] )
-             or ( _lib[0]=="'" and _lib[-1]=="'"
-                  and "'" not in _lib[1:-1] ) ):
+        if (
+            ' ' not in _lib
+            or (_lib[0] == '"' and _lib[-1] == '"' and '"' not in _lib[1:-1])
+            or (_lib[0] == "'" and _lib[-1] == "'" and "'" not in _lib[1:-1])
+        ):
             pass
         elif '"' not in _lib:
             _lib = '"' + _lib + '"'
@@ -78,7 +94,8 @@ def set_pyomo_amplfunc_env(external_libs):
             raise RuntimeError(
                 "Cannot pass the AMPL external function library\n\t%s\n"
                 "to the ASL because the string contains spaces, "
-                "single quote and\ndouble quote characters." % (_lib,))
+                "single quote and\ndouble quote characters." % (_lib,)
+            )
         if env_str:
             env_str += "\n"
         env_str += _lib
@@ -86,26 +103,26 @@ def set_pyomo_amplfunc_env(external_libs):
 
 
 _intrinsic_function_operators = {
-    'log':    'o43',
-    'log10':  'o42',
-    'sin':    'o41',
-    'cos':    'o46',
-    'tan':    'o38',
-    'sinh':   'o40',
-    'cosh':   'o45',
-    'tanh':   'o37',
-    'asin':   'o51',
-    'acos':   'o53',
-    'atan':   'o49',
-    'exp':    'o44',
-    'sqrt':   'o39',
-    'asinh':  'o50',
-    'acosh':  'o52',
-    'atanh':  'o47',
-    'pow':    'o5',
-    'abs':    'o15',
-    'ceil':   'o14',
-    'floor':  'o13'
+    'log': 'o43',
+    'log10': 'o42',
+    'sin': 'o41',
+    'cos': 'o46',
+    'tan': 'o38',
+    'sinh': 'o40',
+    'cosh': 'o45',
+    'tanh': 'o37',
+    'asin': 'o51',
+    'acos': 'o53',
+    'atan': 'o49',
+    'exp': 'o44',
+    'sqrt': 'o39',
+    'asinh': 'o50',
+    'acosh': 'o52',
+    'atanh': 'o47',
+    'pow': 'o5',
+    'abs': 'o15',
+    'ceil': 'o14',
+    'floor': 'o13',
 }
 
 # build string templates
@@ -122,24 +139,32 @@ def _build_op_template():
     _op_template[EXPR.DivisionExpression] = div_template
     _op_comment[EXPR.DivisionExpression] = div_comment
 
-    _op_template[EXPR.ExternalFunctionExpression] = ("f%d %d{C}\n", #function
-                                                      "h%d:%s{C}\n") #string arg
-    _op_comment[EXPR.ExternalFunctionExpression] = ("\t#%s", #function
-                                                     "")      #string arg
+    _op_template[EXPR.ExternalFunctionExpression] = (
+        "f%d %d{C}\n",  # function
+        "h%d:%s{C}\n",
+    )  # string arg
+    _op_comment[EXPR.ExternalFunctionExpression] = (
+        "\t#%s",  # function
+        "",
+    )  # string arg
 
     for opname in _intrinsic_function_operators:
-        _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
-        _op_comment[opname] = "\t#"+opname
+        _op_template[opname] = _intrinsic_function_operators[opname] + "{C}\n"
+        _op_comment[opname] = "\t#" + opname
 
     _op_template[EXPR.Expr_ifExpression] = "o35{C}\n"
     _op_comment[EXPR.Expr_ifExpression] = "\t#if"
 
-    _op_template[EXPR.InequalityExpression] = ("o21{C}\n", # and
-                                                "o22{C}\n", # <
-                                                "o23{C}\n") # <=
-    _op_comment[EXPR.InequalityExpression] = ("\t#and", # and
-                                               "\t#lt",  # <
-                                               "\t#le")  # <=
+    _op_template[EXPR.InequalityExpression] = (
+        "o21{C}\n",  # and
+        "o22{C}\n",  # <
+        "o23{C}\n",
+    )  # <=
+    _op_comment[EXPR.InequalityExpression] = (
+        "\t#and",  # and
+        "\t#lt",  # <
+        "\t#le",
+    )  # <=
 
     _op_template[EXPR.EqualityExpression] = "o24{C}\n"
     _op_comment[EXPR.EqualityExpression] = "\t#eq"
@@ -154,17 +179,19 @@ def _build_op_template():
     _op_comment[NumericConstant] = ""
 
     _op_template[EXPR.SumExpressionBase] = (
-        "o54{C}\n%d\n", # nary +
-        "o0{C}\n",      # +
-        "o2\n" + _op_template[NumericConstant] ) # * coef
-    _op_comment[EXPR.SumExpressionBase] = ("\t#sumlist", # nary +
-                                        "\t#+",       # +
-                                        _op_comment[NumericConstant]) # * coef
+        "o54{C}\n%d\n",  # nary +
+        "o0{C}\n",  # +
+        "o2\n" + _op_template[NumericConstant],
+    )  # * coef
+    _op_comment[EXPR.SumExpressionBase] = (
+        "\t#sumlist",  # nary +
+        "\t#+",  # +
+        _op_comment[NumericConstant],
+    )  # * coef
     _op_template[EXPR.NegationExpression] = "o16{C}\n"
     _op_comment[EXPR.NegationExpression] = "\t#-"
 
     return _op_template, _op_comment
-
 
 
 def _get_bound(exp):
@@ -174,19 +201,19 @@ def _get_bound(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
-class StopWatch(object):
 
+class StopWatch(object):
     def __init__(self):
         self.start = time.time()
 
     def report(self, msg):
-        print(msg+" (seconds): "+str(time.time()-self.start))
+        print(msg + " (seconds): " + str(time.time() - self.start))
 
     def reset(self):
         self.start = time.time()
 
-class _Counter(object):
 
+class _Counter(object):
     def __init__(self, start):
         self._id = start
 
@@ -195,35 +222,38 @@ class _Counter(object):
         self._id += 1
         return tmp
 
+
 class ModelSOS(object):
-
     class AmplSuffix(object):
-
-        def __init__(self,name):
+        def __init__(self, name):
             self.name = name
             self.ids = []
             self.vals = []
 
-        def add(self,idx,val):
+        def add(self, idx, val):
             if idx in self.ids:
                 raise RuntimeError(
                     "The NL file format does not support multiple nonzero "
                     "values for a single component and suffix. \n"
                     "Suffix Name:  %s\n"
-                    "Component ID: %s\n" % (self.name, idx))
+                    "Component ID: %s\n" % (self.name, idx)
+                )
             else:
                 self.ids.append(idx)
                 self.vals.append(val)
 
         def genfilelines(self):
             base_line = "{0} {1}\n"
-            return [base_line.format(idx, val)
-                    for idx, val in zip(self.ids,self.vals) if val != 0]
+            return [
+                base_line.format(idx, val)
+                for idx, val in zip(self.ids, self.vals)
+                if val != 0
+            ]
 
         def is_empty(self):
             return not bool(len(self.ids))
 
-    def __init__(self,ampl_var_id, varID_map):
+    def __init__(self, ampl_var_id, varID_map):
 
         self.ampl_var_id = ampl_var_id
         self.sosno = self.AmplSuffix('sosno')
@@ -231,7 +261,7 @@ class ModelSOS(object):
         self.block_cntr = 0
         self.varID_map = varID_map
 
-    def count_constraint(self,soscondata):
+    def count_constraint(self, soscondata):
 
         ampl_var_id = self.ampl_var_id
         varID_map = self.varID_map
@@ -257,9 +287,11 @@ class ModelSOS(object):
         elif level == 2:
             sign_tag = -1
         else:
-            raise ValueError("SOSContraint '%s' has sos type='%s', "
-                             "which is not supported by the NL file interface" \
-                                 % (soscondata.name, level))
+            raise ValueError(
+                "SOSContraint '%s' has sos type='%s', "
+                "which is not supported by the NL file interface"
+                % (soscondata.name, level)
+            )
 
         for vardata, weight in sos_items:
             weight = _get_bound(weight)
@@ -267,33 +299,32 @@ class ModelSOS(object):
                 raise ValueError(
                     "Cannot use negative weight %f "
                     "for variable %s is special ordered "
-                    "set %s " % (weight, vardata.name, soscondata.name))
+                    "set %s " % (weight, vardata.name, soscondata.name)
+                )
             if vardata.fixed:
                 raise ValueError(
                     "SOSConstraint '%s' includes a fixed Variable '%s'. "
                     "This is currently not supported. Deactivate this constraint "
-                    "in order to proceed"
-                    % (soscondata.name, vardata.name))
+                    "in order to proceed" % (soscondata.name, vardata.name)
+                )
 
             ID = ampl_var_id[varID_map[id(vardata)]]
-            self.sosno.add(ID,self.block_cntr*sign_tag)
-            self.ref.add(ID,weight)
+            self.sosno.add(ID, self.block_cntr * sign_tag)
+            self.ref.add(ID, weight)
+
 
 class RepnWrapper(object):
 
-    __slots__ = ('repn','linear_vars','nonlinear_vars')
+    __slots__ = ('repn', 'linear_vars', 'nonlinear_vars')
 
-    def __init__(self,repn,linear,nonlinear):
+    def __init__(self, repn, linear, nonlinear):
         self.repn = repn
         self.linear_vars = linear
         self.nonlinear_vars = nonlinear
 
 
-@WriterFactory.register(
-    'nl_v1', 'Generate the corresponding AMPL NL file (version 1).')
+@WriterFactory.register('nl_v1', 'Generate the corresponding AMPL NL file (version 1).')
 class ProblemWriter_nl(AbstractProblemWriter):
-
-
     def __init__(self):
         AbstractProblemWriter.__init__(self, ProblemFormat.nl)
         self._ampl_var_id = {}
@@ -302,11 +333,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._OUTPUT = None
         self._varID_map = None
 
-    def __call__(self,
-                 model,
-                 filename,
-                 solver_capability,
-                 io_options):
+    def __call__(self, model, filename, solver_capability, io_options):
 
         # Rebuild the OP template (as the expression tree system may
         # have been switched)
@@ -347,28 +374,30 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # preprocessed after the variable was fixed). If True, we
         # allow this case and modify the variable bounds section to
         # fix the variable.
-        output_fixed_variable_bounds = \
-                io_options.pop("output_fixed_variable_bounds", False)
+        output_fixed_variable_bounds = io_options.pop(
+            "output_fixed_variable_bounds", False
+        )
 
         # If False, unused variables will not be included in
         # the NL file. Otherwise, include all variables in
         # the bounds sections.
-        include_all_variable_bounds = \
-            io_options.pop("include_all_variable_bounds", False)
+        include_all_variable_bounds = io_options.pop(
+            "include_all_variable_bounds", False
+        )
 
         # List of variables that don't appear in constraints to force into the
         # nl-file
-        export_nonlinear_variables = \
-            io_options.pop("export_nonlinear_variables", False)
+        export_nonlinear_variables = io_options.pop("export_nonlinear_variables", False)
 
         # column_order is a new option supported by the nl writer v2
         _column_order = io_options.pop("column_order", True)
-        assert _column_order in {True,}
+        assert _column_order in {True}
 
         if len(io_options):
             raise ValueError(
-                "ProblemWriter_nl passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in io_options.items()))
+                "ProblemWriter_nl passed unrecognized io_options:\n\t"
+                + "\n\t".join("%s = %s" % (k, v) for k, v in io_options.items())
+            )
 
         if filename is None:
             filename = model.name + ".nl"
@@ -405,7 +434,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         # Pause the GC for the duration of this method
         with PauseGC() as pgc:
-            with open(filename,"w") as f:
+            with open(filename, "w") as f:
                 self._OUTPUT = f
                 symbol_map = self._print_model_NL(
                     model,
@@ -414,7 +443,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     skip_trivial_constraints=skip_trivial_constraints,
                     file_determinism=file_determinism,
                     include_all_variable_bounds=include_all_variable_bounds,
-                    export_nonlinear_variables=export_nonlinear_variables)
+                    export_nonlinear_variables=export_nonlinear_variables,
+                )
 
         self._symbolic_solver_labels = False
         self._output_fixed_variable_bounds = False
@@ -438,12 +468,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
             self._print_nonlinear_terms_NL(v1)
             OUTPUT.write(self._op_string[NumericConstant] % (2))
 
-    def _print_standard_quadratic_NL(self,
-                                     quadratic_vars,
-                                     quadratic_coefs):
+    def _print_standard_quadratic_NL(self, quadratic_vars, quadratic_coefs):
         OUTPUT = self._OUTPUT
-        nary_sum_str, binary_sum_str, coef_term_str = \
-            self._op_string[EXPR.SumExpressionBase]
+        nary_sum_str, binary_sum_str, coef_term_str = self._op_string[
+            EXPR.SumExpressionBase
+        ]
         assert len(quadratic_vars) == len(quadratic_coefs)
         if len(quadratic_vars) == 1:
             pass
@@ -461,14 +490,18 @@ class ProblemWriter_nl(AbstractProblemWriter):
             self_varID_map = self._varID_map
             quadratic_vars = []
             quadratic_coefs = []
-            for (i, (v1, v2)) in sorted(enumerate(old_quadratic_vars),
-                                        key=lambda x: (self_varID_map[id(x[1][0])],
-                                                       self_varID_map[id(x[1][1])])):
+            for (i, (v1, v2)) in sorted(
+                enumerate(old_quadratic_vars),
+                key=lambda x: (
+                    self_varID_map[id(x[1][0])],
+                    self_varID_map[id(x[1][1])],
+                ),
+            ):
                 quadratic_coefs.append(old_quadratic_coefs[i])
                 if self_varID_map[id(v1)] <= self_varID_map[id(v2)]:
-                    quadratic_vars.append((v1,v2))
+                    quadratic_vars.append((v1, v2))
                 else:
-                    quadratic_vars.append((v2,v1))
+                    quadratic_vars.append((v2, v1))
         for i in range(len(quadratic_vars)):
             coef = quadratic_coefs[i]
             v1, v2 = quadratic_vars[i]
@@ -486,32 +519,32 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # create a new sum expression for efficiency) this should
             # be a list of tuples where [0] is the coeff and [1] is
             # the expr to write
-            nary_sum_str, binary_sum_str, coef_term_str = \
-                self._op_string[EXPR.SumExpressionBase]
+            nary_sum_str, binary_sum_str, coef_term_str = self._op_string[
+                EXPR.SumExpressionBase
+            ]
             n = len(exp)
             if n > 2:
                 OUTPUT.write(nary_sum_str % (n))
-                for i in range(0,n):
-                    assert(exp[i].__class__ is tuple)
+                for i in range(0, n):
+                    assert exp[i].__class__ is tuple
                     coef = exp[i][0]
                     child_exp = exp[i][1]
                     if coef != 1:
                         OUTPUT.write(coef_term_str % (coef))
                     self._print_nonlinear_terms_NL(child_exp)
-            else: # n == 1 or 2
-                for i in range(0,n):
-                    assert(exp[i].__class__ is tuple)
+            else:  # n == 1 or 2
+                for i in range(0, n):
+                    assert exp[i].__class__ is tuple
                     coef = exp[i][0]
                     child_exp = exp[i][1]
-                    if i != n-1:
+                    if i != n - 1:
                         # need the + op if it is not the last entry in the list
                         OUTPUT.write(binary_sum_str)
                     if coef != 1:
                         OUTPUT.write(coef_term_str % (coef))
                     self._print_nonlinear_terms_NL(child_exp)
         elif exp_type in native_numeric_types:
-            OUTPUT.write(self._op_string[NumericConstant]
-                         % (exp))
+            OUTPUT.write(self._op_string[NumericConstant] % (exp))
 
         elif exp.is_expression_type():
             #
@@ -524,8 +557,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # have been preprocessed to form constant values.
             #
             elif exp.__class__ is EXPR.SumExpression:
-                nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[EXPR.SumExpressionBase]
+                nary_sum_str, binary_sum_str, coef_term_str = self._op_string[
+                    EXPR.SumExpressionBase
+                ]
                 n = exp.nargs()
                 const = 0
                 vargs = []
@@ -549,8 +583,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         self._print_nonlinear_terms_NL(child_exp)
 
             elif exp_type is EXPR.SumExpressionBase:
-                nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[EXPR.SumExpressionBase]
+                nary_sum_str, binary_sum_str, coef_term_str = self._op_string[
+                    EXPR.SumExpressionBase
+                ]
                 OUTPUT.write(binary_sum_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
@@ -589,18 +624,24 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if exp.is_fixed():
                     self._print_nonlinear_terms_NL(exp())
                     return
-                fun_str, string_arg_str = \
-                    self._op_string[EXPR.ExternalFunctionExpression]
+                fun_str, string_arg_str = self._op_string[
+                    EXPR.ExternalFunctionExpression
+                ]
                 if not self._symbolic_solver_labels:
-                    OUTPUT.write(fun_str
-                                 % (self.external_byFcn[exp._fcn._function][1],
-                                    exp.nargs()))
+                    OUTPUT.write(
+                        fun_str
+                        % (self.external_byFcn[exp._fcn._function][1], exp.nargs())
+                    )
                 else:
                     # Note: exp.name fails
-                    OUTPUT.write(fun_str
-                                 % (self.external_byFcn[exp._fcn._function][1],
-                                    exp.nargs(),
-                                    exp.name))
+                    OUTPUT.write(
+                        fun_str
+                        % (
+                            self.external_byFcn[exp._fcn._function][1],
+                            exp.nargs(),
+                            exp.name,
+                        )
+                    )
                 for arg in exp.args:
                     if isinstance(arg, str):
                         # Note: ASL does not handle '\r\n' as the EOL
@@ -616,10 +657,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         # would force us to change a large number of
                         # baselines / file comparisons
                         OUTPUT.flush()
-                        with os.fdopen(OUTPUT.fileno(),
-                                       mode='w+',
-                                       closefd=False,
-                                       newline='\n') as TMP:
+                        with os.fdopen(
+                            OUTPUT.fileno(), mode='w+', closefd=False, newline='\n'
+                        ) as TMP:
                             TMP.write(string_arg_str % (len(arg), arg))
                     elif type(arg) in native_numeric_types:
                         self._print_nonlinear_terms_NL(arg)
@@ -641,8 +681,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     OUTPUT.write(intr_expr_str)
                 else:
                     logger.error("Unsupported unary function ({0})".format(exp.name))
-                    raise TypeError("ASL writer does not support '%s' expressions"
-                                    % (exp.name))
+                    raise TypeError(
+                        "ASL writer does not support '%s' expressions" % (exp.name)
+                    )
                 self._print_nonlinear_terms_NL(exp.arg(0))
 
             elif exp_type is EXPR.Expr_ifExpression:
@@ -652,8 +693,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(exp._else)
 
             elif exp_type is EXPR.InequalityExpression:
-                and_str, lt_str, le_str = \
-                    self._op_string[EXPR.InequalityExpression]
+                and_str, lt_str, le_str = self._op_string[EXPR.InequalityExpression]
                 left = exp.arg(0)
                 right = exp.arg(1)
                 if exp._strict:
@@ -664,8 +704,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(right)
 
             elif exp_type is EXPR.RangedExpression:
-                and_str, lt_str, le_str = \
-                    self._op_string[EXPR.InequalityExpression]
+                and_str, lt_str, le_str = self._op_string[EXPR.InequalityExpression]
                 left = exp.arg(0)
                 middle = exp.arg(1)
                 right = exp.arg(2)
@@ -694,39 +733,47 @@ class ProblemWriter_nl(AbstractProblemWriter):
             else:
                 raise ValueError(
                     "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
-                    % (exp_type))
+                    % (exp_type)
+                )
 
-        elif isinstance(exp, (var._VarData, IVariable)) and \
-             (not exp.is_fixed()):
-            #(self._output_fixed_variable_bounds or
+        elif isinstance(exp, (var._VarData, IVariable)) and (not exp.is_fixed()):
+            # (self._output_fixed_variable_bounds or
             if not self._symbolic_solver_labels:
-                OUTPUT.write(self._op_string[var._VarData]
-                             % (self.ampl_var_id[self._varID_map[id(exp)]]))
+                OUTPUT.write(
+                    self._op_string[var._VarData]
+                    % (self.ampl_var_id[self._varID_map[id(exp)]])
+                )
             else:
-                OUTPUT.write(self._op_string[var._VarData]
-                             % (self.ampl_var_id[self._varID_map[id(exp)]],
-                                self._name_labeler(exp)))
+                OUTPUT.write(
+                    self._op_string[var._VarData]
+                    % (
+                        self.ampl_var_id[self._varID_map[id(exp)]],
+                        self._name_labeler(exp),
+                    )
+                )
 
-        elif isinstance(exp,param._ParamData):
-            OUTPUT.write(self._op_string[param._ParamData]
-                         % (value(exp)))
+        elif isinstance(exp, param._ParamData):
+            OUTPUT.write(self._op_string[param._ParamData] % (value(exp)))
 
-        elif isinstance(exp,NumericConstant) or exp.is_fixed():
-            OUTPUT.write(self._op_string[NumericConstant]
-                         % (value(exp)))
+        elif isinstance(exp, NumericConstant) or exp.is_fixed():
+            OUTPUT.write(self._op_string[NumericConstant] % (value(exp)))
 
         else:
             raise ValueError(
                 "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
-                % (exp_type))
+                % (exp_type)
+            )
 
-    def _print_model_NL(self, model,
-                        solver_capability,
-                        show_section_timing=False,
-                        skip_trivial_constraints=False,
-                        file_determinism=1,
-                        include_all_variable_bounds=False,
-                        export_nonlinear_variables=False):
+    def _print_model_NL(
+        self,
+        model,
+        solver_capability,
+        show_section_timing=False,
+        skip_trivial_constraints=False,
+        file_determinism=1,
+        include_all_variable_bounds=False,
+        export_nonlinear_variables=False,
+    ):
 
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
@@ -793,15 +840,17 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         "The same external function name (%s) is associated "
                         "with two different libraries (%s through %s, and %s "
                         "through %s).  The ASL solver will fail to link "
-                        "correctly." %
-                        (fcn._function,
-                         self.external_byFcn[fcn._function]._library,
-                         self.external_byFcn[fcn._function]._library.name,
-                         fcn._library,
-                         fcn.name))
+                        "correctly."
+                        % (
+                            fcn._function,
+                            self.external_byFcn[fcn._function]._library,
+                            self.external_byFcn[fcn._function]._library.name,
+                            fcn._library,
+                            fcn.name,
+                        )
+                    )
             else:
-                self.external_byFcn[fcn._function] = \
-                    (fcn, len(self.external_byFcn))
+                self.external_byFcn[fcn._function] = (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
             set_pyomo_amplfunc_env(external_Libs)
@@ -815,8 +864,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         all_blocks_list = list(model.block_data_objects(active=True, sort=sorter))
 
         # create a deterministic var labeling
-        Vars_dict = dict( enumerate( model.component_data_objects(
-                    Var, sort=sorter) ) )
+        Vars_dict = dict(enumerate(model.component_data_objects(Var, sort=sorter)))
         cntr = len(Vars_dict)
         # cntr = 0
         # for block in all_blocks_list:
@@ -828,7 +876,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #         cntr))
         #     cntr += len(vars_counter)
         #     Vars_dict.update(vars_counter)
-        self._varID_map = dict((id(val),key) for key,val in Vars_dict.items())
+        self._varID_map = dict((id(val), key) for key, val in Vars_dict.items())
         self_varID_map = self._varID_map
         # Use to label the rest of the components (which we will not encounter twice)
         trivial_labeler = _Counter(cntr)
@@ -847,14 +895,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if gen_obj_repn is not None:
                 gen_obj_repn = bool(gen_obj_repn)
                 # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_repn'):
+                if not hasattr(block, '_repn'):
                     block._repn = ComponentMap()
                 block_repn = block._repn
 
-            for active_objective in block.component_data_objects(Objective,
-                                                                 active=True,
-                                                                 sort=sorter,
-                                                                 descend_into=False):
+            for active_objective in block.component_data_objects(
+                Objective, active=True, sort=sorter, descend_into=False
+            ):
                 if symbolic_solver_labels:
                     objname = name_labeler(active_objective)
                     if len(objname) > max_rowname_len:
@@ -889,8 +936,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     else:
                         nonlinear_vars = repn.nonlinear_vars
                 else:
-                    repn = generate_standard_repn(active_objective.expr,
-                                                  quadratic=False)
+                    repn = generate_standard_repn(
+                        active_objective.expr, quadratic=False
+                    )
                     linear_vars = repn.linear_vars
                     nonlinear_vars = repn.nonlinear_vars
                     if gen_obj_repn:
@@ -899,11 +947,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     wrapped_repn = RepnWrapper(
                         repn,
                         list(self_varID_map[id(var)] for var in linear_vars),
-                        list(self_varID_map[id(var)] for var in nonlinear_vars))
+                        list(self_varID_map[id(var)] for var in nonlinear_vars),
+                    )
                 except KeyError as err:
-                    self._symbolMapKeyError(err, model, self_varID_map,
-                                            list(linear_vars) +
-                                            list(nonlinear_vars))
+                    self._symbolMapKeyError(
+                        err,
+                        model,
+                        self_varID_map,
+                        list(linear_vars) + list(nonlinear_vars),
+                    )
                     raise
 
                 LinearVars.update(wrapped_repn.linear_vars)
@@ -915,7 +967,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 obj_ID = trivial_labeler(active_objective)
                 Objectives_dict[obj_ID] = (active_objective, wrapped_repn)
                 self_ampl_obj_id[obj_ID] = n_objs
-                symbol_map.addSymbols([(active_objective, "o%d"%n_objs)])
+                symbol_map.addSymbols([(active_objective, "o%d" % n_objs)])
 
                 n_objs += 1
                 if repn.is_nonlinear():
@@ -928,9 +980,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
             raise ValueError(
                 "The NL writer has detected multiple active objective functions "
                 "on model %s, but currently only handles a single objective."
-                % (model.name))
+                % (model.name)
+            )
         elif n_objs == 1:
-            symbol_map.alias(symbol_map.bySymbol["o0"](),"__default_objective__")
+            symbol_map.alias(symbol_map.bySymbol["o0"](), "__default_objective__")
 
         if show_section_timing:
             subsection_timer.report("Generate objective representation")
@@ -962,18 +1015,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if gen_con_repn is not None:
                 gen_con_repn = bool(gen_con_repn)
                 # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_repn'):
+                if not hasattr(block, '_repn'):
                     block._repn = ComponentMap()
                 block_repn = block._repn
 
             # Initializing the constraint dictionary
-            for constraint_data in block.component_data_objects(Constraint,
-                                                                active=True,
-                                                                sort=sorter,
-                                                                descend_into=False):
+            for constraint_data in block.component_data_objects(
+                Constraint, active=True, sort=sorter, descend_into=False
+            ):
 
-                if (not constraint_data.has_lb()) and \
-                   (not constraint_data.has_ub()):
+                if (not constraint_data.has_lb()) and (not constraint_data.has_ub()):
                     assert not constraint_data.equality
                     continue  # non-binding, so skip
 
@@ -1016,8 +1067,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         linear_vars = repn.linear_vars
                         nonlinear_vars = repn.nonlinear_vars
                     else:
-                        repn = generate_standard_repn(constraint_data.body,
-                                                      quadratic=False)
+                        repn = generate_standard_repn(
+                            constraint_data.body, quadratic=False
+                        )
                         linear_vars = repn.linear_vars
                         nonlinear_vars = repn.nonlinear_vars
                     if gen_con_repn:
@@ -1036,11 +1088,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     wrapped_repn = RepnWrapper(
                         repn,
                         list(self_varID_map[id(var)] for var in linear_vars),
-                        list(self_varID_map[id(var)] for var in nonlinear_vars))
+                        list(self_varID_map[id(var)] for var in nonlinear_vars),
+                    )
                 except KeyError as err:
-                    self._symbolMapKeyError(err, model, self_varID_map,
-                                            list(linear_vars) +
-                                            list(nonlinear_vars))
+                    self._symbolMapKeyError(
+                        err,
+                        model,
+                        self_varID_map,
+                        list(linear_vars) + list(nonlinear_vars),
+                    )
                     raise
 
                 if repn.is_nonlinear():
@@ -1054,9 +1110,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 LinearVars.update(wrapped_repn.linear_vars)
                 ConNonlinearVars.update(wrapped_repn.nonlinear_vars)
 
-                nnz_grad_constraints += \
-                    len(set(wrapped_repn.linear_vars).union(
-                        wrapped_repn.nonlinear_vars))
+                nnz_grad_constraints += len(
+                    set(wrapped_repn.linear_vars).union(wrapped_repn.nonlinear_vars)
+                )
 
                 L = None
                 U = None
@@ -1075,9 +1131,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:
-                    _vid = self_varID_map[_vid]+1
-                    constraint_bounds_dict[con_ID] = \
-                        "5 {0} {1}\n".format(_type, _vid)
+                    _vid = self_varID_map[_vid] + 1
+                    constraint_bounds_dict[con_ID] = "5 {0} {1}\n".format(_type, _vid)
                     if _type == 1 or _type == 2:
                         n_single_sided_ineq += 1
                     elif _type == 3:
@@ -1095,23 +1150,27 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             constraint_bounds_dict[con_ID] = "3\n"
                             n_unbounded += 1
                         else:
-                            constraint_bounds_dict[con_ID] = \
-                                "4 %r\n" % (L-offset)
+                            constraint_bounds_dict[con_ID] = "4 %r\n" % (L - offset)
                             n_equals += 1
                     elif L is None:
-                        constraint_bounds_dict[con_ID] = "1 %r\n" % (U-offset)
+                        constraint_bounds_dict[con_ID] = "1 %r\n" % (U - offset)
                         n_single_sided_ineq += 1
                     elif U is None:
-                        constraint_bounds_dict[con_ID] = "2 %r\n" % (L-offset)
+                        constraint_bounds_dict[con_ID] = "2 %r\n" % (L - offset)
                         n_single_sided_ineq += 1
-                    elif (L > U):
-                        msg = 'Constraint {0}: lower bound greater than upper' \
+                    elif L > U:
+                        msg = (
+                            'Constraint {0}: lower bound greater than upper'
                             ' bound ({1} > {2})'
-                        raise ValueError(msg.format(constraint_data.name,
-                                                    str(L), str(U)))
+                        )
+                        raise ValueError(
+                            msg.format(constraint_data.name, str(L), str(U))
+                        )
                     else:
-                        constraint_bounds_dict[con_ID] = \
-                            "0 %r %r\n" % (L-offset, U-offset)
+                        constraint_bounds_dict[con_ID] = "0 %r %r\n" % (
+                            L - offset,
+                            U - offset,
+                        )
                         # double sided inequality
                         # both are not none and they are valid
                         n_ranges += 1
@@ -1119,30 +1178,40 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         for block in all_blocks_list:
-            for soscondata in block.component_data_objects(SOSConstraint,
-                                                           active=True,
-                                                           sort=sorter,
-                                                           descend_into=False):
+            for soscondata in block.component_data_objects(
+                SOSConstraint, active=True, sort=sorter, descend_into=False
+            ):
                 level = soscondata.level
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise Exception(
-                        "Solver does not support SOS level %s constraints"
-                        % (level,))
+                        "Solver does not support SOS level %s constraints" % (level,)
+                    )
                 if hasattr(soscondata, "get_variables"):
-                    LinearVars.update(self_varID_map[id(vardata)]
-                                      for vardata in soscondata.get_variables())
+                    LinearVars.update(
+                        self_varID_map[id(vardata)]
+                        for vardata in soscondata.get_variables()
+                    )
                 else:
-                    LinearVars.update(self_varID_map[id(vardata)]
-                                      for vardata in soscondata.variables)
+                    LinearVars.update(
+                        self_varID_map[id(vardata)] for vardata in soscondata.variables
+                    )
 
         # create the ampl constraint ids
         self_ampl_con_id.update(
-            (con_ID,row_id) for row_id,con_ID in \
-            enumerate(itertools.chain(nonlin_con_order_list,lin_con_order_list)))
+            (con_ID, row_id)
+            for row_id, con_ID in enumerate(
+                itertools.chain(nonlin_con_order_list, lin_con_order_list)
+            )
+        )
         # populate the symbol_map
         symbol_map.addSymbols(
-            [(Constraints_dict[con_ID][0],"c%d"%row_id) for row_id,con_ID in \
-             enumerate(itertools.chain(nonlin_con_order_list,lin_con_order_list))])
+            [
+                (Constraints_dict[con_ID][0], "c%d" % row_id)
+                for row_id, con_ID in enumerate(
+                    itertools.chain(nonlin_con_order_list, lin_con_order_list)
+                )
+            ]
+        )
 
         if show_section_timing:
             subsection_timer.report("Generate constraint representations")
@@ -1157,8 +1226,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         if include_all_variable_bounds:
             # classify unused vars as linear
-            AllVars = set(self_varID_map[id(vardata)]
-                          for vardata in Vars_dict.values())
+            AllVars = set(self_varID_map[id(vardata)] for vardata in Vars_dict.values())
             UnusedVars = AllVars.difference(UsedVars)
             LinearVars.update(UnusedVars)
 
@@ -1169,7 +1237,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if self_varID_map[id(vi)] not in UsedVars:
                         Vars_dict[id(vi)] = vi
                         ConNonlinearVars.update([self_varID_map[id(vi)]])
-
 
         ### There used to be an if statement here for the following code block
         ### checking model.statistics.num_binary_vars was greater than zero.
@@ -1183,14 +1250,19 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 L = var.lb
                 U = var.ub
                 if (L is None) or (U is None):
-                    raise ValueError("Variable " + str(var.name) +\
-                                     "is binary, but does not have lb and ub set")
+                    raise ValueError(
+                        "Variable "
+                        + str(var.name)
+                        + "is binary, but does not have lb and ub set"
+                    )
                 LinearVarsBool.add(var_ID)
             elif var.is_integer():
                 LinearVarsInt.add(var_ID)
             elif not var.is_continuous():
-                raise TypeError("Invalid domain type for variable with name '%s'. "
-                                "Variable is not continuous, integer, or binary.")
+                raise TypeError(
+                    "Invalid domain type for variable with name '%s'. "
+                    "Variable is not continuous, integer, or binary."
+                )
         LinearVars.difference_update(LinearVarsInt)
         LinearVars.difference_update(LinearVarsBool)
 
@@ -1199,33 +1271,41 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if var.is_integer() or var.is_binary():
                 ObjNonlinearVarsInt.add(var_ID)
             elif not var.is_continuous():
-                raise TypeError("Invalid domain type for variable with name '%s'. "
-                                "Variable is not continuous, integer, or binary.")
+                raise TypeError(
+                    "Invalid domain type for variable with name '%s'. "
+                    "Variable is not continuous, integer, or binary."
+                )
         ObjNonlinearVars.difference_update(ObjNonlinearVarsInt)
         for var_ID in ConNonlinearVars:
             var = Vars_dict[var_ID]
             if var.is_integer() or var.is_binary():
                 ConNonlinearVarsInt.add(var_ID)
             elif not var.is_continuous():
-                raise TypeError("Invalid domain type for variable with name '%s'. "
-                                "Variable is not continuous, integer, or binary.")
+                raise TypeError(
+                    "Invalid domain type for variable with name '%s'. "
+                    "Variable is not continuous, integer, or binary."
+                )
         ConNonlinearVars.difference_update(ConNonlinearVarsInt)
         ##################
 
-        Nonlinear_Vars_in_Objs_and_Constraints = \
-            ObjNonlinearVars.intersection(ConNonlinearVars)
-        Discrete_Nonlinear_Vars_in_Objs_and_Constraints = \
+        Nonlinear_Vars_in_Objs_and_Constraints = ObjNonlinearVars.intersection(
+            ConNonlinearVars
+        )
+        Discrete_Nonlinear_Vars_in_Objs_and_Constraints = (
             ObjNonlinearVarsInt.intersection(ConNonlinearVarsInt)
-        ObjNonlinearVars = \
-            ObjNonlinearVars.difference(Nonlinear_Vars_in_Objs_and_Constraints)
-        ConNonlinearVars = \
-            ConNonlinearVars.difference(Nonlinear_Vars_in_Objs_and_Constraints)
-        ObjNonlinearVarsInt = \
-            ObjNonlinearVarsInt.difference(
-                Discrete_Nonlinear_Vars_in_Objs_and_Constraints)
-        ConNonlinearVarsInt = \
-            ConNonlinearVarsInt.difference(
-                Discrete_Nonlinear_Vars_in_Objs_and_Constraints)
+        )
+        ObjNonlinearVars = ObjNonlinearVars.difference(
+            Nonlinear_Vars_in_Objs_and_Constraints
+        )
+        ConNonlinearVars = ConNonlinearVars.difference(
+            Nonlinear_Vars_in_Objs_and_Constraints
+        )
+        ObjNonlinearVarsInt = ObjNonlinearVarsInt.difference(
+            Discrete_Nonlinear_Vars_in_Objs_and_Constraints
+        )
+        ConNonlinearVarsInt = ConNonlinearVarsInt.difference(
+            Discrete_Nonlinear_Vars_in_Objs_and_Constraints
+        )
 
         # put the ampl variable id into the variable
         full_var_list = []
@@ -1245,30 +1325,35 @@ class ProblemWriter_nl(AbstractProblemWriter):
         full_var_list.extend(sorted(LinearVarsBool))
         full_var_list.extend(sorted(LinearVarsInt))
 
-        if (idx_nl_obj == idx_nl_con):
+        if idx_nl_obj == idx_nl_con:
             idx_nl_obj = idx_nl_both
 
         # create the ampl variable column ids
-        self_ampl_var_id.update((var_ID,column_id)
-                                for column_id,var_ID in enumerate(full_var_list))
+        self_ampl_var_id.update(
+            (var_ID, column_id) for column_id, var_ID in enumerate(full_var_list)
+        )
         # populate the symbol_map
-        symbol_map.addSymbols([(Vars_dict[var_ID],"v%d"%column_id)
-                               for column_id,var_ID in enumerate(full_var_list)])
+        symbol_map.addSymbols(
+            [
+                (Vars_dict[var_ID], "v%d" % column_id)
+                for column_id, var_ID in enumerate(full_var_list)
+            ]
+        )
 
         if show_section_timing:
             subsection_timer.report("Partition variable types")
             subsection_timer.reset()
 
-#        end_time = time.clock()
-#        print (end_time - start_time)
+        #        end_time = time.clock()
+        #        print (end_time - start_time)
 
         colfilename = None
         if OUTPUT.name.endswith('.nl'):
-            colfilename = OUTPUT.name.replace('.nl','.col')
+            colfilename = OUTPUT.name.replace('.nl', '.col')
         else:
-            colfilename = OUTPUT.name+'.col'
+            colfilename = OUTPUT.name + '.col'
         if symbolic_solver_labels:
-            colf = open(colfilename,'w')
+            colf = open(colfilename, 'w')
             colfile_line_template = "%s\n"
             for var_ID in full_var_list:
                 varname = name_labeler(Vars_dict[var_ID])
@@ -1282,8 +1367,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
             subsection_timer.reset()
 
         if len(full_var_list) < 1:
-            raise ValueError("No variables appear in the Pyomo model constraints or"
-                             " objective. This is not supported by the NL file interface")
+            raise ValueError(
+                "No variables appear in the Pyomo model constraints or"
+                " objective. This is not supported by the NL file interface"
+            )
 
         #
         # Print Header
@@ -1294,24 +1381,30 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # LINE 2
         #
-        OUTPUT.write(" {0} {1} {2} {3} {4} \t# vars, constraints, "
-                     "objectives, ranges, eqns\n" .format(
-                         len(full_var_list),
-                         n_single_sided_ineq + n_ranges+n_equals+n_unbounded,
-                         n_objs,
-                         n_ranges,
-                         n_equals))
+        OUTPUT.write(
+            " {0} {1} {2} {3} {4} \t# vars, constraints, "
+            "objectives, ranges, eqns\n".format(
+                len(full_var_list),
+                n_single_sided_ineq + n_ranges + n_equals + n_unbounded,
+                n_objs,
+                n_ranges,
+                n_equals,
+            )
+        )
         #
         # LINE 3
         #
-        OUTPUT.write(" {0} {1} {2} {3} {4} {5}\t# nonlinear constrs, "
-                     "objs; ccons: lin, nonlin, nd, nzlb\n".format(
-                         n_nonlinear_constraints,
-                         n_nonlinear_objs,
-                         ccons_lin,
-                         ccons_nonlin,
-                         ccons_nd,
-                         ccons_nzlb))
+        OUTPUT.write(
+            " {0} {1} {2} {3} {4} {5}\t# nonlinear constrs, "
+            "objs; ccons: lin, nonlin, nd, nzlb\n".format(
+                n_nonlinear_constraints,
+                n_nonlinear_objs,
+                ccons_lin,
+                ccons_nonlin,
+                ccons_nd,
+                ccons_nzlb,
+            )
+        )
         #
         # LINE 4
         #
@@ -1319,60 +1412,68 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # LINE 5
         #
-        OUTPUT.write(" {0} {1} {2} \t# nonlinear vars in constraints, "
-                     "objectives, both\n".format(
-                         idx_nl_con,
-                         idx_nl_obj,
-                         idx_nl_both))
+        OUTPUT.write(
+            " {0} {1} {2} \t# nonlinear vars in constraints, "
+            "objectives, both\n".format(idx_nl_con, idx_nl_obj, idx_nl_both)
+        )
 
         #
         # LINE 6
         #
-        OUTPUT.write(" 0 {0} 0 1\t# linear network variables; functions; "
-                     "arith, flags\n".format(len(self.external_byFcn)))
+        OUTPUT.write(
+            " 0 {0} 0 1\t# linear network variables; functions; "
+            "arith, flags\n".format(len(self.external_byFcn))
+        )
         #
         # LINE 7
         #
         n_int_nonlinear_b = len(Discrete_Nonlinear_Vars_in_Objs_and_Constraints)
         n_int_nonlinear_c = len(ConNonlinearVarsInt)
         n_int_nonlinear_o = len(ObjNonlinearVarsInt)
-        OUTPUT.write(" {0} {1} {2} {3} {4} \t# discrete variables: binary, "
-                     "integer, nonlinear (b,c,o)\n".format(
-                         len(LinearVarsBool),
-                         len(LinearVarsInt),
-                         n_int_nonlinear_b,
-                         n_int_nonlinear_c,
-                         n_int_nonlinear_o))
+        OUTPUT.write(
+            " {0} {1} {2} {3} {4} \t# discrete variables: binary, "
+            "integer, nonlinear (b,c,o)\n".format(
+                len(LinearVarsBool),
+                len(LinearVarsInt),
+                n_int_nonlinear_b,
+                n_int_nonlinear_c,
+                n_int_nonlinear_o,
+            )
+        )
         #
         # LINE 8
         #
         # objective info computed above
-        OUTPUT.write(" {0} {1} \t# nonzeros in Jacobian, obj. gradient\n".format(
-            nnz_grad_constraints,
-            len(ObjVars)))
+        OUTPUT.write(
+            " {0} {1} \t# nonzeros in Jacobian, obj. gradient\n".format(
+                nnz_grad_constraints, len(ObjVars)
+            )
+        )
         #
         # LINE 9
         #
-        OUTPUT.write(" %d %d\t# max name lengths: constraints, variables\n"
-                     % (max_rowname_len, max_colname_len))
+        OUTPUT.write(
+            " %d %d\t# max name lengths: constraints, variables\n"
+            % (max_rowname_len, max_colname_len)
+        )
 
         #
         # LINE 10
         #
         OUTPUT.write(" 0 0 0 0 0\t# common exprs: b,c,o,c1,o1\n")
 
-#        end_time = time.clock()
-#        print (end_time - start_time)
+        #        end_time = time.clock()
+        #        print (end_time - start_time)
 
-#        print "Printing constraints:",
-#        start_time = time.clock()
-
+        #        print "Printing constraints:",
+        #        start_time = time.clock()
 
         #
         # "F" lines
         #
-        for fcn, fid in sorted(self.external_byFcn.values(),
-                               key=operator.itemgetter(1)):
+        for fcn, fid in sorted(
+            self.external_byFcn.values(), key=operator.itemgetter(1)
+        ):
             OUTPUT.write("F%d 1 -1 %s\n" % (fid, fcn._function))
 
         #
@@ -1384,14 +1485,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos2 = solver_capability("sos2")
         modelSOS = ModelSOS(self_ampl_var_id, self_varID_map)
         for block in all_blocks_list:
-            for soscondata in block.component_data_objects(SOSConstraint,
-                                                           active=True,
-                                                           sort=sorter,
-                                                           descend_into=False):
+            for soscondata in block.component_data_objects(
+                SOSConstraint, active=True, sort=sorter, descend_into=False
+            ):
                 level = soscondata.level
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise ValueError(
-                        "Solver does not support SOS level %s constraints" % (level))
+                        "Solver does not support SOS level %s constraints" % (level)
+                    )
                 modelSOS.count_constraint(soscondata)
 
         symbol_map_byObject = symbol_map.byObject
@@ -1409,25 +1510,27 @@ class ProblemWriter_nl(AbstractProblemWriter):
         prob_tag = 3
         suffix_dict = {}
         if isinstance(model, IBlock):
-            suffix_gen = lambda b: ((suf.storage_key, suf) \
-                                    for suf in pyomo.core.kernel.suffix.\
-                                    export_suffix_generator(b,
-                                                            active=True,
-                                                            descend_into=False))
+            suffix_gen = lambda b: (
+                (suf.storage_key, suf)
+                for suf in pyomo.core.kernel.suffix.export_suffix_generator(
+                    b, active=True, descend_into=False
+                )
+            )
         else:
-            suffix_gen = lambda b: pyomo.core.base.suffix.\
-                         active_export_suffix_generator(b)
+            suffix_gen = (
+                lambda b: pyomo.core.base.suffix.active_export_suffix_generator(b)
+            )
         for block in all_blocks_list:
             for name, suf in suffix_gen(block):
                 if len(suf):
-                    suffix_dict.setdefault(name,[]).append(suf)
+                    suffix_dict.setdefault(name, []).append(suf)
         if not ('sosno' in suffix_dict):
             # We still need to write out the SOSConstraint suffixes
             # even though these may have not been "declared" on the model
             s_lines = var_sosno_suffix.genfilelines()
             len_s_lines = len(s_lines)
             if len_s_lines > 0:
-                OUTPUT.write(suffix_header_line.format(var_tag,len_s_lines,'sosno'))
+                OUTPUT.write(suffix_header_line.format(var_tag, len_s_lines, 'sosno'))
                 OUTPUT.writelines(s_lines)
         else:
             # I am choosing not to allow a user to mix the use of the Pyomo
@@ -1447,14 +1550,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "declared 'sosno' suffixes as well as SOSConstraint "
                     "components to exist on a single model. To avoid this "
                     "error please use only one of these methods to define "
-                    "special ordered sets.")
+                    "special ordered sets."
+                )
         if not ('ref' in suffix_dict):
             # We still need to write out the SOSConstraint suffixes
             # even though these may have not been "declared" on the model
             s_lines = var_ref_suffix.genfilelines()
             len_s_lines = len(s_lines)
             if len_s_lines > 0:
-                OUTPUT.write(suffix_header_line.format(var_tag,len_s_lines,'ref'))
+                OUTPUT.write(suffix_header_line.format(var_tag, len_s_lines, 'ref'))
                 OUTPUT.writelines(s_lines)
         else:
             # see reason (1) in the paragraph above for why we raise this
@@ -1465,7 +1569,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "declared 'ref' suffixes as well as SOSConstraint "
                     "components to exist on a single model. To avoid this "
                     "error please use only one of these methods to define "
-                    "special ordered sets.")
+                    "special ordered sets."
+                )
         # do a sort to make sure NL file output is deterministic
         # across python versions
         for suffix_name in sorted(suffix_dict):
@@ -1476,17 +1581,19 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     datatype = suffix.datatype
                 except AttributeError:
                     datatype = suffix.get_datatype()
-                if datatype not in (Suffix.FLOAT,Suffix.INT):
+                if datatype not in (Suffix.FLOAT, Suffix.INT):
                     raise ValueError(
                         "The Pyomo NL file writer requires that all active export "
                         "Suffix components declare a numeric datatype. Suffix "
-                        "component: %s with " % (suffix_name))
+                        "component: %s with " % (suffix_name)
+                    )
                 datatypes.add(datatype)
             if len(datatypes) != 1:
                 raise ValueError(
                     "The Pyomo NL file writer found multiple active export suffix "
                     "components with name %s with different datatypes. A single "
-                    "datatype must be declared." % (suffix_name))
+                    "datatype must be declared." % (suffix_name)
+                )
             if suffix_name == "dual":
                 # The NL file format has a special section for dual initializations
                 continue
@@ -1520,41 +1627,54 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
             ################## vars
             if len(var_s_lines) > 0:
-                OUTPUT.write(suffix_header_line.format(var_tag | float_tag,
-                                                       len(var_s_lines),
-                                                       suffix_name))
-                OUTPUT.writelines(suffix_line.format(*_l)
-                                  for _l in sorted(var_s_lines,
-                                                   key=operator.itemgetter(0)))
+                OUTPUT.write(
+                    suffix_header_line.format(
+                        var_tag | float_tag, len(var_s_lines), suffix_name
+                    )
+                )
+                OUTPUT.writelines(
+                    suffix_line.format(*_l)
+                    for _l in sorted(var_s_lines, key=operator.itemgetter(0))
+                )
             ################## constraints
             if len(con_s_lines) > 0:
-                OUTPUT.write(suffix_header_line.format(con_tag | float_tag,
-                                                       len(con_s_lines),
-                                                       suffix_name))
-                OUTPUT.writelines(suffix_line.format(*_l)
-                                  for _l in sorted(con_s_lines,
-                                                   key=operator.itemgetter(0)))
+                OUTPUT.write(
+                    suffix_header_line.format(
+                        con_tag | float_tag, len(con_s_lines), suffix_name
+                    )
+                )
+                OUTPUT.writelines(
+                    suffix_line.format(*_l)
+                    for _l in sorted(con_s_lines, key=operator.itemgetter(0))
+                )
             ################## objectives
             if len(obj_s_lines) > 0:
-                OUTPUT.write(suffix_header_line.format(obj_tag | float_tag,
-                                                       len(obj_s_lines),
-                                                       suffix_name))
-                OUTPUT.writelines(suffix_line.format(*_l)
-                                  for _l in sorted(obj_s_lines,
-                                                   key=operator.itemgetter(0)))
+                OUTPUT.write(
+                    suffix_header_line.format(
+                        obj_tag | float_tag, len(obj_s_lines), suffix_name
+                    )
+                )
+                OUTPUT.writelines(
+                    suffix_line.format(*_l)
+                    for _l in sorted(obj_s_lines, key=operator.itemgetter(0))
+                )
             ################## problems (in this case the one problem)
             if len(mod_s_lines) > 0:
                 if len(mod_s_lines) > 1:
                     logger.warning(
                         "ProblemWriter_nl: Collected multiple values for Suffix %s "
                         "referencing model %s. This is likely a bug."
-                        % (suffix_name, model.name))
-                OUTPUT.write(suffix_header_line.format(prob_tag | float_tag,
-                                                       len(mod_s_lines),
-                                                       suffix_name))
-                OUTPUT.writelines(suffix_line.format(*_l)
-                                  for _l in sorted(mod_s_lines,
-                                                   key=operator.itemgetter(0)))
+                        % (suffix_name, model.name)
+                    )
+                OUTPUT.write(
+                    suffix_header_line.format(
+                        prob_tag | float_tag, len(mod_s_lines), suffix_name
+                    )
+                )
+                OUTPUT.writelines(
+                    suffix_line.format(*_l)
+                    for _l in sorted(mod_s_lines, key=operator.itemgetter(0))
+                )
 
         del modelSOS
 
@@ -1563,11 +1683,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         rowfilename = None
         if OUTPUT.name.endswith('.nl'):
-            rowfilename = OUTPUT.name.replace('.nl','.row')
+            rowfilename = OUTPUT.name.replace('.nl', '.row')
         else:
-            rowfilename = OUTPUT.name+'.row'
+            rowfilename = OUTPUT.name + '.row'
         if symbolic_solver_labels:
-            rowf = open(rowfilename,'w')
+            rowf = open(rowfilename, 'w')
 
         cu = [0 for i in range(len(full_var_list))]
         for con_ID in nonlin_con_order_list:
@@ -1577,21 +1697,21 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if symbolic_solver_labels:
                 lbl = name_labeler(con_data)
                 OUTPUT.write("\t#%s" % (lbl))
-                rowf.write(lbl+"\n")
+                rowf.write(lbl + "\n")
             OUTPUT.write("\n")
 
             if wrapped_repn.repn.nonlinear_expr is not None:
                 assert not wrapped_repn.repn.is_quadratic()
-                self._print_nonlinear_terms_NL(
-                    wrapped_repn.repn.nonlinear_expr)
+                self._print_nonlinear_terms_NL(wrapped_repn.repn.nonlinear_expr)
             else:
                 assert wrapped_repn.repn.is_quadratic()
                 self._print_standard_quadratic_NL(
-                    wrapped_repn.repn.quadratic_vars,
-                    wrapped_repn.repn.quadratic_coefs)
+                    wrapped_repn.repn.quadratic_vars, wrapped_repn.repn.quadratic_coefs
+                )
 
             for var_ID in set(wrapped_repn.linear_vars).union(
-                    wrapped_repn.nonlinear_vars):
+                wrapped_repn.nonlinear_vars
+            ):
                 cu[self_ampl_var_id[var_ID]] += 1
 
         for con_ID in lin_con_order_list:
@@ -1604,7 +1724,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if symbolic_solver_labels:
                 lbl = name_labeler(con_data)
                 OUTPUT.write("\t#%s" % (lbl))
-                rowf.write(lbl+"\n")
+                rowf.write(lbl + "\n")
             OUTPUT.write("\n")
             OUTPUT.write("n0\n")
 
@@ -1625,27 +1745,29 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if symbolic_solver_labels:
                 lbl = name_labeler(obj)
                 OUTPUT.write("\t#%s" % (lbl))
-                rowf.write(lbl+"\n")
+                rowf.write(lbl + "\n")
             OUTPUT.write("\n")
 
             if wrapped_repn.repn.is_linear():
-                OUTPUT.write(self._op_string[NumericConstant]
-                             % (wrapped_repn.repn.constant))
+                OUTPUT.write(
+                    self._op_string[NumericConstant] % (wrapped_repn.repn.constant)
+                )
             else:
                 if wrapped_repn.repn.constant != 0:
                     _, binary_sum_str, _ = self._op_string[EXPR.SumExpressionBase]
                     OUTPUT.write(binary_sum_str)
-                    OUTPUT.write(self._op_string[NumericConstant]
-                                 % (wrapped_repn.repn.constant))
+                    OUTPUT.write(
+                        self._op_string[NumericConstant] % (wrapped_repn.repn.constant)
+                    )
                 if wrapped_repn.repn.nonlinear_expr is not None:
                     assert not wrapped_repn.repn.is_quadratic()
-                    self._print_nonlinear_terms_NL(
-                        wrapped_repn.repn.nonlinear_expr)
+                    self._print_nonlinear_terms_NL(wrapped_repn.repn.nonlinear_expr)
                 else:
                     assert wrapped_repn.repn.is_quadratic()
                     self._print_standard_quadratic_NL(
                         wrapped_repn.repn.quadratic_vars,
-                        wrapped_repn.repn.quadratic_coefs)
+                        wrapped_repn.repn.quadratic_coefs,
+                    )
 
         if symbolic_solver_labels:
             rowf.close()
@@ -1680,9 +1802,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if symbolic_solver_labels:
                     OUTPUT.write("\t# dual initial guess")
                 OUTPUT.write("\n")
-                OUTPUT.writelines(suffix_line.format(*_l)
-                                  for _l in sorted(s_lines,
-                                                   key=operator.itemgetter(0)))
+                OUTPUT.writelines(
+                    suffix_line.format(*_l)
+                    for _l in sorted(s_lines, key=operator.itemgetter(0))
+                )
 
         #
         # "x" lines
@@ -1702,7 +1825,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         "indicative of a preprocessing error. Use the IO-option "
                         "'output_fixed_variable_bounds=True' to suppress this error "
                         "and fix the variable by overwriting its bounds in the NL "
-                        "file." % (var.name, model.name))
+                        "file." % (var.name, model.name)
+                    )
                 if var.value is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
                 L = U = _get_bound(var.value)
@@ -1742,13 +1866,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         OUTPUT.write("r")
         if symbolic_solver_labels:
-            OUTPUT.write("\t#%d ranges (rhs's)"
-                         % (len(nonlin_con_order_list) + len(lin_con_order_list)))
+            OUTPUT.write(
+                "\t#%d ranges (rhs's)"
+                % (len(nonlin_con_order_list) + len(lin_con_order_list))
+            )
         OUTPUT.write("\n")
         # *NOTE: This iteration follows the assignment of the ampl_con_id
-        OUTPUT.writelines(constraint_bounds_dict[con_ID]
-                          for con_ID in itertools.chain(nonlin_con_order_list,
-                                                        lin_con_order_list))
+        OUTPUT.writelines(
+            constraint_bounds_dict[con_ID]
+            for con_ID in itertools.chain(nonlin_con_order_list, lin_con_order_list)
+        )
 
         if show_section_timing:
             subsection_timer.report("Write constraint bounds")
@@ -1759,8 +1886,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         OUTPUT.write("b")
         if symbolic_solver_labels:
-            OUTPUT.write("\t#%d bounds (on variables)"
-                         % (len(var_bound_list)))
+            OUTPUT.write("\t#%d bounds (on variables)" % (len(var_bound_list)))
         OUTPUT.write("\n")
         OUTPUT.writelines(var_bound_list)
         del var_bound_list
@@ -1781,7 +1907,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ktot = 0
         for i in range(n1):
             ktot += cu[i]
-            OUTPUT.write("%d\n"%(ktot))
+            OUTPUT.write("%d\n" % (ktot))
         del cu
 
         if show_section_timing:
@@ -1791,48 +1917,49 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "J" lines
         #
-        for nc, con_ID in enumerate(itertools.chain(nonlin_con_order_list,
-                                                    lin_con_order_list)):
+        for nc, con_ID in enumerate(
+            itertools.chain(nonlin_con_order_list, lin_con_order_list)
+        ):
             con_data, wrapped_repn = Constraints_dict[con_ID]
             numnonlinear_vars = len(wrapped_repn.nonlinear_vars)
             numlinear_vars = len(wrapped_repn.linear_vars)
             if numnonlinear_vars == 0:
                 if numlinear_vars > 0:
-                    linear_dict = dict((var_ID, coef)
-                                       for var_ID, coef in
-                                       zip(wrapped_repn.linear_vars,
-                                           wrapped_repn.repn.linear_coefs))
-                    OUTPUT.write("J%d %d\n"%(nc, numlinear_vars))
+                    linear_dict = dict(
+                        (var_ID, coef)
+                        for var_ID, coef in zip(
+                            wrapped_repn.linear_vars, wrapped_repn.repn.linear_coefs
+                        )
+                    )
+                    OUTPUT.write("J%d %d\n" % (nc, numlinear_vars))
                     OUTPUT.writelines(
-                        "%d %r\n" % (self_ampl_var_id[con_var],
-                                     linear_dict[con_var])
-                        for con_var in sorted(linear_dict.keys()))
+                        "%d %r\n" % (self_ampl_var_id[con_var], linear_dict[con_var])
+                        for con_var in sorted(linear_dict.keys())
+                    )
             elif numlinear_vars == 0:
-                nl_con_vars = \
-                    sorted(wrapped_repn.nonlinear_vars)
-                OUTPUT.write("J%d %d\n"%(nc, numnonlinear_vars))
+                nl_con_vars = sorted(wrapped_repn.nonlinear_vars)
+                OUTPUT.write("J%d %d\n" % (nc, numnonlinear_vars))
                 OUTPUT.writelines(
-                    "%d 0\n"%(self_ampl_var_id[con_var])
-                    for con_var in nl_con_vars)
+                    "%d 0\n" % (self_ampl_var_id[con_var]) for con_var in nl_con_vars
+                )
             else:
                 con_vars = set(wrapped_repn.nonlinear_vars)
-                nl_con_vars = sorted(
-                    con_vars.difference(
-                        wrapped_repn.linear_vars))
+                nl_con_vars = sorted(con_vars.difference(wrapped_repn.linear_vars))
                 con_vars.update(wrapped_repn.linear_vars)
                 linear_dict = dict(
-                    (var_ID, coef) for var_ID, coef in
-                    zip(wrapped_repn.linear_vars,
-                        wrapped_repn.repn.linear_coefs))
-                OUTPUT.write("J%d %d\n"%(nc, len(con_vars)))
+                    (var_ID, coef)
+                    for var_ID, coef in zip(
+                        wrapped_repn.linear_vars, wrapped_repn.repn.linear_coefs
+                    )
+                )
+                OUTPUT.write("J%d %d\n" % (nc, len(con_vars)))
                 OUTPUT.writelines(
-                    "%d %r\n" % (self_ampl_var_id[con_var],
-                                 linear_dict[con_var])
-                    for con_var in sorted(linear_dict.keys()))
+                    "%d %r\n" % (self_ampl_var_id[con_var], linear_dict[con_var])
+                    for con_var in sorted(linear_dict.keys())
+                )
                 OUTPUT.writelines(
-                    "%d 0\n"%(self_ampl_var_id[con_var])
-                    for con_var in nl_con_vars)
-
+                    "%d 0\n" % (self_ampl_var_id[con_var]) for con_var in nl_con_vars
+                )
 
         if show_section_timing:
             subsection_timer.report("Write J lines")
@@ -1841,24 +1968,21 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "G" lines
         #
-        for obj_ID, (obj, wrapped_repn) in \
-               Objectives_dict.items():
+        for obj_ID, (obj, wrapped_repn) in Objectives_dict.items():
 
             grad_entries = {}
-            for idx, obj_var in enumerate(
-                    wrapped_repn.linear_vars):
-                grad_entries[self_ampl_var_id[obj_var]] = \
-                    wrapped_repn.repn.linear_coefs[idx]
+            for idx, obj_var in enumerate(wrapped_repn.linear_vars):
+                grad_entries[
+                    self_ampl_var_id[obj_var]
+                ] = wrapped_repn.repn.linear_coefs[idx]
             for obj_var in wrapped_repn.nonlinear_vars:
                 if obj_var not in wrapped_repn.linear_vars:
                     grad_entries[self_ampl_var_id[obj_var]] = 0
             len_ge = len(grad_entries)
             if len_ge > 0:
-                OUTPUT.write("G%d %d\n" % (self_ampl_obj_id[obj_ID],
-                                           len_ge))
+                OUTPUT.write("G%d %d\n" % (self_ampl_obj_id[obj_ID], len_ge))
                 for var_ID in sorted(grad_entries.keys()):
-                    OUTPUT.write("%d %r\n" % (var_ID,
-                                              grad_entries[var_ID]))
+                    OUTPUT.write("%d %r\n" % (var_ID, grad_entries[var_ID]))
 
         if show_section_timing:
             subsection_timer.report("Write G lines")
@@ -1876,7 +2000,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 _errors.append(
                     "Variable '%s' is not part of the model "
                     "being written out, but appears in an "
-                    "expression used on this model." % (v.name,))
+                    "expression used on this model." % (v.name,)
+                )
             else:
                 _parent = v.parent_block()
                 while _parent is not None and _parent is not model:
@@ -1887,8 +2012,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             "expression.  Currently variables "
                             "must be reachable through a tree "
                             "of active Blocks."
-                            % (v.name, _parent.ctype.__name__,
-                               _parent.name))
+                            % (v.name, _parent.ctype.__name__, _parent.name)
+                        )
                     if not _parent.active:
                         _errors.append(
                             "Variable '%s' exists within "
@@ -1896,8 +2021,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             "an active expression.  Currently "
                             "variables must be reachable through "
                             "a tree of active Blocks."
-                            % (v.name, _parent.ctype.__name__,
-                               _parent.name))
+                            % (v.name, _parent.ctype.__name__, _parent.name)
+                        )
                     _parent = _parent.parent_block()
 
         if _errors:

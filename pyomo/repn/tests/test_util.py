@@ -19,9 +19,11 @@ from pyomo.repn.util import ftoa
 
 try:
     import numpy as np
+
     numpy_available = True
 except:
     numpy_available = False
+
 
 class TestRepnUtils(unittest.TestCase):
     def test_ftoa(self):
@@ -43,9 +45,12 @@ class TestRepnUtils(unittest.TestCase):
             test = self.assertNotRegexpMatches
         else:
             test = self.assertRegex
-        test( log.getvalue(),
-              '.*Converting 1.1234567890123456789 to string '
-              'resulted in loss of precision' )
+        test(
+            log.getvalue(),
+            '.*Converting 1.1234567890123456789 to string '
+            'resulted in loss of precision',
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

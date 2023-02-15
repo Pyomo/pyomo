@@ -34,18 +34,21 @@ logger = logging.getLogger('pyomo.neos')
 
 _email_re = re.compile(r'([^@]+@[^@]+\.[a-zA-Z0-9]+)$')
 
+
 class NEOS(object):
     # NEOS currently only supports HTTPS access
     scheme = 'https'
     host = 'neos-server.org'
     port = '3333'
     # Legacy NEOS HTTP interface
-    #urlscheme = 'http'
-    #port = '3332'
+    # urlscheme = 'http'
+    # port = '3332'
+
 
 def ProxiedTransport():
     from urllib.parse import urlparse
     import http.client as httplib
+
     # ProxiedTransport from Python 3.x documentation
     # (https://docs.python.org/3/library/xmlrpc.client.html)
     class ProxiedTransport_PY3(xmlrpclib.Transport):
@@ -53,7 +56,7 @@ def ProxiedTransport():
             self.proxy = urlparse(host)
             if not self.proxy.hostname:
                 # User omitted scheme from the proxy; assume http
-                self.proxy = urlparse('http://'+host)
+                self.proxy = urlparse('http://' + host)
 
         def make_connection(self, host):
             scheme = urlparse(host).scheme
@@ -77,7 +80,6 @@ def ProxiedTransport():
 
 
 class kestrelAMPL(object):
-
     def __init__(self):
         self.setup_connection()
 
@@ -97,16 +99,13 @@ class kestrelAMPL(object):
 
     def setup_connection(self):
         import http.client
+
         # on *NIX, the proxy can show up either upper or lowercase.
         # Prefer lower case, and prefer HTTPS over HTTP if the
         # NEOS.scheme is https.
-        proxy = os.environ.get(
-            'http_proxy', os.environ.get(
-                'HTTP_PROXY', ''))
+        proxy = os.environ.get('http_proxy', os.environ.get('HTTP_PROXY', ''))
         if NEOS.scheme == 'https':
-            proxy = os.environ.get(
-                'https_proxy', os.environ.get(
-                    'HTTPS_PROXY', proxy))
+            proxy = os.environ.get('https_proxy', os.environ.get('HTTPS_PROXY', proxy))
         if proxy:
             self.transport = ProxiedTransport()
             self.transport.set_proxy(proxy)
@@ -116,25 +115,24 @@ class kestrelAMPL(object):
             self.transport = xmlrpclib.Transport()
 
         self.neos = xmlrpclib.ServerProxy(
-            "%s://%s:%s" % (NEOS.scheme, NEOS.host, NEOS.port),
-            transport=self.transport)
+            "%s://%s:%s" % (NEOS.scheme, NEOS.host, NEOS.port), transport=self.transport
+        )
 
         logger.info("Connecting to the NEOS server ... ")
         try:
             result = self.neos.ping()
             logger.info("OK.")
-        except (socket.error, xmlrpclib.ProtocolError,
-                http.client.BadStatusLine):
+        except (socket.error, xmlrpclib.ProtocolError, http.client.BadStatusLine):
             e = sys.exc_info()[1]
             self.neos = None
             logger.info("Fail: %s" % (e,))
             logger.warning("NEOS is temporarily unavailable:\n\t(%s)" % (e,))
 
     def tempfile(self):
-        return os.path.join(tempfile.gettempdir(),'at%s.jobs' % os.getenv('ampl_id'))
+        return os.path.join(tempfile.gettempdir(), 'at%s.jobs' % os.getenv('ampl_id'))
 
-    def kill(self,jobnumber,password):
-        response = self.neos.killJob(jobNumber,password)
+    def kill(self, jobnumber, password):
+        response = self.neos.killJob(jobNumber, password)
         logger.info(response)
 
     def solvers(self):
@@ -149,16 +147,16 @@ class kestrelAMPL(object):
                     attempt += 1
             return []
 
-    def retrieve(self,stub,jobNumber,password):
+    def retrieve(self, stub, jobNumber, password):
         # NEOS should return results as uu-encoded xmlrpclib.Binary data
-        results = self.neos.getFinalResults(jobNumber,password)
-        if isinstance(results,xmlrpclib.Binary):
+        results = self.neos.getFinalResults(jobNumber, password)
+        if isinstance(results, xmlrpclib.Binary):
             results = results.data
         # decode results to kestrel.sol; well try to anyway, any errors
         # will result in error strings in .sol file instead of solution.
         if stub[-4:] == '.sol':
             stub = stub[:-4]
-        solfile = open(stub + ".sol","wb")
+        solfile = open(stub + ".sol", "wb")
         solfile.write(results)
         solfile.close()
 
@@ -168,18 +166,17 @@ class kestrelAMPL(object):
         # sudo.  We include USERNAME to cover Windows, where LOGNAME and
         # USER may not be defined.
         user = self.getEmailAddress()
-        (jobNumber,password) = self.neos.submitJob(xml,user,"kestrel")
+        (jobNumber, password) = self.neos.submitJob(xml, user, "kestrel")
         if jobNumber == 0:
             raise RuntimeError("%s\n\tJob not submitted" % (password,))
 
-        logger.info("Job %d submitted to NEOS, password='%s'\n" %
-                    (jobNumber,password))
+        logger.info("Job %d submitted to NEOS, password='%s'\n" % (jobNumber, password))
         logger.info("Check the following URL for progress report :\n")
         logger.info(
             "%s://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi"
-            "?admin=results&jobnumber=%d&pass=%s\n"
-            % (NEOS.scheme, jobNumber,password))
-        return (jobNumber,password)
+            "?admin=results&jobnumber=%d&pass=%s\n" % (NEOS.scheme, jobNumber, password)
+        )
+        return (jobNumber, password)
 
     def getEmailAddress(self):
         # Note: the NEOS email address parser is more restrictive than
@@ -190,15 +187,16 @@ class kestrelAMPL(object):
 
         raise RuntimeError(
             "NEOS requires a valid email address. "
-            "Please set the 'NEOS_EMAIL' environment variable.")
+            "Please set the 'NEOS_EMAIL' environment variable."
+        )
 
     def getJobAndPassword(self):
         """
         If kestrel_options is set to job/password, then return
         the job and password values
         """
-        jobNumber=0
-        password=""
+        jobNumber = 0
+        password = ""
         options = os.getenv("kestrel_options")
         if options is not None:
             m = re.search(r'job\s*=\s*(\d+)', options, re.IGNORECASE)
@@ -207,7 +205,7 @@ class kestrelAMPL(object):
             m = re.search(r'password\s*=\s*(\S+)', options, re.IGNORECASE)
             if m:
                 password = m.groups()[0]
-        return (jobNumber,password)
+        return (jobNumber, password)
 
     def getSolverName(self):
         """
@@ -232,50 +230,52 @@ class kestrelAMPL(object):
         #
         if self.options is not None:
             m = re.search(r'solver\s*=*\s*(\S+)', self.options, re.IGNORECASE)
-            NEOS_solver_name=None
+            NEOS_solver_name = None
             if m:
-                solver_name=m.groups()[0]
+                solver_name = m.groups()[0]
                 for s in kestrelAmplSolvers:
                     if s.upper() == solver_name.upper():
-                      NEOS_solver_name=s
-                      break
+                        NEOS_solver_name = s
+                        break
                 #
                 if not NEOS_solver_name:
                     raise RuntimeError(
                         "%s is not available on NEOS.  Choose from:\n\t%s"
-                        % (solver_name, "\n\t".join(kestrelAmplSolvers)))
+                        % (solver_name, "\n\t".join(kestrelAmplSolvers))
+                    )
         #
         if self.options is None or m is None:
             raise RuntimeError(
                 "%s is not available on NEOS.  Choose from:\n\t%s"
-                % (solver_name, "\n\t".join(kestrelAmplSolvers)))
+                % (solver_name, "\n\t".join(kestrelAmplSolvers))
+            )
         return NEOS_solver_name
 
-    def formXML(self,stub):
+    def formXML(self, stub):
         solver = self.getSolverName()
         zipped_nl_file = io.BytesIO()
         if os.path.exists(stub) and stub[-3:] == '.nl':
             stub = stub[:-3]
-        nlfile = open(stub+".nl","rb")
-        zipper = gzip.GzipFile(mode='wb',fileobj=zipped_nl_file)
+        nlfile = open(stub + ".nl", "rb")
+        zipper = gzip.GzipFile(mode='wb', fileobj=zipped_nl_file)
         zipper.write(nlfile.read())
         zipper.close()
         nlfile.close()
         #
-        ampl_files={}
-        for key in ['adj','col','env','fix','spc','row','slc','unv']:
-            if os.access(stub+"."+key,os.R_OK):
-                f = open(stub+"." +key,"r")
-                val=""
+        ampl_files = {}
+        for key in ['adj', 'col', 'env', 'fix', 'spc', 'row', 'slc', 'unv']:
+            if os.access(stub + "." + key, os.R_OK):
+                f = open(stub + "." + key, "r")
+                val = ""
                 buf = f.read()
                 while buf:
                     val += buf
-                    buf=f.read()
+                    buf = f.read()
                 f.close()
                 ampl_files[key] = val
         # Get priority
         priority = ""
-        m = re.search(r'priority[\s=]+(\S+)',self.options)
+        m = re.search(r'priority[\s=]+(\S+)', self.options)
         if m:
             priority = "<priority>%s</priority>\n" % (m.groups()[0])
         # Add any AMPL-created environment variables to dictionary
@@ -301,116 +301,121 @@ class kestrelAMPL(object):
               <inputType>AMPL</inputType>
               %s
               <solver_options>%s</solver_options>
-              <nlfile><base64>%s</base64></nlfile>\n""" %\
-                                (self.getEmailAddress(),
-                                 solver,priority,
-                                 solver_options,
-                                 nl_string)
+              <nlfile><base64>%s</base64></nlfile>\n""" % (
+            self.getEmailAddress(),
+            solver,
+            priority,
+            solver_options,
+            nl_string,
+        )
         #
         for key in ampl_files:
-            xml += "<%s><![CDATA[%s]]></%s>\n" % (key,ampl_files[key],key)
+            xml += "<%s><![CDATA[%s]]></%s>\n" % (key, ampl_files[key], key)
         #
-        for option in ["kestrel_auxfiles","mip_priorities","objective_precision"]:
+        for option in ["kestrel_auxfiles", "mip_priorities", "objective_precision"]:
             if option in os.environ:
-                xml += "<%s><![CDATA[%s]]></%s>\n" % (option,os.getenv(option),option)
+                xml += "<%s><![CDATA[%s]]></%s>\n" % (option, os.getenv(option), option)
         #
         xml += "</document>"
         return xml
 
 
+if __name__ == "__main__":  # pragma:nocover
+    if len(sys.argv) < 2:
+        sys.stdout.write("kestrel should be called from inside AMPL.\n")
+        sys.exit(1)
 
-if __name__=="__main__":            #pragma:nocover
-  if len(sys.argv) < 2:
-    sys.stdout.write("kestrel should be called from inside AMPL.\n")
-    sys.exit(1)
+    kestrel = kestrelAMPL()
 
-  kestrel = kestrelAMPL()
+    if sys.argv[1] == "solvers":
+        for s in sorted(kestrel.neos.listSolversInCategory("kestrel")):
+            print(" " + s)
+        sys.exit(0)
 
-  if sys.argv[1] == "solvers":
-    for s in sorted(kestrel.neos.listSolversInCategory("kestrel")):
-        print(" "+s)
-    sys.exit(0)
+    elif sys.argv[1] == "submit":
+        xml = kestrel.formXML("kestproblem")
+        (jobNumber, password) = kestrel.submit(xml)
 
-  elif sys.argv[1] == "submit":
-    xml = kestrel.formXML("kestproblem")
-    (jobNumber,password) = kestrel.submit(xml)
+        # Add the job,pass to the stack
+        jobfile = open(kestrel.tempfile(), 'a')
+        jobfile.write("%d %s\n" % (jobNumber, password))
+        jobfile.close()
 
+    elif sys.argv[1] == "retrieve":
+        # Pop job,pass from the stack
+        try:
+            jobfile = open(kestrel.tempfile(), 'r')
+        except IOError:
+            e = sys.exc_info()[1]
+            sys.stdout.write("Error, could not open file %s.\n")
+            sys.stdout.write("Did you use kestrelsub?\n")
+            sys.exit(1)
 
-    # Add the job,pass to the stack
-    jobfile = open(kestrel.tempfile(),'a')
-    jobfile.write("%d %s\n" % (jobNumber,password))
-    jobfile.close()
+        m = re.match(r'(\d+) ([a-zA-Z]+)', jobfile.readline())
+        if m:
+            jobNumber = int(m.groups()[0])
+            password = m.groups()[1]
+        restofstack = jobfile.read()
+        jobfile.close()
 
-  elif sys.argv[1] == "retrieve":
-    # Pop job,pass from the stack
-    try:
-      jobfile = open(kestrel.tempfile(),'r')
-    except IOError:
-      e = sys.exc_info()[1]
-      sys.stdout.write("Error, could not open file %s.\n")
-      sys.stdout.write("Did you use kestrelsub?\n")
-      sys.exit(1)
+        kestrel.retrieve('kestresult', jobNumber, password)
 
-    m = re.match(r'(\d+) ([a-zA-Z]+)',jobfile.readline())
-    if m:
-      jobNumber = int(m.groups()[0])
-      password = m.groups()[1]
-    restofstack = jobfile.read()
-    jobfile.close()
+        if restofstack:
+            sys.stdout.write("restofstack: %s\n" % restofstack)
+            jobfile = open(kestrel.tempfile(), 'w')
+            jobfile.write(restofstack)
+            jobfile.close()
+        else:
+            os.unlink(kestrel.tempfile())
 
-    kestrel.retrieve('kestresult',jobNumber,password)
-
-    if restofstack:
-      sys.stdout.write("restofstack: %s\n" % restofstack)
-      jobfile = open(kestrel.tempfile(),'w')
-      jobfile.write(restofstack)
-      jobfile.close()
+    elif sys.argv[1] == "kill":
+        (jobNumber, password) = kestrel.getJobAndPassword()
+        if jobNumber:
+            kestrel.kill(jobNumber, password)
+        else:
+            sys.stdout.write(
+                "To kill a NEOS job, first set kestrel_options variable:\n"
+            )
+            sys.stdout.write(
+                '\tampl: option kestrel_options "job=#### password=xxxx";\n'
+            )
     else:
-      os.unlink(kestrel.tempfile())
+        try:
+            stub = sys.argv[1]
+            # See if kestrel_options has job=.. password=..
+            (jobNumber, password) = kestrel.getJobAndPassword()
 
-  elif sys.argv[1] == "kill":
-    (jobNumber,password) = kestrel.getJobAndPassword()
-    if jobNumber:
-      kestrel.kill(jobNumber,password)
-    else:
-      sys.stdout.write("To kill a NEOS job, first set kestrel_options variable:\n")
-      sys.stdout.write('\tampl: option kestrel_options "job=#### password=xxxx";\n')
-  else:
-    try:
-      stub = sys.argv[1]
-      # See if kestrel_options has job=.. password=..
-      (jobNumber,password) = kestrel.getJobAndPassword()
+            # otherwise, submit current problem to NEOS
+            if not jobNumber:
+                xml = kestrel.formXML(stub)
+                (jobNumber, password) = kestrel.submit(xml)
 
-      # otherwise, submit current problem to NEOS
-      if not jobNumber:
-        xml = kestrel.formXML(stub)
-        (jobNumber,password) = kestrel.submit(xml)
+        except KeyboardInterrupt:
+            e = sys.exc_info()[1]
+            sys.stdout.write("Keyboard Interrupt while submitting problem.\n")
+            sys.exit(1)
+        try:
+            # Get intermediate results
+            time.sleep(1)
+            status = "Running"
+            offset = 0
+            while status == "Running" or status == "Waiting":
+                (output, offset) = kestrel.neos.getIntermediateResults(
+                    jobNumber, password, offset
+                )
 
-    except KeyboardInterrupt:
-      e = sys.exc_info()[1]
-      sys.stdout.write("Keyboard Interrupt while submitting problem.\n")
-      sys.exit(1)
-    try:
-      # Get intermediate results
-      time.sleep(1)
-      status = "Running"
-      offset = 0
-      while status == "Running" or status == "Waiting":
-        (output,offset) = kestrel.neos.getIntermediateResults(jobNumber,
-                                                           password,offset)
+                if isinstance(output, xmlrpclib.Binary):
+                    output = output.data
+                sys.stdout.write(output)
+                status = kestrel.neos.getJobStatus(jobNumber, password)
+                time.sleep(5)
 
-        if isinstance(output,xmlrpclib.Binary):
-          output = output.data
-        sys.stdout.write(output)
-        status = kestrel.neos.getJobStatus(jobNumber,password)
-        time.sleep(5)
-
-      # Get final results
-      kestrel.retrieve(stub,jobNumber,password)
-      sys.exit(0)
-    except KeyboardInterrupt:
-      e = sys.exc_info()[1]
-      msg = '''
+            # Get final results
+            kestrel.retrieve(stub, jobNumber, password)
+            sys.exit(0)
+        except KeyboardInterrupt:
+            e = sys.exc_info()[1]
+            msg = '''
 Keyboard Interrupt\n\
 Job is still running on remote machine\n\
 To stop job:\n\
@@ -418,6 +423,11 @@ To stop job:\n\
 \tampl: commands kestrelkill;\n\
 To retrieve results:\n\
 \tampl: option kestrel_options "job=%d password=%s";\n\
-\tampl: solve;\n''' % (jobNumber,password,jobNumber,password)
-      sys.stdout.write(msg)
-      sys.exit(1)
+\tampl: solve;\n''' % (
+                jobNumber,
+                password,
+                jobNumber,
+                password,
+            )
+            sys.stdout.write(msg)
+            sys.exit(1)

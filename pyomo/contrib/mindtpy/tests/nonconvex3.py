@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Problem C in paper 'Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs'
+"""Problem C in paper 'Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs'.
+The problem in the paper has two optimal solution. Variable y4 and y6 are symmetric. Therefore, we remove variable y6 for simplification.
 
 Ref:
 Kesavan P, Allgor R J, Gatzke E P, et al. Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs[J]. Mathematical Programming, 2004, 100(3): 517-535.
@@ -29,7 +30,6 @@ class Nonconvex3(ConcreteModel):
         m.y3 = Var(within=Binary, bounds=(0, 1), initialize=0)
         m.y4 = Var(within=Binary, bounds=(0, 1), initialize=0)
         m.y5 = Var(within=Binary, bounds=(0, 1), initialize=0)
-        m.y6 = Var(within=Binary, bounds=(0, 1), initialize=0)
 
         m.objective = Objective(expr=7 * m.x1 + 10 * m.x2, sense=minimize)
 
@@ -39,7 +39,7 @@ class Nonconvex3(ConcreteModel):
         m.c3 = Constraint(expr=-3 * m.x1 + m.x2 <= 1)
         m.c4 = Constraint(expr=4 * m.x1 - 3 * m.x2 <= 11)
         m.c5 = Constraint(expr=-m.x1 + m.y1 + 2 * m.y2 + 4 * m.y3 == 0)
-        m.c6 = Constraint(expr=-m.x2 + m.y4 + 2 * m.y5 + m.y6 == 0)
+        m.c6 = Constraint(expr=-m.x2 + m.y4 + 2 * m.y5 == 0)
         m.optimal_value = 31
         m.optimal_solution = ComponentMap()
         m.optimal_solution[m.x1] = 3.0
@@ -49,4 +49,3 @@ class Nonconvex3(ConcreteModel):
         m.optimal_solution[m.y3] = 0.0
         m.optimal_solution[m.y4] = 1.0
         m.optimal_solution[m.y5] = 0.0
-        m.optimal_solution[m.y6] = 0.0
