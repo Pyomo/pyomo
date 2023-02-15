@@ -31,7 +31,8 @@ Coding Standards
 Pyomo documentation is generated using `Sphinx <https://www.sphinx-doc.org/en/master/>`_
 with the ``napoleon`` extension enabled.
 See `supported styles <https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html>`_.
-We recommend use of one of the listed styles on documentation for:
+We recommend use of one of the supported styles, but we prefer the
+NumPy standard. Whichever you choose, we require compliant documentation for:
     
     * Modules
     * Public and Private Classes
