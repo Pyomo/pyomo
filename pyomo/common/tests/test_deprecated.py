@@ -54,13 +54,13 @@ class TestDeprecated(unittest.TestCase):
 
     def test_no_version_exception(self):
         with self.assertRaisesRegex(
-                DeveloperError, "@deprecated missing initial version"):
+                DeveloperError, "@deprecated\(\): missing 'version' argument"):
             @deprecated()
             def foo():
                 pass
 
         with self.assertRaisesRegex(
-                DeveloperError, "@deprecated missing initial version"):
+                DeveloperError, "@deprecated\(\): missing 'version' argument"):
             @deprecated()
             class foo(object):
                 pass
@@ -610,7 +610,7 @@ class TestRenamedClass(unittest.TestCase):
                 __renamed_new_class__ = NewClass
 
         with self.assertRaisesRegex(
-                TypeError, "Declaring class 'DeprecatedClass' using the "
+                DeveloperError, "Declaring class 'DeprecatedClass' using the "
                 "RenamedClass metaclass, but without specifying the "
                 "__renamed__version__ class attribute"):
             class DeprecatedClass(metaclass=RenamedClass):

@@ -70,8 +70,13 @@ def default_deprecation_msg(obj, user_msg, version, remove_in):
 
 
 def _deprecation_docstring(obj, msg, version, remove_in):
-    if version is None: # or version in ('','tbd','TBD'):
-        raise DeveloperError("@deprecated missing initial version")
+    # Note that _deprecation_docstring is guaranteed to be called by
+    # @deprecated in all situations where we would be creating a
+    # meaningful deprecation message (classes, functions, and methods),
+    # so this is a convenient place to check that the version is
+    # specified.
+    if version is None:
+        raise DeveloperError("@deprecated(): missing 'version' argument")
     return (
         f'{_doc_flag} {version}\n'
         f'   {default_deprecation_msg(obj, msg, None, remove_in)}\n'
@@ -118,7 +123,7 @@ def _wrap_func(func, msg, logger, version, remove_in):
         '__module__', '__name__', '__qualname__', '__annotations__'))
     def wrapper(*args, **kwargs):
         cf = _find_calling_frame(1)
-        deprecation_warning(message, logger, calling_frame=cf)
+        deprecation_warning(message, logger, version='', calling_frame=cf)
         return func(*args, **kwargs)
 
     wrapper.__doc__ = 'DEPRECATED.\n\n'
@@ -179,6 +184,9 @@ def deprecation_warning(msg, logger=None, version=None,
             the deprecation warning.
 
     """
+    if version is None:
+        raise DeveloperError("deprecation_warning() missing 'version' argument")
+
     if logger is None:
         if calling_frame is not None:
             cf = calling_frame
@@ -373,6 +381,8 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None,
         location.
 
     """
+    if version is None:
+        raise DeveloperError("relocated_module_attribute(): missing 'version' argument")
     # Historical note: This method only works for Python >= 3.7.  There
     # were backports to previous Python interpreters, but were removed
     # after SHA 4e04819aaeefc2c08b7718460918885e12343451
@@ -461,8 +471,8 @@ class RenamedClass(type):
                     calling_frame=_find_calling_frame(1))
             classdict['__renamed__warning__'] = __renamed__warning__
 
-            if '__renamed__version__' not in classdict:
-                raise TypeError(
+            if not classdict.get('__renamed__version__'):
+                raise DeveloperError(
                     "Declaring class '%s' using the RenamedClass metaclass, "
                     "but without specifying the __renamed__version__ class "
                     "attribute" % (name,))
