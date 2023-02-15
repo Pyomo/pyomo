@@ -12,9 +12,8 @@
 import argparse
 import pyomo.scripting.pyomo_parser
 import os.path
-from pyomo.common.deprecation import (
-    default_deprecation_msg as _default_deprecation_msg,
-)
+from pyomo.common.deprecation import default_deprecation_msg as _default_deprecation_msg
+
 
 class EnableDisableAction(argparse.Action):
     def add_package(self, namespace, package):
@@ -125,16 +124,20 @@ def main_exec(options):
 #
 # Add a subparser for the check command
 #
-_description="""
-WARNING: DEPRECATED: """ + _default_deprecation_msg(
-    None,
-    'The pyomo.checker module has been deprecated',
-    version='TBD',
-    remove_in='6.6',
-) + """.
+_description = (
+    """
+WARNING: DEPRECATED: """
+    + _default_deprecation_msg(
+        None,
+        'The pyomo.checker module has been deprecated',
+        version='TBD',
+        remove_in='6.6',
+    )
+    + """.
 
 This check subcommand is used to check a model script for errors.
 """
+)
 
 setup_parser(
     pyomo.scripting.pyomo_parser.add_subparser(
