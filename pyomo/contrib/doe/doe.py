@@ -823,28 +823,14 @@ class DesignOfExperiments:
         Parameters:
         -----------
         no_obj: if True, objective function is 0.
-        self.design_values: a dict of dictionaries, keys are the name of design variables, 
-        values are a dict where keys are the time points, values are the design variable value at that time point
-        self.optimize: if True, solve the problem unfixing the design variables. if False, solve the problem as a
-        square problem
-        self.objective_option: choose from 'det' or 'trace'. Optimization problem maximizes determinant or trace.
-        self.scale_nominal_param_value: if True, scale FIM but not scale Jacobian. This toggle can be opened for better performance when the
-        problem is poorly scaled.
-        self.tee_opt: if True, print IPOPT console output
-        self.Cholesky_option: if true, cholesky decomposition is used for Objective function (to optimize determinant). 
-            If true, determinant will not be calculated.
-            self.L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
-            self.L_initial: initialize the L
-        self.formula: choose from 'central', 'forward', 'backward', None
-        self.step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
         Return:
         -------
         m: the DOE model
         """
-        # call generator function to get scenario dictionary
-        scena_gen = ScenarioGenerator(self.param, formula=self.formula, step=self.step, store=True)
-        scenario_all = scena_gen.simultaneous_scenario()
+        
+
+        
         
         # create model
         m = self.create_model(scenario_all, args= self.args)
