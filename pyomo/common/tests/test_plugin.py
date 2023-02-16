@@ -271,6 +271,7 @@ class TestPlugin(TestCase):
                       out.getvalue().replace('\n', ' '))
 
         class IGone(DeprecatedInterface):
+            __deprecated_version__ = '1.2.3'
             pass
 
         out = StringIO()
@@ -288,6 +289,7 @@ class TestPlugin(TestCase):
 
         class ICustomGone(DeprecatedInterface):
             __deprecated_message__ = 'This interface is gone!'
+            __deprecated_version__ = '1.2.3'
 
         out = StringIO()
         with LoggingIntercept(out):

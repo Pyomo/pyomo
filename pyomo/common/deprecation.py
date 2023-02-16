@@ -33,7 +33,7 @@ from pyomo.common.errors import DeveloperError
 _doc_flag = '.. deprecated::'
 
 
-def _default_msg(obj, user_msg, version, remove_in):
+def default_deprecation_msg(obj, user_msg, version, remove_in):
     """Generate the default deprecation message.
 
     See deprecated() function for argument details.
@@ -70,11 +70,16 @@ def _default_msg(obj, user_msg, version, remove_in):
 
 
 def _deprecation_docstring(obj, msg, version, remove_in):
-    if version is None: # or version in ('','tbd','TBD'):
-        raise DeveloperError("@deprecated missing initial version")
+    # Note that _deprecation_docstring is guaranteed to be called by
+    # @deprecated in all situations where we would be creating a
+    # meaningful deprecation message (classes, functions, and methods),
+    # so this is a convenient place to check that the version is
+    # specified.
+    if version is None:
+        raise DeveloperError("@deprecated(): missing 'version' argument")
     return (
-        '%s %s\n   %s\n'
-        % (_doc_flag, version, _default_msg(obj, msg, None, remove_in))
+        f'{_doc_flag} {version}\n'
+        f'   {default_deprecation_msg(obj, msg, None, remove_in)}\n'
     )
 
 
@@ -88,8 +93,8 @@ def _wrap_class(cls, msg, logger, version, remove_in):
         if _flagIdx >= 0:
             _doc = _funcDoc[_flagIdx:]
             break
-    # Note: test msg is not None to revert back to the user-supplied
-    # message.  Checking the fields is still useful as it lets us know
+    # Note: test 'msg is not None' to revert back to the user-supplied
+    # message.  Checking the fields above is still useful as it lets us know
     # if there is already a deprecation message on either new or init.
     if msg is not None or _doc is None:
         _doc = _deprecation_docstring(cls, msg, version, remove_in)
@@ -102,8 +107,8 @@ def _wrap_class(cls, msg, logger, version, remove_in):
         # find the "most derived" implementation of either __new__ or
         # __init__ and wrap that (breaking ties in favor of __init__)
         field = '__init__'
-        for c in cls.__mro__:
-            for f in ('__init__', '__new__'):
+        for c in reversed(cls.__mro__):
+            for f in ('__new__', '__init__'):
                 if getattr(c, f, None) is not getattr(cls, f, None):
                     field = f
         setattr(cls, field, _wrap_func(
@@ -112,13 +117,13 @@ def _wrap_class(cls, msg, logger, version, remove_in):
 
 
 def _wrap_func(func, msg, logger, version, remove_in):
-    message = _default_msg(func, msg, version, remove_in)
+    message = default_deprecation_msg(func, msg, version, remove_in)
 
     @functools.wraps(func, assigned=(
         '__module__', '__name__', '__qualname__', '__annotations__'))
     def wrapper(*args, **kwargs):
         cf = _find_calling_frame(1)
-        deprecation_warning(message, logger, calling_frame=cf)
+        deprecation_warning(message, logger, version='', calling_frame=cf)
         return func(*args, **kwargs)
 
     wrapper.__doc__ = 'DEPRECATED.\n\n'
@@ -169,8 +174,9 @@ def deprecation_warning(msg, logger=None, version=None,
 
         version (str): [required] the version in which the decorated
             object was deprecated.  General practice is to set version
-            to '' or 'TBD' during development and update it to the
-            actual release as part of the release process.
+            to the current development version (from `pyomo --version`)
+            during development and update it to the actual release as
+            part of the release process.
 
         remove_in (str): the version in which the decorated object will be
             removed from the code.
@@ -185,6 +191,9 @@ def deprecation_warning(msg, logger=None, version=None,
     WARNING: DEPRECATED: This functionality is deprecated.  (deprecated in 1.2.3) ...
 
     """
+    if version is None:
+        raise DeveloperError("deprecation_warning() missing 'version' argument")
+
     if logger is None:
         if calling_frame is not None:
             cf = calling_frame
@@ -202,7 +211,7 @@ def deprecation_warning(msg, logger=None, version=None,
         logger = logging.getLogger(logger)
 
     msg = textwrap.fill(
-        'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
+        f'DEPRECATED: {default_deprecation_msg(None, msg, version, remove_in)}',
         width=70)
     if calling_frame is None:
         # The useful thing to let the user know is what called the
@@ -247,8 +256,9 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
 
         version (str): [required] the version in which the decorated
             object was deprecated.  General practice is to set version
-            to '' or 'TBD' during development and update it to the
-            actual release as part of the release process.
+            to the current development version (from `pyomo --version`)
+            during development and update it to the actual release as
+            part of the release process.
 
         remove_in (str): the version in which the decorated object will be
             removed from the code.
@@ -313,10 +323,10 @@ def relocated_module(new_name, msg=None, logger=None,
         pyomo package, or "pyomo")
 
     version: str [required]
-        The version in which the module was renamed or moved.
-        General practice is to set version to '' or 'TBD' during
-        development and update it to the actual release as part of the
-        release process.
+        The version in which the module was renamed or moved.  General
+        practice is to set version to the current development version
+        (from `pyomo --version`) during development and update it to the
+        actual release as part of the release process.
 
     remove_in: str
         The version in which the module will be removed from the code.
@@ -390,6 +400,8 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None,
         location.
 
     """
+    if version is None:
+        raise DeveloperError("relocated_module_attribute(): missing 'version' argument")
     # Historical note: This method only works for Python >= 3.7.  There
     # were backports to previous Python interpreters, but were removed
     # after SHA 4e04819aaeefc2c08b7718460918885e12343451
@@ -478,8 +490,8 @@ class RenamedClass(type):
                     calling_frame=_find_calling_frame(1))
             classdict['__renamed__warning__'] = __renamed__warning__
 
-            if '__renamed__version__' not in classdict:
-                raise TypeError(
+            if not classdict.get('__renamed__version__'):
+                raise DeveloperError(
                     "Declaring class '%s' using the RenamedClass metaclass, "
                     "but without specifying the __renamed__version__ class "
                     "attribute" % (name,))
