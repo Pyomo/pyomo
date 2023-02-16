@@ -15,7 +15,7 @@ useful graph algorithms.
 
 import enum
 import textwrap
-from pyomo.core.base.block import Block
+from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
@@ -288,7 +288,7 @@ class IncidenceGraphInterface(object):
             self._incidence_graph = None
             self._variables = None
             self._constraints = None
-        elif isinstance(model, Block):
+        elif isinstance(model, _BlockData):
             self._constraints = [
                 con for con in model.component_data_objects(
                     Constraint, active=active
