@@ -26,11 +26,10 @@ from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import (
     attempt_import,
-    scipy_available,
+    networkx as nx,
     scipy as sp,
     plotly,
 )
-from pyomo.common.dependencies import networkx as nx
 from pyomo.common.deprecation import deprecated
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import (
@@ -47,14 +46,12 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     RowPartition,
     ColPartition,
 )
-
 from pyomo.contrib.pynumero.asl import AmplInterface
-asl_available = AmplInterface.available()
-if asl_available and scipy_available:
-    # Need this check due to unguarded scipy import in pyomo_nlp.py
-    # Not sure if asl_available is necessary for this import...
-    from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
+pyomo_nlp, pyomo_nlp_available = attempt_import(
+    'pyomo.contrib.pynumero.interfaces.pyomo_nlp'
+)
+asl_available = pyomo_nlp_available & AmplInterface.available()
 
 
 def _check_unindexed(complist):
@@ -243,7 +240,7 @@ def get_numeric_incidence_matrix(variables, constraints):
     _check_unindexed(comps)
     block = create_subsystem_block(constraints, variables)
     block._obj = Objective(expr=0)
-    nlp = PyomoNLP(block)
+    nlp = pyomo_nlp.PyomoNLP(block)
     return nlp.extract_submatrix_jacobian(variables, constraints)
 
 
@@ -313,7 +310,7 @@ class IncidenceGraphInterface(object):
                 # Note that include_fixed is not necessary here. We have
                 # already checked this condition above.
             )
-        elif isinstance(model, PyomoNLP):
+        elif isinstance(model, pyomo_nlp.PyomoNLP):
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "
@@ -347,7 +344,7 @@ class IncidenceGraphInterface(object):
         else:
             raise TypeError(
                 "Unsupported type for incidence matrix. Expected "
-                "%s or %s but got %s." % (PyomoNLP, Block, type(model))
+                "%s or %s but got %s." % (pyomo_nlp.PyomoNLP, Block, type(model))
             )
 
     @property

@@ -14,10 +14,10 @@ from pyomo.common.dependencies import (
     networkx_available,
     plotly_available,
     scipy_available,
-    attempt_import,
 )
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
+    asl_available,
     IncidenceGraphInterface,
     get_structural_incidence_matrix,
     get_numeric_incidence_matrix,
@@ -42,14 +42,13 @@ if scipy_available:
 if networkx_available:
     import networkx as nx
     from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
-from pyomo.contrib.pynumero.asl import AmplInterface
 
 import pyomo.common.unittest as unittest
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
     """
     This class tests the get_numeric_incidence_matrix function on
@@ -434,7 +433,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
     # In these tests, we pass the interface a PyomoNLP and cache
     # its Jacobian.
@@ -1345,7 +1344,7 @@ class TestExtraVars(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestExceptions(unittest.TestCase):
 
     def test_nlp_fixed_error(self):
@@ -1379,7 +1378,7 @@ class TestExceptions(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestIncludeInequality(unittest.TestCase):
     def make_model_with_inequalities(self):
         m = make_degenerate_solid_phase_model()
