@@ -16,4 +16,4 @@ msg = (
     " importing this functionality (e.g. solve_strongly_connected_components)"
     " directly from 'pyomo.contrib.incidence_analysis'."
 )
-relocated_module("pyomo.contrib.incidence_analysis.scc_solver", msg=msg)
+relocated_module("pyomo.contrib.incidence_analysis.scc_solver", version='TBD', msg=msg)
