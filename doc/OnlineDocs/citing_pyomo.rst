@@ -8,6 +8,8 @@ Hart, William E., Jean-Paul Watson, and David L. Woodruff. "Pyomo: modeling and 
 
 Hart, William E., Carl Laird, Jean-Paul Watson, David L. Woodruff, Gabriel A. Hackebeil, Bethany L. Nicholson, and John D. Siirola. Pyomo – Optimization Modeling in Python. Springer, 2017.
 
+Bynum, Michael L., Gabriel A. Hackebeil, William E. Hart, Carl D. Laird, Bethany L. Nicholson, John D. Siirola, Jean-Paul Watson, and David L. Woodruff. Pyomo - Pptimization Modeling in Python. Springer, 2021.
+
 PySP
 ----
 
