@@ -12,10 +12,10 @@
 import pyomo.environ as pyo
 from pyomo.common.dependencies import (
     networkx_available,
+    plotly_available,
     scipy_available,
     attempt_import,
 )
-plotly, plotly_available = attempt_import("plotly")
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,

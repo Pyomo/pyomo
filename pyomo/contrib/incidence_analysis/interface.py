@@ -28,6 +28,7 @@ from pyomo.common.dependencies import (
     attempt_import,
     scipy_available,
     scipy as sp,
+    plotly,
 )
 from pyomo.common.dependencies import networkx as nx
 from pyomo.common.deprecation import deprecated
@@ -54,9 +55,6 @@ if asl_available and scipy_available:
     # Not sure if asl_available is necessary for this import...
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
-plotly, plotly_available = attempt_import("plotly")
-if plotly_available:
-    go = plotly.graph_objects
 
 
 def _check_unindexed(complist):
@@ -881,7 +879,7 @@ class IncidenceGraphInterface(object):
             edge_y.append(y0)
             edge_y.append(y1)
             edge_y.append(None)
-        edge_trace = go.Scatter(
+        edge_trace = plotly.graph_objects.Scatter(
             x=edge_x,
             y=edge_y,
             line=dict(width=0.5, color='#888'),
@@ -919,7 +917,7 @@ class IncidenceGraphInterface(object):
                     f'value: {str(v.value)}<br>domain: {str(v.domain)}<br>'
                     f'fixed: {str(v.is_fixed())}'
                 )
-        node_trace = go.Scatter(
+        node_trace = plotly.graph_objects.Scatter(
             x=node_x,
             y=node_y,
             mode='markers',
@@ -927,7 +925,7 @@ class IncidenceGraphInterface(object):
             text=node_text,
             marker=dict(color=node_color, size=10),
         )
-        fig = go.Figure(data=[edge_trace, node_trace])
+        fig = plotly.graph_objects.Figure(data=[edge_trace, node_trace])
         if title is not None:
             fig.update_layout(title=dict(text=title))
         if show:
