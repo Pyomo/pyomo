@@ -4,7 +4,7 @@ from .interface import (
     IncidenceGraphInterface,
     get_bipartite_incidence_graph,
 )
-from .util import (
+from .scc_solver import (
     generate_strongly_connected_components,
     solve_strongly_connected_components,
 )
