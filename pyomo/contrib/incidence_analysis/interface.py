@@ -288,6 +288,30 @@ class IncidenceGraphInterface(object):
             self._incidence_graph = None
             self._variables = None
             self._constraints = None
+        elif isinstance(model, Block):
+            self._constraints = [
+                con for con in model.component_data_objects(
+                    Constraint, active=active
+                )
+                if include_inequality or isinstance(con.expr, EqualityExpression)
+            ]
+            self._variables = list(
+                _generate_variables_in_constraints(
+                    self._constraints, include_fixed=include_fixed
+                )
+            )
+            self._var_index_map = ComponentMap(
+                (var, i) for i, var in enumerate(self._variables)
+            )
+            self._con_index_map = ComponentMap(
+                (con, i) for i, con in enumerate(self._constraints)
+            )
+            self._incidence_graph = get_bipartite_incidence_graph(
+                self._variables,
+                self._constraints,
+                # Note that include_fixed is not necessary here. We have
+                # already checked this condition above.
+            )
         elif isinstance(model, PyomoNLP):
             if not active:
                 raise ValueError(
@@ -319,30 +343,6 @@ class IncidenceGraphInterface(object):
                 incidence_matrix = nlp.evaluate_jacobian_eq()
             nxb = nx.algorithms.bipartite
             self._incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
-        elif isinstance(model, Block):
-            self._constraints = [
-                con for con in model.component_data_objects(
-                    Constraint, active=active
-                )
-                if include_inequality or isinstance(con.expr, EqualityExpression)
-            ]
-            self._variables = list(
-                _generate_variables_in_constraints(
-                    self._constraints, include_fixed=include_fixed
-                )
-            )
-            self._var_index_map = ComponentMap(
-                (var, i) for i, var in enumerate(self._variables)
-            )
-            self._con_index_map = ComponentMap(
-                (con, i) for i, con in enumerate(self._constraints)
-            )
-            self._incidence_graph = get_bipartite_incidence_graph(
-                self._variables,
-                self._constraints,
-                # Note that include_fixed is not necessary here. We have
-                # already checked this condition above.
-            )
         else:
             raise TypeError(
                 "Unsupported type for incidence matrix. Expected "
