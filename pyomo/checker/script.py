@@ -13,7 +13,7 @@ from pyomo.common.deprecation import deprecated
 
 
 @deprecated(
-    'The pyomo.checker module has been deprecated.', version='TBD', remove_in='6.6'
+    'The pyomo.checker module has been deprecated.', version='6.5.0', remove_in='6.6.0'
 )
 class ModelScript(object):
     def __init__(self, filename=None, text=None):

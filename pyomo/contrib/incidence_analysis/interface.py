@@ -380,7 +380,7 @@ class IncidenceGraphInterface(object):
     @property
     @deprecated(
         msg="``var_index_map`` is deprecated. Please use ``get_matrix_coord`` instead.",
-        version="6.4.5",
+        version="6.5.0",
     )
     def var_index_map(self):
         return self._var_index_map
@@ -388,7 +388,7 @@ class IncidenceGraphInterface(object):
     @property
     @deprecated(
         msg="``con_index_map`` is deprecated. Please use ``get_matrix_coord`` instead.",
-        version="6.4.5",
+        version="6.5.0",
     )
     def con_index_map(self):
         return self._con_index_map
@@ -396,7 +396,7 @@ class IncidenceGraphInterface(object):
     @property
     @deprecated(
         msg="The ``row_block_map`` attribute is deprecated and will be removed.",
-        version="6.4.5",
+        version="6.5.0",
     )
     def row_block_map(self):
         return None
@@ -404,7 +404,7 @@ class IncidenceGraphInterface(object):
     @property
     @deprecated(
         msg="The ``col_block_map`` attribute is deprecated and will be removed.",
-        version="6.4.5",
+        version="6.5.0",
     )
     def col_block_map(self):
         return None
@@ -694,9 +694,9 @@ class IncidenceGraphInterface(object):
 
         .. note::
 
-           **Breaking change in Pyomo 6.4.5**
+           **Breaking change in Pyomo 6.5.0**
 
-           The pre-6.4.5 ``block_triangularize`` method returned maps from
+           The pre-6.5.0 ``block_triangularize`` method returned maps from
            each variable or constraint to the index of its block in a block
            lower triangularization as the original intent of this function
            was to identify when variables do or don't share a diagonal block
@@ -708,7 +708,7 @@ class IncidenceGraphInterface(object):
            This functionality was previously available via the
            ``get_diagonal_blocks`` method, which was confusing as it did not
            capture that the partition was the diagonal of a block
-           *triangularization* (as opposed to diagonalization). The pre-6.4.5
+           *triangularization* (as opposed to diagonalization). The pre-6.5.0
            functionality of ``block_triangularize`` is still available via the
            ``map_nodes_to_block_triangular_indices`` method.
 
@@ -729,7 +729,7 @@ class IncidenceGraphInterface(object):
             " Please use ``IncidenceGraphInterface.block_triangularize``"
             " instead."
         ),
-        version="6.4.5",
+        version="6.5.0",
     )
     def get_diagonal_blocks(self, variables=None, constraints=None):
         variables, constraints = self._validate_input(variables, constraints)

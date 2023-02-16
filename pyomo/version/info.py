@@ -13,22 +13,22 @@ _init_url = "$URL$"
 
 # NOTE: releaselevel should be left at 'invalid' for trunk development
 #     and set to 'final' for releases.  During development, the
-#     major.minor.micro should point ot the NEXT release (generally, the
+#     major.minor.micro should point to the NEXT release (generally, the
 #     next micro release after the current release).
 #
 # Note: When cutting a release, also update the major/minor/micro in
 #
-#     pyomo/RELEASE.txt
+#     pyomo/RELEASE.md
 #
 # The VOTD zipbuilder will automatically change releaselevel to "VOTD
 # {hash}" and set the serial number to YYMMDDhhmm.  The serial number
 # should generally be left at 0, unless a downstream package is tracking
 # main and needs a hard reference to "suitably new" development.
 major = 6
-minor = 4
-micro = 5
-releaselevel = 'invalid'
-# releaselevel='final'
+minor = 5
+micro = 0
+# releaselevel = 'invalid'
+releaselevel='final'
 serial = 0
 
 if releaselevel == 'final':
@@ -51,7 +51,7 @@ elif releaselevel == 'invalid':
         #
         # __file__ fails if script is called in different ways on Windows
         # __file__ fails if someone does os.chdir() before
-        # sys.argv[0] also fails because it doesn't always contains the path
+        # sys.argv[0] also fails because it doesn't always contain the path
         from inspect import getfile as _getfile, currentframe as _frame
         from os.path import abspath as _abspath
 
