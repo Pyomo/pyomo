@@ -130,8 +130,8 @@ WARNING: DEPRECATED: """
     + _default_deprecation_msg(
         None,
         'The pyomo.checker module has been deprecated',
-        version='TBD',
-        remove_in='6.6',
+        version='6.5.0',
+        remove_in='6.6.0',
     )
     + """.
 

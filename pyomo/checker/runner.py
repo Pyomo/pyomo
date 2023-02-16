@@ -61,7 +61,7 @@ class CheckingNodeVisitor(ast.NodeVisitor):
 
 
 @deprecated(
-    'The pyomo.checker module has been deprecated.', version='TBD', remove_in='6.6'
+    'The pyomo.checker module has been deprecated.', version='6.5.0', remove_in='6.6.0'
 )
 class ModelCheckRunner(object):
 
