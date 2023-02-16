@@ -1345,7 +1345,7 @@ class TestExtraVars(unittest.TestCase):
 class TestExceptions(unittest.TestCase):
 
     @unittest.skipUnless(scipy_available, "scipy is not available.")
-    @unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_nlp_fixed_error(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1358,7 +1358,7 @@ class TestExceptions(unittest.TestCase):
             igraph = IncidenceGraphInterface(nlp, include_fixed=True)
 
     @unittest.skipUnless(scipy_available, "scipy is not available.")
-    @unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_nlp_active_error(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1403,7 +1403,7 @@ class TestIncludeInequality(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, include_inequality=True)
         self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
 
-    @unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_dont_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
@@ -1411,7 +1411,7 @@ class TestIncludeInequality(unittest.TestCase):
         igraph = IncidenceGraphInterface(nlp, include_inequality=False)
         self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
 
-    @unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
