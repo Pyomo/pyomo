@@ -24,7 +24,11 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.current import EqualityExpression
 from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.common.dependencies import scipy_available, attempt_import
+from pyomo.common.dependencies import (
+    attempt_import,
+    scipy_available,
+    scipy as sp,
+)
 from pyomo.common.dependencies import networkx as nx
 from pyomo.common.deprecation import deprecated
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
@@ -43,13 +47,12 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     ColPartition,
 )
 
-asl_available = False
-if scipy_available:
-    import scipy as sp
-    from pyomo.contrib.pynumero.asl import AmplInterface
-    if AmplInterface.available():
-        asl_available = True
-        from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.contrib.pynumero.asl import AmplInterface
+asl_available = AmplInterface.available()
+if asl_available and scipy_available:
+    # Need this check due to unguarded scipy import in pyomo_nlp.py
+    # Not sure if asl_available is necessary for this import...
+    from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
 plotly, plotly_available = attempt_import("plotly")
 if plotly_available:
