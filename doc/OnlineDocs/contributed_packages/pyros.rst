@@ -263,7 +263,7 @@ We have converted the model to Pyomo format using the
 `GAMS Convert tool <https://www.gams.com/latest/docs/S_CONVERT.html>`_.
 
 The *hydro* model features 31 variables,
-of which there are 13 are degrees of freedom and 18 state variables.
+of which 13 are degrees of freedom and 18 are state variables.
 Moreover, there are
 6 linear inequality constraints,
 12 linear equality constraints,
@@ -450,8 +450,8 @@ object can be done as follows:
 Step 3: Solve with PyROS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PyROS requires the user to supply one local and one global NLP solver to be
-used for solving sub-problems.
+PyROS requires the user to supply one local and one global NLP solver to use
+for solving sub-problems.
 For convenience, we shall have PyROS invoke BARON as both the local and the
 global NLP solver:
 
@@ -463,12 +463,12 @@ global NLP solver:
   >>> global_solver = pyo.SolverFactory('baron')
 
 .. note::
-    Additional NLP optimizers to be used in the event the primary
-    subordinate local and global optimizers passed
+    Additional NLP optimizers can be automatically used in the event the primary
+    subordinate local or global optimizer passed
     to the PyROS :meth:`~pyomo.contrib.pyros.PyROS.solve` method
-    do not successfully solve a subproblem to an appropriate termination
-    condition can be provided through the optional keyword arguments
-    ``backup_local_solvers`` and ``backup_global_solvers``.
+    does not successfully solve a subproblem to an appropriate termination
+    condition. These alternative solvers are provided through the optional
+    keyword arguments ``backup_local_solvers`` and ``backup_global_solvers``.
 
 The final step in solving a model with PyROS is to construct the
 remaining required inputs, namely
