@@ -278,6 +278,7 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
     """
     This class tests the get_structural_incidence_matrix function
@@ -590,6 +591,7 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
     # In these tests we pass a model to the interface and are caching a
     # structural incidence matrix.
@@ -884,6 +886,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
     # In these tests we do not cache anything and use the interface
     # simply as a convenient wrapper around the analysis functions,
@@ -1093,6 +1096,7 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestDulmageMendelsohnInterface(unittest.TestCase):
 
     def test_degenerate_solid_phase_model(self):
@@ -1257,6 +1261,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestConnectedComponents(unittest.TestCase):
 
     def test_dynamic_model_backward(self):
@@ -1324,6 +1329,7 @@ class TestConnectedComponents(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestExtraVars(unittest.TestCase):
 
     def test_unused_var(self):
@@ -1421,6 +1427,7 @@ class TestIncludeInequality(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGetIncidenceGraph(unittest.TestCase):
 
     def make_test_model(self):
@@ -1583,6 +1590,7 @@ class TestGetIncidenceGraph(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGetAdjacent(unittest.TestCase):
 
     def test_get_adjacent_to_var(self):
@@ -1629,6 +1637,7 @@ class TestGetAdjacent(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestInterface(unittest.TestCase):
 
     def test_subgraph_with_fewer_var_or_con(self):
