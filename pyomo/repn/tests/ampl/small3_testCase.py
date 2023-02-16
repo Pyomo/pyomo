@@ -23,7 +23,6 @@ model = ConcreteModel()
 model.x = Var(initialize=1.0)
 model.y = Var(initialize=1.0)
 
-model.OBJ = Objective(expr=model.x*model.y)
+model.OBJ = Objective(expr=model.x * model.y)
 
 model.CON1 = Constraint(expr=model.y**2 == 4)
-

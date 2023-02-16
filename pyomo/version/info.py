@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-_init_url="$URL$"
+_init_url = "$URL$"
 
 # NOTE: releaselevel should be left at 'invalid' for trunk development
 #     and set to 'final' for releases.  During development, the
@@ -24,19 +24,20 @@ _init_url="$URL$"
 # {hash}" and set the serial number to YYMMDDhhmm.  The serial number
 # should generally be left at 0, unless a downstream package is tracking
 # main and needs a hard reference to "suitably new" development.
-major=6
-minor=4
-micro=5
-releaselevel='invalid'
-#releaselevel='final'
-serial=0
+major = 6
+minor = 4
+micro = 5
+releaselevel = 'invalid'
+# releaselevel='final'
+serial = 0
 
 if releaselevel == 'final':
     pass
-elif '/tags/' in _init_url:                #pragma:nocover
+elif '/tags/' in _init_url:  # pragma:nocover
     releaselevel = 'final'
 elif releaselevel == 'invalid':
     from os.path import abspath, dirname, exists, join
+
     if __file__.endswith('setup.py'):
         # This file is being sources (exec'ed) from setup.py.
         # dirname(__file__) setup.py's scope is the root sourec directory
@@ -49,20 +50,22 @@ elif releaselevel == 'invalid':
         # __file__ fails if someone does os.chdir() before
         # sys.argv[0] also fails because it doesn't not always contains the path
         from inspect import getfile, currentframe
+
         _rootdir = join(dirname(abspath(getfile(currentframe()))), '..', '..')
 
     if exists(join(_rootdir, '.git')):
         try:
             with open(join(_rootdir, '.git', 'HEAD')) as _FILE:
-                _ref = _FILE.readline().strip()           #pragma:nocover
+                _ref = _FILE.readline().strip()  # pragma:nocover
             releaselevel = 'devel {%s}' % (
-                _ref.split('/')[-1].split('\\')[-1], )    #pragma:nocover
+                _ref.split('/')[-1].split('\\')[-1],
+            )  # pragma:nocover
         except:
-            releaselevel = 'devel'         #pragma:nocover
+            releaselevel = 'devel'  # pragma:nocover
     elif exists(join(_rootdir, '.svn')):
-        releaselevel = 'devel {svn}'       #pragma:nocover
+        releaselevel = 'devel {svn}'  # pragma:nocover
     else:
-        releaselevel = 'VOTD'              #pragma:nocover
+        releaselevel = 'VOTD'  # pragma:nocover
 
 
 version_info = (major, minor, micro, releaselevel, serial)
@@ -70,7 +73,7 @@ version_info = (major, minor, micro, releaselevel, serial)
 version = '.'.join(str(x) for x in version_info[:3])
 __version__ = version
 if releaselevel != 'final':
-    version += ' ('+releaselevel+')'
+    version += ' (' + releaselevel + ')'
 if releaselevel.startswith('devel'):
     __version__ += ".dev%d" % (serial,)
 elif releaselevel.startswith('VOTD'):

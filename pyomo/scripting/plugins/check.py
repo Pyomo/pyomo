@@ -13,8 +13,8 @@ import argparse
 import pyomo.scripting.pyomo_parser
 import os.path
 
-class EnableDisableAction(argparse.Action):
 
+class EnableDisableAction(argparse.Action):
     def add_package(self, namespace, package):
         if namespace.checkers.get(package, None) is None:
             namespace.checkers[package] = []
@@ -38,7 +38,9 @@ class EnableDisableAction(argparse.Action):
         for c in pyomo.core.check.ModelCheckRunner._checkers(all=True):
             if c._checkerName() == checker:
                 if namespace.checkers.get(c._checkerPackage(), None) is not None:
-                    for i in range(namespace.checkers[c._checkerPackage()].count(c._checkerName())):
+                    for i in range(
+                        namespace.checkers[c._checkerPackage()].count(c._checkerName())
+                    ):
                         namespace.checkers[c._checkerPackage()].remove(c._checkerName())
 
     def add_default_checkers(self, namespace):
@@ -49,7 +51,7 @@ class EnableDisableAction(argparse.Action):
         if 'checkers' not in dir(namespace):
             setattr(namespace, 'checkers', {})
             self.add_default_checkers(namespace)
-        
+
         if option_string == '-c':
             self.add_checker(namespace, values)
         elif option_string == '-C':
@@ -59,19 +61,47 @@ class EnableDisableAction(argparse.Action):
         elif option_string == '-X':
             self.remove_package(namespace, values)
 
+
 def setup_parser(parser):
-    parser.add_argument("script", metavar="SCRIPT", default=None,
-                        help="A Pyomo script that is checked")
-    parser.add_argument("-v", "--verbose", action="store_true", dest="verbose",
-                        default=False, help="Enable additional output messages")
-    parser.add_argument("-c", "--enable-checker", metavar="CHECKER", action=EnableDisableAction, 
-                        help="Activate a specific checker")
-    parser.add_argument("-C", "--enable-package", metavar="PACKAGE", action=EnableDisableAction,
-                        help="Activate an entire checker package")
-    parser.add_argument("-x", "--disable-checker", metavar="CHECKER", action=EnableDisableAction,
-                        help="Disable a specific checker")
-    parser.add_argument("-X", "--disable-package", metavar="PACKAGE", action=EnableDisableAction,
-                        help="Disable an entire checker package")
+    parser.add_argument(
+        "script", metavar="SCRIPT", default=None, help="A Pyomo script that is checked"
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        dest="verbose",
+        default=False,
+        help="Enable additional output messages",
+    )
+    parser.add_argument(
+        "-c",
+        "--enable-checker",
+        metavar="CHECKER",
+        action=EnableDisableAction,
+        help="Activate a specific checker",
+    )
+    parser.add_argument(
+        "-C",
+        "--enable-package",
+        metavar="PACKAGE",
+        action=EnableDisableAction,
+        help="Activate an entire checker package",
+    )
+    parser.add_argument(
+        "-x",
+        "--disable-checker",
+        metavar="CHECKER",
+        action=EnableDisableAction,
+        help="Disable a specific checker",
+    )
+    parser.add_argument(
+        "-X",
+        "--disable-package",
+        metavar="PACKAGE",
+        action=EnableDisableAction,
+        help="Disable an entire checker package",
+    )
 
 
 def main_exec(options):
@@ -89,17 +119,25 @@ def main_exec(options):
     runner = check.ModelCheckRunner()
     runner.run(**vars(options))
 
+
 #
 # Add a subparser for the check command
 #
 setup_parser(
-    pyomo.scripting.pyomo_parser.add_subparser('check',
-        func=main_exec, 
+    pyomo.scripting.pyomo_parser.add_subparser(
+        'check',
+        func=main_exec,
         help='Check a model for errors.',
-        description='This pyomo subcommand is used to check a model script for errors.',
+        description="""
+        WARNING: DEPRECATED: The pyomo.checker module has been deprecated as of version TBD.
+        It will be removed in version 6.6.
+        
+        This pyomo subcommand is used to check a model script for errors.
+        """,
         epilog="""
 The default behavior of this command is to assume that the model
 script is a simple Pyomo model.  Eventually, this script will support
 options that allow other Pyomo models to be checked.
-"""
-        ))
+""",
+    )
+)

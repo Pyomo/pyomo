@@ -1,9 +1,11 @@
 import warnings
+
 warnings.filterwarnings("ignore")
 # The following import/use is needed to prevent matplotlib from using
 # the X-backend on *nix platforms, which would fail when run in
 # automated testing environments or when $DISPLAY is not set.
 import matplotlib
+
 matplotlib.use('agg')
 # @all:
 import json
@@ -28,7 +30,7 @@ while not done:
     term_cond = results.solver.termination_condition
     print('')
     print('--- Solver Status: {0} ---'.format(term_cond))
-   
+
     if pyo.check_optimal_termination(results):
         # look at the solution
         print('Optimal Obj. Value = {0}'.format(pyo.value(model.obj)))
@@ -41,13 +43,13 @@ while not done:
         expr1 = sum(model.y[i] for i in WH_True)
         expr2 = sum(model.y[i] for i in WH_False)
         model.integer_cuts.add(
-            sum(model.y[i] for i in WH_True) \
-            - sum(model.y[i] for i in WH_False) \
-            <= len(WH_True)-1)
+            sum(model.y[i] for i in WH_True) - sum(model.y[i] for i in WH_False)
+            <= len(WH_True) - 1
+        )
     else:
         done = True
 
-x = range(1, len(objective_values)+1)
+x = range(1, len(objective_values) + 1)
 plt.bar(x, objective_values, align='center')
 plt.gca().set_xticks(x)
 plt.xlabel('Solution Number')

@@ -12,7 +12,7 @@ timer = TicTocTimer()
 timer.tic()
 
 for i in range(N2):
-    e = sum(i*m.x[i] for i in range(N1))
+    e = sum(i * m.x[i] for i in range(N1))
 timer.toc('created expression with sum function')
 
 for i in range(N2):

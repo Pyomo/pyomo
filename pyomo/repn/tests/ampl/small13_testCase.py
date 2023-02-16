@@ -25,6 +25,6 @@ model.x = Var(initialize=0.5)
 
 model.obj = Objective(expr=model.x, sense=maximize)
 
-model.c1 = Constraint(expr= (model.x**3 - model.x) == 0)
-model.c2 = Constraint(expr= 10*(model.x**3 - model.x) == 0)
-model.c3 = Constraint(expr= (model.x**3 - model.x)/10.0 == 0)
+model.c1 = Constraint(expr=(model.x**3 - model.x) == 0)
+model.c2 = Constraint(expr=10 * (model.x**3 - model.x) == 0)
+model.c3 = Constraint(expr=(model.x**3 - model.x) / 10.0 == 0)

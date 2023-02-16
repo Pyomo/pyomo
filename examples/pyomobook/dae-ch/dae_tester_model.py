@@ -3,7 +3,7 @@ import pyomo.environ as pyo
 import pyomo.dae as dae
 
 m = pyo.ConcreteModel()
-m.t = dae.ContinuousSet(bounds=(0,1))
+m.t = dae.ContinuousSet(bounds=(0, 1))
 m.x1 = pyo.Var(m.t)
 
 # @second-deriv:
@@ -20,8 +20,8 @@ print(len(m.t))
 print(len(m.x1))
 
 m = pyo.ConcreteModel()
-m.t1 = dae.ContinuousSet(bounds=(0,1))
-m.t2 = dae.ContinuousSet(bounds=(0,1))
+m.t1 = dae.ContinuousSet(bounds=(0, 1))
+m.t2 = dae.ContinuousSet(bounds=(0, 1))
 
 m.x1 = pyo.Var(m.t1, m.t2)
 m.dx1dt2 = dae.DerivativeVar(m.x1, wrt=(m.t1, m.t2))
@@ -39,8 +39,8 @@ print(len(m.t2))
 print(len(m.x1))
 
 m = pyo.ConcreteModel()
-m.t1 = dae.ContinuousSet(bounds=(0,1))
-m.t2 = dae.ContinuousSet(bounds=(0,1))
+m.t1 = dae.ContinuousSet(bounds=(0, 1))
+m.t2 = dae.ContinuousSet(bounds=(0, 1))
 
 m.x1 = pyo.Var(m.t1, m.t2)
 m.dx1dt2 = dae.DerivativeVar(m.x1, wrt=(m.t1, m.t2))
@@ -58,14 +58,14 @@ print(len(m.t2))
 print(len(m.x1))
 
 m = pyo.ConcreteModel()
-m.t1 = dae.ContinuousSet(bounds=(0,1))
-m.t2 = dae.ContinuousSet(bounds=(0,1))
+m.t1 = dae.ContinuousSet(bounds=(0, 1))
+m.t2 = dae.ContinuousSet(bounds=(0, 1))
 
 m.x1 = pyo.Var(m.t1, m.t2)
 m.dx1dt2 = dae.DerivativeVar(m.x1, wrt=(m.t1, m.t2))
 
 # @finite-colloc:
-# Apply a combination of finite difference and 
+# Apply a combination of finite difference and
 # collocation schemes
 discretizer1 = pyo.TransformationFactory('dae.finite_difference')
 discretizer2 = pyo.TransformationFactory('dae.collocation')

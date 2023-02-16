@@ -10,14 +10,20 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
-from pyomo.common.dependencies import networkx_available
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import (
+    networkx_available,
+    scipy_available,
+    attempt_import,
+)
+plotly, plotly_available = attempt_import("plotly")
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
     get_structural_incidence_matrix,
     get_numeric_incidence_matrix,
     get_incidence_graph,
+    get_bipartite_incidence_graph,
+    extract_bipartite_subgraph,
 )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
@@ -32,6 +38,7 @@ from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 if networkx_available:
+    import networkx as nx
     from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
 from pyomo.contrib.pynumero.asl import AmplInterface
 
@@ -1236,6 +1243,260 @@ class TestIncludeInequality(unittest.TestCase):
         nlp = PyomoNLP(m)
         igraph = IncidenceGraphInterface(nlp, include_inequality=True)
         self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestGetIncidenceGraph(unittest.TestCase):
+
+    def make_test_model(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3, 4])
+        m.v = pyo.Var(m.I, bounds=(0, None))
+        m.eq1 = pyo.Constraint(expr=m.v[1]**2 + m.v[2]**2 == 1.0)
+        m.eq2 = pyo.Constraint(expr=m.v[1] + 2.0 == m.v[3])
+        m.ineq1 = pyo.Constraint(expr=m.v[2] - m.v[3]**0.5 + m.v[4]**2 <= 1.0)
+        m.ineq2 = pyo.Constraint(expr=m.v[2]*m.v[4] >= 1.0)
+        m.ineq3 = pyo.Constraint(expr=m.v[1] >= m.v[4]**4)
+        m.obj = pyo.Objective(expr=-m.v[1] - m.v[2] + m.v[3]**2 + m.v[4]**2)
+        return m
+
+    def test_bipartite_incidence_graph(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.ineq1
+        #   3: m.ineq2
+        #   4: m.ineq3
+        #   5: m.v[1]
+        #   6: m.v[2]
+        #   7: m.v[3]
+        #   8: m.v[4]
+
+        # Assert some basic structure
+        self.assertEqual(len(graph.nodes), 9)
+        self.assertEqual(len(graph.edges), 11)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {5, 6})
+        self.assertEqual(set(graph[1]), {5, 7})
+        self.assertEqual(set(graph[2]), {6, 7, 8})
+        self.assertEqual(set(graph[3]), {6, 8})
+        self.assertEqual(set(graph[4]), {5, 8})
+        self.assertEqual(set(graph[5]), {0, 1, 4})
+        self.assertEqual(set(graph[6]), {0, 2, 3})
+        self.assertEqual(set(graph[7]), {1, 2})
+        self.assertEqual(set(graph[8]), {2, 3, 4})
+
+    def test_unused_var(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.v[1]
+        #   3: m.v[2]
+        #   4: m.v[3]
+        #   5: m.v[4]
+
+        self.assertEqual(len(graph.nodes), 6)
+        self.assertEqual(len(graph.edges), 4)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {2, 3})
+        self.assertEqual(set(graph[1]), {2, 4})
+        self.assertEqual(set(graph[2]), {0, 1})
+        self.assertEqual(set(graph[3]), {0})
+        self.assertEqual(set(graph[4]), {1})
+        self.assertEqual(set(graph[5]), set())
+
+    def test_fixed_vars(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        m.v[1].fix()
+        m.v[4].fix()
+
+        # Slightly odd situation where we provide fixed variables, but
+        # then tell the graph to not include them. Nodes will be created
+        # for these vars, but they will not have any edges.
+        graph = get_bipartite_incidence_graph(
+            variables, constraints, include_fixed=False
+        )
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.ineq1
+        #   3: m.ineq2
+        #   4: m.ineq3
+        #   5: m.v[1]
+        #   6: m.v[2]
+        #   7: m.v[3]
+        #   8: m.v[4]
+
+        self.assertEqual(len(graph.nodes), 9)
+        self.assertEqual(len(graph.edges), 5)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {6})
+        self.assertEqual(set(graph[1]), {7})
+        self.assertEqual(set(graph[2]), {6, 7})
+        self.assertEqual(set(graph[3]), {6})
+        self.assertEqual(set(graph[4]), set())
+        self.assertEqual(set(graph[5]), set())
+        self.assertEqual(set(graph[6]), {0, 2, 3})
+        self.assertEqual(set(graph[7]), {1, 2})
+        self.assertEqual(set(graph[8]), set())
+
+    def test_extract_subgraph(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        sg_cons = [0, 2]
+        sg_vars = [i + len(constraints) for i in [2, 0, 3]]
+
+        subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+        # Subgraph nodes:
+        #   0: m.eq1
+        #   1: m.ineq1
+        #   2: m.v[3]
+        #   3: m.v[1]
+        #   4: m.v[4]
+
+        self.assertEqual(len(subgraph.nodes), 5)
+        self.assertEqual(len(subgraph.edges), 3)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(subgraph))
+
+        self.assertEqual(set(subgraph[0]), {3})
+        self.assertEqual(set(subgraph[1]), {2, 4})
+        self.assertEqual(set(subgraph[2]), {1})
+        self.assertEqual(set(subgraph[3]), {0})
+        self.assertEqual(set(subgraph[4]), {1})
+
+    def test_extract_exceptions(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        sg_cons = [0, 2, 5]
+        sg_vars = [i + len(constraints) for i in [2, 3]]
+        msg = "Subgraph is not bipartite"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+        sg_cons = [0, 2, 5]
+        sg_vars = [i + len(constraints) for i in [2, 0, 3]]
+        msg = "provided more than once"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestGetAdjacent(unittest.TestCase):
+
+    def test_get_adjacent_to_var(self):
+        m = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface(m)
+        adj_cons = igraph.get_adjacent_to(m.rho)
+        self.assertEqual(
+            ComponentSet(adj_cons),
+            ComponentSet([
+                m.holdup_eqn[1],
+                m.holdup_eqn[2],
+                m.holdup_eqn[3],
+                m.density_eqn,
+            ]),
+        )
+
+    def test_get_adjacent_to_con(self):
+        m = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface(m)
+        adj_vars = igraph.get_adjacent_to(m.density_eqn)
+        self.assertEqual(
+            ComponentSet(adj_vars),
+            ComponentSet([
+                m.x[1],
+                m.x[2],
+                m.x[3],
+                m.rho,
+            ]),
+        )
+
+    def test_get_adjacent_exceptions(self):
+        m = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface()
+        msg = "Cannot get components adjacent to"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            adj_vars = igraph.get_adjacent_to(m.density_eqn)
+
+        m.x[1].fix()
+        igraph = IncidenceGraphInterface(m, include_fixed=False)
+        msg = "Cannot find component"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            adj_cons = igraph.get_adjacent_to(m.x[1])
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestInterface(unittest.TestCase):
+
+    def test_subgraph_with_fewer_var_or_con(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2])
+        m.v = pyo.Var(m.I)
+        m.eq1 = pyo.Constraint(expr=m.v[1] + m.v[2] == 1)
+        m.ineq1 = pyo.Constraint(expr=m.v[1] - m.v[2] <= 2)
+
+        # Defensively set include_inequality=True, which is the current
+        # default, in case this default changes.
+        igraph = IncidenceGraphInterface(m, include_inequality=True)
+
+        variables = list(m.v.values())
+        constraints = [m.ineq1]
+        matching = igraph.maximum_matching(variables, constraints)
+        self.assertEqual(len(matching), 1)
+
+        variables = [m.v[2]]
+        constraints = [m.eq1, m.ineq1]
+        matching = igraph.maximum_matching(variables, constraints)
+        self.assertEqual(len(matching), 1)
+
+    @unittest.skipUnless(plotly_available, "Plotly is not available")
+    def test_plot(self):
+        """
+        Unfortunately, this test only ensures the code runs without errors.
+        It does not test for correctness.
+        """
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-1, 1))
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        # NOTE: Objective will not be displayed
+        m.obj = pyo.Objective(expr=m.y**2 + m.z**2)
+        m.c1 = pyo.Constraint(expr=m.y == 2*m.x + 1)
+        m.c2 = pyo.Constraint(expr=m.z >= m.x)
+        m.y.fix()
+        igraph = IncidenceGraphInterface(
+            m, include_inequality=True, include_fixed=True
+        )
+        igraph.plot(title='test plot', show=False)
 
 
 if __name__ == "__main__":

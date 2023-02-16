@@ -8,14 +8,12 @@ v = pmo.variable()
 
 v = pmo.variable(domain=pmo.Reals)
 
-v = pmo.variable(domain=pmo.NonNegativeReals,
-                 ub=10)
+v = pmo.variable(domain=pmo.NonNegativeReals, ub=10)
 
-v = pmo.variable(domain_type=pmo.RealSet,
-                 lb=1)
+v = pmo.variable(domain_type=pmo.RealSet, lb=1)
 
 # error (because domain lower bound is finite)
-#v = pmo.variable(domain=pmo.NonNegativeReals,
+# v = pmo.variable(domain=pmo.NonNegativeReals,
 #                 lb=1)
 
 #
@@ -26,14 +24,12 @@ v = pmo.variable(domain=pmo.Binary)
 
 v = pmo.variable(domain=pmo.Integers)
 
-v = pmo.variable(domain=pmo.NonNegativeIntegers,
-                 ub=10)
+v = pmo.variable(domain=pmo.NonNegativeIntegers, ub=10)
 
-v = pmo.variable(domain_type=pmo.IntegerSet,
-                 lb=1)
+v = pmo.variable(domain_type=pmo.IntegerSet, lb=1)
 
 # error (because domain upper bound is finite)
-#v = pmo.variable(domain=pmo.NegativeIntegers,
+# v = pmo.variable(domain=pmo.NegativeIntegers,
 #                 ub=10)
 
 #

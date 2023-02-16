@@ -9,18 +9,21 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import Interface
+from pyomo.common.plugin_base import Interface
+from pyomo.common.deprecation import deprecated
 
 
+@deprecated(
+    'The pyomo.checker module has been deprecated.', version='TBD', remove_in='6.6'
+)
 class IModelChecker(Interface):
-
     def check(self, runner, script, info):
         """
         Check a particular piece of Python information for errors.
 
         Provides the primary interface for checking some code for problems,
-        according to the particular subclass's definition. 
-        
+        according to the particular subclass's definition.
+
         @param runner the ModelCheckRunner instance that has dispatched
                       this call to check().
         @param script the ModelScript instance being checked.
@@ -39,7 +42,7 @@ class IModelChecker(Interface):
         Finish checking the given script from the given runner.
         """
 
-    def problem(self, script = None, message = "Error", lineno = None):
+    def problem(self, script=None, message="Error", lineno=None):
         """
         Write a problem to the console. The format varies and can be
         changed in subclasses; by default, this method prints the following:
@@ -51,4 +54,3 @@ class IModelChecker(Interface):
         @param message the error to display.
         @param lineno the line number on which the error occurred.
         """
-

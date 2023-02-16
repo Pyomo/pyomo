@@ -42,14 +42,13 @@ if os.system('gjh_asl_json -v') == 0:
 names = []
 # add test methods to classes
 for f in glob.glob(join(currdir, '*_testCase.py')):
-    names.append(re.split('[._]',os.path.basename(f))[0])
+    names.append(re.split('[._]', os.path.basename(f))[0])
 
 
 class Tests(unittest.TestCase):
-
     def pyomo(self, cmd):
         os.chdir(currdir)
-        output = main.main(['convert', '--logging=quiet', '-c']+cmd)
+        output = main.main(['convert', '--logging=quiet', '-c'] + cmd)
         return output
 
     def setUp(self):
@@ -67,21 +66,17 @@ class BaselineTests(Tests):
 
     @parameterized.parameterized.expand(input=names)
     def nlwriter_baseline_test(self, name):
-        baseline = join(currdir, name+'.pyomo.nl')
-        testFile = TempfileManager.create_tempfile(
-            suffix=name + '.test.nl')
-        cmd = ['--output=' + testFile,
-               join(currdir, name+'_testCase.py')]
+        baseline = join(currdir, name + '.pyomo.nl')
+        testFile = TempfileManager.create_tempfile(suffix=name + '.test.nl')
+        cmd = ['--output=' + testFile, join(currdir, name + '_testCase.py')]
         if os.path.exists(join(currdir, name + '.dat')):
             cmd.append(join(currdir, name + '.dat'))
         self.pyomo(cmd)
 
         # Check that the pyomo nl file matches its own baseline
         with open(testFile, 'r') as f1, open(baseline, 'r') as f2:
-            f1_contents = list(filter(
-                None, f1.read().replace('n', 'n ').split()))
-            f2_contents = list(filter(
-                None, f2.read().replace('n', 'n ').split()))
+            f1_contents = list(filter(None, f1.read().replace('n', 'n ').split()))
+            f2_contents = list(filter(None, f2.read().replace('n', 'n ').split()))
             for item1, item2 in zip_longest(f1_contents, f2_contents):
                 try:
                     self.assertEqual(float(item1), float(item2))
@@ -89,8 +84,7 @@ class BaselineTests(Tests):
                     self.assertEqual(item1, item2)
 
 
-@unittest.skipUnless(
-    has_gjh_asl_json, "'gjh_asl_json' executable not available")
+@unittest.skipUnless(has_gjh_asl_json, "'gjh_asl_json' executable not available")
 class ASLJSONTests(Tests):
 
     #
@@ -102,51 +96,63 @@ class ASLJSONTests(Tests):
     #
     @parameterized.parameterized.expand(input=names)
     def nlwriter_asl_test(self, name):
-        testFile = TempfileManager.create_tempfile(suffix=name+'.test.nl')
+        testFile = TempfileManager.create_tempfile(suffix=name + '.test.nl')
         testFile_row = testFile[:-2] + 'row'
         TempfileManager.add_tempfile(testFile_row, exists=False)
         testFile_col = testFile[:-2] + 'col'
         TempfileManager.add_tempfile(testFile_col, exists=False)
 
-        cmd = ['--output='+testFile,
-               '--file-determinism=2',
-               '--symbolic-solver-labels',
-               join(currdir, name+'_testCase.py')]
+        cmd = [
+            '--output=' + testFile,
+            '--file-determinism=2',
+            '--symbolic-solver-labels',
+            join(currdir, name + '_testCase.py'),
+        ]
         if os.path.exists(join(currdir, name + '.dat')):
-               cmd.append(join(currdir, name + '.dat'))
+            cmd.append(join(currdir, name + '.dat'))
 
         self.pyomo(cmd)
 
         #
         # compare AMPL and Pyomo nl file structure
         #
-        testFile_json = testFile[:-2]+'json'
+        testFile_json = testFile[:-2] + 'json'
         TempfileManager.add_tempfile(testFile_json, exists=False)
         # obtain the nl file summary information for comparison with ampl
         p = subprocess.run(
-            ['gjh_asl_json', testFile,
-             'rows=' + testFile_row,
-             'cols=' + testFile_col,
-             'json=' + testFile_json],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            universal_newlines=True)
+            [
+                'gjh_asl_json',
+                testFile,
+                'rows=' + testFile_row,
+                'cols=' + testFile_col,
+                'json=' + testFile_json,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
         self.assertTrue(p.returncode == 0, msg=p.stdout)
 
-        baseFile = join(currdir, name+'.ampl.nl')
-        amplFile = TempfileManager.create_tempfile(suffix=name+'.ampl.json')
+        baseFile = join(currdir, name + '.ampl.nl')
+        amplFile = TempfileManager.create_tempfile(suffix=name + '.ampl.json')
         # obtain the nl file summary information for comparison with ampl
         p = subprocess.run(
-            ['gjh_asl_json', baseFile,
-             'rows=' + baseFile[:-2] + 'row',
-             'cols=' + baseFile[:-2] + 'col',
-             'json=' + amplFile],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            universal_newlines=True)
+            [
+                'gjh_asl_json',
+                baseFile,
+                'rows=' + baseFile[:-2] + 'row',
+                'cols=' + baseFile[:-2] + 'col',
+                'json=' + amplFile,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
         self.assertTrue(p.returncode == 0, msg=p.stdout)
 
         with open(testFile_json, 'r') as f1, open(amplFile, 'r') as f2:
-            self.assertStructuredAlmostEqual(
-                json.load(f1), json.load(f2), abstol=1e-8)
+            self.assertStructuredAlmostEqual(json.load(f1), json.load(f2), abstol=1e-8)
+
 
 if __name__ == "__main__":
     deleteFiles = False

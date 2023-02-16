@@ -26,5 +26,4 @@ model.y = Var(initialize=1.0)
 
 model.OBJ = Objective(expr=model.y**2)
 
-model.CON1 = Constraint(expr=model.y*model.x == 4)
-
+model.CON1 = Constraint(expr=model.y * model.x == 4)

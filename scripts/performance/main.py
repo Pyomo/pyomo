@@ -18,6 +18,7 @@ import os
 import platform
 import sys
 import time
+
 try:
     import ujson as json
 except ImportError:
@@ -39,6 +40,7 @@ class TimingHandler(logging.Handler):
     information and adds it to the test data recorder.
 
     """
+
     def __init__(self):
         super(TimingHandler, self).__init__()
         self._testRecord = None
@@ -81,6 +83,7 @@ class DataRecorder(object):
     report.
 
     """
+
     def __init__(self, data):
         self._data = data
         self._timer = TicTocTimer()
@@ -130,12 +133,7 @@ def getProjectInfo(project):
         version = _module.__version__
     finally:
         os.chdir(cwd)
-    return {
-        'branch': branch,
-        'sha': sha,
-        'diffs': diffs,
-        'version': version,
-    }
+    return {'branch': branch, 'sha': sha, 'diffs': diffs, 'version': version}
 
 
 def getRunInfo(options):
@@ -151,6 +149,7 @@ def getRunInfo(options):
         info['pypy_version'] = tuple(sys.pypy_version_info)
     if options.cython:
         import Cython
+
         info['cython'] = tuple(int(x) for x in Cython.__version__.split('.'))
     for project in options.projects:
         info[project] = getProjectInfo(project)
@@ -160,7 +159,7 @@ def getRunInfo(options):
 def run_tests(options, argv):
     gc.collect()
     gc.collect()
-    results = ( getRunInfo(options), OrderedDict() )
+    results = (getRunInfo(options), OrderedDict())
     recorder = DataRecorder(results[1])
     unittest.pytest.main(argv, plugins=[recorder])
     gc.collect()
@@ -169,46 +168,48 @@ def run_tests(options, argv):
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(
-        epilog="Remaining arguments are passed to pytest"
-    )
+    parser = argparse.ArgumentParser(epilog="Remaining arguments are passed to pytest")
     parser.add_argument(
-        '-o', '--output',
+        '-o',
+        '--output',
         action='store',
         dest='output',
         default=None,
-        help='Store the test results to the specified file.'
+        help='Store the test results to the specified file.',
     )
     parser.add_argument(
-        '-d', '--dir',
+        '-d',
+        '--dir',
         action='store',
         dest='output_dir',
         default=None,
         help='Store the test results in the specified directory.  If -o '
         'is not specified, then a file name is automatically generated '
-        'based on the first "main project" git branch and hash.'
+        'based on the first "main project" git branch and hash.',
     )
     parser.add_argument(
-        '-p', '--project',
+        '-p',
+        '--project',
         action='append',
         dest='projects',
         default=[],
         help='Main project (used for generating and recording SHA and '
-        'DIFF information)'
+        'DIFF information)',
     )
     parser.add_argument(
-        '-n', '--replicates',
+        '-n',
+        '--replicates',
         action='store',
         dest='replicates',
         type=int,
         default=1,
-        help='Number of replicates to run.'
+        help='Number of replicates to run.',
     )
     parser.add_argument(
         '--with-cython',
         action='store_true',
         dest='cython',
-        help='Cythonization enabled.'
+        help='Cythonization enabled.',
     )
 
     options, argv = parser.parse_known_args(argv)
@@ -229,11 +230,11 @@ def main(argv):
         if not options.output:
             options.output = 'perf-%s-%s-%s-%s.json' % (
                 results[0][options.projects[0]]['branch'],
-                results[0][options.projects[0]]['sha'][:7] + (
-                    '_mod' if results[0][options.projects[0]]['diffs'] else ''),
-                results[0]['python_implementation'].lower() + (
-                    '.'.join(str(i) for i in results[0]['python_version'][:3])),
-                time.strftime('%y%m%d_%H%M', time.localtime())
+                results[0][options.projects[0]]['sha'][:7]
+                + ('_mod' if results[0][options.projects[0]]['diffs'] else ''),
+                results[0]['python_implementation'].lower()
+                + ('.'.join(str(i) for i in results[0]['python_version'][:3])),
+                time.strftime('%y%m%d_%H%M', time.localtime()),
             )
         options.output = os.path.join(options.output_dir, options.output)
     if options.output:
@@ -252,6 +253,7 @@ def main(argv):
             ostream.close()
     print("Performance run complete.")
     return results
+
 
 if __name__ == '__main__':
     results = main(sys.argv)

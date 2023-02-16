@@ -13,6 +13,7 @@ import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Var, Objective, Constraint, Binary, maximize
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
+
 @register_model
 class MIQCP_simple(_BaseTestModel):
     """
@@ -25,7 +26,7 @@ class MIQCP_simple(_BaseTestModel):
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.add_results(self.description+".json")
+        self.add_results(self.description + ".json")
 
     def _generate_model(self):
         self.model = ConcreteModel()
@@ -36,10 +37,10 @@ class MIQCP_simple(_BaseTestModel):
         model.y = Var(within=Binary)
         model.z = Var(within=Binary)
 
-        model.obj = Objective(expr=model.x,sense=maximize)
-        model.c0 = Constraint(expr=model.x+model.y+model.z == 1)
+        model.obj = Objective(expr=model.x, sense=maximize)
+        model.c0 = Constraint(expr=model.x + model.y + model.z == 1)
         model.qc0 = Constraint(expr=model.x**2 + model.y**2 <= model.z**2)
-        model.qc1 = Constraint(expr=model.x**2 <= model.y*model.z)
+        model.qc1 = Constraint(expr=model.x**2 <= model.y * model.z)
 
     def warmstart_model(self):
         assert self.model is not None
@@ -48,9 +49,9 @@ class MIQCP_simple(_BaseTestModel):
         model.y.value = None
         model.z.value = None
 
+
 @register_model
 class MIQCP_simple_kernel(MIQCP_simple):
-
     def _generate_model(self):
         self.model = pmo.block()
         model = self.model
@@ -60,7 +61,7 @@ class MIQCP_simple_kernel(MIQCP_simple):
         model.y = pmo.variable(domain=Binary)
         model.z = pmo.variable(domain=Binary)
 
-        model.obj = pmo.objective(model.x,sense=maximize)
-        model.c0 = pmo.constraint(model.x+model.y+model.z == 1)
+        model.obj = pmo.objective(model.x, sense=maximize)
+        model.c0 = pmo.constraint(model.x + model.y + model.z == 1)
         model.qc0 = pmo.constraint(model.x**2 + model.y**2 <= model.z**2)
-        model.qc1 = pmo.constraint(model.x**2 <= model.y*model.z)
+        model.qc1 = pmo.constraint(model.x**2 <= model.y * model.z)
