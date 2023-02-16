@@ -232,24 +232,28 @@ def ValidEnum(enum_class):
         return obj
     return fcn
 
+
 class pyrosTerminationCondition(Enum):
-    '''
-    Enum class to describe termination conditions of the grcs algorithm
-    robust_optimal: The grcs algorithm returned with a robust_optimal solution under normal conditions
-    robust_feasible: The grcs algorithm determined a proven robust feasible solution.
-                     See documentation for the distinction between robust feasible and robust optimal.
-    robust_infeasible: The grcs algorithm terminated with a proof of robust infeasibility.
-    max_iter: The grcs algorithm could not identify a robust optimal solution within the specified max_iter.
-              Consider increasing the max_iter config param.
-    subsolver_error: There was an error in the user-specified sub-solvers used in the grcs solution procedure. Check the sub-solver log files.
-    time_out: The grcs algorithm could not identify a robust optimal solution within the specified time_limit.
-    '''
+    """Enumeration of all possible PyROS termination conditions."""
+
     robust_feasible = 0
+    """Final solution is robust feasible."""
+
     robust_optimal = 1
+    """Final solution is robust optimal."""
+
     robust_infeasible = 2
+    """Problem is robust infeasible."""
+
     max_iter = 3
+    """Maximum number of GRCS iteration reached."""
+
     subsolver_error = 4
+    """Subsolver(s) provided could not solve a subproblem to
+    an acceptable termination status."""
+
     time_out = 5
+    """Maximum allowable time exceeded."""
 
 
 class SeparationStrategy(Enum):
