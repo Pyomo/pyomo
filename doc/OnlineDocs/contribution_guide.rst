@@ -28,11 +28,14 @@ Coding Standards
       maintainer (such as a Github ID) should be included in the Sphinx
       documentation
 
-Sphinx-compliant documentation is required for:
+Online Pyomo documentation is generated using `Sphinx <https://www.sphinx-doc.org/en/master/>`_
+with the ``napoleon`` extension enabled. For API documentation we use of one of these 
+`supported styles for docstrings <https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html>`_, 
+but we prefer the NumPy standard. Whichever you choose, we require compliant docstrings for:
     
     * Modules
     * Public and Private Classes
-    * Public and Private Functions 
+    * Public and Private Functions
 
 We also encourage you to include examples, especially for new features
 and contributions to ``pyomo.contrib``.
@@ -41,7 +44,7 @@ Testing
 +++++++
 
 Pyomo uses `unittest <https://docs.python.org/3/library/unittest.html>`_,
-`nose <https://nose.readthedocs.io/>`_,
+`pytest <https://docs.pytest.org/>`_,
 `GitHub Actions <https://docs.github.com/en/free-pro-team@latest/actions>`_,
 and Jenkins
 for testing and continuous integration. Submitted code should include 
@@ -68,6 +71,23 @@ testing infrastructure. Any pull requests marked '[WIP]' will not be
 reviewed or merged by the core development team. In addition, any
 '[WIP]' pull request left open for an extended period of time without
 active development may be marked 'stale' and closed.
+
+Python Version Support
+++++++++++++++++++++++
+
+By policy, Pyomo supports and tests the currently supported Python versions,
+as can be seen on `Status of Python Versions <https://devguide.python.org/versions/>`_.
+It is expected that tests will pass for all of the supported and tested
+versions of Python, unless otherwise stated.
+
+At the time of the first Pyomo release after the end-of-life of a minor Python
+version, we will remove testing and support for that Python version.
+
+This will also result in a bump in the minor Pyomo version.
+
+For example, assume Python 3.A is declared end-of-life while Pyomo is on
+version 6.3.Y. After the release of Pyomo 6.3.(Y+1), Python 3.A will be removed,
+and the next Pyomo release will be 6.4.0.
 
 Working on Forks and Branches
 -----------------------------

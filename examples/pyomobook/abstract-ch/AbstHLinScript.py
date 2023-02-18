@@ -12,17 +12,26 @@ model.c = pyo.Param(model.A)
 model.b = pyo.Param()
 model.u = pyo.Param(model.A)
 
+
 def xbounds_rule(model, i):
     return (0, model.u[i])
+
+
 model.x = pyo.Var(model.A, bounds=xbounds_rule)
 
+
 def obj_rule(model):
-    return sum(model.h[i] * (1 - model.u[i]/model.d[i]**2) * model.x[i] for i in model.A)
+    return sum(
+        model.h[i] * (1 - model.u[i] / model.d[i] ** 2) * model.x[i] for i in model.A
+    )
+
 
 model.z = pyo.Objective(rule=obj_rule, sense=pyo.maximize)
 
+
 def budget_rule(model):
     return pyo.summation(model.c, model.x) <= model.b
+
 
 model.budgetconstr = pyo.Constraint(rule=budget_rule)
 
@@ -30,8 +39,7 @@ model.budgetconstr = pyo.Constraint(rule=budget_rule)
 opt = pyo.SolverFactory('glpk')
 
 instance = model.create_instance("AbstractH.dat")
-results = opt.solve(instance) # solves and updates instance
+results = opt.solve(instance)  # solves and updates instance
 
 instance.display()
 # @:tail
-

@@ -11,8 +11,15 @@
 
 import os
 from pyomo.environ import (
-    SolverFactory, ConcreteModel, Var, Constraint, Objective,
-    Integers, Boolean, Suffix, maximize,
+    SolverFactory,
+    ConcreteModel,
+    Var,
+    Constraint,
+    Objective,
+    Integers,
+    Boolean,
+    Suffix,
+    maximize,
 )
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
@@ -23,9 +30,7 @@ cbc_available = opt_cbc.available(exception_flag=False)
 
 
 class CBCTests(unittest.TestCase):
-
-    @unittest.skipIf(not cbc_available,
-                     "The CBC solver is not available")
+    @unittest.skipIf(not cbc_available, "The CBC solver is not available")
     def test_warm_start(self):
 
         m = ConcreteModel()
@@ -39,9 +44,8 @@ class CBCTests(unittest.TestCase):
         tempdir = os.path.dirname(TempfileManager.create_tempfile())
         TempfileManager.pop()
 
-        sameDrive = os.path.splitdrive(tempdir)[0] == \
-                    os.path.splitdrive(os.getcwd())[0]
-        
+        sameDrive = os.path.splitdrive(tempdir)[0] == os.path.splitdrive(os.getcwd())[0]
+
         # At the moment, CBC does not cleanly handle windows-style drive
         # names in the MIPSTART file name (though at least 2.10.5).
         #
@@ -58,8 +62,9 @@ class CBCTests(unittest.TestCase):
         m.w.set_value(1)
 
         with SolverFactory("cbc") as opt, capture_output() as output:
-            opt.solve(m, tee=True, warmstart=True, options={
-                'sloglevel': 2, 'loglevel': 2})
+            opt.solve(
+                m, tee=True, warmstart=True, options={'sloglevel': 2, 'loglevel': 2}
+            )
 
         log = output.getvalue()
         # Check if CBC loaded the warmstart file.
@@ -73,7 +78,6 @@ class CBCTests(unittest.TestCase):
         else:
             self.assertNotIn('MIPStart values read', log)
 
-
         # Set some initial values for warm start.
         m.x.set_value(10)
         m.z.set_value(5)
@@ -83,8 +87,9 @@ class CBCTests(unittest.TestCase):
             _origDir = os.getcwd()
             os.chdir(tempdir)
             with SolverFactory("cbc") as opt, capture_output() as output:
-                opt.solve(m, tee=True, warmstart=True, options={
-                    'sloglevel': 2, 'loglevel': 2})
+                opt.solve(
+                    m, tee=True, warmstart=True, options={'sloglevel': 2, 'loglevel': 2}
+                )
         finally:
             os.chdir(_origDir)
 
@@ -96,9 +101,7 @@ class CBCTests(unittest.TestCase):
         # m.x is ignored because it is continuous, so cost should be 5+1
         self.assertIn('MIPStart provided solution with cost 6', log)
 
-
-    @unittest.skipIf(not cbc_available,
-                     "The CBC solver is not available")
+    @unittest.skipIf(not cbc_available, "The CBC solver is not available")
     def test_duals_signs(self):
         m = ConcreteModel()
         m.x = Var()
@@ -116,8 +119,7 @@ class CBCTests(unittest.TestCase):
         self.assertAlmostEqual(res.problem.upper_bound, 1)
         self.assertAlmostEqual(m.dual[m.c], 1)
 
-    @unittest.skipIf(not cbc_available,
-                     "The CBC solver is not available")
+    @unittest.skipIf(not cbc_available, "The CBC solver is not available")
     def test_rc_signs(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-1, 1))

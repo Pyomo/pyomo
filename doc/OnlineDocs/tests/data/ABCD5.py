@@ -10,10 +10,10 @@ model.W = Param(model.Z)
 
 instance = model.create_instance('ABCD5.dat')
 
-print('Z '+str(sorted(list(instance.Z.data()))))
+print('Z ' + str(sorted(list(instance.Z.data()))))
 print('Y')
 for key in sorted(instance.Y.keys()):
-    print(name(instance.Y,key)+" "+str(value(instance.Y[key])))
+    print(name(instance.Y, key) + " " + str(value(instance.Y[key])))
 print('W')
 for key in sorted(instance.W.keys()):
-    print(name(instance.W,key)+" "+str(value(instance.W[key])))
+    print(name(instance.W, key) + " " + str(value(instance.W[key])))

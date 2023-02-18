@@ -21,9 +21,6 @@ model = ConcreteModel()
 model.x = Var(bounds=(min(x), max(x)))
 model.y = Var()
 
-model.fx = Piecewise(model.y, model.x,
-                     pw_pts=x,
-                     pw_constr_type='EQ',
-                     f_rule=y)
+model.fx = Piecewise(model.y, model.x, pw_pts=x, pw_constr_type='EQ', f_rule=y)
 
 model.o = Objective(expr=model.y)

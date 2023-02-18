@@ -10,25 +10,20 @@
 #  ___________________________________________________________________________
 
 """Utility functions and classes for the MindtPy solver."""
-from __future__ import division
-from contextlib import contextmanager
 import logging
-from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
+from pyomo.common.collections import ComponentMap
 from pyomo.core import (Block, Constraint, VarList,
-                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory, value)
-from pyomo.gdp import Disjunct, Disjunction
+                        Objective, Reals, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.opt import SolverFactory, SolverResults, ProblemSense
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.opt import ProblemSense
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.util.model_size import build_model_size_report
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
 import math
@@ -43,66 +38,7 @@ class MindtPySolveData(object):
     pass
 
 
-def model_is_valid(solve_data, config):
-    """Determines whether the model is solvable by MindtPy.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    config : ConfigBlock
-        The specific configurations for MindtPy.
-
-    Returns
-    -------
-    bool
-        True if model is solvable in MindtPy, False otherwise.
-    """
-    m = solve_data.working_model
-    MindtPy = m.MindtPy_utils
-
-    # Handle LP/NLP being passed to the solver
-    prob = solve_data.results.problem
-    if len(MindtPy.discrete_variable_list) == 0:
-        config.logger.info('Problem has no discrete decisions.')
-        obj = next(m.component_data_objects(ctype=Objective, active=True))
-        if (any(c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree for c in MindtPy.constraint_list) or
-                obj.expr.polynomial_degree() not in solve_data.mip_objective_polynomial_degree):
-            config.logger.info(
-                'Your model is a NLP (nonlinear program). '
-                'Using NLP solver %s to solve.' % config.nlp_solver)
-            nlpopt = SolverFactory(config.nlp_solver)
-            set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
-            nlpopt.solve(solve_data.original_model,
-                         tee=config.nlp_solver_tee, **config.nlp_solver_args)
-            return False
-        else:
-            config.logger.info(
-                'Your model is an LP (linear program). '
-                'Using LP solver %s to solve.' % config.mip_solver)
-            mainopt = SolverFactory(config.mip_solver)
-            if isinstance(mainopt, PersistentSolver):
-                mainopt.set_instance(solve_data.original_model)
-            set_solver_options(mainopt, solve_data,
-                               config, solver_type='mip')
-            results = mainopt.solve(solve_data.original_model,
-                                    tee=config.mip_solver_tee,
-                                    load_solutions=False,
-                                    **config.mip_solver_args
-                                    )
-            if len(results.solution) > 0:
-                solve_data.original_model.solutions.load_from(results)
-            return False
-
-    if not hasattr(m, 'dual') and config.calculate_dual_at_solution:  # Set up dual value reporting
-        m.dual = Suffix(direction=Suffix.IMPORT)
-
-    # TODO if any continuous variables are multiplied with binary ones,
-    #  need to do some kind of transformation (Glover?) or throw an error message
-    return True
-
-
-def calc_jacobians(solve_data, config):
+def calc_jacobians(model, config):
     """Generates a map of jacobians for the variables in the model.
 
     This function generates a map of jacobians corresponding to the variables in the
@@ -110,25 +46,26 @@ def calc_jacobians(solve_data, config):
 
     Parameters
     ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    model : Pyomo model
+        Target model to calculate jacobian.
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
-    solve_data.jacobians = ComponentMap()
+    jacobians = ComponentMap()
     if config.differentiate_mode == 'reverse_symbolic':
         mode = differentiate.Modes.reverse_symbolic
     elif config.differentiate_mode == 'sympy':
         mode = differentiate.Modes.sympy
-    for c in solve_data.mip.MindtPy_utils.nonlinear_constraint_list:
+    for c in model.MindtPy_utils.nonlinear_constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = differentiate(
             c.body, wrt_list=vars_in_constr, mode=mode)
-        solve_data.jacobians[c] = ComponentMap(
+        jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
+    return jacobians
 
 
 def add_feas_slacks(m, config):
@@ -164,7 +101,7 @@ def add_feas_slacks(m, config):
                     >= -MindtPy.feas_opt.slack_var)
 
 
-def add_var_bound(solve_data, config):
+def add_var_bound(model, config):
     """This function will add bounds for variables in nonlinear constraints if they are not bounded.
 
     This is to avoid an unbounded main problem in the LP/NLP algorithm. Thus, the model will be 
@@ -172,13 +109,12 @@ def add_var_bound(solve_data, config):
 
     Parameters
     ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    model : PyomoModel
+        Target model to add bound for its variables.
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
-    m = solve_data.working_model
-    MindtPy = m.MindtPy_utils
+    MindtPy = model.MindtPy_utils
     for c in MindtPy.nonlinear_constraint_list:
         for var in EXPR.identify_variables(c.body):
             if var.has_lb() and var.has_ub():
@@ -196,7 +132,7 @@ def add_var_bound(solve_data, config):
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
-    r"""This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
+    """This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
 
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}.
 
@@ -232,7 +168,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
-    r"""This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    """This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
 
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
 
@@ -260,23 +196,23 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm1 objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L1_obj')
-    obj_blk = model.MindtPy_utils.L1_obj = Block()
-    obj_blk.L1_obj_idx = RangeSet(len(model_vars))
-    obj_blk.L1_obj_var = Var(
-        obj_blk.L1_obj_idx, domain=Reals, bounds=(0, None))
-    obj_blk.abs_reform = ConstraintList()
-    for idx, v_model, v_setpoint in zip(obj_blk.L1_obj_idx, model_vars,
+    obj_block = model.MindtPy_utils.L1_obj = Block()
+    obj_block.L1_obj_idx = RangeSet(len(model_vars))
+    obj_block.L1_obj_var = Var(
+        obj_block.L1_obj_idx, domain=Reals, bounds=(0, None))
+    obj_block.abs_reform = ConstraintList()
+    for idx, v_model, v_setpoint in zip(obj_block.L1_obj_idx, model_vars,
                                         setpoint_vars):
-        obj_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -obj_blk.L1_obj_var[idx])
-        obj_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value <= obj_blk.L1_obj_var[idx])
+        obj_block.abs_reform.add(
+            expr=v_model - v_setpoint.value >= -obj_block.L1_obj_var[idx])
+        obj_block.abs_reform.add(
+            expr=v_model - v_setpoint.value <= obj_block.L1_obj_var[idx])
 
-    return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
+    return Objective(expr=sum(obj_block.L1_obj_var[idx] for idx in obj_block.L1_obj_idx))
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
-    r"""This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
+    """This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
 
     Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|.
 
@@ -304,20 +240,20 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm Infinity objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L_infinity_obj')
-    obj_blk = model.MindtPy_utils.L_infinity_obj = Block()
-    obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
-    obj_blk.abs_reform = ConstraintList()
+    obj_block = model.MindtPy_utils.L_infinity_obj = Block()
+    obj_block.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
+    obj_block.abs_reform = ConstraintList()
     for v_model, v_setpoint in zip(model_vars,
                                    setpoint_vars):
-        obj_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -obj_blk.L_infinity_obj_var)
-        obj_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value <= obj_blk.L_infinity_obj_var)
+        obj_block.abs_reform.add(
+            expr=v_model - v_setpoint.value >= -obj_block.L_infinity_obj_var)
+        obj_block.abs_reform.add(
+            expr=v_model - v_setpoint.value <= obj_block.L_infinity_obj_var)
 
-    return Objective(expr=obj_blk.L_infinity_obj_var)
+    return Objective(expr=obj_block.L_infinity_obj_var)
 
 
-def generate_lag_objective_function(model, setpoint_model, config, solve_data, discrete_only=False):
+def generate_lag_objective_function(model, setpoint_model, config, timing, discrete_only=False):
     """The function generates the second-order Taylor approximation of the Lagrangean.
 
     Parameters
@@ -328,8 +264,8 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         The model that provides the base point for us to calculate the distance.
     config : ConfigBlock
         The specific configurations for MindtPy.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    timing : Timing
+        Timing
     discrete_only : bool, optional
         Whether to only optimize on distance between the discrete variables, by default False.
 
@@ -351,7 +287,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
 
     # Implementation 1
     # First calculate Jacobian and Hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
-    with time_code(solve_data.timing, 'PyomoNLP'):
+    with time_code(timing, 'PyomoNLP'):
         nlp = pyomo_nlp.PyomoNLP(temp_model)
         lam = [-temp_model.dual[constr] if abs(temp_model.dual[constr]) > config.zero_tolerance else 0
                for constr in nlp.get_pyomo_constraints()]
@@ -406,7 +342,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
-    r"""This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    """This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
 
     Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
@@ -430,33 +366,33 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
         filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm1 norm constraint for models with different number of variables'
-    norm_constraint_blk = model.MindtPy_utils.L1_norm_constraint = Block()
-    norm_constraint_blk.L1_slack_idx = RangeSet(len(model_vars))
-    norm_constraint_blk.L1_slack_var = Var(
-        norm_constraint_blk.L1_slack_idx, domain=Reals, bounds=(0, None))
-    norm_constraint_blk.abs_reform = ConstraintList()
-    for idx, v_model, v_setpoint in zip(norm_constraint_blk.L1_slack_idx, model_vars,
+    norm_constraint_block = model.MindtPy_utils.L1_norm_constraint = Block()
+    norm_constraint_block.L1_slack_idx = RangeSet(len(model_vars))
+    norm_constraint_block.L1_slack_var = Var(
+        norm_constraint_block.L1_slack_idx, domain=Reals, bounds=(0, None))
+    norm_constraint_block.abs_reform = ConstraintList()
+    for idx, v_model, v_setpoint in zip(norm_constraint_block.L1_slack_idx, model_vars,
                                         setpoint_vars):
-        norm_constraint_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -norm_constraint_blk.L1_slack_var[idx])
-        norm_constraint_blk.abs_reform.add(
-            expr=v_model - v_setpoint.value <= norm_constraint_blk.L1_slack_var[idx])
+        norm_constraint_block.abs_reform.add(
+            expr=v_model - v_setpoint.value >= -norm_constraint_block.L1_slack_var[idx])
+        norm_constraint_block.abs_reform.add(
+            expr=v_model - v_setpoint.value <= norm_constraint_block.L1_slack_var[idx])
     rhs = config.fp_norm_constraint_coef * \
         sum(abs(v_model.value-v_setpoint.value)
             for v_model, v_setpoint in zip(model_vars, setpoint_vars))
-    norm_constraint_blk.sum_slack = Constraint(
-        expr=sum(norm_constraint_blk.L1_slack_var[idx] for idx in norm_constraint_blk.L1_slack_idx) <= rhs)
+    norm_constraint_block.sum_slack = Constraint(
+        expr=sum(norm_constraint_block.L1_slack_var[idx] for idx in norm_constraint_block.L1_slack_idx) <= rhs)
 
 
-def set_solver_options(opt, solve_data, config, solver_type, regularization=False):
+def set_solver_options(opt, timing, config, solver_type, regularization=False):
     """Set options for MIP/NLP solvers.
 
     Parameters
     ----------
     opt : SolverFactory
         The MIP/NLP solver.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    timing : Timing
+        Timing.
     config : ConfigBlock
         The specific configurations for MindtPy.
     solver_type : str
@@ -466,7 +402,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     """
     # TODO: integrate nlp_args here
     # nlp_args = dict(config.nlp_solver_args)
-    elapsed = get_main_elapsed_time(solve_data.timing)
+    elapsed = get_main_elapsed_time(timing)
     remaining = int(max(config.time_limit - elapsed, 1))
     if solver_type == 'mip':
         if regularization:
@@ -601,103 +537,6 @@ def get_integer_solution(model, string_zero=False):
     return tuple(temp)
 
 
-def set_up_solve_data(model, config):
-    """Set up the solve data.
-
-    Parameters
-    ----------
-    model : Pyomo model
-        The original model to be solved in MindtPy.
-    config : ConfigBlock
-        The specific configurations for MindtPy.
-
-    Returns
-    -------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    """
-    solve_data = MindtPySolveData()
-    solve_data.results = SolverResults()
-    solve_data.timing = Bunch()
-    solve_data.curr_int_sol = []
-    solve_data.should_terminate = False
-    solve_data.integer_list = []
-
-    # if the objective function is a constant, dual bound constraint is not added.
-    obj = next(model.component_data_objects(ctype=Objective, active=True))
-    if obj.expr.polynomial_degree() == 0:
-        config.use_dual_bound = False
-
-    if config.use_fbbt:
-        fbbt(model)
-        # TODO: logging_level is not logging.INFO here
-        config.logger.info(
-            'Use the fbbt to tighten the bounds of variables')
-
-    solve_data.original_model = model
-    solve_data.working_model = model.clone()
-
-    # Set up iteration counters
-    solve_data.nlp_iter = 0
-    solve_data.mip_iter = 0
-    solve_data.mip_subiter = 0
-    solve_data.nlp_infeasible_counter = 0
-    if config.init_strategy == 'FP':
-        solve_data.fp_iter = 1
-
-    # set up bounds
-    if obj.sense == minimize:
-        solve_data.primal_bound = float('inf')
-        solve_data.dual_bound = float('-inf')
-    else:
-        solve_data.primal_bound = float('-inf')
-        solve_data.dual_bound = float('inf')
-    solve_data.primal_bound_progress = [solve_data.primal_bound]
-    solve_data.dual_bound_progress = [solve_data.dual_bound]
-    solve_data.primal_bound_progress_time = [0]
-    solve_data.dual_bound_progress_time = [0]
-    solve_data.abs_gap = float('inf')
-    solve_data.rel_gap = float('inf')
-    solve_data.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
-    solve_data.fixed_nlp_log_formatter = '{:1}{:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
-    solve_data.log_note_formatter = ' {:>9}   {:>15}   {:>15}'
-    if config.add_regularization is not None:
-        if config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
-            solve_data.regularization_mip_type = 'MILP'
-        elif config.add_regularization in {'level_L2', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-            solve_data.regularization_mip_type = 'MIQP'
-
-    if config.single_tree and (config.add_no_good_cuts or config.use_tabu_list):
-        solve_data.stored_bound = {}
-    if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
-        solve_data.num_no_good_cuts_added = {}
-
-    # Flag indicating whether the solution improved in the past
-    # iteration or not
-    solve_data.primal_bound_improved = False
-    solve_data.dual_bound_improved = False
-
-    if config.nlp_solver == 'ipopt':
-        if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
-            solve_data.working_model.ipopt_zL_out = Suffix(
-                direction=Suffix.IMPORT)
-        if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
-            solve_data.working_model.ipopt_zU_out = Suffix(
-                direction=Suffix.IMPORT)
-    
-    if config.quadratic_strategy == 0:
-        solve_data.mip_objective_polynomial_degree = {0, 1}
-        solve_data.mip_constraint_polynomial_degree = {0, 1}
-    elif config.quadratic_strategy == 1:
-        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
-        solve_data.mip_constraint_polynomial_degree = {0, 1}
-    elif config.quadratic_strategy == 2:
-        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
-        solve_data.mip_constraint_polynomial_degree = {0, 1, 2}
-
-    return solve_data
-
-
 def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_model, var_map, solution_name,
                                             ignore_integrality=False):
     """Copy variable values from the solution pool to another list.
@@ -795,7 +634,7 @@ def update_gap(solve_data):
 def update_dual_bound(solve_data, bound_value):
     """Update the dual bound.
 
-    Call after solving relaxed problem, including relaxed NLP and MIP master problem.
+    Call after solving relaxed problem, including relaxed NLP and MIP main problem.
     Use the optimal primal bound of the relaxed problem to update the dual bound.
 
     Parameters
@@ -991,99 +830,23 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
     else:
         constraint_list.add(expr=slack_var <= exp)
 
-def build_ordered_component_lists(model, solve_data):
-    """Define lists used for future data transfer.
 
-    Also attaches ordered lists of the variables, constraints, disjuncts, and
-    disjunctions to the model so that they can be used for mapping back and
-    forth.
-
-    """
-    util_blk = getattr(model, solve_data.util_block_name)
-    var_set = ComponentSet()
-    setattr(
-        util_blk, 'constraint_list', list(
-            model.component_data_objects(
-                ctype=Constraint, active=True,
-                descend_into=(Block, Disjunct))))
-    if hasattr(solve_data,'mip_constraint_polynomial_degree'):
-        mip_constraint_polynomial_degree = solve_data.mip_constraint_polynomial_degree
-    else:
-        mip_constraint_polynomial_degree = {0, 1}
-    setattr(
-        util_blk, 'linear_constraint_list', list(
-            c for c in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() in mip_constraint_polynomial_degree))
-    setattr(
-        util_blk, 'nonlinear_constraint_list', list(
-            c for c in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in mip_constraint_polynomial_degree))
-    setattr(
-        util_blk, 'disjunct_list', list(
-            model.component_data_objects(
-                ctype=Disjunct, active=True,
-                descend_into=(Block, Disjunct))))
-    setattr(
-        util_blk, 'disjunction_list', list(
-            model.component_data_objects(
-                ctype=Disjunction, active=True,
-                descend_into=(Disjunct, Block))))
-    setattr(
-        util_blk, 'objective_list', list(
-            model.component_data_objects(
-                ctype=Objective, active=True,
-                descend_into=(Block))))
-
-    # Identify the non-fixed variables in (potentially) active constraints and
-    # objective functions
-    for constr in getattr(util_blk, 'constraint_list'):
-        for v in EXPR.identify_variables(constr.body, include_fixed=False):
-            var_set.add(v)
-    for obj in model.component_data_objects(ctype=Objective, active=True):
-        for v in EXPR.identify_variables(obj.expr, include_fixed=False):
-            var_set.add(v)
-    # Disjunct indicator variables might not appear in active constraints. In
-    # fact, if we consider them Logical variables, they should not appear in
-    # active algebraic constraints. For now, they need to be added to the
-    # variable set.
-    for disj in getattr(util_blk, 'disjunct_list'):
-        var_set.add(disj.binary_indicator_var)
-
-    # We use component_data_objects rather than list(var_set) in order to
-    # preserve a deterministic ordering.
-    var_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set)
-    setattr(util_blk, 'variable_list', var_list)
-    discrete_variable_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set and v.is_integer())
-    setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
-    continuous_variable_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set and v.is_continuous())
-    setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
-
-def setup_results_object(solve_data, config):
+def setup_results_object(results, model, config):
     """Record problem statistics for original model."""
     # Create the solver results object
-    res = solve_data.results
+    res = results
     prob = res.problem
-    res.problem.name = solve_data.original_model.name
+    res.problem.name = model.name
     res.problem.number_of_nonzeros = None  # TODO
-    # TODO work on termination condition and message
     res.solver.termination_condition = None
     res.solver.message = None
     res.solver.user_time = None
     res.solver.wallclock_time = None
     res.solver.termination_message = None
+    # Record solver name
+    res.solver.name = 'MindtPy' + str(config.strategy)
 
-    num_of = build_model_size_report(solve_data.original_model)
+    num_of = build_model_size_report(model)
 
     # Get count of constraints and variables
     prob.number_of_constraints = num_of.activated.constraints
@@ -1105,6 +868,14 @@ def setup_results_object(solve_data, config):
          num_of.activated.binary_variables,
          num_of.activated.integer_variables,
          num_of.activated.continuous_variables))
+    config.logger.info(
+    '{} is the initial strategy being used.'
+    '\n'.format(config.init_strategy))
+    config.logger.info(
+        ' ===============================================================================================')
+    config.logger.info(
+        ' {:>9} | {:>15} | {:>15} | {:>12} | {:>12} | {:^7} | {:>7}\n'.format('Iteration', 'Subproblem Type', 'Objective Value', 'Primal Bound',
+                                                                            'Dual Bound', ' Gap ', 'Time(s)'))
 
 def process_objective(solve_data, config, move_objective=False,
                       use_mcpp=False, update_var_con_list=True,
@@ -1118,7 +889,7 @@ def process_objective(solve_data, config, move_objective=False,
     objective.
     Parameters
     ----------
-    solve_data (GDPoptSolveData): solver environment data class
+    solve_data (MindtPySolveData): solver environment data class
     config (ConfigBlock): solver configuration options
     move_objective (bool): if True, move even linear
         objective functions to the constraints
@@ -1128,7 +899,7 @@ def process_objective(solve_data, config, move_objective=False,
     partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
     """
     m = solve_data.working_model
-    util_blk = getattr(m, solve_data.util_block_name)
+    util_block = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
     active_objectives = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
@@ -1136,8 +907,8 @@ def process_objective(solve_data, config, move_objective=False,
     if len(active_objectives) == 0:
         config.logger.warning(
             'Model has no active objectives. Adding dummy objective.')
-        util_blk.dummy_objective = Objective(expr=1)
-        main_obj = util_blk.dummy_objective
+        util_block.dummy_objective = Objective(expr=1)
+        main_obj = util_block.dummy_objective
     elif len(active_objectives) > 1:
         raise ValueError('Model has multiple active objectives.')
     else:
@@ -1154,137 +925,116 @@ def process_objective(solve_data, config, move_objective=False,
         else:
             config.logger.info(
                 "Objective is nonlinear. Moving it to constraint set.")
-        util_blk.objective_value = VarList(domain=Reals, initialize=0)
-        util_blk.objective_constr = ConstraintList()
+        util_block.objective_value = VarList(domain=Reals, initialize=0)
+        util_block.objective_constr = ConstraintList()
         if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
             repn = generate_standard_repn(main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree)
             # the following code will also work if linear_subexpr is a constant.
             linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars)) \
                 + sum(coef*var1*var2 for coef, (var1, var2) in zip(repn.quadratic_coefs, repn.quadratic_vars))
             # only need to generate one epigraph constraint for the sum of all linear terms and constant
-            epigraph_reformulation(linear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+            epigraph_reformulation(linear_subexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
             nonlinear_subexpr = repn.nonlinear_expr
             if nonlinear_subexpr.__class__ is EXPR.SumExpression:
                 for subsubexpr in nonlinear_subexpr.args:
-                    epigraph_reformulation(subsubexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+                    epigraph_reformulation(subsubexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
             else:
-                epigraph_reformulation(nonlinear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+                epigraph_reformulation(nonlinear_subexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
         else:
-            epigraph_reformulation(main_obj.expr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+            epigraph_reformulation(main_obj.expr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
 
         main_obj.deactivate()
-        util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
+        util_block.objective = Objective(expr=sum(util_block.objective_value[:]), sense=main_obj.sense)
 
         if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or \
            (move_objective and update_var_con_list):
-            util_blk.variable_list.extend(util_blk.objective_value[:])
-            util_blk.continuous_variable_list.extend(util_blk.objective_value[:])
-            util_blk.constraint_list.extend(util_blk.objective_constr[:])
-            util_blk.objective_list.append(util_blk.objective)
-            for constr in util_blk.objective_constr[:]:
+            util_block.variable_list.extend(util_block.objective_value[:])
+            util_block.continuous_variable_list.extend(util_block.objective_value[:])
+            util_block.constraint_list.extend(util_block.objective_constr[:])
+            util_block.objective_list.append(util_block.objective)
+            for constr in util_block.objective_constr[:]:
                 if constr.body.polynomial_degree() in constr_handleable_polynomial_degree:
-                    util_blk.linear_constraint_list.append(constr)
+                    util_block.linear_constraint_list.append(constr)
                 else:
-                    util_blk.nonlinear_constraint_list.append(constr)
+                    util_block.nonlinear_constraint_list.append(constr)
 
-def build_ordered_component_lists(model, solve_data):
-    """Define lists used for future data transfer.
 
-    Also attaches ordered lists of the variables, constraints, disjuncts, and
-    disjunctions to the model so that they can be used for mapping back and
-    forth.
+def fp_converged(working_model, mip_model, config, discrete_only=True):
+    """Calculates the euclidean norm between the discrete variables in the MIP and NLP models.
 
+    Parameters
+    ----------
+    working_model : Pyomo model
+        The working model(original model).
+    mip_model : Pyomo model
+        The mip model.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    discrete_only : bool, optional
+        Whether to only optimize on distance between the discrete variables, by default True.
+
+    Returns
+    -------
+    distance : float
+        The euclidean norm between the discrete variables in the MIP and NLP models.
     """
-    util_blk = getattr(model, solve_data.util_block_name)
-    var_set = ComponentSet()
-    setattr(
-        util_blk, 'constraint_list', list(
-            model.component_data_objects(
-                ctype=Constraint, active=True,
-                descend_into=(Block, Disjunct))))
-    if hasattr(solve_data,'mip_constraint_polynomial_degree'):
-        mip_constraint_polynomial_degree = solve_data.mip_constraint_polynomial_degree
-    else:
-        mip_constraint_polynomial_degree = {0, 1}
-    setattr(
-        util_blk, 'linear_constraint_list', list(
-            c for c in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() in mip_constraint_polynomial_degree))
-    setattr(
-        util_blk, 'nonlinear_constraint_list', list(
-            c for c in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in mip_constraint_polynomial_degree))
-    setattr(
-        util_blk, 'disjunct_list', list(
-            model.component_data_objects(
-                ctype=Disjunct, active=True,
-                descend_into=(Block, Disjunct))))
-    setattr(
-        util_blk, 'disjunction_list', list(
-            model.component_data_objects(
-                ctype=Disjunction, active=True,
-                descend_into=(Disjunct, Block))))
-    setattr(
-        util_blk, 'objective_list', list(
-            model.component_data_objects(
-                ctype=Objective, active=True,
-                descend_into=(Block))))
+    distance = (max((nlp_var.value - milp_var.value)**2
+                    for (nlp_var, milp_var) in
+                    zip(working_model.MindtPy_utils.variable_list,
+                        mip_model.MindtPy_utils.variable_list)
+                    if (not discrete_only) or milp_var.is_integer()))
+    return distance <= config.fp_projzerotol
 
-    # Identify the non-fixed variables in (potentially) active constraints and
-    # objective functions
-    for constr in getattr(util_blk, 'constraint_list'):
-        for v in EXPR.identify_variables(constr.body, include_fixed=False):
-            var_set.add(v)
-    for obj in model.component_data_objects(ctype=Objective, active=True):
-        for v in EXPR.identify_variables(obj.expr, include_fixed=False):
-            var_set.add(v)
-    # Disjunct indicator variables might not appear in active constraints. In
-    # fact, if we consider them Logical variables, they should not appear in
-    # active algebraic constraints. For now, they need to be added to the
-    # variable set.
-    for disj in getattr(util_blk, 'disjunct_list'):
-        var_set.add(disj.binary_indicator_var)
 
-    # We use component_data_objects rather than list(var_set) in order to
-    # preserve a deterministic ordering.
-    var_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set)
-    setattr(util_blk, 'variable_list', var_list)
-    discrete_variable_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set and v.is_integer())
-    setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
-    continuous_variable_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set and v.is_continuous())
-    setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
+def add_orthogonality_cuts(working_model, mip_model, config):
+    """Add orthogonality cuts.
 
-@contextmanager
-def create_utility_block(model, name, solve_data):
-    created_util_block = False
-    # Create a model block on which to store GDPopt-specific utility
-    # modeling objects.
-    if hasattr(model, name):
-        raise RuntimeError(
-            "GDPopt needs to create a Block named %s "
-            "on the model object, but an attribute with that name "
-            "already exists." % name)
-    else:
-        created_util_block = True
-        setattr(model, name, Block(
-            doc="Container for GDPopt solver utility modeling objects"))
-        solve_data.util_block_name = name
+    This function adds orthogonality cuts to avoid cycling when the independence constraint qualification is not satisfied.
 
-        # Save ordered lists of main modeling components, so that data can
-        # be easily transferred between future model clones.
-        build_ordered_component_lists(model, solve_data)
-    yield
-    if created_util_block:
-        model.del_component(name)
+    Parameters
+    ----------
+    working_model : Pyomo model
+        The working model(original model).
+    mip_model : Pyomo model
+        The mip model.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    """
+    mip_integer_vars = mip_model.MindtPy_utils.discrete_variable_list
+    nlp_integer_vars = working_model.MindtPy_utils.discrete_variable_list
+    orthogonality_cut = sum((nlp_v.value-mip_v.value)*(mip_v-nlp_v.value)
+                            for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
+    mip_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
+        orthogonality_cut)
+    if config.fp_projcuts:
+        orthogonality_cut = sum((nlp_v.value-mip_v.value)*(nlp_v-nlp_v.value)
+                                for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
+        working_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
+            orthogonality_cut)
 
+
+def generate_norm_constraint(fp_nlp_model, mip_model, config):
+    """Generate the norm constraint for the FP-NLP subproblem.
+
+    Parameters
+    ----------
+    fp_nlp_model : Pyomo model
+        The feasibility pump NLP subproblem.
+    mip_model : Pyomo model
+        The mip_model model.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    """
+    if config.fp_main_norm == 'L1':
+        # TODO: check if we can access the block defined in FP-main problem
+        generate_norm1_norm_constraint(
+            fp_nlp_model, mip_model, config, discrete_only=True)
+    elif config.fp_main_norm == 'L2':
+        fp_nlp_model.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
+                                                     for nlp_var, mip_var in zip(fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list)) <= 0)
+    elif config.fp_main_norm == 'L_infinity':
+        fp_nlp_model.norm_constraint = ConstraintList()
+        rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
+            fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list))
+        for nlp_var, mip_var in zip(fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list):
+            fp_nlp_model.norm_constraint.add(nlp_var - mip_var.value <= rhs)

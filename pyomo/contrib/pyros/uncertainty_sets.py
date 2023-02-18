@@ -309,15 +309,12 @@ class Geometry(Enum):
 
 class UncertaintySet(object, metaclass=abc.ABCMeta):
     """
-    An object representing an uncertainty set for a two-stage robust
-    optimization model. Along with a `ConcreteModel` object
-    representing the corresponding deterministic model formulation, the
-    uncertainty set object may be passed to the PyROS solver to obtain a
-    robust model solution.
+    An object representing an uncertainty set to be passed to the
+    PyROS solver.
 
     An `UncertaintySet` object should be viewed as merely a container
-    for data needed to parameterize the set it represents, such that the
-    object's attributes do not, in general, reference the
+    for data needed to parameterize the set it represents,
+    such that the object's attributes do not reference the
     components of a Pyomo modeling object.
     """
 
@@ -742,12 +739,38 @@ class UncertaintySetList(MutableSequence):
 
 class BoxSet(UncertaintySet):
     """
-    A hyper-rectangle (a.k.a "box").
+    A hyper-rectangle (a.k.a. "box").
 
     Parameters
     ----------
     bounds : (N, 2) array_like
         Lower and upper bounds for each dimension of the set.
+
+    Examples
+    --------
+    1D box set (interval):
+
+    >>> from pyomo.contrib.pyros import BoxSet
+    >>> interval = BoxSet(bounds=[(1, 2)])
+    >>> interval.bounds
+    array([[1, 2]])
+
+    2D box set:
+
+    >>> box_set = BoxSet(bounds=[[1, 2], [3, 4]])
+    >>> box_set.bounds
+    array([[1, 2],
+           [3, 4]])
+
+    5D hypercube with bounds 0 and 1 in each dimension:
+
+    >>> hypercube_5d = BoxSet(bounds=[[0, 1] for idx in range(5)])
+    >>> hypercube_5d.bounds
+    array([[0, 1],
+           [0, 1],
+           [0, 1],
+           [0, 1],
+           [0, 1]])
     """
 
     def __init__(self, bounds):
@@ -769,7 +792,7 @@ class BoxSet(UncertaintySet):
         (N, 2) numpy.ndarray : Lower and upper bounds for each dimension
         of the set.
 
-        The bounds of a ``BoxSet`` instance can be changed, such that
+        The bounds of a `BoxSet` instance can be changed, such that
         the dimension of the set remains unchanged.
         """
         return self._bounds
@@ -804,27 +827,30 @@ class BoxSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the box set.
+        int : Dimension `N` of the box set.
         """
         return len(self.bounds)
 
     @property
     def geometry(self):
         """
-        Geometry of the box set. See the `Geometry` class
-        documentation.
+        Geometry of the box set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the box set.
+        Bounds in each dimension of the box set.
+        This is numerically equivalent to the `bounds` attribute.
 
         Returns
         -------
-        : list(tuple)
-            Box set bounds.
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
+            dimension.
         """
         return [tuple(bound) for bound in self.bounds]
 
@@ -866,7 +892,7 @@ class CardinalitySet(UncertaintySet):
     Parameters
     ----------
     origin : (N,) array_like
-        Origin of the set (e.g. nominal uncertain parameter values).
+        Origin of the set (e.g., nominal uncertain parameter values).
     positive_deviation : (N,) array_like
         Maximal non-negative coordinate deviation from the origin
         in each dimension.
@@ -874,6 +900,23 @@ class CardinalitySet(UncertaintySet):
         Upper bound for the number of uncertain parameters which
         may realize their maximal deviations from the origin
         simultaneously.
+
+    Examples
+    --------
+    A 3D cardinality set:
+
+    >>> from pyomo.contrib.pyros import CardinalitySet
+    >>> gamma_set = CardinalitySet(
+    ...     origin=[0, 0, 0],
+    ...     positive_deviation=[1.0, 2.0, 1.5],
+    ...     gamma=1,
+    ... )
+    >>> gamma_set.origin
+    array([0, 0, 0])
+    >>> gamma_set.positive_deviation
+    array([1. , 2. , 1.5])
+    >>> gamma_set.gamma
+    1
     """
 
     def __init__(self, origin, positive_deviation, gamma):
@@ -965,12 +1008,13 @@ class CardinalitySet(UncertaintySet):
         numeric type : Upper bound for the number of uncertain
         parameters which may maximally deviate from their respective
         origin values simultaneously. Must be a numerical value ranging
-        from 0 to the set dimension.
+        from 0 to the set dimension `N`.
 
-        Note that mathematically, setting `gamma` to 0 reduces the set
+        Note that, mathematically, setting `gamma` to 0 reduces the set
         to a singleton containing the center, while setting `gamma` to
-        the set dimension reduces the set to a hyperrectangle with
-        bounds ``[origin, origin + positive_deviation]``.
+        the set dimension `N` makes the set mathematically equivalent
+        to a `BoxSet` with bounds
+        ``numpy.array([origin, origin + positive_deviation]).T``.
         """
         return self._gamma
 
@@ -993,28 +1037,28 @@ class CardinalitySet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the cardinality set.
+        int : Dimension `N` of the cardinality set.
         """
         return len(self.origin)
 
     @property
     def geometry(self):
         """
-        Geometry of the cardinality set. See the `Geometry` class
-        documentation.
+        Geometry of the cardinality set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the cardinality set.
+        Bounds in each dimension of the cardinality set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         nom_val = self.origin
@@ -1100,6 +1144,26 @@ class PolyhedralSet(UncertaintySet):
     rhs_vec : (M,) array_like
         Right-hand side values for the linear inequality
         constraints defining the polyhedral set.
+        Each entry is an upper bound for the quantity
+        ``lhs_coefficients_mat @ x``, where `x` is an (N,)
+        array representing any point in the polyhedral set.
+
+    Examples
+    --------
+    2D polyhedral set with 4 defining inequalities:
+
+    >>> from pyomo.contrib.pyros import PolyhedralSet
+    >>> pset = PolyhedralSet(
+    ...     lhs_coefficients_mat=[[-1, 0], [0, -1], [-1, 1], [1, 0]],
+    ...     rhs_vec=[0, 0, 0, 1],
+    ... )
+    >>> pset.coefficients_mat
+    array([[-1,  0],
+           [ 0, -1],
+           [-1,  1],
+           [ 1,  0]])
+    >>> pset.rhs_vec
+    array([0, 0, 0, 1])
     """
 
     def __init__(self, lhs_coefficients_mat, rhs_vec):
@@ -1249,25 +1313,25 @@ class PolyhedralSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the polyhedral set.
+        int : Dimension `N` of the polyhedral set.
         """
         return len(self.coefficients_mat[0])
 
     @property
     def geometry(self):
         """
-        Geometry of the polyhedral set. See the `Geometry` class
-        documentation.
+        Geometry of the polyhedral set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the polyhedral set.
+        Bounds in each dimension of the polyhedral set.
 
-        Currently, an empty list, as the bounds cannot, in general,
-        be computed without access to an optimization solver.
+        Currently, an empty `list` is returned, as the bounds cannot, in
+        general, be computed without access to an optimization solver.
         """
         return []
 
@@ -1339,17 +1403,49 @@ class BudgetSet(UncertaintySet):
 
     Parameters
     ----------
-    budget_membership_mat : (M, N) array_like
+    budget_membership_mat : (L, N) array_like
         Incidence matrix of the budget constraints.
         Each row corresponds to a single budget constraint,
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
-    rhs_vec : (M,) array_like
+    rhs_vec : (L,) array_like
         Budget limits (upper bounds) with respect to
         the origin of the set.
     origin : (N,) array_like or None, optional
         Origin of the budget set. If `None` is provided, then
         the origin is set to the zero vector.
+
+    Examples
+    --------
+    3D budget set with one budget constraint and
+    no origin chosen (hence origin defaults to 3D zero vector):
+
+    >>> from pyomo.contrib.pyros import BudgetSet
+    >>> budget_set = BudgetSet(
+    ...     budget_membership_mat=[[1, 1, 1]],
+    ...     rhs_vec=[2],
+    ... )
+    >>> budget_set.budget_membership_mat
+    array([[1, 1, 1]])
+    >>> budget_set.budget_rhs_vec
+    array([2])
+    >>> budget_set.origin
+    array([0., 0., 0.])
+
+    3D budget set with two budget constraints and custom origin:
+
+    >>> budget_custom = BudgetSet(
+    ...     budget_membership_mat=[[1, 0, 1], [0, 1, 0]],
+    ...     rhs_vec=[1, 1],
+    ...     origin=[2, 2, 2],
+    ... )
+    >>> budget_custom.budget_membership_mat
+    array([[1, 0, 1],
+           [0, 1, 0]])
+    >>> budget_custom.budget_rhs_vec
+    array([1, 1])
+    >>> budget_custom.origin
+    array([2, 2, 2])
     """
 
     def __init__(self, budget_membership_mat, rhs_vec, origin=None):
@@ -1370,7 +1466,7 @@ class BudgetSet(UncertaintySet):
     @property
     def coefficients_mat(self):
         """
-        (M + N, N) numpy.ndarray : Coefficient matrix of all polyhedral
+        (L + N, N) numpy.ndarray : Coefficient matrix of all polyhedral
         constraints defining the budget set. Composed from the incidence
         matrix used for defining the budget constraints and a
         coefficient matrix for individual uncertain parameter
@@ -1389,7 +1485,7 @@ class BudgetSet(UncertaintySet):
     @property
     def rhs_vec(self):
         """
-        (M + N,) numpy.ndarray : Right-hand side vector for polyhedral
+        (L + N,) numpy.ndarray : Right-hand side vector for polyhedral
         constraints defining the budget set. This also includes entries
         for nonnegativity constraints on the uncertain parameters.
 
@@ -1404,10 +1500,10 @@ class BudgetSet(UncertaintySet):
     @property
     def budget_membership_mat(self):
         """
-        (M, N) numpy.ndarray : Incidence matrix of the budget
+        (L, N) numpy.ndarray : Incidence matrix of the budget
         constraints.  Each row corresponds to a single budget
-        constraint, and defines which uncertain parameters (which
-        dimensions) participate in that row's constraint.
+        constraint and defines which uncertain parameters
+        participate in that row's constraint.
         """
         return self._budget_membership_mat
 
@@ -1483,7 +1579,7 @@ class BudgetSet(UncertaintySet):
     @property
     def budget_rhs_vec(self):
         """
-        (M,) numpy.ndarray : Budget limits (upper bounds)
+        (L,) numpy.ndarray : Budget limits (upper bounds)
         with respect to the origin.
         """
         return self._budget_rhs_vec
@@ -1557,28 +1653,28 @@ class BudgetSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the budget set.
+        int : Dimension `N` of the budget set.
         """
         return self.budget_membership_mat.shape[1]
 
     @property
     def geometry(self):
         """
-        Geometry of the budget set. See the `Geometry` class
-        documentation.
+        Geometry of the budget set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the budget set.
+        Bounds in each dimension of the budget set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         bounds = []
@@ -1646,7 +1742,7 @@ class BudgetSet(UncertaintySet):
 
 class FactorModelSet(UncertaintySet):
     """
-    A factor model (a.k.a "net-alpha" model) set.
+    A factor model (a.k.a. "net-alpha" model) set.
 
     Parameters
     ----------
@@ -1656,14 +1752,40 @@ class FactorModelSet(UncertaintySet):
     number_of_factors : int
         Natural number representing the dimensionality of the
         space to which the set projects.
-    psi_mat : (N, `number_of_factors`) array_like
+    psi_mat : (N, F) array_like
         Matrix designating each uncertain parameter's contribution to
         each factor.  Each row is associated with a separate uncertain
         parameter.  Each column is associated with a separate factor.
+        Number of columns `F` of `psi_mat` should be equal to
+        `number_of_factors`.
     beta : numeric type
         Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
         their extreme values.
+
+    Examples
+    --------
+    A 4D factor model set with a 2D factor space:
+
+    >>> from pyomo.contrib.pyros import FactorModelSet
+    >>> import numpy as np
+    >>> fset = FactorModelSet(
+    ...     origin=np.zeros(4),
+    ...     number_of_factors=2,
+    ...     psi_mat=np.full(shape=(4, 2), fill_value=0.1),
+    ...     beta=0.5,
+    ... )
+    >>> fset.origin
+    array([0., 0., 0., 0.])
+    >>> fset.number_of_factors
+    2
+    >>> fset.psi_mat
+    array([[0.1, 0.1],
+           [0.1, 0.1],
+           [0.1, 0.1],
+           [0.1, 0.1]])
+    >>> fset.beta
+    0.5
     """
 
     def __init__(self, origin, number_of_factors, psi_mat, beta):
@@ -1715,8 +1837,8 @@ class FactorModelSet(UncertaintySet):
     @property
     def number_of_factors(self):
         """
-        int : Natural number representing the dimensionality of the
-        space to which the set projects.
+        int : Natural number representing the dimensionality `F`
+        of the space to which the set projects.
 
         This attribute is immutable, and may only be set at
         object construction. Typically, the number of factors
@@ -1742,7 +1864,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def psi_mat(self):
         """
-        (N, `number_of_factors`) numpy.ndarray : Matrix designating each
+        (N, F) numpy.ndarray : Matrix designating each
         uncertain parameter's contribution to each factor. Each row is
         associated with a separate uncertain parameter. Each column with
         a separate factor.
@@ -1789,11 +1911,11 @@ class FactorModelSet(UncertaintySet):
         fraction of the independent factors that can simultaneously
         attain their extreme values.
 
-        Note that mathematically, setting `beta = 0` will enforce
+        Note that, mathematically, setting ``beta = 0`` will enforce
         that as many factors will be above 0 as there will be below 0
-        (i.e., "zero-net-alpha" model). Setting `beta = 1` produces the
-        hyper-rectangle ``[origin - psi @ e, origin + psi @ e]``, where
-        `e` is a vector of ones.
+        (i.e., "zero-net-alpha" model). If ``beta = 1``,
+        then the set is numerically equivalent to a `BoxSet` with bounds
+        ``[origin - psi @ np.ones(F), origin + psi @ np.ones(F)].T``.
         """
         return self._beta
 
@@ -1810,28 +1932,28 @@ class FactorModelSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the factor model set.
+        int : Dimension `N` of the factor model set.
         """
         return len(self.origin)
 
     @property
     def geometry(self):
         """
-        Geometry of the factor model set. See the `Geometry` class
-        documentation.
+        Geometry of the factor model set.
+        See the `Geometry` class documentation.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the factor model set.
+        Bounds in each dimension of the factor model set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         F = self.number_of_factors
@@ -1961,6 +2083,21 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         Center of the ellipsoid.
     half_lengths : (N,) aray_like
         Semi-axis lengths of the ellipsoid.
+
+    Examples
+    --------
+    3D origin-centered unit hypersphere:
+
+    >>> from pyomo.contrib.pyros import AxisAlignedEllipsoidalSet
+    >>> sphere = AxisAlignedEllipsoidalSet(
+    ...     center=[0, 0, 0],
+    ...     half_lengths=[1, 1, 1]
+    ... )
+    >>> sphere.center
+    array([0, 0, 0])
+    >>> sphere.half_lengths
+    array([1, 1, 1])
+
     """
 
     def __init__(self, center, half_lengths):
@@ -2050,7 +2187,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the axis-aligned ellipsoidal set.
+        int : Dimension `N` of the axis-aligned ellipsoidal set.
         """
         return len(self.center)
 
@@ -2065,14 +2202,13 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the axis-aligned
-        ellipsoidal set.
+        Bounds in each dimension of the axis-aligned ellipsoidal set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         nom_value = self.center
@@ -2154,6 +2290,42 @@ class EllipsoidalSet(UncertaintySet):
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
         matrix). The default is `1`.
+
+    Examples
+    --------
+    3D origin-centered unit hypersphere:
+
+    >>> from pyomo.contrib.pyros import EllipsoidalSet
+    >>> import numpy as np
+    >>> hypersphere = EllipsoidalSet(
+    ...     center=[0, 0, 0],
+    ...     shape_matrix=np.eye(3),
+    ...     scale=1,
+    ... )
+    >>> hypersphere.center
+    array([0, 0, 0])
+    >>> hypersphere.shape_matrix
+    array([[1., 0., 0.],
+           [0., 1., 0.],
+           [0., 0., 1.]])
+    >>> hypersphere.scale
+    1
+
+    A 2D ellipsoid with custom rotation and scaling:
+
+    >>> rotated_ellipsoid = EllipsoidalSet(
+    ...     center=[1, 1],
+    ...     shape_matrix=[[4, 2], [2, 4]],
+    ...     scale=0.5,
+    ... )
+    >>> rotated_ellipsoid.center
+    array([1, 1])
+    >>> rotated_ellipsoid.shape_matrix
+    array([[4, 2],
+           [2, 4]])
+    >>> rotated_ellipsoid.scale
+    0.5
+
     """
 
     def __init__(self, center, shape_matrix, scale=1):
@@ -2311,7 +2483,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the ellipsoidal set.
+        int : Dimension `N` of the ellipsoidal set.
         """
         return len(self.center)
 
@@ -2326,14 +2498,13 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the ellipsoidal
-        set.
+        Bounds in each dimension of the ellipsoidal set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         scale = self.scale
@@ -2396,7 +2567,19 @@ class DiscreteScenarioSet(UncertaintySet):
     Parameters
     ----------
     scenarios : (M, N) array_like
-        A sequence of M distinct uncertain parameter realizations.
+        A sequence of `M` distinct uncertain parameter realizations.
+
+    Examples
+    --------
+    2D set with three scenarios:
+
+    >>> from pyomo.contrib.pyros import DiscreteScenarioSet
+    >>> discrete_set = DiscreteScenarioSet(
+    ...     scenarios=[[1, 1], [2, 1], [1, 2]],
+    ... )
+    >>> discrete_set.scenarios
+    [(1, 1), (2, 1), (1, 2)]
+
     """
 
     def __init__(self, scenarios):
@@ -2416,7 +2599,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def scenarios(self):
         """
-        list(tuple) : Uncertain parameter realizations comprising the
+        list of tuples : Uncertain parameter realizations comprising the
         set.  Each tuple is an uncertain parameter realization.
 
         Note that the `scenarios` attribute may be modified, but
@@ -2450,7 +2633,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the discrete scenario set.
+        int : Dimension `N` of the discrete scenario set.
         """
         return len(self.scenarios[0])
 
@@ -2465,14 +2648,13 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the discrete
-        scenario set.
+        Bounds in each dimension of the discrete scenario set.
 
         Returns
         -------
-        parameter_bounds : list of tuples
-            A list of 2-tuples of numerical values. Each tuple specifies
-            the uncertain parameter bounds for the corresponding set
+        : list of tuples
+            List, length `N`, of 2-tuples. Each tuple
+            specifies the bounds in its corresponding
             dimension.
         """
         parameter_bounds = [(min(s[i] for s in self.scenarios),
@@ -2550,14 +2732,33 @@ class DiscreteScenarioSet(UncertaintySet):
 class IntersectionSet(UncertaintySet):
     """
     An intersection of a sequence of uncertainty sets, each of which
-    is represented by an ``UncertaintySet`` object.
+    is represented by an `UncertaintySet` object.
 
     Parameters
     ----------
     **unc_sets : dict
-        PyROS ``UncertaintySet`` objects of which to construct
+        PyROS `UncertaintySet` objects of which to construct
         an intersection. At least two uncertainty sets must
         be provided. All sets must be of the same dimension.
+
+    Examples
+    --------
+    Intersection of origin-centered 2D box (square) and 2D
+    hypersphere (circle):
+
+    >>> from pyomo.contrib.pyros import (
+    ...     BoxSet, AxisAlignedEllipsoidalSet, IntersectionSet,
+    ... )
+    >>> square = BoxSet(bounds=[[-1.5, 1.5], [-1.5, 1.5]])
+    >>> circle = AxisAlignedEllipsoidalSet(
+    ...     center=[0, 0],
+    ...     half_lengths=[2, 2],
+    ... )
+    >>> # to construct intersection, pass sets as keyword arguments
+    >>> intersection = IntersectionSet(set1=square, set2=circle)
+    >>> intersection.all_sets
+    UncertaintySetList([...])
+
     """
 
     def __init__(self, **unc_sets):
@@ -2581,7 +2782,7 @@ class IntersectionSet(UncertaintySet):
 
         This attribute may be set through any iterable of
         `UncertaintySet` objects, and exhibits similar behavior
-        to a ``list``.
+        to a `list`.
         """
         return self._all_sets
 

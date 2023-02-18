@@ -10,17 +10,25 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
-from pyomo.common.dependencies import networkx_available
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import (
+    networkx_available,
+    scipy_available,
+    attempt_import,
+)
+plotly, plotly_available = attempt_import("plotly")
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
     get_structural_incidence_matrix,
     get_numeric_incidence_matrix,
     get_incidence_graph,
+    get_bipartite_incidence_graph,
+    extract_bipartite_subgraph,
 )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.triangularize import (
+    map_coords_to_block_triangular_indices,
+)
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
 )
@@ -32,6 +40,7 @@ from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 if networkx_available:
+    import networkx as nx
     from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
 from pyomo.contrib.pynumero.asl import AmplInterface
 
@@ -241,7 +250,7 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
         con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
-        row_block_map, col_block_map = block_triangularize(imat)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(imat)
         var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
                 for v in variables)
         con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
@@ -397,7 +406,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
         con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
-        row_block_map, col_block_map = block_triangularize(imat)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(imat)
         var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
                 for v in variables)
         con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
@@ -491,8 +500,56 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
+        N = 5
+        model = make_gas_expansion_model(N)
+        model.obj = pyo.Objective(expr=0)
+        nlp = PyomoNLP(model)
+        igraph = IncidenceGraphInterface(nlp)
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
@@ -518,13 +575,13 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
         nlp = PyomoNLP(model)
         igraph = IncidenceGraphInterface(nlp)
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.maximum_matching(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.block_triangularize(variables, constraints)
@@ -592,8 +649,58 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
+        """
+        This tests the maps from variables and constraints to their diagonal
+        blocks returned by map_nodes_to_block_triangular_indices
+        """
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface(model)
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
@@ -614,7 +721,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
                 self.assertEqual(con_block_map[model.ebal[i]], i)
 
     def test_triangularize_submatrix(self):
-        # This test exercises the extraction of a somewhat nontrivial
+        # This test exercises triangularization of a somewhat nontrivial
         # submatrix from a cached incidence matrix.
         N = 5
         model = make_gas_expansion_model(N)
@@ -639,8 +746,64 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         constraints.extend(model.ebal[i] for i in model.streams
                 if i > half)
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
+        self.assertEqual(len(partition), (N-half)+1)
+
+        for i in model.streams:
+            idx = i - half
+            variables = ComponentSet([var for var, _ in partition[idx]])
+            constraints = ComponentSet([con for _, con in partition[idx]])
+            if i == half:
+                self.assertEqual(variables, ComponentSet([model.P[half]]))
+            elif i > half:
+                pred_var = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_con = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(variables, pred_var)
+                self.assertEqual(constraints, pred_con)
+
+    def test_maps_from_triangularization_submatrix(self):
+        # This test exercises the var/con-block-maps obtained from
+        # triangularization of a somewhat nontrivial submatrix from a cached
+        # incidence matrix.
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface(model)
+
+        # These are the variables and constraints of a square,
+        # nonsingular subsystem
+        variables = []
+        half = N//2
+        variables.extend(model.P[i] for i in model.streams if i >= half)
+        variables.extend(model.T[i] for i in model.streams if i > half)
+        variables.extend(model.rho[i] for i in model.streams if i > half)
+        variables.extend(model.F[i] for i in model.streams if i > half)
+
+        constraints = []
+        constraints.extend(model.ideal_gas[i] for i in model.streams
+                if i >= half)
+        constraints.extend(model.expansion[i] for i in model.streams
+                if i > half)
+        constraints.extend(model.mbal[i] for i in model.streams
+                if i > half)
+        constraints.extend(model.ebal[i] for i in model.streams
+                if i > half)
+
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), (N-half)+1)
@@ -665,13 +828,13 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         model = make_gas_expansion_model()
         igraph = IncidenceGraphInterface(model)
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.maximum_matching(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.block_triangularize(variables, constraints)
@@ -783,8 +946,54 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface()
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
@@ -825,8 +1034,8 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         var_blocks, con_blocks = igraph.get_diagonal_blocks(
             variables, constraints
         )
-        self.assertIs(igraph.row_block_map, None)
-        self.assertIs(igraph.col_block_map, None)
+        #self.assertIs(igraph.row_block_map, None)
+        #self.assertIs(igraph.col_block_map, None)
         self.assertEqual(len(var_blocks), N+1)
         self.assertEqual(len(con_blocks), N+1)
 
@@ -854,6 +1063,7 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
                 self.assertEqual(pred_con_set, con_set)
 
     def test_diagonal_blocks_with_cached_maps(self):
+        # NOTE: This functionality has been deprecated.
         N = 5
         model = make_gas_expansion_model(N)
         igraph = IncidenceGraphInterface()
@@ -875,33 +1085,10 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         var_blocks, con_blocks = igraph.get_diagonal_blocks(
             variables, constraints
         )
-        self.assertIsNot(igraph.row_block_map, None)
-        self.assertIsNot(igraph.col_block_map, None)
-        self.assertEqual(len(var_blocks), N+1)
-        self.assertEqual(len(con_blocks), N+1)
-
-        for i, (vars, cons) in enumerate(zip(var_blocks, con_blocks)):
-            var_set = ComponentSet(vars)
-            con_set = ComponentSet(cons)
-
-            if i == 0:
-                pred_var_set = ComponentSet([model.P[0]])
-                self.assertEqual(pred_var_set, var_set)
-                pred_con_set = ComponentSet([model.ideal_gas[0]])
-                self.assertEqual(pred_con_set, con_set)
-
-            else:
-                pred_var_set = ComponentSet([
-                    model.rho[i], model.T[i], model.P[i], model.F[i]
-                ])
-                pred_con_set = ComponentSet([
-                    model.ideal_gas[i],
-                    model.expansion[i],
-                    model.mbal[i],
-                    model.ebal[i],
-                ])
-                self.assertEqual(pred_var_set, var_set)
-                self.assertEqual(pred_con_set, con_set)
+        # NOTE: row/col_block_map have been deprecated.
+        # However, they still return None for now.
+        self.assertIs(igraph.row_block_map, None)
+        self.assertIs(igraph.col_block_map, None)
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
@@ -1096,14 +1283,8 @@ class TestConnectedComponents(unittest.TestCase):
 
         # The variables in these blocks need to be sorted by their coordinates
         # in the underlying incidence matrix
-        var_idx_map = ComponentMap(
-            (var, i) for i, var in enumerate(igraph.variables)
-        )
-        con_idx_map = ComponentMap(
-            (con, i) for i, con in enumerate(igraph.constraints)
-        )
-        var_key = lambda var: var_idx_map[var]
-        con_key = lambda con: con_idx_map[con]
+        var_key = lambda var: igraph.get_matrix_coord(var)
+        con_key = lambda con: igraph.get_matrix_coord(con)
         var_blocks = [
             tuple(sorted(t0_vars, key=var_key)),
             tuple(sorted(
@@ -1236,6 +1417,260 @@ class TestIncludeInequality(unittest.TestCase):
         nlp = PyomoNLP(m)
         igraph = IncidenceGraphInterface(nlp, include_inequality=True)
         self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestGetIncidenceGraph(unittest.TestCase):
+
+    def make_test_model(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3, 4])
+        m.v = pyo.Var(m.I, bounds=(0, None))
+        m.eq1 = pyo.Constraint(expr=m.v[1]**2 + m.v[2]**2 == 1.0)
+        m.eq2 = pyo.Constraint(expr=m.v[1] + 2.0 == m.v[3])
+        m.ineq1 = pyo.Constraint(expr=m.v[2] - m.v[3]**0.5 + m.v[4]**2 <= 1.0)
+        m.ineq2 = pyo.Constraint(expr=m.v[2]*m.v[4] >= 1.0)
+        m.ineq3 = pyo.Constraint(expr=m.v[1] >= m.v[4]**4)
+        m.obj = pyo.Objective(expr=-m.v[1] - m.v[2] + m.v[3]**2 + m.v[4]**2)
+        return m
+
+    def test_bipartite_incidence_graph(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.ineq1
+        #   3: m.ineq2
+        #   4: m.ineq3
+        #   5: m.v[1]
+        #   6: m.v[2]
+        #   7: m.v[3]
+        #   8: m.v[4]
+
+        # Assert some basic structure
+        self.assertEqual(len(graph.nodes), 9)
+        self.assertEqual(len(graph.edges), 11)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {5, 6})
+        self.assertEqual(set(graph[1]), {5, 7})
+        self.assertEqual(set(graph[2]), {6, 7, 8})
+        self.assertEqual(set(graph[3]), {6, 8})
+        self.assertEqual(set(graph[4]), {5, 8})
+        self.assertEqual(set(graph[5]), {0, 1, 4})
+        self.assertEqual(set(graph[6]), {0, 2, 3})
+        self.assertEqual(set(graph[7]), {1, 2})
+        self.assertEqual(set(graph[8]), {2, 3, 4})
+
+    def test_unused_var(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.v[1]
+        #   3: m.v[2]
+        #   4: m.v[3]
+        #   5: m.v[4]
+
+        self.assertEqual(len(graph.nodes), 6)
+        self.assertEqual(len(graph.edges), 4)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {2, 3})
+        self.assertEqual(set(graph[1]), {2, 4})
+        self.assertEqual(set(graph[2]), {0, 1})
+        self.assertEqual(set(graph[3]), {0})
+        self.assertEqual(set(graph[4]), {1})
+        self.assertEqual(set(graph[5]), set())
+
+    def test_fixed_vars(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        m.v[1].fix()
+        m.v[4].fix()
+
+        # Slightly odd situation where we provide fixed variables, but
+        # then tell the graph to not include them. Nodes will be created
+        # for these vars, but they will not have any edges.
+        graph = get_bipartite_incidence_graph(
+            variables, constraints, include_fixed=False
+        )
+
+        # Nodes:
+        #   0: m.eq1
+        #   1: m.eq2
+        #   2: m.ineq1
+        #   3: m.ineq2
+        #   4: m.ineq3
+        #   5: m.v[1]
+        #   6: m.v[2]
+        #   7: m.v[3]
+        #   8: m.v[4]
+
+        self.assertEqual(len(graph.nodes), 9)
+        self.assertEqual(len(graph.edges), 5)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(graph))
+
+        # Assert that the "adjacency list" is what we expect
+        self.assertEqual(set(graph[0]), {6})
+        self.assertEqual(set(graph[1]), {7})
+        self.assertEqual(set(graph[2]), {6, 7})
+        self.assertEqual(set(graph[3]), {6})
+        self.assertEqual(set(graph[4]), set())
+        self.assertEqual(set(graph[5]), set())
+        self.assertEqual(set(graph[6]), {0, 2, 3})
+        self.assertEqual(set(graph[7]), {1, 2})
+        self.assertEqual(set(graph[8]), set())
+
+    def test_extract_subgraph(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        sg_cons = [0, 2]
+        sg_vars = [i + len(constraints) for i in [2, 0, 3]]
+
+        subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+        # Subgraph nodes:
+        #   0: m.eq1
+        #   1: m.ineq1
+        #   2: m.v[3]
+        #   3: m.v[1]
+        #   4: m.v[4]
+
+        self.assertEqual(len(subgraph.nodes), 5)
+        self.assertEqual(len(subgraph.edges), 3)
+        self.assertTrue(nx.algorithms.bipartite.is_bipartite(subgraph))
+
+        self.assertEqual(set(subgraph[0]), {3})
+        self.assertEqual(set(subgraph[1]), {2, 4})
+        self.assertEqual(set(subgraph[2]), {1})
+        self.assertEqual(set(subgraph[3]), {0})
+        self.assertEqual(set(subgraph[4]), {1})
+
+    def test_extract_exceptions(self):
+        m = self.make_test_model()
+        constraints = [m.eq1, m.eq2, m.ineq1, m.ineq2, m.ineq3]
+        variables = list(m.v.values())
+        graph = get_bipartite_incidence_graph(variables, constraints)
+
+        sg_cons = [0, 2, 5]
+        sg_vars = [i + len(constraints) for i in [2, 3]]
+        msg = "Subgraph is not bipartite"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+        sg_cons = [0, 2, 5]
+        sg_vars = [i + len(constraints) for i in [2, 0, 3]]
+        msg = "provided more than once"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestGetAdjacent(unittest.TestCase):
+
+    def test_get_adjacent_to_var(self):
+        m = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface(m)
+        adj_cons = igraph.get_adjacent_to(m.rho)
+        self.assertEqual(
+            ComponentSet(adj_cons),
+            ComponentSet([
+                m.holdup_eqn[1],
+                m.holdup_eqn[2],
+                m.holdup_eqn[3],
+                m.density_eqn,
+            ]),
+        )
+
+    def test_get_adjacent_to_con(self):
+        m = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface(m)
+        adj_vars = igraph.get_adjacent_to(m.density_eqn)
+        self.assertEqual(
+            ComponentSet(adj_vars),
+            ComponentSet([
+                m.x[1],
+                m.x[2],
+                m.x[3],
+                m.rho,
+            ]),
+        )
+
+    def test_get_adjacent_exceptions(self):
+        m = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface()
+        msg = "Cannot get components adjacent to"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            adj_vars = igraph.get_adjacent_to(m.density_eqn)
+
+        m.x[1].fix()
+        igraph = IncidenceGraphInterface(m, include_fixed=False)
+        msg = "Cannot find component"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            adj_cons = igraph.get_adjacent_to(m.x[1])
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestInterface(unittest.TestCase):
+
+    def test_subgraph_with_fewer_var_or_con(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2])
+        m.v = pyo.Var(m.I)
+        m.eq1 = pyo.Constraint(expr=m.v[1] + m.v[2] == 1)
+        m.ineq1 = pyo.Constraint(expr=m.v[1] - m.v[2] <= 2)
+
+        # Defensively set include_inequality=True, which is the current
+        # default, in case this default changes.
+        igraph = IncidenceGraphInterface(m, include_inequality=True)
+
+        variables = list(m.v.values())
+        constraints = [m.ineq1]
+        matching = igraph.maximum_matching(variables, constraints)
+        self.assertEqual(len(matching), 1)
+
+        variables = [m.v[2]]
+        constraints = [m.eq1, m.ineq1]
+        matching = igraph.maximum_matching(variables, constraints)
+        self.assertEqual(len(matching), 1)
+
+    @unittest.skipUnless(plotly_available, "Plotly is not available")
+    def test_plot(self):
+        """
+        Unfortunately, this test only ensures the code runs without errors.
+        It does not test for correctness.
+        """
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-1, 1))
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        # NOTE: Objective will not be displayed
+        m.obj = pyo.Objective(expr=m.y**2 + m.z**2)
+        m.c1 = pyo.Constraint(expr=m.y == 2*m.x + 1)
+        m.c2 = pyo.Constraint(expr=m.z >= m.x)
+        m.y.fix()
+        igraph = IncidenceGraphInterface(
+            m, include_inequality=True, include_fixed=True
+        )
+        igraph.plot(title='test plot', show=False)
 
 
 if __name__ == "__main__":

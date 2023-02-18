@@ -10,7 +10,6 @@ Ref:
                      3  constraints
 
 """
-from __future__ import division
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint, Objective,
                             Var, minimize, Reals)

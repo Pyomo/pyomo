@@ -16,35 +16,37 @@ import os
 
 import pyomo.common.unittest as unittest
 
-from pyomo.opt import (AbstractProblemWriter, AbstractResultsReader,
-                       OptSolver, ReaderFactory,
-                       SolverFactory, WriterFactory)
+from pyomo.opt import (
+    AbstractProblemWriter,
+    AbstractResultsReader,
+    OptSolver,
+    ReaderFactory,
+    SolverFactory,
+    WriterFactory,
+)
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.plugins.sol import ResultsReader_sol
 from pyomo.solvers.plugins.solvers.CBCplugin import MockCBC
 
-class MockWriter(AbstractProblemWriter):
 
+class MockWriter(AbstractProblemWriter):
     def __init__(self, name=None):
-        AbstractProblemWriter.__init__(self,name)
+        AbstractProblemWriter.__init__(self, name)
 
 
 class MockReader(AbstractResultsReader):
-
     def __init__(self, name=None):
-        AbstractResultsReader.__init__(self,name)
+        AbstractResultsReader.__init__(self, name)
 
 
 class MockSolver(OptSolver):
-
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
         kwds['doc'] = 'MockSolver Documentation'
-        OptSolver.__init__(self,**kwds)
+        OptSolver.__init__(self, **kwds)
 
 
 class OptFactoryDebug(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         import pyomo.environ
@@ -60,9 +62,22 @@ class OptFactoryDebug(unittest.TestCase):
         """
         SolverFactory.register('stest3')(MockSolver)
         ans = sorted(SolverFactory)
-        tmp = ['_mock_asl', '_mock_cbc', '_mock_cplex', '_mock_glpk', 'cbc', 'cplex', 'glpk', 'scip', 'stest3', 'asl']
+        tmp = [
+            '_mock_asl',
+            '_mock_cbc',
+            '_mock_cplex',
+            '_mock_glpk',
+            'cbc',
+            'cplex',
+            'glpk',
+            'scip',
+            'stest3',
+            'asl',
+        ]
         tmp.sort()
-        self.assertTrue(set(tmp) <= set(ans), msg="Set %s is not a subset of set %s" %(tmp,ans))
+        self.assertTrue(
+            set(tmp) <= set(ans), msg="Set %s is not a subset of set %s" % (tmp, ans)
+        )
 
     def test_solver_instance(self):
         """
@@ -74,7 +89,7 @@ class OptFactoryDebug(unittest.TestCase):
         self.assertEqual(type(ans), MockCBC)
         ans = SolverFactory("_mock_cbc", name="mymock")
         self.assertEqual(type(ans), MockCBC)
-        self.assertEqual(ans.name,  "mymock")
+        self.assertEqual(ans.name, "mymock")
 
     def test_solver_registration(self):
         """
@@ -115,15 +130,14 @@ class OptFactoryDebug(unittest.TestCase):
         WriterFactory.register('wtest3')(MockWriter)
         self.assertTrue('wtest3' in WriterFactory)
 
-
     def test_reader_factory(self):
         """
         Testing the pyomo.opt reader factory
         """
         ReaderFactory.register('rtest3')(MockReader)
         ans = ReaderFactory
-        #self.assertEqual(len(ans),4)
-        self.assertTrue(set(ans) >= set(["rtest3", "sol","yaml", "json"]))
+        # self.assertEqual(len(ans),4)
+        self.assertTrue(set(ans) >= set(["rtest3", "sol", "yaml", "json"]))
 
     def test_reader_instance(self):
         """
@@ -133,9 +147,9 @@ class OptFactoryDebug(unittest.TestCase):
         self.assertEqual(ans, None)
         ans = ReaderFactory("sol")
         self.assertEqual(type(ans), ResultsReader_sol)
-        #ans = pyomo.opt.ReaderFactory("osrl", "myreader")
-        #self.assertEqual(type(ans), pyomo.opt.reader.OS.ResultsReader_osrl)
-        #self.assertEqual(ans.name, "myreader")
+        # ans = pyomo.opt.ReaderFactory("osrl", "myreader")
+        # self.assertEqual(type(ans), pyomo.opt.reader.OS.ResultsReader_osrl)
+        # self.assertEqual(ans.name, "myreader")
 
     def test_reader_registration(self):
         """
@@ -145,6 +159,7 @@ class OptFactoryDebug(unittest.TestCase):
         self.assertTrue(not 'rtest3' in ReaderFactory)
         ReaderFactory.register('rtest3')(MockReader)
         self.assertTrue('rtest3' in ReaderFactory)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -137,7 +137,7 @@ class DeferredImportModule(object):
     def __init__(self, indicator, deferred_submodules, submodule_name):
         self._indicator_flag = indicator
         self._submodule_name = submodule_name
-        self.__file__ = None # Disable nose's coverage of this module
+        self.__file__ = None # Disable coverage of this module
         self.__spec__ = None # Indicate that this is not a "real" module
 
         if not deferred_submodules:

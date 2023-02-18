@@ -9,8 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base import Var, Param, Expression, Objective, Block, \
-    Constraint, Suffix
+from pyomo.core.base import Var, Param, Expression, Objective, Block, Constraint, Suffix
 from pyomo.core.expr.numvalue import native_numeric_types, is_fixed, value
 import logging
 
@@ -46,7 +45,8 @@ def ftoa(val, parenthesize_negative_values=False):
             _val = value(val)
         else:
             raise ValueError(
-                "Converting non-fixed bound or value to string: %s" % (val,))
+                "Converting non-fixed bound or value to string: %s" % (val,)
+            )
     #
     # Convert to string
     a = _ftoa_precision_str % _val
@@ -58,7 +58,7 @@ def ftoa(val, parenthesize_negative_values=False):
     i = len(a)
     try:
         while i > 1:
-            if float(a[:i-1]) == _val:
+            if float(a[: i - 1]) == _val:
                 i -= 1
             else:
                 break
@@ -69,8 +69,7 @@ def ftoa(val, parenthesize_negative_values=False):
     # precision (as the emitted model is not exactly what the user
     # specified)
     if i == len(a) and float(a) != _val:
-        logger.warning(
-            "Converting %s to string resulted in loss of precision" % val)
+        logger.warning("Converting %s to string resulted in loss of precision" % val)
     #
     if parenthesize_negative_values and a[0] == '-':
         return '(' + a[:i] + ')'
