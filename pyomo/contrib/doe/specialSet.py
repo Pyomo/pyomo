@@ -24,7 +24,7 @@
 #  public, prepare derivative works, and perform publicly and display
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
-
+import itertools
 
 class SpecialSet: 
     def __init__(self):
@@ -44,7 +44,7 @@ class SpecialSet:
         """
         self.special_set = self_define_res
 
-    def add_elements(self, var_name, extra_index=None, time_index=[0]):
+    def add_elements(self, var_name, extra_index=None, time_index=None):
         """
         Used for generating string names with indexes. 
 
@@ -53,13 +53,39 @@ class SpecialSet:
         var_name: a ``list`` of measurement var names 
         extra_index: a ``list`` containing extra indexes except for time indexes 
             if default (None), no extra indexes needed for all var in var_name
-            if it is a ``list`` of strings or int or floats, it is a set of one index, for every var in var_name 
-            if it is a ``list`` of lists: they are multiple sets of indexes, for every var in var_name 
-            if it is a ``list`` of ``list`` of ``list``, they are different multiple sets of indexes for different var_name 
+            if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
+            they are different multiple sets of indexes for different var_name
+            for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
         time_index: a ``list`` containing time indexes
-            default choice is [0], means this is an algebraic variable 
-            if it is a ``list`` of integers or floats, it is the time set for every var in var_name 
-            if it is a ``list`` of ``lists``, they are different time set for different var in var_name
+            default choice is None, means this is a model parameter 
+            if it is an algebraic variable, time index should be set up to [0]
+            if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
 
+        for i, n in enumerate(var_name):
+            name_data = str(n)
+
+            # first combine all indexes into a list 
+            all_index_list = [] # contains all index lists
+            if extra_index:
+                for index_list in extra_index[i]: 
+                    all_index_list.append(index_list)
+            if time_index:
+                all_index_list.append(time_index[i])
+
+            # all idnex list for one variable, such as ["CA", 10, 1]
+            all_index_for_var = list(itertools.product(*all_index_list))
+
+            for lst in all_index_for_var:
+                name1 = name_data+"["
+                for i, idx in enumerate(lst):
+                    name1 += str(idx)
+
+                    # if i is the last index, close the []. if not, add a "," for the next index. 
+                    if i==len(lst)-1:
+                        name1 += "]"
+                    else:
+                        name1 += ","
+
+                self.special_set.append(name1)
         
