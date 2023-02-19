@@ -661,19 +661,19 @@ def _finalize_numpy(np, available):
         numeric_types.RegisterBooleanType(t)
 
 
-yaml, yaml_available = attempt_import(
-    'yaml', callback=_finalize_yaml)
-pympler, pympler_available = attempt_import(
-    'pympler', callback=_finalize_pympler)
-numpy, numpy_available = attempt_import(
-    'numpy', callback=_finalize_numpy)
-scipy, scipy_available = attempt_import(
-    'scipy', callback=_finalize_scipy,
-    deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
-networkx, networkx_available = attempt_import('networkx')
-pandas, pandas_available = attempt_import('pandas')
 dill, dill_available = attempt_import('dill')
+networkx, networkx_available = attempt_import('networkx')
+numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
+pandas, pandas_available = attempt_import('pandas')
+plotly, plotly_available = attempt_import('plotly')
+pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
 pyutilib, pyutilib_available = attempt_import('pyutilib')
+scipy, scipy_available = attempt_import(
+    'scipy',
+    callback=_finalize_scipy,
+    deferred_submodules=['stats', 'sparse', 'spatial', 'integrate']
+)
+yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 
 # Note that matplotlib.pyplot can generate a runtime error on OSX when
 # not installed as a Framework (as is the case in the CI systems)
