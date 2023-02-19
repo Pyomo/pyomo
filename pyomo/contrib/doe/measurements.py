@@ -55,29 +55,18 @@ class Measurements(SpecialSet):
                 default choice is [0], means this is an algebraic variable
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
+        self._check_names(var_name, extra_index, time_index)
         self.measurement_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index)
 
     def _generate_variance(self, variance):
+        # TO BE FINISHED
         return 
 
-    def _check_names(self):
+    def _check_names(self, var_name, extra_index, time_index):
         """
         Check if the measurement information provided are valid to use. 
         """
-
-        assert type(self.measure_varname)==dict, "Measurement_var should be a dictionary."
-
-        for name in self.measure_varname:
-            if len(self.measure_varname[name]) != 2: 
-                warnings.warn("There should be two lists for each measurement. This warning indicates a potential modeling error.")
-
-            if self.measure_varname[name][0]:
-                for i in self.measure_varname[name][0]:
-                    print(i)
-                    if type(i) is not list:
-                        warnings.warn("Each extra index should form a seperate list. This warning indicates a potential modeling error.")
-
-            if self.measure_varname[name][1]:
-                for i in self.measure_varname[name][1]:
-                    if type(i) is list:
-                        warnings.warn("Each element in time index should be a number.")
+        num_var = len(var_name)
+        
+        if len(extra_index) != num_var: 
+            warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")

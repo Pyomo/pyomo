@@ -85,13 +85,13 @@ class FisherResults:
         self.logger.setLevel(level=logging.WARN)
 
 
-    def calculate_FIM(self, dv_values, black_box_res=True, result=None):
+    def calculate_FIM(self, dv_names, black_box_res=True, result=None):
         """Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
         Parameters
         ----------
-        dv_values:
-            a ``dict`` where keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+        dv_names:
+            a list of design variable names
         result:
             solver status returned by IPOPT
         """
@@ -136,7 +136,7 @@ class FisherResults:
             self.logger.info('A condition number bigger than %s is considered near singular.', self.max_condition_number)
 
         # call private methods
-        self._print_FIM_info(fim, dv_set=dv_values)
+        self._print_FIM_info(fim, dv_names=dv_names)
         if self.result is not None:
             self._get_solver_info()
 
@@ -219,14 +219,14 @@ class FisherResults:
             return jac_3Darray
 
 
-    def _print_FIM_info(self, FIM, dv_set=None):
+    def _print_FIM_info(self, FIM, dv_names=None):
         """
         using a dictionary to store all FIM information
 
         Parameters:
         -----------
         FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
-        dv_set: design variable dictionary
+        dv_names: design variable dictionary
 
         Return:
         ------
@@ -248,14 +248,6 @@ class FisherResults:
         self.cond = max(eig) / min(eig)
         self.eig_vals = eig
         self.eig_vecs = np.linalg.eig(FIM)[1]
-
-        dv_names = list(dv_set.keys())
-
-        FIM_dv_info = {}
-        FIM_dv_info[dv_names[0]] = dv_set[dv_names[0]]
-        FIM_dv_info[dv_names[1]] = dv_set[dv_names[1]]
-
-        self.dv_info = FIM_dv_info
 
         self.logger.info('FIM: %s; \n Trace: %s; \n Determinant: %s;', self.FIM, self.trace, self.det) 
         self.logger.info('Condition number: %s; \n Min eigenvalue: %s.', self.cond, self.min_eig)

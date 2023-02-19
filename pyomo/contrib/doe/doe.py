@@ -43,7 +43,7 @@ from scenario import ScenarioGenerator
 from result import FisherResults, GridSearchResult
 
 class DesignOfExperiments:
-    def __init__(self, param_init, design_variable_timepoints, measurement_object, create_model, solver=None,
+    def __init__(self, param_init, design_names, measurement_object, create_model, solver=None,
                  time_set_name = "t", prior_FIM=None, discretize_model=None, args=None):
         """
         This package enables model-based design of experiments analysis with Pyomo. 
@@ -57,9 +57,8 @@ class DesignOfExperiments:
             A  ``dictionary`` of parameter names and values. 
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
             Note: if sIPOPT is used, parameter shouldn't be indexed.
-        design_variable_timepoints:
-            A ``dictionary`` where keys are design variable names, values are its control time points.
-            If this design var is independent of time (constant), set the time to [0]
+        design_names:
+            A ``list`` of design variable names as string 
         measurement_object:
             A measurement ``object``.
         create_model:
@@ -80,10 +79,7 @@ class DesignOfExperiments:
         # parameters
         self.param = param_init
         # design variable name
-        self.design_timeset = design_variable_timepoints
-        self.design_name = list(self.design_timeset.keys())
-        # the control time point for each design variable
-        self.design_time = list(self.design_timeset.values())
+        self.design_name = design_names
         self.create_model = create_model
         self.args = args
 
@@ -320,8 +316,7 @@ class DesignOfExperiments:
         Parameters
         -----------
         design_values:
-            a ``dict`` where keys are design variable names, 
-            values are a dict whose keys are time point and values are the design variable value at that time point
+            a ``list`` of design variable values 
         mode:
             use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'
         FIM_store_name:
@@ -437,21 +432,13 @@ class DesignOfExperiments:
                 mod = self.discretize_model(mod)
 
             # force all design variables in blocks be the same as global design variables
-            def fix_design1(m,s):
-                """s: scenario index
-                """
-                return m.block[s].CA0[0]  == m.CA0[0]
+            #def fix_design1(m,s):
+            #    return m.block[s].CA0[0]  == m.CA0[0]
             
-            def fix_design2(m,s,t):
-                """s: scenario index
-                """
-                return m.block[s].T[t] == m.T[t]
-            
-            
-            design_names = ["CA0[0]", "T[0]", "T[0.125]", "T[0.25]", 
-                             "T[0.375]", "T[0.5]", "T[0.625]", "T[0.75]", "T[0.875]", "T[1]"]
+            #def fix_design2(m,s,t):
+            #    return m.block[s].T[t] == m.T[t]
 
-            for name in design_names:
+            for name in self.design_name:
                 
                 #for s in mod.scena:
                 #    design_var = cuid.find_component_on(mod.block[s])
@@ -498,6 +485,7 @@ class DesignOfExperiments:
                     f = open(store_output, 'wb')
                     pickle.dump(output_record, f)
                     f.close()
+
             # calculate jacobian
             jac = self._finite_calculation(output_record, scena_gen)
 
@@ -1060,27 +1048,24 @@ class DesignOfExperiments:
         m: model
         """
         # loop over the design variables and time index and to fix values specified in design_val
-        for d, dname in enumerate(self.design_name):
+        #for d, dname in enumerate(self.design_name):
             # if design variables are indexed by time
-            if self.design_time[d]:
-                for time in self.design_time[d]:
-                    fix_v = design_val[dname][time]
-
-                    if fix_opt:
-                        getattr(m, dname)[time].fix(fix_v)
-                    else:
-                        if optimize_option is None:
-                            getattr(m, dname)[time].unfix()
-                        else:
-                            if optimize_option[dname]:
-                                getattr(m, dname)[time].unfix()
+        #    if self.design_time[d]:
+        #        for time in self.design_time[d]:
+        #            fix_v = design_val[dname][time]
+        
+        for i, name in enumerate(self.design_name):
+            cuid = pyo.ComponentUID(name)
+            var = cuid.find_component_on(m)
+            if fix_opt:
+                #getattr(m, dname)[time].fix(fix_v)    
+                var.fix(design_val[i])
             else:
-                fix_v = design_val[dname][0]
-
-                if fix_opt:
-                    getattr(m, dname).fix(fix_v)
+                if optimize_option is None:
+                    var.unfix()
                 else:
-                    getattr(m, dname).unfix()
+                    if optimize_option[name]:
+                        var.unfix()
         return m
 
     def _get_default_ipopt_solver(self):
