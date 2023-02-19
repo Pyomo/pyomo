@@ -26,92 +26,39 @@
 #  ___________________________________________________________________________
 
 import warnings
-import itertools
+from specialSet import SpecialSet
 
-class Measurements:
-    def __init__(self, self_define_res=None,  measurement_var=None, variance=None, ind_string='_index_'):
+class Measurements(SpecialSet):
+    def __init__(self, variance=None):
         """
         This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
-        This includes the functionality to specify indices for these measurement variables. 
-        For example, with a partial differential algebraic equation model, 
-        these measurement index sets can specify which spatial and temporal coordinates each measurement is available. 
-        Moreover, this class supports defining the covariance matrix for all measurements.
+        """
+        super().__init__()
+        self._generate_variance(variance)
+
+    def specify(self, self_define_res):
+
+        self.measurement_name = super().specify(self_define_res)
+
+    def add_elements(self, var_name, extra_index=None, time_index=[0]):
+        """
 
         Parameters
-        ----------
-        self_define_res: a ``list`` of ``string``, containing the measurement variable names with indexs, 
-            for e.g. "C['CA', 23, 0]". 
-            If this is defined, no need to define ``measurement_var``, ``extra_idx``, ``time_idx``.
-        measurement_var: if not given self_define_res, this needs to be given to provide measurement names.
-             a ``dict``. Keys are measurement Var name, values are a list of two lists. 
-             The first list contains extra index. 
-                extra_idx: a ``list`` of ``list``. Each list contains an extra index for the measurement variables. 
-                For e.g., [['CA', 'CB', 'CC'], [10, 23, 28]] means there are two extra indexes for measurement variables
-                besides the time index.
-            The second list contains time index. 
-                time_idx: a ``list`` containing timepoints. 
-
-            For e.g., {'C':[['CA', 'CB', 'CC'], [10, 23, 28]], [1,2,3]} is a valid input. The measurement names will be 
-            from "C['CA', 10, 1]" to "C['CB',28,3]".
-
-        variance:
-            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index,
-            values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
-            For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
-            If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
-        ind_string:
-            a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
-            For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
+        -----------
+        var_name: a ``list`` of measurement var names 
+            extra_index: a ``list`` containing extra indexes except for time indexes 
+                if default (None), no extra indexes needed for all var in var_name
+                if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
+                they are different multiple sets of indexes for different var_name
+                for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
+            time_index: a ``list`` containing time indexes
+                default choice is [0], means this is an algebraic variable
+                if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
-        if self_define_res:
-            self.measurement_name = self_define_res
-        elif measurement_var:
-            self.measure_varname = measurement_var
-            self._check_names()
-            self._measure_name()
-        else:
-            raise AttributeError("No measurement names provided. Define either self_define_res or measurement_var.")
+        self.measurement_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index)
 
-    def _measure_name(self):
-        """Return pyomo string name
-        """
-        names = list(self.measure_varname.keys())
-        name_list = []
-        for n in names:
-            name_data = str(n)
-
-            # first combine all indexes into a list 
-            all_index_list = [] # contains all index lists
-            if self.measure_varname[n][0]:
-                for index_list in self.measure_varname[n][0]:
-                    all_index_list.append(index_list)
-            if self.measure_varname[n][1]:
-                all_index_list.append(self.measure_varname[n][1])
-
-            if not all_index_list: # there is no any index for this measurement 
-                name_list.append(name_data)
-
-            else: # add indexes to the variable name 
-
-                # all idnex list for one variable, such as ["CA", 10, 1]
-                all_index_for_var = list(itertools.product(*all_index_list))
-
-                for lst in all_index_for_var:
-                    name1 = name_data+"["
-                    for i, idx in enumerate(lst):
-                        name1 += str(idx)
-
-                        # if i is the last index, close the []. if not, add a "," for the next index. 
-                        if i==len(lst)-1:
-                            name1 += "]"
-                        else:
-                            name1 += ","
-
-                    name_list.append(name1)
-        print(name_list)
-
-        self.measurement_name = name_list
-        
+    def _generate_variance(self, variance):
+        return 
 
     def _check_names(self):
         """

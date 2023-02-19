@@ -44,6 +44,8 @@ class SpecialSet:
         """
         self.special_set = self_define_res
 
+        return self.special_set
+
     def add_elements(self, var_name, extra_index=None, time_index=None):
         """
         Used for generating string names with indexes. 
@@ -88,4 +90,6 @@ class SpecialSet:
                         name1 += ","
 
                 self.special_set.append(name1)
+
+        return self.special_set
         
