@@ -37,7 +37,7 @@ Bibliography
 .. [PyomoBookIII] Bynum, Michael L., Gabriel A. Hackebeil,
                   William E. Hart, Carl D. Laird, Bethany L. Nicholson,
                   John D. Siirola, Jean-Paul Watson, and David L. Woodruff.
-                  Pyomo - Optimization Modeling in Python.
+                  Pyomo - Optimization Modeling in Python, 3rd Edition.
                   Vol. 67. Springer, 2021.
 
 .. [PyomoJournal] William E. Hart, Jean-Paul Watson, David L. Woodruff.
