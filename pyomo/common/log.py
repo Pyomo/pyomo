@@ -18,6 +18,7 @@
 #
 # Utility classes for working with the logger
 #
+import inspect
 import io
 import logging
 import re
@@ -27,10 +28,9 @@ import textwrap
 from pyomo.version.info import releaselevel
 from pyomo.common.deprecation import deprecated
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
+from pyomo.common.formatting import wrap_reStructuredText
 
 _indentation_re = re.compile(r'\s*')
-_bullet_re = re.compile(r'(?:[-*] +)|(\[\s*[A-Za-z0-9\.]+\s*\] +)')
-_bullet_char = '-*['
 
 _RTD_URL = "https://pyomo.readthedocs.io/en/%s/errors.html" % (
     'stable'
@@ -96,7 +96,9 @@ class WrappingFormatter(logging.Formatter):
                 raise ValueError('unrecognized style flag "%s"'
                                  % (kwds['style'],))
         self._wrapper = textwrap.TextWrapper(width=kwds.pop('wrap', 78))
-        self.hang = kwds.pop('hang', ' '*4)
+        self._wrapper.subsequent_indent = kwds.pop('hang', ' '*4)
+        if not self._wrapper.subsequent_indent:
+            self._wrapper.subsequent_indent = ''
         self.basepath = kwds.pop('base', None)
         super(WrappingFormatter, self).__init__(**kwds)
 
@@ -117,92 +119,48 @@ class WrappingFormatter(logging.Formatter):
             for k,v in _orig.items():
                 setattr(record, k, v)
 
+        # We want to normalize the incoming message *before* we start
+        # formatting (wrapping) paragraphs.
+        #
         # Most of the messages are either unformatted long lines or
         # triple-quote blocks of text.  In the latter case, if the text
         # starts on the same line as the triple-quote, then it is almost
         # certainly NOT indented with the bulk of the text, which will
         # cause dedent to get confused and not strip any leading
-        # whitespace.  This attempts to work around that case:
+        # whitespace.
         #
-        #if not (_msg.startswith('\n') or _indentation_re.match(_msg).group()):
-        #    # copy the indention for the second line to the first:
-        #    lines = _msg.splitlines()
-        #    if len(lines) > 1:
-        #        _msg = _indentation_re.match(lines[1]).group() + _msg
-        #
-        # The problem with the above logic is that users may want a
-        # simple introductory line followed by an intented line (our
-        # tests did this!), and cannot specify it without adding an
-        # extra blank line to the output.  In contrast, it is possible
-        # for the user to fix the scenario above that motivated this
-        # code by just indenting their first line correctly.
-        msg = textwrap.dedent(msg).strip()
+        # A standard approach is to use inspect.cleandoc, which
+        # allows for the first line to have 0 indent.
+        msg = inspect.cleandoc(msg)
 
         # Split the formatted log message (that currently has _flag in
         # lieu of the actual message content) into lines, then
         # recombine, substituting and wrapping any lines that contain
         # _flag.
         return '\n'.join(
-            self._wrap_msg(l, msg, _id) if self._flag in l else l
-            for l in raw_msg.splitlines()
+            self._wrap_msg(line, msg, _id) if self._flag in line else line
+            for line in raw_msg.splitlines()
         )
 
-    def _wrap_msg(self, l, msg, _id):
-        indent = _indentation_re.match(l).group()
-        wrapped_msg = self._wrap(l.strip().replace(self._flag, msg), indent)
+    def _wrap_msg(self, format_line, msg, _id):
+        _init = self._wrapper.initial_indent, self._wrapper.subsequent_indent
+        # We will honor the "hang" argument (for specifying a hanging
+        # indent) unless the formatting line was indented (e.g. because
+        # DEBUG was set), in which case we will use that for both the
+        # first line and all subsequent lines.
+        indent = _indentation_re.match(format_line).group()
+        if indent:
+            self._wrapper.initial_indent = self._wrapper.subsequent_indent = indent
+        try:
+            wrapped_msg = wrap_reStructuredText(
+                format_line.strip().replace(self._flag, msg), self._wrapper
+            )
+        finally:
+            # Restore the wrapper state
+            self._wrapper.initial_indent, self._wrapper.subsequent_indent = _init
         if _id:
-            wrapped_msg += f"\n{indent}    See also {RTD(_id)}"
+            wrapped_msg += f"\n{indent}{_init[1]}See also {RTD(_id)}"
         return wrapped_msg
-
-    def _wrap(self, msg, base_indent):
-        # As textwrap only works on single paragraphs, we need to break
-        # up the incoming message into paragraphs before we pass it to
-        # textwrap.
-        paragraphs = []
-        verbatim = False
-        for line in msg.rstrip().splitlines():
-            leading = _indentation_re.match(line).group()
-            content = line.strip()
-            if not content:
-                paragraphs.append((None, None))
-            elif content == '```':
-                verbatim ^= True
-            elif verbatim:
-                paragraphs.append((None, line))
-            else:
-                matchBullet = _bullet_re.match(content)
-                if matchBullet:
-                    paragraphs.append(
-                        (leading + ' '*len(matchBullet.group()), [content]))
-                elif paragraphs and paragraphs[-1][0] == leading:
-                    paragraphs[-1][1].append( content )
-                else:
-                    paragraphs.append((leading, [content]))
-
-        base_indent = (self.hang or '') + base_indent
-
-        for i, (indent, par) in enumerate(paragraphs):
-            if indent is None:
-                if par is None:
-                    paragraphs[i] = ''
-                else:
-                    paragraphs[i] = base_indent + par
-                continue
-
-            par_indent = base_indent + indent
-            self._wrapper.subsequent_indent = par_indent
-            if not i and self.hang:
-                self._wrapper.initial_indent = par_indent[len(self.hang):]
-            else:
-                self._wrapper.initial_indent = par_indent
-
-            # Bulleted lists get indented with a hanging indent
-            bullet = _bullet_re.match(par[0])
-            if bullet:
-                self._wrapper.initial_indent = par_indent[:-len(bullet.group())]
-
-            paragraphs[i] = self._wrapper.fill(' '.join(par))
-        return '\n'.join(paragraphs)
 
 
 class LegacyPyomoFormatter(logging.Formatter):
