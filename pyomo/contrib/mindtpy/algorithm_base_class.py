@@ -259,26 +259,21 @@ class _MindtPyAlgorithm(object):
         """
         util_block = getattr(model, self.util_block_name)
         var_set = ComponentSet()
-        setattr(
-            util_block, 'constraint_list', list(
-                model.component_data_objects(
-                    ctype=Constraint, active=True,
-                    descend_into=(Block))))
-        setattr(
-            util_block, 'linear_constraint_list', list(
+        util_block.constraint_list = list(model.component_data_objects(
+                                        ctype=Constraint, active=True,
+                                        descend_into=(Block)))
+        util_block.linear_constraint_list = list(
                 c for c in model.component_data_objects(
                     ctype=Constraint, active=True, descend_into=(Block))
-                if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree))
-        setattr(
-            util_block, 'nonlinear_constraint_list', list(
+                if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree)
+        util_block.nonlinear_constraint_list = list(
                 c for c in model.component_data_objects(
                     ctype=Constraint, active=True, descend_into=(Block))
-                if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree))
-        setattr(
-            util_block, 'objective_list', list(
+                if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree)
+        util_block.objective_list = list(
                 model.component_data_objects(
                     ctype=Objective, active=True,
-                    descend_into=(Block))))
+                    descend_into=(Block)))
 
         # Identify the non-fixed variables in (potentially) active constraints and
         # objective functions
