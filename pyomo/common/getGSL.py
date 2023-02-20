@@ -11,4 +11,4 @@
 
 from pyomo.common.deprecation import (relocated_module)
 
-relocated_module('pyomo.common.gsl', version='TBD')
+relocated_module('pyomo.common.gsl', version='6.5.0')

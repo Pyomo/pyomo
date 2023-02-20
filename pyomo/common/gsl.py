@@ -19,7 +19,7 @@ logger = logging.getLogger('pyomo.common')
 @deprecated(
     "Use of get_gsl is deprecated and NO LONGER FUNCTIONS as of February 9, "
     "2023. ",
-    version='TBD')
+    version='6.5.0')
 def get_gsl(downloader):
     logger.info("As of February 9, 2023, AMPL GSL can no longer be downloaded\
                 through download-extensions. Visit https://portal.ampl.com/\

@@ -12,12 +12,12 @@
 import pyomo.environ as pyo
 from pyomo.common.dependencies import (
     networkx_available,
+    plotly_available,
     scipy_available,
-    attempt_import,
 )
-plotly, plotly_available = attempt_import("plotly")
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
+    asl_available,
     IncidenceGraphInterface,
     get_structural_incidence_matrix,
     get_numeric_incidence_matrix,
@@ -42,14 +42,13 @@ if scipy_available:
 if networkx_available:
     import networkx as nx
     from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
-from pyomo.contrib.pynumero.asl import AmplInterface
 
 import pyomo.common.unittest as unittest
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
     """
     This class tests the get_numeric_incidence_matrix function on
@@ -434,7 +433,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
     # In these tests, we pass the interface a PyomoNLP and cache
     # its Jacobian.
@@ -589,7 +588,6 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
     # In these tests we pass a model to the interface and are caching a
     # structural incidence matrix.
@@ -840,6 +838,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
             igraph.block_triangularize(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_remove(self):
         model = make_gas_expansion_model()
         igraph = IncidenceGraphInterface(model)
@@ -883,7 +882,6 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
     # In these tests we do not cache anything and use the interface
     # simply as a convenient wrapper around the analysis functions,
@@ -1092,7 +1090,6 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestDulmageMendelsohnInterface(unittest.TestCase):
 
     def test_degenerate_solid_phase_model(self):
@@ -1168,6 +1165,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for con in dmp_cons_over:
             self.assertIn(con, overconstrained_cons)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_incidence_graph(self):
         m = make_degenerate_solid_phase_model()
         variables = list(m.component_data_objects(pyo.Var))
@@ -1218,6 +1216,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for con in con_dmp[0]+con_dmp[1]:
             self.assertIn(con, overconstrained_cons)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_remove(self):
         m = make_degenerate_solid_phase_model()
         variables = list(m.component_data_objects(pyo.Var))
@@ -1256,7 +1255,6 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestConnectedComponents(unittest.TestCase):
 
     def test_dynamic_model_backward(self):
@@ -1344,10 +1342,10 @@ class TestExtraVars(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestExceptions(unittest.TestCase):
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_nlp_fixed_error(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1359,6 +1357,8 @@ class TestExceptions(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fixed variables"):
             igraph = IncidenceGraphInterface(nlp, include_fixed=True)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_nlp_active_error(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1379,7 +1379,6 @@ class TestExceptions(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestIncludeInequality(unittest.TestCase):
     def make_model_with_inequalities(self):
         m = make_degenerate_solid_phase_model()
@@ -1404,6 +1403,7 @@ class TestIncludeInequality(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, include_inequality=True)
         self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
 
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_dont_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
@@ -1411,6 +1411,7 @@ class TestIncludeInequality(unittest.TestCase):
         igraph = IncidenceGraphInterface(nlp, include_inequality=False)
         self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
 
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
@@ -1420,7 +1421,6 @@ class TestIncludeInequality(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGetIncidenceGraph(unittest.TestCase):
 
     def make_test_model(self):
@@ -1582,7 +1582,6 @@ class TestGetIncidenceGraph(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGetAdjacent(unittest.TestCase):
 
     def test_get_adjacent_to_var(self):
@@ -1628,7 +1627,6 @@ class TestGetAdjacent(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestInterface(unittest.TestCase):
 
     def test_subgraph_with_fewer_var_or_con(self):

@@ -147,9 +147,9 @@ def block_triangularize(matrix, matching=None):
 
     .. note::
 
-       **Breaking change in Pyomo 6.4.5**
+       **Breaking change in Pyomo 6.5.0**
 
-       The pre-6.4.5 ``block_triangularize`` function returned maps from
+       The pre-6.5.0 ``block_triangularize`` function returned maps from
        each row or column to the index of its block in a block
        lower triangularization as the original intent of this function
        was to identify when coordinates do or don't share a diagonal block
@@ -161,7 +161,7 @@ def block_triangularize(matrix, matching=None):
        This functionality was previously available via the
        ``get_diagonal_blocks`` method, which was confusing as it did not
        capture that the partition was the diagonal of a block
-       *triangularization* (as opposed to diagonalization). The pre-6.4.5
+       *triangularization* (as opposed to diagonalization). The pre-6.5.0
        functionality of ``block_triangularize`` is still available via the
        ``map_coords_to_block_triangular_indices`` function.
 
@@ -200,7 +200,7 @@ def map_coords_to_block_triangular_indices(matrix, matching=None):
         "``get_blocks_from_maps`` is deprecated. This functionality has been"
         " incorporated into ``block_triangularize``."
     ),
-    version="6.4.5",
+    version="6.5.0",
 )
 def get_blocks_from_maps(row_block_map, col_block_map):
     blocks = set(row_block_map.values())
@@ -220,7 +220,7 @@ def get_blocks_from_maps(row_block_map, col_block_map):
         "``get_diagonal_blocks`` has been deprecated. Please use"
         " ``block_triangularize`` instead."
     ),
-    version="6.4.5",
+    version="6.5.0",
 )
 def get_diagonal_blocks(matrix, matching=None):
     return block_triangularize(matrix, matching=matching)

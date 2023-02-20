@@ -15,7 +15,7 @@ useful graph algorithms.
 
 import enum
 import textwrap
-from pyomo.core.base.block import Block
+from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
@@ -24,8 +24,12 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.current import EqualityExpression
 from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.common.dependencies import scipy_available, attempt_import
-from pyomo.common.dependencies import networkx as nx
+from pyomo.common.dependencies import (
+    attempt_import,
+    networkx as nx,
+    scipy as sp,
+    plotly,
+)
 from pyomo.common.deprecation import deprecated
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import (
@@ -42,18 +46,12 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     RowPartition,
     ColPartition,
 )
+from pyomo.contrib.pynumero.asl import AmplInterface
 
-asl_available = False
-if scipy_available:
-    import scipy as sp
-    from pyomo.contrib.pynumero.asl import AmplInterface
-    if AmplInterface.available():
-        asl_available = True
-        from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-
-plotly, plotly_available = attempt_import("plotly")
-if plotly_available:
-    go = plotly.graph_objects
+pyomo_nlp, pyomo_nlp_available = attempt_import(
+    'pyomo.contrib.pynumero.interfaces.pyomo_nlp'
+)
+asl_available = pyomo_nlp_available & AmplInterface.available()
 
 
 def _check_unindexed(complist):
@@ -242,7 +240,7 @@ def get_numeric_incidence_matrix(variables, constraints):
     _check_unindexed(comps)
     block = create_subsystem_block(constraints, variables)
     block._obj = Objective(expr=0)
-    nlp = PyomoNLP(block)
+    nlp = pyomo_nlp.PyomoNLP(block)
     return nlp.extract_submatrix_jacobian(variables, constraints)
 
 
@@ -288,7 +286,31 @@ class IncidenceGraphInterface(object):
             self._incidence_graph = None
             self._variables = None
             self._constraints = None
-        elif isinstance(model, PyomoNLP):
+        elif isinstance(model, _BlockData):
+            self._constraints = [
+                con for con in model.component_data_objects(
+                    Constraint, active=active
+                )
+                if include_inequality or isinstance(con.expr, EqualityExpression)
+            ]
+            self._variables = list(
+                _generate_variables_in_constraints(
+                    self._constraints, include_fixed=include_fixed
+                )
+            )
+            self._var_index_map = ComponentMap(
+                (var, i) for i, var in enumerate(self._variables)
+            )
+            self._con_index_map = ComponentMap(
+                (con, i) for i, con in enumerate(self._constraints)
+            )
+            self._incidence_graph = get_bipartite_incidence_graph(
+                self._variables,
+                self._constraints,
+                # Note that include_fixed is not necessary here. We have
+                # already checked this condition above.
+            )
+        elif isinstance(model, pyomo_nlp.PyomoNLP):
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "
@@ -319,34 +341,10 @@ class IncidenceGraphInterface(object):
                 incidence_matrix = nlp.evaluate_jacobian_eq()
             nxb = nx.algorithms.bipartite
             self._incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
-        elif isinstance(model, Block):
-            self._constraints = [
-                con for con in model.component_data_objects(
-                    Constraint, active=active
-                )
-                if include_inequality or isinstance(con.expr, EqualityExpression)
-            ]
-            self._variables = list(
-                _generate_variables_in_constraints(
-                    self._constraints, include_fixed=include_fixed
-                )
-            )
-            self._var_index_map = ComponentMap(
-                (var, i) for i, var in enumerate(self._variables)
-            )
-            self._con_index_map = ComponentMap(
-                (con, i) for i, con in enumerate(self._constraints)
-            )
-            self._incidence_graph = get_bipartite_incidence_graph(
-                self._variables,
-                self._constraints,
-                # Note that include_fixed is not necessary here. We have
-                # already checked this condition above.
-            )
         else:
             raise TypeError(
                 "Unsupported type for incidence matrix. Expected "
-                "%s or %s but got %s." % (PyomoNLP, Block, type(model))
+                "%s or %s but got %s." % (pyomo_nlp.PyomoNLP, Block, type(model))
             )
 
     @property
@@ -380,7 +378,7 @@ class IncidenceGraphInterface(object):
     @property
     @deprecated(
         msg="``var_index_map`` is deprecated. Please use ``get_matrix_coord`` instead.",
-        version="6.4.5",
+        version="6.5.0",
     )
     def var_index_map(self):
         return self._var_index_map
@@ -388,7 +386,7 @@ class IncidenceGraphInterface(object):
     @property
     @deprecated(
         msg="``con_index_map`` is deprecated. Please use ``get_matrix_coord`` instead.",
-        version="6.4.5",
+        version="6.5.0",
     )
     def con_index_map(self):
         return self._con_index_map
@@ -396,7 +394,7 @@ class IncidenceGraphInterface(object):
     @property
     @deprecated(
         msg="The ``row_block_map`` attribute is deprecated and will be removed.",
-        version="6.4.5",
+        version="6.5.0",
     )
     def row_block_map(self):
         return None
@@ -404,7 +402,7 @@ class IncidenceGraphInterface(object):
     @property
     @deprecated(
         msg="The ``col_block_map`` attribute is deprecated and will be removed.",
-        version="6.4.5",
+        version="6.5.0",
     )
     def col_block_map(self):
         return None
@@ -694,9 +692,9 @@ class IncidenceGraphInterface(object):
 
         .. note::
 
-           **Breaking change in Pyomo 6.4.5**
+           **Breaking change in Pyomo 6.5.0**
 
-           The pre-6.4.5 ``block_triangularize`` method returned maps from
+           The pre-6.5.0 ``block_triangularize`` method returned maps from
            each variable or constraint to the index of its block in a block
            lower triangularization as the original intent of this function
            was to identify when variables do or don't share a diagonal block
@@ -708,7 +706,7 @@ class IncidenceGraphInterface(object):
            This functionality was previously available via the
            ``get_diagonal_blocks`` method, which was confusing as it did not
            capture that the partition was the diagonal of a block
-           *triangularization* (as opposed to diagonalization). The pre-6.4.5
+           *triangularization* (as opposed to diagonalization). The pre-6.5.0
            functionality of ``block_triangularize`` is still available via the
            ``map_nodes_to_block_triangular_indices`` method.
 
@@ -729,7 +727,7 @@ class IncidenceGraphInterface(object):
             " Please use ``IncidenceGraphInterface.block_triangularize``"
             " instead."
         ),
-        version="6.4.5",
+        version="6.5.0",
     )
     def get_diagonal_blocks(self, variables=None, constraints=None):
         variables, constraints = self._validate_input(variables, constraints)
@@ -878,7 +876,7 @@ class IncidenceGraphInterface(object):
             edge_y.append(y0)
             edge_y.append(y1)
             edge_y.append(None)
-        edge_trace = go.Scatter(
+        edge_trace = plotly.graph_objects.Scatter(
             x=edge_x,
             y=edge_y,
             line=dict(width=0.5, color='#888'),
@@ -916,7 +914,7 @@ class IncidenceGraphInterface(object):
                     f'value: {str(v.value)}<br>domain: {str(v.domain)}<br>'
                     f'fixed: {str(v.is_fixed())}'
                 )
-        node_trace = go.Scatter(
+        node_trace = plotly.graph_objects.Scatter(
             x=node_x,
             y=node_y,
             mode='markers',
@@ -924,7 +922,7 @@ class IncidenceGraphInterface(object):
             text=node_text,
             marker=dict(color=node_color, size=10),
         )
-        fig = go.Figure(data=[edge_trace, node_trace])
+        fig = plotly.graph_objects.Figure(data=[edge_trace, node_trace])
         if title is not None:
             fig.update_layout(title=dict(text=title))
         if show:
