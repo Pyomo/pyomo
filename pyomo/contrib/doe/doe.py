@@ -239,7 +239,7 @@ class DesignOfExperiments:
 
         # create result object
         analysis_square = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac_square,
-                                    prior_FIM=self.prior_FIM, store_FIM=self.FIM_store_name, scale_constant_value=self.scale_constant_value)
+                                    prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
         analysis_square.calculate_FIM(self.design_values, result=result_square)
 
@@ -255,11 +255,7 @@ class DesignOfExperiments:
         
         m = self._add_objective(m)
 
-        self.logger.info('Solve with given objective:')
-        time0_solve2 = time.time()
         result_doe = self._solve_doe(m, fix=False)
-        time1_solve2 = time.time()
-        time_solve2 = time1_solve2 - time0_solve2
 
         # extract Jac
         jac_optimize = self._extract_jac(m)
@@ -268,11 +264,8 @@ class DesignOfExperiments:
         analysis_optimize = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac_optimize,
                                         prior_FIM=self.prior_FIM)
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
-        analysis_optimize.calculate_FIM(self.design_timeset, result=result_doe)
+        analysis_optimize.calculate_FIM(self.design_name, result=result_doe)
         analysis_optimize.model = m
-
-        # record optimization time
-        analysis_optimize.solve_time = time_solve2
 
         return analysis_optimize
 
@@ -837,20 +830,26 @@ class DesignOfExperiments:
                 return design_var == design_var_global
             
             con_name = "con"+name
-            mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1))
+            mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1)) 
 
         # variables for jacobian and FIM
-        mod.param = pyo.Set(initialize=self.param)
+        mod.param = pyo.Set(initialize=list(self.param.keys()))
         mod.res = pyo.Set(initialize=self.measure_name)
 
+        def identity_matrix(m,i,j):
+            if i==j:
+                return 1 
+            else:
+                return 0 
+
         mod.jac = pyo.Var(mod.param, mod.res, initialize=0.1)
-        mod.fim = pyo.Var(mod.param, mod.para, initialize=identity_matrix)
+        mod.fim = pyo.Var(mod.param, mod.param, initialize=identity_matrix)
 
         # move the L matrix initial point to a dictionary
         if type(self.L_initial) != type(None):
             dict_cho={}
-            for i, bu in enumerate(m.para_set):
-                for j, un in enumerate(m.para_set):
+            for i, bu in enumerate(mod.param):
+                for j, un in enumerate(mod.param):
                     dict_cho[(bu,un)] = self.L_initial[i][j]
         # use the L dictionary to initialize L matrix
         def init_cho(m,i,j):
@@ -908,8 +907,8 @@ class DesignOfExperiments:
             """
             return m.fim[p,q] == sum(m.jac[p,n]*m.jac[q,n] for n in mod.res) + m.priorFIM[p,q]*self.fim_scale_constant_value 
         
-        mod.jac_const = pyo.Constraint(mod.para, mod.res, rule=jacobian_rule)
-        mod.fim_const = pyo.Constraint(mod.para, mod.param, rule=fim_rule)
+        mod.jac_const = pyo.Constraint(mod.param, mod.res, rule=jacobian_rule)
+        mod.fim_const = pyo.Constraint(mod.param, mod.param, rule=fim_rule)
 
         return mod
     
@@ -925,7 +924,7 @@ class DesignOfExperiments:
             """
         # If it is the left bottom half of L
             if (list(self.param.keys()).index(c) >= list(self.param.keys()).index(d)):
-                return m.FIM[c, d] == sum(
+                return m.fim[c, d] == sum(
                     m.L_ele[c, list(self.param.keys())[k]] * m.L_ele[d, list(self.param.keys())[k]] for k in range(list(self.param.keys()).index(d) + 1))
             else:
         # This is the empty half of L above the diagonal
@@ -935,7 +934,7 @@ class DesignOfExperiments:
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
-            return m.trace == sum(m.FIM[j,j] for j in m.para_set)
+            return m.trace == sum(m.fim[j,j] for j in m.para_set)
 
         def det_general(m):
             """Calculate determinant. Can be applied to FIM of any size.
@@ -959,12 +958,12 @@ class DesignOfExperiments:
                             name_order.append(element)
 
             # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
-            det_perm = sum( self._sgn(list_p[d])*sum(m.FIM[each, name_order[b]] for b, each in enumerate(m.para_set)) for d in range(len(list_p)))
+            det_perm = sum( self._sgn(list_p[d])*sum(m.fim[each, name_order[b]] for b, each in enumerate(m.param)) for d in range(len(list_p)))
             return m.det == det_perm
 
         if self.Cholesky_option:
-            m.cholesky_cons = pyo.Constraint(m.para_set, m.para_set, rule=cholesky_imp)
-            m.Obj = pyo.Objective(expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.para_set), sense=pyo.maximize)
+            m.cholesky_cons = pyo.Constraint(m.param, m.param, rule=cholesky_imp)
+            m.Obj = pyo.Objective(expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.param), sense=pyo.maximize)
         # if not cholesky but determinant, calculating det and evaluate the OBJ with det
         elif (self.objective_option == 'det'):
             m.det_rule = pyo.Constraint(rule=det_general)
