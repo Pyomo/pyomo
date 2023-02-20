@@ -32,7 +32,12 @@ from textwrap import wrap
 import types
 
 from pyomo.common.collections import Sequence, Mapping
-from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.deprecation import (
+    deprecated,
+    deprecation_warning,
+    relocated_module_attribute,
+)
+from pyomo.common.errors import DeveloperError
 from pyomo.common.fileutils import import_file
 from pyomo.common.modeling import NOTSET
 
@@ -1239,6 +1244,123 @@ def _default_string_dict_lexer(value):
 _default_string_dict_lexer._lex = None
 
 
+def _formatter_str_to_callback(pattern):
+    "Wrapper function that converts formatter strings to callback functions"
+
+    if not pattern:
+        pattern = ''
+    if '%s' in pattern:
+        return lambda indent, obj: indent + pattern % obj.name()
+    elif pattern:
+        return lambda indent, obj: indent + pattern
+    else:
+        return lambda indent, obj: ''
+
+def _formatter_str_to_item_callback(formatter, pattern):
+    "Wrapper function that converts item formatter strings to callback functions"
+
+    if not pattern:
+        pattern = ''
+    if '%s' in pattern:
+        _item_body_formatter = lambda doc: pattern % (doc,)
+    else:
+        _item_body_formatter = lambda doc: pattern
+
+    def _item_body_cb(indent, obj):
+        _doc = obj._doc or obj._description or ""
+        if not _doc:
+            return ''
+        wraplines = '\n ' not in _doc
+        _doc = _item_body_formatter(_doc)
+        _indent = indent + ' ' * formatter.indent_spacing
+        if wraplines:
+            doc_lines = wrap(
+                _doc,
+                formatter.width,
+                initial_indent=_indent,
+                subsequent_indent=_indent
+            )
+        else:
+            doc_lines = (_doc,)
+        return ('\n'.join(doc_lines)).rstrip() + '\n'
+
+    return _item_body_cb
+
+
+class ConfigFormatter(object):
+    def _block_start(self, indent, obj):
+        raise DeveloperError(f"{type(self).__name__} failed to implement _block_start")
+
+    def _block_end(self, indent, obj):
+        raise DeveloperError(f"{type(self).__name__} failed to implement _block_end")
+
+    def _item_start(self, indent, obj):
+        raise DeveloperError(f"{type(self).__name__} failed to implement _item_start")
+
+    def _item_body(self, indent, obj):
+        raise DeveloperError(f"{type(self).__name__} failed to implement _item_body")
+
+    def _item_end(self, indent, obj):
+        raise DeveloperError(f"{type(self).__name__} failed to implement _item_end")
+
+    def generate(self, config, indent_spacing=2, width=78, visibility=0):
+        self.indent_spacing = indent_spacing
+        self.width = width
+
+        os = io.StringIO()
+        level = []
+        lastObj = config
+        indent = ''
+        for lvl, pre, val, obj in config._data_collector(1, '', visibility, True):
+            if len(level) < lvl:
+                while len(level) < lvl - 1:
+                    level.append(None)
+                level.append(lastObj)
+                os.write(self._block_start(indent, lastObj))
+                indent += ' ' * indent_spacing
+            while len(level) > lvl:
+                _last = level.pop()
+                if _last is not None:
+                    indent = indent[:-1 * indent_spacing]
+                    os.write(self._block_end(indent, _last))
+
+            lastObj = obj
+            os.write(self._item_start(indent, obj))
+            os.write(self._item_body(indent, obj))
+            os.write(self._item_end(indent, obj))
+        while level:
+            _last = level.pop()
+            if _last is not None:
+                indent = indent[:-1 * indent_spacing]
+                os.write(self._block_end(indent, _last))
+        return os.getvalue()
+
+
+class String_ConfigFormatter(ConfigFormatter):
+    def __init__(self, block_start, block_end, item_start, item_body, item_end):
+        self._block_start = _formatter_str_to_callback(block_start)
+        self._block_end = _formatter_str_to_callback(block_end)
+        self._item_start = _formatter_str_to_callback(item_start)
+        self._item_end = _formatter_str_to_callback(item_end)
+        self._item_body = _formatter_str_to_item_callback(self, item_body)
+
+
+class LaTeX_ConfigFormatter(String_ConfigFormatter):
+    def __init__(self):
+        super().__init__(
+            "\\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]\n",
+            "\\end{description}\n",
+            "\\item[{%s}]\\hfill\n",
+            "\\\\%s",
+            "",
+        )
+
+
+ConfigFormatter.formats = {
+    'latex': LaTeX_ConfigFormatter,
+}
+
+
 class ConfigBase(object):
     __slots__ = ('_parent', '_name', '_userSet', '_userAccessed', '_data',
                  '_default', '_domain', '_description', '_doc', '_visibility',
@@ -1624,78 +1746,43 @@ class ConfigBase(object):
             item_start=None, item_body=None, item_end=None,
             indent_spacing=2, width=78, visibility=0,
             format='latex'):
-        _formats = ConfigBase.generate_documentation.formats
-        if block_start is None:
-            block_start = _formats.get(format, {}).get('block_start','')
-        if block_end is None:
-            block_end = _formats.get(format, {}).get('block_end','')
-        if item_start is None:
-            item_start = _formats.get(format, {}).get('item_start','')
-        if item_body is None:
-            item_body = _formats.get(format, {}).get('item_body','')
-        if item_end is None:
-            item_end = _formats.get(format, {}).get('item_end','')
 
-        os = io.StringIO()
-        level = []
-        lastObj = self
-        indent = ''
-        for lvl, pre, val, obj in self._data_collector(1, '', visibility, True):
-            if len(level) < lvl:
-                while len(level) < lvl - 1:
-                    level.append(None)
-                level.append(lastObj)
-                if '%s' in block_start:
-                    os.write(indent + block_start % lastObj.name())
-                elif block_start:
-                    os.write(indent + block_start)
-                indent += ' ' * indent_spacing
-            while len(level) > lvl:
-                _last = level.pop()
-                if _last is not None:
-                    indent = indent[:-1 * indent_spacing]
-                    if '%s' in block_end:
-                        os.write(indent + block_end % _last.name())
-                    elif block_end:
-                        os.write(indent + block_end)
+        if isinstance(format, str):
+            formatter = ConfigFormatter.formats.get(format, None)
+            if formatter is None:
+                raise ValueError(f"Unrecognized documentation formatter, '{format}'")
+            formatter = formatter()
+        else:
+            # Assume everything not a str is a valid formatter object.
+            formatter = format
 
-            lastObj = obj
-            if '%s' in item_start:
-                os.write(indent + item_start % obj.name())
-            elif item_start:
-                os.write(indent + item_start)
-            _doc = obj._doc or obj._description or ""
-            if _doc:
-                _wrapLines = '\n ' not in _doc
-                if '%s' in item_body:
-                    _doc = item_body % (_doc,)
-                elif _doc:
-                    _doc = item_body
-                if _wrapLines:
-                    doc_lines = wrap(
-                        _doc,
-                        width,
-                        initial_indent=indent + ' ' * indent_spacing,
-                        subsequent_indent=indent + ' ' * indent_spacing)
-                else:
-                    doc_lines = (_doc,)
-                # Write things out
-                os.writelines('\n'.join(doc_lines))
-                if not doc_lines[-1].endswith("\n"):
-                    os.write('\n')
-            if '%s' in item_end:
-                os.write(indent + item_end % obj.name())
-            elif item_end:
-                os.write(indent + item_end)
-        while level:
-            _last = level.pop()
-            if _last is not None:
-                indent = indent[:-1 * indent_spacing]
-                if '%s' in block_end:
-                    os.write(indent + block_end % _last.name())
-                else:
-                    os.write(indent + block_end)
-        return os.getvalue()
+        deprecated_args = (block_start, block_end, item_start, item_end)
+        if any(arg is not None for arg in deprecated_args):
+            names = ('block_start', 'block_end', 'item_start', 'item_end')
+            for arg, name in zip(deprecated_args, names):
+                if arg is None:
+                    continue
+                deprecation_warning(
+                    f"Overriding '{name}' by passing strings to "
+                    "generate_documentation is deprecated.  Create an instance of a "
+                    "StringConfigFormatter and pass it as the 'format' argument.",
+                    version='6.5.1.dev0',
+                )
+                setattr(formatter, "_" + name, _formatter_str_to_callback(arg))
+        if item_body is not None:
+            deprecation_warning(
+                f"Overriding 'item_body' by passing strings to "
+                "generate_documentation is deprecated.  Create an instance of a "
+                "StringConfigFormatter and pass it as the 'format' argument.",
+                version='6.5.1.dev0',
+            )
+            setattr(
+                formatter,
+                "_item_body",
+                _formatter_str_to_item_callback(formatter, item_body)
+            )
+
+        return formatter.generate(self, indent_spacing, width, visibility)
 
     def user_values(self):
         if self._userSet:
@@ -1710,17 +1797,6 @@ class ConfigBase(object):
         for level, prefix, value, obj in self._data_collector(0, ""):
             if obj._userSet and not obj._userAccessed:
                 yield obj
-
-ConfigBase.generate_documentation.formats = {
-    'latex': {
-        'block_start': "\\begin{description}["
-            "topsep=0pt,parsep=0.5em,itemsep=-0.4em]\n",
-        'block_end': "\\end{description}\n",
-        'item_start': "\\item[{%s}]\\hfill\n",
-        'item_body': "\\\\%s",
-        'item_end': "",
-    }
-}
 
 
 class ConfigValue(ConfigBase):

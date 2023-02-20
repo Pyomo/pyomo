@@ -37,6 +37,8 @@ import pyomo.common.unittest as unittest
 from io import StringIO
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+from pyomo.common.errors import DeveloperError
+
 def yaml_load(arg):
     return yaml.load(arg, **yaml_load_args)
 
@@ -46,6 +48,7 @@ from pyomo.common.config import (
     Bool, Integer, PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, ListOf, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
+    ConfigFormatter, String_ConfigFormatter,
     _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
@@ -1743,13 +1746,35 @@ formatting; like a bulleted list:
   endBlock{flushing}
 endBlock{}
 """
-        test = self.config.generate_documentation(
-            block_start= "startBlock{%s}\n",
-            block_end=   "endBlock{%s}\n",
-            item_start=  "startItem{%s}\n",
-            item_body=   "item{%s}\n",
-            item_end=    "endItem{%s}\n",
-        )
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(
+                block_start= "startBlock{%s}\n",
+                block_end=   "endBlock{%s}\n",
+                item_start=  "startItem{%s}\n",
+                item_body=   "item{%s}\n",
+                item_end=    "endItem{%s}\n",
+            )
+        LOG = LOG.getvalue().replace('\n', ' ')
+        for name in ('block_start', 'block_end', 'item_start', 'item_end', 'item_body'):
+            self.assertIn(
+                f"Overriding '{name}' by passing strings to "
+                "generate_documentation is deprecated.",
+                LOG
+            )
+        self.maxDiff = None
+        #print(test)
+        self.assertEqual(test, reference)
+
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(format=String_ConfigFormatter(
+                block_start= "startBlock{%s}\n",
+                block_end=   "endBlock{%s}\n",
+                item_start=  "startItem{%s}\n",
+                item_body=   "item{%s}\n",
+                item_end=    "endItem{%s}\n",
+            ))
+        self.assertEqual(LOG.getvalue(), "")
+        self.maxDiff = None
         #print(test)
         self.assertEqual(test, reference)
 
@@ -1802,6 +1827,40 @@ endBlock{}
 \\end{description}
             """.strip())
 
+
+    def test_ConfigFormatter_errors(self):
+        cfg = ConfigDict()
+        cfg.declare('field', ConfigValue())
+        with self.assertRaisesRegex(
+                ValueError, "Unrecognized documentation formatter, 'unknown'"):
+            cfg.generate_documentation(format="unknown")
+
+        with self.assertRaisesRegex(
+                DeveloperError, "ConfigFormatter failed to implement _block_start"):
+            cfg.generate_documentation(format=ConfigFormatter())
+
+        with self.assertRaisesRegex(
+                DeveloperError, "ConfigFormatter failed to implement _item_start"):
+            cfg.generate_documentation(format=ConfigFormatter(), block_start="")
+
+        with self.assertRaisesRegex(
+                DeveloperError, "ConfigFormatter failed to implement _item_body"):
+            cfg.generate_documentation(
+                format=ConfigFormatter(), block_start="", item_start=""
+            )
+
+        with self.assertRaisesRegex(
+                DeveloperError, "ConfigFormatter failed to implement _item_end"):
+            cfg.generate_documentation(
+                format=ConfigFormatter(), block_start="", item_start="", item_body=""
+            )
+
+        with self.assertRaisesRegex(
+                DeveloperError, "ConfigFormatter failed to implement _block_end"):
+            cfg.generate_documentation(
+                format=ConfigFormatter(), block_start="", item_start="", item_body="",
+                item_end=""
+            )
 
     def test_block_get(self):
         self.assertTrue('scenario' in self.config)
