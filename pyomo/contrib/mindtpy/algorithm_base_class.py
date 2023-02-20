@@ -290,17 +290,15 @@ class _MindtPyAlgorithm(object):
             v for v in model.component_data_objects(
                 ctype=Var, descend_into=(Block))
             if v in var_set)
-        setattr(util_block, 'variable_list', var_list)
-        discrete_variable_list = list(
+        util_block.variable_list = var_list
+        util_block.discrete_variable_list = list(
             v for v in model.component_data_objects(
                 ctype=Var, descend_into=(Block))
             if v in var_set and v.is_integer())
-        setattr(util_block, 'discrete_variable_list', discrete_variable_list)
-        continuous_variable_list = list(
+        util_block.continuous_variable_list = list(
             v for v in model.component_data_objects(
                 ctype=Var, descend_into=(Block))
             if v in var_set and v.is_continuous())
-        setattr(util_block, 'continuous_variable_list', continuous_variable_list)
 
     def add_cuts_components(self, model):
         config = self.config
