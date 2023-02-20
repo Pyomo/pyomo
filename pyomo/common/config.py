@@ -41,7 +41,7 @@ from pyomo.common.errors import DeveloperError
 from pyomo.common.fileutils import import_file
 from pyomo.common.modeling import NOTSET
 
-logger = logging.getLogger('pyomo.common.config')
+logger = logging.getLogger(__name__)
 
 relocated_module_attribute(
     'PYOMO_CONFIG_DIR', 'pyomo.common.envvar.PYOMO_CONFIG_DIR',
@@ -2430,9 +2430,9 @@ class ConfigDict(ConfigBase, Mapping):
                 level += 1
         for key in self._decl_order:
             cfg = self._data[key]
-            for v in cfg._data_collector(
-                    level, cfg._name + ': ', visibility, docMode):
-                yield v
+            yield from cfg._data_collector(
+                level, cfg._name + ': ', visibility, docMode
+            )
 
 # Backwards compatibility: ConfigDict was originally named ConfigBlock.
 ConfigBlock = ConfigDict
