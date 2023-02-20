@@ -88,7 +88,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 config.logger.info('Algorithm should terminate here.')
                 break
 
-            if self.algorithm_should_terminate(config):
+            if self.algorithm_should_terminate():
                 self.last_iter_cuts = False
                 break
 
@@ -134,17 +134,12 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         super().init_rNLP(config, add_oa_cuts=False)
 
 
-    def algorithm_should_terminate(self, config):
+    def algorithm_should_terminate(self):
         """Checks if the algorithm should terminate at the given point.
 
         This function determines whether the algorithm should terminate based on the solver options and progress.
         (Sets the self.results.solver.termination_condition to the appropriate condition, i.e. optimal,
         maxIterations, maxTimeLimit).
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
