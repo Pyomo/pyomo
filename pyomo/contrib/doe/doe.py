@@ -205,16 +205,7 @@ class DesignOfExperiments:
         # calculate how much the FIM element is scaled by a constant number
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
         self.fim_scale_constant_value = self.scale_constant_value **2
-
-        # identify measurements involved in calculation
-        if jac_involved_measurement:
-            self.jac_involved_name = jac_involved_measurement.flatten_measure_name.copy()
-            self.timepoint_overall_set = jac_involved_measurement.timepoint_overall_set.copy()
-        else:
-            self.jac_involved_name = self.flatten_measure_name.copy()
-            self.timepoint_overall_set = self.measure.timepoint_overall_set.copy()
-            
-
+    
         # check if inputs are valid
         # simultaneous mode does not need to check mode and dimension of design variables
         if check:
@@ -228,18 +219,9 @@ class DesignOfExperiments:
 
         if self.optimize:
             analysis_optimize = self._optimize_stochastic_program(m)
-
-            time1 = time.time()
-            analysis_optimize.total_time = time1-time0
-            self.logger.info('Total wall clock time [s]: %s', time1-time0)
             return analysis_square, analysis_optimize
             
         else:
-            time1 = time.time()
-            # record square problem time
-            analysis_square.total_time = time1-time0
-            self.logger.info('Total wall clock time [s]: %s', time1 - time0)
-
             return analysis_square
             
 
@@ -250,27 +232,20 @@ class DesignOfExperiments:
 
         # Solve square problem first
         # result_square: solver result
-        time0_solve = time.time()
         result_square = self._solve_doe(m, fix=True, opt_option=optimize_option)
-        time1_solve = time.time()
-
-        time_solve1 = time1_solve-time0_solve
 
         # extract Jac
         jac_square = self._extract_jac(m)
 
         # create result object
         analysis_square = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac_square,
-                                     prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
+                                    prior_FIM=self.prior_FIM, store_FIM=self.FIM_store_name, scale_constant_value=self.scale_constant_value)
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
-        analysis_square.calculate_FIM(self.design_timeset, result=result_square)
+        analysis_square.calculate_FIM(self.design_values, result=result_square)
 
         analysis_square.model = m
 
         self.analysis_square = analysis_square
-        analysis_square.solve_time = time_solve1
-        self.logger.info('Total solve time with simultaneous_finite mode (Wall clock) [s]:  %s', time_solve1)
-        
         return m, analysis_square
 
     def _optimize_stochastic_program(self, m):
@@ -644,9 +619,8 @@ class DesignOfExperiments:
         # loop over parameters
         for p in list(self.param.keys()): 
             jac_para = []
-            for name1 in self.jac_involved_name:
-                for tim in self.timepoint_overall_set:
-                    jac_para.append(pyo.value(m.jac[name1, p, tim]))
+            for res in m.res:
+                jac_para.append(pyo.value(m.jac[p, res]))
             jac[p] = jac_para
         return jac
 
@@ -872,32 +846,6 @@ class DesignOfExperiments:
         mod.jac = pyo.Var(mod.param, mod.res, initialize=0.1)
         mod.fim = pyo.Var(mod.param, mod.para, initialize=identity_matrix)
 
-        # jacobian rule
-        def jacobian_rule(m, p, n):
-            """
-            p: parameter 
-            n: response
-            """
-            cuid = pyo.ComponentUID(n)
-            var_up = cuid.find_component_on(m.block[self.scenario_num[p][0]])
-            var_lo = cuid.find_component_on(m.block[self.scenario_num[p][1]])
-            if self.scale_nominal_param_value:
-                return m.jac[p,n] == (var_up-var_lo)/self.eps_abs[p]*self.param[p]*self.scale_constant_value
-            else:
-                return m.jac[p,n] == (var_up-var_lo)/self.eps_abs[p]*self.scale_constant_value
-        
-        def fim_rule(m,p,q):
-            """
-            p: parameter 
-            q: parameter
-            """
-            return m.fim[p,q] == sum(m.jac[p,n]*m.jac[q,n] for n in mod.res) 
-        
-        mod.jac_const = pyo.Constraint(mod.para, mod.res, rule=jacobian_rule)
-        mod.fim_const = pyo.Constraint(mod.para, mod.param, rule=fim_rule)
-
-        return mod
-        ### old code
         # move the L matrix initial point to a dictionary
         if type(self.L_initial) != type(None):
             dict_cho={}
@@ -912,44 +860,62 @@ class DesignOfExperiments:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if type(self.L_initial) != type(None):
-                m.L_ele = pyo.Var(m.para_set, m.para_set, initialize=init_cho)
+                mod.L_ele = pyo.Var(mod.param, mod.param, initialize=init_cho)
             # or initialize with the identity matrix
             else:
-                m.L_ele = pyo.Var(m.para_set, m.para_set, initialize=identity_matrix)
+                mod.L_ele = pyo.Var(mod.param, mod.param, initialize=identity_matrix)
 
             # loop over parameter name
-            for c in m.para_set:
-                for d in m.para_set:
+            for i, c in enumerate(mod.param):
+                for j, d in enumerate(mod.param):
                     # fix the 0 half of L matrix to be 0.0
-                    if (param_name.index(c) < param_name.index(d)):
-                        m.L_ele[c,d].fix(0.0)
+                    if i < j:
+                        mod.L_ele[c,d].fix(0.0)
                     # Give LB to the diagonal entries 
                     if self.L_LB:
                         if c==d:
-                            m.L_ele[c,d].setlb(self.L_LB)
+                            mod.L_ele[c,d].setlb(self.L_LB)
 
+        # jacobian rule
+        def jacobian_rule(m, p, n):
+            """
+            p: parameter 
+            n: response
+            """
+            cuid = pyo.ComponentUID(n)
+            var_up = cuid.find_component_on(m.block[self.scenario_num[p][0]])
+            var_lo = cuid.find_component_on(m.block[self.scenario_num[p][1]])
+            if self.scale_nominal_param_value:
+                return m.jac[p,n] == (var_up-var_lo)/self.eps_abs[p]*self.param[p]*self.scale_constant_value
+            else:
+                return m.jac[p,n] == (var_up-var_lo)/self.eps_abs[p]*self.scale_constant_value
+            
         #A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
         dict_fele={}
-        for i, bu in enumerate(m.para_set):
-            for j, un in enumerate(m.para_set):
+        for i, bu in enumerate(mod.param):
+            for j, un in enumerate(mod.param):
                 dict_fele[(bu,un)] = self.prior_FIM[i][j]
 
-        def ele_todict(m,i,j):
+        def read_prior(m,i,j):
             return dict_fele[(i,j)]
-        m.refele = pyo.Expression(m.para_set, m.para_set, rule=ele_todict)
-
-        def calc_FIM(m,j,d):
+        mod.priorFIM = pyo.Expression(mod.param, mod.param, rule=read_prior)
+        
+        def fim_rule(m,p,q):
             """
-            Calculate FIM elements
+            p: parameter 
+            q: parameter
             """
-            return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
+            return m.fim[p,q] == sum(m.jac[p,n]*m.jac[q,n] for n in mod.res) + m.priorFIM[p,q]*self.fim_scale_constant_value 
+        
+        mod.jac_const = pyo.Constraint(mod.para, mod.res, rule=jacobian_rule)
+        mod.fim_const = pyo.Constraint(mod.para, mod.param, rule=fim_rule)
 
-        ### Constraints and Objective function
-        m.dC_value = pyo.Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
-        m.ele_rule = pyo.Constraint(m.para_set, m.para_set, rule=calc_FIM)
+        return mod
+    
 
-        return m
+        ### old code
+        
 
     def _add_objective(self, m):
 
