@@ -185,8 +185,6 @@ class DesignOfExperiments:
         analysis_optimize: result summary of the optimization problem solved
 
         """
-        time0 = time.time()
-
         # store inputs in object
         self.design_values = design_values
         self.optimize = if_optimize
@@ -599,10 +597,10 @@ class DesignOfExperiments:
 
     def _extract_jac(self, m):
         """
-        Extract jacobian from simultaneous mode
+        Extract jacobian from the stochastic program 
         Arguments
         ---------
-        m: solved simultaneous model
+        m: solved stochastic program model
         Returns
         ------
         JAC: the overall jacobian as a dictionary
@@ -821,7 +819,7 @@ class DesignOfExperiments:
 
         # force design variables in blocks to be equal to global design values
         for name in self.design_name:
-
+            
             def fix1(mod, s):
                 cuid = pyo.ComponentUID(name)
                 design_var_global = cuid.find_component_on(mod)
@@ -855,6 +853,7 @@ class DesignOfExperiments:
         def init_cho(m,i,j):
             return dict_cho[(i,j)]
 
+        # if cholesky, define L elements as variables
         if self.Cholesky_option:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
@@ -911,10 +910,6 @@ class DesignOfExperiments:
         mod.fim_const = pyo.Constraint(mod.param, mod.param, rule=fim_rule)
 
         return mod
-    
-
-        ### old code
-        
 
     def _add_objective(self, m):
 
@@ -992,13 +987,6 @@ class DesignOfExperiments:
         --------
         m: model
         """
-        # loop over the design variables and time index and to fix values specified in design_val
-        #for d, dname in enumerate(self.design_name):
-            # if design variables are indexed by time
-        #    if self.design_time[d]:
-        #        for time in self.design_time[d]:
-        #            fix_v = design_val[dname][time]
-        
         for i, name in enumerate(self.design_name):
             cuid = pyo.ComponentUID(name)
             var = cuid.find_component_on(m)
