@@ -95,7 +95,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Pyomo'
-copyright = u'2017, Sandia National Laboratories'
+copyright = u'2008-2023, Sandia National Laboratories'
 author = u'Pyomo Developers'
 
 # The version info for the project you're documenting, acts as replacement for
