@@ -24,7 +24,6 @@ _packages = [
     'pyomo.opt',
     'pyomo.dataportal',
     'pyomo.duality',
-    'pyomo.checker',
     'pyomo.repn',
     'pyomo.neos',
     'pyomo.solvers',
