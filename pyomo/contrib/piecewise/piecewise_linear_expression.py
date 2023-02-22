@@ -24,14 +24,11 @@ class PiecewiseLinearExpression(NumericExpression):
         index (non-negative int): this expression's index in the parent's
             '_expressions' object (which is an indexed Expression)
     """
-    __slots__ = ('_parent_pw_linear_function', '_index',)
+    __slots__ = ('_parent_pw_linear_function',)
 
-    def __init__(self, args, parent, index):
+    def __init__(self, args, parent):
         super().__init__(args)
         self._parent_pw_linear_function = weakref_ref(parent)
-        # We store the index here so that it will be easy to replace with a
-        # variable in the case that we later convert the model to a MIP
-        self._index = index
 
     def nargs(self):
         return len(self._args_)

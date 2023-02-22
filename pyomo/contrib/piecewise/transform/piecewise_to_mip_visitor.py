@@ -46,7 +46,7 @@ class PiecewiseLinearToMIP(StreamBasedExpressionVisitor):
             parent = node.parent_pw_linear_function
             substitute_var = self.transform_pw_linear_expression(
                 node, parent, self.transBlock)
-            parent._expressions[node._index] = substitute_var
+            parent._expressions[id(node)] = substitute_var
         return node
 
     finalizeResult = None
