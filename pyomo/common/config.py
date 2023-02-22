@@ -1435,6 +1435,10 @@ class document_kwargs_from_configdict(object):
     width : int
         total documentation width in characters (for wrapping paragraphs)
 
+    doc : str, optional
+        the initial docstring to append the ConfigDict documentation to.
+        If None, then the decorated object's ``__doc__`` will be used.
+
     Examples
     --------
 
@@ -1471,19 +1475,35 @@ class document_kwargs_from_configdict(object):
             If True, stream the solver output to the console
 
     """
-    def __init__(self, config, section='Keyword Arguments', indent_spacing=4, width=78):
+    def __init__(
+            self,
+            config,
+            section='Keyword Arguments',
+            indent_spacing=4,
+            width=78,
+            doc=None,
+    ):
         if '\n' not in section:
             section += '\n' + '-'*len(section) + '\n'
         self.config = config
         self.section = section
         self.indent_spacing = indent_spacing
         self.width = width
+        self.doc = doc
 
     def __call__(self, fcn):
         if isinstance(self.config, str):
             self.config = getattr(fcn, self.config)
+        if self.doc is not None:
+            doc = inspect.cleandoc(self.doc)
+        elif fcn.__doc__:
+            doc = inspect.cleandoc(fcn.__doc__)
+        else:
+            doc = ""
+        if doc and not doc.endswith('\n'):
+            doc += '\n'
         fcn.__doc__ = (
-            inspect.cleandoc(fcn.__doc__ or "")
+            doc
             + f'\n{self.section}'
             + self.config.generate_documentation(
                 indent_spacing=self.indent_spacing, width=self.width, format='numpydoc'
