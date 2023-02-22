@@ -220,7 +220,7 @@ class In(object):
         values are passed to ``domain.__contains__()``, and if ``True``
         is returned, the value is accepted and returned.
 
-    cast: callable, optional
+    cast: Callable, optional
         A callable object.  If specified, incoming values are first
         passed to `cast`, and the resulting object is checked for
         membership in `domain`
@@ -343,7 +343,7 @@ class ListOf(object):
 
 
 class Module(object):
-    """ Domain validator for modules.
+    """Domain validator for modules.
 
     Modules can be specified as module objects, by module name,
     or by the path to the module's file. If specified by path, the
@@ -356,21 +356,25 @@ class Module(object):
 
     Parameters
     ----------
-    basePath: None, str, ConfigValue
+    basePath : None, str, ConfigValue
         The base path that will be prepended to any non-absolute path
         values provided.  If None, defaults to :py:attr:`Path.BasePath`.
 
-    expandPath: bool
+    expandPath : bool
         If True, then the value will be expanded and normalized.  If
         False, the string representation of the value will be used
         unchanged.  If None, expandPath will defer to the (negated)
         value of :py:attr:`Path.SuppressPathExpansion`.
+
+    Examples
+    --------
 
     The following code shows the three ways you can specify a module: by file
     name, by module name, or by module object. Regardless of how the module is
     specified, what is stored in the configuration is a module object.
 
     .. doctest::
+
         >>> from pyomo.common.config import (
         ...     ConfigDict, ConfigValue, Module
         ... )
@@ -378,6 +382,7 @@ class Module(object):
         >>> config.declare('my_module', ConfigValue(
         ...     domain=Module(),
         ... ))
+        <pyomo.common.config.ConfigValue object at ...>
         >>> # Set using file path
         >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
         >>> # Set using python module name, as a string
@@ -385,6 +390,7 @@ class Module(object):
         >>> # Set using an imported module object
         >>> import os.path
         >>> config.my_module = os.path
+
     """
     def __init__(self, basePath=None, expandPath=None):
         self.basePath = basePath
@@ -509,7 +515,7 @@ class DynamicImplicitDomain(object):
     ``pyomo/common/tests/config_plugin.py``:
 
     .. literalinclude:: /../../pyomo/common/tests/config_plugin.py
-       :lines: 10-
+       :start-at: import
 
     .. doctest::
        :hide:
@@ -608,7 +614,7 @@ values for those entries, and retrieve the current values:
 .. doctest::
 
     >>> from pyomo.common.config import (
-    ...     ConfigDict, ConfigList, ConfigValue, In,
+    ...     ConfigDict, ConfigList, ConfigValue
     ... )
     >>> config = ConfigDict()
     >>> config.declare('filename', ConfigValue(
@@ -692,7 +698,7 @@ validators for common use cases:
    Module
    Path
    PathList
-
+   DynamicImplicitDomain
 
 Configuring class hierarchies
 =============================
@@ -1423,16 +1429,52 @@ class document_kwargs_from_configdict(object):
     Parameters
     ----------
     config : ConfigDict
-        The ConfigDict to document
+        the `ConfigDict` to document
 
-    section : string
+    section : str
         the section header to preface config documentation with
 
     indent_spacing : int
-        amount by which to indent
+        number of spaces to indent each block of documentation
 
     width : int
         total documentation width in characters (for wrapping paragraphs)
+
+    Examples
+    --------
+
+    >>> from pyomo.common.config import (
+    ...     ConfigDict, ConfigValue, document_kwargs_from_configdict
+    ... )
+    >>> class MyClass(object):
+    ...     CONFIG = ConfigDict()
+    ...     CONFIG.declare('iterlim', ConfigValue(
+    ...         default=3000,
+    ...         domain=int,
+    ...         doc="Iteration limit.  Specify None for no limit"
+    ...     ))
+    ...     CONFIG.declare('tee', ConfigValue(
+    ...         domain=bool,
+    ...         doc="If True, stream the solver output to the console"
+    ...     ))
+    ...
+    ...     @document_kwargs_from_configdict(CONFIG)
+    ...     def solve(self, **kwargs):
+    ...         config = self.CONFIG(kwargs)
+    ...         # ...
+    ...
+    >>> help(MyClass.solve)
+    Help on function solve:
+    <BLANKLINE>
+    solve(self, **kwargs)
+        Keyword Arguments
+        -----------------
+        iterlim: int, default=3000
+            Iteration limit.  Specify None for no limit
+    <BLANKLINE>
+        tee: bool, optional
+            If True, stream the solver output to the console
+
     """
     def __init__(self, config, section='Keyword Arguments', indent_spacing=4, width=78):
         if '\n' not in section:
@@ -1904,7 +1946,7 @@ class ConfigValue(ConfigBase):
         The default value that this ConfigValue will take if no value is
         provided.
 
-    domain: callable, optional
+    domain: Callable, optional
         The domain can be any callable that accepts a candidate value
         and returns the value converted to the desired type, optionally
         performing any data validation.  The result will be stored into
@@ -2030,7 +2072,7 @@ class ConfigList(ConfigBase, Sequence):
         otherwise the default is cast to the domain and forms a default
         list with a single element.
 
-    domain: callable, optional
+    domain: Callable, optional
         The domain can be any callable that accepts a candidate value
         and returns the value converted to the desired type, optionally
         performing any data validation.  The result will be stored /
@@ -2211,7 +2253,7 @@ class ConfigDict(ConfigBase, Mapping):
         were not prevously declared using :py:meth:`declare` or
         :py:meth:`declare_from`.
 
-    implicit_domain: callable, optional
+    implicit_domain: Callable, optional
         The domain that will be used for any implicitly-declared keys.
         Follows the same rules as :py:meth:`ConfigValue`'s `domain`.
 

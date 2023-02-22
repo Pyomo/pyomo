@@ -14,6 +14,7 @@
 
    tostr
    tabular_writer
+   wrap_reStructuredText
    StreamIndenter
 """
 
