@@ -1428,8 +1428,12 @@ class document_kwargs_from_configdict(object):
 
     Parameters
     ----------
-    config : ConfigDict
-        the `ConfigDict` to document
+    config : ConfigDict or str
+        the :py:class:`ConfigDict` to document.  If a ``str``, then the
+        :py:class:`ConfigDict` is obtained by retrieving the named
+        attribute from the decorated object (thereby enabling
+        documenting class objects whose ``__init__`` keyword arguments
+        are processed by a :py:class:`ConfigDict` class attribute)
 
     section : str
         the section header to preface config documentation with
@@ -1485,6 +1489,8 @@ class document_kwargs_from_configdict(object):
         self.width = width
 
     def __call__(self, fcn):
+        if isinstance(self.config, str):
+            self.config = getattr(fcn, self.config)
         fcn.__doc__ = (
             inspect.cleandoc(fcn.__doc__ or "")
             + f'\n{self.section}'

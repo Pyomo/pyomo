@@ -2642,6 +2642,7 @@ c: 1.0
             cfg2.declare_from({})
 
     def test_docstring_decorator(self):
+        @document_kwargs_from_configdict('CONFIG')
         class ExampleClass(object):
             CONFIG = ConfigDict()
             CONFIG.declare('option_1', ConfigValue(
@@ -2681,10 +2682,7 @@ c: 1.0
             def __init__(self):
                 pass
 
-        print(ExampleClass.__init__.__doc__)
-        self.assertEqual(
-            ExampleClass.__init__.__doc__,
-            """
+        ref = """
 Keyword Arguments
 -----------------
 option_1: int, default=5
@@ -2707,7 +2705,8 @@ option_2: int, default=5
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
     actual information."""
-        )
+        self.assertEqual(ExampleClass.__doc__, ref)
+        self.assertEqual(ExampleClass.__init__.__doc__, ref)
 
 
 if __name__ == "__main__":
