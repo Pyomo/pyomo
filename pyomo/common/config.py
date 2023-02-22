@@ -39,6 +39,7 @@ from pyomo.common.deprecation import (
 )
 from pyomo.common.errors import DeveloperError
 from pyomo.common.fileutils import import_file
+from pyomo.common.formatting import wrap_reStructuredText
 from pyomo.common.modeling import NOTSET
 
 logger = logging.getLogger(__name__)
@@ -553,20 +554,6 @@ class DynamicImplicitDomain(object):
 
     def __call__(self, key, value):
         return self.callback(key, value)
-
-
-def add_docstring_list(docstring, configdict, indent_by=4):
-    """Returns the docstring with a formatted configuration arguments listing."""
-    return docstring + (" " * indent_by).join(
-        configdict.generate_documentation(
-            block_start="Keyword Arguments\n-----------------\n",
-            block_end="",
-            item_start="%s\n",
-            item_body="  %s",
-            item_end="",
-            indent_spacing=0,
-            width=256
-        ).splitlines(True))
 
 
 # Note: Enum uses a metaclass to work its magic.  To get a deprecation
@@ -1372,9 +1359,58 @@ class LaTeX_ConfigFormatter(String_ConfigFormatter):
         )
 
 
+class numpydoc_ConfigFormatter(ConfigFormatter):
+    def _initialize(self, *args):
+        super()._initialize(*args)
+        self.wrapper = textwrap.TextWrapper(width=self.width)
+
+    def _item_body(self, indent, obj):
+        typeinfo = ', '.join(filter(
+            None,
+            [
+                'dict' if isinstance(obj, ConfigDict) else obj.domain_name(),
+                'optional' if obj._default is None else f'default={repr(obj._default)}',
+            ]
+        ))
+        # Note that numpydoc / ReST specifies that the colon in
+        # definition lists be surrounded by spaces (i.e., " : ").
+        # However, as of numpydoc (1.1.0) / Sphinx (3.4.3) / napoleon
+        # (0.7), things aren't really geared for nested lists of
+        # parameters.  Definition lists omit the colon, and
+        # sub-definitions are rendered as normal definition sections
+        # (without the special formatting applied to Parameters lists),
+        # leading to less readable docs.  As they tolerate omitting the
+        # space before the colon at the top level (which at lower levels
+        # causes nested definition lists to NOT omit the colon), we will
+        # generate non-standard ReST and omit the preceeding space:
+        self.out.write(f'\n{indent}{obj.name()}: {typeinfo}\n')
+        self.wrapper.initial_indent = indent + ' ' * self.indent_spacing
+        self.wrapper.subsequent_indent = indent + ' ' * self.indent_spacing
+        itemdoc = wrap_reStructuredText(
+            inspect.cleandoc(obj._doc or obj._description or ""),
+            self.wrapper,
+        )
+        if itemdoc:
+            self.out.write(itemdoc + '\n')
+
+    def _finalize(self):
+        return inspect.cleandoc(self.out.getvalue())
+
 ConfigFormatter.formats = {
     'latex': LaTeX_ConfigFormatter,
+    'numpydoc': numpydoc_ConfigFormatter,
 }
+
+
+def add_docstring_list(docstring, configdict, indent_by=4):
+    """Returns the docstring with a formatted configuration arguments listing."""
+    section = 'Keyword Arguments'
+    return (
+        inspect.cleandoc(docstring)
+        + '\n' + section + '\n' + '-'*len(section) + '\n'
+        + configdict.generate_documentation(
+            indent_spacing=indent_by, width=256, format='numpydoc')
+    )
 
 
 class ConfigBase(object):
