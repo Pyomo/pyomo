@@ -1237,19 +1237,20 @@ def _default_string_dict_lexer(value):
 _default_string_dict_lexer._lex = None
 
 
-def _formatter_str_to_callback(pattern):
+def _formatter_str_to_callback(pattern, formatter):
     "Wrapper function that converts formatter strings to callback functions"
 
     if not pattern:
         pattern = ''
     if '%s' in pattern:
-        return lambda self, indent, obj: self.out.write(indent + pattern % obj.name())
+        cb = lambda self, indent, obj: self.out.write(indent + pattern % obj.name())
     elif pattern:
-        return lambda self, indent, obj: self.out.write(indent + pattern)
+        cb = lambda self, indent, obj: self.out.write(indent + pattern)
     else:
-        return lambda self, indent, obj: None
+        cb = lambda self, indent, obj: None
+    return types.MethodType(cb, formatter)
 
-def _formatter_str_to_item_callback(pattern):
+def _formatter_str_to_item_callback(pattern, formatter):
     "Wrapper function that converts item formatter strings to callback functions"
 
     if not pattern:
@@ -1277,7 +1278,7 @@ def _formatter_str_to_item_callback(pattern):
         else:
             self.out.write(_doc.rstrip() + '\n')
 
-    return _item_body_cb
+    return types.MethodType(_item_body_cb, formatter)
 
 
 class ConfigFormatter(object):
@@ -1337,21 +1338,11 @@ class ConfigFormatter(object):
 
 class String_ConfigFormatter(ConfigFormatter):
     def __init__(self, block_start, block_end, item_start, item_body, item_end):
-        self._block_start = types.MethodType(
-            _formatter_str_to_callback(block_start), self
-        )
-        self._block_end = types.MethodType(
-            _formatter_str_to_callback(block_end), self
-        )
-        self._item_start = types.MethodType(
-            _formatter_str_to_callback(item_start), self
-        )
-        self._item_end = types.MethodType(
-            _formatter_str_to_callback(item_end), self
-        )
-        self._item_body = types.MethodType(
-            _formatter_str_to_item_callback(item_body), self
-        )
+        self._block_start = _formatter_str_to_callback(block_start, self)
+        self._block_end = _formatter_str_to_callback(block_end, self)
+        self._item_start = _formatter_str_to_callback(item_start, self)
+        self._item_end = _formatter_str_to_callback(item_end, self)
+        self._item_body = _formatter_str_to_item_callback(item_body, self)
 
 
 class LaTeX_ConfigFormatter(String_ConfigFormatter):
@@ -1911,7 +1902,7 @@ class ConfigBase(object):
                 setattr(
                     formatter,
                     "_" + name,
-                    types.MethodType(_formatter_str_to_callback(arg), formatter)
+                    _formatter_str_to_callback(arg, formatter)
                 )
         if item_body is not None:
             deprecation_warning(
@@ -1923,7 +1914,7 @@ class ConfigBase(object):
             setattr(
                 formatter,
                 "_item_body",
-                types.MethodType(_formatter_str_to_item_callback(item_body), formatter)
+                _formatter_str_to_item_callback(item_body, formatter)
             )
 
         return formatter.generate(self, indent_spacing, width, visibility)
