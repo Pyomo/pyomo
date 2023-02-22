@@ -1413,6 +1413,46 @@ def add_docstring_list(docstring, configdict, indent_by=4):
     )
 
 
+class document_kwargs_from_configdict(object):
+    """Decorator to add the documentation of a ConfigDict to the method docstring
+
+    This will add the documentation (using the
+    :py:class:`numpydoc_ConfigFormatter` formatter) to the decorated
+    method's docstring.
+
+    Parameters
+    ----------
+    config : ConfigDict
+        The ConfigDict to document
+
+    section : string
+        the section header to preface config documentation with
+
+    indent_spacing : int
+        amount by which to indent
+
+    width : int
+        total documentation width in characters (for wrapping paragraphs)
+    """
+    def __init__(self, config, section='Keyword Arguments', indent_spacing=4, width=78):
+        if '\n' not in section:
+            section += '\n' + '-'*len(section) + '\n'
+        self.config = config
+        self.section = section
+        self.indent_spacing = indent_spacing
+        self.width = width
+
+    def __call__(self, fcn):
+        fcn.__doc__ = (
+            inspect.cleandoc(fcn.__doc__ or "")
+            + f'\n{self.section}'
+            + self.config.generate_documentation(
+                indent_spacing=self.indent_spacing, width=self.width, format='numpydoc'
+            )
+        )
+        return fcn
+
+
 class ConfigBase(object):
     __slots__ = ('_parent', '_name', '_userSet', '_userAccessed', '_data',
                  '_default', '_domain', '_description', '_doc', '_visibility',

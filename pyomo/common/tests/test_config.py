@@ -49,6 +49,7 @@ from pyomo.common.config import (
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, ListOf, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
     ConfigFormatter, String_ConfigFormatter,
+    document_kwargs_from_configdict,
     _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
@@ -2640,6 +2641,74 @@ c: 1.0
         with self.assertRaisesRegex(
                 ValueError, "only accepts other ConfigDicts"):
             cfg2.declare_from({})
+
+    def test_docstring_decorator(self):
+        class ExampleClass(object):
+            CONFIG = ConfigDict()
+            CONFIG.declare('option_1', ConfigValue(
+                default=5,
+                domain=int,
+                doc='The first configuration option',
+            ))
+            SOLVER = CONFIG.declare('solver_options', ConfigDict())
+            SOLVER.declare('solver_option_1', ConfigValue(
+                default=1,
+                domain=float,
+                doc='The first solver configuration option',
+            ))
+            SOLVER.declare('solver_option_2', ConfigValue(
+                default=1,
+                domain=float,
+                doc="""The second solver configuration option
+
+                With a very long line containing
+                wrappable text in a long, silly paragraph
+                with little actual information.
+                #) but a bulleted list
+                #) with two bullets
+                """,
+            ))
+            CONFIG.declare('option_2', ConfigValue(
+                default=5,
+                domain=int,
+                doc="""The second solver configuration option
+                with a very long line containing
+                wrappable text in a long, silly paragraph
+                with little actual information.
+                """,
+            ))
+
+            @document_kwargs_from_configdict(CONFIG)
+            def __init__(self):
+                pass
+
+        print(ExampleClass.__init__.__doc__)
+        self.assertEqual(
+            ExampleClass.__init__.__doc__,
+            """
+Keyword Arguments
+-----------------
+option_1: int, default=5
+    The first configuration option
+
+solver_options: dict, optional
+
+    solver_option_1: float, default=1
+        The first solver configuration option
+
+    solver_option_2: float, default=1
+        The second solver configuration option
+
+        With a very long line containing wrappable text in a long, silly
+        paragraph with little actual information.
+        #) but a bulleted list
+        #) with two bullets
+
+option_2: int, default=5
+    The second solver configuration option with a very long line
+    containing wrappable text in a long, silly paragraph with little
+    actual information."""
+        )
 
 
 if __name__ == "__main__":
