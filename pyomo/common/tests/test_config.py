@@ -37,7 +37,6 @@ import pyomo.common.unittest as unittest
 from io import StringIO
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
-from pyomo.common.errors import DeveloperError
 
 def yaml_load(arg):
     return yaml.load(arg, **yaml_load_args)
