@@ -306,7 +306,7 @@ def wrap_reStructuredText(docstr, wrapper):
         if literal_block:
             if literal_block[0] == 0:
                 if len(literal_block[1]) < len(leading):
-                    # Indented literal block
+                    # indented literal block
                     literal_block = 1, leading
                     paragraphs.append((None, None, line))
                     continue
@@ -333,7 +333,7 @@ def wrap_reStructuredText(docstr, wrapper):
         elif verbatim:
             paragraphs.append((None, None, line))
         elif _verbatim_line_start.match(content):
-            # This catches lines that start with patterns that inlicate
+            # This catches lines that start with patterns that indicate
             # that the line should not be wrapped (line blocks, grid
             # tables)
             paragraphs.append((None, None, line))
