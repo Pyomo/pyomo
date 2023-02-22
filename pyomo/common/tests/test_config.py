@@ -1827,40 +1827,16 @@ endBlock{}
 \\end{description}
             """.strip())
 
-
-    def test_ConfigFormatter_errors(self):
+    def test_empty_ConfigFormatter(self):
         cfg = ConfigDict()
         cfg.declare('field', ConfigValue())
         with self.assertRaisesRegex(
                 ValueError, "Unrecognized documentation formatter, 'unknown'"):
             cfg.generate_documentation(format="unknown")
 
-        with self.assertRaisesRegex(
-                DeveloperError, "ConfigFormatter failed to implement _block_start"):
-            cfg.generate_documentation(format=ConfigFormatter())
-
-        with self.assertRaisesRegex(
-                DeveloperError, "ConfigFormatter failed to implement _item_start"):
-            cfg.generate_documentation(format=ConfigFormatter(), block_start="")
-
-        with self.assertRaisesRegex(
-                DeveloperError, "ConfigFormatter failed to implement _item_body"):
-            cfg.generate_documentation(
-                format=ConfigFormatter(), block_start="", item_start=""
-            )
-
-        with self.assertRaisesRegex(
-                DeveloperError, "ConfigFormatter failed to implement _item_end"):
-            cfg.generate_documentation(
-                format=ConfigFormatter(), block_start="", item_start="", item_body=""
-            )
-
-        with self.assertRaisesRegex(
-                DeveloperError, "ConfigFormatter failed to implement _block_end"):
-            cfg.generate_documentation(
-                format=ConfigFormatter(), block_start="", item_start="", item_body="",
-                item_end=""
-            )
+        self.assertEqual(
+            cfg.generate_documentation(format=ConfigFormatter()), ''
+        )
 
     def test_block_get(self):
         self.assertTrue('scenario' in self.config)

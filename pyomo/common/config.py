@@ -28,7 +28,7 @@ import pickle
 import ply.lex
 import re
 import sys
-from textwrap import wrap
+import textwrap
 import types
 
 from pyomo.common.collections import Sequence, Mapping
@@ -1250,13 +1250,13 @@ def _formatter_str_to_callback(pattern):
     if not pattern:
         pattern = ''
     if '%s' in pattern:
-        return lambda indent, obj: indent + pattern % obj.name()
+        return lambda self, indent, obj: self.out.write(indent + pattern % obj.name())
     elif pattern:
-        return lambda indent, obj: indent + pattern
+        return lambda self, indent, obj: self.out.write(indent + pattern)
     else:
-        return lambda indent, obj: ''
+        return lambda self, indent, obj: None
 
-def _formatter_str_to_item_callback(formatter, pattern):
+def _formatter_str_to_item_callback(pattern):
     "Wrapper function that converts item formatter strings to callback functions"
 
     if not pattern:
@@ -1266,48 +1266,54 @@ def _formatter_str_to_item_callback(formatter, pattern):
     else:
         _item_body_formatter = lambda doc: pattern
 
-    def _item_body_cb(indent, obj):
+    def _item_body_cb(self, indent, obj):
         _doc = obj._doc or obj._description or ""
         if not _doc:
             return ''
         wraplines = '\n ' not in _doc
         _doc = _item_body_formatter(_doc)
-        _indent = indent + ' ' * formatter.indent_spacing
+        _indent = indent + ' ' * self.indent_spacing
         if wraplines:
-            doc_lines = wrap(
+            doc_lines = textwrap.wrap(
                 _doc,
-                formatter.width,
+                self.width,
                 initial_indent=_indent,
-                subsequent_indent=_indent
+                subsequent_indent=_indent,
             )
+            self.out.write(('\n'.join(doc_lines)).rstrip() + '\n')
         else:
-            doc_lines = (_doc,)
-        return ('\n'.join(doc_lines)).rstrip() + '\n'
+            self.out.write(_doc.rstrip() + '\n')
 
     return _item_body_cb
 
 
 class ConfigFormatter(object):
-    def _block_start(self, indent, obj):
-        raise DeveloperError(f"{type(self).__name__} failed to implement _block_start")
-
-    def _block_end(self, indent, obj):
-        raise DeveloperError(f"{type(self).__name__} failed to implement _block_end")
-
-    def _item_start(self, indent, obj):
-        raise DeveloperError(f"{type(self).__name__} failed to implement _item_start")
-
-    def _item_body(self, indent, obj):
-        raise DeveloperError(f"{type(self).__name__} failed to implement _item_body")
-
-    def _item_end(self, indent, obj):
-        raise DeveloperError(f"{type(self).__name__} failed to implement _item_end")
-
-    def generate(self, config, indent_spacing=2, width=78, visibility=0):
+    def _initialize(self, indent_spacing, width, visibility):
+        self.out = io.StringIO()
         self.indent_spacing = indent_spacing
         self.width = width
+        self.visibility = visibility
 
-        os = io.StringIO()
+    def _block_start(self, indent, obj):
+        pass
+
+    def _block_end(self, indent, obj):
+        pass
+
+    def _item_start(self, indent, obj):
+        pass
+
+    def _item_body(self, indent, obj):
+        pass
+
+    def _item_end(self, indent, obj):
+        pass
+
+    def _finalize(self):
+        return self.out.getvalue()
+
+    def generate(self, config, indent_spacing=2, width=78, visibility=0):
+        self._initialize(indent_spacing, width, visibility)
         level = []
         lastObj = config
         indent = ''
@@ -1316,33 +1322,43 @@ class ConfigFormatter(object):
                 while len(level) < lvl - 1:
                     level.append(None)
                 level.append(lastObj)
-                os.write(self._block_start(indent, lastObj))
+                self._block_start(indent, lastObj)
                 indent += ' ' * indent_spacing
             while len(level) > lvl:
                 _last = level.pop()
                 if _last is not None:
-                    indent = indent[:-1 * indent_spacing]
-                    os.write(self._block_end(indent, _last))
+                    indent = indent[:-indent_spacing]
+                    self._block_end(indent, _last)
 
             lastObj = obj
-            os.write(self._item_start(indent, obj))
-            os.write(self._item_body(indent, obj))
-            os.write(self._item_end(indent, obj))
+            self._item_start(indent, obj)
+            self._item_body(indent, obj)
+            self._item_end(indent, obj)
         while level:
             _last = level.pop()
             if _last is not None:
-                indent = indent[:-1 * indent_spacing]
-                os.write(self._block_end(indent, _last))
-        return os.getvalue()
+                indent = indent[:-indent_spacing]
+                self._block_end(indent, _last)
+        return self._finalize()
 
 
 class String_ConfigFormatter(ConfigFormatter):
     def __init__(self, block_start, block_end, item_start, item_body, item_end):
-        self._block_start = _formatter_str_to_callback(block_start)
-        self._block_end = _formatter_str_to_callback(block_end)
-        self._item_start = _formatter_str_to_callback(item_start)
-        self._item_end = _formatter_str_to_callback(item_end)
-        self._item_body = _formatter_str_to_item_callback(self, item_body)
+        self._block_start = types.MethodType(
+            _formatter_str_to_callback(block_start), self
+        )
+        self._block_end = types.MethodType(
+            _formatter_str_to_callback(block_end), self
+        )
+        self._item_start = types.MethodType(
+            _formatter_str_to_callback(item_start), self
+        )
+        self._item_end = types.MethodType(
+            _formatter_str_to_callback(item_end), self
+        )
+        self._item_body = types.MethodType(
+            _formatter_str_to_item_callback(item_body), self
+        )
 
 
 class LaTeX_ConfigFormatter(String_ConfigFormatter):
@@ -1735,7 +1751,7 @@ class ConfigBase(object):
             os.write(comment)
             txtArea = max(width - field - len(comment), minDocWidth)
             os.write(("\n" + ' ' * field + comment).join(
-                wrap(
+                textwrap.wrap(
                     obj._description, txtArea, subsequent_indent='  ')))
             os.write('\n')
         return os.getvalue()
@@ -1768,7 +1784,11 @@ class ConfigBase(object):
                     "StringConfigFormatter and pass it as the 'format' argument.",
                     version='6.5.1.dev0',
                 )
-                setattr(formatter, "_" + name, _formatter_str_to_callback(arg))
+                setattr(
+                    formatter,
+                    "_" + name,
+                    types.MethodType(_formatter_str_to_callback(arg), formatter)
+                )
         if item_body is not None:
             deprecation_warning(
                 f"Overriding 'item_body' by passing strings to "
@@ -1779,7 +1799,7 @@ class ConfigBase(object):
             setattr(
                 formatter,
                 "_item_body",
-                _formatter_str_to_item_callback(formatter, item_body)
+                types.MethodType(_formatter_str_to_item_callback(item_body), formatter)
             )
 
         return formatter.generate(self, indent_spacing, width, visibility)
