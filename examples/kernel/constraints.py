@@ -8,7 +8,7 @@ v = pmo.variable()
 
 c = pmo.constraint(v == 1)
 
-c = pmo.constraint(expr= v == 1)
+c = pmo.constraint(expr=v == 1)
 
 c = pmo.constraint(body=v, rhs=1)
 
@@ -22,7 +22,7 @@ c.rhs = 1
 
 c = pmo.constraint(v <= 1)
 
-c = pmo.constraint(expr= v <= 1)
+c = pmo.constraint(expr=v <= 1)
 
 c = pmo.constraint(body=v, ub=1)
 
@@ -32,7 +32,7 @@ c.ub = 1
 
 c = pmo.constraint(v >= 1)
 
-c = pmo.constraint(expr= v >= 1)
+c = pmo.constraint(expr=v >= 1)
 
 c = pmo.constraint(body=v, lb=1)
 
@@ -46,7 +46,7 @@ c.lb = 1
 
 c = pmo.constraint((0, v, 1))
 
-c = pmo.constraint(expr= (0, v, 1))
+c = pmo.constraint(expr=(0, v, 1))
 
 c = pmo.constraint(lb=0, body=v, ub=1)
 

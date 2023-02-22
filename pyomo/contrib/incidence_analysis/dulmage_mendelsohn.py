@@ -13,27 +13,83 @@ from collections import namedtuple
 from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
     dulmage_mendelsohn as dm_nx,
-    )
+)
+
 """
 This module imports the general Dulmage-Mendelsohn-on-a-graph function
 from "common" and implements an interface for coo_matrix-like objects.
 """
 
 RowPartition = namedtuple(
-        "RowPartition",
-        ["unmatched", "overconstrained", "underconstrained", "square"],
-        )
+    "RowPartition",
+    ["unmatched", "overconstrained", "underconstrained", "square"],
+)
+"""Named tuple containing the subsets of the Dulmage-Mendelsohn partition
+when applied to matrix rows (constraints).
+
+"""
+
 ColPartition = namedtuple(
-        "ColPartition",
-        ["unmatched", "underconstrained", "overconstrained", "square"],
-        )
+    "ColPartition",
+    ["unmatched", "underconstrained", "overconstrained", "square"],
+)
+"""Named tuple containing the subsets of the Dulmage-Mendelsohn partition
+when applied to matrix columns (variables).
+
+"""
+
 
 def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
-    """
-    COO matrix or NetworkX graph interface to the coarse Dulmage Mendelsohn
-    partition. The matrix or graph should correspond to a Pyomo model.
-    top_nodes must be provided if a NetworkX graph is used, and should
-    correspond to Pyomo constraints.
+    """Partition a bipartite graph or incidence matrix according to the
+    Dulmage-Mendelsohn characterization
+
+    The Dulmage-Mendelsohn partition tells which nodes of the two bipartite
+    sets *can possibly be* unmatched after a maximum cardinality matching.
+    Applied to an incidence matrix, it can be interpreted as partitioning
+    rows and columns into under-constrained, over-constrained, and
+    well-constrained subsystems.
+
+    As it is often useful to explicitly check the unmatched rows and columns,
+    ``dulmage_mendelsohn`` partitions rows into the subsets:
+
+    - **underconstrained** - The rows matched with *possibly* unmatched
+      columns (unmatched and underconstrained columns)
+    - **square** - The well-constrained rows, which are matched with
+      well-constrained columns
+    - **overconstrained** - The matched rows that *can possibly be* unmatched
+      in some maximum cardinality matching
+    - **unmatched** - The unmatched rows in a particular maximum cardinality
+      matching
+
+    and partitions columns into the subsets:
+
+    - **unmatched** - The unmatched columns in a particular maximum cardinality
+      matching
+    - **underconstrained** - The columns that *can possibly be* unmatched in
+      some maximum cardinality matching
+    - **square** - The well-constrained columns, which are matched with
+      well-constrained rows
+    - **overconstrained** - The columns matched with *possibly* unmatched
+      rows (unmatched and overconstrained rows)
+
+    Parameters
+    ----------
+    matrix_or_graph: ``scipy.sparse.coo_matrix`` or ``networkx.Graph``
+        The incidence matrix or bipartite graph to be partitioned
+    top_nodes: list
+        List of nodes in one bipartite set of the graph. Must be provided
+        if a graph is provided.
+    matching: dict
+        A maximum cardinality matching in the form of a dict mapping
+        from "top nodes" to their matched nodes *and* from the matched
+        nodes back to the "top nodes".
+
+    Returns
+    -------
+    row_dmp: RowPartition
+        The Dulmage-Mendelsohn partition of rows
+    col_dmp: ColPartition
+        The Dulmage-Mendelsohn partition of columns
 
     """
     if isinstance(matrix_or_graph, nx.Graph):
@@ -45,9 +101,9 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
         graph = matrix_or_graph
         if top_nodes is None:
             raise ValueError(
-                    "top_nodes must be specified if a graph is provided,"
-                    "\notherwise the result is ambiguous."
-                    )
+                "top_nodes must be specified if a graph is provided,"
+                "\notherwise the result is ambiguous."
+            )
         partition = dm_nx(graph, top_nodes=top_nodes, matching=matching)
         # RowPartition and ColPartition do not make sense for a general graph.
         # However, here we assume that this graph comes from a Pyomo model,
@@ -74,17 +130,17 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
         # Matrix rows have bipartite=0, columns have bipartite=1
         bg = from_biadjacency_matrix(matrix)
         row_partition, col_partition = dm_nx(
-                bg,
-                top_nodes=list(range(M)),
-                matching=matching,
-                )
+            bg,
+            top_nodes=list(range(M)),
+            matching=matching,
+        )
 
         partition = (
-                row_partition,
-                tuple([n - M for n in subset] for subset in col_partition)
-                # Column nodes have values in [M, M+N-1]. Apply the offset
-                # to get values corresponding to indices in user's matrix.
-                )
+            row_partition,
+            tuple([n - M for n in subset] for subset in col_partition)
+            # Column nodes have values in [M, M+N-1]. Apply the offset
+            # to get values corresponding to indices in user's matrix.
+        )
 
     partition = (RowPartition(*partition[0]), ColPartition(*partition[1]))
     return partition

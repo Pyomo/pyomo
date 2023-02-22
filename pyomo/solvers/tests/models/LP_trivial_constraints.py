@@ -11,9 +11,15 @@
 
 import pyomo.kernel as pmo
 from pyomo.core import (
-    ConcreteModel, Var, Objective, Constraint, RangeSet, ConstraintList
+    ConcreteModel,
+    Var,
+    Objective,
+    Constraint,
+    RangeSet,
+    ConstraintList,
 )
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
+
 
 @register_model
 class LP_trivial_constraints(_BaseTestModel):
@@ -27,7 +33,7 @@ class LP_trivial_constraints(_BaseTestModel):
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.add_results(self.description+".json")
+        self.add_results(self.description + ".json")
 
     def _generate_model(self):
         self.model = None
@@ -61,13 +67,12 @@ class LP_trivial_constraints(_BaseTestModel):
         assert cdata.upper == 1
         assert cdata.body() == 0
         assert not cdata.equality
-        cdata = model.c.add((1,1))
+        cdata = model.c.add((1, 1))
         assert cdata.lower == 1
         assert cdata.upper == 1
         assert cdata.body() == 1
         assert cdata.equality
-        model.d = Constraint(
-            rule=lambda m: (float('-inf'), m.x, float('inf')))
+        model.d = Constraint(rule=lambda m: (float('-inf'), m.x, float('inf')))
         assert not model.d.equality
 
     def warmstart_model(self):
@@ -86,9 +91,9 @@ class LP_trivial_constraints(_BaseTestModel):
                 tester.assertIn(id(self.model.c[i]), symbol_map.byObject)
             tester.assertNotIn(id(self.model.d), symbol_map.byObject)
 
+
 @register_model
 class LP_trivial_constraints_kernel(LP_trivial_constraints):
-
     def _generate_model(self):
         self.model = None
         self.model = pmo.block()
@@ -121,7 +126,7 @@ class LP_trivial_constraints_kernel(LP_trivial_constraints):
         assert cdata.ub == 1
         assert cdata.body() == 0
         assert not cdata.equality
-        cdata = model.c[7] = pmo.constraint((1,1))
+        cdata = model.c[7] = pmo.constraint((1, 1))
         assert cdata.lb == 1
         assert cdata.ub == 1
         assert cdata.body() == 1

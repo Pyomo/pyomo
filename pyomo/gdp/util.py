@@ -245,7 +245,9 @@ def _gather_disjunctions(block, gdp_tree, include_root=True):
 
     return gdp_tree
 
-def get_gdp_tree(targets, instance, knownBlocks):
+def get_gdp_tree(targets, instance, knownBlocks=None):
+    if knownBlocks is None:
+        knownBlocks = {}
     gdp_tree = GDPTree()
     for t in targets:
         # first check it's not insane, that is, it is at least on the instance
@@ -558,67 +560,3 @@ def _disjunct_on_active_block(disjunct):
             parent_block = parent_block.parent_block()
             continue
     return True
-
-def _get_bigm_suffix_list(block, stopping_block=None):
-    # Note that you can only specify suffixes on BlockData objects or
-    # ScalarBlocks. Though it is possible at this point to stick them
-    # on whatever components you want, we won't pick them up.
-    suffix_list = []
-
-    # go searching above block in the tree, stop when we hit stopping_block
-    # (This is so that we can search on each Disjunct once, but get any
-    # information between a constraint and its Disjunct while transforming
-    # the constraint).
-    while block is not None:
-        bigm = block.component('BigM')
-        if type(bigm) is Suffix:
-            suffix_list.append(bigm)
-        if block is stopping_block:
-            break
-        block = block.parent_block()
-
-    return suffix_list
-
-def _convert_M_to_tuple(M, constraint, disjunct=None):
-    if not isinstance(M, (tuple, list)):
-        if M is None:
-            M = (None, None)
-        else:
-            try:
-                M = (-M, M)
-            except:
-                logger.error("Error converting scalar M-value %s "
-                             "to (-M,M).  Is %s not a numeric type?"
-                             % (M, type(M)))
-                raise
-    if len(M) != 2:
-        constraint_name = constraint.name
-        if disjunct is not None:
-            constraint_name += " relative to Disjunct %s" % disjunct.name
-        raise GDP_Error("Big-M %s for constraint %s is not of "
-                        "length two. "
-                        "Expected either a single value or "
-                        "tuple or list of length two for M."
-                        % (str(M), constraint.name))
-
-    return M
-
-def _warn_for_unused_bigM_args(bigM, used_args, logger):
-    # issue warnings about anything that was in the bigM args dict that we
-    # didn't use
-    if bigM is not None:
-        unused_args = ComponentSet(bigM.keys()) - \
-                      ComponentSet(used_args.keys())
-        if len(unused_args) > 0:
-            warning_msg = ("Unused arguments in the bigM map! "
-                           "These arguments were not used by the "
-                           "transformation:\n")
-            for component in unused_args:
-                if isinstance(component, (tuple, list)) and len(component) == 2:
-                    warning_msg += "\t(%s, %s)\n" % (component[0].name,
-                                                     component[1].name)
-                elif hasattr(component, 'name'):
-                    warning_msg += "\t%s\n" % component.name
-                else:
-                    warning_msg += "\t%s\n" % component
-            logger.warning(warning_msg)

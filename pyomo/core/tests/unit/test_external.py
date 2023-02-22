@@ -16,7 +16,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.getGSL import find_GSL
+from pyomo.common.gsl import find_GSL
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import (

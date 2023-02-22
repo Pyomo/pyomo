@@ -25,7 +25,9 @@ from pyomo.core.expr.numvalue import value
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
-from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
+from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
+    DirectOrPersistentSolver,
+)
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
@@ -37,26 +39,29 @@ import pyomo.core.base.var
 
 logger = logging.getLogger('pyomo.solvers')
 
+
 class DegreeError(ValueError):
     pass
 
-def _is_convertable(conv_type,x):
+
+def _is_convertable(conv_type, x):
     try:
         conv_type(x)
     except ValueError:
         return False
     return True
 
+
 def _print_message(xp_prob, _, msg, *args):
     if msg is not None:
-        sys.stdout.write(msg+'\n')
+        sys.stdout.write(msg + '\n')
         sys.stdout.flush()
+
 
 def _finalize_xpress_import(xpress, avail):
     if not avail:
         return
-    XpressDirect._version = tuple(
-        int(k) for k in xpress.getversion().split('.'))
+    XpressDirect._version = tuple(int(k) for k in xpress.getversion().split('.'))
     XpressDirect._name = "Xpress %s.%s.%s" % XpressDirect._version
     # in versions prior to 34, xpress raised a RuntimeError, but
     # in more recent versions it raises a
@@ -69,6 +74,7 @@ def _finalize_xpress_import(xpress, avail):
     # 'xpress.range'
     if not hasattr(xpress, 'rng'):
         xpress.rng = xpress.range
+
 
 class _xpress_importer_class(object):
     # We want to be able to *update* the message that the deferred
@@ -95,6 +101,7 @@ class _xpress_importer_class(object):
             os.chdir(_cwd)
             self.import_message += OUT.getvalue()
         return xpress
+
 
 _xpress_importer = _xpress_importer_class()
 xpress, xpress_available = attempt_import(
@@ -160,8 +167,8 @@ class XpressDirect(DirectSolver):
         if exception_flag and not xpress_available:
             xpress.log_import_warning(logger=__name__)
             raise ApplicationError(
-                "No Python bindings available for %s solver plugin"
-                % (type(self),))
+                "No Python bindings available for %s solver plugin" % (type(self),)
+            )
         return bool(xpress_available)
 
     def _apply_solver(self):
@@ -169,7 +176,7 @@ class XpressDirect(DirectSolver):
 
         self._solver_model.setlogfile(self._log_file)
         if self._keepfiles:
-            print("Solver log file: "+self._log_file)
+            print("Solver log file: " + self._log_file)
 
         # Setting a log file in xpress disables all output
         # in xpress versions less than 36.
@@ -190,7 +197,7 @@ class XpressDirect(DirectSolver):
         # get the xpress valid controls
         xp_controls = xpress.controls
         for key, option in self.options.items():
-            if key == 'mipgap': # handled above
+            if key == 'mipgap':  # handled above
                 continue
             try:
                 self._solver_model.setControl(key, option)
@@ -235,50 +242,64 @@ class XpressDirect(DirectSolver):
         mip_sols = xprob_attrs.mipsols
         if status == xp.mip_not_loaded:
             results.solver.status = SolverStatus.aborted
-            results.solver.termination_message = "Model is not loaded; no solution information is available."
+            results.solver.termination_message = (
+                "Model is not loaded; no solution information is available."
+            )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.unknown
-            #no MIP solution, first LP did not solve, second LP did, third search started but incomplete
-        elif status == xp.mip_lp_not_optimal \
-             or status == xp.mip_lp_optimal \
-             or status == xp.mip_no_sol_found:
+            # no MIP solution, first LP did not solve, second LP did, third search started but incomplete
+        elif (
+            status == xp.mip_lp_not_optimal
+            or status == xp.mip_lp_optimal
+            or status == xp.mip_no_sol_found
+        ):
             results.solver.status = SolverStatus.aborted
-            results.solver.termination_message = "Model is loaded, but no solution information is available."
+            results.solver.termination_message = (
+                "Model is loaded, but no solution information is available."
+            )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.unknown
-        elif status == xp.mip_solution: # some solution available
+        elif status == xp.mip_solution:  # some solution available
             results.solver.status = SolverStatus.warning
-            results.solver.termination_message = "Unable to satisfy optimality tolerances; a sub-optimal " \
-            "solution is available."
+            results.solver.termination_message = (
+                "Unable to satisfy optimality tolerances; a sub-optimal "
+                "solution is available."
+            )
             results.solver.termination_condition = TerminationCondition.other
             soln.status = SolutionStatus.feasible
-        elif status == xp.mip_infeas: # MIP proven infeasible
+        elif status == xp.mip_infeas:  # MIP proven infeasible
             results.solver.status = SolverStatus.warning
             results.solver.termination_message = "Model was proven to be infeasible"
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        elif status == xp.mip_optimal: # optimal
+        elif status == xp.mip_optimal:  # optimal
             results.solver.status = SolverStatus.ok
-            results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
+            results.solver.termination_message = (
+                "Model was solved to optimality (subject to tolerances), "
                 "and an optimal solution is available."
+            )
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
         elif status == xp.mip_unbounded and mip_sols > 0:
             results.solver.status = SolverStatus.warning
-            results.solver.termination_message = "LP relaxation was proven to be unbounded, " \
+            results.solver.termination_message = (
+                "LP relaxation was proven to be unbounded, "
                 "but a solution is available."
+            )
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
         elif status == xp.mip_unbounded and mip_sols <= 0:
             results.solver.status = SolverStatus.warning
-            results.solver.termination_message = "LP relaxation was proven to be unbounded."
+            results.solver.termination_message = (
+                "LP relaxation was proven to be unbounded."
+            )
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
         else:
             results.solver.status = SolverStatus.error
-            results.solver.termination_message = \
-                ("Unhandled Xpress solve status "
-                 "("+str(status)+")")
+            results.solver.termination_message = (
+                "Unhandled Xpress solve status (" + str(status) + ")"
+            )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
 
@@ -302,7 +323,7 @@ class XpressDirect(DirectSolver):
                 results.problem.lower_bound = xprob_attrs.mipbestobjval
             except (XpressDirect.XpressException, AttributeError):
                 pass
-            
+
         return mip_sols > 0
 
     def _get_lp_results(self, results, soln):
@@ -316,13 +337,17 @@ class XpressDirect(DirectSolver):
         status = xprob_attrs.lpstatus
         if status == xp.lp_unstarted:
             results.solver.status = SolverStatus.aborted
-            results.solver.termination_message = "Model is not loaded; no solution information is available."
+            results.solver.termination_message = (
+                "Model is not loaded; no solution information is available."
+            )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.unknown
         elif status == xp.lp_optimal:
             results.solver.status = SolverStatus.ok
-            results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
+            results.solver.termination_message = (
+                "Model was solved to optimality (subject to tolerances), "
                 "and an optimal solution is available."
+            )
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
         elif status == xp.lp_infeas:
@@ -332,13 +357,17 @@ class XpressDirect(DirectSolver):
             soln.status = SolutionStatus.infeasible
         elif status == xp.lp_cutoff:
             results.solver.status = SolverStatus.ok
-            results.solver.termination_message = "Optimal objective for model was proven to be worse than the " \
+            results.solver.termination_message = (
+                "Optimal objective for model was proven to be worse than the "
                 "cutoff value specified; a solution is available."
+            )
             results.solver.termination_condition = TerminationCondition.minFunctionValue
             soln.status = SolutionStatus.optimal
         elif status == xp.lp_unfinished:
             results.solver.status = SolverStatus.aborted
-            results.solver.termination_message = "Optimization was terminated by the user."
+            results.solver.termination_message = (
+                "Optimization was terminated by the user."
+            )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
         elif status == xp.lp_unbounded:
@@ -348,26 +377,32 @@ class XpressDirect(DirectSolver):
             soln.status = SolutionStatus.unbounded
         elif status == xp.lp_cutoff_in_dual:
             results.solver.status = SolverStatus.ok
-            results.solver.termination_message = "Xpress reported the LP was cutoff in the dual."
+            results.solver.termination_message = (
+                "Xpress reported the LP was cutoff in the dual."
+            )
             results.solver.termination_condition = TerminationCondition.minFunctionValue
             soln.status = SolutionStatus.optimal
         elif status == xp.lp_unsolved:
             results.solver.status = SolverStatus.error
-            results.solver.termination_message = "Optimization was terminated due to unrecoverable numerical " \
+            results.solver.termination_message = (
+                "Optimization was terminated due to unrecoverable numerical "
                 "difficulties."
+            )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
         elif status == xp.lp_nonconvex:
             results.solver.status = SolverStatus.error
-            results.solver.termination_message = "Optimization was terminated because nonconvex quadratic data " \
+            results.solver.termination_message = (
+                "Optimization was terminated because nonconvex quadratic data "
                 "were found."
+            )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
         else:
             results.solver.status = SolverStatus.error
-            results.solver.termination_message = \
-                ("Unhandled Xpress solve status "
-                 "("+str(status)+")")
+            results.solver.termination_message = (
+                "Unhandled Xpress solve status (" + str(status) + ")"
+            )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
 
@@ -382,8 +417,11 @@ class XpressDirect(DirectSolver):
         # Not all solution information will be available in all cases, it is
         # up to the caller/user to check the actual status and figure which
         # of x, slack, duals, reduced costs are valid.
-        return  xprob_attrs.lpstatus in [xp.lp_optimal, xp.lp_cutoff,
-                                         xp.lp_cutoff_in_dual]
+        return xprob_attrs.lpstatus in [
+            xp.lp_optimal,
+            xp.lp_cutoff,
+            xp.lp_cutoff_in_dual,
+        ]
 
     def _get_nlp_results(self, results, soln):
         """Sets up `results` and `soln` and returns whether there is a solution
@@ -406,10 +444,12 @@ class XpressDirect(DirectSolver):
             status = xprob_attrs.xslp_nlpstatus
             solstatus = xprob_attrs.xslp_solstatus
             have_soln = False
-            optimal = False # *globally* optimal?
+            optimal = False  # *globally* optimal?
             if status == xp.nlp_unstarted:
                 results.solver.status = SolverStatus.unknown
-                results.solver.termination_message = "Non-convex model solve was not start"
+                results.solver.termination_message = (
+                    "Non-convex model solve was not start"
+                )
                 results.solver.termination_condition = TerminationCondition.unknown
                 soln.status = SolutionStatus.unknown
             elif status == xp.nlp_locally_optimal:
@@ -417,46 +457,64 @@ class XpressDirect(DirectSolver):
                 # we must look at the solstatus to figure out which
                 if solstatus in [2, 3]:
                     results.solver.status = SolverStatus.ok
-                    results.solver.termination_message = "Non-convex model was solved to local optimality"
-                    results.solver.termination_condition = TerminationCondition.locallyOptimal
+                    results.solver.termination_message = (
+                        "Non-convex model was solved to local optimality"
+                    )
+                    results.solver.termination_condition = (
+                        TerminationCondition.locallyOptimal
+                    )
                     soln.status = SolutionStatus.locallyOptimal
                 else:
                     results.solver.status = SolverStatus.ok
-                    results.solver.termination_message = "Feasible solution found for non-convex model"
+                    results.solver.termination_message = (
+                        "Feasible solution found for non-convex model"
+                    )
                     results.solver.termination_condition = TerminationCondition.feasible
                     soln.status = SolutionStatus.feasible
                 have_soln = True
             elif status == xp.nlp_globally_optimal:
                 results.solver.status = SolverStatus.ok
-                results.solver.termination_message = "Non-convex model was solved to global optimality"
+                results.solver.termination_message = (
+                    "Non-convex model was solved to global optimality"
+                )
                 results.solver.termination_condition = TerminationCondition.optimal
                 soln.status = SolutionStatus.optimal
                 have_soln = True
                 optimal = True
             elif status == xp.nlp_locally_infeasible:
                 results.solver.status = SolverStatus.ok
-                results.solver.termination_message = "Non-convex model was proven to be locally infeasible"
+                results.solver.termination_message = (
+                    "Non-convex model was proven to be locally infeasible"
+                )
                 results.solver.termination_condition = TerminationCondition.noSolution
                 soln.status = SolutionStatus.unknown
             elif status == xp.nlp_infeasible:
                 results.solver.status = SolverStatus.ok
-                results.solver.termination_message = "Non-conex model was proven to be infeasible"
+                results.solver.termination_message = (
+                    "Non-conex model was proven to be infeasible"
+                )
                 results.solver.termination_condition = TerminationCondition.infeasible
                 soln.status = SolutionStatus.infeasible
-            elif status == xp.nlp_unbounded: # locally unbounded!
+            elif status == xp.nlp_unbounded:  # locally unbounded!
                 results.solver.status = SolverStatus.ok
-                results.solver.termination_message = "Non-convex model is locally unbounded"
+                results.solver.termination_message = (
+                    "Non-convex model is locally unbounded"
+                )
                 results.solver.termination_condition = TerminationCondition.unbounded
                 soln.status = SolutionStatus.unbounded
             elif status == xp.nlp_unfinished:
                 results.solver.status = SolverStatus.ok
-                results.solver.termination_message = "Non-convex solve not finished (numerical issues?)"
+                results.solver.termination_message = (
+                    "Non-convex solve not finished (numerical issues?)"
+                )
                 results.solver.termination_condition = TerminationCondition.unknown
                 soln.status = SolutionStatus.unknown
                 have_soln = True
             else:
                 results.solver.status = SolverStatus.error
-                results.solver.termination_message = "Error for non-convex model: " + str(status)
+                results.solver.termination_message = (
+                    "Error for non-convex model: " + str(status)
+                )
                 results.solver.termination_condition = TerminationCondition.error
                 soln.status = SolutionStatus.error
 
@@ -469,7 +527,7 @@ class XpressDirect(DirectSolver):
                     results.problem.lower_bound = xprob_attrs.xslp_objval
             except (XpressDirect.XpressException, AttributeError):
                 pass
-      
+
             return have_soln
 
     def _solve_model(self):
@@ -489,7 +547,7 @@ class XpressDirect(DirectSolver):
         else:
             xprob.lpoptimize()
             self._get_results = self._get_lp_results
-        
+
         self._solver_model.postsolve()
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
@@ -497,19 +555,30 @@ class XpressDirect(DirectSolver):
 
         degree = repn.polynomial_degree()
         if (degree is None) or (degree > max_degree):
-            raise DegreeError('XpressDirect does not support expressions of degree {0}.'.format(degree))
+            raise DegreeError(
+                'XpressDirect does not support expressions of degree {0}.'.format(
+                    degree
+                )
+            )
 
         # NOTE: xpress's python interface only allows for expresions
         #       with native numeric types. Others, like numpy.float64,
         #       will cause an exception when constructing expressions
         if len(repn.linear_vars) > 0:
             referenced_vars.update(repn.linear_vars)
-            new_expr = xpress.Sum(float(coef)*self._pyomo_var_to_solver_var_map[var] for coef,var in zip(repn.linear_coefs, repn.linear_vars))
+            new_expr = xpress.Sum(
+                float(coef) * self._pyomo_var_to_solver_var_map[var]
+                for coef, var in zip(repn.linear_coefs, repn.linear_vars)
+            )
         else:
             new_expr = 0.0
 
-        for coef,(x,y) in zip(repn.quadratic_coefs,repn.quadratic_vars):
-            new_expr += float(coef) * self._pyomo_var_to_solver_var_map[x] * self._pyomo_var_to_solver_var_map[y]
+        for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
+            new_expr += (
+                float(coef)
+                * self._pyomo_var_to_solver_var_map[x]
+                * self._pyomo_var_to_solver_var_map[y]
+            )
             referenced_vars.add(x)
             referenced_vars.add(y)
 
@@ -524,7 +593,9 @@ class XpressDirect(DirectSolver):
             repn = generate_standard_repn(expr, quadratic=False)
 
         try:
-            xpress_expr, referenced_vars = self._get_expr_from_pyomo_repn(repn, max_degree)
+            xpress_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                repn, max_degree
+            )
         except DegreeError as e:
             msg = e.args[0]
             msg += '\nexpr: {0}'.format(expr)
@@ -560,7 +631,9 @@ class XpressDirect(DirectSolver):
             if lb == ub:
                 self._solver_model.chgbounds([xpress_var], ['B'], [lb])
             else:
-                self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb,ub])
+                self._solver_model.chgbounds(
+                    [xpress_var, xpress_var], ['L', 'U'], [lb, ub]
+                )
 
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var
@@ -580,10 +653,11 @@ class XpressDirect(DirectSolver):
                 self._solver_model = xpress.problem()
         except Exception:
             e = sys.exc_info()[1]
-            msg = ("Unable to create Xpress model. "
-                   "Have you installed the Python "
-                   "bindings for Xpress?\n\n\t" +
-                   "Error message: {0}".format(e))
+            msg = (
+                "Unable to create Xpress model. "
+                "Have you installed the Python "
+                "bindings for Xpress?\n\n\t" + "Error message: {0}".format(e)
+            )
             raise Exception(msg)
         self._add_block(model)
 
@@ -602,47 +676,50 @@ class XpressDirect(DirectSolver):
 
         if con._linear_canonical_form:
             xpress_expr, referenced_vars = self._get_expr_from_pyomo_repn(
-                con.canonical_form(),
-                self._max_constraint_degree)
+                con.canonical_form(), self._max_constraint_degree
+            )
         else:
             xpress_expr, referenced_vars = self._get_expr_from_pyomo_expr(
-                con.body,
-                self._max_constraint_degree)
+                con.body, self._max_constraint_degree
+            )
 
         if con.has_lb():
             if not is_fixed(con.lower):
-                raise ValueError("Lower bound of constraint {0} "
-                                 "is not constant.".format(con))
+                raise ValueError(
+                    "Lower bound of constraint {0} is not constant.".format(con)
+                )
         if con.has_ub():
             if not is_fixed(con.upper):
-                raise ValueError("Upper bound of constraint {0} "
-                                 "is not constant.".format(con))
+                raise ValueError(
+                    "Upper bound of constraint {0} is not constant.".format(con)
+                )
 
         if con.equality:
-            xpress_con = xpress.constraint(body=xpress_expr,
-                                           sense=xpress.eq,
-                                           rhs=value(con.lower),
-                                           name=conname)
+            xpress_con = xpress.constraint(
+                body=xpress_expr, sense=xpress.eq, rhs=value(con.lower), name=conname
+            )
         elif con.has_lb() and con.has_ub():
-            xpress_con = xpress.constraint(body=xpress_expr,
-                                           sense=xpress.rng,
-                                           lb=value(con.lower),
-                                           ub=value(con.upper),
-                                           name=conname)
+            xpress_con = xpress.constraint(
+                body=xpress_expr,
+                sense=xpress.rng,
+                lb=value(con.lower),
+                ub=value(con.upper),
+                name=conname,
+            )
             self._range_constraints.add(xpress_con)
         elif con.has_lb():
-            xpress_con = xpress.constraint(body=xpress_expr,
-                                           sense=xpress.geq,
-                                           rhs=value(con.lower),
-                                           name=conname)
+            xpress_con = xpress.constraint(
+                body=xpress_expr, sense=xpress.geq, rhs=value(con.lower), name=conname
+            )
         elif con.has_ub():
-            xpress_con = xpress.constraint(body=xpress_expr,
-                                           sense=xpress.leq,
-                                           rhs=value(con.upper),
-                                           name=conname)
+            xpress_con = xpress.constraint(
+                body=xpress_expr, sense=xpress.leq, rhs=value(con.upper), name=conname
+            )
         else:
-            raise ValueError("Constraint does not have a lower "
-                             "or an upper bound: {0} \n".format(con))
+            raise ValueError(
+                "Constraint does not have a lower "
+                "or an upper bound: {0} \n".format(con)
+            )
 
         self._solver_model.addConstraint(xpress_con)
 
@@ -658,9 +735,10 @@ class XpressDirect(DirectSolver):
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
         level = con.level
-        if level not in [1,2]:
-            raise ValueError("Solver does not support SOS "
-                             "level {0} constraints".format(level))
+        if level not in [1, 2]:
+            raise ValueError(
+                "Solver does not support SOS level {0} constraints".format(level)
+            )
 
         xpress_vars = []
         weights = []
@@ -698,7 +776,9 @@ class XpressDirect(DirectSolver):
         elif var.is_continuous():
             vartype = xpress.continuous
         else:
-            raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
+            raise ValueError(
+                'Variable domain type is not recognized for {0}'.format(var.domain)
+            )
         return vartype
 
     def _set_objective(self, obj):
@@ -718,7 +798,9 @@ class XpressDirect(DirectSolver):
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
-        xpress_expr, referenced_vars = self._get_expr_from_pyomo_expr(obj.expr, self._max_obj_degree)
+        xpress_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+            obj.expr, self._max_obj_degree
+        )
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
@@ -748,7 +830,10 @@ class XpressDirect(DirectSolver):
                 extract_reduced_costs = True
                 flag = True
             if not flag:
-                raise RuntimeError("***The xpress_direct solver plugin cannot extract solution suffix="+suffix)
+                raise RuntimeError(
+                    "***The xpress_direct solver plugin cannot extract solution suffix="
+                    + suffix
+                )
 
         xprob = self._solver_model
         xp = xpress
@@ -773,7 +858,9 @@ class XpressDirect(DirectSolver):
         self.results.solver.wallclock_time = self._opt_time
 
         if not hasattr(self, '_get_results'):
-            raise RuntimeError('Model was solved but `_get_results` property is not set')
+            raise RuntimeError(
+                'Model was solved but `_get_results` property is not set'
+            )
         have_soln = self._get_results(self.results, soln)
         self.results.problem.name = xprob_attrs.matrixname
 
@@ -782,18 +869,26 @@ class XpressDirect(DirectSolver):
         elif xprob_attrs.objsense == -1.0:
             self.results.problem.sense = maximize
         else:
-            raise RuntimeError('Unrecognized Xpress objective sense: {0}'.format(xprob_attrs.objsense))
+            raise RuntimeError(
+                'Unrecognized Xpress objective sense: {0}'.format(xprob_attrs.objsense)
+            )
 
         try:
-            soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
+            soln.gap = (
+                self.results.problem.upper_bound - self.results.problem.lower_bound
+            )
         except TypeError:
             soln.gap = None
 
-        self.results.problem.number_of_constraints = xprob_attrs.rows + xprob_attrs.sets + xprob_attrs.qconstraints
+        self.results.problem.number_of_constraints = (
+            xprob_attrs.rows + xprob_attrs.sets + xprob_attrs.qconstraints
+        )
         self.results.problem.number_of_nonzeros = xprob_attrs.elems
         self.results.problem.number_of_variables = xprob_attrs.cols
         self.results.problem.number_of_integer_variables = xprob_attrs.mipents
-        self.results.problem.number_of_continuous_variables = xprob_attrs.cols - xprob_attrs.mipents
+        self.results.problem.number_of_continuous_variables = (
+            xprob_attrs.cols - xprob_attrs.mipents
+        )
         self.results.problem.number_of_objectives = 1
         self.results.problem.number_of_solutions = xprob_attrs.mipsols if is_mip else 1
 
@@ -842,8 +937,8 @@ class XpressDirect(DirectSolver):
                             lb = con.lb
                             ub = con.ub
                             ub_s = val
-                            expr_val = ub-ub_s
-                            lb_s = lb-expr_val
+                            expr_val = ub - ub_s
+                            lb_s = lb - expr_val
                             if abs(ub_s) > abs(lb_s):
                                 soln_constraints[con.name]["Slack"] = ub_s
                             else:
@@ -944,11 +1039,13 @@ class XpressDirect(DirectSolver):
             if xpress_con in self._range_constraints:
                 ## for xpress, the slack on a range constraint
                 ## is based on the upper bound
+                ## FIXME: This looks like a bug - there is no variable named
+                ## `con` - there is, however, `xpress_con` and `pyomo_con`
                 lb = con.lb
                 ub = con.ub
                 ub_s = val
-                expr_val = ub-ub_s
-                lb_s = lb-expr_val
+                expr_val = ub - ub_s
+                lb_s = lb - expr_val
                 if abs(ub_s) > abs(lb_s):
                     slack[pyomo_con] = ub_s
                 else:

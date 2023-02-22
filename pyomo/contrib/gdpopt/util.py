@@ -170,7 +170,7 @@ def copy_var_list_values(from_list, to_list, config,
 
 def fix_discrete_var(var, val, config):
     """Fixes the discrete variable var to val, rounding to the nearest integer
-    or not, depending on if rounding is specifed in config and what the integer
+    or not, depending on if rounding is specified in config and what the integer
     tolerance is."""
     if val is None:
         return
@@ -491,7 +491,9 @@ def _add_bigm_constraint_to_transformed_model(m, constraint, block):
         return
 
     bigm = TransformationFactory('gdp.bigm')
-    bigm.assume_fixed_vars_permanent = False
+    # We're fine with default state, but because we're not using apply_to, we
+    # need to set it.
+    bigm._config = bigm.CONFIG()
     # ESJ: This function doesn't handle ConstraintDatas, and bigm is not
     # sufficiently modular to have a function that does at the moment, so I'm
     # making a Reference to the ComponentData so that it will look like an
@@ -499,3 +501,5 @@ def _add_bigm_constraint_to_transformed_model(m, constraint, block):
     # could be prettier.
     bigm._transform_constraint(Reference(constraint), parent_disjunct, None,
                                 [], [])
+    # Now get rid of it because this is a class attribute!
+    del bigm._config

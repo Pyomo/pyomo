@@ -28,4 +28,5 @@ model.y.pprint()
 # @:script
 
 import os
+
 os.remove('warehouse.log')

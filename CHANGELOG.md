@@ -2,6 +2,68 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.5.0    (16 Feb 2023)
+-------------------------------------------------------------------------------
+
+- General
+  - Apply `black` to enforce PEP8 standards in certain modules (#2737, #2738,
+    #2733, #2732, #2731, #2728, #2730, #2729, #2720, #2721, #2719, #2718)
+  - Add Developers' call information to README (#2665)
+  - Deprecate `pyomo.checker` module (#2734)
+  - Warn when infeasibility tools will not log output (#2666)
+  - Separate identification from logging in `pyomo.util.infeasible.log_*` (#2669)
+  - Convert subprocess timeout parameters to module attributes (#2672)
+  - Resolve consistency issues in the Bunch class (#2685)
+  - Remove GSL downloader from `download-extensions` (#2725)
+  - Update enhancement GitHub issue template to link to wiki (#2739)
+  - Add deprecation warning to `pyomo` command (#2740)
+  - Require `version=` for all deprecation utilities (#2744)
+  - Fix `pyomo --version` version string (#2743)
+- Core
+  - Fix minor typo: taht -> that in set.py (#2679)
+  - Fix bugs in scaling transformation (#2678)
+  - Rework handling of 'dimensionless' units in Pyomo (#2691)
+- Solver Interfaces
+  - Switch default NL writer to nlv2 and bug fixes (#2676, #2710, #2726)
+  - Enable MOSEK10 warm-start flag and relocate var initialization (#2647)
+  - Fix handling of POW in Baron writer (#2693)
+  - Update GAMS license check to avoid exception when not available (#2697)
+- Documentation
+  - Fix incorrect documentation for sending options to solvers (#2688)
+  - Fix Sphinx warnings (#2712)
+  - Document Python Version Support policy (#2735)
+  - Document deprecation and removal of functionality (#2741)
+  - Document docstring formatting requirements (#2742)
+- Testing
+  - Skip failing Baron tests (#2694)
+  - Remove residual `nose` references (#2736)
+  - Update GHA setup-python version (#2705)
+  - Improve GHA conda setup performance (#2701)
+  - Add unit test for QCQO problems with MOSEK (#2682)
+- DAE
+  - Fix typo in `__init__.py` (#2683)
+  - Add `active` filter to flattener (#2643)
+- GDP
+  - Add GDP-to-MIP transformation base class (#2687)
+- Contributed Packages
+  - DoE: New module for model-based design of experiments (#2294, #2711, #2527)
+  - FBBT: Add tolerances to tests (#2675)
+  - GDPopt: Switch a LBB test to use Gurobi as MINLP solver (#2686)
+  - incidence_analysis: Add `plot` method to `IncidenceGraphInterface` (#2716)
+  - incidence_analysis: Refactor to cache a graph instead of a matrix (#2715)
+  - incidence_analysis: Add documentation and update API (#2727, #2745)
+  - incidence_analysis: Add logging solve_strongly_connected_components (#2723)
+  - MindtPy: Refactor to improve extensibility and maintainability (#2654)
+  - Parmest: Suppress mpi-sppy output in import (#2692)
+  - PyNumero: Add tee argument to Pyomo-SciPy square solvers (#2668)
+  - PyNumero: Support implicit function solvers in ExternalPyomoModel (#2652)
+  - PyROS: Fix user_time and wallclock_time bug (#2670)
+  - PyROS: More judicious enforcement of PyROS Solver time limit (#2660, #2706)
+  - PyROS: Update documentation (#2698, #2707)
+  - PyROS: Adjust routine for loading DR polishing model solutions (#2700)
+  - Viewer: Update to support PySide6 and display units and domain (#2689)
+
+-------------------------------------------------------------------------------
 Pyomo 6.4.4    (9 Dec 2022)
 -------------------------------------------------------------------------------
 

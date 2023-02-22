@@ -17,13 +17,21 @@ model.x = Var(within=NonNegativeReals)
 model.y = Var(within=NonNegativeReals)
 
 # ... multipliers
-model.l = Var([1,2,3])
+model.l = Var([1, 2, 3])
 
-model.f = Objective(expr=(model.x - 5)**2 + (2*model.y + 1)**2)
+model.f = Objective(expr=(model.x - 5) ** 2 + (2 * model.y + 1) ** 2)
 
-model.KKT = Constraint(expr=2*(model.y-1) - 1.5*model.x + model.l[1] - model.l[2]*0.5 + model.l[3] == 0)
+model.KKT = Constraint(
+    expr=2 * (model.y - 1) - 1.5 * model.x + model.l[1] - model.l[2] * 0.5 + model.l[3]
+    == 0
+)
 
-model.lin_1 = Complementarity(expr=complements(0 <= 3*model.x - model.y - 3,        model.l[1] >= 0))
-model.lin_2 = Complementarity(expr=complements(0 <= - model.x + 0.5*model.y + 4,    model.l[2] >= 0))
-model.lin_3 = Complementarity(expr=complements(0 <= - model.x - model.y + 7,        model.l[3] >= 0))
-
+model.lin_1 = Complementarity(
+    expr=complements(0 <= 3 * model.x - model.y - 3, model.l[1] >= 0)
+)
+model.lin_2 = Complementarity(
+    expr=complements(0 <= -model.x + 0.5 * model.y + 4, model.l[2] >= 0)
+)
+model.lin_3 = Complementarity(
+    expr=complements(0 <= -model.x - model.y + 7, model.l[3] >= 0)
+)
