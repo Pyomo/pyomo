@@ -18,7 +18,11 @@ from pyomo.core.base.suffix import Suffix
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    document_kwargs_from_configdict,
+)
 from pyomo.common.errors import InfeasibleConstraintException
 
 
@@ -80,6 +84,7 @@ def _detect_fixed_variables(m):
 
 @TransformationFactory.register('contrib.propagate_fixed_vars',
           doc="Propagate variable fixing for equalities of type x = y.")
+@document_kwargs_from_configdict('CONFIG')
 class FixedVarPropagator(IsomorphicTransformation):
     """Propagate variable fixing for equalities of type :math:`x = y`.
 
@@ -100,8 +105,6 @@ class FixedVarPropagator(IsomorphicTransformation):
         description="True to store the set of transformed variables and "
         "their old states so that they can be later restored."
     ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds)
@@ -150,6 +153,7 @@ class FixedVarPropagator(IsomorphicTransformation):
 
 @TransformationFactory.register('contrib.propagate_eq_var_bounds',
           doc="Propagate variable bounds for equalities of type x = y.")
+@document_kwargs_from_configdict('CONFIG')
 class VarBoundPropagator(IsomorphicTransformation):
     """Propagate variable bounds for equalities of type :math:`x = y`.
 
@@ -167,8 +171,6 @@ class VarBoundPropagator(IsomorphicTransformation):
         description="True to store the set of transformed variables and "
         "their old states so that they can be later restored."
     ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds)

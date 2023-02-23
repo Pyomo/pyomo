@@ -55,7 +55,7 @@
 from pyomo.contrib.mindtpy import __version__
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
-from pyomo.common.config import add_docstring_list
+from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.contrib.mindtpy.config_options import _supported_algorithms
 
 
@@ -99,7 +99,7 @@ class MindtPySolver(object):
         return __version__
 
 
-
+    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
         """Solve the model.
 
@@ -127,8 +127,3 @@ class MindtPySolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
-
-
-# Add the CONFIG arguments to the solve method docstring
-MindtPySolver.solve.__doc__ = add_docstring_list(
-    MindtPySolver.solve.__doc__, MindtPySolver.CONFIG, indent_by=8)
