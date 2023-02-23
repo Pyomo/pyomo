@@ -1265,7 +1265,9 @@ def _formatter_str_to_item_callback(pattern, formatter):
         if not _doc:
             return ''
         wraplines = '\n ' not in _doc
-        _doc = _item_body_formatter(_doc)
+        _doc = _item_body_formatter(_doc).strip()
+        if not _doc:
+            return ''
         _indent = indent + ' ' * self.indent_spacing
         if wraplines:
             doc_lines = textwrap.wrap(

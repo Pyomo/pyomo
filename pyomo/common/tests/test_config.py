@@ -1778,17 +1778,52 @@ endBlock{}
         #print(test)
         self.assertEqual(test, reference)
 
-        test = self.config.generate_documentation(
-            block_start= "startBlock\n",
-            block_end=   "endBlock\n",
-            item_start=  "startItem\n",
-            item_body=   "item\n",
-            item_end=    "endItem\n",
-        )
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(
+                block_start= "startBlock\n",
+                block_end=   "endBlock\n",
+                item_start=  "startItem\n",
+                item_body=   "item\n",
+                item_end=    "endItem\n",
+            )
 
         stripped_reference = re.sub(r'\{[^\}]*\}','',reference,flags=re.M)
         #print(test)
         self.assertEqual(test, stripped_reference)
+
+        reference = \
+"""startBlock{}
+  startBlock{network}
+  startBlock{scenario}
+  startBlock{scenarios}
+  startBlock{impact}
+  startBlock{flushing}
+    startBlock{flush nodes}
+    startBlock{close valves}
+"""
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(
+                block_start="startBlock{%s}\n",
+                block_end="",
+                item_start="",
+                item_body="",
+            )
+        LOG = LOG.getvalue().replace('\n', ' ')
+        for name in ('block_start', 'block_end', 'item_start', 'item_body'):
+            self.assertIn(
+                f"Overriding '{name}' by passing strings to "
+                "generate_documentation is deprecated.",
+                LOG
+            )
+        for name in ('item_end'):
+            self.assertNotIn(
+                f"Overriding '{name}' by passing strings to "
+                "generate_documentation is deprecated.",
+                LOG
+            )
+        self.maxDiff = None
+        #print(test)
+        self.assertEqual(test, reference)
 
 
     def test_generate_latex_documentation(self):
