@@ -48,7 +48,7 @@ from pyomo.common.config import (
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, ListOf, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
     ConfigFormatter, String_ConfigFormatter,
-    document_kwargs_from_configdict,
+    document_kwargs_from_configdict, add_docstring_list,
     _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
@@ -2749,6 +2749,29 @@ option_2: int, default=5
         self.assertEqual(ExampleClass.__init__.__doc__, "A simple docstring\n" + ref)
         self.assertEqual(ExampleClass.fcn.__doc__, "A simple docstring\n" + ref)
 
+        ref = """
+Keyword Arguments
+-----------------
+option_1: int, default=5
+    The first configuration option
+
+solver_options: dict, optional
+
+    solver_option_1: float, default=1
+        The first solver configuration option
+
+    solver_option_2: float, default=1
+        The second solver configuration option
+
+        With a very long line containing wrappable text in a long, silly paragraph with little actual information.
+        #) but a bulleted list
+        #) with two bullets
+
+option_2: int, default=5
+    The second solver configuration option with a very long line containing wrappable text in a long, silly paragraph with little actual information."""
+        with LoggingIntercept() as LOG:
+            self.assertEqual(add_docstring_list("", ExampleClass.CONFIG), ref)
+        self.assertIn('add_docstring_list is deprecated', LOG.getvalue())
 
 if __name__ == "__main__":
     unittest.main()
