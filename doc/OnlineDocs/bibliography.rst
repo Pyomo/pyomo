@@ -34,6 +34,12 @@ Bibliography
                  2nd Edition.  Springer Optimization and Its
                  Applications, Vol 67.  Springer, 2017.
 
+.. [PyomoBookIII] Bynum, Michael L., Gabriel A. Hackebeil,
+                  William E. Hart, Carl D. Laird, Bethany L. Nicholson,
+                  John D. Siirola, Jean-Paul Watson, and David L. Woodruff.
+                  Pyomo - Optimization Modeling in Python, 3rd Edition.
+                  Vol. 67. Springer, 2021.
+
 .. [PyomoJournal] William E. Hart, Jean-Paul Watson, David L. Woodruff.
                   "Pyomo: modeling and solving mathematical programs in
                   Python," Mathematical Programming Computation, Volume
