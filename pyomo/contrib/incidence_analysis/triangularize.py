@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import deprecated
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
     # TODO: The fact that we import this function here suggests it should be
@@ -16,6 +17,40 @@ from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
     _get_projected_digraph,
 )
 from pyomo.common.dependencies import networkx as nx
+
+
+def _get_scc_dag_of_projection(graph, top_nodes, matching):
+    """Return the DAG of strongly connected components of a bipartite graph,
+    projected with respect to a perfect matching
+
+    This data structure can be used, for instance, to identify the minimal
+    subsystem of constraints and variables necessary to solve a given variable
+    or constraint.
+
+    """
+    nxc = nx.algorithms.components
+    # _get_projected_digraph treats matched edges as "in-edges", so we
+    # reverse the direction of edges here.
+    dg = _get_projected_digraph(graph, matching, top_nodes).reverse()
+
+    scc_list = list(nxc.strongly_connected_components(dg))
+    n_scc = len(scc_list)
+    node_scc_map = {n: idx for idx, scc in enumerate(scc_list) for n in scc}
+
+    # Now we need to put the SCCs in the right order. We do this by performing
+    # a topological sort on the DAG of SCCs.
+    dag = nx.DiGraph()
+    dag.add_nodes_from(range(n_scc))
+    for n in dg.nodes:
+        source_scc = node_scc_map[n]
+        for neighbor in dg[n]:
+            target_scc = node_scc_map[neighbor]
+            if target_scc != source_scc:
+                dag.add_edge(source_scc, target_scc)
+
+    # Note that the matching is required to fully interpret scc_list (as it
+    # only contains the "top nodes")
+    return scc_list, dag
 
 
 def get_scc_of_projection(graph, top_nodes, matching=None):
@@ -52,7 +87,6 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
 
     """
     nxb = nx.algorithms.bipartite
-    nxc = nx.algorithms.components
     nxd = nx.algorithms.dag
     if not nxb.is_bipartite(graph):
         raise RuntimeError("Provided graph is not bipartite.")
@@ -75,25 +109,7 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
             " and a matching of cardinality %s." % (M, (len(matching)/2))
         )
 
-    # _get_projected_digraph treats matched edges as "in-edges", so we
-    # reverse the direction of edges here.
-    dg = _get_projected_digraph(graph, matching, top_nodes).reverse()
-
-    scc_list = list(nxc.strongly_connected_components(dg))
-    n_scc = len(scc_list)
-    node_scc_map = {n: idx for idx, scc in enumerate(scc_list) for n in scc}
-
-    # Now we need to put the SCCs in the right order. We do this by performing
-    # a topological sort on the DAG of SCCs.
-    dag = nx.DiGraph()
-    dag.add_nodes_from(range(n_scc))
-    for n in dg.nodes:
-        source_scc = node_scc_map[n]
-        for neighbor in dg[n]:
-            target_scc = node_scc_map[neighbor]
-            if target_scc != source_scc:
-                dag.add_edge(source_scc, target_scc)
-
+    scc_list, dag = _get_scc_dag_of_projection(graph, top_nodes, matching)
     scc_order = list(nxd.lexicographical_topological_sort(dag))
 
     # The "natural" return type, here, is a list of lists. Each inner list
@@ -107,23 +123,48 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
 
 
 def block_triangularize(matrix, matching=None):
-    """
-    Computes the necessary information to permute a matrix to block-lower
-    triangular form, i.e. a partition of rows and columns into an ordered
-    set of diagonal blocks in such a permutation.
+    """Compute ordered partitions of the matrix's rows and columns that
+    permute the matrix to block lower triangular form
 
-    Arguments
-    ---------
-    matrix: A SciPy sparse matrix
-    matching: A perfect matching of rows and columns, in the form of a dict
-              mapping row indices to column indices
+    Subsets in the partition correspond to diagonal blocks in the block
+    triangularization. The order is topological, with ties broken
+    "lexicographically".
+
+    Parameters
+    ----------
+    matrix: ``scipy.sparse.coo_matrix``
+        Matrix whose rows and columns will be permuted
+    matching: ``dict``
+        A perfect matching. Maps rows to columns *and* columns back to rows.
 
     Returns
     -------
-    Two dicts. The first maps each row index to the index of its block in a
-    block-lower triangular permutation of the matrix. The second maps each
-    column index to the index of its block in a block-lower triangular
-    permutation of the matrix.
+    row_partition: list of lists
+        A partition of rows. The inner lists hold integer row coordinates.
+    col_partition: list of lists
+        A partition of columns. The inner lists hold integer column coordinates.
+
+
+    .. note::
+
+       **Breaking change in Pyomo 6.5.0**
+
+       The pre-6.5.0 ``block_triangularize`` function returned maps from
+       each row or column to the index of its block in a block
+       lower triangularization as the original intent of this function
+       was to identify when coordinates do or don't share a diagonal block
+       in this partition. Since then, the dominant use case of
+       ``block_triangularize`` has been to partition variables and
+       constraints into these blocks and inspect or solve each block
+       individually. A natural return type for this functionality is the
+       ordered partition of rows and columns, as lists of lists.
+       This functionality was previously available via the
+       ``get_diagonal_blocks`` method, which was confusing as it did not
+       capture that the partition was the diagonal of a block
+       *triangularization* (as opposed to diagonalization). The pre-6.5.0
+       functionality of ``block_triangularize`` is still available via the
+       ``map_coords_to_block_triangular_indices`` function.
+
     """
     nxb = nx.algorithms.bipartite
     nxc = nx.algorithms.components
@@ -138,36 +179,30 @@ def block_triangularize(matrix, matching=None):
     graph = from_biadjacency_matrix(matrix)
     row_nodes = list(range(M))
     sccs = get_scc_of_projection(graph, row_nodes, matching=matching)
-    row_idx_map = {r: idx for idx, scc in enumerate(sccs) for r, _ in scc}
-    col_idx_map = {c-M: idx for idx, scc in enumerate(sccs) for _, c in scc}
+    row_partition = [[i for i, j in scc] for scc in sccs]
+    col_partition = [[j-M for i, j in scc] for scc in sccs]
+    return row_partition, col_partition
+
+
+def map_coords_to_block_triangular_indices(matrix, matching=None):
+    row_blocks, col_blocks = block_triangularize(matrix, matching=matching)
+    row_idx_map = {
+        r: idx for idx, rblock in enumerate(row_blocks) for r in rblock
+    }
+    col_idx_map = {
+        c: idx for idx, cblock in enumerate(col_blocks) for c in cblock
+    }
     return row_idx_map, col_idx_map
 
 
+@deprecated(
+    msg=(
+        "``get_blocks_from_maps`` is deprecated. This functionality has been"
+        " incorporated into ``block_triangularize``."
+    ),
+    version="6.5.0",
+)
 def get_blocks_from_maps(row_block_map, col_block_map):
-    """
-    Gets the row and column coordinates of each diagonal block in a
-    block triangularization from maps of row/column coordinates to
-    block indices.
-
-    Arguments
-    ---------
-    row_block_map: dict
-        Dict mapping each row coordinate to the coordinate of the
-        block it belongs to
-
-    col_block_map: dict
-        Dict mapping each column coordinate to the coordinate of the
-        block it belongs to
-
-    Returns
-    -------
-    tuple of lists
-        The first list is a list-of-lists of row indices that partitions
-        the indices into diagonal blocks. The second list is a
-        list-of-lists of column indices that partitions the indices into
-        diagonal blocks.
-
-    """
     blocks = set(row_block_map.values())
     assert blocks == set(col_block_map.values())
     n_blocks = len(blocks)
@@ -180,29 +215,12 @@ def get_blocks_from_maps(row_block_map, col_block_map):
     return block_rows, block_cols
 
 
+@deprecated(
+    msg=(
+        "``get_diagonal_blocks`` has been deprecated. Please use"
+        " ``block_triangularize`` instead."
+    ),
+    version="6.5.0",
+)
 def get_diagonal_blocks(matrix, matching=None):
-    """
-    Gets the diagonal blocks of a block triangularization of the provided
-    matrix.
-
-    Arguments
-    ---------
-    coo_matrix
-        Matrix to get the diagonal blocks of
-
-    matching
-        Dict mapping row indices to column indices in the perfect matching
-        to be used by the block triangularization.
-
-    Returns
-    -------
-    tuple of lists
-        The first list is a list-of-lists of row indices that partitions
-        the indices into diagonal blocks. The second list is a
-        list-of-lists of column indices that partitions the indices into
-        diagonal blocks.
-
-    """
-    row_block_map, col_block_map = block_triangularize(matrix, matching=matching)
-    block_rows, block_cols = get_blocks_from_maps(row_block_map, col_block_map)
-    return block_rows, block_cols
+    return block_triangularize(matrix, matching=matching)

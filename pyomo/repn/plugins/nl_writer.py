@@ -536,7 +536,7 @@ class _NLWriter_impl(object):
             deprecation_warning(
                 f'{str(old)} ({int(old)}) is deprecated.  '
                 f'Please use {str(new)} ({int(new)})',
-                version='TBD',
+                version='6.5.0',
             )
 
     def __enter__(self):

@@ -10,4 +10,5 @@ scripts using Pyomo.
    :maxdepth: 1
 
    config.rst
+   deprecation.rst
    expressions/index.rst

@@ -28,11 +28,14 @@ Coding Standards
       maintainer (such as a Github ID) should be included in the Sphinx
       documentation
 
-Sphinx-compliant documentation is required for:
+Online Pyomo documentation is generated using `Sphinx <https://www.sphinx-doc.org/en/master/>`_
+with the ``napoleon`` extension enabled. For API documentation we use of one of these 
+`supported styles for docstrings <https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html>`_, 
+but we prefer the NumPy standard. Whichever you choose, we require compliant docstrings for:
     
     * Modules
     * Public and Private Classes
-    * Public and Private Functions 
+    * Public and Private Functions
 
 We also encourage you to include examples, especially for new features
 and contributions to ``pyomo.contrib``.

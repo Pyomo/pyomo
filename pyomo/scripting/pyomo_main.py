@@ -64,12 +64,12 @@ def main(args=None):
         if args[0] not in ['-h', '--help', '--version']:
             deprecation_warning("Running the 'pyomo' script with no subcommand is deprecated. "
                                 "Defaulting to 'pyomo solve'",
-                                version='TBD')
+                                version='6.5.0')
             args = ['solve'] + args[0:]
     elif args[0] not in pyomo_parser.subparsers:
         deprecation_warning("Running the 'pyomo' script with no subcommand is deprecated. "
                             "Defaulting to 'pyomo solve'",
-                            version='TBD')
+                            version='6.5.0')
         args = ['solve'] + args[0:]
     #
     # Process arguments
