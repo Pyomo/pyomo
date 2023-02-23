@@ -1083,7 +1083,7 @@ class _template_iter_manager(object):
         else:
             return self._pause_template_iter_manager(self)
 
-# Global manager for coordnating overriding set iteration
+# Global manager for coordinating overriding set iteration
 _TemplateIterManager = _template_iter_manager()
 
 

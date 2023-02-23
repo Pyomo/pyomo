@@ -48,7 +48,7 @@ def quicksum(args, start=0, linear=None):
 
     The behavior of :func:`quicksum` is similar to the builtin
     :func:`sum` function, but this function can avoid the generation and
-    disposal of intermediate objects, as thus is slightly more
+    disposal of intermediate objects, and thus is slightly more
     performant.
 
     Parameters
@@ -57,13 +57,13 @@ def quicksum(args, start=0, linear=None):
         A generator for terms in the sum.
 
     start: Any
-        A value that is initializes the sum.  If this value is not a
+        A value that initializes the sum.  If this value is not a
         numeric constant, then the += operator is used to add terms to
         this object.  Defaults to 0.
 
     linear: bool
         DEPRECATED: the linearity of the resulting expression is
-        determined automatically.  This optin is ignored.
+        determined automatically.  This option is ignored.
 
     Returns
     -------
