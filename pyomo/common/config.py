@@ -1413,11 +1413,11 @@ def add_docstring_list(docstring, configdict, indent_by=4):
 
 
 class document_kwargs_from_configdict(object):
-    """Decorator to add the documentation of a ConfigDict to the method docstring
+    """Decorator to append the documentation of a ConfigDict to the docstring
 
-    This will add the documentation (using the
-    :py:class:`numpydoc_ConfigFormatter` formatter) to the decorated
-    method's docstring.
+    This adds the documentation of the specified :py:class:`ConfigDict`
+    (using the :py:class:`numpydoc_ConfigFormatter` formatter) to the
+    decorated object's docstring.
 
     Parameters
     ----------
