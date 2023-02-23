@@ -1502,11 +1502,14 @@ class document_kwargs_from_configdict(object):
             doc = inspect.cleandoc(fcn.__doc__)
         else:
             doc = ""
-        if doc and not doc.endswith('\n'):
-            doc += '\n'
+        if doc:
+            if not doc.endswith('\n'):
+                doc += '\n\n'
+            else:
+                doc += '\n'
         fcn.__doc__ = (
             doc
-            + f'\n{self.section}'
+            + f'{self.section}'
             + self.config.generate_documentation(
                 indent_spacing=self.indent_spacing, width=self.width, format='numpydoc'
             )

@@ -2715,7 +2715,12 @@ c: 1.0
 
             @document_kwargs_from_configdict(CONFIG)
             def __init__(self):
+                "A simple docstring"
+
+            @document_kwargs_from_configdict(CONFIG, doc="A simple docstring\n")
+            def fcn(self):
                 pass
+
 
         ref = """
 Keyword Arguments
@@ -2740,8 +2745,9 @@ option_2: int, default=5
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
     actual information."""
-        self.assertEqual(ExampleClass.__doc__, ref)
-        self.assertEqual(ExampleClass.__init__.__doc__, ref)
+        self.assertEqual(ExampleClass.__doc__, ref.lstrip())
+        self.assertEqual(ExampleClass.__init__.__doc__, "A simple docstring\n" + ref)
+        self.assertEqual(ExampleClass.fcn.__doc__, "A simple docstring\n" + ref)
 
 
 if __name__ == "__main__":
