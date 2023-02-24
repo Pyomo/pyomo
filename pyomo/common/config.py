@@ -1385,8 +1385,15 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
         self.out.write(f'\n{indent}{obj.name()}: {typeinfo}\n')
         self.wrapper.initial_indent = indent + ' ' * self.indent_spacing
         self.wrapper.subsequent_indent = indent + ' ' * self.indent_spacing
+        vis = ""
+        if self.visibility is None and obj._visibility >= ADVANCED_OPTION:
+            vis = "[ADVANCED option]"
+            if obj._visibility >= DEVELOPER_OPTION:
+                vis = "[DEVELOPER option]"
         itemdoc = wrap_reStructuredText(
-            inspect.cleandoc(obj._doc or obj._description or ""),
+            '\n\n'.join(filter(
+                None, [vis, inspect.cleandoc(obj._doc or obj._description or "")]
+            )),
             self.wrapper,
         )
         if itemdoc:
