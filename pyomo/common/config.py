@@ -1490,6 +1490,7 @@ class document_kwargs_from_configdict(object):
             section='Keyword Arguments',
             indent_spacing=4,
             width=78,
+            visibility=None,
             doc=None,
     ):
         if '\n' not in section:
@@ -1498,6 +1499,7 @@ class document_kwargs_from_configdict(object):
         self.section = section
         self.indent_spacing = indent_spacing
         self.width = width
+        self.visibility = visibility
         self.doc = doc
 
     def __call__(self, fcn):
@@ -1518,7 +1520,10 @@ class document_kwargs_from_configdict(object):
             doc
             + f'{self.section}'
             + self.config.generate_documentation(
-                indent_spacing=self.indent_spacing, width=self.width, format='numpydoc'
+                indent_spacing=self.indent_spacing,
+                width=self.width,
+                visibility=self.visibility,
+                format='numpydoc',
             )
         )
         return fcn
