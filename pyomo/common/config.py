@@ -49,8 +49,8 @@ relocated_module_attribute(
     version='6.1')
 
 USER_OPTION = 0
-ADVANCED_OPTION = 1
-DEVELOPER_OPTION = 2
+ADVANCED_OPTION = 10
+DEVELOPER_OPTION = 20
 
 def Bool(val):
     """Domain validator for bool-like objects.
@@ -1308,7 +1308,7 @@ class ConfigFormatter(object):
     def _finalize(self):
         return self.out.getvalue()
 
-    def generate(self, config, indent_spacing=2, width=78, visibility=0):
+    def generate(self, config, indent_spacing=2, width=78, visibility=None):
         self._initialize(indent_spacing, width, visibility)
         level = []
         lastObj = config
@@ -1385,8 +1385,15 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
         self.out.write(f'\n{indent}{obj.name()}: {typeinfo}\n')
         self.wrapper.initial_indent = indent + ' ' * self.indent_spacing
         self.wrapper.subsequent_indent = indent + ' ' * self.indent_spacing
+        vis = ""
+        if self.visibility is None and obj._visibility >= ADVANCED_OPTION:
+            vis = "[ADVANCED option]"
+            if obj._visibility >= DEVELOPER_OPTION:
+                vis = "[DEVELOPER option]"
         itemdoc = wrap_reStructuredText(
-            inspect.cleandoc(obj._doc or obj._description or ""),
+            '\n\n'.join(filter(
+                None, [vis, inspect.cleandoc(obj._doc or obj._description or "")]
+            )),
             self.wrapper,
         )
         if itemdoc:
@@ -1488,6 +1495,7 @@ class document_kwargs_from_configdict(object):
             section='Keyword Arguments',
             indent_spacing=4,
             width=78,
+            visibility=None,
             doc=None,
     ):
         if '\n' not in section:
@@ -1496,6 +1504,7 @@ class document_kwargs_from_configdict(object):
         self.section = section
         self.indent_spacing = indent_spacing
         self.width = width
+        self.visibility = visibility
         self.doc = doc
 
     def __call__(self, fcn):
@@ -1516,7 +1525,10 @@ class document_kwargs_from_configdict(object):
             doc
             + f'{self.section}'
             + self.config.generate_documentation(
-                indent_spacing=self.indent_spacing, width=self.width, format='numpydoc'
+                indent_spacing=self.indent_spacing,
+                width=self.width,
+                visibility=self.visibility,
+                format='numpydoc',
             )
         )
         return fcn
@@ -1905,7 +1917,7 @@ class ConfigBase(object):
     def generate_documentation(
             self, block_start=None, block_end=None,
             item_start=None, item_body=None, item_end=None,
-            indent_spacing=2, width=78, visibility=0,
+            indent_spacing=2, width=78, visibility=None,
             format='latex'):
 
         if isinstance(format, str):
