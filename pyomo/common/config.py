@@ -49,8 +49,8 @@ relocated_module_attribute(
     version='6.1')
 
 USER_OPTION = 0
-ADVANCED_OPTION = 1
-DEVELOPER_OPTION = 2
+ADVANCED_OPTION = 10
+DEVELOPER_OPTION = 20
 
 def Bool(val):
     """Domain validator for bool-like objects.
