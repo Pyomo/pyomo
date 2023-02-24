@@ -28,23 +28,29 @@ import pickle
 import ply.lex
 import re
 import sys
-from textwrap import wrap
+import textwrap
 import types
 
 from pyomo.common.collections import Sequence, Mapping
-from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.deprecation import (
+    deprecated,
+    deprecation_warning,
+    relocated_module_attribute,
+)
+from pyomo.common.errors import DeveloperError
 from pyomo.common.fileutils import import_file
+from pyomo.common.formatting import wrap_reStructuredText
 from pyomo.common.modeling import NOTSET
 
-logger = logging.getLogger('pyomo.common.config')
+logger = logging.getLogger(__name__)
 
 relocated_module_attribute(
     'PYOMO_CONFIG_DIR', 'pyomo.common.envvar.PYOMO_CONFIG_DIR',
     version='6.1')
 
 USER_OPTION = 0
-ADVANCED_OPTION = 1
-DEVELOPER_OPTION = 2
+ADVANCED_OPTION = 10
+DEVELOPER_OPTION = 20
 
 def Bool(val):
     """Domain validator for bool-like objects.
@@ -214,7 +220,7 @@ class In(object):
         values are passed to ``domain.__contains__()``, and if ``True``
         is returned, the value is accepted and returned.
 
-    cast: callable, optional
+    cast: Callable, optional
         A callable object.  If specified, incoming values are first
         passed to `cast`, and the resulting object is checked for
         membership in `domain`
@@ -337,7 +343,7 @@ class ListOf(object):
 
 
 class Module(object):
-    """ Domain validator for modules.
+    """Domain validator for modules.
 
     Modules can be specified as module objects, by module name,
     or by the path to the module's file. If specified by path, the
@@ -350,21 +356,25 @@ class Module(object):
 
     Parameters
     ----------
-    basePath: None, str, ConfigValue
+    basePath : None, str, ConfigValue
         The base path that will be prepended to any non-absolute path
         values provided.  If None, defaults to :py:attr:`Path.BasePath`.
 
-    expandPath: bool
+    expandPath : bool
         If True, then the value will be expanded and normalized.  If
         False, the string representation of the value will be used
         unchanged.  If None, expandPath will defer to the (negated)
         value of :py:attr:`Path.SuppressPathExpansion`.
+
+    Examples
+    --------
 
     The following code shows the three ways you can specify a module: by file
     name, by module name, or by module object. Regardless of how the module is
     specified, what is stored in the configuration is a module object.
 
     .. doctest::
+
         >>> from pyomo.common.config import (
         ...     ConfigDict, ConfigValue, Module
         ... )
@@ -372,6 +382,7 @@ class Module(object):
         >>> config.declare('my_module', ConfigValue(
         ...     domain=Module(),
         ... ))
+        <pyomo.common.config.ConfigValue object at ...>
         >>> # Set using file path
         >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
         >>> # Set using python module name, as a string
@@ -379,6 +390,7 @@ class Module(object):
         >>> # Set using an imported module object
         >>> import os.path
         >>> config.my_module = os.path
+
     """
     def __init__(self, basePath=None, expandPath=None):
         self.basePath = basePath
@@ -503,7 +515,7 @@ class DynamicImplicitDomain(object):
     ``pyomo/common/tests/config_plugin.py``:
 
     .. literalinclude:: /../../pyomo/common/tests/config_plugin.py
-       :lines: 10-
+       :start-at: import
 
     .. doctest::
        :hide:
@@ -548,20 +560,6 @@ class DynamicImplicitDomain(object):
 
     def __call__(self, key, value):
         return self.callback(key, value)
-
-
-def add_docstring_list(docstring, configdict, indent_by=4):
-    """Returns the docstring with a formatted configuration arguments listing."""
-    return docstring + (" " * indent_by).join(
-        configdict.generate_documentation(
-            block_start="Keyword Arguments\n-----------------\n",
-            block_end="",
-            item_start="%s\n",
-            item_body="  %s",
-            item_end="",
-            indent_spacing=0,
-            width=256
-        ).splitlines(True))
 
 
 # Note: Enum uses a metaclass to work its magic.  To get a deprecation
@@ -616,7 +614,7 @@ values for those entries, and retrieve the current values:
 .. doctest::
 
     >>> from pyomo.common.config import (
-    ...     ConfigDict, ConfigList, ConfigValue, In,
+    ...     ConfigDict, ConfigList, ConfigValue
     ... )
     >>> config = ConfigDict()
     >>> config.declare('filename', ConfigValue(
@@ -700,7 +698,7 @@ validators for common use cases:
    Module
    Path
    PathList
-
+   DynamicImplicitDomain
 
 Configuring class hierarchies
 =============================
@@ -1239,6 +1237,298 @@ def _default_string_dict_lexer(value):
 _default_string_dict_lexer._lex = None
 
 
+def _formatter_str_to_callback(pattern, formatter):
+    "Wrapper function that converts formatter strings to callback functions"
+
+    if not pattern:
+        pattern = ''
+    if '%s' in pattern:
+        cb = lambda self, indent, obj: self.out.write(indent + pattern % obj.name())
+    elif pattern:
+        cb = lambda self, indent, obj: self.out.write(indent + pattern)
+    else:
+        cb = lambda self, indent, obj: None
+    return types.MethodType(cb, formatter)
+
+def _formatter_str_to_item_callback(pattern, formatter):
+    "Wrapper function that converts item formatter strings to callback functions"
+
+    if not pattern:
+        pattern = ''
+    if '%s' in pattern:
+        _item_body_formatter = lambda doc: pattern % (doc,)
+    else:
+        _item_body_formatter = lambda doc: pattern
+
+    def _item_body_cb(self, indent, obj):
+        _doc = obj._doc or obj._description or ""
+        if not _doc:
+            return ''
+        wraplines = '\n ' not in _doc
+        _doc = _item_body_formatter(_doc).strip()
+        if not _doc:
+            return ''
+        _indent = indent + ' ' * self.indent_spacing
+        if wraplines:
+            doc_lines = textwrap.wrap(
+                _doc,
+                self.width,
+                initial_indent=_indent,
+                subsequent_indent=_indent,
+            )
+            self.out.write(('\n'.join(doc_lines)).rstrip() + '\n')
+        else:
+            self.out.write(_doc.rstrip() + '\n')
+
+    return types.MethodType(_item_body_cb, formatter)
+
+
+class ConfigFormatter(object):
+    def _initialize(self, indent_spacing, width, visibility):
+        self.out = io.StringIO()
+        self.indent_spacing = indent_spacing
+        self.width = width
+        self.visibility = visibility
+
+    def _block_start(self, indent, obj):
+        pass
+
+    def _block_end(self, indent, obj):
+        pass
+
+    def _item_start(self, indent, obj):
+        pass
+
+    def _item_body(self, indent, obj):
+        pass
+
+    def _item_end(self, indent, obj):
+        pass
+
+    def _finalize(self):
+        return self.out.getvalue()
+
+    def generate(self, config, indent_spacing=2, width=78, visibility=None):
+        self._initialize(indent_spacing, width, visibility)
+        level = []
+        lastObj = config
+        indent = ''
+        for lvl, pre, val, obj in config._data_collector(1, '', visibility, True):
+            if len(level) < lvl:
+                while len(level) < lvl - 1:
+                    level.append(None)
+                level.append(lastObj)
+                self._block_start(indent, lastObj)
+                indent += ' ' * indent_spacing
+            while len(level) > lvl:
+                _last = level.pop()
+                if _last is not None:
+                    indent = indent[:-indent_spacing]
+                    self._block_end(indent, _last)
+
+            lastObj = obj
+            self._item_start(indent, obj)
+            self._item_body(indent, obj)
+            self._item_end(indent, obj)
+        while level:
+            _last = level.pop()
+            if _last is not None:
+                indent = indent[:-indent_spacing]
+                self._block_end(indent, _last)
+        return self._finalize()
+
+
+class String_ConfigFormatter(ConfigFormatter):
+    def __init__(self, block_start, block_end, item_start, item_body, item_end):
+        self._block_start = _formatter_str_to_callback(block_start, self)
+        self._block_end = _formatter_str_to_callback(block_end, self)
+        self._item_start = _formatter_str_to_callback(item_start, self)
+        self._item_end = _formatter_str_to_callback(item_end, self)
+        self._item_body = _formatter_str_to_item_callback(item_body, self)
+
+
+class LaTeX_ConfigFormatter(String_ConfigFormatter):
+    def __init__(self):
+        super().__init__(
+            "\\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]\n",
+            "\\end{description}\n",
+            "\\item[{%s}]\\hfill\n",
+            "\\\\%s",
+            "",
+        )
+
+
+class numpydoc_ConfigFormatter(ConfigFormatter):
+    def _initialize(self, *args):
+        super()._initialize(*args)
+        self.wrapper = textwrap.TextWrapper(width=self.width)
+
+    def _item_body(self, indent, obj):
+        typeinfo = ', '.join(filter(
+            None,
+            [
+                'dict' if isinstance(obj, ConfigDict) else obj.domain_name(),
+                'optional' if obj._default is None else f'default={repr(obj._default)}',
+            ]
+        ))
+        # Note that numpydoc / ReST specifies that the colon in
+        # definition lists be surrounded by spaces (i.e., " : ").
+        # However, as of numpydoc (1.1.0) / Sphinx (3.4.3) / napoleon
+        # (0.7), things aren't really geared for nested lists of
+        # parameters.  Definition lists omit the colon, and
+        # sub-definitions are rendered as normal definition sections
+        # (without the special formatting applied to Parameters lists),
+        # leading to less readable docs.  As they tolerate omitting the
+        # space before the colon at the top level (which at lower levels
+        # causes nested definition lists to NOT omit the colon), we will
+        # generate non-standard ReST and omit the preceeding space:
+        self.out.write(f'\n{indent}{obj.name()}: {typeinfo}\n')
+        self.wrapper.initial_indent = indent + ' ' * self.indent_spacing
+        self.wrapper.subsequent_indent = indent + ' ' * self.indent_spacing
+        vis = ""
+        if self.visibility is None and obj._visibility >= ADVANCED_OPTION:
+            vis = "[ADVANCED option]"
+            if obj._visibility >= DEVELOPER_OPTION:
+                vis = "[DEVELOPER option]"
+        itemdoc = wrap_reStructuredText(
+            '\n\n'.join(filter(
+                None, [vis, inspect.cleandoc(obj._doc or obj._description or "")]
+            )),
+            self.wrapper,
+        )
+        if itemdoc:
+            self.out.write(itemdoc + '\n')
+
+    def _finalize(self):
+        return inspect.cleandoc(self.out.getvalue())
+
+ConfigFormatter.formats = {
+    'latex': LaTeX_ConfigFormatter,
+    'numpydoc': numpydoc_ConfigFormatter,
+}
+
+
+def add_docstring_list(docstring, configdict, indent_by=4):
+    """Returns the docstring with a formatted configuration arguments listing."""
+    section = 'Keyword Arguments'
+    return (
+        inspect.cleandoc(docstring)
+        + '\n' + section + '\n' + '-'*len(section) + '\n'
+        + configdict.generate_documentation(
+            indent_spacing=indent_by, width=256, format='numpydoc')
+    )
+
+
+class document_kwargs_from_configdict(object):
+    """Decorator to append the documentation of a ConfigDict to the docstring
+
+    This adds the documentation of the specified :py:class:`ConfigDict`
+    (using the :py:class:`numpydoc_ConfigFormatter` formatter) to the
+    decorated object's docstring.
+
+    Parameters
+    ----------
+    config : ConfigDict or str
+        the :py:class:`ConfigDict` to document.  If a ``str``, then the
+        :py:class:`ConfigDict` is obtained by retrieving the named
+        attribute from the decorated object (thereby enabling
+        documenting class objects whose ``__init__`` keyword arguments
+        are processed by a :py:class:`ConfigDict` class attribute)
+
+    section : str
+        the section header to preface config documentation with
+
+    indent_spacing : int
+        number of spaces to indent each block of documentation
+
+    width : int
+        total documentation width in characters (for wrapping paragraphs)
+
+    doc : str, optional
+        the initial docstring to append the ConfigDict documentation to.
+        If None, then the decorated object's ``__doc__`` will be used.
+
+    Examples
+    --------
+
+    >>> from pyomo.common.config import (
+    ...     ConfigDict, ConfigValue, document_kwargs_from_configdict
+    ... )
+    >>> class MyClass(object):
+    ...     CONFIG = ConfigDict()
+    ...     CONFIG.declare('iterlim', ConfigValue(
+    ...         default=3000,
+    ...         domain=int,
+    ...         doc="Iteration limit.  Specify None for no limit"
+    ...     ))
+    ...     CONFIG.declare('tee', ConfigValue(
+    ...         domain=bool,
+    ...         doc="If True, stream the solver output to the console"
+    ...     ))
+    ...
+    ...     @document_kwargs_from_configdict(CONFIG)
+    ...     def solve(self, **kwargs):
+    ...         config = self.CONFIG(kwargs)
+    ...         # ...
+    ...
+    >>> help(MyClass.solve)
+    Help on function solve:
+    <BLANKLINE>
+    solve(self, **kwargs)
+        Keyword Arguments
+        -----------------
+        iterlim: int, default=3000
+            Iteration limit.  Specify None for no limit
+    <BLANKLINE>
+        tee: bool, optional
+            If True, stream the solver output to the console
+
+    """
+    def __init__(
+            self,
+            config,
+            section='Keyword Arguments',
+            indent_spacing=4,
+            width=78,
+            visibility=None,
+            doc=None,
+    ):
+        if '\n' not in section:
+            section += '\n' + '-'*len(section) + '\n'
+        self.config = config
+        self.section = section
+        self.indent_spacing = indent_spacing
+        self.width = width
+        self.visibility = visibility
+        self.doc = doc
+
+    def __call__(self, fcn):
+        if isinstance(self.config, str):
+            self.config = getattr(fcn, self.config)
+        if self.doc is not None:
+            doc = inspect.cleandoc(self.doc)
+        elif fcn.__doc__:
+            doc = inspect.cleandoc(fcn.__doc__)
+        else:
+            doc = ""
+        if doc:
+            if not doc.endswith('\n'):
+                doc += '\n\n'
+            else:
+                doc += '\n'
+        fcn.__doc__ = (
+            doc
+            + f'{self.section}'
+            + self.config.generate_documentation(
+                indent_spacing=self.indent_spacing,
+                width=self.width,
+                visibility=self.visibility,
+                format='numpydoc',
+            )
+        )
+        return fcn
+
+
 class ConfigBase(object):
     __slots__ = ('_parent', '_name', '_userSet', '_userAccessed', '_data',
                  '_default', '_domain', '_description', '_doc', '_visibility',
@@ -1613,7 +1903,7 @@ class ConfigBase(object):
             os.write(comment)
             txtArea = max(width - field - len(comment), minDocWidth)
             os.write(("\n" + ' ' * field + comment).join(
-                wrap(
+                textwrap.wrap(
                     obj._description, txtArea, subsequent_indent='  ')))
             os.write('\n')
         return os.getvalue()
@@ -1622,80 +1912,49 @@ class ConfigBase(object):
     def generate_documentation(
             self, block_start=None, block_end=None,
             item_start=None, item_body=None, item_end=None,
-            indent_spacing=2, width=78, visibility=0,
+            indent_spacing=2, width=78, visibility=None,
             format='latex'):
-        _formats = ConfigBase.generate_documentation.formats
-        if block_start is None:
-            block_start = _formats.get(format, {}).get('block_start','')
-        if block_end is None:
-            block_end = _formats.get(format, {}).get('block_end','')
-        if item_start is None:
-            item_start = _formats.get(format, {}).get('item_start','')
-        if item_body is None:
-            item_body = _formats.get(format, {}).get('item_body','')
-        if item_end is None:
-            item_end = _formats.get(format, {}).get('item_end','')
 
-        os = io.StringIO()
-        level = []
-        lastObj = self
-        indent = ''
-        for lvl, pre, val, obj in self._data_collector(1, '', visibility, True):
-            if len(level) < lvl:
-                while len(level) < lvl - 1:
-                    level.append(None)
-                level.append(lastObj)
-                if '%s' in block_start:
-                    os.write(indent + block_start % lastObj.name())
-                elif block_start:
-                    os.write(indent + block_start)
-                indent += ' ' * indent_spacing
-            while len(level) > lvl:
-                _last = level.pop()
-                if _last is not None:
-                    indent = indent[:-1 * indent_spacing]
-                    if '%s' in block_end:
-                        os.write(indent + block_end % _last.name())
-                    elif block_end:
-                        os.write(indent + block_end)
+        if isinstance(format, str):
+            formatter = ConfigFormatter.formats.get(format, None)
+            if formatter is None:
+                raise ValueError(f"Unrecognized documentation formatter, '{format}'")
+            formatter = formatter()
+        else:
+            # Assume everything not a str is a valid formatter object.
+            formatter = format
 
-            lastObj = obj
-            if '%s' in item_start:
-                os.write(indent + item_start % obj.name())
-            elif item_start:
-                os.write(indent + item_start)
-            _doc = obj._doc or obj._description or ""
-            if _doc:
-                _wrapLines = '\n ' not in _doc
-                if '%s' in item_body:
-                    _doc = item_body % (_doc,)
-                elif _doc:
-                    _doc = item_body
-                if _wrapLines:
-                    doc_lines = wrap(
-                        _doc,
-                        width,
-                        initial_indent=indent + ' ' * indent_spacing,
-                        subsequent_indent=indent + ' ' * indent_spacing)
-                else:
-                    doc_lines = (_doc,)
-                # Write things out
-                os.writelines('\n'.join(doc_lines))
-                if not doc_lines[-1].endswith("\n"):
-                    os.write('\n')
-            if '%s' in item_end:
-                os.write(indent + item_end % obj.name())
-            elif item_end:
-                os.write(indent + item_end)
-        while level:
-            _last = level.pop()
-            if _last is not None:
-                indent = indent[:-1 * indent_spacing]
-                if '%s' in block_end:
-                    os.write(indent + block_end % _last.name())
-                else:
-                    os.write(indent + block_end)
-        return os.getvalue()
+        deprecated_args = (block_start, block_end, item_start, item_end)
+        if any(arg is not None for arg in deprecated_args):
+            names = ('block_start', 'block_end', 'item_start', 'item_end')
+            for arg, name in zip(deprecated_args, names):
+                if arg is None:
+                    continue
+                deprecation_warning(
+                    f"Overriding '{name}' by passing strings to "
+                    "generate_documentation is deprecated.  Create an instance of a "
+                    "StringConfigFormatter and pass it as the 'format' argument.",
+                    version='6.5.1.dev0',
+                )
+                setattr(
+                    formatter,
+                    "_" + name,
+                    _formatter_str_to_callback(arg, formatter)
+                )
+        if item_body is not None:
+            deprecation_warning(
+                f"Overriding 'item_body' by passing strings to "
+                "generate_documentation is deprecated.  Create an instance of a "
+                "StringConfigFormatter and pass it as the 'format' argument.",
+                version='6.5.1.dev0',
+            )
+            setattr(
+                formatter,
+                "_item_body",
+                _formatter_str_to_item_callback(item_body, formatter)
+            )
+
+        return formatter.generate(self, indent_spacing, width, visibility)
 
     def user_values(self):
         if self._userSet:
@@ -1711,17 +1970,6 @@ class ConfigBase(object):
             if obj._userSet and not obj._userAccessed:
                 yield obj
 
-ConfigBase.generate_documentation.formats = {
-    'latex': {
-        'block_start': "\\begin{description}["
-            "topsep=0pt,parsep=0.5em,itemsep=-0.4em]\n",
-        'block_end': "\\end{description}\n",
-        'item_start': "\\item[{%s}]\\hfill\n",
-        'item_body': "\\\\%s",
-        'item_end': "",
-    }
-}
-
 
 class ConfigValue(ConfigBase):
     """Store and manipulate a single configuration value.
@@ -1732,7 +1980,7 @@ class ConfigValue(ConfigBase):
         The default value that this ConfigValue will take if no value is
         provided.
 
-    domain: callable, optional
+    domain: Callable, optional
         The domain can be any callable that accepts a candidate value
         and returns the value converted to the desired type, optionally
         performing any data validation.  The result will be stored into
@@ -1858,7 +2106,7 @@ class ConfigList(ConfigBase, Sequence):
         otherwise the default is cast to the domain and forms a default
         list with a single element.
 
-    domain: callable, optional
+    domain: Callable, optional
         The domain can be any callable that accepts a candidate value
         and returns the value converted to the desired type, optionally
         performing any data validation.  The result will be stored /
@@ -2039,7 +2287,7 @@ class ConfigDict(ConfigBase, Mapping):
         were not prevously declared using :py:meth:`declare` or
         :py:meth:`declare_from`.
 
-    implicit_domain: callable, optional
+    implicit_domain: Callable, optional
         The domain that will be used for any implicitly-declared keys.
         Follows the same rules as :py:meth:`ConfigValue`'s `domain`.
 
@@ -2354,9 +2602,9 @@ class ConfigDict(ConfigBase, Mapping):
                 level += 1
         for key in self._decl_order:
             cfg = self._data[key]
-            for v in cfg._data_collector(
-                    level, cfg._name + ': ', visibility, docMode):
-                yield v
+            yield from cfg._data_collector(
+                level, cfg._name + ': ', visibility, docMode
+            )
 
 # Backwards compatibility: ConfigDict was originally named ConfigBlock.
 ConfigBlock = ConfigDict
