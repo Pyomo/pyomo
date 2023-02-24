@@ -1308,7 +1308,7 @@ class ConfigFormatter(object):
     def _finalize(self):
         return self.out.getvalue()
 
-    def generate(self, config, indent_spacing=2, width=78, visibility=0):
+    def generate(self, config, indent_spacing=2, width=78, visibility=None):
         self._initialize(indent_spacing, width, visibility)
         level = []
         lastObj = config
@@ -1907,7 +1907,7 @@ class ConfigBase(object):
     def generate_documentation(
             self, block_start=None, block_end=None,
             item_start=None, item_body=None, item_end=None,
-            indent_spacing=2, width=78, visibility=0,
+            indent_spacing=2, width=78, visibility=None,
             format='latex'):
 
         if isinstance(format, str):
