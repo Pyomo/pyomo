@@ -2678,6 +2678,8 @@ c: 1.0
             cfg2.declare_from({})
 
     def test_docstring_decorator(self):
+        self.maxDiff = None
+
         @document_kwargs_from_configdict('CONFIG')
         class ExampleClass(object):
             CONFIG = ConfigDict()
@@ -2783,9 +2785,6 @@ option_1: int, default=5
     The first configuration option
 
 solver_options: dict, optional
-
-    solver_option_1: float, default=1
-        The first solver configuration option
 
     solver_option_2: float, default=1
         The second solver configuration option

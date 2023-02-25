@@ -1420,7 +1420,7 @@ def add_docstring_list(docstring, configdict, indent_by=4):
         inspect.cleandoc(docstring)
         + '\n' + section + '\n' + '-'*len(section) + '\n'
         + configdict.generate_documentation(
-            indent_spacing=indent_by, width=256, format='numpydoc')
+            indent_spacing=indent_by, width=256, visibility=0, format='numpydoc')
     )
 
 
