@@ -41,8 +41,11 @@ from pyomo.core.expr.current import (
     NPV_AbsExpression,
     UnaryFunctionExpression,
     NPV_UnaryFunctionExpression,
+)
+from pyomo.core.expr.numeric_expr import (
     _MutableSumExpression,
-    sin,
+    _MutableLinearExpression,
+    _MutableNPVSumExpression,
 )
 from pyomo.core.expr.visitor import clone_expression
 from pyomo.environ import ConcreteModel, Param, Var, BooleanVar
@@ -104,6 +107,8 @@ class TestExprGen(unittest.TestCase):
         self.mutable_l2 = _MutableSumExpression([self.mon_npv, self.other])
 
         # often repeated reference expressions
+        self.mon_bin = MonomialTermExpression((1, self.bin))
+        self.mon_var = MonomialTermExpression((1, self.var))
         self.minus_bin = MonomialTermExpression((-1, self.bin))
         self.minus_npv = NPV_NegationExpression((self.npv,))
         self.minus_param_mut = NPV_NegationExpression((self.param_mut,))
@@ -5928,3 +5933,248 @@ class TestExprGen(unittest.TestCase):
                 (self.param1, ValueError if name in SKIP_1 else fcn(1)),
             ]
             self._run_cases(tests, op)
+
+    #
+    #
+    # MUTABLE SUM IADD EXPRESSIONS
+    #
+    #
+
+    def _run_iadd_cases(self, tests, op):
+        self.assertEqual(len(tests), self.NUM_TESTS)
+        try:
+            for test_num, test in enumerate(tests):
+                ans = None
+                args = test[:-1]
+                result = test[-1]
+                if result is self.SKIP:
+                    continue
+                orig_args = list(args)
+                orig_args_clone = [clone_expression(arg) for arg in args]
+                try:
+                    mutable = [isinstance(arg, _MutableSumExpression) for arg in args]
+                    classes = [arg.__class__ for arg in args]
+                    with LoggingIntercept() as LOG:
+                        ans = op(*args)
+                    if not any(arg is self.asbinary for arg in args):
+                        self.assertEqual(LOG.getvalue(), "")
+                    assertExpressionsEqual(self, result, ans)
+                    for i, arg in enumerate(args):
+                        self.assertIs(arg, orig_args[i])
+                        if mutable[i]:
+                            if i:
+                                self.assertFalse(isinstance(arg, _MutableSumExpression))
+                                self.assertIsNot(arg.__class__, classes[i])
+                                assertExpressionsEqual(
+                                    self,
+                                    _MutableSumExpression(arg.args),
+                                    _MutableSumExpression(orig_args_clone[i].args),
+                                )
+                            else:
+                                self.assertIsInstance(arg, _MutableSumExpression)
+                                self.assertIs(arg, ans)
+                        else:
+                            self.assertIs(arg.__class__, classes[i])
+                            assertExpressionsEqual(self, arg, orig_args_clone[i])
+                except TypeError:
+                    if result is not NotImplemented:
+                        raise
+                except ZeroDivisionError:
+                    if result is not ZeroDivisionError:
+                        raise
+                except ValueError:
+                    if result is not ValueError:
+                        raise
+                else:
+                    # Don't reset mutable args yet: we need to print out the error!
+                    for i, arg in enumerate(args):
+                        if mutable[i]:
+                            arg.__class__ = classes[i]
+                            arg._args_ = orig_args_clone[i]._args_
+                            arg._nargs = orig_args_clone[i]._nargs
+        except:
+            self._print_error(test_num, orig_args_clone + [result], ans)
+            for i, arg in enumerate(args):
+                if mutable[i]:
+                    arg.__class__ = classes[i]
+                    arg._args_ = orig_args_clone[i]._args_
+                    arg._nargs = orig_args_clone[i]._nargs
+            raise
+
+    def test_mutable_nvp_iadd(self):
+        mutable_npv = _MutableNPVSumExpression([])
+        tests = [
+            (mutable_npv, self.invalid, NotImplemented),
+            (mutable_npv, self.asbinary, _MutableLinearExpression([self.mon_bin])),
+            (mutable_npv, self.zero, _MutableNPVSumExpression([])),
+            (mutable_npv, self.one, _MutableNPVSumExpression([1])),
+            # 4:
+            (mutable_npv, self.native, _MutableNPVSumExpression([5])),
+            (mutable_npv, self.npv, _MutableNPVSumExpression([self.npv])),
+            (mutable_npv, self.param, _MutableNPVSumExpression([6])),
+            (mutable_npv, self.param_mut, _MutableNPVSumExpression([self.param_mut])),
+            # 8:
+            (mutable_npv, self.var, _MutableLinearExpression([self.mon_var])),
+            (mutable_npv, self.mon_native, _MutableLinearExpression([self.mon_native])),
+            (mutable_npv, self.mon_param, _MutableLinearExpression([self.mon_param])),
+            (mutable_npv, self.mon_npv, _MutableLinearExpression([self.mon_npv])),
+            # 12:
+            (mutable_npv, self.linear, _MutableLinearExpression(self.linear.args)),
+            (mutable_npv, self.sum, _MutableSumExpression(self.sum.args)),
+            (mutable_npv, self.other, _MutableSumExpression([self.other])),
+            (mutable_npv, self.mutable_l0, _MutableNPVSumExpression([])),
+            # 16:
+            (mutable_npv, self.mutable_l1, _MutableLinearExpression(self.mutable_l1.args)),
+            (mutable_npv, self.mutable_l2, _MutableSumExpression(self.mutable_l2.args)),
+            (mutable_npv, self.param0, _MutableNPVSumExpression([])),
+            (mutable_npv, self.param1, _MutableNPVSumExpression([1])),
+        ]
+        self._run_iadd_cases(tests, operator.iadd)
+
+        mutable_npv = _MutableNPVSumExpression([10])
+        tests = [
+            (mutable_npv, self.invalid, NotImplemented),
+            (mutable_npv, self.asbinary, _MutableLinearExpression([10, self.mon_bin])),
+            (mutable_npv, self.zero, _MutableNPVSumExpression([10])),
+            (mutable_npv, self.one, _MutableNPVSumExpression([10, 1])),
+            # 4:
+            (mutable_npv, self.native, _MutableNPVSumExpression([10, 5])),
+            (mutable_npv, self.npv, _MutableNPVSumExpression([10, self.npv])),
+            (mutable_npv, self.param, _MutableNPVSumExpression([10, 6])),
+            (mutable_npv, self.param_mut, _MutableNPVSumExpression([10, self.param_mut])),
+            # 8:
+            (mutable_npv, self.var, _MutableLinearExpression([10, self.mon_var])),
+            (mutable_npv, self.mon_native, _MutableLinearExpression([10, self.mon_native])),
+            (mutable_npv, self.mon_param, _MutableLinearExpression([10, self.mon_param])),
+            (mutable_npv, self.mon_npv, _MutableLinearExpression([10, self.mon_npv])),
+            # 12:
+            (mutable_npv, self.linear, _MutableLinearExpression([10] + self.linear.args)),
+            (mutable_npv, self.sum, _MutableSumExpression([10] + self.sum.args)),
+            (mutable_npv, self.other, _MutableSumExpression([10, self.other])),
+            (mutable_npv, self.mutable_l0, _MutableNPVSumExpression([10])),
+            # 16:
+            (mutable_npv, self.mutable_l1, _MutableLinearExpression([10] + self.mutable_l1.args)),
+            (mutable_npv, self.mutable_l2, _MutableSumExpression([10] + self.mutable_l2.args)),
+            (mutable_npv, self.param0, _MutableNPVSumExpression([10])),
+            (mutable_npv, self.param1, _MutableNPVSumExpression([10, 1])),
+        ]
+        self._run_iadd_cases(tests, operator.iadd)
+
+    def test_mutable_lin_iadd(self):
+        mutable_lin = _MutableLinearExpression([])
+        tests = [
+            (mutable_lin, self.invalid, NotImplemented),
+            (mutable_lin, self.asbinary, _MutableLinearExpression([self.mon_bin])),
+            (mutable_lin, self.zero, _MutableLinearExpression([])),
+            (mutable_lin, self.one, _MutableLinearExpression([1])),
+            # 4:
+            (mutable_lin, self.native, _MutableLinearExpression([5])),
+            (mutable_lin, self.npv, _MutableLinearExpression([self.npv])),
+            (mutable_lin, self.param, _MutableLinearExpression([6])),
+            (mutable_lin, self.param_mut, _MutableLinearExpression([self.param_mut])),
+            # 8:
+            (mutable_lin, self.var, _MutableLinearExpression([self.mon_var])),
+            (mutable_lin, self.mon_native, _MutableLinearExpression([self.mon_native])),
+            (mutable_lin, self.mon_param, _MutableLinearExpression([self.mon_param])),
+            (mutable_lin, self.mon_npv, _MutableLinearExpression([self.mon_npv])),
+            # 12:
+            (mutable_lin, self.linear, _MutableLinearExpression(self.linear.args)),
+            (mutable_lin, self.sum, _MutableSumExpression(self.sum.args)),
+            (mutable_lin, self.other, _MutableSumExpression([self.other])),
+            (mutable_lin, self.mutable_l0, _MutableLinearExpression([])),
+            # 16:
+            (mutable_lin, self.mutable_l1, _MutableLinearExpression(self.mutable_l1.args)),
+            (mutable_lin, self.mutable_l2, _MutableSumExpression(self.mutable_l2.args)),
+            (mutable_lin, self.param0, _MutableLinearExpression([])),
+            (mutable_lin, self.param1, _MutableLinearExpression([1])),
+        ]
+        self._run_iadd_cases(tests, operator.iadd)
+
+        mutable_lin = _MutableLinearExpression([self.mon_bin])
+        tests = [
+            (mutable_lin, self.invalid, NotImplemented),
+            (mutable_lin, self.asbinary, _MutableLinearExpression([self.mon_bin, self.mon_bin])),
+            (mutable_lin, self.zero, _MutableLinearExpression([self.mon_bin])),
+            (mutable_lin, self.one, _MutableLinearExpression([self.mon_bin, 1])),
+            # 4:
+            (mutable_lin, self.native, _MutableLinearExpression([self.mon_bin, 5])),
+            (mutable_lin, self.npv, _MutableLinearExpression([self.mon_bin, self.npv])),
+            (mutable_lin, self.param, _MutableLinearExpression([self.mon_bin, 6])),
+            (mutable_lin, self.param_mut, _MutableLinearExpression([self.mon_bin, self.param_mut])),
+            # 8:
+            (mutable_lin, self.var, _MutableLinearExpression([self.mon_bin, self.mon_var])),
+            (mutable_lin, self.mon_native, _MutableLinearExpression([self.mon_bin, self.mon_native])),
+            (mutable_lin, self.mon_param, _MutableLinearExpression([self.mon_bin, self.mon_param])),
+            (mutable_lin, self.mon_npv, _MutableLinearExpression([self.mon_bin, self.mon_npv])),
+            # 12:
+            (mutable_lin, self.linear, _MutableLinearExpression([self.mon_bin] + self.linear.args)),
+            (mutable_lin, self.sum, _MutableSumExpression([self.mon_bin] + self.sum.args)),
+            (mutable_lin, self.other, _MutableSumExpression([self.mon_bin, self.other])),
+            (mutable_lin, self.mutable_l0, _MutableLinearExpression([self.mon_bin])),
+            # 16:
+            (mutable_lin, self.mutable_l1, _MutableLinearExpression([self.mon_bin] + self.mutable_l1.args)),
+            (mutable_lin, self.mutable_l2, _MutableSumExpression([self.mon_bin] + self.mutable_l2.args)),
+            (mutable_lin, self.param0, _MutableLinearExpression([self.mon_bin])),
+            (mutable_lin, self.param1, _MutableLinearExpression([self.mon_bin, 1])),
+        ]
+        self._run_iadd_cases(tests, operator.iadd)
+
+
+    def test_mutable_sum_iadd(self):
+        mutable_sum = _MutableSumExpression([])
+        tests = [
+            (mutable_sum, self.invalid, NotImplemented),
+            (mutable_sum, self.asbinary, _MutableSumExpression([self.bin])),
+            (mutable_sum, self.zero, _MutableSumExpression([])),
+            (mutable_sum, self.one, _MutableSumExpression([1])),
+            # 4:
+            (mutable_sum, self.native, _MutableSumExpression([5])),
+            (mutable_sum, self.npv, _MutableSumExpression([self.npv])),
+            (mutable_sum, self.param, _MutableSumExpression([6])),
+            (mutable_sum, self.param_mut, _MutableSumExpression([self.param_mut])),
+            # 8:
+            (mutable_sum, self.var, _MutableSumExpression([self.var])),
+            (mutable_sum, self.mon_native, _MutableSumExpression([self.mon_native])),
+            (mutable_sum, self.mon_param, _MutableSumExpression([self.mon_param])),
+            (mutable_sum, self.mon_npv, _MutableSumExpression([self.mon_npv])),
+            # 12:
+            (mutable_sum, self.linear, _MutableSumExpression([self.linear])),
+            (mutable_sum, self.sum, _MutableSumExpression(self.sum.args)),
+            (mutable_sum, self.other, _MutableSumExpression([self.other])),
+            (mutable_sum, self.mutable_l0, _MutableSumExpression([])),
+            # 16:
+            (mutable_sum, self.mutable_l1, _MutableSumExpression(self.mutable_l1.args)),
+            (mutable_sum, self.mutable_l2, _MutableSumExpression(self.mutable_l2.args)),
+            (mutable_sum, self.param0, _MutableSumExpression([])),
+            (mutable_sum, self.param1, _MutableSumExpression([1])),
+        ]
+        self._run_iadd_cases(tests, operator.iadd)
+
+        mutable_sum = _MutableSumExpression([self.other])
+        tests = [
+            (mutable_sum, self.invalid, NotImplemented),
+            (mutable_sum, self.asbinary, _MutableSumExpression([self.other, self.bin])),
+            (mutable_sum, self.zero, _MutableSumExpression([self.other])),
+            (mutable_sum, self.one, _MutableSumExpression([self.other, 1])),
+            # 4:
+            (mutable_sum, self.native, _MutableSumExpression([self.other, 5])),
+            (mutable_sum, self.npv, _MutableSumExpression([self.other, self.npv])),
+            (mutable_sum, self.param, _MutableSumExpression([self.other, 6])),
+            (mutable_sum, self.param_mut, _MutableSumExpression([self.other, self.param_mut])),
+            # 8:
+            (mutable_sum, self.var, _MutableSumExpression([self.other, self.var])),
+            (mutable_sum, self.mon_native, _MutableSumExpression([self.other, self.mon_native])),
+            (mutable_sum, self.mon_param, _MutableSumExpression([self.other, self.mon_param])),
+            (mutable_sum, self.mon_npv, _MutableSumExpression([self.other, self.mon_npv])),
+            # 12:
+            (mutable_sum, self.linear, _MutableSumExpression([self.other, self.linear])),
+            (mutable_sum, self.sum, _MutableSumExpression([self.other] + self.sum.args)),
+            (mutable_sum, self.other, _MutableSumExpression([self.other, self.other])),
+            (mutable_sum, self.mutable_l0, _MutableSumExpression([self.other])),
+            # 16:
+            (mutable_sum, self.mutable_l1, _MutableSumExpression([self.other] + self.mutable_l1.args)),
+            (mutable_sum, self.mutable_l2, _MutableSumExpression([self.other] + self.mutable_l2.args)),
+            (mutable_sum, self.param0, _MutableSumExpression([self.other])),
+            (mutable_sum, self.param1, _MutableSumExpression([self.other, 1])),
+        ]
+        self._run_iadd_cases(tests, operator.iadd)
