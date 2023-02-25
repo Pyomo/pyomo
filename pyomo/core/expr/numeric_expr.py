@@ -306,7 +306,7 @@ class ExternalFunctionExpression(NumericExpression):
             classtype = self.__class__
         return classtype(args, self._fcn)
 
-    def getname(self, *args, **kwds):           #pragma: no cover
+    def getname(self, *args, **kwds):
         return self._fcn.getname(*args, **kwds)
 
     def _compute_polynomial_degree(self, result):
