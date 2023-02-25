@@ -1234,11 +1234,11 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates):
     # Special case (wrapping) operators
     #
     def _any_asbinary(a, b):
-        a = a.as_binary()
+        b = b.as_binary()
         return dispatcher[a.__class__, b.__class__](a, b)
 
     def _asbinary_any(a, b):
-        b = b.as_binary()
+        a = a.as_binary()
         return dispatcher[a.__class__, b.__class__](a, b)
 
     def _asbinary_asbinary(a, b):
