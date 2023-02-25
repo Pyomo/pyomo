@@ -58,7 +58,7 @@ class DesignOfExperiments:
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
             Note: if sIPOPT is used, parameter shouldn't be indexed.
         design_names:
-            A ``list`` of design variable names as string 
+            A ``list`` of design variable names as string, generated with specialSet
         measurement_object:
             A measurement ``object``.
         create_model:
@@ -282,7 +282,7 @@ class DesignOfExperiments:
         Parameters
         -----------
         design_values:
-            a ``list`` of design variable values 
+            a ``dict`` of design variable names and values, generated with specialSet 
         mode:
             use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'
         FIM_store_name:
@@ -992,7 +992,7 @@ class DesignOfExperiments:
             var = cuid.find_component_on(m)
             if fix_opt:
                 #getattr(m, dname)[time].fix(fix_v)    
-                var.fix(design_val[i])
+                var.fix(design_val[name])
             else:
                 if optimize_option is None:
                     var.unfix()

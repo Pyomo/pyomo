@@ -26,8 +26,122 @@
 #  ___________________________________________________________________________
 
 import warnings
-from specialSet import SpecialSet
+import itertools
 
+class SpecialSet: 
+    def __init__(self):
+        """This class defines variable names with provided names and indexes.
+        """
+        self.special_set = []
+
+    def specify(self, self_define_res):
+        """
+        Used for user to provide defined string names
+
+        Parameter
+        ---------
+        self_define_res: a ``list`` of ``string``, containing the measurement variable names with indexs, 
+            for e.g. "C['CA', 23, 0]". 
+            If this is defined, no need to define ``measurement_var``, ``extra_idx``, ``time_idx``.
+        """
+        self.special_set = self_define_res
+
+        return self.special_set
+
+    def add_elements(self, var_name, extra_index=None, time_index=None, values=None):
+        """
+        Used for generating string names with indexes. 
+
+        Parameter 
+        ---------
+        var_name: a ``list`` of measurement var names 
+        extra_index: a ``list`` containing extra indexes except for time indexes 
+            if default (None), no extra indexes needed for all var in var_name
+            if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
+            they are different multiple sets of indexes for different var_name
+            for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
+        time_index: a ``list`` containing time indexes
+            default choice is None, means this is a model parameter 
+            if it is an algebraic variable, time index should be set up to [0]
+            if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
+        values: a ``list`` containing values which has the same shape of flattened variables 
+            default choice is None, means there is no give nvalues 
+
+        Return
+        ------
+        if not defining values, return a set of variable names 
+        if defining values, return a dictionary of variable names and its value 
+        """
+
+        self._add_elements(var_name, extra_index=extra_index, time_index=time_index)
+        if values:
+            # this dictionary keys are special set, values are its value
+            self.special_set_value = {}
+            for i in range(len(self.special_set)):
+                self.special_set_value[self.special_set[i]] = values[i]
+
+        return self.special_set
+    
+    def update_values(self, values):
+        """
+        Used for updating values
+
+        Parameters
+        ---------
+         values: a ``list`` containing values which has the same shape of flattened variables 
+            default choice is None, means there is no give nvalues 
+        """
+        for i in range(len(self.special_set)):
+            self.special_set_value[self.special_set[i]] = values[i]
+
+
+    def _add_elements(self, var_name, extra_index=None, time_index=None):
+        """
+        Used for generating string names with indexes. 
+
+        Parameter 
+        ---------
+        var_name: a ``list`` of measurement var names 
+        extra_index: a ``list`` containing extra indexes except for time indexes 
+            if default (None), no extra indexes needed for all var in var_name
+            if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
+            they are different multiple sets of indexes for different var_name
+            for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
+        time_index: a ``list`` containing time indexes
+            default choice is None, means this is a model parameter 
+            if it is an algebraic variable, time index should be set up to [0]
+            if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
+        """
+
+        for i, n in enumerate(var_name):
+            name_data = str(n)
+
+            # first combine all indexes into a list 
+            all_index_list = [] # contains all index lists
+            if extra_index:
+                for index_list in extra_index[i]: 
+                    all_index_list.append(index_list)
+            if time_index:
+                all_index_list.append(time_index[i])
+
+            # all idnex list for one variable, such as ["CA", 10, 1]
+            all_index_for_var = list(itertools.product(*all_index_list))
+
+            for lst in all_index_for_var:
+                name1 = name_data+"["
+                for i, idx in enumerate(lst):
+                    name1 += str(idx)
+
+                    # if i is the last index, close the []. if not, add a "," for the next index. 
+                    if i==len(lst)-1:
+                        name1 += "]"
+                    else:
+                        name1 += ","
+
+                self.special_set.append(name1)
+
+        #return self.special_set
+    
 class Measurements(SpecialSet):
     def __init__(self, variance=None):
         """
@@ -70,3 +184,4 @@ class Measurements(SpecialSet):
         
         if len(extra_index) != num_var: 
             warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")
+
