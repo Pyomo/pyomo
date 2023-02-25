@@ -1291,10 +1291,10 @@ def _add_native_npv(a, b):
     return NPV_SumExpression([a, b])
 
 def _add_native_param(a, b):
-    if not a:
-        return b
     if b.is_constant():
         return a + b.value
+    if not a:
+        return b
     return NPV_SumExpression([a, b])
 
 def _add_native_var(a, b):
@@ -1384,10 +1384,10 @@ def _add_param_npv(a, b):
 def _add_param_param(a, b):
     if a.is_constant():
         a = a.value
-        if not a:
-            return b
-        elif b.is_constant():
+        if b.is_constant():
             return a + b.value
+        elif not a:
+            return b
     elif b.is_constant():
         b = b.value
         if not b:
@@ -2055,10 +2055,10 @@ def _mul_native_npv(a, b):
     return NPV_ProductExpression((a, b))
 
 def _mul_native_param(a, b):
-    if a == 1:
-        return b
     if b.is_constant():
         return a * b.value
+    if a == 1:
+        return b
     return NPV_ProductExpression((a, b))
 
 def _mul_native_var(a, b):
@@ -2135,15 +2135,17 @@ def _mul_param_native(a, b):
 def _mul_param_npv(a, b):
     if a.is_constant():
         a = a.value
+        if a == 1:
+            return b
     return NPV_ProductExpression((a, b))
 
 def _mul_param_param(a, b):
     if a.is_constant():
         a = a.value
-        if a == 1:
-            return b
-        elif b.is_constant():
+        if b.is_constant():
             return a * b.value
+        elif a == 1:
+            return b
     elif b.is_constant():
         b = b.value
         if b == 1:
@@ -2889,12 +2891,12 @@ def _pow_npv_other(a, b):
 
 
 def _pow_param_native(a, b):
+    if a.is_constant():
+        return a.value ** b
     if not b:
         return 1
     elif b == 1:
         return a
-    if a.is_constant():
-        return a.value ** b
     return NPV_PowExpression((a, b))
 
 def _pow_param_npv(a, b):
