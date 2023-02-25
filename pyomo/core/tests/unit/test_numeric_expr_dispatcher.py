@@ -5877,16 +5877,39 @@ class TestExprGen(unittest.TestCase):
     #
 
     def test_unary(self):
-        for op, name, fcn in [(sin, 'sin', math.sin)]:
+        SKIP_0 = {'log', 'log10', 'acosh'}
+        SKIP_1 = {'atanh'}
+        SKIP_5 = {'asin', 'acos', 'atanh'}
+        SKIP_6 = SKIP_5
+        for op, name, fcn in [
+                (EXPR.ceil, 'ceil', math.ceil),
+                (EXPR.floor, 'floor', math.floor),
+                (EXPR.exp, 'exp', math.exp),
+                (EXPR.log, 'log', math.log),
+                (EXPR.log10, 'log10', math.log10),
+                (EXPR.sqrt, 'sqrt', math.sqrt),
+                (EXPR.sin, 'sin', math.sin),
+                (EXPR.cos, 'cos', math.cos),
+                (EXPR.tan, 'tan', math.tan),
+                (EXPR.asin, 'asin', math.asin),
+                (EXPR.acos, 'acos', math.acos),
+                (EXPR.atan, 'atan', math.atan),
+                (EXPR.sinh, 'sinh', math.sinh),
+                (EXPR.cosh, 'cosh', math.cosh),
+                (EXPR.tanh, 'tanh', math.tanh),
+                (EXPR.asinh, 'asinh', math.asinh),
+                (EXPR.acosh, 'acosh', math.acosh),
+                (EXPR.atanh, 'atanh', math.atanh),
+        ]:
             tests = [
                 (self.invalid, NotImplemented),
                 (self.asbinary, UnaryFunctionExpression((self.bin,), name, fcn)),
-                (self.zero, fcn(0)),
-                (self.one, fcn(1)),
+                (self.zero, ValueError if name in SKIP_0 else fcn(0)),
+                (self.one, ValueError if name in SKIP_1 else fcn(1)),
                 # 4:
-                (self.native, fcn(5)),
+                (self.native, ValueError if name in SKIP_5 else fcn(5)),
                 (self.npv, NPV_UnaryFunctionExpression((self.npv,), name, fcn)),
-                (self.param, fcn(6)),
+                (self.param, ValueError if name in SKIP_6 else fcn(6)),
                 (self.param_mut, NPV_UnaryFunctionExpression((self.param_mut,), name, fcn)),
                 # 8:
                 (self.var, UnaryFunctionExpression((self.var,), name, fcn)),
@@ -5897,11 +5920,11 @@ class TestExprGen(unittest.TestCase):
                 (self.linear, UnaryFunctionExpression((self.linear,), name, fcn)),
                 (self.sum, UnaryFunctionExpression((self.sum,), name, fcn)),
                 (self.other, UnaryFunctionExpression((self.other,), name, fcn)),
-                (self.mutable_l0, fcn(0)),
+                (self.mutable_l0, ValueError if name in SKIP_0 else fcn(0)),
                 # 16:
                 (self.mutable_l1, UnaryFunctionExpression((self.mon_npv,), name, fcn)),
                 (self.mutable_l2, UnaryFunctionExpression((self.mutable_l2,), name, fcn)),
-                (self.param0, fcn(0)),
-                (self.param1, fcn(1)),
+                (self.param0, ValueError if name in SKIP_0 else fcn(0)),
+                (self.param1, ValueError if name in SKIP_1 else fcn(1)),
             ]
             self._run_cases(tests, op)
