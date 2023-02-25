@@ -361,68 +361,10 @@ class DesignOfExperiments:
 
         # if measurements are not provided
         else:
-            # create scenario information for block scenarios
-            scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
-            scena_gen = scena_object.generate_scenario()
-            
-            # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
-            self.scenario_list = scena_gen["scenario"]
-            # dictionary, keys are parameter name, values are a list of scenario index where this parameter is perturbed.
-            self.scenario_num = scena_gen["scena_num"]
+            mod = self._create_block()
 
             # dict for storing model outputs
             output_record = {}
-
-            # Create a global model 
-            mod = pyo.ConcreteModel()
-
-            # Set for block/scenarios
-            mod.scena = pyo.Set(initialize=list(range(len(self.scenario_list))))
-
-            # Allow user to self-define complex design variables
-            self.create_model(mod=mod, model_option="global")
-
-            def block_build(b,s):
-                # create block scenarios
-                self.create_model(mod=b, model_option="block")
-                
-                # fix parameter values to perturbed values
-                for par in self.param:
-                    par_strname = eval('b.'+str(par))
-                    par_strname.fix(scena_gen["scenario"][s][par])
-
-            mod.block = pyo.Block(mod.scena, rule=block_build)
-
-            # discretize the model        
-            if self.discretize_model:
-                mod = self.discretize_model(mod)
-
-            # force all design variables in blocks be the same as global design variables
-            #def fix_design1(m,s):
-            #    return m.block[s].CA0[0]  == m.CA0[0]
-            
-            #def fix_design2(m,s,t):
-            #    return m.block[s].T[t] == m.T[t]
-
-            for name in self.design_name:
-                
-                #for s in mod.scena:
-                #    design_var = cuid.find_component_on(mod.block[s])
-                #    design_var.fix(design_var_global)
-                def fix1(mod, s):
-                    cuid = pyo.ComponentUID(name)
-                    design_var_global = cuid.find_component_on(mod)
-                    design_var_global = cuid.find_component_on(mod)
-                    design_var = cuid.find_component_on(mod.block[s])
-                    return design_var == design_var_global
-                
-                con_name = "con"+name
-                #mod.con1 = pyo.Constraint(mod.scena,  rule=fix1)
-                mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1))
-
-
-            #mod.fix_con1 = pyo.Constraint(mod.scena, rule=fix_design1)
-            #mod.fix_con2 = pyo.Constraint(mod.scena, mod.t_con, rule=fix_design2)
 
             # solve model
             square_result = self._solve_doe(mod, fix=True)
@@ -453,7 +395,7 @@ class DesignOfExperiments:
                     f.close()
 
             # calculate jacobian
-            jac = self._finite_calculation(output_record, scena_gen)
+            jac = self._finite_calculation(output_record, self.scena_gen)
 
             # return all models formed
             self.model = mod
@@ -515,7 +457,6 @@ class DesignOfExperiments:
         measurement_index = []
         # produce the sensitivity for fixed variables
         zero_sens = np.zeros(len(self.param))
-        print(col)
 
         # loop over measurement variables and their time points
         for mname in self.measure_name:
@@ -558,6 +499,59 @@ class DesignOfExperiments:
         self.jac = jac
         
         return FIM_analysis
+
+    def _create_block(self):
+
+        # create scenario information for block scenarios
+        scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
+        scena_gen = scena_object.generate_scenario()
+            
+        # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
+        self.scenario_list = scena_gen["scenario"]
+        # dictionary, keys are parameter name, values are a list of scenario index where this parameter is perturbed.
+        self.scenario_num = scena_gen["scena_num"]
+        # dictionary, keys are parameter name, values are the perturbation step 
+        self.eps_abs = scena_gen["eps-abs"]
+        self.scena_gen = scena_gen
+
+        # Create a global model 
+        mod = pyo.ConcreteModel()
+
+        # Set for block/scenarios
+        mod.scena = pyo.Set(initialize=list(range(len(self.scenario_list))))
+
+        # Allow user to self-define complex design variables
+        self.create_model(mod=mod, model_option="global")
+
+        def block_build(b,s):
+            # create block scenarios
+            self.create_model(mod=b, model_option="block")
+            
+            # fix parameter values to perturbed values
+            for par in self.param:
+                par_strname = eval('b.'+str(par))
+                par_strname.fix(scena_gen["scenario"][s][par])
+
+        mod.block = pyo.Block(mod.scena, rule=block_build)
+
+        # discretize the model        
+        if self.discretize_model:
+            mod = self.discretize_model(mod)
+
+        # force design variables in blocks to be equal to global design values
+        for name in self.design_name:
+            
+            def fix1(mod, s):
+                cuid = pyo.ComponentUID(name)
+                design_var_global = cuid.find_component_on(mod)
+                design_var_global = cuid.find_component_on(mod)
+                design_var = cuid.find_component_on(mod.block[s])
+                return design_var == design_var_global
+            
+            con_name = "con"+name
+            mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1)) 
+
+        return mod 
 
 
     def _finite_calculation(self, output_record, scena_gen):
@@ -781,54 +775,7 @@ class DesignOfExperiments:
         -------
         m: the DOE model
         """
-        
-        # create scenario information for block scenarios
-        scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
-        scena_gen = scena_object.generate_scenario()
-            
-        # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
-        self.scenario_list = scena_gen["scenario"]
-        # dictionary, keys are parameter name, values are a list of scenario index where this parameter is perturbed.
-        self.scenario_num = scena_gen["scena_num"]
-        # dictionary, keys are parameter name, values are the perturbation step 
-        self.eps_abs = scena_gen["eps-abs"]
-
-        # Create a global model 
-        mod = pyo.ConcreteModel()
-
-        # Set for block/scenarios
-        mod.scena = pyo.Set(initialize=list(range(len(self.scenario_list))))
-
-        # Allow user to self-define complex design variables
-        self.create_model(mod=mod, model_option="global")
-
-        def block_build(b,s):
-            # create block scenarios
-            self.create_model(mod=b, model_option="block")
-            
-            # fix parameter values to perturbed values
-            for par in self.param:
-                par_strname = eval('b.'+str(par))
-                par_strname.fix(scena_gen["scenario"][s][par])
-
-        mod.block = pyo.Block(mod.scena, rule=block_build)
-
-        # discretize the model        
-        if self.discretize_model:
-            mod = self.discretize_model(mod)
-
-        # force design variables in blocks to be equal to global design values
-        for name in self.design_name:
-            
-            def fix1(mod, s):
-                cuid = pyo.ComponentUID(name)
-                design_var_global = cuid.find_component_on(mod)
-                design_var_global = cuid.find_component_on(mod)
-                design_var = cuid.find_component_on(mod.block[s])
-                return design_var == design_var_global
-            
-            con_name = "con"+name
-            mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1)) 
+        mod = self._create_block()
 
         # variables for jacobian and FIM
         mod.param = pyo.Set(initialize=list(self.param.keys()))
