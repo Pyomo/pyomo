@@ -1112,16 +1112,17 @@ def _categorize_arg_type(arg):
         ans = ARG_TYPE.NATIVE
     else:
         try:
-            if not arg.is_numeric_type():
-                if hasattr(arg, 'as_binary'):
-                    ans = ARG_TYPE.AS_BINARY
-                else:
-                    ans = ARG_TYPE.INVALID
-            else:
-                ans = None
+            is_numeric = arg.is_numeric_type()
         except AttributeError:
             if check_if_numeric_type(arg):
                 ans = ARG_TYPE.NATIVE
+            else:
+                ans = ARG_TYPE.INVALID
+        else:
+            if is_numeric:
+                ans = None
+            elif hasattr(arg, 'as_binary'):
+                ans = ARG_TYPE.ASBINARY
             else:
                 ans = ARG_TYPE.INVALID
 
