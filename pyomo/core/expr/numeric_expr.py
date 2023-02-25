@@ -3072,6 +3072,9 @@ def _fcn_mutable(a, name, fcn):
     a = _recast_mutable(a)
     return _fcn_dispatcher[a.__class__](a, name, fcn)
 
+def _fcn_invalid(a, name, fcn):
+    fcn(a)
+
 def _fcn_native(a, name, fcn):
     # This can be hit because of the asbinary / mutable wrapper handlers.
     return fcn(a)
@@ -3104,7 +3107,7 @@ _fcn_dispatcher = collections.defaultdict(lambda: _register_new_fcn_dispatcher)
 _fcn_type_handler_mapping = {
     ARG_TYPE.ASBINARY: _fcn_asbinary,
     ARG_TYPE.MUTABLE: _fcn_mutable,
-    ARG_TYPE.INVALID: _invalid,
+    ARG_TYPE.INVALID: _fcn_invalid,
     ARG_TYPE.NATIVE: _fcn_native,
     ARG_TYPE.NPV: _fcn_npv,
     ARG_TYPE.PARAM: _fcn_param,
