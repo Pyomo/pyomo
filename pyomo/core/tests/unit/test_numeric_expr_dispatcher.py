@@ -23,6 +23,7 @@ from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
 )
+import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.current import (
     DivisionExpression,
     NPV_DivisionExpression,
@@ -52,6 +53,8 @@ logger = logging.getLogger(__name__)
 
 class TestExprGen(unittest.TestCase):
     class SKIP(): pass
+
+    NUM_TESTS = 20
 
     def setUp(self):
         # Note there are 11 basic argument "types" that determine how
@@ -143,8 +146,29 @@ class TestExprGen(unittest.TestCase):
         # ]
         # self._run_cases(tests, operator.mul)
 
+    def _print_error(self, test_num, test, ans):
+        msg = f"Failed test {test_num}:\n\t"
+        for arg in test:
+            try:
+                msg += str(arg)
+            except:
+                msg += '[ERROR]'
+            msg += f'  ({arg.__class__.__name__}'
+            try:
+                msg += f': {arg.nargs()}'
+            except AttributeError:
+                pass
+            msg += ')\n\t'
+        msg += f'{ans} (result: {ans.__class__.__name__}'
+        try:
+            msg += f': {ans.nargs()}'
+        except AttributeError:
+            pass
+        msg += ')'
+        logger.error(msg)
+
     def _run_cases(self, tests, op):
-        self.assertEqual(len(tests), 20)
+        self.assertEqual(len(tests), self.NUM_TESTS)
         try:
             for test_num, test in enumerate(tests):
                 ans = None
@@ -152,7 +176,8 @@ class TestExprGen(unittest.TestCase):
                 result = test[-1]
                 if result is self.SKIP:
                     continue
-                orig_args = [clone_expression(arg) for arg in args]
+                orig_args = list(args)
+                orig_args_clone = [clone_expression(arg) for arg in args]
                 try:
                     mutable = [isinstance(arg, _MutableSumExpression) for arg in args]
                     classes = [arg.__class__ for arg in args]
@@ -163,42 +188,32 @@ class TestExprGen(unittest.TestCase):
                     assertExpressionsEqual(self, result, ans)
                     for i, arg in enumerate(args):
                         self.assertFalse(isinstance(arg, _MutableSumExpression))
+                        self.assertIs(arg, orig_args[i])
                         if mutable[i]:
                             self.assertIsNot(arg.__class__, classes[i])
+                            assertExpressionsEqual(
+                                self,
+                                _MutableSumExpression(arg.args),
+                                _MutableSumExpression(orig_args_clone[i].args),
+                            )
                         else:
-                            assertExpressionsEqual(self, orig_args[i], arg)
                             self.assertIs(arg.__class__, classes[i])
+                            assertExpressionsEqual(self, arg, orig_args_clone[i])
                 except TypeError:
                     if result is not NotImplemented:
                         raise
                 except ZeroDivisionError:
                     if result is not ZeroDivisionError:
                         raise
+                except ValueError:
+                    if result is not ValueError:
+                        raise
                 finally:
                     for i, arg in enumerate(args):
                         if mutable[i]:
                             arg.__class__ = classes[i]
         except:
-            print(sys.exc_info())
-            msg = f"Failed test {test_num}:\n\t"
-            for arg in test:
-                try:
-                    msg += str(arg)
-                except:
-                    msg += '[ERROR]'
-                msg += f'  ({arg.__class__.__name__}'
-                try:
-                    msg += f': {arg.nargs()}'
-                except AttributeError:
-                    pass
-                msg += ')\n\t'
-            msg += f'{ans} (result: {ans.__class__.__name__}'
-            try:
-                msg += f': {ans.nargs()}'
-            except AttributeError:
-                pass
-            msg += ')'
-            logger.error(msg)
+            self._print_error(test_num, test, ans)
             raise
 
     #
