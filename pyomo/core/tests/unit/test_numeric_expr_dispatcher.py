@@ -253,6 +253,7 @@ class TestExprGen(unittest.TestCase):
             (self.invalid, self.param1, NotImplemented),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_asbinary(self):
         tests = [
@@ -354,6 +355,7 @@ class TestExprGen(unittest.TestCase):
             ),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_zero(self):
         tests = [
@@ -383,6 +385,7 @@ class TestExprGen(unittest.TestCase):
             (self.zero, self.param1, 1),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_one(self):
         tests = [
@@ -420,6 +423,7 @@ class TestExprGen(unittest.TestCase):
             (self.one, self.param1, 2),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_native(self):
         tests = [
@@ -461,6 +465,7 @@ class TestExprGen(unittest.TestCase):
             (self.native, self.param1, 6),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_npv(self):
         tests = [
@@ -506,6 +511,7 @@ class TestExprGen(unittest.TestCase):
             (self.npv, self.param1, NPV_SumExpression([self.npv, 1])),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_param(self):
         tests = [
@@ -543,6 +549,7 @@ class TestExprGen(unittest.TestCase):
             (self.param, self.param1, 7),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_param_mut(self):
         tests = [
@@ -612,6 +619,7 @@ class TestExprGen(unittest.TestCase):
             (self.param_mut, self.param1, NPV_SumExpression([self.param_mut, 1])),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_var(self):
         tests = [
@@ -721,6 +729,7 @@ class TestExprGen(unittest.TestCase):
             ),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_mon_native(self):
         tests = [
@@ -794,6 +803,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_native, self.param1, LinearExpression([self.mon_native, 1])),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_mon_param(self):
         tests = [
@@ -863,6 +873,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_param, self.param1, LinearExpression([self.mon_param, 1])),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_mon_npv(self):
         tests = [
@@ -928,6 +939,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_npv, self.param1, LinearExpression([self.mon_npv, 1])),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_linear(self):
         tests = [
@@ -997,6 +1009,7 @@ class TestExprGen(unittest.TestCase):
             (self.linear, self.param1, LinearExpression(self.linear.args + [1])),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_sum(self):
         tests = [
@@ -1038,6 +1051,7 @@ class TestExprGen(unittest.TestCase):
             (self.sum, self.param1, SumExpression(self.sum.args + [1])),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_other(self):
         tests = [
@@ -1075,6 +1089,7 @@ class TestExprGen(unittest.TestCase):
             (self.other, self.param1, SumExpression([self.other, 1])),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_mutable_l0(self):
         tests = [
@@ -1104,6 +1119,8 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l0, self.param1, 1),
         ]
         self._run_cases(tests, operator.add)
+        # Mutable iadd handled by separate tests
+        # self._run_cases(tests, operator.iadd)
 
     def test_add_mutable_l1(self):
         tests = [
@@ -1189,6 +1206,8 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l1, self.param1, LinearExpression(self.mutable_l1.args + [1])),
         ]
         self._run_cases(tests, operator.add)
+        # Mutable iadd handled by separate tests
+        # self._run_cases(tests, operator.iadd)
 
     def test_add_mutable_l2(self):
         tests = [
@@ -1266,6 +1285,8 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l2, self.param1, SumExpression(self.mutable_l2.args + [1])),
         ]
         self._run_cases(tests, operator.add)
+        # Mutable iadd handled by separate tests
+        # self._run_cases(tests, operator.iadd)
 
     def test_add_param0(self):
         tests = [
@@ -1295,6 +1316,7 @@ class TestExprGen(unittest.TestCase):
             (self.param0, self.param1, 1),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     def test_add_param1(self):
         tests = [
@@ -1332,6 +1354,7 @@ class TestExprGen(unittest.TestCase):
             (self.param1, self.param1, 2),
         ]
         self._run_cases(tests, operator.add)
+        self._run_cases(tests, operator.iadd)
 
     #
     #
@@ -1367,6 +1390,7 @@ class TestExprGen(unittest.TestCase):
             (self.invalid, self.param1, NotImplemented),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_asbinary(self):
         tests = [
@@ -1459,6 +1483,7 @@ class TestExprGen(unittest.TestCase):
             ),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_zero(self):
         tests = [
@@ -1488,6 +1513,7 @@ class TestExprGen(unittest.TestCase):
             (self.zero, self.param1, -1),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_one(self):
         tests = [
@@ -1517,6 +1543,7 @@ class TestExprGen(unittest.TestCase):
             (self.one, self.param1, 0),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_native(self):
         tests = [
@@ -1550,6 +1577,7 @@ class TestExprGen(unittest.TestCase):
             (self.native, self.param1, 4),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_npv(self):
         tests = [
@@ -1599,6 +1627,7 @@ class TestExprGen(unittest.TestCase):
             (self.npv, self.param1, NPV_SumExpression([self.npv, -1])),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_param(self):
         tests = [
@@ -1628,6 +1657,7 @@ class TestExprGen(unittest.TestCase):
             (self.param, self.param1, 5),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_param_mut(self):
         tests = [
@@ -1701,6 +1731,7 @@ class TestExprGen(unittest.TestCase):
             (self.param_mut, self.param1, NPV_SumExpression([self.param_mut, -1])),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_var(self):
         tests = [
@@ -1802,6 +1833,7 @@ class TestExprGen(unittest.TestCase):
             ),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_mon_native(self):
         tests = [
@@ -1879,6 +1911,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_native, self.param1, LinearExpression([self.mon_native, -1])),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_mon_param(self):
         tests = [
@@ -1952,6 +1985,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_param, self.param1, LinearExpression([self.mon_param, -1])),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_mon_npv(self):
         tests = [
@@ -2013,6 +2047,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_npv, self.param1, LinearExpression([self.mon_npv, -1])),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_linear(self):
         tests = [
@@ -2078,6 +2113,7 @@ class TestExprGen(unittest.TestCase):
             (self.linear, self.param1, LinearExpression(self.linear.args + [-1])),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_sum(self):
         tests = [
@@ -2131,6 +2167,7 @@ class TestExprGen(unittest.TestCase):
             (self.sum, self.param1, SumExpression(self.sum.args + [-1])),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_other(self):
         tests = [
@@ -2180,6 +2217,7 @@ class TestExprGen(unittest.TestCase):
             (self.other, self.param1, SumExpression([self.other, -1])),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_mutable_l0(self):
         tests = [
@@ -2209,6 +2247,8 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l0, self.param1, -1),
         ]
         self._run_cases(tests, operator.sub)
+        # Mutable isub handled by separate tests
+        # self._run_cases(tests, operator.isub)
 
     def test_sub_mutable_l1(self):
         tests = [
@@ -2294,6 +2334,8 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l1, self.param1, LinearExpression(self.mutable_l1.args + [-1])),
         ]
         self._run_cases(tests, operator.sub)
+        # Mutable isub handled by separate tests
+        # self._run_cases(tests, operator.isub)
 
     def test_sub_mutable_l2(self):
         tests = [
@@ -2371,6 +2413,8 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l2, self.param1, SumExpression(self.mutable_l2.args + [-1])),
         ]
         self._run_cases(tests, operator.sub)
+        # Mutable isub handled by separate tests
+        # self._run_cases(tests, operator.isub)
 
     def test_sub_param0(self):
         tests = [
@@ -2400,6 +2444,7 @@ class TestExprGen(unittest.TestCase):
             (self.param0, self.param1, -1),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     def test_sub_param1(self):
         tests = [
@@ -2429,6 +2474,7 @@ class TestExprGen(unittest.TestCase):
             (self.param1, self.param1, 0),
         ]
         self._run_cases(tests, operator.sub)
+        self._run_cases(tests, operator.isub)
 
     #
     #
@@ -2467,6 +2513,7 @@ class TestExprGen(unittest.TestCase):
             (self.invalid, self.param1, NotImplemented),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_asbinary(self):
         tests = [
@@ -2517,6 +2564,7 @@ class TestExprGen(unittest.TestCase):
             (self.asbinary, self.param1, self.bin),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_zero(self):
         tests = [
@@ -2579,6 +2627,7 @@ class TestExprGen(unittest.TestCase):
             (self.zero, self.param1, 0),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_one(self):
         tests = [
@@ -2610,6 +2659,7 @@ class TestExprGen(unittest.TestCase):
             (self.one, self.param1, 1),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_native(self):
         tests = [
@@ -2672,6 +2722,7 @@ class TestExprGen(unittest.TestCase):
             (self.native, self.param1, 5),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_npv(self):
         tests = [
@@ -2743,6 +2794,7 @@ class TestExprGen(unittest.TestCase):
             (self.npv, self.param1, self.npv),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_param(self):
         tests = [
@@ -2803,6 +2855,7 @@ class TestExprGen(unittest.TestCase):
             (self.param, self.param1, 6),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_param_mut(self):
         tests = [
@@ -2902,6 +2955,7 @@ class TestExprGen(unittest.TestCase):
             (self.param_mut, self.param1, self.param_mut),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_var(self):
         tests = [
@@ -2939,6 +2993,7 @@ class TestExprGen(unittest.TestCase):
             (self.var, self.param1, self.var),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_mon_native(self):
         tests = [
@@ -3038,6 +3093,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_native, self.param1, self.mon_native),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_mon_param(self):
         tests = [
@@ -3162,6 +3218,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_param, self.param1, self.mon_param),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_mon_npv(self):
         tests = [
@@ -3274,6 +3331,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_npv, self.param1, self.mon_npv),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_linear(self):
         tests = [
@@ -3323,6 +3381,7 @@ class TestExprGen(unittest.TestCase):
             (self.linear, self.param1, self.linear),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_sum(self):
         tests = [
@@ -3356,6 +3415,7 @@ class TestExprGen(unittest.TestCase):
             (self.sum, self.param1, self.sum),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_other(self):
         tests = [
@@ -3405,6 +3465,7 @@ class TestExprGen(unittest.TestCase):
             (self.other, self.param1, self.other),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_mutable_l0(self):
         tests = [
@@ -3469,6 +3530,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l0, self.param1, 0),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_mutable_l1(self):
         tests = [
@@ -3601,6 +3663,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l1, self.param1, self.mon_npv),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_mutable_l2(self):
         tests = [
@@ -3666,6 +3729,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l2, self.param1, self.mutable_l2),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_param1(self):
         tests = [
@@ -3728,6 +3792,7 @@ class TestExprGen(unittest.TestCase):
             (self.param1, self.param1, 0),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     def test_mul_param1(self):
         tests = [
@@ -3759,6 +3824,7 @@ class TestExprGen(unittest.TestCase):
             (self.param1, self.param1, 1),
         ]
         self._run_cases(tests, operator.mul)
+        self._run_cases(tests, operator.imul)
 
     #
     #
@@ -3794,6 +3860,7 @@ class TestExprGen(unittest.TestCase):
             (self.invalid, self.param1, NotImplemented),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_asbinary(self):
         tests = [
@@ -3852,6 +3919,7 @@ class TestExprGen(unittest.TestCase):
             (self.asbinary, self.param1, self.bin),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_zero(self):
         tests = [
@@ -3885,6 +3953,7 @@ class TestExprGen(unittest.TestCase):
             (self.zero, self.param1, 0.0),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_one(self):
         tests = [
@@ -3918,6 +3987,7 @@ class TestExprGen(unittest.TestCase):
             (self.one, self.param1, 1.0),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_native(self):
         tests = [
@@ -3951,6 +4021,7 @@ class TestExprGen(unittest.TestCase):
             (self.native, self.param1, 5.0),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_npv(self):
         tests = [
@@ -3996,6 +4067,7 @@ class TestExprGen(unittest.TestCase):
             (self.npv, self.param1, self.npv),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_param(self):
         tests = [
@@ -4029,6 +4101,7 @@ class TestExprGen(unittest.TestCase):
             (self.param, self.param1, 6.0),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_param_mut(self):
         tests = [
@@ -4102,6 +4175,7 @@ class TestExprGen(unittest.TestCase):
             (self.param_mut, self.param1, self.param_mut),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_var(self):
         tests = [
@@ -4155,6 +4229,7 @@ class TestExprGen(unittest.TestCase):
             (self.var, self.param1, self.var),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_mon_native(self):
         tests = [
@@ -4252,6 +4327,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_native, self.param1, self.mon_native),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_mon_param(self):
         tests = [
@@ -4349,6 +4425,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_param, self.param1, self.mon_param),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_mon_npv(self):
         tests = [
@@ -4438,6 +4515,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_npv, self.param1, self.mon_npv),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_linear(self):
         tests = [
@@ -4491,6 +4569,7 @@ class TestExprGen(unittest.TestCase):
             (self.linear, self.param1, self.linear),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_sum(self):
         tests = [
@@ -4532,6 +4611,7 @@ class TestExprGen(unittest.TestCase):
             (self.sum, self.param1, self.sum),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_other(self):
         tests = [
@@ -4581,6 +4661,7 @@ class TestExprGen(unittest.TestCase):
             (self.other, self.param1, self.other),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_mutable_l0(self):
         tests = [
@@ -4626,6 +4707,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l0, self.param1, 0.0),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_mutable_l1(self):
         tests = [
@@ -4731,6 +4813,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l1, self.param1, self.mon_npv),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_mutable_l2(self):
         tests = [
@@ -4812,6 +4895,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l2, self.param1, self.mutable_l2),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_param1(self):
         tests = [
@@ -4845,6 +4929,7 @@ class TestExprGen(unittest.TestCase):
             (self.param1, self.param1, 0.0),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     def test_div_param1(self):
         tests = [
@@ -4878,6 +4963,7 @@ class TestExprGen(unittest.TestCase):
             (self.param1, self.param1, 1.0),
         ]
         self._run_cases(tests, operator.truediv)
+        self._run_cases(tests, operator.itruediv)
 
     #
     #
@@ -4913,6 +4999,7 @@ class TestExprGen(unittest.TestCase):
             (self.invalid, self.param1, NotImplemented),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_asbinary(self):
         tests = [
@@ -4955,6 +5042,7 @@ class TestExprGen(unittest.TestCase):
             (self.asbinary, self.param1, self.bin),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_zero(self):
         tests = [
@@ -4984,6 +5072,7 @@ class TestExprGen(unittest.TestCase):
             (self.zero, self.param1, 0),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_one(self):
         tests = [
@@ -5013,6 +5102,7 @@ class TestExprGen(unittest.TestCase):
             (self.one, self.param1, 1),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_native(self):
         tests = [
@@ -5042,6 +5132,7 @@ class TestExprGen(unittest.TestCase):
             (self.native, self.param1, 5),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_npv(self):
         tests = [
@@ -5075,6 +5166,7 @@ class TestExprGen(unittest.TestCase):
             (self.npv, self.param1, self.npv),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_param(self):
         tests = [
@@ -5104,6 +5196,7 @@ class TestExprGen(unittest.TestCase):
             (self.param, self.param1, 6),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_param_mut(self):
         tests = [
@@ -5161,6 +5254,7 @@ class TestExprGen(unittest.TestCase):
             (self.param_mut, self.param1, self.param_mut),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_var(self):
         tests = [
@@ -5194,6 +5288,7 @@ class TestExprGen(unittest.TestCase):
             (self.var, self.param1, self.var),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_mon_native(self):
         tests = [
@@ -5255,6 +5350,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_native, self.param1, self.mon_native),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_mon_param(self):
         tests = [
@@ -5308,6 +5404,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_param, self.param1, self.mon_param),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_mon_npv(self):
         tests = [
@@ -5357,6 +5454,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_npv, self.param1, self.mon_npv),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_linear(self):
         tests = [
@@ -5398,6 +5496,7 @@ class TestExprGen(unittest.TestCase):
             (self.linear, self.param1, self.linear),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_sum(self):
         tests = [
@@ -5431,6 +5530,7 @@ class TestExprGen(unittest.TestCase):
             (self.sum, self.param1, self.sum),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_other(self):
         tests = [
@@ -5464,6 +5564,7 @@ class TestExprGen(unittest.TestCase):
             (self.other, self.param1, self.other),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_mutable_l0(self):
         tests = [
@@ -5497,6 +5598,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l0, self.param1, 0),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_mutable_l1(self):
         tests = [
@@ -5570,6 +5672,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l1, self.param1, self.mon_npv),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_mutable_l2(self):
         tests = [
@@ -5635,6 +5738,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l2, self.param1, self.mutable_l2),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_param0(self):
         tests = [
@@ -5664,6 +5768,7 @@ class TestExprGen(unittest.TestCase):
             (self.param0, self.param1, 0),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     def test_pow_param1(self):
         tests = [
@@ -5693,6 +5798,7 @@ class TestExprGen(unittest.TestCase):
             (self.param1, self.param1, 1),
         ]
         self._run_cases(tests, operator.pow)
+        self._run_cases(tests, operator.ipow)
 
     #
     #
