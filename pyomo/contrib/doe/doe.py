@@ -608,7 +608,7 @@ class DesignOfExperiments:
         return jac
 
     def run_grid_search(self, design_values, design_ranges, design_dimension_names, 
-                    design_control_time, mode='sequential_finite', tee_option=False, 
+                     mode='sequential_finite', tee_option=False, 
                     scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
                         filename=None, formula='central', step=0.001):
         """
@@ -624,15 +624,13 @@ class DesignOfExperiments:
         Parameters
         -----------
         design_values:
-            a ``dict`` where keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+            a ``dict`` of design variable names and values, generated with specialSet 
         design_ranges:
             a ``list`` of design variable values to go over
         design_dimension_names:
             a ``list`` of design variable names of each design range
-        design_control_time:
-            a ``list`` of control time points that should be fixed to the values in dv_ranges
         mode:
-            use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'
+            use mode='sequential_finite', 'direct_kaug'
         tee_option:
             if solver console output is made
         scale_nominal_param_value:
@@ -658,9 +656,6 @@ class DesignOfExperiments:
         -------
         figure_draw_object: a combined result object of class Grid_search_result
         """
-        # time 0
-        t_enumeration_begin = time.time()
-
         # Set the Objective Function to 0 helps solve square problem quickly
         self.objective_option='zero'
         self.filename = filename
@@ -670,7 +665,7 @@ class DesignOfExperiments:
 
         # when defining design space, design variable values are defined as in design_values argument
         # the design var value defined in dv_ranges only applies to control time points given in dv_apply_time
-        grid_dimension = len(design_ranges)
+        #grid_dimension = len(design_ranges)
 
         # to store all FIM results
         result_combine = {}
@@ -686,19 +681,24 @@ class DesignOfExperiments:
         # generate combinations of design variable values to go over
         search_design_set = product(*design_ranges)
 
-        build_time_store=[]
-        solve_time_store=[]
-
         # loop over design value combinations
         for design_set_iter in search_design_set:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_values
             design_iter = design_values.copy()
+            print(design_set_iter)
 
             # update the controlled value of certain time points for certain design variables
-            for i in range(grid_dimension):
-                for v, value in enumerate(design_control_time[i]):
-                    design_iter[design_dimension_names[i]][value] = list(design_set_iter)[i]
+            #for i in range(grid_dimension):
+            #    for v, value in enumerate(design_control_time[i]):
+            #        design_iter[design_dimension_names[i]][value] = list(design_set_iter)[i]
+            for i in range(len(design_dimension_names)):
+                names = design_dimension_names[i]
+                if type(names) is list:
+                    for n in names:
+                        design_iter[n] = list(design_set_iter)[i] 
+                else:
+                    design_iter[names] = list(design_set_iter)[i]
 
             self.logger.info('=======Iteration Number: %s =====', count+1)
             self.logger.debug('Design variable values of this iteration: %s', design_iter)
@@ -722,20 +722,17 @@ class DesignOfExperiments:
                                                 scale_constant_value = scale_constant_value,
                                                 store_output=store_output_name, read_output=read_input_name,
                                                 formula=formula, step=step)
-                if read_input_name is None:
-                    build_time_store.append(result_iter.build_time)
-                    solve_time_store.append(result_iter.solve_time)
 
                 count += 1
 
                 result_iter.calculate_FIM(self.design_values)
 
-                t_now = time.time()
 
                 # give run information at each iteration
-                self.logger.info('This is the  %s run out of  %s run.', count+1, total_count)
-                self.logger.info('The code has run  %s seconds.', t_now-t_enumeration_begin)
-                self.logger.info('Estimated remaining time:  %s seconds', (t_now-t_enumeration_begin)/(count+1)*(total_count-count-1))
+                # to be changed to tictoctimer 
+                #self.logger.info('This is the  %s run out of  %s run.', count+1, total_count)
+                #self.logger.info('The code has run  %s seconds.', t_now-t_enumeration_begin)
+                #self.logger.info('Estimated remaining time:  %s seconds', (t_now-t_enumeration_begin)/(count+1)*(total_count-count-1))
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
@@ -753,10 +750,11 @@ class DesignOfExperiments:
         # Create figure drawing object
         figure_draw_object = GridSearchResult(design_ranges, design_dimension_names, design_control_time, result_combine, store_optimality_name=filename)
 
-        t_enumeration_stop = time.time()
-        self.logger.info('Overall model building time [s]:  %s', sum(build_time_store))
-        self.logger.info('Overall model solve time [s]:  %s', sum(solve_time_store))
-        self.logger.info('Overall wall clock time [s]:  %s', t_enumeration_stop - t_enumeration_begin)
+        # save for TicTocTimer
+        #t_enumeration_stop = time.time()
+        #self.logger.info('Overall model building time [s]:  %s', sum(build_time_store))
+        #self.logger.info('Overall model solve time [s]:  %s', sum(solve_time_store))
+        #self.logger.info('Overall wall clock time [s]:  %s', t_enumeration_stop - t_enumeration_begin)
 
         return figure_draw_object
 
