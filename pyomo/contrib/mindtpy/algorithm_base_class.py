@@ -313,13 +313,6 @@ class _MindtPyAlgorithm(object):
         # characteristics, the user may wish to revisit NLP subproblems
         # (with a different initialization, for example). Therefore, these
         # cuts are not enabled by default.
-        #
-        # Note: these cuts will only exclude integer realizations that are
-        # not already in the primary no_good_cuts ConstraintList.
-        # TODO: this is not used.
-        lin.feasible_no_good_cuts = ConstraintList(
-            doc='explored no-good cuts')
-        lin.feasible_no_good_cuts.deactivate()
 
         if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
             feas.nl_constraint_set = RangeSet(len(MindtPy.nonlinear_constraint_list),
