@@ -12,14 +12,20 @@
 
 import pyomo.common.unittest as unittest
 
+import io
 import math
+import os
 
 import pyomo.repn.plugins.nl_writer as nl_writer
 
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr.current import Expr_if, inequality
 from pyomo.core.base.expression import ScalarExpression
-from pyomo.environ import ConcreteModel, Param, Var, log
+from pyomo.environ import (
+    ConcreteModel, Objective, Param, Var, log, ExternalFunction, Suffix,
+    Constraint,
+)
 
 
 class INFO(object):
@@ -204,6 +210,43 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+    def test_pow(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=2)
+        m.x = Var()
+
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, ('o5\nv%s\nn2\n', [id(m.x)]))
+
+        m.p = 1
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.x): 1})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.p = 0
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 1)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -655,3 +698,147 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, [(id(m.x), 1)])
         self.assertEqual(repn.nonlinear, None)
         self.assertEqual(info, [None, None, False])
+
+    def test_nested_operator_zero_arg(self):
+        # This tests an error encountered when developing the nlv2
+        # writer where var ids were being dropped then the second
+        # argument in a binary operator was 0.  The original case was
+        # for expr**p where p was a variable fixed to 0.  However, since
+        # then, _handle_pow_operator contains special handling for **0
+        # and **1.
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Param(initialize=0, mutable=True)
+        expr = (1/m.x) == m.p
+
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((expr, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(
+            repn.nonlinear,
+            ('o24\no3\nn1\nv%s\nn0\n', [id(m.x)])
+        )
+
+class Test_NLWriter(unittest.TestCase):
+    def test_external_function_str_args(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.e = ExternalFunction(library='tmp', function='test')
+        m.o = Objective(expr=m.e(m.x, 'str'))
+
+        # Test explicit newline translation
+        OUT = io.StringIO(newline='\r\n')
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertIn(
+            "Writing NL file containing string arguments to a "
+            "text output stream with line endings other than '\\n' ",
+            LOG.getvalue()
+        )
+
+        # Test system-dependent newline translation
+        with TempfileManager:
+            fname = TempfileManager.create_tempfile()
+            with open(fname, 'w') as OUT:
+                with LoggingIntercept() as LOG:
+                    nl_writer.NLWriter().write(m, OUT)
+        if os.linesep == '\n':
+            self.assertEqual(LOG.getvalue(), "")
+        else:
+            self.assertIn(
+                "Writing NL file containing string arguments to a "
+                "text output stream with line endings other than '\\n' ",
+                LOG.getvalue()
+            )
+
+        # Test objects lacking 'tell':
+        r,w = os.pipe()
+        try:
+            OUT = os.fdopen(w, 'w')
+            with LoggingIntercept() as LOG:
+                nl_writer.NLWriter().write(m, OUT)
+            if os.linesep == '\n':
+                self.assertEqual(LOG.getvalue(), "")
+            else:
+                self.assertIn(
+                    "Writing NL file containing string arguments to a "
+                    "text output stream that does not support tell()",
+                    LOG.getvalue()
+                )
+        finally:
+            OUT.close()
+            os.close(r)
+
+    def test_suffix_warning_new_components(self):
+        m = ConcreteModel()
+        m.junk = Suffix(direction=Suffix.EXPORT)
+        m.x = Var()
+        m.y = Var()
+        m.z = Var([1,2,3])
+        m.o = Objective(expr=m.x + m.z[2])
+        m.c = Constraint(expr=m.y <=0)
+        m.c.deactivate()
+        @m.Constraint([1,2,3])
+        def d(m, i):
+            return m.z[i] <= 0
+        m.d.deactivate()
+        m.d[2].activate()
+        m.junk[m.x] = 1
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(LOG.getvalue(), "")
+
+        m.junk[m.y] = 1
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 1 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n",
+            LOG.getvalue(),
+        )
+
+        m.junk[m.z] = 1
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 3 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n",
+            LOG.getvalue(),
+        )
+
+        m.junk[m.c] = 2
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 4 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n",
+            LOG.getvalue(),
+        )
+
+        m.junk[m.d] = 2
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 6 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n",
+            LOG.getvalue(),
+        )
+
+        m.junk[5] = 5
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            "model contains export suffix 'junk' that contains 6 component "
+            "keys that are not exported as part of the NL file.  Skipping.\n"
+            "model contains export suffix 'junk' that contains 1 "
+            "keys that are not Var, Constraint, Objective, or the model.  "
+            "Skipping.\n",
+            LOG.getvalue(),
+        )

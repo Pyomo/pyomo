@@ -17,7 +17,7 @@ instance = model.create_instance('distill.dat')
 
 # Discretize using Finite Difference Approach
 discretizer = TransformationFactory('dae.finite_difference')
-discretizer.apply_to(instance,nfe=50,scheme='BACKWARD')
+discretizer.apply_to(instance, nfe=50, scheme='BACKWARD')
 
 # Discretize using Orthogonal Collocation
 # discretizer = TransformationFactory('dae.collocation')
@@ -30,27 +30,32 @@ discretizer.apply_to(instance,nfe=50,scheme='BACKWARD')
 # discretized to ensure that we include all the discretization points
 # when we take the sum.
 
+
 def obj_rule(m):
-    return m.alpha*sum((m.y[1,i] - m.y1_ref)**2 for i in m.t if i != 1) + m.rho*sum((m.u1[i] - m.u1_ref)**2 for i in m.t if i!=1)
-instance.OBJ = Objective(rule=obj_rule) 
+    return m.alpha * sum(
+        (m.y[1, i] - m.y1_ref) ** 2 for i in m.t if i != 1
+    ) + m.rho * sum((m.u1[i] - m.u1_ref) ** 2 for i in m.t if i != 1)
 
-solver=SolverFactory('ipopt')
 
-results = solver.solve(instance,tee=True)
+instance.OBJ = Objective(rule=obj_rule)
+
+solver = SolverFactory('ipopt')
+
+results = solver.solve(instance, tee=True)
 
 # If you have matplotlib you can use the following code to plot the
 # results
-t = [] 
-x5 = [] 
+t = []
+x5 = []
 x20 = []
 
-for i in sorted(instance.t): 
-    x5.append(value(instance.x[5,i]))
-    x20.append(value(instance.x[20,i]))
+for i in sorted(instance.t):
+    x5.append(value(instance.x[5, i]))
+    x20.append(value(instance.x[20, i]))
     t.append(i)
 
 import matplotlib.pyplot as plt
 
-plt.plot(t,x5)
-plt.plot(t,x20)
+plt.plot(t, x5)
+plt.plot(t, x20)
 plt.show()

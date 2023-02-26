@@ -5,7 +5,8 @@ def getCutCount():
         cutCount += 1
     fout1.close()
     return cutCount
-    
+
+
 def getPatCount():
     patCount = 0
     fout2 = open('Waste.csv', 'r')
@@ -14,28 +15,33 @@ def getPatCount():
     fout2.close()
     return patCount
 
+
 def getPriceSheetData():
     return 28
-    
+
+
 def getSheetsAvail():
     return 2000
-    
+
+
 def getCuts():
     cutcount = getCutCount()
     Cuts = range(cutcount)
     for i in range(cutcount):
-        nstr = str(i+1)
+        nstr = str(i + 1)
         Cuts[i] = 'w' + nstr
     return Cuts
+
 
 def getPatterns():
     patcount = getPatCount()
     Patterns = range(patcount)
     for j in range(patcount):
-        pstr = str(j+1)
+        pstr = str(j + 1)
         Patterns[j] = 'P' + pstr
-    return Patterns 
-    
+    return Patterns
+
+
 def getCutDemand():
     i = 0
     cutcount = getCutCount()
@@ -48,6 +54,7 @@ def getCutDemand():
     fout1.close()
     return CutDemand
 
+
 def getCutsInPattern():
     cutcount = getCutCount()
     patcount = getPatCount()
@@ -59,12 +66,12 @@ def getCutsInPattern():
         pstr = lstr[0]
         wstr = lstr[1]
         cstr = lstr[2]
-        pstr = pstr.replace("P","")
-        wstr = wstr.replace("w","")
+        pstr = pstr.replace("P", "")
+        wstr = wstr.replace("w", "")
         cstr = cstr.rstrip("\n")
         p = int(pstr)
         w = int(wstr)
         c = int(cstr)
-        CutsInPattern[w-1][p-1] = c
+        CutsInPattern[w - 1][p - 1] = c
     fout2.close()
     return CutsInPattern

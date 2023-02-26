@@ -365,3 +365,16 @@ class Test_calc_var(unittest.TestCase):
             r"Setting Var 'x' to a value `[0-9\.]+` \(float\) not in "
             "domain Binary.")
         self.assertAlmostEqual(value(m.x), 3.5, 3)
+
+    @unittest.skipUnless(differentiate_available, "this test requires sympy")
+    def test_nonlinear_overflow(self):
+        # Regression check to make sure calculate_variable_from_constraint
+        # can handle extreme non-linear cases where assuming linear behaviour
+        # results in OverflowErrors
+        m = ConcreteModel()
+        m.x = Var(initialize=1)
+        m.c = Constraint(expr=exp(1e2*m.x**2) == 100)
+
+        calculate_variable_from_constraint(m.x, m.c)
+
+        self.assertAlmostEqual(value(m.x), 0.214597, 5)

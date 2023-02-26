@@ -32,10 +32,12 @@ def create_model():
 
     def _diffeq1(m, t):
         return m.domegadt[t] == -m.b * m.omega[t] - m.c * sin(m.theta[t])
+
     m.diffeq1 = Constraint(m.t, rule=_diffeq1)
 
     def _diffeq2(m, t):
         return m.dthetadt[t] == m.omega[t]
+
     m.diffeq2 = Constraint(m.t, rule=_diffeq2)
 
     return m
@@ -77,6 +79,7 @@ def plot_result(m, sim, tsim, profiles):
     plt.xlabel('t')
     plt.legend(loc='best')
     plt.show()
+
 
 if __name__ == "__main__":
     model = create_model()

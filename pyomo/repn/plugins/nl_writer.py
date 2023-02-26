@@ -65,6 +65,7 @@ logger=logging.getLogger(__name__)
 # Feasibility tolerance for trivial (fixed) constraints
 TOL = 1e-8
 inf = float('inf')
+minus_inf = -inf
 nan = float('nan')
 
 HALT_ON_EVALUATION_ERROR = False
@@ -277,7 +278,7 @@ class NLWriter(object):
             _open = lambda fname: open(fname, 'w')
         else:
             _open = nullcontext
-        with open(filename, 'w') as FILE, \
+        with open(filename, 'w', newline='') as FILE, \
              _open(row_fname) as ROWFILE, \
              _open(col_fname) as COLFILE:
             info = self.write(
@@ -378,17 +379,17 @@ class _SuffixData(object):
                 if missing > 0:
                     missing_component += missing
                 else:
-                    missing_other += missing
+                    missing_other -= missing
         if missing_component:
             logger.warning(
-                f"model contained export suffix {suffix.name} that "
-                f"contained {missing_component} component keys that are "
+                f"model contains export suffix '{suffix.name}' that "
+                f"contains {missing_component} component keys that are "
                 "not exported as part of the NL file.  "
                 "Skipping.")
         if missing_other:
             logger.warning(
-                f"model contained export suffix {suffix.name} that "
-                f"contained {missing_other} keys that are not "
+                f"model contains export suffix '{suffix.name}' that "
+                f"contains {missing_other} keys that are not "
                 "Var, Constraint, Objective, or the model.  Skipping.")
 
     def store(self, obj, val):
@@ -397,24 +398,25 @@ class _SuffixData(object):
             return
         if missing == 1:
             logger.warning(
-                f"model contained export suffix {self._name} with "
+                f"model contains export suffix '{self._name}' with "
                 f"{obj.ctype.__name__} key '{obj.name}', but that "
                 "object is not exported as part of the NL file.  "
                 "Skipping.")
         elif missing > 1:
             logger.warning(
-                f"model contained export suffix {self._name} with "
+                f"model contains export suffix '{self._name}' with "
                 f"{obj.ctype.__name__} key '{obj.name}', but that "
                 "object contained {missing} data objects that are "
                 "not exported as part of the NL file.  "
                 "Skipping.")
         else:
             logger.warning(
-                f"model contained export suffix {self._name} with "
+                f"model contains export suffix '{self._name}' with "
                 f"{obj.__class__.__name__} key '{obj}' that is not "
                 "a Var, Constraint, Objective, or the model.  Skipping.")
 
     def _store(self, obj, val):
+        missing_ct = 0
         _id = id(obj)
         if _id in self._column_order:
             self.var[self._column_order[_id]] = val
@@ -426,14 +428,13 @@ class _SuffixData(object):
             self.prob[0] = val
         elif isinstance(obj, PyomoObject):
             if obj.is_indexed():
-                missing_ct = 0
                 for o in obj.values():
                     missing_ct += self._store(o, val)
-                return missing_ct
             else:
-                return 1
+                missing_ct = 1
         else:
-            return -1
+            missing_ct = -1
+        return missing_ct
 
 
 class _NLWriter_impl(object):
@@ -587,6 +588,13 @@ class _NLWriter_impl(object):
         linear_cons = []
         n_ranges = 0
         n_equality = 0
+        n_complementarity_nonlin = 0
+        n_complementarity_lin = 0
+        # TODO: update the writer to tabulate and report the range and
+        # nzlb values.  Low priority, as they do not appear to be
+        # required for solvers like PATH.
+        n_complementarity_range = 0
+        n_complementarity_nz_var_lb = 0
         for con in model.component_data_objects(
                 Constraint, active=True, sort=sorter):
             if with_debug_timing and con.parent_component() is not last_parent:
@@ -597,10 +605,14 @@ class _NLWriter_impl(object):
                 self._record_named_expression_usage(
                     expr.named_exprs, con, 0)
             lb = con.lb
-            if lb is not None:
+            if lb == minus_inf:
+                lb = None
+            elif lb is not None:
                 lb = repr(lb - expr.const)
             ub = con.ub
-            if ub is not None:
+            if ub == inf:
+                ub = None
+            elif ub is not None:
                 ub = repr(ub - expr.const)
             _type = _RANGE_TYPE(lb, ub)
             if _type == 4:
@@ -608,9 +620,23 @@ class _NLWriter_impl(object):
             elif _type == 0:
                 n_ranges += 1
             elif _type == 3: #and self.config.skip_trivial_constraints:
-                # FIXME: historically the NL writer was
-                # hard-coded to skip all unbounded constraints
                 continue
+                pass
+            # FIXME: this is a HACK to be compatible with the NLv1
+            # writer.  In the future, this writer should be expanded to
+            # look for and process Complementarity components (assuming
+            # that they are in an acceptable form).
+            if hasattr(con, '_complementarity'):
+                _type = 5
+                # we are going to pass the complementarity type and the
+                # corresponding variable id() as the "lb" and "ub" for
+                # the range.
+                lb = con._complementarity
+                ub = con._vid
+                if expr.nonlinear:
+                    n_complementarity_nonlin += 1
+                else:
+                    n_complementarity_lin += 1
             if expr.nonlinear:
                 constraints.append((con, expr, _type, lb, ub))
             elif expr.linear:
@@ -828,9 +854,13 @@ class _NLWriter_impl(object):
         for idx, _id in enumerate(variables):
             v = var_map[_id]
             lb, ub = v.bounds
-            if lb is not None:
+            if lb == minus_inf:
+                lb = None
+            elif lb is not None:
                 lb = repr(lb)
-            if ub is not None:
+            if ub == inf:
+                ub = None
+            elif ub is not None:
                 ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
@@ -942,7 +972,52 @@ class _NLWriter_impl(object):
         #
         # LINE 1
         #
-        ostream.write("g3 1 1 0\t# problem %s\n" % (model.name,))
+        if (visitor.encountered_string_arguments
+            and 'b' not in getattr(ostream, 'mode', '')
+        ):
+            # Not all streams support tell()
+            try:
+                _written_bytes = ostream.tell()
+            except IOError:
+                _written_bytes = None
+
+        line_1_txt = f"g3 1 1 0\t# problem {model.name}\n"
+        ostream.write(line_1_txt)
+
+        # If there were any string arguments, then we need to ensure
+        # that ostream is not converting newlines to something other
+        # than '\n'.  Binary files do not perform newline mapping (of
+        # course, we will also need to map all the str to bytes for
+        # binary-mode I/O).
+        if (visitor.encountered_string_arguments
+            and 'b' not in getattr(ostream, 'mode', '')
+        ):
+            if _written_bytes is None:
+                _written_bytes = 0
+            else:
+                _written_bytes = ostream.tell() - _written_bytes
+            if not _written_bytes:
+                if os.linesep != '\n':
+                    logger.warning(
+                        "Writing NL file containing string arguments to a "
+                        "text output stream that does not support tell() on "
+                        "a platform with default line endings other than "
+                        "'\\n'. Current versions of the ASL "
+                        "(through at least 20190605) require UNIX-style "
+                        "newlines as terminators for string arguments: "
+                        "it is possible that the ASL may refuse to read "
+                        "the NL file.")
+            else:
+                if ostream.encoding:
+                    line_1_txt = line_1_txt.encode(ostream.encoding)
+                if len(line_1_txt) != _written_bytes:
+                    logger.error(
+                        "Writing NL file containing string arguments to a "
+                        "text output stream with line endings other than '\\n' "
+                        "Current versions of the ASL "
+                        "(through at least 20190605) require UNIX-style "
+                        "newlines as terminators for string arguments.")
+
         #
         # LINE 2
         #
@@ -963,10 +1038,15 @@ class _NLWriter_impl(object):
             "# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb\n"
             % ( n_nonlinear_cons,
                 n_nonlinear_objs,
-                0, # ccons_lin,
-                0, # ccons_nonlin,
-                0, # ccons_nd,
-                0, # ccons_nzlb,
+                # num linear complementarity constraints
+                n_complementarity_lin,
+                # num nonlinear complementarity constraints
+                n_complementarity_nonlin,
+                # num complementarities involving double inequalities
+                n_complementarity_range,
+                # num complemented variables with either a nonzero lower
+                # bound or any upper bound (excluding ranges)
+                n_complementarity_nz_var_lb,
             ))
         #
         # LINE 4
@@ -1184,6 +1264,9 @@ class _NLWriter_impl(object):
                 ostream.write(f"2 {info[3]}{row_comments[row_idx]}\n")
             elif i == 0: # lb <= body <= ub
                 ostream.write(f"0 {info[3]} {info[4]}{row_comments[row_idx]}\n")
+            elif i == 5: # complementarity
+                ostream.write(f"5 {info[3]} {1+column_order[info[4]]}"
+                              f"{row_comments[row_idx]}\n")
             else: # i == 3; unbounded
                 ostream.write(f"3{row_comments[row_idx]}\n")
 
@@ -1566,7 +1649,7 @@ class AMPLRepn(object):
         elif nterms == 1:
             return prefix + nl_sum, args, named_exprs
         else: # nterms == 0
-            return prefix + (template.const % 0), [], named_exprs
+            return prefix + (template.const % 0), args, named_exprs
 
     def compile_nonlinear_fragment(self, visitor):
         if not self.nonlinear:
@@ -1841,8 +1924,13 @@ def handle_division_node(visitor, node, arg1, arg2):
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_pow_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return _apply_node_operation(node, (arg1[1], arg2[1]))
+    if arg2[0] is _CONSTANT:
+        if arg1[0] is _CONSTANT:
+            return _apply_node_operation(node, (arg1[1], arg2[1]))
+        elif not arg2[1]:
+            return _CONSTANT, 1
+        elif arg2[1] == 1:
+            return arg1
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.pow)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
@@ -2102,6 +2190,7 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 def _before_string(visitor, child):
+    visitor.encountered_string_arguments = True
     ans = AMPLRepn(child, None, None)
     ans.nl = (visitor.template.string % (len(child), child), ())
     return False, (_GENERAL, ans)
@@ -2257,6 +2346,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.used_named_expressions = used_named_expressions
         self.symbolic_solver_labels = symbolic_solver_labels
         self.use_named_exprs = use_named_exprs
+        self.encountered_string_arguments = False
         #self.value_cache = {}
 
     def initializeWalker(self, expr):

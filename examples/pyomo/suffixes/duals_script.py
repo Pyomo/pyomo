@@ -28,15 +28,17 @@ from pyomo.opt import SolverFactory
 
 ### Create the a solver plugin
 solver = 'gurobi'
-solver_io = 'lp' # Uses the LP file interface
-stream_solver = False     # True prints solver output to screen
-keepfiles =     False     # True prints intermediate file names (.nl,.sol,...) 
-opt = SolverFactory(solver,solver_io=solver_io)
+solver_io = 'lp'  # Uses the LP file interface
+stream_solver = False  # True prints solver output to screen
+keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
+opt = SolverFactory(solver, solver_io=solver_io)
 
 if opt is None:
     print("")
-    print("ERROR: Unable to create solver plugin for %s "\
-          "using the %s interface" % (solver, solver_io))
+    print(
+        "ERROR: Unable to create solver plugin for %s "
+        "using the %s interface" % (solver, solver_io)
+    )
     print("")
     exit(1)
 
@@ -47,11 +49,8 @@ from duals_pyomo import model
 ### Send the model to gurobi_ampl and collect the solution
 # The solver plugin will scan the model for all active suffixes
 # valid for importing, which it will store into the results object
-results = opt.solve(model,
-                    keepfiles=keepfiles,
-                    tee=stream_solver)
+results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 
 print("")
 print("Dual Solution")
 print("%s: %s" % (model.con, model.dual[model.con]))
-

@@ -3,12 +3,15 @@ from math import pi
 
 model = pyo.ConcreteModel()
 # @init:
-model.x = pyo.Var(initialize = 2.1, bounds=(0,4))
-model.y = pyo.Var(initialize = 2.1, bounds=(0,4))
+model.x = pyo.Var(initialize=2.1, bounds=(0, 4))
+model.y = pyo.Var(initialize=2.1, bounds=(0, 4))
 # @:init
 
+
 def multimodal(m):
-    return (2-pyo.cos(pi*m.x)-pyo.cos(pi*m.y)) * (m.x**2) * (m.y**2)
+    return (2 - pyo.cos(pi * m.x) - pyo.cos(pi * m.y)) * (m.x**2) * (m.y**2)
+
+
 model.obj = pyo.Objective(rule=multimodal, sense=pyo.minimize)
 
 status = pyo.SolverFactory('ipopt').solve(model)
