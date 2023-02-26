@@ -437,15 +437,13 @@ class DesignOfExperiments:
 
         # generate parameter name list and value dictionary with index
         var_name = []
-        var_dict = {}
         for name in list(self.param.keys()):
             # [0] is the scenario index
             var_name.append(name)
-            var_dict[name] = self.param[name]
 
         # call k_aug get_dsdp function
         square_result = self._solve_doe(mod, fix=True)
-        dsdp_re, col = get_dsdp(mod, var_name, var_dict, tee=self.tee_opt)
+        dsdp_re, col = get_dsdp(mod, list(self.param.keys()), self.param, tee=self.tee_opt)
 
         # analyze result
         dsdp_array = dsdp_re.toarray().T
@@ -786,9 +784,22 @@ class DesignOfExperiments:
                 return 1 
             else:
                 return 0 
-
+        
         mod.jac = pyo.Var(mod.param, mod.res, initialize=0.1)
-        mod.fim = pyo.Var(mod.param, mod.param, initialize=identity_matrix)
+
+        if self.fim_initial:
+            dict_fim = {}
+            for i, bu in enumerate(mod.param):
+                for j, un in enumerate(mod.param):
+                    dict_fim[(bu,un)]=self.fim_initial[i][j]
+
+        def initialize_fim(m,j,d):
+            return dict_fim[(j,d)]
+
+        if self.fim_initial:
+            mod.fim = pyo.Var(mod.param, mod.param, initialize=initialize_fim)
+        else:
+            mod.fim = pyo.Var(mod.param, mod.param, initialize=identity_matrix)
 
         # move the L matrix initial point to a dictionary
         if type(self.L_initial) != type(None):

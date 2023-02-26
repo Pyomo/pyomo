@@ -29,7 +29,6 @@
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
 import numpy as np
-from measurements import Measurements
 
 def disc_for_measure(m, NFE=32, block=True):
     """Pyomo.DAE discretization
@@ -70,45 +69,44 @@ def create_model(mod=None, model_option="block", control_time=None, control_val=
     if model_option == "parmest":
         mod = pyo.ConcreteModel()
         return_m = True
-    else:
+    elif model_option in ["block", "global"]:
         if not mod:
             raise ValueError("If model option is global or block, a created model needs to be provided.")
         return_m = False
+    else:
+        raise ValueError("model_option needs to be defined as global, block, or parmest.")
+    
+    if not control_time:
+        control_time = [0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1]
+        
+    if not control_val:
+        control_val = [300]*9
 
-    if model_option == "global":
-        mod.t0 = pyo.Set(initialize=[0])
-        mod.t_con = pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
-        mod.CA0 = pyo.Var(mod.t0, bounds=[1,5], within=pyo.NonNegativeReals)
-        mod.T = pyo.Var(mod.t_con, bounds=[300, 700], within=pyo.NonNegativeReals)
+    controls = {}
+    for i, t in enumerate(control_time):
+        controls[t]=control_val[i]
+
+    t_control = control_time
+
+
+    #if model_option == "global":
+    mod.t0 = pyo.Set(initialize=[0])
+    mod.t_con = pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
+    mod.CA0 = pyo.Var(mod.t0, initialize = CA_init, bounds=(1.0,5.0), within=pyo.NonNegativeReals) # mol/L
+
+    if model_option=="global":
+        mod.T = pyo.Var(mod.t_con, initialize =controls, bounds=(300, 700), within=pyo.NonNegativeReals)
 
     else:
         para_list = ['A1', 'A2', 'E1', 'E2']
-
-        if not control_time:
-            control_time = [0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1]
-            
-        if not control_val:
-            control_val = [300]*9
-
-        controls = {}
-        for i, t in enumerate(control_time):
-            controls[t]=control_val[i]
         
         ### Add variables 
         mod.CA_init = CA_init
         mod.para_list = para_list
-        t_control = control_time
+        #t_control = control_time
         
         # timepoints
         mod.t = ContinuousSet(bounds=(t_range[0], t_range[1]))
-        
-        # Control time points
-        mod.t_con = pyo.Set(initialize=t_control)
-        
-        mod.t0 = pyo.Set(initialize=[0])
-        
-        # time-independent design variable
-        mod.CA0 = pyo.Var(mod.t0, initialize = CA_init, bounds=(1.0,5.0), within=pyo.NonNegativeReals) # mol/L
         
         # time-dependent design variable, initialized with the first control value
         def T_initial(m,t):
