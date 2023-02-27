@@ -329,7 +329,7 @@ class FisherResults:
 
 
 class GridSearchResult:
-    def __init__(self, design_ranges, design_dimension_names, design_control_time, FIM_result_list, store_optimality_name=None, verbose=True):
+    def __init__(self, design_ranges, design_dimension_names, FIM_result_list, store_optimality_name=None, verbose=True):
         """
         This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
         Can choose to draw 1D sensitivity curves and 2D heatmaps.
@@ -340,8 +340,6 @@ class GridSearchResult:
             a ``dict`` whose keys are design variable names, values are a list of design variable values to go over
         design_dimension_names:
             a ``list`` of design variables names
-        design_control_time:
-            a ``list`` of design control timesets
         FIM_result_list:
             a ``dict`` containing FIM results, keys are a tuple of design variable values, values are FIM result objects
         store_optimality_name:
@@ -352,7 +350,6 @@ class GridSearchResult:
         # design variables
         self.design_names = design_dimension_names
         self.design_ranges = design_ranges
-        self.design_control_time = design_control_time
         self.FIM_result_list = FIM_result_list
 
         self.store_optimality_name = store_optimality_name
@@ -399,10 +396,13 @@ class GridSearchResult:
         for i in self.design_names:
             # if a name is in the design variable name list more than once, name them as name_itself, name_itself2, ...
             # this is because it can be erroneous when we extract values from a dataframe with two columns having the same name
-            if i in column_names:
-                count += 1
-                i = i+str(count+1)
-            column_names.append(i)
+            #if i in column_names:
+            #    count += 1
+            #    i = i+str(count+1)
+            if type(i) is list:
+                column_names.append(i[0])
+            else:
+                column_names.append(i)
 
         # Each design criteria has a column to store values
         column_names.append('A')
@@ -410,6 +410,8 @@ class GridSearchResult:
         column_names.append('E')
         column_names.append('ME')
         # generate the dataframe
+        store_all_results = np.asarray(store_all_results)
+        print(column_names)
         self.store_all_results_dataframe = pd.DataFrame(store_all_results, columns=column_names)
         # if needs to store the values
         if self.store_optimality_name is not None:
@@ -465,6 +467,7 @@ class GridSearchResult:
                 if i != (len(self.fixed_design_names)-1):
                     filter += '&'
             # extract results with other dimensions fixed
+            print(filter)
             figure_result_data = self.store_all_results_dataframe.loc[eval(filter)]
         # if there is no other fixed dimensions
         else:
@@ -602,12 +605,14 @@ class GridSearchResult:
         # create a dictionary for sensitivity dimensions
         sensitivity_dict = {}
         for i, nam in enumerate(self.design_names):
-            if nam in self.sensitivity_dimension:
+            if nam in self.sensitivity_dimension: 
                 sensitivity_dict[nam] = self.design_ranges[i]
+            elif nam[0] in self.sensitivity_dimension:
+                sensitivity_dict[nam[0]] = self.design_ranges[i]
 
+        print(sensitivity_dict)
         x_range = sensitivity_dict[self.sensitivity_dimension[0]]
         y_range = sensitivity_dict[self.sensitivity_dimension[1]]
-
 
         # extract the design criteria values
         A_range = self.figure_result_data['A'].values.tolist()

@@ -748,7 +748,7 @@ class DesignOfExperiments:
         self.all_fim = result_combine
 
         # Create figure drawing object
-        figure_draw_object = GridSearchResult(design_ranges, design_dimension_names, design_control_time, result_combine, store_optimality_name=filename)
+        figure_draw_object = GridSearchResult(design_ranges, design_dimension_names, result_combine, store_optimality_name=filename)
 
         # save for TicTocTimer
         #t_enumeration_stop = time.time()
