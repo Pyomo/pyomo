@@ -152,10 +152,14 @@ class Measurements(SpecialSet):
         variance: 
             a ``dict``, keys are measurement variable names, values are its variance (a scalar number)
             For e.g., for the kinetics example, it should be {'CA[0]':10, 'CA[0.125]': 1, ...., 'CC[1]': 2}. 
-            If given None, 
+            If given None, the default is {'CA[0]':1, 'CA[0.125]': 1, ...., 'CC[1]': 1}
         """
         super().__init__()
-        self._generate_variance(variance)
+
+        if variance:
+            self.variance = variance 
+        else:
+            self._generate_variance()
 
     def specify(self, self_define_res):
 
@@ -179,9 +183,12 @@ class Measurements(SpecialSet):
         self._check_names(var_name, extra_index, time_index)
         self.measurement_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index)
 
-    def _generate_variance(self, variance):
-        # TO BE FINISHED
-        return 
+    def _generate_variance(self):
+        """Generate the variance dictionary. 
+        """
+        self.variance = {}
+        for name in self.special_set:
+            self.variance[name] = 1 
 
     def _check_names(self, var_name, extra_index, time_index):
         """
