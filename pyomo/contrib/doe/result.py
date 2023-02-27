@@ -113,15 +113,16 @@ class FisherResults:
 
         else:
             fim = np.zeros((no_param, no_param))
-
-            Q_all = []
             
+            # convert dictionary to a numpy array
+            Q_all = []
             for par in self.para_name:
                 Q_all.append(self.jaco_information[par])
+            n = len(self.para_name)
 
-            Q_all = np.asarray(Q_all)
-
-            fim = Q_all@Q_all.T 
+            Q_all = np.asarray(Q_all).T
+            for i, mea_name in enumerate(self.measurement_variables):
+                fim += 1/self.measure_object.variance[str(mea_name)]*(Q_all[i,:].reshape(n,1)@Q_all[i,:].reshape(n,1).T)
 
         # add prior information
         if (self.prior_FIM is not None):
@@ -603,7 +604,7 @@ class GridSearchResult:
                 sensitivity_dict[nam] = self.design_ranges[i]
             elif nam[0] in self.sensitivity_dimension:
                 sensitivity_dict[nam[0]] = self.design_ranges[i]
-                
+
         x_range = sensitivity_dict[self.sensitivity_dimension[0]]
         y_range = sensitivity_dict[self.sensitivity_dimension[1]]
 
