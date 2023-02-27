@@ -392,13 +392,8 @@ class GridSearchResult:
         # generate column names for the dataframe
         column_names = []
         # this count is for repeated design variable names which can happen in dynamic problems
-        count = 0
         for i in self.design_names:
-            # if a name is in the design variable name list more than once, name them as name_itself, name_itself2, ...
-            # this is because it can be erroneous when we extract values from a dataframe with two columns having the same name
-            #if i in column_names:
-            #    count += 1
-            #    i = i+str(count+1)
+            # if design variables share the same value, use the first name as the column name
             if type(i) is list:
                 column_names.append(i[0])
             else:
@@ -467,7 +462,6 @@ class GridSearchResult:
                 if i != (len(self.fixed_design_names)-1):
                     filter += '&'
             # extract results with other dimensions fixed
-            print(filter)
             figure_result_data = self.store_all_results_dataframe.loc[eval(filter)]
         # if there is no other fixed dimensions
         else:
@@ -609,8 +603,7 @@ class GridSearchResult:
                 sensitivity_dict[nam] = self.design_ranges[i]
             elif nam[0] in self.sensitivity_dimension:
                 sensitivity_dict[nam[0]] = self.design_ranges[i]
-
-        print(sensitivity_dict)
+                
         x_range = sensitivity_dict[self.sensitivity_dimension[0]]
         y_range = sensitivity_dict[self.sensitivity_dimension[1]]
 

@@ -614,12 +614,10 @@ class DesignOfExperiments:
         """
         Enumerate through full grid search for any number of design variables;
         solve square problems sequentially to compute FIMs.
-        It calculates FIM with sensitivity information from four modes:
+        It calculates FIM with sensitivity information from two modes:
             1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. 
             Sensitivity info estimated by finite difference
-            2.  sequential_sipopt: calculate sensitivity by sIPOPT [Experimental]
-            3.  sequential_kaug: calculate sensitivity by k_aug [Experimental]
-            4.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity
+            2.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity
 
         Parameters
         -----------
@@ -663,10 +661,6 @@ class DesignOfExperiments:
         # calculate how much the FIM element is scaled
         self.fim_scale_constant_value = scale_constant_value ** 2
 
-        # when defining design space, design variable values are defined as in design_values argument
-        # the design var value defined in dv_ranges only applies to control time points given in dv_apply_time
-        #grid_dimension = len(design_ranges)
-
         # to store all FIM results
         result_combine = {}
 
@@ -686,14 +680,11 @@ class DesignOfExperiments:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_values
             design_iter = design_values.copy()
-            print(design_set_iter)
 
             # update the controlled value of certain time points for certain design variables
-            #for i in range(grid_dimension):
-            #    for v, value in enumerate(design_control_time[i]):
-            #        design_iter[design_dimension_names[i]][value] = list(design_set_iter)[i]
             for i in range(len(design_dimension_names)):
                 names = design_dimension_names[i]
+                # if the element is a list, all design variables in this list share the same values
                 if type(names) is list:
                     for n in names:
                         design_iter[n] = list(design_set_iter)[i] 

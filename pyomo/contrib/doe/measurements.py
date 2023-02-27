@@ -146,6 +146,13 @@ class Measurements(SpecialSet):
     def __init__(self, variance=None):
         """
         This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
+
+        Parameters 
+        ----------
+        variance: 
+            a ``dict``, keys are measurement variable names, values are its variance (a scalar number)
+            For e.g., for the kinetics example, it should be {'CA[0]':10, 'CA[0.125]': 1, ...., 'CC[1]': 2}. 
+            If given None, 
         """
         super().__init__()
         self._generate_variance(variance)
