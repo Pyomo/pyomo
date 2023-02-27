@@ -1408,6 +1408,11 @@ ConfigFormatter.formats = {
 }
 
 
+@deprecated(
+    "add_docstring_list is deprecated.  Please use the "
+    "@document_kwargs_from_configdict() decorator.",
+    version='6.5.1.dev0',
+)
 def add_docstring_list(docstring, configdict, indent_by=4):
     """Returns the docstring with a formatted configuration arguments listing."""
     section = 'Keyword Arguments'
@@ -1415,7 +1420,7 @@ def add_docstring_list(docstring, configdict, indent_by=4):
         inspect.cleandoc(docstring)
         + '\n' + section + '\n' + '-'*len(section) + '\n'
         + configdict.generate_documentation(
-            indent_spacing=indent_by, width=256, format='numpydoc')
+            indent_spacing=indent_by, width=256, visibility=0, format='numpydoc')
     )
 
 

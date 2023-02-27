@@ -12,7 +12,7 @@
 from itertools import product
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.config import add_docstring_list
+from pyomo.common.config import document_kwargs_from_configdict
 
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
@@ -56,6 +56,11 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
     _add_mip_solver_configs(CONFIG)
 
     algorithm = 'enumerate'
+
+    # Override solve() to customize the docstring for this solver
+    @document_kwargs_from_configdict(CONFIG, doc=_GDPoptAlgorithm.solve.__doc__)
+    def solve(self, model, **kwds):
+        return super().solve(model, **kwds)
 
     def _discrete_solution_iterator(self, disjunctions,
                                     non_indicator_boolean_vars,
@@ -157,8 +162,3 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
                         'enumerated.')
                     self.pyomo_results.solver.termination_condition = tc.optimal
                     break
-
-
-GDP_Enumeration_Solver.solve.__doc__ = add_docstring_list(
-    GDP_Enumeration_Solver.solve.__doc__, GDP_Enumeration_Solver.CONFIG,
-    indent_by=8)

@@ -17,7 +17,12 @@ from collections import deque
 from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.backports import nullcontext
-from pyomo.common.config import ConfigBlock, ConfigValue, InEnum, add_docstring_list
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    InEnum,
+    document_kwargs_from_configdict,
+)
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
@@ -347,6 +352,7 @@ class NLWriter(object):
         # was generated and the symbol_map
         return filename, symbol_map
 
+    @document_kwargs_from_configdict(CONFIG)
     def write(self, model, ostream, rowstream=None, colstream=None, **options):
         """Write a model in NL format.
 
@@ -380,8 +386,6 @@ class NLWriter(object):
         # small objects.
         with _NLWriter_impl(ostream, rowstream, colstream, config) as impl:
             return impl.write(model)
-
-    write.__doc__ = add_docstring_list(write.__doc__, CONFIG)
 
     def _generate_symbol_map(self, info):
         # Now that the row/column ordering is resolved, create the labels

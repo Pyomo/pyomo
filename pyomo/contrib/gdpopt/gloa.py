@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.config import add_docstring_list
+from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
@@ -52,6 +52,11 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     _add_tolerance_configs(CONFIG)
 
     algorithm = 'GLOA'
+
+    # Override solve() to customize the docstring for this solver
+    @document_kwargs_from_configdict(CONFIG, doc=_GDPoptAlgorithm.solve.__doc__)
+    def solve(self, model, **kwds):
+        return super().solve(model, **kwds)
 
     def _log_citation(self, config):
         config.logger.info("\n" + """- GLOA algorithm:
@@ -191,6 +196,3 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 counter += 2
 
                 config.logger.debug("Added %s affine cuts" % counter)
-
-GDP_GLOA_Solver.solve.__doc__ = add_docstring_list(
-    GDP_GLOA_Solver.solve.__doc__, GDP_GLOA_Solver.CONFIG, indent_by=8)

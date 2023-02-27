@@ -22,7 +22,7 @@ from pyomo.core.base.range import NumericRange
 from pyomo.common.config import (ConfigDict, ConfigValue,
                                  Bool, PositiveInt,
                                  PositiveFloat, In,
-                                 add_docstring_list)
+                                 document_kwargs_from_configdict)
 from pyomo.contrib.trustregion.filter import Filter, FilterElement
 from pyomo.contrib.trustregion.interface import TRFInterface
 from pyomo.contrib.trustregion.util import IterationLogger
@@ -390,6 +390,7 @@ class TrustRegionSolver(object):
     def __exit__(self, et, ev, tb):
         pass
 
+    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, degrees_of_freedom_variables,
               ext_fcn_surrogate_map_rule=None, **kwds):
         """
@@ -397,9 +398,9 @@ class TrustRegionSolver(object):
 
         Parameters
         ----------
-        model: ``ConcreteModel``
+        model : ConcreteModel
             The model to be solved using the Trust Region Framework.
-        degrees_of_freedom_variables : List of Vars
+        degrees_of_freedom_variables : List[Var]
             User-supplied input. The user must provide a list of vars which
             are the degrees of freedom or decision variables within
             the model.
@@ -423,10 +424,3 @@ class TrustRegionSolver(object):
                             ext_fcn_surrogate_map_rule,
                             config)
         return result
-
-
-def _generate_filtered_docstring():
-    cfg = _trf_config()
-    return add_docstring_list(TrustRegionSolver.solve.__doc__, cfg, indent_by=8)
-
-TrustRegionSolver.solve.__doc__ = _generate_filtered_docstring()

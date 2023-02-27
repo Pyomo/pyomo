@@ -17,8 +17,12 @@ from math import fabs
 import math
 
 from pyomo.core.base.transformation import TransformationFactory
-from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
-                                 add_docstring_list)
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    NonNegativeFloat,
+    document_kwargs_from_configdict,
+)
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
@@ -27,6 +31,7 @@ from pyomo.repn import generate_standard_repn
 
 @TransformationFactory.register('contrib.constraints_to_var_bounds',
           doc="Change constraints to be a bound on the variable.")
+@document_kwargs_from_configdict('CONFIG')
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
     """Change constraints to be a bound on the variable.
 
@@ -49,8 +54,6 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
         description="If True, fix variable when "
         ":math:`| LB - UB | \\leq tolerance`."
     ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def _apply_to(self, model, **kwds):
         config = self.CONFIG(kwds)
