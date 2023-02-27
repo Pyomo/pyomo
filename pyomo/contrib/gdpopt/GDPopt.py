@@ -44,8 +44,7 @@
 - start keeping basic changelog
 
 """
-from pyomo.common.config import (
-    add_docstring_list, ConfigDict)
+from pyomo.common.config import document_kwargs_from_configdict, ConfigDict
 from pyomo.contrib.gdpopt import __version__
 from pyomo.contrib.gdpopt.config_options import (
     _add_common_configs, _supported_algorithms, _get_algorithm_config)
@@ -97,6 +96,7 @@ class GDPoptSolver(object):
     CONFIG = ConfigDict("GDPopt")
     _add_common_configs(CONFIG)
 
+    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
         """Solve the model.
 
@@ -154,6 +154,3 @@ class GDPoptSolver(object):
         return __version__
 
     _metasolver = False
-
-GDPoptSolver.solve.__doc__ = add_docstring_list(
-    GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)

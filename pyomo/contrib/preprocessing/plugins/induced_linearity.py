@@ -24,8 +24,12 @@ import textwrap
 from math import fabs
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
-                                 add_docstring_list)
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    NonNegativeFloat,
+    document_kwargs_from_configdict,
+)
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
 from pyomo.core import (Binary, Block, Constraint, Objective, Set,
@@ -41,6 +45,7 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 @TransformationFactory.register('contrib.induced_linearity',
           doc="Reformulate nonlinear constraints with induced linearity.")
+@document_kwargs_from_configdict('CONFIG')
 class InducedLinearity(IsomorphicTransformation):
     """Reformulate nonlinear constraints with induced linearity.
 
@@ -75,8 +80,6 @@ class InducedLinearity(IsomorphicTransformation):
         default='glpk',
         description="Solver to use when pruning possible values."
     ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def _apply_to(self, model, **kwds):
         """Apply the transformation to the given model."""

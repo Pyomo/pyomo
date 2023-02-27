@@ -17,7 +17,11 @@ Relaxations between big-M and Convex Hull Reformulations," 2021.
 """
 from __future__ import division
 
-from pyomo.common.config import (ConfigBlock, ConfigValue, add_docstring_list)
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    document_kwargs_from_configdict,
+)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Block, Constraint, Var, SortComponents, Transformation,
                          TransformationFactory, TraversalStrategy,
@@ -153,6 +157,7 @@ def compute_fbbt_bounds(expr, global_constraints, opt):
                                 doc="Reformulates a convex disjunctive model "
                                 "into a new GDP by splitting additively "
                                 "separable constraints on P sets of variables")
+@document_kwargs_from_configdict('CONFIG')
 class PartitionDisjuncts_Transformation(Transformation):
     """
     Transform disjunctive model to equivalent disjunctive model (with
@@ -789,8 +794,3 @@ class PartitionDisjuncts_Transformation(Transformation):
                                   transformed_parent_disjunct, transBlock,
                                   partition):
         _warn_for_active_disjunct(disjunct, parent_disjunct)
-
-# Add the CONFIG arguments to the transformation's docstring
-PartitionDisjuncts_Transformation.__doc__ = add_docstring_list(
-    PartitionDisjuncts_Transformation.__doc__,
-    PartitionDisjuncts_Transformation.CONFIG, indent_by=8)

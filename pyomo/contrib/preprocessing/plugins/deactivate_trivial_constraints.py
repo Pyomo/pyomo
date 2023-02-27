@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -15,8 +14,12 @@
 import logging
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
-                                 add_docstring_list)
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    NonNegativeFloat,
+    document_kwargs_from_configdict,
+)
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.transformation import TransformationFactory
@@ -29,6 +32,7 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
 @TransformationFactory.register(
         'contrib.deactivate_trivial_constraints',
         doc="Deactivate trivial constraints.")
+@document_kwargs_from_configdict('CONFIG')
 class TrivialConstraintDeactivator(IsomorphicTransformation):
     """Deactivates trivial constraints.
 
@@ -61,8 +65,6 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
         default=1E-13, domain=NonNegativeFloat,
         description="tolerance on constraint violations"
     ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
 
 
     def _apply_to(self, instance, **kwargs):
