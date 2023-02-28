@@ -659,7 +659,7 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    for t in (np.float_, np.float16, np.float32, np.float64, np.ndarray):
+    for t in (np.float_, np.float16, np.float32, np.float64):
         numeric_types.RegisterNumericType(t)
         # We have deprecated RegisterBooleanType, so we will mock up the
         # registration here (to bypass the deprecation warning) until we

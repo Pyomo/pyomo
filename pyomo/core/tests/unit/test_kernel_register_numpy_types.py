@@ -38,7 +38,6 @@ if numpy_available:
     numpy_float_names.append('float16')
     numpy_float_names.append('float32')
     numpy_float_names.append('float64')
-    numpy_float_names.append('ndarray')
 # Complex
 numpy_complex_names = []
 if numpy_available:

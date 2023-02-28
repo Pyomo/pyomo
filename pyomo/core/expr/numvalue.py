@@ -428,9 +428,18 @@ def check_if_numeric_type(obj):
 
     """
     obj_class = obj.__class__
+    # Do not re-evaluate known native types
+    if obj_class in native_types:
+        return obj_class in native_numeric_types
+
     try:
         obj_plus_0 = obj + 0
         obj_p0_class = obj_plus_0.__class__
+        # ensure that the object is comparable to 0 in a meaningful way
+        # (among other things, this prevents numpy.ndarray objects from
+        # being added to native_numeric_types)
+        if not (( obj < 0 ) ^ ( obj >= 0)):
+            return False
     except:
         return False
     if obj_p0_class is obj_class or obj_p0_class in native_numeric_types:

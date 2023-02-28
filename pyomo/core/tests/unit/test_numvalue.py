@@ -42,6 +42,11 @@ class MyBogusNumericType(MyBogusType):
     def __add__(self, other):
         return MyBogusNumericType(self.val + float(other))
 
+    def __lt__(self, other):
+        return self.val < float(other)
+
+    def __ge__(self, other):
+        return self.val >= float(other)
 
 class Test_is_numeric_data(unittest.TestCase):
 
@@ -419,8 +424,14 @@ class Test_as_numeric(unittest.TestCase):
             as_numeric(val)
 
     def test_bool(self):
-        self.assertEqual(as_numeric(False), 0)
-        self.assertEqual(as_numeric(True), 1)
+        with self.assertRaisesRegex(
+                TypeError, r"bool values \('False'\) are not allowed "
+                "in Pyomo numeric expressions"):
+            as_numeric(False)
+        with self.assertRaisesRegex(
+                TypeError, r"bool values \('True'\) are not allowed "
+                "in Pyomo numeric expressions"):
+            as_numeric(True)
 
     def test_float(self):
         val = 1.1
