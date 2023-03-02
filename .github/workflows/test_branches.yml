@@ -675,7 +675,7 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: always() # run even if a build job fails
+    if: ${{ false }} # turn off for branches
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
