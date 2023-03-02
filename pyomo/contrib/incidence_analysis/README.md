@@ -6,7 +6,9 @@ constraints.
 These tools can be used to detect whether and (approximately) why the Jacobian
 of equality constraints is structurally or numerically singular, which
 commonly happens as the result of a modeling error.
-See the documentation (TODO: link) for more information and examples.
+See the
+[documentation](https://pyomo.readthedocs.io/en/stable/contributed_packages/incidence/index.html)
+for more information and examples.
 
 ## Dependencies
 
@@ -65,7 +67,7 @@ for con in oc_con:
 print()
 
 print("Underconstrained subsystem")
-print("-------------------------")
+print("--------------------------")
 print("Variables")
 for var in uc_var:
     print(f"  {var.name}")
@@ -90,7 +92,7 @@ Constraints
   density_eqn
 
 Underconstrained subsystem
--------------------------
+--------------------------
 Variables
   flow_comp[1]
   flow
