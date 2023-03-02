@@ -37,6 +37,7 @@ import pyomo.common.unittest as unittest
 from io import StringIO
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+
 def yaml_load(arg):
     return yaml.load(arg, **yaml_load_args)
 
@@ -46,6 +47,9 @@ from pyomo.common.config import (
     Bool, Integer, PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, ListOf, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
+    ConfigFormatter, String_ConfigFormatter,
+    document_kwargs_from_configdict, add_docstring_list,
+    USER_OPTION, DEVELOPER_OPTION,
     _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
@@ -1743,27 +1747,84 @@ formatting; like a bulleted list:
   endBlock{flushing}
 endBlock{}
 """
-        test = self.config.generate_documentation(
-            block_start= "startBlock{%s}\n",
-            block_end=   "endBlock{%s}\n",
-            item_start=  "startItem{%s}\n",
-            item_body=   "item{%s}\n",
-            item_end=    "endItem{%s}\n",
-        )
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(
+                block_start= "startBlock{%s}\n",
+                block_end=   "endBlock{%s}\n",
+                item_start=  "startItem{%s}\n",
+                item_body=   "item{%s}\n",
+                item_end=    "endItem{%s}\n",
+            )
+        LOG = LOG.getvalue().replace('\n', ' ')
+        for name in ('block_start', 'block_end', 'item_start', 'item_end', 'item_body'):
+            self.assertIn(
+                f"Overriding '{name}' by passing strings to "
+                "generate_documentation is deprecated.",
+                LOG
+            )
+        self.maxDiff = None
         #print(test)
         self.assertEqual(test, reference)
 
-        test = self.config.generate_documentation(
-            block_start= "startBlock\n",
-            block_end=   "endBlock\n",
-            item_start=  "startItem\n",
-            item_body=   "item\n",
-            item_end=    "endItem\n",
-        )
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(format=String_ConfigFormatter(
+                block_start= "startBlock{%s}\n",
+                block_end=   "endBlock{%s}\n",
+                item_start=  "startItem{%s}\n",
+                item_body=   "item{%s}\n",
+                item_end=    "endItem{%s}\n",
+            ))
+        self.assertEqual(LOG.getvalue(), "")
+        self.maxDiff = None
+        #print(test)
+        self.assertEqual(test, reference)
+
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(
+                block_start= "startBlock\n",
+                block_end=   "endBlock\n",
+                item_start=  "startItem\n",
+                item_body=   "item\n",
+                item_end=    "endItem\n",
+            )
 
         stripped_reference = re.sub(r'\{[^\}]*\}','',reference,flags=re.M)
         #print(test)
         self.assertEqual(test, stripped_reference)
+
+        reference = \
+"""startBlock{}
+  startBlock{network}
+  startBlock{scenario}
+  startBlock{scenarios}
+  startBlock{impact}
+  startBlock{flushing}
+    startBlock{flush nodes}
+    startBlock{close valves}
+"""
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(
+                block_start="startBlock{%s}\n",
+                block_end="",
+                item_start="",
+                item_body="",
+            )
+        LOG = LOG.getvalue().replace('\n', ' ')
+        for name in ('block_start', 'block_end', 'item_start', 'item_body'):
+            self.assertIn(
+                f"Overriding '{name}' by passing strings to "
+                "generate_documentation is deprecated.",
+                LOG
+            )
+        for name in ('item_end'):
+            self.assertNotIn(
+                f"Overriding '{name}' by passing strings to "
+                "generate_documentation is deprecated.",
+                LOG
+            )
+        self.maxDiff = None
+        #print(test)
+        self.assertEqual(test, reference)
 
 
     def test_generate_latex_documentation(self):
@@ -1802,6 +1863,16 @@ endBlock{}
 \\end{description}
             """.strip())
 
+    def test_empty_ConfigFormatter(self):
+        cfg = ConfigDict()
+        cfg.declare('field', ConfigValue())
+        with self.assertRaisesRegex(
+                ValueError, "Unrecognized documentation formatter, 'unknown'"):
+            cfg.generate_documentation(format="unknown")
+
+        self.assertEqual(
+            cfg.generate_documentation(format=ConfigFormatter()), ''
+        )
 
     def test_block_get(self):
         self.assertTrue('scenario' in self.config)
@@ -2606,6 +2677,127 @@ c: 1.0
                 ValueError, "only accepts other ConfigDicts"):
             cfg2.declare_from({})
 
+    def test_docstring_decorator(self):
+        self.maxDiff = None
+
+        @document_kwargs_from_configdict('CONFIG')
+        class ExampleClass(object):
+            CONFIG = ConfigDict()
+            CONFIG.declare('option_1', ConfigValue(
+                default=5,
+                domain=int,
+                doc='The first configuration option',
+            ))
+            SOLVER = CONFIG.declare('solver_options', ConfigDict())
+            SOLVER.declare('solver_option_1', ConfigValue(
+                default=1,
+                domain=float,
+                doc='The first solver configuration option',
+                visibility=DEVELOPER_OPTION,
+            ))
+            SOLVER.declare('solver_option_2', ConfigValue(
+                default=1,
+                domain=float,
+                doc="""The second solver configuration option
+
+                With a very long line containing
+                wrappable text in a long, silly paragraph
+                with little actual information.
+                #) but a bulleted list
+                #) with two bullets
+                """,
+            ))
+            CONFIG.declare('option_2', ConfigValue(
+                default=5,
+                domain=int,
+                doc="""The second solver configuration option
+                with a very long line containing
+                wrappable text in a long, silly paragraph
+                with little actual information.
+                """,
+            ))
+
+            @document_kwargs_from_configdict(CONFIG)
+            def __init__(self):
+                "A simple docstring"
+
+            @document_kwargs_from_configdict(
+                CONFIG, doc="A simple docstring\n", visibility=USER_OPTION
+            )
+            def fcn(self):
+                pass
+
+
+        ref = """
+Keyword Arguments
+-----------------
+option_1: int, default=5
+    The first configuration option
+
+solver_options: dict, optional
+
+    solver_option_1: float, default=1
+        [DEVELOPER option]
+
+        The first solver configuration option
+
+    solver_option_2: float, default=1
+        The second solver configuration option
+
+        With a very long line containing wrappable text in a long, silly
+        paragraph with little actual information.
+        #) but a bulleted list
+        #) with two bullets
+
+option_2: int, default=5
+    The second solver configuration option with a very long line
+    containing wrappable text in a long, silly paragraph with little
+    actual information."""
+        self.assertEqual(ExampleClass.__doc__, ref.lstrip())
+        self.assertEqual(ExampleClass.__init__.__doc__, "A simple docstring\n" + ref)
+
+        ref = """
+Keyword Arguments
+-----------------
+option_1: int, default=5
+    The first configuration option
+
+solver_options: dict, optional
+
+    solver_option_2: float, default=1
+        The second solver configuration option
+
+        With a very long line containing wrappable text in a long, silly
+        paragraph with little actual information.
+        #) but a bulleted list
+        #) with two bullets
+
+option_2: int, default=5
+    The second solver configuration option with a very long line
+    containing wrappable text in a long, silly paragraph with little
+    actual information."""
+        self.assertEqual(ExampleClass.fcn.__doc__, "A simple docstring\n" + ref)
+
+        ref = """
+Keyword Arguments
+-----------------
+option_1: int, default=5
+    The first configuration option
+
+solver_options: dict, optional
+
+    solver_option_2: float, default=1
+        The second solver configuration option
+
+        With a very long line containing wrappable text in a long, silly paragraph with little actual information.
+        #) but a bulleted list
+        #) with two bullets
+
+option_2: int, default=5
+    The second solver configuration option with a very long line containing wrappable text in a long, silly paragraph with little actual information."""
+        with LoggingIntercept() as LOG:
+            self.assertEqual(add_docstring_list("", ExampleClass.CONFIG), ref)
+        self.assertIn('add_docstring_list is deprecated', LOG.getvalue())
 
 if __name__ == "__main__":
     unittest.main()

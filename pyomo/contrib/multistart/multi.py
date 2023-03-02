@@ -15,7 +15,7 @@ from __future__ import division
 import logging
 
 from pyomo.common.config import (
-    ConfigBlock, ConfigValue, In, add_docstring_list
+    ConfigBlock, ConfigValue, In, document_kwargs_from_configdict
 )
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.multistart.high_conf_stop import should_stop
@@ -29,6 +29,7 @@ logger = logging.getLogger('pyomo.contrib.multistart')
 
 @SolverFactory.register('multistart',
                         doc='MultiStart solver for NLPs')
+@document_kwargs_from_configdict('CONFIG')
 class MultiStart(object):
     """Solver wrapper that initializes at multiple starting points.
 
@@ -95,8 +96,6 @@ class MultiStart(object):
         default=0,
         description="Tolerance on HCS objective value equality. Defaults to Python float equality precision."
     ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def available(self, exception_flag=True):
         """Check if solver is available.

@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 """Cut generation."""
-from __future__ import division
 from math import copysign
 from pyomo.core import minimize, value
 from pyomo.core.expr import current as EXPR
@@ -18,7 +17,14 @@ from pyomo.contrib.gdpopt.util import time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 
-def add_oa_cuts(target_model, dual_values, solve_data, config,
+def add_oa_cuts(target_model, 
+                dual_values,
+                jacobians,
+                objective_sense,
+                mip_constraint_polynomial_degree,
+                mip_iter,
+                config,
+                timing,
                 cb_opt=None,
                 linearize_active=True,
                 linearize_violated=True):
@@ -45,18 +51,18 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
     linearize_violated : bool, optional
         Whether to linearize the violated nonlinear constraints, by default True.
     """
-    with time_code(solve_data.timing, 'OA cut generation'):
+    with time_code(timing, 'OA cut generation'):
         for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
             # TODO: here the index is correlated to the duals, try if this can be fixed when temp duals are removed.
-            if constr.body.polynomial_degree() in solve_data.mip_constraint_polynomial_degree:
+            if constr.body.polynomial_degree() in mip_constraint_polynomial_degree:
                 continue
 
             constr_vars = list(EXPR.identify_variables(constr.body))
-            jacs = solve_data.jacobians
+            jacs = jacobians
 
             # Equality constraint (makes the problem nonconvex)
             if constr.has_ub() and constr.has_lb() and value(constr.lower) == value(constr.upper) and config.equality_relaxation:
-                sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+                sign_adjust = -1 if objective_sense == minimize else 1
                 rhs = constr.lower
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
@@ -66,7 +72,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                            for var in EXPR.identify_variables(constr.body))
                         + value(constr.body) - rhs)
                     - (slack_var if config.add_slack else 0) <= 0)
-                if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
+                if config.single_tree and config.mip_solver == 'gurobi_persistent' and mip_iter > 0 and cb_opt is not None:
                     cb_opt.cbLazy(
                         target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 
@@ -85,7 +91,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                               - (slack_var if config.add_slack else 0)
                               <= value(constr.upper))
                     )
-                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
+                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and mip_iter > 0 and cb_opt is not None:
                         cb_opt.cbLazy(
                             target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 
@@ -102,12 +108,12 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                               + (slack_var if config.add_slack else 0)
                               >= value(constr.lower))
                     )
-                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
+                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and mip_iter > 0 and cb_opt is not None:
                         cb_opt.cbLazy(
                             target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 
 
-def add_ecp_cuts(target_model, solve_data, config,
+def add_ecp_cuts(target_model, jacobians, config, timing,
                  linearize_active=True,
                  linearize_violated=True):
     """Linearizes nonlinear constraints. Adds the cuts for the ECP method.
@@ -125,10 +131,10 @@ def add_ecp_cuts(target_model, solve_data, config,
     linearize_violated : bool, optional
         Whether to linearize the violated nonlinear constraints, by default True.
     """
-    with time_code(solve_data.timing, 'ECP cut generation'):
+    with time_code(timing, 'ECP cut generation'):
         for constr in target_model.MindtPy_utils.nonlinear_constraint_list:
             constr_vars = list(EXPR.identify_variables(constr.body))
-            jacs = solve_data.jacobians
+            jacs = jacobians
 
             if constr.has_lb() and constr.has_ub():
                 config.logger.warning(
@@ -184,7 +190,7 @@ def add_ecp_cuts(target_model, solve_data, config,
                     )
 
 
-def add_no_good_cuts(var_values, solve_data, config):
+def add_no_good_cuts(target_model, var_values, config, timing, mip_iter=0, cb_opt=None):
     """Adds no-good cuts.
 
     This adds an no-good cuts to the no_good_cuts ConstraintList, which is not activated by default.
@@ -199,6 +205,10 @@ def add_no_good_cuts(var_values, solve_data, config):
         Data container that holds solve-instance data.
     config : ConfigBlock
         The specific configurations for MindtPy.
+    mip_iter: Int, optional
+        Mip iteration counter.
+    cb_opt : SolverFactory, optional
+        Gurobi_persistent solver, by default None.
 
     Raises
     ------
@@ -207,11 +217,11 @@ def add_no_good_cuts(var_values, solve_data, config):
     """
     if not config.add_no_good_cuts:
         return
-    with time_code(solve_data.timing, 'no_good cut generation'):
+    with time_code(timing, 'no_good cut generation'):
 
         config.logger.debug('Adding no-good cuts')
 
-        m = solve_data.mip
+        m = target_model
         MindtPy = m.MindtPy_utils
         int_tol = config.integer_tolerance
 
@@ -238,9 +248,12 @@ def add_no_good_cuts(var_values, solve_data, config):
                        if value(abs(v)) <= int_tol) >= 1)
 
         MindtPy.cuts.no_good_cuts.add(expr=int_cut)
+        if config.single_tree and config.mip_solver == 'gurobi_persistent' and mip_iter > 0 and cb_opt is not None:
+            cb_opt.cbLazy(
+                target_model.MindtPy_utils.cuts.no_good_cuts[len(target_model.MindtPy_utils.cuts.no_good_cuts)])
 
 
-def add_affine_cuts(solve_data, config):
+def add_affine_cuts(target_model, config, timing):
     """Adds affine cuts using MCPP.
 
     Parameters
@@ -250,8 +263,8 @@ def add_affine_cuts(solve_data, config):
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
-    with time_code(solve_data.timing, 'Affine cut generation'):
-        m = solve_data.mip
+    with time_code(timing, 'Affine cut generation'):
+        m = target_model
         config.logger.debug('Adding affine cuts')
         counter = 0
 

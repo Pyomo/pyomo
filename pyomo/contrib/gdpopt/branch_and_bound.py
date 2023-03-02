@@ -14,7 +14,7 @@ from heapq import heappush, heappop
 import traceback
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import add_docstring_list
+from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
@@ -68,6 +68,11 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
     _add_BB_configs(CONFIG)
 
     algorithm = 'LBB'
+
+    # Override solve() to customize the docstring for this solver
+    @document_kwargs_from_configdict(CONFIG, doc=_GDPoptAlgorithm.solve.__doc__)
+    def solve(self, model, **kwds):
+        return super().solve(model, **kwds)
 
     def _log_citation(self, config):
         config.logger.info("\n" + """- LBB algorithm:
@@ -523,6 +528,3 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 config=config, ignore_integrality=True
             )
             return float('-inf'), float('inf')
-
-GDP_LBB_Solver.solve.__doc__ = add_docstring_list(
-    GDP_LBB_Solver.solve.__doc__, GDP_LBB_Solver.CONFIG, indent_by=8)

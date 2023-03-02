@@ -12,12 +12,12 @@
 import pyomo.environ as pyo
 from pyomo.common.dependencies import (
     networkx_available,
+    plotly_available,
     scipy_available,
-    attempt_import,
 )
-plotly, plotly_available = attempt_import("plotly")
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
+    asl_available,
     IncidenceGraphInterface,
     get_structural_incidence_matrix,
     get_numeric_incidence_matrix,
@@ -26,7 +26,9 @@ from pyomo.contrib.incidence_analysis.interface import (
     extract_bipartite_subgraph,
 )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.triangularize import (
+    map_coords_to_block_triangular_indices,
+)
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
 )
@@ -40,14 +42,13 @@ if scipy_available:
 if networkx_available:
     import networkx as nx
     from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
-from pyomo.contrib.pynumero.asl import AmplInterface
 
 import pyomo.common.unittest as unittest
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
     """
     This class tests the get_numeric_incidence_matrix function on
@@ -248,7 +249,7 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
         con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
-        row_block_map, col_block_map = block_triangularize(imat)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(imat)
         var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
                 for v in variables)
         con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
@@ -404,7 +405,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
         con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
-        row_block_map, col_block_map = block_triangularize(imat)
+        row_block_map, col_block_map = map_coords_to_block_triangular_indices(imat)
         var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
                 for v in variables)
         con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
@@ -432,7 +433,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
     # In these tests, we pass the interface a PyomoNLP and cache
     # its Jacobian.
@@ -498,8 +499,56 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
+        N = 5
+        model = make_gas_expansion_model(N)
+        model.obj = pyo.Objective(expr=0)
+        nlp = PyomoNLP(model)
+        igraph = IncidenceGraphInterface(nlp)
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
@@ -525,13 +574,13 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
         nlp = PyomoNLP(model)
         igraph = IncidenceGraphInterface(nlp)
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.maximum_matching(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.block_triangularize(variables, constraints)
@@ -539,7 +588,6 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
     # In these tests we pass a model to the interface and are caching a
     # structural incidence matrix.
@@ -599,8 +647,58 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
+        """
+        This tests the maps from variables and constraints to their diagonal
+        blocks returned by map_nodes_to_block_triangular_indices
+        """
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface(model)
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
@@ -621,7 +719,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
                 self.assertEqual(con_block_map[model.ebal[i]], i)
 
     def test_triangularize_submatrix(self):
-        # This test exercises the extraction of a somewhat nontrivial
+        # This test exercises triangularization of a somewhat nontrivial
         # submatrix from a cached incidence matrix.
         N = 5
         model = make_gas_expansion_model(N)
@@ -646,8 +744,64 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         constraints.extend(model.ebal[i] for i in model.streams
                 if i > half)
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
+        self.assertEqual(len(partition), (N-half)+1)
+
+        for i in model.streams:
+            idx = i - half
+            variables = ComponentSet([var for var, _ in partition[idx]])
+            constraints = ComponentSet([con for _, con in partition[idx]])
+            if i == half:
+                self.assertEqual(variables, ComponentSet([model.P[half]]))
+            elif i > half:
+                pred_var = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_con = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(variables, pred_var)
+                self.assertEqual(constraints, pred_con)
+
+    def test_maps_from_triangularization_submatrix(self):
+        # This test exercises the var/con-block-maps obtained from
+        # triangularization of a somewhat nontrivial submatrix from a cached
+        # incidence matrix.
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface(model)
+
+        # These are the variables and constraints of a square,
+        # nonsingular subsystem
+        variables = []
+        half = N//2
+        variables.extend(model.P[i] for i in model.streams if i >= half)
+        variables.extend(model.T[i] for i in model.streams if i > half)
+        variables.extend(model.rho[i] for i in model.streams if i > half)
+        variables.extend(model.F[i] for i in model.streams if i > half)
+
+        constraints = []
+        constraints.extend(model.ideal_gas[i] for i in model.streams
+                if i >= half)
+        constraints.extend(model.expansion[i] for i in model.streams
+                if i > half)
+        constraints.extend(model.mbal[i] for i in model.streams
+                if i > half)
+        constraints.extend(model.ebal[i] for i in model.streams
+                if i > half)
+
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), (N-half)+1)
@@ -672,18 +826,19 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         model = make_gas_expansion_model()
         igraph = IncidenceGraphInterface(model)
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.maximum_matching(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(RuntimeError) as exc:
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.block_triangularize(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_remove(self):
         model = make_gas_expansion_model()
         igraph = IncidenceGraphInterface(model)
@@ -727,7 +882,6 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
     # In these tests we do not cache anything and use the interface
     # simply as a convenient wrapper around the analysis functions,
@@ -790,8 +944,54 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_block_map, con_block_map = igraph.block_triangularize(
-                variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(
+            variables, constraints
+        )
+        partition = [
+            list(zip(vblock, cblock))
+            for vblock, cblock in zip(var_blocks, con_blocks)
+        ]
+        self.assertEqual(len(partition), N+1)
+
+        for i in model.streams:
+            variables = ComponentSet([var for var, _ in partition[i]])
+            constraints = ComponentSet([con for _, con in partition[i]])
+            if i == model.streams.first():
+                self.assertEqual(variables, ComponentSet([model.P[0]]))
+            else:
+                pred_vars = ComponentSet([
+                    model.rho[i], model.T[i], model.P[i], model.F[i]
+                ])
+                pred_cons = ComponentSet([
+                    model.ideal_gas[i],
+                    model.expansion[i],
+                    model.mbal[i],
+                    model.ebal[i],
+                ])
+                self.assertEqual(pred_vars, variables)
+                self.assertEqual(pred_cons, constraints)
+
+    def test_maps_from_triangularization(self):
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface()
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
+            variables, constraints
+        )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
         self.assertEqual(len(var_values), N+1)
@@ -832,8 +1032,8 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         var_blocks, con_blocks = igraph.get_diagonal_blocks(
             variables, constraints
         )
-        self.assertIs(igraph.row_block_map, None)
-        self.assertIs(igraph.col_block_map, None)
+        #self.assertIs(igraph.row_block_map, None)
+        #self.assertIs(igraph.col_block_map, None)
         self.assertEqual(len(var_blocks), N+1)
         self.assertEqual(len(con_blocks), N+1)
 
@@ -861,6 +1061,7 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
                 self.assertEqual(pred_con_set, con_set)
 
     def test_diagonal_blocks_with_cached_maps(self):
+        # NOTE: This functionality has been deprecated.
         N = 5
         model = make_gas_expansion_model(N)
         igraph = IncidenceGraphInterface()
@@ -882,37 +1083,13 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         var_blocks, con_blocks = igraph.get_diagonal_blocks(
             variables, constraints
         )
-        self.assertIsNot(igraph.row_block_map, None)
-        self.assertIsNot(igraph.col_block_map, None)
-        self.assertEqual(len(var_blocks), N+1)
-        self.assertEqual(len(con_blocks), N+1)
-
-        for i, (vars, cons) in enumerate(zip(var_blocks, con_blocks)):
-            var_set = ComponentSet(vars)
-            con_set = ComponentSet(cons)
-
-            if i == 0:
-                pred_var_set = ComponentSet([model.P[0]])
-                self.assertEqual(pred_var_set, var_set)
-                pred_con_set = ComponentSet([model.ideal_gas[0]])
-                self.assertEqual(pred_con_set, con_set)
-
-            else:
-                pred_var_set = ComponentSet([
-                    model.rho[i], model.T[i], model.P[i], model.F[i]
-                ])
-                pred_con_set = ComponentSet([
-                    model.ideal_gas[i],
-                    model.expansion[i],
-                    model.mbal[i],
-                    model.ebal[i],
-                ])
-                self.assertEqual(pred_var_set, var_set)
-                self.assertEqual(pred_con_set, con_set)
+        # NOTE: row/col_block_map have been deprecated.
+        # However, they still return None for now.
+        self.assertIs(igraph.row_block_map, None)
+        self.assertIs(igraph.col_block_map, None)
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestDulmageMendelsohnInterface(unittest.TestCase):
 
     def test_degenerate_solid_phase_model(self):
@@ -988,6 +1165,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for con in dmp_cons_over:
             self.assertIn(con, overconstrained_cons)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_incidence_graph(self):
         m = make_degenerate_solid_phase_model()
         variables = list(m.component_data_objects(pyo.Var))
@@ -1038,6 +1216,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for con in con_dmp[0]+con_dmp[1]:
             self.assertIn(con, overconstrained_cons)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_remove(self):
         m = make_degenerate_solid_phase_model()
         variables = list(m.component_data_objects(pyo.Var))
@@ -1076,7 +1255,6 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestConnectedComponents(unittest.TestCase):
 
     def test_dynamic_model_backward(self):
@@ -1103,14 +1281,8 @@ class TestConnectedComponents(unittest.TestCase):
 
         # The variables in these blocks need to be sorted by their coordinates
         # in the underlying incidence matrix
-        var_idx_map = ComponentMap(
-            (var, i) for i, var in enumerate(igraph.variables)
-        )
-        con_idx_map = ComponentMap(
-            (con, i) for i, con in enumerate(igraph.constraints)
-        )
-        var_key = lambda var: var_idx_map[var]
-        con_key = lambda con: con_idx_map[con]
+        var_key = lambda var: igraph.get_matrix_coord(var)
+        con_key = lambda con: igraph.get_matrix_coord(con)
         var_blocks = [
             tuple(sorted(t0_vars, key=var_key)),
             tuple(sorted(
@@ -1170,10 +1342,10 @@ class TestExtraVars(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestExceptions(unittest.TestCase):
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_nlp_fixed_error(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1185,6 +1357,8 @@ class TestExceptions(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fixed variables"):
             igraph = IncidenceGraphInterface(nlp, include_fixed=True)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_nlp_active_error(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1205,7 +1379,6 @@ class TestExceptions(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestIncludeInequality(unittest.TestCase):
     def make_model_with_inequalities(self):
         m = make_degenerate_solid_phase_model()
@@ -1230,6 +1403,7 @@ class TestIncludeInequality(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, include_inequality=True)
         self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
 
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_dont_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
@@ -1237,6 +1411,7 @@ class TestIncludeInequality(unittest.TestCase):
         igraph = IncidenceGraphInterface(nlp, include_inequality=False)
         self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
 
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
@@ -1246,7 +1421,6 @@ class TestIncludeInequality(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGetIncidenceGraph(unittest.TestCase):
 
     def make_test_model(self):
@@ -1408,7 +1582,6 @@ class TestGetIncidenceGraph(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGetAdjacent(unittest.TestCase):
 
     def test_get_adjacent_to_var(self):
@@ -1454,7 +1627,6 @@ class TestGetAdjacent(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestInterface(unittest.TestCase):
 
     def test_subgraph_with_fewer_var_or_con(self):

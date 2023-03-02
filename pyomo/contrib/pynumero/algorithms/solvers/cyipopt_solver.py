@@ -148,13 +148,7 @@ _ipopt_term_cond = {
     'Internal_Error': TerminationCondition.internalSolverError,
 }
 
-class CyIpoptProblemInterface(object, metaclass=abc.ABCMeta):
-    def __init__(self):
-        # We allow this object to know about the cyipopt.Problem it is
-        # associated with. This way, the Problem and its methods may be accessed
-        # e.g. during an intermediate callback.
-        self.__cyipopt_problem = None
-
+class CyIpoptProblemInterface(cyipopt.Problem, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def x_init(self):
         """Return the initial values for x as a numpy ndarray
@@ -280,8 +274,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         provides the interface between AmplNLP or PyomoNLP objects
         and the CyIpoptSolver
         """
-        # call super.__init__ to initialize cyipopt_problem
-        super(CyIpoptNLP, self).__init__()
         self._nlp = nlp
         self._intermediate_callback = intermediate_callback
 
@@ -308,6 +300,22 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             self._hessian_available = False
             self._hess_lag = None
             self._hess_lower_mask = None
+
+        # Call cyipopt.Problem.__init__
+        xl = self.x_lb()
+        xu = self.x_ub()
+        gl = self.g_lb()
+        gu = self.g_ub()
+        nx = len(x)
+        ng = len(gl)
+        super().__init__(
+            n=nx,
+            m=ng,
+            lb=xl,
+            ub=xu,
+            cl=gl,
+            cu=gu
+        )
 
     def _set_primals_if_necessary(self, x):
         if not np.array_equal(x, self._cached_x):
@@ -438,30 +446,11 @@ class CyIpoptSolver(object):
             self._options = dict()
 
     def solve(self, x0=None, tee=False):
-        xl = self._problem.x_lb()
-        xu = self._problem.x_ub()
-        gl = self._problem.g_lb()
-        gu = self._problem.g_ub()
-
         if x0 is None:
             x0 = self._problem.x_init()
         xstart = x0
 
-        nx = len(xstart)
-        ng = len(gl)
-
-        cyipopt_solver = cyipopt.Problem(
-            n=nx,
-            m=ng,
-            problem_obj=self._problem,
-            lb=xl,
-            ub=xu,
-            cl=gl,
-            cu=gu
-        )
-        # Attach cyipopt.Problem to the interface so we can use its methods,
-        # e.g. during an intermediate callback
-        self._problem.set_cyipopt_problem(cyipopt_solver)
+        cyipopt_solver = self._problem
 
         # check if we need scaling
         obj_scaling, x_scaling, g_scaling = self._problem.scaling_factors()
@@ -585,26 +574,9 @@ class PyomoCyIpoptSolver(object):
 
         problem = CyIpoptNLP(nlp, intermediate_callback=config.intermediate_callback)
 
-        xl = problem.x_lb()
-        xu = problem.x_ub()
-        gl = problem.g_lb()
-        gu = problem.g_ub()
-
-        nx = len(xl)
-        ng = len(gl)
-
-        cyipopt_solver = cyipopt.Problem(
-            n=nx,
-            m=ng,
-            problem_obj=problem,
-            lb=xl,
-            ub=xu,
-            cl=gl,
-            cu=gu
-        )
-        # Attach cyipopt.Problem to the interface so we can use its methods,
-        # e.g. during an intermediate callback
-        problem.set_cyipopt_problem(cyipopt_solver)
+        ng = len(problem.g_lb())
+        nx = len(problem.x_lb())
+        cyipopt_solver = problem
 
         # check if we need scaling
         obj_scaling, x_scaling, g_scaling = problem.scaling_factors()

@@ -13,7 +13,7 @@ from collections import namedtuple
 from math import copysign
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import add_docstring_list
+from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
@@ -59,6 +59,11 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     _add_tolerance_configs(CONFIG)
 
     algorithm = 'LOA'
+
+    # Override solve() to customize the docstring for this solver
+    @document_kwargs_from_configdict(CONFIG, doc=_GDPoptAlgorithm.solve.__doc__)
+    def solve(self, model, **kwds):
+        return super().solve(model, **kwds)
 
     def _log_citation(self, config):
         config.logger.info("\n" + """- LOA algorithm:
@@ -275,6 +280,3 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 jacobian.jac.clear()
 
         config.logger.debug('Added %s OA cuts' % counter)
-
-GDP_LOA_Solver.solve.__doc__ = add_docstring_list(
-    GDP_LOA_Solver.solve.__doc__, GDP_LOA_Solver.CONFIG, indent_by=8)

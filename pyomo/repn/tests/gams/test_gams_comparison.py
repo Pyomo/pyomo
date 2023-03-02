@@ -37,9 +37,9 @@ deleteFiles = True
 invalidlist = []
 validlist = []
 
-invalid_tests = {'small14',}
+invalid_tests = {'small14'}
 for f in glob.glob(join(datadir, '*_testCase.py')):
-    name = re.split('[._]',os.path.basename(f))[0]
+    name = re.split('[._]', os.path.basename(f))[0]
     if name in invalid_tests:
         # Create some list
         invalidlist.append((name, datadir))
@@ -47,15 +47,14 @@ for f in glob.glob(join(datadir, '*_testCase.py')):
         validlist.append((name, datadir))
 
 for f in glob.glob(join(currdir, '*_testCase.py')):
-    name = re.split('[._]',os.path.basename(f))[0]
+    name = re.split('[._]', os.path.basename(f))[0]
     validlist.append((name, currdir))
 
 
 class Tests(unittest.TestCase):
-
     def pyomo(self, cmd):
         os.chdir(currdir)
-        output = main.main(['convert', '--logging=quiet', '-c']+cmd)
+        output = main.main(['convert', '--logging=quiet', '-c'] + cmd)
         return output
 
     def setUp(self):
@@ -73,11 +72,9 @@ class BaselineTests(Tests):
 
     @parameterized.parameterized.expand(input=validlist)
     def gams_writer_baseline_test(self, name, targetdir):
-        baseline = join(currdir, name+'.pyomo.gms')
-        testFile = TempfileManager.create_tempfile(
-            suffix=name + '.test.gms')
-        cmd = ['--output=' + testFile,
-               join(targetdir, name + '_testCase.py')]
+        baseline = join(currdir, name + '.pyomo.gms')
+        testFile = TempfileManager.create_tempfile(suffix=name + '.test.gms')
+        cmd = ['--output=' + testFile, join(targetdir, name + '_testCase.py')]
         if os.path.exists(join(targetdir, name + '.dat')):
             cmd.append(join(targetdir, name + '.dat'))
         self.pyomo(cmd)
@@ -90,19 +87,18 @@ class BaselineTests(Tests):
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
                 self.assertEqual(
-                    f1_contents, f2_contents,
-                    "\n\nbaseline: %s\ntestFile: %s\n" % (baseline, testFile)
+                    f1_contents,
+                    f2_contents,
+                    "\n\nbaseline: %s\ntestFile: %s\n" % (baseline, testFile),
                 )
-
 
     @parameterized.parameterized.expand(input=invalidlist)
     def gams_writer_test_invalid(self, name, targetdir):
         with self.assertRaisesRegex(
-                RuntimeError, "GAMS files cannot represent the unary function"):
-            testFile = TempfileManager.create_tempfile(
-                suffix=name + '.test.gms')
-            cmd = ['--output=' + testFile,
-                   join(targetdir, name + '_testCase.py')]
+            RuntimeError, "GAMS files cannot represent the unary function"
+        ):
+            testFile = TempfileManager.create_tempfile(suffix=name + '.test.gms')
+            cmd = ['--output=' + testFile, join(targetdir, name + '_testCase.py')]
             if os.path.exists(join(targetdir, name + '.dat')):
                 cmd.append(join(targetdir, name + '.dat'))
             self.pyomo(cmd)
