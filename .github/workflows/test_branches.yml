@@ -807,6 +807,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         files: coverage.xml
+        token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
         fail_ci_if_error: true
@@ -818,6 +819,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         files: coverage-other.xml
+        token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
         fail_ci_if_error: true
