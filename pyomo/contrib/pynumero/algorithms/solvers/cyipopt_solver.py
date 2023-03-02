@@ -148,7 +148,7 @@ _ipopt_term_cond = {
     'Internal_Error': TerminationCondition.internalSolverError,
 }
 
-class CyIpoptProblemInterface(object, metaclass=abc.ABCMeta):
+class CyIpoptProblemInterface(cyipopt.Problem, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def x_init(self):
         """Return the initial values for x as a numpy ndarray
@@ -293,6 +293,22 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             self._hess_lag = None
             self._hess_lower_mask = None
 
+        # Call cyipopt.Problem.__init__
+        xl = self.x_lb()
+        xu = self.x_ub()
+        gl = self.g_lb()
+        gu = self.g_ub()
+        nx = len(x)
+        ng = len(gl)
+        super().__init__(
+            n=nx,
+            m=ng,
+            lb=xl,
+            ub=xu,
+            cl=gl,
+            cu=gu
+        )
+
     def _set_primals_if_necessary(self, x):
         if not np.array_equal(x, self._cached_x):
             self._nlp.set_primals(x)
@@ -407,27 +423,10 @@ class CyIpoptSolver(object):
             self._options = dict()
 
     def solve(self, x0=None, tee=False):
-        xl = self._problem.x_lb()
-        xu = self._problem.x_ub()
-        gl = self._problem.g_lb()
-        gu = self._problem.g_ub()
-
         if x0 is None:
             x0 = self._problem.x_init()
         xstart = x0
-
-        nx = len(xstart)
-        ng = len(gl)
-
-        cyipopt_solver = cyipopt.Problem(
-            n=nx,
-            m=ng,
-            problem_obj=self._problem,
-            lb=xl,
-            ub=xu,
-            cl=gl,
-            cu=gu
-        )
+        cyipopt_solver = self._problem
 
         # check if we need scaling
         obj_scaling, x_scaling, g_scaling = self._problem.scaling_factors()
@@ -550,24 +549,9 @@ class PyomoCyIpoptSolver(object):
             nlp = pyomo_nlp.PyomoNLP(model)
 
         problem = CyIpoptNLP(nlp, intermediate_callback=config.intermediate_callback)
-
-        xl = problem.x_lb()
-        xu = problem.x_ub()
-        gl = problem.g_lb()
-        gu = problem.g_ub()
-
-        nx = len(xl)
-        ng = len(gl)
-
-        cyipopt_solver = cyipopt.Problem(
-            n=nx,
-            m=ng,
-            problem_obj=problem,
-            lb=xl,
-            ub=xu,
-            cl=gl,
-            cu=gu
-        )
+        ng = len(problem.g_lb())
+        nx = len(problem.x_lb())
+        cyipopt_solver = problem
 
         # check if we need scaling
         obj_scaling, x_scaling, g_scaling = problem.scaling_factors()
