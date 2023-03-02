@@ -257,13 +257,6 @@ class CyIpoptProblemInterface(cyipopt.Problem, metaclass=abc.ABCMeta):
         # Note that this call signature is defined by CyIpopt.
         pass
 
-    @property
-    def cyipopt_problem(self):
-        return self.__cyipopt_problem
-
-    def set_cyipopt_problem(self, problem):
-        self.__cyipopt_problem = problem
-
 
 class CyIpoptNLP(CyIpoptProblemInterface):
     def __init__(self, nlp, intermediate_callback=None):
@@ -413,7 +406,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             # potentially the cyipopt.Problem object itself.
             return self._intermediate_callback(
                 self._nlp,
-                self.cyipopt_problem,
+                self,
                 alg_mod,
                 iter_count,
                 obj_value,
