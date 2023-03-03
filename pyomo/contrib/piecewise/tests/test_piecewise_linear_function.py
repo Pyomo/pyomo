@@ -9,6 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from io import StringIO
+import pickle
+
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
@@ -151,6 +154,25 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
                                        linear_functions=silly_linear_func_rule)
         self.check_x_squared_approx(m.pw[1], m.z[1])
         self.check_x_squared_approx(m.pw[2], m.z[2])
+
+    def test_pickle(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=m.f)
+        m.c = Constraint(expr=m.pw(m.x) >= 0.35)
+
+        # pickle and unpickle
+        unpickle = pickle.loads(pickle.dumps(m))
+
+        # Check that the pprint is equal
+        m_buf = StringIO()
+        m.pprint(ostream=m_buf)
+        m_output = m_buf.getvalue()
+
+        unpickle_buf = StringIO()
+        unpickle.pprint(ostream=unpickle_buf)
+        unpickle_output = unpickle_buf.getvalue()
+        self.assertMultiLineEqual(m_output, unpickle_output)
+
 
 class TestPiecewiseLinearFunction3D(unittest.TestCase):
     simplices = [[(0, 1), (0, 4), (3, 4)],

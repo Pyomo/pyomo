@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.autoslots import AutoSlots
 from pyomo.core.expr.numeric_expr import NumericExpression
 from weakref import ref as weakref_ref
 
@@ -24,7 +25,8 @@ class PiecewiseLinearExpression(NumericExpression):
         index (non-negative int): this expression's index in the parent's
             '_expressions' object (which is an indexed Expression)
     """
-    __slots__ = ('_parent_pw_linear_function',)
+    __autoslot_mappers__ = {'_parent_pw_linear_function':
+                            AutoSlots.weakref_mapper}
 
     def __init__(self, args, parent):
         super().__init__(args)
