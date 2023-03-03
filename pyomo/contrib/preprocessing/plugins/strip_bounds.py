@@ -12,7 +12,11 @@
 """Transformation to strip variable bounds from a model."""
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    document_kwargs_from_configdict,
+)
 from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.base.var import Var
 from pyomo.core.base.set_types import Reals
@@ -21,6 +25,7 @@ from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
 @TransformationFactory.register('contrib.strip_var_bounds',
           doc="Strip bounds from varaibles.")
+@document_kwargs_from_configdict('CONFIG')
 class VariableBoundStripper(NonIsomorphicTransformation):
     """Strip bounds from variables.
 
@@ -39,8 +44,6 @@ class VariableBoundStripper(NonIsomorphicTransformation):
         description="Whether the bound stripping will be temporary. "
         "If so, store information for reversion."
     ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds)

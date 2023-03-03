@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.config import add_docstring_list
+from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
@@ -47,6 +47,11 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     _add_oa_configs(CONFIG)
 
     algorithm = 'RIC'
+
+    # Override solve() to customize the docstring for this solver
+    @document_kwargs_from_configdict(CONFIG, doc=_GDPoptAlgorithm.solve.__doc__)
+    def solve(self, model, **kwds):
+        return super().solve(model, **kwds)
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -93,6 +98,3 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                                       objective_sense, config, timing):
         # Nothing to do here
         pass
-
-GDP_RIC_Solver.solve.__doc__ = add_docstring_list(
-    GDP_RIC_Solver.solve.__doc__, GDP_RIC_Solver.CONFIG, indent_by=8)

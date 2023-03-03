@@ -86,8 +86,10 @@ class _GDPoptAlgorithm():
     def solve(self, model, **kwds):
         """Solve the model.
 
-        Args:
-            model (Block): a Pyomo model or block to be solved
+        Parameters
+        ----------
+        model : Block
+            the Pyomo model or block to be solved
 
         """
         # I'm going to be nice for now and intercept with a more informative

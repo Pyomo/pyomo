@@ -17,6 +17,7 @@ from pyomo.common.dependencies import (
     scipy_available,
     numpy as np,
     numpy_available,
+    networkx_available,
 )
 from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
@@ -301,6 +302,7 @@ class TestImplicitFunctionSolver(_TestSolver):
         self._test_implicit_function_with_extra_variables()
 
 
+@unittest.skipUnless(networkx_available, "NetworkX is not available")
 class TestSccImplicitFunctionSolver(_TestSolver):
 
     def get_solver_class(self):
