@@ -1160,42 +1160,6 @@ def _categorize_arg_types(*args):
     return tuple(_categorize_arg_type(arg) for arg in args)
 
 
-def _process_arg(obj):
-    # Note: caller is responsible for filtering out native types and
-    # expressions
-    if obj.__class__ in native_numeric_types:
-        return obj
-    if not hasattr(obj, 'is_numeric_type'):
-        # We will assume that anything implementing is_numeric_type is
-        # implementing the PyomoObject API
-        return NotImplemented
-    if not obj.is_numeric_type():
-        if hasattr(obj, 'as_binary'):
-            # We assume non-numeric types that have an as_binary method
-            # are instances of AutoLinkedBooleanVar.  Calling as_binary
-            # will return a valid Binary Var (and issue the appropriate
-            # deprecation warning)
-            obj = obj.as_binary()
-        else:
-            # User assistance: provide a helpful exception when using an
-            # indexed object in an expression
-            if obj.is_component_type() and obj.is_indexed():
-                raise TypeError(
-                    "Argument for expression is an indexed numeric "
-                    "value\nspecified without an index:\n\t%s\nIs this "
-                    "value defined over an index that you did not specify?"
-                    % (obj.name, ) )
-
-            raise TypeError(
-                "Attempting to use a non-numeric type (%s) in a "
-                "numeric context." % (obj.__class__.__name__,))
-    elif obj.is_constant():
-        # Resolve constants (e.g., immutable scalar Params & NumericConstants)
-        return value(obj)
-    return obj
-
-
-
 def _invalid(*args):
     return NotImplemented
 

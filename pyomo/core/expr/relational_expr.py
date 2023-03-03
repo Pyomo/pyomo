@@ -22,7 +22,6 @@ from .numvalue import (
     native_numeric_types, is_potentially_variable, is_constant, value,
     check_if_numeric_type
 )
-from .numeric_expr import _process_arg
 from .visitor import polynomial_degree
 
 #-------------------------------------------------------
