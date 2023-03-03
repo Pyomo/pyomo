@@ -57,6 +57,11 @@ cyipopt, cyipopt_available = attempt_import(
      importer=_cyipopt_importer,
 )
 
+# If cyipopt is not available, we will use object as our base class for
+# CyIpoptProblemInterface so we don't require cyipopt to import from
+# this file.
+cyipopt_Problem = cyipopt.Problem if cyipopt_available else object
+
 # Because pynumero.interfaces requires numpy, we will leverage deferred
 # imports here so that the solver can be registered even when numpy is
 # not available.
@@ -148,7 +153,36 @@ _ipopt_term_cond = {
     'Internal_Error': TerminationCondition.internalSolverError,
 }
 
-class CyIpoptProblemInterface(cyipopt.Problem, metaclass=abc.ABCMeta):
+class CyIpoptProblemInterface(cyipopt_Problem, metaclass=abc.ABCMeta):
+    def __init__(self):
+        """Initialize the problem interface
+
+        This method calls ``cyipopt.Problem.__init__``, and *must* be called
+        by any subclass's ``__init__`` method. If not, we will segfault when
+        we call ``cyipopt.Problem.solve`` from this object.
+
+        """
+        if not cyipopt_available:
+            raise RuntimeError(
+                "cyipopt is required to instantiate CyIpoptProblemInterface"
+            )
+
+        # Call cyipopt.Problem.__init__
+        xl = self.x_lb()
+        xu = self.x_ub()
+        gl = self.g_lb()
+        gu = self.g_ub()
+        nx = len(xl)
+        ng = len(gl)
+        super(CyIpoptProblemInterface, self).__init__(
+            n=nx,
+            m=ng,
+            lb=xl,
+            ub=xu,
+            cl=gl,
+            cu=gu
+        )
+
     @abc.abstractmethod
     def x_init(self):
         """Return the initial values for x as a numpy ndarray
@@ -293,21 +327,9 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             self._hess_lag = None
             self._hess_lower_mask = None
 
-        # Call cyipopt.Problem.__init__
-        xl = self.x_lb()
-        xu = self.x_ub()
-        gl = self.g_lb()
-        gu = self.g_ub()
-        nx = len(x)
-        ng = len(gl)
-        super().__init__(
-            n=nx,
-            m=ng,
-            lb=xl,
-            ub=xu,
-            cl=gl,
-            cu=gu
-        )
+        # Call CyIpoptProblemInterface.__init__, which calls
+        # cyipopt.Problem.__init__
+        super(CyIpoptNLP, self).__init__()
 
     def _set_primals_if_necessary(self, x):
         if not np.array_equal(x, self._cached_x):

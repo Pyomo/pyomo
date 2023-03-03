@@ -257,21 +257,9 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
         # currently, this interface does not do anything with Hessians
 
-        # Call cyipopt.Problem.__init__
-        xl = self.x_lb()
-        xu = self.x_ub()
-        gl = self.g_lb()
-        gu = self.g_ub()
-        nx = len(xl)
-        ng = len(gl)
-        super(CyIpoptProblemInterface, self).__init__(
-            n=nx,
-            m=ng,
-            lb=xl,
-            ub=xu,
-            cl=gl,
-            cu=gu
-        )
+        # Call CyIpoptProblemInterface.__init__, which calls
+        # cyipopt.Problem.__init__
+        super(PyomoExternalCyIpoptProblem, self).__init__()
 
     def load_x_into_pyomo(self, primals):
         """
