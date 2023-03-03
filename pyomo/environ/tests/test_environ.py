@@ -20,9 +20,8 @@ from collections import namedtuple
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.dependencies import (
-    numpy_available, attempt_import, cyipopt_available
-)
+from pyomo.common.dependencies import numpy_available, attempt_import
+cyipopt, cyipopt_available = attempt_import('cyipopt')
 pyro4, pyro4_available = attempt_import('Pyro4')
 
 class ImportData(object):
