@@ -39,6 +39,9 @@ class PiecewiseLinearExpression(NumericExpression):
     def pw_linear_function(self):
         return self._pw_linear_function()
 
+    def create_node_with_local_data(self, args):
+        return self.__class__(args, pw_linear_function=self.pw_linear_function)
+
     def _to_string(self, values, verbose, smap):
         return "%s(%s)" % (str(self.pw_linear_function), ', '.join(values))
 
