@@ -61,7 +61,6 @@ class InnerRepresentationGDPTransformation(Transformation):
         domain=target_list,
         description="target or list of targets that will be transformed",
         doc="""
-
         This specifies the list of components to transform. If None (default),
         the entire model is transformed. Note that if the transformation is
         done out of place, the list of targets should be attached to the model
@@ -76,7 +75,6 @@ class InnerRepresentationGDPTransformation(Transformation):
         "all PiecewiseLinearFunctions are on the active tree(s) of 'instance' "
         "and 'targets.'",
         doc="""
-
         It is *strongly* recommended that, in hierarchical models, the
         PiecewiseLinearFunction components are on the same Block as where
         they are used in expressions. If you follow this recommendation,

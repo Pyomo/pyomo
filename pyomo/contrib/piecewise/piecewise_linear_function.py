@@ -156,7 +156,7 @@ class PiecewiseLinearFunction(Block):
     _ComponentDataClass = PiecewiseLinearFunctionData
 
     def __new__(cls, *args, **kwds):
-        if cls != PiecewiseLinearFunction:
+        if cls is not PiecewiseLinearFunction:
             return super(PiecewiseLinearFunction, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return PiecewiseLinearFunction.__new__(
@@ -239,7 +239,7 @@ class PiecewiseLinearFunction(Block):
                                                            nonlinear_function)
 
     def _construct_from_univariate_function_and_segments(self, obj, func):
-        # [ESJ 1/21/23]: See this blog post about why tje below is necessary:
+        # [ESJ 1/21/23]: See this blog post about why the below is necessary:
         # https://eev.ee/blog/2011/04/24/gotcha-python-scoping-closures/
         # Basically, Python scoping is such a disaster that if we directly
         # declare the lambda function in the loop, their defintions will

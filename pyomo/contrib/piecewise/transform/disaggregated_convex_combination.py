@@ -25,10 +25,10 @@ class DisaggregatedConvexCombinationTransformation(Transformation):
 
     References
     ----------
-        [1] J.P. Vielma, S. Ahmed, and G. Nemhauser, "Mixed-integer models
-            for nonseparable piecewise-linear optimization: unifying framework
-            and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
-            2010.
+    [1] J.P. Vielma, S. Ahmed, and G. Nemhauser, "Mixed-integer models
+        for nonseparable piecewise-linear optimization: unifying framework
+        and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
+        2010.
     """
     def _apply_to(self, instance, **kwds):
         TransformationFactory('contrib.inner_repn_gdp').apply_to(instance)
