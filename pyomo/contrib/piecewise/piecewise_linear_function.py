@@ -10,7 +10,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies.scipy import spatial
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression)
 from pyomo.core import Any, NonNegativeIntegers, value, Var
@@ -21,10 +22,6 @@ from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import UnindexedComponent_set
 from pyomo.core.base.initializer import Initializer
 import pyomo.core.expr.current as EXPR
-
-np, numpy_available = attempt_import('numpy')
-scipy, scipy_available = attempt_import('scipy')
-spatial, scipy_available = attempt_import('scipy.spatial')
 
 # This is the default absolute tolerance in np.isclose... Not sure if it's
 # enough, but we need to make sure that 'barely negative' values are assumed to
@@ -86,15 +83,11 @@ class PiecewiseLinearFunctionData(_BlockData):
         for j, extreme_point in enumerate(simplex):
             for i, coord in enumerate(self._points[extreme_point]):
                 A[i, j] = coord
-        try:
+        if np.linalg.det(A) == 0:
+            # A is singular, so the system has no solutions
+            return False
+        else:
             lambdas = np.linalg.solve(A, b)
-        except np.linalg.LinAlgError as e:
-            if 'Singular' in str(e):
-                # It's singular
-                return False
-            else:
-                # This would be a bug (non-square system)
-                raise
         for l in lambdas:
             if l < -ZERO_TOLERANCE:
                 return False
