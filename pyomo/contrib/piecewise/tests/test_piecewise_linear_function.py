@@ -252,7 +252,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
 
         m.c = Constraint(expr=m.pw(m.x1, m.x2) <= 5)
         self.assertEqual(str(m.c.body.expr), "pw(x1, x2)")
-        self.assertIs(m.c.body.expr.parent_pw_linear_function, m.pw)
+        self.assertIs(m.c.body.expr.pw_linear_function, m.pw)
 
     @unittest.skipUnless(numpy_available, "numpy are not available")
     def test_evaluate_pw_linear_function(self):

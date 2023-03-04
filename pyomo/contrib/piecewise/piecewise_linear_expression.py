@@ -20,28 +20,27 @@ class PiecewiseLinearExpression(NumericExpression):
 
     Args:
         args (list or tuple): Children of this node
-        parent (PiecewiseLinearFunction): parent piece-wise linear function
+        pw_linear_function (PiecewiseLinearFunction): piece-wise linear function
             of which this node is an instance.
         index (non-negative int): this expression's index in the parent's
             '_expressions' object (which is an indexed Expression)
     """
-    __autoslot_mappers__ = {'_parent_pw_linear_function':
+    __autoslot_mappers__ = {'_pw_linear_function':
                             AutoSlots.weakref_mapper}
 
-    def __init__(self, args, parent):
+    def __init__(self, args, pw_linear_function):
         super().__init__(args)
-        self._parent_pw_linear_function = weakref_ref(parent)
+        self._pw_linear_function = weakref_ref(pw_linear_function)
 
     def nargs(self):
         return len(self._args_)
 
     @property
-    def parent_pw_linear_function(self):
-        return self._parent_pw_linear_function()
+    def pw_linear_function(self):
+        return self._pw_linear_function()
 
     def _to_string(self, values, verbose, smap):
-        return "%s(%s)" % (str(self.parent_pw_linear_function),
-                           ', '.join(values))
+        return "%s(%s)" % (str(self.pw_linear_function), ', '.join(values))
 
     def polynomial_degree(self):
         return None
