@@ -40,7 +40,8 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             return (log(5/3)/4)*x + log(6/((5/3)**(3/2)))
         m.f3 = f3
 
-        m.obj = Objective(expr=m.pw_log(m.x))
+        m.log_expr = m.pw_log(m.x)
+        m.obj = Objective(expr=m.log_expr)
 
         m.x1 = Var(bounds=(0, 3))
         m.x2 = Var(bounds=(1, 7))
@@ -59,9 +60,10 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         m.pw_paraboloid = PiecewiseLinearFunction(simplices=simplices,
                                                   linear_functions=[g1, g1, g2,
                                                                     g2])
+        m.paraboloid_expr = m.pw_paraboloid(m.x1, m.x2)
         def c_rule(m, i):
             if i == 0:
-                return m.x >= m.pw_paraboloid(m.x1, m.x2)
+                return m.x >= m.paraboloid_expr
             else:
                 return (1, m.x1, 2)
         m.indexed_c = Constraint([0, 1], rule=c_rule)
@@ -129,9 +131,9 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         ##
         # Check the transformation of the approximation of log(x)
         ##
-        self.assertIsInstance(m.pw_log._expressions[0].expr, Var)
+        z = m.pw_log.get_transformation_var(m.log_expr)
+        self.assertIsInstance(z, Var)
         # Now we can use those Vars to check on what the transformation created
-        z = m.pw_log._expressions[0].expr
         log_block = z.parent_block()
         self.check_trans_block_structure(log_block)
 
@@ -159,8 +161,8 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         ##
         # Check the approximation of the transformation of the paraboloid
         ##
-        self.assertIsInstance(m.pw_paraboloid._expressions[0].expr, Var)
-        z = m.pw_paraboloid._expressions[0].expr
+        z = m.pw_paraboloid.get_transformation_var(m.paraboloid_expr)
+        self.assertIsInstance(z, Var)
         paraboloid_block = z.parent_block()
         self.check_trans_block_structure(paraboloid_block)
 
@@ -203,8 +205,8 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.check_pw_log(m)
 
         # And check that the paraboloid was *not* transformed.
-        self.assertIsInstance(m.pw_paraboloid._expressions[0].expr,
-                              PiecewiseLinearExpression)
+        self.assertIsNone(
+            m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
 
     def test_descend_into_expressions(self):
         m = self.make_model()
@@ -223,8 +225,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
         self.check_pw_paraboloid(m)
         # And check that the log was *not* transformed.
-        self.assertIsInstance(m.pw_log._expressions[0].expr,
-                              PiecewiseLinearExpression)
+        self.assertIsNone(m.pw_log.get_transformation_var(m.log_expr))
 
     def test_descend_into_expressions_objective_target(self):
         m = self.make_model()
@@ -234,8 +235,8 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
         self.check_pw_log(m)
         # And check that the paraboloid was *not* transformed.
-        self.assertIsInstance(m.pw_paraboloid._expressions[0].expr,
-                              PiecewiseLinearExpression)
+        self.assertIsNone(
+            m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
 
     @unittest.skipUnless(SolverFactory('gurobi').available(),
                          'Gurobi is not available')

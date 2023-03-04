@@ -39,6 +39,7 @@ class PiecewiseLinearFunctionData(_BlockData):
 
         with self._declare_reserved_components():
             self._expressions = Expression(NonNegativeIntegers)
+            self._transformed_exprs = ComponentMap()
             self._simplices = None
             # These will always be tuples, even when we only have one dimension.
             self._points = []
@@ -115,6 +116,15 @@ class PiecewiseLinearFunctionData(_BlockData):
                     point_to_index[pt] = len(self._points) - 1
                 extreme_pts.append(point_to_index[pt])
             self._simplices.append(tuple(extreme_pts))
+
+    def map_transformation_var(self, pw_expr, v):
+        self._transformed_exprs[self._expressions[id(pw_expr)]] = v
+
+    def get_transformation_var(self, pw_expr):
+        if pw_expr in self._transformed_exprs:
+            return self._transformed_exprs[pw_expr]
+        else:
+            return None
 
 
 @ModelComponentFactory.register("Multidimensional piecewise linear function")

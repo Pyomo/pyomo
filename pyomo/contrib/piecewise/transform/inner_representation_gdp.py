@@ -205,7 +205,9 @@ class InnerRepresentationGDPTransformation(Transformation):
         # get the PiecewiseLinearFunctionExpression
         dimension = pw_expr.nargs()
         transBlock.disjuncts = Disjunct(NonNegativeIntegers)
-        transBlock.substitute_var = Var()
+        substitute_var = transBlock.substitute_var = Var()
+        pw_linear_func.map_transformation_var(pw_expr,
+                                              substitute_var)
         substitute_var_lb = float('inf')
         substitute_var_ub = -float('inf')
         for simplex, linear_func in zip(pw_linear_func._simplices,
@@ -220,7 +222,7 @@ class InnerRepresentationGDPTransformation(Transformation):
             disj.convex_combo = Constraint(
                 expr=sum(disj.lambdas[i] for i in range(len(extreme_pts))) == 1)
             linear_func_expr = linear_func(*pw_expr.args)
-            disj.set_substitute = Constraint(expr=transBlock.substitute_var ==
+            disj.set_substitute = Constraint(expr=substitute_var ==
                                              linear_func_expr)
             (lb, ub) = compute_bounds_on_expr(linear_func_expr)
             if lb is not None and lb < substitute_var_lb:
