@@ -22,8 +22,6 @@ class PiecewiseLinearExpression(NumericExpression):
         args (list or tuple): Children of this node
         pw_linear_function (PiecewiseLinearFunction): piece-wise linear function
             of which this node is an instance.
-        index (non-negative int): this expression's index in the parent's
-            '_expressions' object (which is an indexed Expression)
     """
     __autoslot_mappers__ = {'_pw_linear_function':
                             AutoSlots.weakref_mapper}

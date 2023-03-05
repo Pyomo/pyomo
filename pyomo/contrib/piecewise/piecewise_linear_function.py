@@ -43,6 +43,10 @@ class PiecewiseLinearFunctionData(_BlockData):
             self._linear_functions = []
 
     def __call__(self, *args):
+        """
+        Returns a PiecewiseLinearExpression which is an instance of this
+        function applied to the variables and/or constants specified in args.
+        """
         if all(type(arg) in EXPR.native_types or not
                arg.is_potentially_variable() for arg in args):
             # We need to actually evaluate
@@ -111,9 +115,17 @@ class PiecewiseLinearFunctionData(_BlockData):
             self._simplices.append(tuple(extreme_pts))
 
     def map_transformation_var(self, pw_expr, v):
+        """
+        Records on the PiecewiseLinearFunction object that the transformed
+        form of the PiecewiseLinarExpression object pw_expr is the Var v.
+        """
         self._transformed_exprs[self._expressions[id(pw_expr)]] = v
 
     def get_transformation_var(self, pw_expr):
+        """
+        Returns the Var that replaced the PiecewiseLinearExpression 'pw_expr'
+        after transformation, or None if 'pw_expr' has not been transformed.
+        """
         if pw_expr in self._transformed_exprs:
             return self._transformed_exprs[pw_expr]
         else:
