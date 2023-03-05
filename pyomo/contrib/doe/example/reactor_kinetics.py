@@ -35,7 +35,7 @@ def disc_for_measure(m, NFE=32, block=True):
     """
     discretizer = pyo.TransformationFactory('dae.collocation')
     if block:
-        for s in range(8):
+        for s in range(len(m.block)):
             discretizer.apply_to(m.block[s], nfe=NFE, ncp=3, wrt=m.block[s].t)
     else:
         discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)

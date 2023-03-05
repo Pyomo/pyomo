@@ -853,7 +853,7 @@ class DesignOfExperiments:
             p: parameter 
             q: parameter
             """
-            return m.fim[p,q] == sum(m.jac[p,n]*m.jac[q,n] for n in mod.res) + m.priorFIM[p,q]*self.fim_scale_constant_value 
+            return m.fim[p,q] == sum(1/self.measure.variance[n]*m.jac[p,n]*m.jac[q,n] for n in mod.res) + m.priorFIM[p,q]*self.fim_scale_constant_value 
         
         mod.jac_const = pyo.Constraint(mod.param, mod.res, rule=jacobian_rule)
         mod.fim_const = pyo.Constraint(mod.param, mod.param, rule=fim_rule)

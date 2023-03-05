@@ -327,8 +327,6 @@ class FisherResults:
 
 
 
-
-
 class GridSearchResult:
     def __init__(self, design_ranges, design_dimension_names, FIM_result_list, store_optimality_name=None, verbose=True):
         """
