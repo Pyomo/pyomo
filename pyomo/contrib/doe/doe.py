@@ -36,6 +36,7 @@ import time
 import pickle
 from itertools import permutations, product
 import logging
+from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
 #from pyomo.contrib.doe.scenario import Scenario_generator
 #from pyomo.contrib.doe.result import FisherResults, GridSearchResult
@@ -105,7 +106,7 @@ class DesignOfExperiments:
 
         # if print statements
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(level=logging.WARN)
+        self.logger.setLevel(level=logging.INFO)
         
     def _check_inputs(self, check_mode=False):
         """
@@ -209,6 +210,9 @@ class DesignOfExperiments:
         if check:
             self._check_inputs(check_mode=False)
 
+        sp_timer = TicTocTimer()
+        sp_timer.tic()
+
         # build the large DOE pyomo model
         m = self._create_doe_model(no_obj=True)
 
@@ -217,9 +221,13 @@ class DesignOfExperiments:
 
         if self.optimize:
             analysis_optimize = self._optimize_stochastic_program(m)
+            dT = sp_timer.toc()
+            self.logger.info("elapsed time: %0.1f"%dT)
             return analysis_square, analysis_optimize
             
         else:
+            dT = sp_timer.toc(msg=None)
+            self.logger.info("elapsed time: %0.1f"%dT)
             return analysis_square
             
 
@@ -337,16 +345,21 @@ class DesignOfExperiments:
         # check inputs valid
         self._check_inputs(check_mode=True)
 
+        square_timer = TicTocTimer()
+        square_timer.tic(msg=None)
         if self.mode=='sequential_finite':
             FIM_analysis = self._sequential_finite(read_output, extract_single_model, store_output)
-            return FIM_analysis
 
         elif self.mode =='direct_kaug':
             FIM_analysis = self._direct_kaug()
-            return FIM_analysis
             
         else:
             raise ValueError(self.mode+' is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
+        
+        dT = square_timer.toc(msg=None)
+        self.logger.info("elapsed time: %0.1f"%dT)
+        
+        return FIM_analysis
 
     def _sequential_finite(self, read_output, extract_single_model, store_output):
         """ Sequential_finite mode uses Pyomo Block to evaluate the sensitivity information.
@@ -672,6 +685,8 @@ class DesignOfExperiments:
         for rng in design_ranges:
             total_count *= len(rng)
 
+        time_set = [] # record time for every iteration
+
         # generate combinations of design variable values to go over
         search_design_set = product(*design_ranges)
 
@@ -693,9 +708,10 @@ class DesignOfExperiments:
 
             design_object.special_set_value = design_iter
 
+            iter_timer = TicTocTimer()
             self.logger.info('=======Iteration Number: %s =====', count+1)
             self.logger.debug('Design variable values of this iteration: %s', design_iter)
-
+            iter_timer.tic(msg=None)
             # generate store name
             if store_name is None:
                 store_output_name = None
@@ -720,12 +736,14 @@ class DesignOfExperiments:
 
                 result_iter.calculate_FIM(self.design_values)
 
+                # iteration time
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
 
                 # give run information at each iteration
-                # to be changed to tictoctimer 
-                #self.logger.info('This is the  %s run out of  %s run.', count+1, total_count)
-                #self.logger.info('The code has run  %s seconds.', t_now-t_enumeration_begin)
-                #self.logger.info('Estimated remaining time:  %s seconds', (t_now-t_enumeration_begin)/(count+1)*(total_count-count-1))
+                self.logger.info('This is the  %s run out of  %s run.', (count+1), total_count)
+                self.logger.info('The code has run  %s seconds.', sum(time_set))
+                self.logger.info('Estimated remaining time:  %s seconds', (sum(time_set)/(count+1)*(total_count-count-1)))
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
@@ -742,12 +760,8 @@ class DesignOfExperiments:
 
         # Create figure drawing object
         figure_draw_object = GridSearchResult(design_ranges, design_dimension_names, result_combine, store_optimality_name=filename)
-
-        # save for TicTocTimer
-        #t_enumeration_stop = time.time()
-        #self.logger.info('Overall model building time [s]:  %s', sum(build_time_store))
-        #self.logger.info('Overall model solve time [s]:  %s', sum(solve_time_store))
-        #self.logger.info('Overall wall clock time [s]:  %s', t_enumeration_stop - t_enumeration_begin)
+        
+        self.logger.info('Overall wall clock time [s]:  %s', sum(time_set))
 
         return figure_draw_object
 
