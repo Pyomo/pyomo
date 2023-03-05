@@ -92,8 +92,7 @@ class SpecialSet:
          values: a ``list`` containing values which has the same shape of flattened variables 
             default choice is None, means there is no give nvalues 
         """
-        for i in range(len(self.special_set)):
-            self.special_set_value[self.special_set[i]] = values[i]
+        self.special_set_value = self._generate_dict(values)
 
     def add_bounds(self, upper_bound=None, lower_bound=None):
         """
@@ -255,6 +254,11 @@ class DesignVariables(SpecialSet):
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
         self.design_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values)
+        # initialize upper and lower bounds
+        self.upper_bound, self.lower_bound = None, None
 
     def add_bounds(self, upper_bound=None, lower_bound=None):
         return super().add_bounds(upper_bound, lower_bound)
+    
+    def update_values(self, values):
+        return super().update_values(values)

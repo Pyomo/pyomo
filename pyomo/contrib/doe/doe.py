@@ -43,7 +43,7 @@ from scenario import ScenarioGenerator
 from result import FisherResults, GridSearchResult
 
 class DesignOfExperiments:
-    def __init__(self, param_init, design_names, measurement_object, create_model, solver=None,
+    def __init__(self, param_init, design_object, measurement_object, create_model, solver=None,
                  time_set_name = "t", prior_FIM=None, discretize_model=None, args=None):
         """
         This package enables model-based design of experiments analysis with Pyomo. 
@@ -58,7 +58,7 @@ class DesignOfExperiments:
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
             Note: if sIPOPT is used, parameter shouldn't be indexed.
         design_names:
-            A ``list`` of design variable names as string, generated with specialSet
+            A designvariable ``object``
         measurement_object:
             A measurement ``object``.
         create_model:
@@ -79,7 +79,7 @@ class DesignOfExperiments:
         # parameters
         self.param = param_init
         # design variable name
-        self.design_name = design_names
+        self.design_name = design_object.design_name
         self.create_model = create_model
         self.args = args
 
@@ -130,7 +130,7 @@ class DesignOfExperiments:
             if self.mode not in curr_available_mode:
                 raise ValueError('Wrong mode.')
 
-    def stochastic_program(self,  design_values, if_optimize=True, objective_option='det',
+    def stochastic_program(self,  design_object, if_optimize=True, objective_option='det',
                      jac_involved_measurement=None,
                      scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-7, L_initial=None,
                      jac_initial=None, fim_initial=None,
@@ -146,8 +146,7 @@ class DesignOfExperiments:
         Parameters
         -----------
         design_values:
-            a ``dict`` where keys are design variable names, values are a dict whose keys are time point
-            and values are the design variable value at that time point
+            designVariable object
         if_optimize:
             if true, continue to do optimization. else, just run square problem with given design variable values
         objective_option:
@@ -186,7 +185,8 @@ class DesignOfExperiments:
 
         """
         # store inputs in object
-        self.design_values = design_values
+        self.design_values = design_object.special_set_value
+        self.design_object = design_object
         self.optimize = if_optimize
         self.objective_option = objective_option
         self.scale_nominal_param_value = scale_nominal_param_value
@@ -269,7 +269,7 @@ class DesignOfExperiments:
 
 
 
-    def compute_FIM(self, design_values, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
+    def compute_FIM(self, design_object, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
                     store_output = None, read_output=None, extract_single_model=None,
                     formula='central', step=0.001):
@@ -282,7 +282,7 @@ class DesignOfExperiments:
         Parameters
         -----------
         design_values:
-            a ``dict`` of design variable names and values, generated with specialSet 
+            designVariable object 
         mode:
             use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'
         FIM_store_name:
@@ -314,7 +314,7 @@ class DesignOfExperiments:
         """
         
         # save inputs in object
-        self.design_values = design_values
+        self.design_values = design_object.special_set_value
         self.mode = mode
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
@@ -607,7 +607,7 @@ class DesignOfExperiments:
             jac[p] = jac_para
         return jac
 
-    def run_grid_search(self, design_values, design_ranges, design_dimension_names, 
+    def run_grid_search(self, design_object, design_ranges, design_dimension_names, 
                      mode='sequential_finite', tee_option=False, 
                     scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
                         filename=None, formula='central', step=0.001):
@@ -622,7 +622,7 @@ class DesignOfExperiments:
         Parameters
         -----------
         design_values:
-            a ``dict`` of design variable names and values, generated with specialSet 
+            designvariable object
         design_ranges:
             a ``list`` of design variable values to go over
         design_dimension_names:
@@ -679,7 +679,7 @@ class DesignOfExperiments:
         for design_set_iter in search_design_set:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_values
-            design_iter = design_values.copy()
+            design_iter = design_object.special_set_value.copy()
 
             # update the controlled value of certain time points for certain design variables
             for i in range(len(design_dimension_names)):
@@ -690,6 +690,8 @@ class DesignOfExperiments:
                         design_iter[n] = list(design_set_iter)[i] 
                 else:
                     design_iter[names] = list(design_set_iter)[i]
+
+            design_object.special_set_value = design_iter
 
             self.logger.info('=======Iteration Number: %s =====', count+1)
             self.logger.debug('Design variable values of this iteration: %s', design_iter)
@@ -707,7 +709,7 @@ class DesignOfExperiments:
 
             # call compute_FIM to get FIM
             try:
-                result_iter = self.compute_FIM(design_iter, mode=mode,
+                result_iter = self.compute_FIM(design_object, mode=mode,
                                                 tee_opt=tee_option,
                                                 scale_nominal_param_value=scale_nominal_param_value,
                                                 scale_constant_value = scale_constant_value,
