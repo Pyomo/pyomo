@@ -25,8 +25,8 @@ class PiecewiseLinearExpression(NumericExpression):
         index (non-negative int): this expression's index in the parent's
             '_expressions' object (which is an indexed Expression)
     """
-    __autoslot_mappers__ = {'_pw_linear_function':
-                            AutoSlots.weakref_mapper}
+    __slots__ = ('_pw_linear_function',)
+    __autoslot_mappers__ = {'_pw_linear_function': AutoSlots.weakref_mapper}
 
     def __init__(self, args, pw_linear_function):
         super().__init__(args)
