@@ -66,8 +66,6 @@ class FisherResults:
         self.para_name = para_name
         self.measure_object = measure_object
         self.measurement_variables = measure_object.measurement_name
-        #self.measurement_timeset = measure_object.flatten_measure_timeset
-        #self.flatten_all_measure = measure_object.flatten_measure_name
 
         if jacobian_info is None:
             self.jaco_information = all_jacobian_info
@@ -85,7 +83,7 @@ class FisherResults:
         self.logger.setLevel(level=logging.WARN)
 
 
-    def calculate_FIM(self, dv_names, black_box_res=True, result=None):
+    def calculate_FIM(self, dv_names, result=None):
         """Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
         Parameters
@@ -101,28 +99,17 @@ class FisherResults:
         # get number of parameters
         no_param = len(self.para_name)
 
-        if not black_box_res:
+        fim = np.zeros((no_param, no_param))
+        
+        # convert dictionary to a numpy array
+        Q_all = []
+        for par in self.para_name:
+            Q_all.append(self.jaco_information[par])
+        n = len(self.para_name)
 
-            # reform jacobian, split the overall Q into Q_r, each r is a flattened measurement name
-            Q_response_list, variance_list = self._jac_reform_3D(self.jaco_information, Q_response=True)
-
-            fim = np.zeros((no_param, no_param))
-
-            for i in range(len(Q_response_list)):
-                fim += ((1/variance_list[i])*(Q_response_list[i]@Q_response_list[i].T))
-
-        else:
-            fim = np.zeros((no_param, no_param))
-            
-            # convert dictionary to a numpy array
-            Q_all = []
-            for par in self.para_name:
-                Q_all.append(self.jaco_information[par])
-            n = len(self.para_name)
-
-            Q_all = np.asarray(Q_all).T
-            for i, mea_name in enumerate(self.measurement_variables):
-                fim += 1/self.measure_object.variance[str(mea_name)]*(Q_all[i,:].reshape(n,1)@Q_all[i,:].reshape(n,1).T)
+        Q_all = np.asarray(Q_all).T
+        for i, mea_name in enumerate(self.measurement_variables):
+            fim += 1/self.measure_object.variance[str(mea_name)]*(Q_all[i,:].reshape(n,1)@Q_all[i,:].reshape(n,1).T)
 
         # add prior information
         if (self.prior_FIM is not None):
@@ -165,7 +152,7 @@ class FisherResults:
 
         return FIM_subclass
 
-    def _split_jacobian(self, measurement_subset):
+    def _split_jacobian(self, measure_subset):
         """
         Split jacobian
         Args:
@@ -177,48 +164,19 @@ class FisherResults:
         # create a dict for FIM. It has the same keys as the Jacobian dict.
         jaco_info = {}
 
-        # convert the form of jacobian for split
-        jaco_3D = self._jac_reform_3D(self.jacobian_info)
-
-        involved_flatten_index = measurement_subset.flatten_measure_name
-
         # reorganize the jacobian subset with the same form of the jacobian
         # loop over parameters
         for p, par in enumerate(self.para_name):
             jaco_info[par] = []
-            # loop over flatten measurements
-            for n, nam in enumerate(involved_flatten_index):
-                if nam in self.flatten_all_measure:
-                    n_all_measure = self.flatten_all_measure.index(nam)
-                    # loop over time
-                    for d in range(len(jaco_3D[n_all_measure, p, :])):
-                        jaco_info[par].append(jaco_3D[n_all_measure, p, d])
+            # loop over measurements
+            for n, nam in enumerate(measure_subset.measurement_name):
+                try: 
+                    n_all_measure = self.measurement_variables.index(nam)
+                    jaco_info[par].append(self.all_jacobian_info[par][n_all_measure])
+                except:
+                    print("Measurement ", nam, " is not in original measurement set.")
+                
         return jaco_info
-
-    def _jac_reform_3D(self, jac_original, Q_response=False):
-        """
-        Reform the Jacobian returned by _finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
-        """
-        # 3-D array form of jacobian [measurements, parameters, time]
-        self.measure_timeset = list(self.measurement_timeset.values())[0]
-        no_time = len(self.measure_timeset)
-        jac_3Darray = np.zeros((len(self.flatten_all_measure), len(self.para_name), no_time))
-        # reorganize the matrix
-        for m, mname in enumerate(self.flatten_all_measure):
-            for p, para in enumerate(self.para_name):
-                for t, tim in enumerate(self.measure_timeset):
-                    jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
-        if Q_response:
-            Qr_list = []
-            var_list = []
-            for m, mname in enumerate(self.flatten_all_measure):
-                Qr_list.append(jac_3Darray[m, :, :])
-                var_list.append(self.measure_object.flatten_variance[mname])
-
-            return Qr_list, var_list
-        else:
-            return jac_3Darray
-
 
     def _print_FIM_info(self, FIM, dv_names=None):
         """

@@ -209,6 +209,19 @@ class Measurements(SpecialSet):
         """
         self.variance = variance 
 
+    def check_subset(self, subset_class):
+        """
+        Check if subset_class is a subset of the current measurement object
+        
+        Parameters
+        ----------
+        subset_class: a measurement object
+        """
+        for nam in subset_class.measurement_name:
+            if nam not in self.measurement_name:
+                print("Measurement not in the set: ", nam)
+
+
     def _generate_variance(self):
         """Generate the variance dictionary. 
         """
