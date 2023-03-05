@@ -76,9 +76,10 @@ class SpecialSet:
         self._add_elements(var_name, extra_index=extra_index, time_index=time_index)
         if values:
             # this dictionary keys are special set, values are its value
-            self.special_set_value = {}
-            for i in range(len(self.special_set)):
-                self.special_set_value[self.special_set[i]] = values[i]
+            #self.special_set_value = {}
+            #for i in range(len(self.special_set)):
+            #    self.special_set_value[self.special_set[i]] = values[i]
+            self.special_set_value = self._generate_dict(values)
 
         return self.special_set
     
@@ -93,6 +94,26 @@ class SpecialSet:
         """
         for i in range(len(self.special_set)):
             self.special_set_value[self.special_set[i]] = values[i]
+
+    def add_bounds(self, upper_bound=None, lower_bound=None):
+        """
+        add bounds
+        """
+        if upper_bound:
+            self.upper_bound = self._generate_dict(upper_bound)
+            
+        if lower_bound:
+            self.lower_bound = self._generate_dict(lower_bound)
+
+    def _generate_dict(self, values):
+        """
+        Given a list of values, return a dictionary, keys are special set names. 
+        """
+        value_map = {}
+        for i in range(len(values)):
+            value_map[self.special_set[i]] = values[i]
+
+        return value_map
 
 
     def _add_elements(self, var_name, extra_index=None, time_index=None):
@@ -194,7 +215,7 @@ class Measurements(SpecialSet):
         """
         self.variance = {}
         for name in self.measurement_name:
-            self.variance[name] = 1 
+            self.variance[name] = 1     
 
     def _check_names(self, var_name, extra_index, time_index):
         """
@@ -205,3 +226,35 @@ class Measurements(SpecialSet):
         if len(extra_index) != num_var: 
             warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")
 
+
+
+class DesignVariables(SpecialSet):
+    """
+    Define design variables 
+    """
+    def __init__(self):
+        super().__init__()
+
+    def specify(self, self_define_res):
+
+        self.design_name = super().specify(self_define_res)
+
+    def add_elements(self, var_name, extra_index=None, time_index=[0], values=None):
+        """
+
+        Parameters
+        -----------
+        var_name: a ``list`` of measurement var names 
+            extra_index: a ``list`` containing extra indexes except for time indexes 
+                if default (None), no extra indexes needed for all var in var_name
+                if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
+                they are different multiple sets of indexes for different var_name
+                for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
+            time_index: a ``list`` containing time indexes
+                default choice is [0], means this is an algebraic variable
+                if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
+        """
+        self.design_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values)
+
+    def add_bounds(self, upper_bound=None, lower_bound=None):
+        return super().add_bounds(upper_bound, lower_bound)
