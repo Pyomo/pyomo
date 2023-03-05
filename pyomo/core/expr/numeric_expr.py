@@ -1086,7 +1086,7 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 class ARG_TYPE(enum.Enum):
     MUTABLE = -2
-    ASBINARY = -1
+    ASNUMERIC = -1
     INVALID = 0
     NATIVE = 1
     NPV = 2
@@ -1121,8 +1121,8 @@ def _categorize_arg_type(arg):
         else:
             if is_numeric:
                 ans = None
-            elif hasattr(arg, 'as_binary'):
-                ans = ARG_TYPE.ASBINARY
+            elif hasattr(arg, 'as_numeric'):
+                ans = ARG_TYPE.ASNUMERIC
             else:
                 ans = ARG_TYPE.INVALID
 
@@ -1176,8 +1176,8 @@ def _unary_op_dispatcher_type_mapping(dispatcher, updates):
     #
     # Special case (wrapping) operators
     #
-    def _asbinary(a):
-        a = a.as_binary()
+    def _asnumeric(a):
+        a = a.as_numeric()
         return dispatcher[a.__class__](a)
 
     def _mutable(a):
@@ -1185,7 +1185,7 @@ def _unary_op_dispatcher_type_mapping(dispatcher, updates):
         return dispatcher[a.__class__](a)
 
     mapping = {
-        ARG_TYPE.ASBINARY: _asbinary,
+        ARG_TYPE.ASNUMERIC: _asnumeric,
         ARG_TYPE.MUTABLE: _mutable,
         ARG_TYPE.INVALID: _invalid,
     }
@@ -1197,17 +1197,17 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates):
     #
     # Special case (wrapping) operators
     #
-    def _any_asbinary(a, b):
-        b = b.as_binary()
+    def _any_asnumeric(a, b):
+        b = b.as_numeric()
         return dispatcher[a.__class__, b.__class__](a, b)
 
-    def _asbinary_any(a, b):
-        a = a.as_binary()
+    def _asnumeric_any(a, b):
+        a = a.as_numeric()
         return dispatcher[a.__class__, b.__class__](a, b)
 
-    def _asbinary_asbinary(a, b):
-        a = a.as_binary()
-        b = b.as_binary()
+    def _asnumeric_asnumeric(a, b):
+        a = a.as_numeric()
+        b = b.as_numeric()
         return dispatcher[a.__class__, b.__class__](a, b)
 
     def _any_mutable(a, b):
@@ -1227,9 +1227,9 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates):
         return dispatcher[a.__class__, b.__class__](a, b)
 
     mapping = {}
-    mapping.update({(i, ARG_TYPE.ASBINARY): _any_asbinary for i in ARG_TYPE})
-    mapping.update({(ARG_TYPE.ASBINARY, i): _asbinary_any for i in ARG_TYPE})
-    mapping[ARG_TYPE.ASBINARY, ARG_TYPE.ASBINARY] = _asbinary_asbinary
+    mapping.update({(i, ARG_TYPE.ASNUMERIC): _any_asnumeric for i in ARG_TYPE})
+    mapping.update({(ARG_TYPE.ASNUMERIC, i): _asnumeric_any for i in ARG_TYPE})
+    mapping[ARG_TYPE.ASNUMERIC, ARG_TYPE.ASNUMERIC] = _asnumeric_asnumeric
 
     mapping.update({(i, ARG_TYPE.MUTABLE): _any_mutable for i in ARG_TYPE})
     mapping.update({(ARG_TYPE.MUTABLE, i): _mutable_any for i in ARG_TYPE})
@@ -1246,7 +1246,7 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates):
 #
 
 def _add_native_native(a, b):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return a + b
 
 def _add_native_npv(a, b):
@@ -1699,8 +1699,8 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
 # MUTABLENPVSUM __iadd__ handlers
 #
 
-def _iadd_mutablenpvsum_asbinary(a, b):
-    b = b.as_binary()
+def _iadd_mutablenpvsum_asnumeric(a, b):
+    b = b.as_numeric()
     return _iadd_mutablenpvsum_dispatcher[b.__class__](a, b)
 
 def _iadd_mutablenpvsum_mutable(a, b):
@@ -1750,7 +1750,7 @@ def _iadd_mutablenpvsum_other(a, b):
 
 _iadd_mutablenpvsum_type_handler_mapping = {
     ARG_TYPE.INVALID: _invalid,
-    ARG_TYPE.ASBINARY: _iadd_mutablenpvsum_asbinary,
+    ARG_TYPE.ASNUMERIC: _iadd_mutablenpvsum_asnumeric,
     ARG_TYPE.MUTABLE: _iadd_mutablenpvsum_mutable,
     ARG_TYPE.NATIVE: _iadd_mutablenpvsum_native,
     ARG_TYPE.NPV: _iadd_mutablenpvsum_npv,
@@ -1780,8 +1780,8 @@ _iadd_mutablenpvsum_dispatcher = collections.defaultdict(
 # MUTABLELINEAR __iadd__ handlers
 #
 
-def _iadd_mutablelinear_asbinary(a, b):
-    b = b.as_binary()
+def _iadd_mutablelinear_asnumeric(a, b):
+    b = b.as_numeric()
     return _iadd_mutablelinear_dispatcher[b.__class__](a, b)
 
 def _iadd_mutablelinear_mutable(a, b):
@@ -1834,7 +1834,7 @@ def _iadd_mutablelinear_other(a, b):
 
 _iadd_mutablelinear_type_handler_mapping = {
     ARG_TYPE.INVALID: _invalid,
-    ARG_TYPE.ASBINARY: _iadd_mutablelinear_asbinary,
+    ARG_TYPE.ASNUMERIC: _iadd_mutablelinear_asnumeric,
     ARG_TYPE.MUTABLE: _iadd_mutablelinear_mutable,
     ARG_TYPE.NATIVE: _iadd_mutablelinear_native,
     ARG_TYPE.NPV: _iadd_mutablelinear_npv,
@@ -1864,8 +1864,8 @@ _iadd_mutablelinear_dispatcher = collections.defaultdict(
 # MUTABLESUM __iadd__ handlers
 #
 
-def _iadd_mutablesum_asbinary(a, b):
-    b = b.as_binary()
+def _iadd_mutablesum_asnumeric(a, b):
+    b = b.as_numeric()
     return _iadd_mutablesum_dispatcher[b.__class__](a, b)
 
 def _iadd_mutablesum_mutable(a, b):
@@ -1920,7 +1920,7 @@ def _iadd_mutablesum_other(a, b):
 
 _iadd_mutablesum_type_handler_mapping = {
     ARG_TYPE.INVALID: _invalid,
-    ARG_TYPE.ASBINARY: _iadd_mutablesum_asbinary,
+    ARG_TYPE.ASNUMERIC: _iadd_mutablesum_asnumeric,
     ARG_TYPE.MUTABLE: _iadd_mutablesum_mutable,
     ARG_TYPE.NATIVE: _iadd_mutablesum_native,
     ARG_TYPE.NPV: _iadd_mutablesum_npv,
@@ -1951,11 +1951,11 @@ _iadd_mutablesum_dispatcher = collections.defaultdict(
 #
 
 def _neg_native(a):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return -a
 
 def _neg_npv(a):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return NPV_NegationExpression((a,))
 
 def _neg_param(a):
@@ -2010,7 +2010,7 @@ _neg_type_handler_mapping = _unary_op_dispatcher_type_mapping(
 #
 
 def _mul_native_native(a, b):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return a * b
 
 def _mul_native_npv(a, b):
@@ -2416,7 +2416,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
 #
 
 def _div_native_native(a, b):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return a / b
 
 def _div_native_npv(a, b):
@@ -2816,7 +2816,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
 #
 
 def _pow_native_native(a, b):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return a**b
 
 def _pow_native_npv(a, b):
@@ -2983,11 +2983,11 @@ _pow_type_handler_mapping.update({
 #
 
 def _abs_native(a):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return abs(a)
 
 def _abs_npv(a):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return NPV_AbsExpression((a,))
 
 def _abs_param(a):
@@ -3028,8 +3028,8 @@ _abs_type_handler_mapping = _unary_op_dispatcher_type_mapping(
 # INTRINSIC FUNCTION handlers
 #
 
-def _fcn_asbinary(a, name, fcn):
-    a = a.as_binary()
+def _fcn_asnumeric(a, name, fcn):
+    a = a.as_numeric()
     return _fcn_dispatcher[a.__class__](a, name, fcn)
 
 def _fcn_mutable(a, name, fcn):
@@ -3040,11 +3040,11 @@ def _fcn_invalid(a, name, fcn):
     fcn(a)
 
 def _fcn_native(a, name, fcn):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return fcn(a)
 
 def _fcn_npv(a, name, fcn):
-    # This can be hit because of the asbinary / mutable wrapper handlers.
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
     return NPV_UnaryFunctionExpression((a,), name, fcn)
 
 def _fcn_param(a, name, fcn):
@@ -3069,7 +3069,7 @@ def _register_new_fcn_dispatcher(a, name, fcn):
 _fcn_dispatcher = collections.defaultdict(lambda: _register_new_fcn_dispatcher)
 
 _fcn_type_handler_mapping = {
-    ARG_TYPE.ASBINARY: _fcn_asbinary,
+    ARG_TYPE.ASNUMERIC: _fcn_asnumeric,
     ARG_TYPE.MUTABLE: _fcn_mutable,
     ARG_TYPE.INVALID: _fcn_invalid,
     ARG_TYPE.NATIVE: _fcn_native,

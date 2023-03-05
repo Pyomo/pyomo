@@ -83,7 +83,7 @@ class TestExprGen(unittest.TestCase):
         self.m.q = Param(initialize=7, mutable=True)
         self.m.x = Var()
         self.m.d = Disjunct()
-        self.bin = self.m.d.indicator_var.as_binary()
+        self.bin = self.m.d.indicator_var.as_numeric()
 
         self.invalid = 'str'
         self.asbinary = self.m.d.indicator_var
