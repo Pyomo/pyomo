@@ -139,6 +139,14 @@ class _multivariate_linear_functor(AutoSlots.Mixin):
     def __call__(self, *args):
         return sum(self.normal[i]*arg for i, arg in enumerate(args)) + self.normal[-1]
 
+
+def _define_handler(handle_map, *key):
+    def _wrapper(obj):
+        assert key not in handle_map
+        handle_map[key] = obj
+        return obj
+    return _wrapper
+
 @ModelComponentFactory.register("Multidimensional piecewise linear function")
 class PiecewiseLinearFunction(Block):
     """A piecewise linear function, which may be defined over an index.
@@ -174,6 +182,9 @@ class PiecewiseLinearFunction(Block):
     """
     _ComponentDataClass = PiecewiseLinearFunctionData
 
+    # Map 4-tuple of bool to hander: "(f, pts, simplices, linear_funcs) : handler"
+    _handlers = {}
+
     def __new__(cls, *args, **kwds):
         if cls is not PiecewiseLinearFunction:
             return super(PiecewiseLinearFunction, cls).__new__(cls)
@@ -185,15 +196,6 @@ class PiecewiseLinearFunction(Block):
                 IndexedPiecewiseLinearFunction)
 
     def __init__(self, *args, **kwargs):
-        self._handlers = {
-            # (f, pts, simplices, linear_funcs) : handler
-            (True, True, False,
-             False): self._construct_from_function_and_points,
-            (True, False, True,
-             False): self._construct_from_function_and_simplices,
-            (False, False, True,
-             True): self._construct_from_linear_functions_and_simplices
-        }
         # [ESJ 1/24/23]: TODO: Eventually we should also support constructing
         # this from table data--a mapping of points to function values.
 
@@ -216,6 +218,7 @@ class PiecewiseLinearFunction(Block):
         self._linear_funcs_rule = Initializer(_linear_functions,
                                               treat_sequences_as_mappings=False)
 
+    @_define_handler(_handlers, True, True, False, False)
     def _construct_from_function_and_points(self, obj, parent,
                                             nonlinear_function):
         parent = obj.parent_block()
@@ -270,6 +273,7 @@ class PiecewiseLinearFunction(Block):
 
         return obj
 
+    @_define_handler(_handlers, True, False, True, False)
     def _construct_from_function_and_simplices(self, obj, parent,
                                                nonlinear_function):
         if obj._simplices is None:
@@ -313,6 +317,7 @@ class PiecewiseLinearFunction(Block):
 
         return obj
 
+    @_define_handler(_handlers, False, False, True, True)
     def _construct_from_linear_functions_and_simplices(self, obj, parent,
                                                        nonlinear_function):
         # We know that we have simplices because else this handler wouldn't
@@ -348,7 +353,7 @@ class PiecewiseLinearFunction(Block):
                              "of breakpoints, a nonlinear function and a list "
                              "of simplices, or a list of linear functions and "
                              "a list of corresponding simplices.")
-        return handler(obj, parent, nonlinear_function)
+        return handler(self, obj, parent, nonlinear_function)
 
 
 class ScalarPiecewiseLinearFunction(PiecewiseLinearFunctionData,
