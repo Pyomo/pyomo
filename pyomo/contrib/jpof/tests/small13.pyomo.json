@@ -1,0 +1,51 @@
+{
+  "__metadata__": {
+    "version": 20210301,
+    "format": "JSON Parameterized Optimization Format (JPOF)"
+  },
+  "model": {
+    "config": {
+      "symbolic_solver_labels": 1,
+      "skip_trivial_constraints": 0,
+      "file_determinism": 3,
+      "include_all_variable_bounds": 0
+    },
+    "obj": [
+      {
+        "expr": "V,0",
+        "sense": "max",
+        "label": "obj"
+      }
+    ],
+    "con": [
+      {
+        "expr": "+,pow,V,0,N,3,*,N,-1,V,0",
+        "label": "c1",
+        "eq": 0.0
+      },
+      {
+        "expr": "*,N,10,+,pow,V,0,N,3,*,N,-1,V,0",
+        "label": "c2",
+        "eq": 0.0
+      },
+      {
+        "expr": "/,+,pow,V,0,N,3,*,N,-1,V,0,N,10.0",
+        "label": "c3",
+        "eq": 0.0
+      }
+    ],
+    "var": [
+      {
+        "label": "x",
+        "id": 0,
+        "value": 0.5,
+        "type": "R",
+        "fixed": 0
+      }
+    ],
+    "param": [],
+    "set": {},
+    "indexed_vars": [],
+    "indexed_params": []
+  }
+}

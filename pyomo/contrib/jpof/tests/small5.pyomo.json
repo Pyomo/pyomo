@@ -1,0 +1,122 @@
+{
+  "__metadata__": {
+    "version": 20210301,
+    "format": "JSON Parameterized Optimization Format (JPOF)"
+  },
+  "model": {
+    "config": {
+      "symbolic_solver_labels": 1,
+      "skip_trivial_constraints": 0,
+      "file_determinism": 3,
+      "include_all_variable_bounds": 0
+    },
+    "obj": [
+      {
+        "expr": "+,/,pow,V,1,N,2,N,2.0,/,pow,V,1,N,2,P,1",
+        "sense": "min",
+        "label": "OBJ"
+      }
+    ],
+    "con": [
+      {
+        "expr": "*,*,N,0.5,V,0,+,V,1,*,N,-1,V,2",
+        "label": "CON1",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,V,0,+,*,/,N,1,P,1,V,1,*,neg,/,N,1,P,1,V,2",
+        "label": "CON10",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,*,V,0,+,V,1,*,N,-1,V,2,/,N,1.0,P,1",
+        "label": "CON11",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,V,0,+,V,1,*,N,-1,V,2",
+        "label": "CON12",
+        "eq": "*,N,2.0,P,1"
+      },
+      {
+        "expr": "*,*,N,0.5,V,0,+,V,1,*,N,-1,V,2",
+        "label": "CON2",
+        "eq": 2.0
+      },
+      {
+        "expr": "/,*,V,0,+,V,1,*,N,-1,V,2,N,2.0",
+        "label": "CON3",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,V,0,+,*,N,0.5,V,1,*,N,-0.5,V,2",
+        "label": "CON4",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,*,V,0,+,V,1,*,N,-1,V,2,N,0.5",
+        "label": "CON5",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,V,0,+,V,1,*,N,-1,V,2",
+        "label": "CON6",
+        "eq": 4.0
+      },
+      {
+        "expr": "*,*,/,N,1.0,P,1,V,0,+,V,1,*,N,-1,V,2",
+        "label": "CON7",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,*,/,N,1,P,1,V,0,+,V,1,*,N,-1,V,2",
+        "label": "CON8",
+        "eq": 2.0
+      },
+      {
+        "expr": "/,*,V,0,+,V,1,*,N,-1,V,2,P,1",
+        "label": "CON9",
+        "eq": 2.0
+      }
+    ],
+    "var": [
+      {
+        "label": "v",
+        "id": 0,
+        "value": 3.0,
+        "lb": -1.0,
+        "ub": 1.0,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x",
+        "id": 1,
+        "value": 1.0,
+        "lb": -1.0,
+        "ub": 1.0,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "y",
+        "id": 2,
+        "value": 2.0,
+        "lb": -1.0,
+        "ub": 1.0,
+        "type": "R",
+        "fixed": 0
+      }
+    ],
+    "param": [
+      {
+        "label": "q",
+        "id": 1,
+        "value": 2.0
+      }
+    ],
+    "set": {},
+    "indexed_vars": [],
+    "indexed_params": []
+  }
+}

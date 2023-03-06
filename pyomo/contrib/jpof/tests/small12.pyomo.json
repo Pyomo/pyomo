@@ -1,0 +1,163 @@
+{
+  "__metadata__": {
+    "version": 20210301,
+    "format": "JSON Parameterized Optimization Format (JPOF)"
+  },
+  "model": {
+    "config": {
+      "symbolic_solver_labels": 1,
+      "skip_trivial_constraints": 0,
+      "file_determinism": 3,
+      "include_all_variable_bounds": 0
+    },
+    "obj": [
+      {
+        "expr": "*,N,10.0",
+        "sense": "min",
+        "label": "obj"
+      }
+    ],
+    "con": [
+      {
+        "expr": "V,1",
+        "label": "c1",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c10",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c11",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c12",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c13",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c14",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c15",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c16",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c17",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c18",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c19",
+        "eq": -1.0
+      },
+      {
+        "expr": "V,6",
+        "label": "c2",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c20",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c21",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c22",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c23",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c24",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c3",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c4",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c5",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c6",
+        "eq": 1.0
+      },
+      {
+        "expr": "",
+        "label": "c7",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c8",
+        "eq": -1.0
+      },
+      {
+        "expr": "",
+        "label": "c9",
+        "eq": -1.0
+      }
+    ],
+    "var": [
+      {
+        "label": "vFalse",
+        "id": 1,
+        "value": -1,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "vTrue",
+        "id": 6,
+        "value": 1,
+        "type": "R",
+        "fixed": 0
+      }
+    ],
+    "param": [],
+    "set": {},
+    "indexed_vars": [],
+    "indexed_params": []
+  }
+}

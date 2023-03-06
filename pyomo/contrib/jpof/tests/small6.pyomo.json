@@ -1,0 +1,93 @@
+{
+  "__metadata__": {
+    "version": 20210301,
+    "format": "JSON Parameterized Optimization Format (JPOF)"
+  },
+  "model": {
+    "config": {
+      "symbolic_solver_labels": 1,
+      "skip_trivial_constraints": 0,
+      "file_determinism": 3,
+      "include_all_variable_bounds": 0
+    },
+    "obj": [
+      {
+        "expr": "V,2",
+        "sense": "min",
+        "label": "OBJ"
+      }
+    ],
+    "con": [
+      {
+        "expr": "*,*,/,N,1.0,V,0,V,1,+,V,2,*,N,-1,V,3",
+        "label": "CON1",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,/,V,1,V,0,+,V,2,*,N,-1,V,3",
+        "label": "CON2",
+        "eq": 2.0
+      },
+      {
+        "expr": "/,*,V,1,+,V,2,*,N,-1,V,3,V,0",
+        "label": "CON3",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,V,1,+,/,V,2,V,0,neg,/,V,3,V,0",
+        "label": "CON4",
+        "eq": 2.0
+      },
+      {
+        "expr": "*,*,V,1,+,V,2,*,N,-1,V,3,/,N,1.0,V,0",
+        "label": "CON5",
+        "eq": 2.0
+      },
+      {
+        "expr": "+,*,V,1,+,V,2,*,N,-1,V,3,*,N,-2.0,V,0",
+        "label": "CON6",
+        "eq": 0.0
+      }
+    ],
+    "var": [
+      {
+        "label": "p",
+        "id": 0,
+        "value": 2.0,
+        "type": "R",
+        "fixed": 1
+      },
+      {
+        "label": "v",
+        "id": 1,
+        "value": 3.0,
+        "lb": -1.0,
+        "ub": 1.0,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "x",
+        "id": 2,
+        "value": 1.0,
+        "lb": -1.0,
+        "ub": 1.0,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "y",
+        "id": 3,
+        "value": 2.0,
+        "lb": -1.0,
+        "ub": 1.0,
+        "type": "R",
+        "fixed": 0
+      }
+    ],
+    "param": [],
+    "set": {},
+    "indexed_vars": [],
+    "indexed_params": []
+  }
+}

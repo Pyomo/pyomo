@@ -1,0 +1,138 @@
+{
+  "__metadata__": {
+    "version": 20210301,
+    "format": "JSON Parameterized Optimization Format (JPOF)"
+  },
+  "model": {
+    "config": {
+      "symbolic_solver_labels": 1,
+      "skip_trivial_constraints": 0,
+      "file_determinism": 3,
+      "include_all_variable_bounds": 0
+    },
+    "obj": [
+      {
+        "expr": "+,V,0,V,1",
+        "sense": "min",
+        "label": "obj"
+      }
+    ],
+    "con": [
+      {
+        "expr": "abs,V,0",
+        "label": "c_abs",
+        "eq": 1.0
+      },
+      {
+        "expr": "acos,V,1",
+        "label": "c_acos",
+        "eq": 1.5707963267948966
+      },
+      {
+        "expr": "acosh,/,+,V,0,N,7.3890560989306495,N,5.43656365691809",
+        "label": "c_acosh",
+        "eq": 0.0
+      },
+      {
+        "expr": "asin,V,1",
+        "label": "c_asin",
+        "eq": 0.0
+      },
+      {
+        "expr": "asinh,V,1",
+        "label": "c_asinh",
+        "eq": 0.0
+      },
+      {
+        "expr": "atan,V,1",
+        "label": "c_atan",
+        "eq": 0.0
+      },
+      {
+        "expr": "atanh,V,1",
+        "label": "c_atanh",
+        "eq": 0.0
+      },
+      {
+        "expr": "ceil,V,0",
+        "label": "c_ceil",
+        "eq": 1.0
+      },
+      {
+        "expr": "cos,V,1",
+        "label": "c_cos",
+        "eq": 1.0
+      },
+      {
+        "expr": "cosh,V,1",
+        "label": "c_cosh",
+        "eq": 1.0
+      },
+      {
+        "expr": "exp,V,1",
+        "label": "c_exp",
+        "eq": 1.0
+      },
+      {
+        "expr": "floor,V,0",
+        "label": "c_floor",
+        "eq": 1.0
+      },
+      {
+        "expr": "log,V,0",
+        "label": "c_log",
+        "eq": 0.0
+      },
+      {
+        "expr": "log10,V,0",
+        "label": "c_log10",
+        "eq": 0.0
+      },
+      {
+        "expr": "sin,V,1",
+        "label": "c_sin",
+        "eq": 0.0
+      },
+      {
+        "expr": "sinh,V,1",
+        "label": "c_sinh",
+        "eq": 0.0
+      },
+      {
+        "expr": "sqrt,V,0",
+        "label": "c_sqrt",
+        "eq": 1.0
+      },
+      {
+        "expr": "tan,V,1",
+        "label": "c_tan",
+        "eq": 0.0
+      },
+      {
+        "expr": "tanh,V,1",
+        "label": "c_tanh",
+        "eq": 0.0
+      }
+    ],
+    "var": [
+      {
+        "label": "ONE",
+        "id": 0,
+        "value": 1,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "ZERO",
+        "id": 1,
+        "value": 0,
+        "type": "R",
+        "fixed": 0
+      }
+    ],
+    "param": [],
+    "set": {},
+    "indexed_vars": [],
+    "indexed_params": []
+  }
+}
