@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import json_writer
+import pyomo.contrib.jpof
 
 def create(N):
     M = pe.ConcreteModel()
@@ -18,7 +18,7 @@ def create(N):
 
     return M
 
-writer = json_writer.JPOFWriter()
+writer = pyomo.contrib.jpof.JPOFWriter()
 
 M = create(3)
 writer(M, filename="dsrosen3.jpof", io_options={'file_determinism':3, 'symbolic_solver_labels':True})
