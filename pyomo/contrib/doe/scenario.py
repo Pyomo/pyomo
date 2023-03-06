@@ -26,6 +26,16 @@
 #  ___________________________________________________________________________
 
 import pickle
+from enum import Enum
+
+class formula_lib(Enum):
+    forward = "forward"
+    central = "central"
+    backward = "backward"
+
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
 
 class ScenarioGenerator:
     def __init__(self, para_dict, formula='central', step=0.001, store=False):
@@ -45,7 +55,8 @@ class ScenarioGenerator:
             if True, store results.
         """
 
-        if formula not in ['central', 'forward', 'backward', None]:
+        #if formula not in ['central', 'forward', 'backward', None]:
+        if not formula_lib.has_value(formula):
             raise ValueError('Undefined formula. Available formulas: central, forward, backward, none.')
 
         # get info from parameter dictionary
@@ -91,7 +102,7 @@ class ScenarioGenerator:
         for p, para in enumerate(self.para_names):
 
             ## get scenario dictionary
-            if self.formula == "central":
+            if self.formula == formula_lib.central.value:
                 scena_num[para] = [2*p, 2*p+1]
                 scena_dict_up, scena_dict_lo = self.para_dict.copy(), self.para_dict.copy()
                 # corresponding parameter dictionary for the scenario
@@ -101,14 +112,14 @@ class ScenarioGenerator:
                 scenario.append(scena_dict_up)
                 scenario.append(scena_dict_lo)
 
-            elif self.formula in ["forward", "backward"]:
+            elif self.formula in [formula_lib.forward.value, formula_lib.backward.value]:
                 # the base case is added as the last one
                 scena_num[para] = [p,len(self.param_names)]
                 scena_dict_up, scena_dict_lo = self.para_dict.copy(), self.para_dict.copy()
-                if self.formula=="forward":
+                if self.formula==formula_lib.forward.value:
                     scena_dict_up[para] *= (1+self.step)
                 
-                elif self.formula=="backward":
+                elif self.formula==formula_lib.backward.value:
                     scena_dict_lo[para] *= (1-self.step)
 
                 scenario.append(scena_dict_up)
@@ -116,7 +127,7 @@ class ScenarioGenerator:
 
             ## get perturbation sizes
             # for central difference scheme, perturbation size is two times the step size
-            if self.formula == 'central':
+            if self.formula == formula_lib.central.value:
                 eps_abs[para] = 2 * self.step * self.para_dict[para]
             else:
                 eps_abs[para] = self.step * self.para_dict[para]

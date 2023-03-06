@@ -124,12 +124,13 @@ class DesignOfExperiments:
         if self.objective_option not in ['det', 'trace', 'zero']:
             raise ValueError('Objective function should be chosen from "det", "zero" and "trace" while receiving {}'.format(self.objective_option))
 
-        if self.formula not in ['central', 'forward', 'backward', None]:
-            raise ValueError('Finite difference scheme should be chosen from "central", "forward", "backward" and None while receiving {}.'.formate(self.formula))
-
         if type(self.prior_FIM)!=type(None):
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
                 raise ValueError('Found wrong prior information matrix shape.')
+            
+        if check_mode:
+            if not (mode_lib.has_value(self.mode)):
+                raise ValueError('Mode scheme should be choosen from "sequential_finite" and "direct_kaug".')
 
     def stochastic_program(self,  design_object, if_optimize=True, objective_option='det',
                      jac_involved_measurement=None,
@@ -326,6 +327,7 @@ class DesignOfExperiments:
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
         self.formula = formula
+        self.mode = mode
         self.step = step
 
         # This method only solves square problem
