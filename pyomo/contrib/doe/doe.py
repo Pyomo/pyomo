@@ -36,6 +36,7 @@ import time
 import pickle
 from itertools import permutations, product
 import logging
+from enum import Enum
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
 #from pyomo.contrib.doe.scenario import Scenario_generator
@@ -43,9 +44,18 @@ from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_
 from scenario import ScenarioGenerator
 from result import FisherResults, GridSearchResult
 
+
+class mode_lib(Enum):
+    sequential_finite = "sequential_finite"
+    direct_kaug = "direct_kaug"
+
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
+
 class DesignOfExperiments:
     def __init__(self, param_init, design_object, measurement_object, create_model, solver=None,
-                 time_set_name = "t", prior_FIM=None, discretize_model=None, args=None):
+                  prior_FIM=None, discretize_model=None, args=None):
         """
         This package enables model-based design of experiments analysis with Pyomo. 
         Both direct optimization and enumeration modes are supported.
@@ -67,8 +77,6 @@ class DesignOfExperiments:
         solver:
             A ``solver`` object that User specified, default=None. 
             If not specified, default solver is IPOPT MA57.
-        time_set_name:
-            A ``string`` of the name of the time set in the model. Default is "t".
         prior_FIM:
             A ``list`` of lists containing Fisher information matrix (FIM) for prior experiments.
         discretize_model:
@@ -94,9 +102,6 @@ class DesignOfExperiments:
         # if not given, use default solver
         else:
             self.solver = self._get_default_ipopt_solver()
-
-        # time set name 
-        self.t = time_set_name
 
         # check if discretization is needed
         self.discretize_model = discretize_model
@@ -125,11 +130,6 @@ class DesignOfExperiments:
         if type(self.prior_FIM)!=type(None):
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
                 raise ValueError('Found wrong prior information matrix shape.')
-
-        if check_mode:
-            curr_available_mode = ['sequential_finite','direct_kaug']
-            if self.mode not in curr_available_mode:
-                raise ValueError('Wrong mode.')
 
     def stochastic_program(self,  design_object, if_optimize=True, objective_option='det',
                      jac_involved_measurement=None,
@@ -323,7 +323,6 @@ class DesignOfExperiments:
         
         # save inputs in object
         self.design_values = design_object.special_set_value
-        self.mode = mode
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
         self.formula = formula
@@ -347,14 +346,14 @@ class DesignOfExperiments:
 
         square_timer = TicTocTimer()
         square_timer.tic(msg=None)
-        if self.mode=='sequential_finite':
+        if mode==mode_lib.sequential_finite.value:
             FIM_analysis = self._sequential_finite(read_output, extract_single_model, store_output)
 
-        elif self.mode =='direct_kaug':
+        elif mode==mode_lib.direct_kaug.value:
             FIM_analysis = self._direct_kaug()
             
         else:
-            raise ValueError(self.mode+' is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
+            raise ValueError(mode+' is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
         
         dT = square_timer.toc(msg=None)
         self.logger.info("elapsed time: %0.1f"%dT)
