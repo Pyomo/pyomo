@@ -97,6 +97,11 @@ class SpecialSet:
     def add_bounds(self, upper_bound=None, lower_bound=None):
         """
         add bounds
+
+        Parameters
+        ----------
+        upper_bound: a ``list`` of upper bounds 
+        lower_bound: a ``list `` of lower bounds
         """
         if upper_bound:
             self.upper_bound = self._generate_dict(upper_bound)
@@ -159,8 +164,6 @@ class SpecialSet:
                         name1 += ","
 
                 self.special_set.append(name1)
-
-        #return self.special_set
     
 class Measurements(SpecialSet):
     def __init__(self):
@@ -170,7 +173,9 @@ class Measurements(SpecialSet):
         super().__init__()
 
     def specify(self, self_define_res):
-
+        """
+        User can pass already defined measurement names here
+        """
         self.measurement_name = super().specify(self_define_res)
 
         # generate default variance
@@ -178,7 +183,6 @@ class Measurements(SpecialSet):
 
     def add_elements(self, var_name, extra_index=None, time_index=[0]):
         """
-
         Parameters
         -----------
         var_name: a ``list`` of measurement var names 
@@ -221,7 +225,6 @@ class Measurements(SpecialSet):
             if nam not in self.measurement_name:
                 print("Measurement not in the set: ", nam)
 
-
     def _generate_variance(self):
         """Generate the variance dictionary. 
         """
@@ -237,6 +240,9 @@ class Measurements(SpecialSet):
         
         if len(extra_index) != num_var: 
             warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")
+
+        if len(time_index) != num_var:
+            warnings.warn("time_index is of different length with var_name. This warning indicates a potential modeling error.")
 
 
 
@@ -266,6 +272,8 @@ class DesignVariables(SpecialSet):
                 default choice is [0], means this is an algebraic variable
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
+        self._check_names(var_name, extra_index, time_index)
+
         self.design_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values)
         # initialize upper and lower bounds
         self.upper_bound, self.lower_bound = None, None
@@ -275,3 +283,15 @@ class DesignVariables(SpecialSet):
     
     def update_values(self, values):
         return super().update_values(values)
+
+    def _check_names(self, var_name, extra_index, time_index):
+        """
+        Check if the measurement information provided are valid to use. 
+        """
+        num_var = len(var_name)
+        
+        if len(extra_index) != num_var: 
+            warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")
+
+        if len(time_index) != num_var:
+            warnings.warn("time_index is of different length with var_name. This warning indicates a potential modeling error.")

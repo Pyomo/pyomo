@@ -444,16 +444,13 @@ class DesignOfExperiments:
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
         # set ub and lb to parameters
-        for par in list(self.param.keys()):
+        for par in self.param.keys():
             component = getattr(mod, par)
             component.setlb(self.param[par])
             component.setub(self.param[par])
 
         # generate parameter name list and value dictionary with index
-        var_name = []
-        for name in list(self.param.keys()):
-            # [0] is the scenario index
-            var_name.append(name)
+        var_name = list(self.param.keys())
 
         # call k_aug get_dsdp function
         square_result = self._solve_doe(mod, fix=True)
@@ -467,8 +464,6 @@ class DesignOfExperiments:
         dsdp_extract = []
         # get right lines from results
         measurement_index = []
-        # produce the sensitivity for fixed variables
-        zero_sens = np.zeros(len(self.param))
 
         # loop over measurement variables and their time points
         for mname in self.measure_name:
@@ -480,17 +475,19 @@ class DesignOfExperiments:
             except: 
                 # k_aug does not provide value for fixed variables
                 self.logger.debug('The variable is fixed:  %s', mname)
+                # produce the sensitivity for fixed variables
+                zero_sens = np.zeros(len(self.param))
                 # for fixed variables, the sensitivity are a zero vector
                 dsdp_extract.append(zero_sens)
 
         # Extract and calculate sensitivity if scaled by constants or parameters.
         # Convert sensitivity to a dictionary
         jac = {}
-        for par in list(self.param.keys()):
+        for par in self.param.keys():
             jac[par] = []
 
         for d in range(len(dsdp_extract)):
-            for p, par in enumerate(list(self.param.keys())):
+            for p, par in enumerate(self.param.keys()):
                 # if scaled by parameter value or constant value
                 sensi = dsdp_extract[d][p]*self.scale_constant_value
                 if self.scale_nominal_param_value:
@@ -583,7 +580,7 @@ class DesignOfExperiments:
         jac = {}
 
         # After collecting outputs from all scenarios, calculate sensitivity
-        for para in list(self.param.keys()):
+        for para in self.param.keys():
             # extract involved scenario No. for each parameter from scenario class
             involved_s = scena_gen['scena_num'][para]
 
@@ -614,7 +611,7 @@ class DesignOfExperiments:
         # dictionary form of jacobian
         jac = {}
         # loop over parameters
-        for p in list(self.param.keys()): 
+        for p in self.param.keys(): 
             jac_para = []
             for res in m.res:
                 jac_para.append(pyo.value(m.jac[p, res]))
@@ -698,8 +695,8 @@ class DesignOfExperiments:
             design_iter = design_object.special_set_value.copy()
 
             # update the controlled value of certain time points for certain design variables
-            for i in range(len(design_dimension_names)):
-                names = design_dimension_names[i]
+            for i, names in enumerate(design_dimension_names):
+                #names = design_dimension_names[i]
                 # if the element is a list, all design variables in this list share the same values
                 if type(names) is list:
                     for n in names:
@@ -998,31 +995,6 @@ class DesignOfExperiments:
         solver_result = self.solver.solve(mod,tee=self.tee_opt)
 
         return solver_result
-
-    def _add_parameter(self, m, perturb=0):
-        """
-        For sIPOPT: add parameter perturbation set
-
-        Parameters:
-        -----------
-        m: model name
-        perturb: which parameter to perturb
-        """
-        # model parameters perturbation, backward disturb
-        param_backward = self.param_value.copy()
-        # perturb parameter
-        param_backward[perturb] *= (1-self.step)
-
-        # generate sIPOPT perturbed parameter names
-        param_perturb_names = list(self.param.keys()).copy()
-        for x, xname in enumerate(list(self.param.keys())):
-            param_perturb_names[x] = xname+'_pert'
-
-        self.perturb_names = param_perturb_names
-
-        for change in range(len(self.perturb_names)):
-            setattr(m, self.perturb_names[change], Param(m.scena, initialize=param_backward[change]))
-        return m
 
     def _sgn(self,p):
         """

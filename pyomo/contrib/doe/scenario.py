@@ -54,8 +54,6 @@ class ScenarioGenerator:
         store:
             if True, store results.
         """
-
-        #if formula not in ['central', 'forward', 'backward', None]:
         if not formula_lib.has_value(formula):
             raise ValueError('Undefined formula. Available formulas: central, forward, backward, none.')
 
