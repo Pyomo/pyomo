@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.dependencies.scipy import spatial
@@ -131,6 +132,32 @@ class PiecewiseLinearFunctionData(_BlockData):
         else:
             return None
 
+class _univariate_linear_functor(AutoSlots.Mixin):
+    __slots__ = ('slope', 'intercept')
+
+    def __init__(self, slope, intercept):
+        self.slope = slope
+        self.intercept = intercept
+
+    def __call__(self, x):
+        return self.slope*x + self.intercept
+
+class _multivariate_linear_functor(AutoSlots.Mixin):
+    __slots__ = ('normal')
+
+    def __init__(self, normal):
+        self.normal = normal
+
+    def __call__(self, *args):
+        return sum(self.normal[i]*arg for i, arg in enumerate(args)) + self.normal[-1]
+
+
+def _define_handler(handle_map, *key):
+    def _wrapper(obj):
+        assert key not in handle_map
+        handle_map[key] = obj
+        return obj
+    return _wrapper
 
 @ModelComponentFactory.register("Multidimensional piecewise linear function")
 class PiecewiseLinearFunction(Block):
@@ -167,6 +194,9 @@ class PiecewiseLinearFunction(Block):
     """
     _ComponentDataClass = PiecewiseLinearFunctionData
 
+    # Map 4-tuple of bool to hander: "(f, pts, simplices, linear_funcs) : handler"
+    _handlers = {}
+
     def __new__(cls, *args, **kwds):
         if cls is not PiecewiseLinearFunction:
             return super(PiecewiseLinearFunction, cls).__new__(cls)
@@ -178,15 +208,6 @@ class PiecewiseLinearFunction(Block):
                 IndexedPiecewiseLinearFunction)
 
     def __init__(self, *args, **kwargs):
-        self._handlers = {
-            # (f, pts, simplices, linear_funcs) : handler
-            (True, True, False,
-             False): self._construct_from_function_and_points,
-            (True, False, True,
-             False): self._construct_from_function_and_simplices,
-            (False, False, True,
-             True): self._construct_from_linear_functions_and_simplices
-        }
         # [ESJ 1/24/23]: TODO: Eventually we should also support constructing
         # this from table data--a mapping of points to function values.
 
@@ -209,6 +230,7 @@ class PiecewiseLinearFunction(Block):
         self._linear_funcs_rule = Initializer(_linear_functions,
                                               treat_sequences_as_mappings=False)
 
+    @_define_handler(_handlers, True, True, False, False)
     def _construct_from_function_and_points(self, obj, parent,
                                             nonlinear_function):
         parent = obj.parent_block()
@@ -251,26 +273,19 @@ class PiecewiseLinearFunction(Block):
                                                            nonlinear_function)
 
     def _construct_from_univariate_function_and_segments(self, obj, func):
-        # [ESJ 1/21/23]: See this blog post about why the below is necessary:
-        # https://eev.ee/blog/2011/04/24/gotcha-python-scoping-closures/
-        # Basically, Python scoping is such a disaster that if we directly
-        # declare the lambda function in the loop, their defintions will
-        # rely on the value of idx1 and idx2... So all the functions will be
-        # the last iteration function. By using a factory, we put 'slope' and
-        # 'intercept' in a separate scope and get around this.
-        def linear_func_factory(slope, intercept):
-            return lambda x : slope*x + intercept
-
         for idx1, idx2 in obj._simplices:
             x1 = obj._points[idx1][0]
             x2 = obj._points[idx2][0]
             y = {x : func(x) for x in [x1, x2]}
             slope = (y[x2] - y[x1])/(x2 - x1)
             intercept = y[x1] - slope*x1
-            obj._linear_functions.append(linear_func_factory(slope, intercept))
+            obj._linear_functions.append(
+                _univariate_linear_functor(slope, intercept)
+            )
 
         return obj
 
+    @_define_handler(_handlers, True, False, True, False)
     def _construct_from_function_and_simplices(self, obj, parent,
                                                nonlinear_function):
         if obj._simplices is None:
@@ -289,12 +304,6 @@ class PiecewiseLinearFunction(Block):
             # numpy.
             return self._construct_from_univariate_function_and_segments(
                 obj, nonlinear_function)
-
-        def linear_function_factory(normal):
-            def f(*args):
-                return sum(normal[i]*arg for i, arg in enumerate(args)) + \
-                    normal[-1]
-            return f
 
         # evaluate the function at each of the points and form the homogeneous
         # system of equations
@@ -316,10 +325,11 @@ class PiecewiseLinearFunction(Block):
             # of the nonlinear function dimension is -1, so we can just read
             # off the linear equation in the x space).
             normal = np.linalg.solve(A, b)
-            obj._linear_functions.append(linear_function_factory(normal))
+            obj._linear_functions.append(_multivariate_linear_functor(normal))
 
         return obj
 
+    @_define_handler(_handlers, False, False, True, True)
     def _construct_from_linear_functions_and_simplices(self, obj, parent,
                                                        nonlinear_function):
         # We know that we have simplices because else this handler wouldn't
@@ -355,7 +365,7 @@ class PiecewiseLinearFunction(Block):
                              "of breakpoints, a nonlinear function and a list "
                              "of simplices, or a list of linear functions and "
                              "a list of corresponding simplices.")
-        return handler(obj, parent, nonlinear_function)
+        return handler(self, obj, parent, nonlinear_function)
 
 
 class ScalarPiecewiseLinearFunction(PiecewiseLinearFunctionData,
