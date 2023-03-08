@@ -1089,6 +1089,29 @@ class TestSolvers(unittest.TestCase):
         self.assertIn(m.y, sol)
         self.assertNotIn(m.z, sol)
 
+    @parameterized.expand(input=all_solvers)
+    def test_bug_1(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(3, 7))
+        m.y = pe.Var(bounds=(-10, 10))
+        m.p = pe.Param(mutable=True, initialize=0)
+
+        m.obj = pe.Objective(expr=m.y)
+        m.c = pe.Constraint(expr=m.y >= m.p*m.x)
+
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+
+        m.p.value = 1
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 3)
+
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestLegacySolverInterface(unittest.TestCase):
