@@ -343,6 +343,7 @@ class Highs(PersistentBase, PersistentSolver):
             for ndx, coef in enumerate(repn.linear_coefs):
                 v = repn.linear_vars[ndx]
                 v_id = id(v)
+                coef_val = value(coef)
                 if not is_constant(coef):
                     mutable_linear_coefficient = _MutableLinearCoefficient(pyomo_con=con, pyomo_var_id=v_id,
                                                                            con_map=self._pyomo_con_to_solver_con_map,
@@ -352,8 +353,10 @@ class Highs(PersistentBase, PersistentSolver):
                     if con not in self._mutable_helpers:
                         self._mutable_helpers[con] = list()
                     self._mutable_helpers[con].append(mutable_linear_coefficient)
+                    if coef_val == 0:
+                        continue
                 var_indices.append(self._pyomo_var_to_solver_var_map[v_id])
-                coef_values.append(value(coef))
+                coef_values.append(coef_val)
 
             if con.has_lb():
                 lb = con.lower - repn.constant
