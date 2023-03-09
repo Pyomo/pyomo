@@ -223,9 +223,26 @@ class TestIndexedComponent(unittest.TestCase):
     def test_index_by_unhashable_type(self):
         m = ConcreteModel()
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
+        # Indexing by a dict raises an error
         self.assertRaisesRegex(
             TypeError, '.*',
             m.x.__getitem__, {})
+        # Indexing by lists works...
+        # ... scalar
+        self.assertIs(m.x[[1]], m.x[1])
+        # ... "tuple"
+        m.y = Var([(1, 1), (1, 2)])
+        self.assertIs(m.y[[1, 1]], m.y[1, 1])
+        m.y[[1, 2]] = 5
+        y12 = m.y[[1, 2]]
+        self.assertEqual(y12.value, 5)
+        m.y[[1, 2]] = 15
+        self.assertIs(y12, m.y[[1, 2]])
+        self.assertEqual(y12.value, 15)
+        with self.assertRaisesRegex(
+                KeyError, r"Index '\(2, 2\)' is not valid for indexed component 'y'"):
+            m.y[[2, 2]] = 5
+
 
     def test_ordered_keys(self):
         m = ConcreteModel()
