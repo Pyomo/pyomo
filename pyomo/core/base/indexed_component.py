@@ -802,6 +802,7 @@ You can silence this warning by one of three ways:
         # Iterate through the index and look for slices and constant
         # components
         #
+        orig_idx = idx
         fixed = {}
         sliced = {}
         ellipsis = None
@@ -942,7 +943,7 @@ value() function.""" % ( self.name, i ))
         else:
             raise DeveloperError(
                 "Unknown problem encountered when trying to retrieve "
-                "index for component %s" % (self.name,) )
+                f"index '{orig_idx}' for component '{self.name}'")
 
     def _getitem_when_not_present(self, index):
         """Returns/initializes a value when the index is not in the _data dict.
