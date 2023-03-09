@@ -174,7 +174,7 @@ class NumericExpression(ExpressionBase, NumericValue):
             logger.error(
                 'recasting a non-potentially variable expression to a '
                 'potentially variable one violates the immutability '
-                'promise for Pyomo5 expression trees.')
+                'promise for Pyomo expression trees.')
             cls = list(self.__class__.__bases__)
             cls.remove(Numeric_NPV_Mixin)
             assert len(cls) == 1
