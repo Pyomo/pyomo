@@ -12,7 +12,7 @@
 from pyomo.core.base import Transformation, TransformationFactory
 import pyomo.gdp.plugins.hull
 
-@TransformationFactory.register('contrib.disaggregated_convex_combination',
+@TransformationFactory.register('contrib.piecewise.disaggregated_convex_combination',
                                 doc="Convert piecewise-linear model to a GDP "
                                 "to 'Disaggregated Convex Combination' MIP "
                                 "formulation.")
@@ -31,5 +31,5 @@ class DisaggregatedConvexCombinationTransformation(Transformation):
         2010.
     """
     def _apply_to(self, instance, **kwds):
-        TransformationFactory('contrib.inner_repn_gdp').apply_to(instance)
+        TransformationFactory('contrib.piecewise.inner_repn_gdp').apply_to(instance)
         TransformationFactory('gdp.hull').apply_to(instance)

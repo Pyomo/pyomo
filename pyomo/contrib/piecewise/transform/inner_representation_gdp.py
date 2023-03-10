@@ -27,7 +27,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import is_child_of
 from pyomo.network import Port
 
-@TransformationFactory.register('contrib.inner_repn_gdp',
+@TransformationFactory.register('contrib.piecewise.inner_repn_gdp',
                                 doc="Convert piecewise-linear model to a GDP "
                                 "using an inner representation of the "
                                 "simplices that are the domains of the linear "
