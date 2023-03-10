@@ -156,32 +156,6 @@ class TestExprGen(unittest.TestCase):
             self.mutable_l3,
         ]
 
-        # tests = [
-        #     (self.xxx, self.invalid, NotImplemented),
-        #     (self.xxx, self.asbinary, ),
-        #     (self.xxx, self.zero, ),
-        #     (self.xxx, self.one, ),
-        #     # 4:
-        #     (self.xxx, self.native, ),
-        #     (self.xxx, self.npv, ),
-        #     (self.xxx, self.param, ),
-        #     (self.xxx, self.param_mut, ),
-        #     # 8:
-        #     (self.xxx, self.var, ),
-        #     (self.xxx, self.mon_native, ),
-        #     (self.xxx, self.mon_param, ),
-        #     (self.xxx, self.mon_npv, ),
-        #     # 12:
-        #     (self.xxx, self.linear, ),
-        #     (self.xxx, self.sum, ),
-        #     (self.xxx, self.other, ),
-        #     (self.xxx, self.mutable_l0, ),
-        #     # 16:
-        #     (self.xxx, self.mutable_l1, ),
-        #     (self.xxx, self.mutable_l2, ),
-        # ]
-        # self._run_cases(tests, operator.mul)
-
     def _print_error(self, test_num, test, ans):
         msg = f"Failed test {test_num}:\n\t"
         for arg in test:
