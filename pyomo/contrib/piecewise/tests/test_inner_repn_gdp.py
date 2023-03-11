@@ -16,7 +16,7 @@ from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import (
     assertExpressionsEqual, assertExpressionsStructurallyEqual)
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.environ import Constraint, SolverFactory, value, Var
+from pyomo.environ import Constraint, SolverFactory, Var
 
 class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
     def check_log_disjunct(self, d, pts, f, substitute_var, x):
@@ -129,53 +129,27 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
                       paraboloid_block.substitute_var)
 
     def test_transformation_do_not_descend(self):
-        m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
-        inner_repn.apply_to(m)
-
-        self.check_pw_log(m)
-        self.check_pw_paraboloid(m)
+       ct.check_transformation_do_not_descend(self,
+                                             'contrib.piecewise.inner_repn_gdp')
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
-        m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
-        inner_repn.apply_to(m, targets=[m.pw_log])
-
-        self.check_pw_log(m)
-
-        # And check that the paraboloid was *not* transformed.
-        self.assertIsNone(
-            m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
+        ct.check_transformation_PiecewiseLinearFunction_targets(
+            self,
+            'contrib.piecewise.inner_repn_gdp')
 
     def test_descend_into_expressions(self):
-        m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
-        inner_repn.apply_to(m, descend_into_expressions=True)
-
-        # Everything should be transformed
-        self.check_pw_log(m)
-        self.check_pw_paraboloid(m)
+        ct.check_descend_into_expressions(self,
+                                         'contrib.piecewise.inner_repn_gdp')
 
     def test_descend_into_expressions_constraint_target(self):
-        m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
-        inner_repn.apply_to(m, descend_into_expressions=True,
-                            targets=[m.indexed_c])
-
-        self.check_pw_paraboloid(m)
-        # And check that the log was *not* transformed.
-        self.assertIsNone(m.pw_log.get_transformation_var(m.log_expr))
+        ct.check_descend_into_expressions_constraint_target(
+            self,
+            'contrib.piecewise.inner_repn_gdp')
 
     def test_descend_into_expressions_objective_target(self):
-        m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
-        inner_repn.apply_to(m, descend_into_expressions=True,
-                            targets=[m.obj])
-
-        self.check_pw_log(m)
-        # And check that the paraboloid was *not* transformed.
-        self.assertIsNone(
-            m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
+        ct.check_descend_into_expressions_objective_target(
+            self,
+            'contrib.piecewise.inner_repn_gdp')
 
     @unittest.skipUnless(SolverFactory('gurobi').available(),
                          'Gurobi is not available')
@@ -183,10 +157,6 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         m = models.make_log_x_model()
         TransformationFactory(
             'contrib.piecewise.disaggregated_convex_combination').apply_to(m)
+        SolverFactory('gurobi').solve(m)
 
-        SolverFactory('gurobi').solve(m, tee=True)
-
-        self.assertAlmostEqual(value(m.x), 4)
-        self.assertAlmostEqual(value(m.x1), 1)
-        self.assertAlmostEqual(value(m.x2), 1)
-        self.assertAlmostEqual(value(m.obj), m.f2(4))
+        ct.check_log_x_model_soln(self, m)
