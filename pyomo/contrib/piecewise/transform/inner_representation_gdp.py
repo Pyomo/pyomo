@@ -9,13 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
     PiecewiseLinearToGDP)
 from pyomo.core import Constraint, NonNegativeIntegers, Suffix, Var
 from pyomo.core.base import TransformationFactory
-from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 
 @TransformationFactory.register('contrib.piecewise.inner_repn_gdp',
@@ -46,36 +44,7 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
            parent Block as the component owning their parent expression. In
            this mode, targets must be Blocks, Constraints, and/or Objectives.
     """
-    CONFIG = ConfigDict('piecewise.inner_repn_gdp')
-    CONFIG.declare('targets', ConfigValue(
-        default=None,
-        domain=target_list,
-        description="target or list of targets that will be transformed",
-        doc="""
-        This specifies the list of components to transform. If None (default),
-        the entire model is transformed. Note that if the transformation is
-        done out of place, the list of targets should be attached to the model
-        before it is cloned, and the list will specify the targets on the cloned
-        instance."""
-    ))
-    CONFIG.declare('descend_into_expressions', ConfigValue(
-        default=False,
-        domain=bool,
-        description="Whether to look for uses of PiecewiseLinearFunctions in "
-        "the Constraint and Objective expressions, rather than assuming "
-        "all PiecewiseLinearFunctions are on the active tree(s) of 'instance' "
-        "and 'targets.'",
-        doc="""
-        It is *strongly* recommended that, in hierarchical models, the
-        PiecewiseLinearFunction components are on the same Block as where
-        they are used in expressions. If you follow this recommendation,
-        this option can remain False, which will make this transformation
-        more efficient. However, if you do not follow the recommendation,
-        unless you know what you are doing, turn this option to 'True' to
-        ensure that all of the uses of PiecewiseLinearFunctions are
-        transformed.
-        """
-    ))
+    CONFIG = PiecewiseLinearToGDP.CONFIG()
     _transformation_name = 'pw_linear_inner_repn'
 
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func,

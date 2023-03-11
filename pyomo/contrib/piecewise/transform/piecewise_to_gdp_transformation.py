@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
@@ -19,6 +20,7 @@ from pyomo.core import (
     SetOf, RangeSet, ExternalFunction, Connector, SortComponents, Any)
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import is_child_of
 from pyomo.network import Port
@@ -27,6 +29,37 @@ class PiecewiseLinearToGDP(Transformation):
     """
     Base class for transformations of piecewise-linear models to GDPs
     """
+    CONFIG = ConfigDict('contrib.piecewise_to_gdp')
+    CONFIG.declare('targets', ConfigValue(
+        default=None,
+        domain=target_list,
+        description="target or list of targets that will be transformed",
+        doc="""
+        This specifies the list of components to transform. If None (default),
+        the entire model is transformed. Note that if the transformation is
+        done out of place, the list of targets should be attached to the model
+        before it is cloned, and the list will specify the targets on the cloned
+        instance."""
+    ))
+    CONFIG.declare('descend_into_expressions', ConfigValue(
+        default=False,
+        domain=bool,
+        description="Whether to look for uses of PiecewiseLinearFunctions in "
+        "the Constraint and Objective expressions, rather than assuming "
+        "all PiecewiseLinearFunctions are on the active tree(s) of 'instance' "
+        "and 'targets.'",
+        doc="""
+        It is *strongly* recommended that, in hierarchical models, the
+        PiecewiseLinearFunction components are on the same Block as where
+        they are used in expressions. If you follow this recommendation,
+        this option can remain False, which will make this transformation
+        more efficient. However, if you do not follow the recommendation,
+        unless you know what you are doing, turn this option to 'True' to
+        ensure that all of the uses of PiecewiseLinearFunctions are
+        transformed.
+        """
+    ))
+
     def __init__(self):
         super().__init__()
         self.handlers = {
