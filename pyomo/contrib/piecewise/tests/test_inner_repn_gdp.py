@@ -10,76 +10,15 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.piecewise import (
-    PiecewiseLinearFunction, PiecewiseLinearExpression)
+from pyomo.contrib.piecewise.tests import models
+import pyomo.contrib.piecewise.tests.common_tests as ct
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import (
     assertExpressionsEqual, assertExpressionsStructurallyEqual)
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.environ import (
-    ConcreteModel, Constraint, log, SolverFactory, Objective, value, Var)
+from pyomo.environ import Constraint, SolverFactory, value, Var
 
 class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
-    def make_model(self):
-        m = ConcreteModel()
-        m.x = Var(bounds=(1, 10))
-        def log_function(x):
-            return log(x)
-        m.log_function = log_function
-        m.pw_log = PiecewiseLinearFunction(points=[1, 3, 6, 10],
-                                           function=m.log_function)
-
-        # Here are the linear functions, for safe keeping.
-        def f1(x):
-            return (log(3)/2)*x - log(3)/2
-        m.f1 = f1
-        def f2(x):
-            return (log(2)/3)*x + log(3/2)
-        m.f2 = f2
-        def f3(x):
-            return (log(5/3)/4)*x + log(6/((5/3)**(3/2)))
-        m.f3 = f3
-
-        m.log_expr = m.pw_log(m.x)
-        m.obj = Objective(expr=m.log_expr)
-
-        m.x1 = Var(bounds=(0, 3))
-        m.x2 = Var(bounds=(1, 7))
-
-        ## apprximates paraboloid x1**2 + x2**2
-        def g1(x1, x2):
-            return 3*x1 + 5*x2 - 4
-        m.g1 = g1
-        def g2(x1, x2):
-            return 3*x1 + 11*x2 - 28
-        m.g2 = g2
-        simplices = [[(0, 1), (0, 4), (3, 4)],
-                     [(0, 1), (3, 4), (3, 1)],
-                     [(3, 4), (3, 7), (0, 7)],
-                     [(0, 7), (0, 4), (3, 4)]]
-        m.pw_paraboloid = PiecewiseLinearFunction(simplices=simplices,
-                                                  linear_functions=[g1, g1, g2,
-                                                                    g2])
-        m.paraboloid_expr = m.pw_paraboloid(m.x1, m.x2)
-        def c_rule(m, i):
-            if i == 0:
-                return m.x >= m.paraboloid_expr
-            else:
-                return (1, m.x1, 2)
-        m.indexed_c = Constraint([0, 1], rule=c_rule)
-
-        return m
-
-    def check_trans_block_structure(self, block):
-        # One (indexed) disjunct
-        self.assertEqual(len(block.component_map(Disjunct)), 1)
-        # One disjunction
-        self.assertEqual(len(block.component_map(Disjunction)), 1)
-        # The 'z' var (that we will substitute in for the function being
-        # approximated) is here:
-        self.assertEqual(len(block.component_map(Var)), 1)
-        self.assertIsInstance(block.substitute_var, Var)
-
     def check_log_disjunct(self, d, pts, f, substitute_var, x):
         self.assertEqual(len(d.component_map(Constraint)), 3)
         # lambdas and indicator_var
@@ -135,7 +74,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.assertIsInstance(z, Var)
         # Now we can use those Vars to check on what the transformation created
         log_block = z.parent_block()
-        self.check_trans_block_structure(log_block)
+        ct.check_trans_block_structure(self, log_block)
 
         # Check that all of the Disjuncts have what they should
         self.assertEqual(len(log_block.disjuncts), 3)
@@ -164,7 +103,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         z = m.pw_paraboloid.get_transformation_var(m.paraboloid_expr)
         self.assertIsInstance(z, Var)
         paraboloid_block = z.parent_block()
-        self.check_trans_block_structure(paraboloid_block)
+        ct.check_trans_block_structure(self, paraboloid_block)
 
         self.assertEqual(len(paraboloid_block.disjuncts), 4)
         disjuncts_dict = {
@@ -190,7 +129,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
                       paraboloid_block.substitute_var)
 
     def test_transformation_do_not_descend(self):
-        m = self.make_model()
+        m = models.make_log_x_model()
         inner_repn = TransformationFactory('contrib.inner_repn_gdp')
         inner_repn.apply_to(m)
 
@@ -198,7 +137,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.check_pw_paraboloid(m)
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
-        m = self.make_model()
+        m = models.make_log_x_model()
         inner_repn = TransformationFactory('contrib.inner_repn_gdp')
         inner_repn.apply_to(m, targets=[m.pw_log])
 
@@ -209,7 +148,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
 
     def test_descend_into_expressions(self):
-        m = self.make_model()
+        m = models.make_log_x_model()
         inner_repn = TransformationFactory('contrib.inner_repn_gdp')
         inner_repn.apply_to(m, descend_into_expressions=True)
 
@@ -218,7 +157,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.check_pw_paraboloid(m)
 
     def test_descend_into_expressions_constraint_target(self):
-        m = self.make_model()
+        m = models.make_log_x_model()
         inner_repn = TransformationFactory('contrib.inner_repn_gdp')
         inner_repn.apply_to(m, descend_into_expressions=True,
                             targets=[m.indexed_c])
@@ -228,7 +167,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.assertIsNone(m.pw_log.get_transformation_var(m.log_expr))
 
     def test_descend_into_expressions_objective_target(self):
-        m = self.make_model()
+        m = models.make_log_x_model()
         inner_repn = TransformationFactory('contrib.inner_repn_gdp')
         inner_repn.apply_to(m, descend_into_expressions=True,
                             targets=[m.obj])
@@ -241,7 +180,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
     @unittest.skipUnless(SolverFactory('gurobi').available(),
                          'Gurobi is not available')
     def test_solve_disaggregated_convex_combo_model(self):
-        m = self.make_model()
+        m = models.make_log_x_model()
         TransformationFactory(
             'contrib.disaggregated_convex_combination').apply_to(m)
 
