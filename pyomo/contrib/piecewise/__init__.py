@@ -7,3 +7,8 @@ from pyomo.contrib.piecewise.transform.inner_representation_gdp import (
     InnerRepresentationGDPTransformation)
 from pyomo.contrib.piecewise.transform.disaggregated_convex_combination import (
     DisaggregatedConvexCombinationTransformation)
+from pyomo.contrib.piecewise.transform.outer_representation_gdp import (
+    OuterRepresentationGDPTransformation)
+from pyomo.contrib.piecewise.transform.multiple_choice import (
+    MultipleChoiceTransformation)
+                                                               
