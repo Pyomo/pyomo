@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from math import sqrt
+from pyomo.common.dependencies import scipy_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.tests import models
 import pyomo.contrib.piecewise.tests.common_tests as ct
@@ -126,6 +127,7 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
         self.assertIs(m.indexed_c[0].body.args[0].expr,
                       paraboloid_block.substitute_var)
 
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_transformation_do_not_descend(self):
         m = models.make_log_x_model()
         outer_repn = TransformationFactory('contrib.outer_repn_gdp')
@@ -145,6 +147,7 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
         self.assertIsNone(
             m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
 
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_descend_into_expressions(self):
         m = models.make_log_x_model()
         outer_repn = TransformationFactory('contrib.outer_repn_gdp')
@@ -154,6 +157,7 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
         self.check_pw_log(m)
         self.check_pw_paraboloid(m)
 
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_descend_into_expressions_constraint_target(self):
         m = models.make_log_x_model()
         outer_repn = TransformationFactory('contrib.outer_repn_gdp')
@@ -175,8 +179,9 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
         self.assertIsNone(
             m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
 
-    @unittest.skipUnless(SolverFactory('gurobi').available(),
-                         'Gurobi is not available')
+    @unittest.skipUnless(SolverFactory('gurobi').available() and 
+                         scipy_available,
+                         'Gurobi and/or scipy is not available')
     def test_solve_multiple_choice_model(self):
         m = models.make_log_x_model()
         TransformationFactory('contrib.piecewise.multiple_choice').apply_to(m)
