@@ -18,7 +18,7 @@ from pyomo.core.base import TransformationFactory
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 
-@TransformationFactory.register('contrib.inner_repn_gdp',
+@TransformationFactory.register('contrib.piecewise.inner_repn_gdp',
                                 doc="Convert piecewise-linear model to a GDP "
                                 "using an inner representation of the "
                                 "simplices that are the domains of the linear "

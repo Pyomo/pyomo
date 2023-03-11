@@ -130,7 +130,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
     def test_transformation_do_not_descend(self):
         m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
         inner_repn.apply_to(m)
 
         self.check_pw_log(m)
@@ -138,7 +138,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
         m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
         inner_repn.apply_to(m, targets=[m.pw_log])
 
         self.check_pw_log(m)
@@ -149,7 +149,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
     def test_descend_into_expressions(self):
         m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
         inner_repn.apply_to(m, descend_into_expressions=True)
 
         # Everything should be transformed
@@ -158,7 +158,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
     def test_descend_into_expressions_constraint_target(self):
         m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
         inner_repn.apply_to(m, descend_into_expressions=True,
                             targets=[m.indexed_c])
 
@@ -168,7 +168,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
     def test_descend_into_expressions_objective_target(self):
         m = models.make_log_x_model()
-        inner_repn = TransformationFactory('contrib.inner_repn_gdp')
+        inner_repn = TransformationFactory('contrib.piecewise.inner_repn_gdp')
         inner_repn.apply_to(m, descend_into_expressions=True,
                             targets=[m.obj])
 
@@ -182,7 +182,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
     def test_solve_disaggregated_convex_combo_model(self):
         m = models.make_log_x_model()
         TransformationFactory(
-            'contrib.disaggregated_convex_combination').apply_to(m)
+            'contrib.piecewise.disaggregated_convex_combination').apply_to(m)
 
         SolverFactory('gurobi').solve(m, tee=True)
 
