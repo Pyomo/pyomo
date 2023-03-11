@@ -20,10 +20,7 @@ from pyomo.core.base import TransformationFactory
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 
-## DEBUG
-from pytest import set_trace
-
-@TransformationFactory.register('contrib.outer_repn_gdp',
+@TransformationFactory.register('contrib.piecewise.outer_repn_gdp',
                                 doc="Convert piecewise-linear model to a GDP "
                                 "using an outer (Ax <= b) representation of "
                                 "the simplices that are the domains of the "

@@ -129,24 +129,27 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
 
     @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_transformation_do_not_descend(self):
-        ct.check_transformation_do_not_descend(self, 'contrib.outer_repn_gdp')
+        ct.check_transformation_do_not_descend(
+            self,
+            'contrib.piecewise.outer_repn_gdp')
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
         ct.check_transformation_PiecewiseLinearFunction_targets(
-            self, 'contrib.outer_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp')
 
     @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_descend_into_expressions(self):
-        ct.check_descend_into_expressions(self, 'contrib.outer_repn_gdp')
+        ct.check_descend_into_expressions(self,
+                                          'contrib.piecewise.outer_repn_gdp')
 
     @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_descend_into_expressions_constraint_target(self):
         ct.check_descend_into_expressions_constraint_target(
-            self, 'contrib.outer_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp')
 
     def test_descend_into_expressions_objective_target(self):
         ct.check_descend_into_expressions_objective_target(
-            self, 'contrib.outer_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp')
 
     @unittest.skipUnless(SolverFactory('gurobi').available() and 
                          scipy_available,

@@ -31,5 +31,6 @@ class MultipleChoiceTransformation(Transformation):
         2010.
     """
     def _apply_to(self, instance, **kwds):
-        TransformationFactory('contrib.outer_repn_gdp').apply_to(instance)
+        TransformationFactory('contrib.piecewise.outer_repn_gdp').apply_to(
+            instance)
         TransformationFactory('gdp.hull').apply_to(instance)
