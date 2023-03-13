@@ -15,11 +15,7 @@ from pyomo.environ import ConcreteModel, Constraint, log, Objective, Var
 def make_log_x_model():
     m = ConcreteModel()
     m.x = Var(bounds=(1, 10))
-    def log_function(x):
-        return log(x)
-    m.log_function = log_function
-    m.pw_log = PiecewiseLinearFunction(points=[1, 3, 6, 10],
-                                       function=m.log_function)
+    m.pw_log = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=log)
 
     # Here are the linear functions, for safe keeping.
     def f1(x):
