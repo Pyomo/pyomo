@@ -652,14 +652,15 @@ class LinearExpression(SumExpression):
 
     def __init__(self, args=None, constant=None, linear_coefs=None,
                  linear_vars=None):
-        """A linear expression of the form `const + sum_i(c_i*x_i).
+        """A linear expression of the form `const + sum_i(c_i*x_i)`.
 
-        You can specify args OR (constant, linear_coefs, and
-        linear_vars).  If args is provided, it should be a list that
-        contains the constant, followed by a series of
-        :py:class:`MonomialTermExpression` objects. Alternatively, you
+        You can specify `args` OR (`constant`, `linear_coefs`, and
+        `linear_vars`).  If `args` is provided, it should be a list that
+        contains only constants, NPV objects/expressions, or
+        :py:class:`MonomialTermExpression` objects.  Alternatively, you
         can specify the constant, the list of linear_coefs and the list
-        of linear_vars separately. Note that these lists are NOT copied.
+        of linear_vars separately.  Note that these lists are NOT
+        preserved.
 
         """
         # I am not sure why LinearExpression allows omitting args, but
@@ -670,16 +671,6 @@ class LinearExpression(SumExpression):
                    (constant, linear_coefs, linear_vars)):
                 raise ValueError("Cannot specify both args and any of "
                                  "{constant, linear_coefs, or linear_vars}")
-            # if len(args) > 1 and (args[1].__class__ in native_types
-            #                       or not args[1].is_potentially_variable()):
-            #     deprecation_warning(
-            #         "LinearExpression has been updated to expect args= to "
-            #         "be a constant followed by MonomialTermExpressions.  "
-            #         "The older format (`[const, coefficient_1, ..., "
-            #         "variable_1, ...]`) is deprecated.", version='6.2')
-            #     args = args[:1] + list(map(
-            #         MonomialTermExpression,
-            #         zip(args[1:1+len(args)//2], args[1+len(args)//2:])))
             self._args_ = args
         else:
             self._args_ = []
