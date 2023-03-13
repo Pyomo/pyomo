@@ -647,7 +647,6 @@ class LinearExpression(SumExpression):
     """
     __slots__ = ()
 
-    PRECEDENCE = 6
     _allowable_linear_expr_arg_types = set([MonomialTermExpression])
     _cache = (None, None, None, None)
 
@@ -697,9 +696,6 @@ class LinearExpression(SumExpression):
                 self._args_.extend(map(
                     MonomialTermExpression, zip(linear_coefs, linear_vars)))
         self._nargs = len(self._args_)
-
-    def nargs(self):
-        return self._nargs
 
     def _build_cache(self):
         const = 0
@@ -757,15 +753,9 @@ class LinearExpression(SumExpression):
                 self._allowable_linear_expr_arg_types.add(arg.__class__)
             return self.__class__(args)
 
-    def getname(self, *args, **kwds):
-        return 'sum'
-
 
 class NPV_SumExpression(Numeric_NPV_Mixin, SumExpression):
     __slots__ = ()
-
-    def _apply_operation(self, result):
-        return sum(result)
 
     def create_node_with_local_data(self, args, classtype=None):
         assert classtype is None
