@@ -259,10 +259,8 @@ class NegationExpression(NumericExpression):
             return f"{self.getname()}({values[0]})"
         tmp = values[0]
         if tmp[0] == '-':
-            i = 1
-            while tmp[i] == ' ':
-                i += 1
-            return tmp[i:]
+            return tmp[1:].strip()
+        # TODO: remove space after negation
         return "- " + tmp
 
     def _apply_operation(self, result):
@@ -499,6 +497,7 @@ class ProductExpression(NumericExpression):
             return f"{self.getname()}({', '.join(values)})"
         if values[0] in self._to_string.one:
             return values[1]
+        # TODO: remove space after negation
         if values[0] in self._to_string.minus_one:
             return f"- {values[1]}"
         return f"{values[0]}*{values[1]}"
@@ -617,19 +616,26 @@ class SumExpression(NumericExpression):
         return ans
 
     def _to_string(self, values, verbose, smap):
+        if not values:
+            values = ['0']
         if verbose:
             return f"{self.getname()}({', '.join(values)})"
-
+        term = values[0]
+        # TODO: remove space after negation for first term
+        # if term[0] in '-+':
+        #     values[0] = term[0] + term[1:].strip()
         for i in range(1, len(values)):
-            val = values[i]
-            if val[0] == '-':
-                values[i] = ' - ' + val[1:].strip()
-            elif len(val) > 3 and val[:2] == '(-' and val[-1] == ')' \
-                 and _balanced_parens(val[1:-1]):
-                values[i] = ' - ' + val[2:-1].strip()
+            term = values[i]
+            # TODO: remove unnecessary parenthetical grouping
+            # (addition is the lowest priority algebraic operator, so if
+            # a term is enclosed in parens, then it is a nested sum.)
+            # if term[0] == '(' and term[-1] == ')' and _balanced_parens(term[1:-1]):
+            #     term = term[1:-1]
+            if term[0] in '-+':
+                values[i] = term[0] + ' ' + term[1:].strip()
             else:
-                values[i] = ' + ' + val
-        return ''.join(values)
+                values[i] = '+ ' + term.strip()
+        return ' '.join(values)
 
     def add(self, new_arg):
         self += new_arg
@@ -767,33 +773,12 @@ class LinearExpression(SumExpression):
     def getname(self, *args, **kwds):
         return 'sum'
 
-    def _to_string(self, values, verbose, smap):
-        if not values:
-            values = ['0']
-        if verbose:
-            return f"{self.getname()}({', '.join(values)})"
-
-        for i in range(1, len(values)):
-            term = values[i]
-            if term[0] not in '+-':
-                values[i] = '+ ' + term
-            elif term[1] != ' ':
-                values[i] = term[0] + ' ' + term[1:]
-        return ' '.join(values)
-
 
 class NPV_SumExpression(Numeric_NPV_Mixin, SumExpression):
     __slots__ = ()
 
     def _apply_operation(self, result):
         return sum(result)
-
-    def _to_string(self, values, verbose, smap):
-        if verbose:
-            return f"{self.getname()}({', '.join(values)})"
-        if values[1][0] == '-':
-            return f"{values[0]} {values[1]}"
-        return f"{values[0]} + {values[1]}"
 
     def create_node_with_local_data(self, args, classtype=None):
         assert classtype is None
