@@ -209,7 +209,10 @@ class NumericExpression(ExpressionBase, NumericValue):
             A nonnegative integer that is the polynomial degree of the
             expression, or :const:`None`.  Default is :const:`None`.
         """
-        return None
+        if all(val == 0 for val in values):
+            return 0
+        else:
+            return None
 
 
 class Numeric_NPV_Mixin(NPV_Mixin):
@@ -371,10 +374,9 @@ class PowExpression(NumericExpression):
         return None
 
     def _is_fixed(self, args):
-        assert(len(args) == 2)
         if not args[1]:
             return False
-        return args[0] or value(self._args_[1]) == 0
+        return args[0] or value(self._args_[1], exception=False) == 0
 
     def _apply_operation(self, result):
         _l, _r = result
@@ -466,6 +468,10 @@ class ProductExpression(NumericExpression):
         # overrides a numeric value (and sum() just ignores it - or
         # errors in py3k)
         a, b = result
+        if a == 0 and value(self._args_[0], exception=False) == 0:
+            return 0
+        if b == 0 and value(self._args_[1], exception=False) == 0:
+            return 0
         if a is None or b is None:
             return None
         else:
@@ -477,11 +483,10 @@ class ProductExpression(NumericExpression):
     def _is_fixed(self, args):
         # Anything times 0 equals 0, so one of the children is
         # fixed and has a value of 0, then this expression is fixed
-        assert(len(args) == 2)
         if all(args):
             return True
         for i in (0, 1):
-            if args[i] and value(self._args_[i]) == 0:
+            if args[i] and value(self._args_[i], exception=False) == 0:
                 return True
         return False
 
@@ -887,11 +892,11 @@ class Expr_ifExpression(NumericExpression):
         _if, _then, _else = result
         if _if == 0:
             if _then == _else:
+                # It doesn't matter which branch is active
                 return _then
-            try:
-                return _then if value(self.arg(0)) else _else
-            except ValueError:
-                pass
+            val = value(self.arg(0), exception=False)
+            if val is not None:
+                return _then if val else _else
         return None
 
     def _to_string(self, values, verbose, smap):
@@ -939,12 +944,6 @@ class UnaryFunctionExpression(NumericExpression):
 
     def _to_string(self, values, verbose, smap):
         return f"{self.getname()}({', '.join(values)})"
-
-    def _compute_polynomial_degree(self, result):
-        if result[0] == 0:
-            return 0
-        else:
-            return None
 
     def _apply_operation(self, result):
         return self._fcn(result[0])

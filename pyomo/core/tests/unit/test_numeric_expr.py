@@ -3301,7 +3301,7 @@ class TestPolynomialDegree(unittest.TestCase):
         self.model = ConcreteModel()
         self.model.a = Var(initialize=1.0)
         self.model.b = Var(initialize=2.0)
-        self.model.c = Param(initialize=0, mutable=True)
+        self.model.c = Param(initialize=3.0, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.model.e = Param(mutable=True)
         self.instance = self.model
