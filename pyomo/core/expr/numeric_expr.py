@@ -15,8 +15,7 @@ import collections
 import enum
 import logging
 import math
-from operator import attrgetter
-from itertools import islice
+import operator
 
 logger = logging.getLogger('pyomo.core')
 
@@ -175,10 +174,7 @@ class NumericExpression(ExpressionBase, NumericValue):
                 'recasting a non-potentially variable expression to a '
                 'potentially variable one violates the immutability '
                 'promise for Pyomo expression trees.')
-            cls = list(self.__class__.__bases__)
-            cls.remove(Numeric_NPV_Mixin)
-            assert len(cls) == 1
-            self.__class__ = cls[0]
+            self.__class__ = self.potentially_variable_base_class()
         return self
 
     def polynomial_degree(self):
@@ -519,19 +515,10 @@ class MonomialTermExpression(ProductExpression):
 
     def create_node_with_local_data(self, args, classtype=None):
         if classtype is None:
-            # If this doesn't look like a MonomialTermExpression, then
-            # fall back on the expression generation system to sort out
-            # what the appropriate return type is.
-            try:
-                if not (args[0].__class__ in native_types
-                        or not args[0].is_potentially_variable()):
-                    return args[0] * args[1]
-                elif (args[1].__class__ in native_types
-                      or not args[1].is_variable_type()):
-                    return args[0] * args[1]
-            except AttributeError:
-                # Fall back on general expression generation
-                return args[0] * args[1]
+            # Because monomial terms place requirements on the argument
+            # types, the simplest / fastest thing to do is just defer to
+            # the operator dispatcher.
+            return operator.mul(*args)
         return self.__class__(args)
 
 
