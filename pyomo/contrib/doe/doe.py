@@ -46,8 +46,8 @@ from result import FisherResults, GridSearchResult
 
 
 class mode_lib(Enum):
-    sequential_finite = "sequential_finite"
-    direct_kaug = "direct_kaug"
+    sequential_finite = 1
+    direct_kaug = 2
 
     @classmethod
     def has_value(cls, value):
@@ -128,9 +128,10 @@ class DesignOfExperiments:
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
                 raise ValueError('Found wrong prior information matrix shape.')
             
-        if check_mode:
-            if not (mode_lib.has_value(self.mode)):
-                raise ValueError('Mode scheme should be choosen from "sequential_finite" and "direct_kaug".')
+        #if check_mode:
+            
+            #if not (mode_lib.has_value(self.mode)):
+            #    raise ValueError('Mode scheme should be choosen from "sequential_finite" and "direct_kaug".')
 
     def stochastic_program(self,  design_object, if_optimize=True, objective_option='det',
                      jac_involved_measurement=None,
@@ -348,10 +349,10 @@ class DesignOfExperiments:
 
         square_timer = TicTocTimer()
         square_timer.tic(msg=None)
-        if mode==mode_lib.sequential_finite.value:
+        if mode==mode_lib.sequential_finite:
             FIM_analysis = self._sequential_finite(read_output, extract_single_model, store_output)
 
-        elif mode==mode_lib.direct_kaug.value:
+        elif mode==mode_lib.direct_kaug:
             FIM_analysis = self._direct_kaug()
             
         else:

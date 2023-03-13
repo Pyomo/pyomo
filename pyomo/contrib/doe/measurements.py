@@ -272,7 +272,7 @@ class DesignVariables(SpecialSet):
                 default choice is [0], means this is an algebraic variable
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
-        self._check_names(var_name, extra_index, time_index)
+        #self._check_names(var_name, extra_index, time_index)
 
         self.design_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values)
         # initialize upper and lower bounds
