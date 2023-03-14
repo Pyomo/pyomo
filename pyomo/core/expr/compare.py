@@ -23,6 +23,7 @@ from .current import (
 )
 from .template_expr import GetItemExpression
 from typing import List
+from pyomo.common.collections import Sequence
 from pyomo.common.errors import PyomoException
 from pyomo.common.formatting import tostr
 from pyomo.common.numeric_types import native_types
@@ -138,7 +139,10 @@ def convert_expression_to_prefix_notation(expr, include_named_exprs=True):
 
     """
     visitor = PrefixVisitor(include_named_exprs=include_named_exprs)
-    return visitor.walk_expression(expr)
+    if isinstance(expr, Sequence):
+        return expr.__class__(visitor.walk_expression(e) for e in expr)
+    else:
+        return visitor.walk_expression(expr)
 
 
 def compare_expressions(expr1, expr2, include_named_exprs=True):
