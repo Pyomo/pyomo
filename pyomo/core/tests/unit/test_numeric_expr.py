@@ -50,7 +50,7 @@ from pyomo.core.expr.numeric_expr import (
     decompose_term, clone_counter, nonlinear_expression,
     _MutableLinearExpression, _MutableSumExpression, _MutableNPVSumExpression,
     _decompose_linear_terms, LinearDecompositionError,
-    MaxExpression, MinExpression,
+    MaxExpression, MinExpression, _balanced_parens,
 )
 from pyomo.core.expr.compare import (
     assertExpressionsEqual, assertExpressionsStructurallyEqual,
@@ -2605,6 +2605,14 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual(
             expression_to_string(e, smap=smap, compute_values=True),
             "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (3*x3 + 3*x4 + 3*x5)/x1")
+
+    def test_balanced_parens(self):
+        self.assertTrue(_balanced_parens('(1+5)+((x - 1)*(5+x))'))
+        self.assertFalse(_balanced_parens('1+5)+((x - 1)*(5+x)'))
+        self.assertFalse(_balanced_parens('(((1+5)+((x - 1)*(5+x))'))
+        self.assertFalse(_balanced_parens('1+5)+((x - 1)*(5+x))'))
+        self.assertFalse(_balanced_parens('(1+5)+((x - 1)*(5+x)'))
+        self.assertFalse(_balanced_parens('(1+5)+((x - 1))*(5+x))'))
 
 #
 # TODO:What is this checking?
