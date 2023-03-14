@@ -914,6 +914,9 @@ class AbsExpression(UnaryFunctionExpression):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
 
     def create_node_with_local_data(self, args, classtype=None):
+        # Because this class removes arguments from the __init__, we
+        # also need to reimplement create_node_with_local_data to not
+        # add those arguments here.
         if classtype is None:
             classtype = self.__class__
         return classtype(args)
