@@ -627,6 +627,11 @@ class SumExpression(NumericExpression):
                 values[i] = '+ ' + term.strip()
         return ' '.join(values)
 
+    @deprecated(
+        "SumExpression.add() is deprecated.  Please use regular Python operators "
+        "(infix '+' or inplace '+='.)",
+        version='6.5.1.dev0',
+    )
     def add(self, new_arg):
         self += new_arg
         return self
