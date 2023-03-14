@@ -802,10 +802,10 @@ You can silence this warning by one of three ways:
         # Iterate through the index and look for slices and constant
         # components
         #
+        orig_idx = idx
         fixed = {}
         sliced = {}
         ellipsis = None
-        _found_numeric = False
         #
         # Setup the slice template (in fixed)
         #
@@ -844,8 +844,6 @@ You can silence this warning by one of three ways:
                 # should raise a TemplateExpressionError
                 try:
                     val = EXPR.evaluate_expression(val, constant=True)
-                    _found_numeric = True
-
                 except TemplateExpressionError:
                     #
                     # The index is a template expression, so return the
@@ -937,7 +935,7 @@ value() function.""" % ( self.name, i ))
                     IndexedComponent_slice._getitem_args_to_str(list(idx)),
                     self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
-        elif _found_numeric:
+        elif len(idx) == len(fixed):
             if len(idx) == 1:
                 return fixed[0]
             else:
@@ -945,7 +943,7 @@ value() function.""" % ( self.name, i ))
         else:
             raise DeveloperError(
                 "Unknown problem encountered when trying to retrieve "
-                "index for component %s" % (self.name,) )
+                f"index '{orig_idx}' for component '{self.name}'")
 
     def _getitem_when_not_present(self, index):
         """Returns/initializes a value when the index is not in the _data dict.
