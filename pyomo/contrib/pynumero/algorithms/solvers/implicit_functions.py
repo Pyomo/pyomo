@@ -33,9 +33,11 @@ from pyomo.util.subsystems import (
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 nlp_proj = attempt_import('pyomo.contrib.pynumero.interfaces.nlp_projections')[0]
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+    CyIpoptSolver,
+)
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
     cyipopt_available,
     CyIpoptNLP,
-    CyIpoptSolver,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     FsolveNlpSolver,

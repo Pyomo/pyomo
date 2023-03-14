@@ -41,8 +41,10 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import (
     ExternalGreyBoxBlock,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptNLP,
     CyIpoptSolver,
+)
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
+    CyIpoptNLP,
 )
 
 if not pyo.SolverFactory("ipopt").available():
