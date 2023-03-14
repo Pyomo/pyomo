@@ -21,6 +21,7 @@ logger = logging.getLogger('pyomo.core')
 
 from math import isclose
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.formatting import tostr
 
 from .expr_common import (
     OperatorAssociativity,
@@ -682,8 +683,8 @@ class LinearExpression(SumExpression):
                 if (linear_coefs is None
                     or len(linear_vars) != len(linear_coefs)):
                     raise ValueError(
-                        f"linear_vars ({linear_vars}) is not compatible "
-                        f"with linear_coefs ({linear_coefs})")
+                        f"linear_vars ({tostr(linear_vars)}) is not compatible "
+                        f"with linear_coefs ({tostr(linear_coefs)})")
                 self._args_.extend(map(
                     MonomialTermExpression, zip(linear_coefs, linear_vars)))
         self._nargs = len(self._args_)
