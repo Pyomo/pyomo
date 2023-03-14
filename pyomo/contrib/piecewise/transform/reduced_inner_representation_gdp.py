@@ -16,6 +16,9 @@ from pyomo.core import Constraint, NonNegativeIntegers, Var
 from pyomo.core.base import TransformationFactory
 from pyomo.gdp import Disjunct, Disjunction
 
+##DEBUG
+from pytest import set_trace
+
 @TransformationFactory.register('contrib.piecewise.reduced_inner_repn_gdp',
                                 doc="Convert piecewise-linear model to a GDP "
                                 "using an inner representation of the "
@@ -53,8 +56,6 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
                                   transformation_block):
         transBlock = transformation_block.transformed_functions[
             len(transformation_block.transformed_functions)]
-        transBlock.lambdas = Var(NonNegativeIntegers, dense=False, bounds=(0,1))
-        multipliers_by_pt = transBlock.multipliers_by_pt = {}
 
         # get the PiecewiseLinearFunctionExpression
         dimension = pw_expr.nargs()
@@ -65,22 +66,16 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         substitute_var_lb = float('inf')
         substitute_var_ub = -float('inf')
         extreme_pts_by_simplex = {}
-        all_extreme_pts = []
-        # Collect all of the extreme pts, and map each one to *one* lambda
-        # multiplier
+        # Save all the extreme points as sets since we will need to check set
+        # containment to build the constraints fixing the multipliers to 0
         for simplex, linear_func in zip(pw_linear_func._simplices,
                                         pw_linear_func._linear_functions):
             extreme_pts = extreme_pts_by_simplex[simplex] = set()
             for idx in simplex:
-                pt = pw_linear_func._points[idx]
                 extreme_pts.add(idx)
-                if idx not in multipliers_by_pt:
-                    all_extreme_pts.append((idx, pt))
-                    multipliers_by_pt[idx] = transBlock.lambdas[
-                        len(transBlock.lambdas)]
 
             # We're going to want bounds on the substitute var, so we use
-            # interval arithmeltic to figure those out as we go.
+            # interval arithmetic to figure those out as we go.
             (lb, ub) = compute_bounds_on_expr(linear_func(*pw_expr.args))
             if lb is not None and lb < substitute_var_lb:
                 substitute_var_lb = lb
@@ -93,6 +88,11 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         if substitute_var_ub > -float('inf'):
             transBlock.substitute_var.setub(substitute_var_ub)
 
+        num_extreme_pts = len(pw_linear_func._points)
+        # lambda[i] will be the multiplier for the extreme point with index i in
+        # pw_linear_fun._points
+        transBlock.lambdas = Var(range(num_extreme_pts), bounds=(0, 1))
+
         # Now that we have all of the extreme points, we can make the
         # disjunctive constraints
         for simplex in pw_linear_func._simplices:
@@ -100,24 +100,24 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
             cons = disj.lambdas_zero_for_other_simplices = Constraint(
                 NonNegativeIntegers)
             extreme_pts = extreme_pts_by_simplex[simplex]
-            for i, pt in all_extreme_pts:
+            for i in range(num_extreme_pts):
                 if i not in extreme_pts:
-                    cons[len(cons)] = multipliers_by_pt[i] <= 0
+                    cons[len(cons)] = transBlock.lambdas[i] <= 0
         # Make the disjunction
         transBlock.pick_a_piece = Disjunction(
             expr=[d for d in transBlock.disjuncts.values()])
         
         # Now we make the global constraints
-        num_extreme_pts = len(transBlock.lambdas)
         transBlock.convex_combo = Constraint(
             expr=sum(transBlock.lambdas[i] for i in
                      range(num_extreme_pts)) == 1)
         transBlock.linear_func = Constraint(
-            expr=sum(linear_func(*pt)*multipliers_by_pt[j] for (j, pt) in
-                     all_extreme_pts) == substitute_var)
+            expr=sum(linear_func(*pt)*transBlock.lambdas[j] for (j, pt) in
+                     enumerate(pw_linear_func._points)) == substitute_var)
         @transBlock.Constraint(range(dimension))
         def linear_combo(b, i):
-            return pw_expr.args[i] == sum(pt[i]*multipliers_by_pt[j] for (j, pt)
-                                          in all_extreme_pts)
+            return pw_expr.args[i] == sum(pt[i]*transBlock.lambdas[j] for
+                                          (j, pt) in
+                                          enumerate(pw_linear_func._points))
 
         return transBlock.substitute_var
