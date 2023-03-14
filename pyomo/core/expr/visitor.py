@@ -1504,13 +1504,6 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
-        if node.PRECEDENCE is None:
-            if self._expression_handlers \
-               and node.__class__ in self._expression_handlers:
-                return self._expression_handlers[node.__class__](
-                    self, node, values)
-            return node._to_string(values, self.verbose, self.smap)
-
         for i,val in enumerate(values):
             arg = node._args_[i]
 
@@ -1522,7 +1515,9 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 values[i] = f"'{val}'"
             else:
                 parens = False
-                if not self.verbose and arg.is_expression_type():
+                if (not self.verbose and arg.is_expression_type()
+                    and node.PRECEDENCE is not None
+                ):
                     if arg.PRECEDENCE is None:
                         pass
                     elif node.PRECEDENCE < arg.PRECEDENCE:
