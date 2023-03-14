@@ -834,9 +834,6 @@ class Expr_ifExpression(NumericExpression):
         else:
             return False
 
-    def is_potentially_variable(self):
-        return True
-
     def _compute_polynomial_degree(self, result):
         _if, _then, _else = result
         if _if == 0:
