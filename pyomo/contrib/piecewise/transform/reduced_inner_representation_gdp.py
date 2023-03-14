@@ -70,7 +70,7 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         # multiplier
         for simplex, linear_func in zip(pw_linear_func._simplices,
                                         pw_linear_func._linear_functions):
-            extreme_pts = extreme_pts_by_sinples[simplex] = set()
+            extreme_pts = extreme_pts_by_simplex[simplex] = set()
             for idx in simplex:
                 pt = pw_linear_func._points[idx]
                 extreme_pts.add(idx)
@@ -98,7 +98,7 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         for simplex in pw_linear_func._simplices:
             disj = transBlock.disjuncts[len(transBlock.disjuncts)]
             cons = disj.lambdas_zero_for_other_simplices = Constraint(
-                NonNegaativeIntegers)
+                NonNegativeIntegers)
             extreme_pts = extreme_pts_by_simplex[simplex]
             for i, pt in all_extreme_pts:
                 if i not in extreme_pts:
@@ -108,9 +108,10 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
             expr=[d for d in transBlock.disjuncts.values()])
         
         # Now we make the global constraints
-        num_extreme_pts = len(disj.lambdas)
+        num_extreme_pts = len(transBlock.lambdas)
         transBlock.convex_combo = Constraint(
-            expr=sum(disj.lambdas[i] for i in range(len(num_extreme_pts))) == 1)
+            expr=sum(transBlock.lambdas[i] for i in
+                     range(num_extreme_pts)) == 1)
         transBlock.linear_func = Constraint(
             expr=sum(linear_func(*pt)*multipliers_by_pt[j] for (j, pt) in
                      all_extreme_pts) == substitute_var)
