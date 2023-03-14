@@ -21,7 +21,11 @@ class MultipleChoiceTransformation(Transformation):
     Converts a model containing PiecewiseLinearFunctions to a an equivalent
     MIP via the Multiple Choice method from [1]. Note that,
     while this model probably resolves to the model described in [1] after
-    presolve, the Pyomo version is not as simplified.
+    presolve, the Pyomo version is not as simplified. Specifically, in [1], the
+    the 'z' variables (representing the value of the piecewise-linear function
+    in each Disjunct) are not disaggregated. In this transformation's output
+    they will be, but a linear combination of inequalities yields a model
+    equivalent to the Multiple Choice model in [1].
 
     References
     ----------

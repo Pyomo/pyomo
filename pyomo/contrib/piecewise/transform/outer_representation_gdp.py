@@ -78,8 +78,8 @@ class OuterRepresentationGDPTransformation(PiecewiseLinearToGDP):
                           pw_linear_func._points[simplex[1]][0]))
             else:
                 disj.simplex_halfspaces = Constraint(range(dimension + 1))
-                # we will use scipy to get the convex hull of the extreme pts of
-                # the simplex
+                # we will use scipy to get the convex hull of the extreme
+                # points of the simplex
                 extreme_pts = []
                 for idx in simplex:
                     extreme_pts.append(pw_linear_func._points[idx])
