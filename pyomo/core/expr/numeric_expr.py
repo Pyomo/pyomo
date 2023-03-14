@@ -585,10 +585,6 @@ class SumExpression(NumericExpression):
             self._args_ = self._args_[:self._nargs]
         return self._args_
 
-    def create_node_with_local_data(self, args, classtype=None):
-        # TODO: do we need to copy the args list here?
-        return super().create_node_with_local_data(list(args), classtype)
-
     def getname(self, *args, **kwds):
         return 'sum'
 
@@ -726,51 +722,36 @@ class LinearExpression(SumExpression):
         return LinearExpression._cache[3]
 
     def create_node_with_local_data(self, args, classtype=None):
-        if classtype is not None:
-            return classtype(args)
-        else:
-            for i, arg in enumerate(args):
-                if arg.__class__ in self._allowable_linear_expr_arg_types:
-                    # 99% of the time, the arg type hasn't changed
-                    continue
-                elif arg.__class__ in native_numeric_types:
-                    # native numbers are OK (that's part of the constant)
-                    pass
-                elif not arg.is_potentially_variable():
-                    # NPV expressions are OK
-                    pass
-                elif arg.is_variable_type():
-                    # vars are OK, but need to be mapped to monomial terms
-                    args[i] = MonomialTermExpression((1, arg))
-                    continue
-                else:
-                    # For anything else, convert this to a general sum
-                    return SumExpression(args)
-                # We get here for new types (likely NPV types) --
-                # remember them for when they show up again
-                self._allowable_linear_expr_arg_types.add(arg.__class__)
-            return self.__class__(args)
+        if classtype is None:
+            classtype = self.__class__
+        if type(args) is not list:
+            args = list(args)
+        for i, arg in enumerate(args):
+            if arg.__class__ in self._allowable_linear_expr_arg_types:
+                # 99% of the time, the arg type hasn't changed
+                continue
+            elif arg.__class__ in native_numeric_types:
+                # native numbers are OK (that's part of the constant)
+                pass
+            elif not arg.is_potentially_variable():
+                # NPV expressions are OK
+                pass
+            elif arg.is_variable_type():
+                # vars are OK, but need to be mapped to monomial terms
+                args[i] = MonomialTermExpression((1, arg))
+                continue
+            else:
+                # For anything else, convert this to a general sum
+                classtype = SumExpression
+                break
+            # We get here for new types (likely NPV types) --
+            # remember them for when they show up again
+            self._allowable_linear_expr_arg_types.add(arg.__class__)
+        return super().create_node_with_local_data(args, classtype)
 
 
-class NPV_SumExpression(Numeric_NPV_Mixin, SumExpression):
+class NPV_SumExpression(Numeric_NPV_Mixin, LinearExpression):
     __slots__ = ()
-
-    def create_node_with_local_data(self, args, classtype=None):
-        assert classtype is None
-        try:
-            npv_args = all(
-                type(arg) in native_types or not arg.is_potentially_variable()
-                for arg in args
-            )
-        except AttributeError:
-            # We can hit this during expression replacement when the new
-            # type is not a PyomoObject type, but is not in the
-            # native_types set.  We will play it safe and clear the NPV flag
-            npv_args = False
-        if npv_args:
-            return NPV_SumExpression(args)
-        else:
-            return SumExpression(args)
 
 
 class _MutableSumExpression(SumExpression):
