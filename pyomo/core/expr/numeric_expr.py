@@ -570,6 +570,9 @@ class SumExpression(NumericExpression):
     PRECEDENCE = 6
 
     def __init__(self, args):
+        # unlike other expressions, we expect (require) args to be a list
+        if args.__class__ is not list:
+            args = list(args)
         self._args_ = args
         self._nargs = len(args)
 
@@ -672,6 +675,9 @@ class LinearExpression(SumExpression):
                    (constant, linear_coefs, linear_vars)):
                 raise ValueError("Cannot specify both args and any of "
                                  "{constant, linear_coefs, or linear_vars}")
+            # unlike other expressions, we expect (require) args to be a list
+            if args.__class__ is not list:
+                args = list(args)
             self._args_ = args
         else:
             self._args_ = []
