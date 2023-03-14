@@ -16,9 +16,6 @@ from pyomo.core import Constraint, NonNegativeIntegers, Var
 from pyomo.core.base import TransformationFactory
 from pyomo.gdp import Disjunct, Disjunction
 
-##DEBUG
-from pytest import set_trace
-
 @TransformationFactory.register('contrib.piecewise.reduced_inner_repn_gdp',
                                 doc="Convert piecewise-linear model to a GDP "
                                 "using an inner representation of the "
