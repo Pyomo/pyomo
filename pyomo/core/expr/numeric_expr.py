@@ -292,6 +292,9 @@ class ExternalFunctionExpression(NumericExpression):
     """
     __slots__ = ('_fcn',)
 
+    # This operator does not have an infix representation
+    PRECEDENCE = None
+
     def __init__(self, args, fcn=None):
         self._args_ = args
         self._fcn = fcn
