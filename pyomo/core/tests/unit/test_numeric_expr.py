@@ -3526,7 +3526,7 @@ class TestPolynomialDegree(unittest.TestCase):
         m.b.fixed = True
         self.assertEqual(expr.polynomial_degree(), 2)
         m.b.value = 0
-        self.assertEqual(expr.polynomial_degree(), 0)
+        self.assertEqual(expr.polynomial_degree(), None)
         #
         # A power with a constant base and exponent is a constant
         #
@@ -3567,8 +3567,7 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), None)
 
         expr = pow(2**m.a, 0)
-        self.assertEqual(expr, 1)
-        self.assertEqual(as_numeric(expr).polynomial_degree(), 0)
+        self.assertEqual(expr.polynomial_degree(), None)
         #
         # With an undefined exponent, the polynomial degree is None
         #
@@ -4775,9 +4774,8 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
         expr = pow(2**m.a, 0)
         self.assertEqual(is_fixed(expr), True)
-        self.assertEqual(is_constant(expr), True)
-        self.assertEqual(expr, 1)
-        self.assertEqual(as_numeric(expr).polynomial_degree(), 0)
+        self.assertEqual(is_constant(expr), False)
+        self.assertEqual(is_potentially_variable(expr), True)
 
     def test_Expr_if(self):
         m = self.instance

@@ -362,10 +362,10 @@ class PowExpression(NumericExpression):
             if exp is None:
                 return None
             if exp == int(exp):
+                # Note: exp == 0 is still nonpolynomial
+                #   (-1**0 == -1, and 1**0 == 1)
                 if l is not None and exp > 0:
-                    return l * exp
-                elif exp == 0:
-                    return 0
+                    return l * int(exp)
         return None
 
     def _is_fixed(self, args):
