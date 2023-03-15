@@ -49,6 +49,8 @@ from pyomo.core.expr.numeric_expr import (
     _MutableSumExpression,
     _MutableLinearExpression,
     _MutableNPVSumExpression,
+    _zero_one_optimizations,
+    enable_expression_optimizations,
 )
 from pyomo.core.expr.numvalue import NumericValue, native_types, native_numeric_types
 from pyomo.core.expr.visitor import clone_expression
@@ -58,13 +60,21 @@ from pyomo.gdp import Disjunct
 logger = logging.getLogger(__name__)
 
 
-class TestExprGen(unittest.TestCase):
+class Base(object):
     class SKIP:
         pass
 
     NUM_TESTS = 21
 
+    def tearDown(self):
+        # Restore the state of 0 and 1 optimizations
+        _zero_one_optimizations.clear()
+        _zero_one_optimizations.update(self.zero_one_optimizations)
+
     def setUp(self):
+        # Save (and standardize) the state of 0 and 1 optimizations
+        self.zero_one_optimizations = set(_zero_one_optimizations)
+
         # Note there are 11 basic argument "types" that determine how
         # expressions are generated (defined by the _EXPR_TYPE enum):
         #
@@ -236,6 +246,80 @@ class TestExprGen(unittest.TestCase):
         except:
             self._print_error(test_num, test, ans)
             raise
+
+    def _run_iadd_cases(self, tests, op):
+        self.assertEqual(len(tests), self.NUM_TESTS)
+        # Check that this test is checking the correct arg type (catch
+        # copy/paste errors)
+        ref = tests[0][:-2]
+        for test_num, test in enumerate(tests):
+            self.assertIs(test[-2], self.TEMPLATE[test_num])
+            for i, j in zip(test[:-2], ref):
+                self.assertIs(i, j)
+        try:
+            for test_num, test in enumerate(tests):
+                ans = None
+                args = test[:-1]
+                result = test[-1]
+                if result is self.SKIP:
+                    continue
+                orig_args = list(args)
+                orig_args_clone = [clone_expression(arg) for arg in args]
+                try:
+                    mutable = [isinstance(arg, _MutableSumExpression) for arg in args]
+                    classes = [arg.__class__ for arg in args]
+                    with LoggingIntercept() as LOG:
+                        ans = op(*args)
+                    if not any(arg is self.asbinary for arg in args):
+                        self.assertEqual(LOG.getvalue(), "")
+                    assertExpressionsEqual(self, result, ans)
+                    for i, arg in enumerate(args):
+                        self.assertIs(arg, orig_args[i])
+                        if mutable[i]:
+                            if i:
+                                self.assertFalse(isinstance(arg, _MutableSumExpression))
+                                self.assertIsNot(arg.__class__, classes[i])
+                                assertExpressionsEqual(
+                                    self,
+                                    _MutableSumExpression(arg.args),
+                                    _MutableSumExpression(orig_args_clone[i].args),
+                                )
+                            else:
+                                self.assertIsInstance(arg, _MutableSumExpression)
+                                self.assertIs(arg, ans)
+                        else:
+                            self.assertIs(arg.__class__, classes[i])
+                            assertExpressionsEqual(self, arg, orig_args_clone[i])
+                except TypeError:
+                    if result is not NotImplemented:
+                        raise
+                except ZeroDivisionError:
+                    if result is not ZeroDivisionError:
+                        raise
+                except ValueError:
+                    if result is not ValueError:
+                        raise
+                else:
+                    # Don't reset mutable args yet: we need to print out the error!
+                    for i, arg in enumerate(args):
+                        if mutable[i]:
+                            arg.__class__ = classes[i]
+                            arg._args_ = orig_args_clone[i]._args_
+                            arg._nargs = orig_args_clone[i]._nargs
+        except:
+            self._print_error(test_num, orig_args_clone + [result], ans)
+            for i, arg in enumerate(args):
+                if mutable[i]:
+                    arg.__class__ = classes[i]
+                    arg._args_ = orig_args_clone[i]._args_
+                    arg._nargs = orig_args_clone[i]._nargs
+            raise
+
+
+class TestExpressionGeneration(Base, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        enable_expression_optimizations(zero=False, one=True)
 
     #
     #
@@ -2789,7 +2873,7 @@ class TestExprGen(unittest.TestCase):
             # 4:
             (self.one, self.native, 5),
             (self.one, self.npv, self.npv),
-            (self.one, self.param, 6),
+            (self.one, self.param, self.param),
             (self.one, self.param_mut, self.param_mut),
             # 8:
             (self.one, self.var, self.var),
@@ -2804,8 +2888,8 @@ class TestExprGen(unittest.TestCase):
             # 16:
             (self.one, self.mutable_l1, self.mon_npv),
             (self.one, self.mutable_l2, self.mutable_l2),
-            (self.one, self.param0, 0),
-            (self.one, self.param1, 1),
+            (self.one, self.param0, self.param0),
+            (self.one, self.param1, self.param1),
             # 20:
             (self.one, self.mutable_l3, self.npv),
         ]
@@ -4010,7 +4094,7 @@ class TestExprGen(unittest.TestCase):
             # 4:
             (self.param1, self.native, 5),
             (self.param1, self.npv, self.npv),
-            (self.param1, self.param, 6),
+            (self.param1, self.param, self.param),
             (self.param1, self.param_mut, self.param_mut),
             # 8:
             (self.param1, self.var, self.var),
@@ -4025,8 +4109,8 @@ class TestExprGen(unittest.TestCase):
             # 16:
             (self.param1, self.mutable_l1, self.mon_npv),
             (self.param1, self.mutable_l2, self.mutable_l2),
-            (self.param1, self.param0, 0),
-            (self.param1, self.param1, 1),
+            (self.param1, self.param0, self.param0),
+            (self.param1, self.param1, self.param1),
             # 20:
             (self.param1, self.mutable_l3, self.npv),
         ]
@@ -5399,7 +5483,7 @@ class TestExprGen(unittest.TestCase):
             (self.asbinary, self.invalid, NotImplemented),
             # BooleanVar objects do not support exponentiation
             (self.asbinary, self.asbinary, NotImplemented),
-            (self.asbinary, self.zero, 1),
+            (self.asbinary, self.zero, PowExpression((self.bin, 0))),
             (self.asbinary, self.one, self.bin),
             # 4:
             (self.asbinary, self.native, PowExpression((self.bin, 5))),
@@ -5419,7 +5503,7 @@ class TestExprGen(unittest.TestCase):
             (self.asbinary, self.linear, PowExpression((self.bin, self.linear))),
             (self.asbinary, self.sum, PowExpression((self.bin, self.sum))),
             (self.asbinary, self.other, PowExpression((self.bin, self.other))),
-            (self.asbinary, self.mutable_l0, 1),
+            (self.asbinary, self.mutable_l0, PowExpression((self.bin, 0))),
             # 16:
             (self.asbinary, self.mutable_l1, PowExpression((self.bin, self.mon_npv))),
             (
@@ -5427,7 +5511,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.bin, self.mutable_l2)),
             ),
-            (self.asbinary, self.param0, 1),
+            (self.asbinary, self.param0, PowExpression((self.bin, 0))),
             (self.asbinary, self.param1, self.bin),
             # 20:
             (self.asbinary, self.mutable_l3, PowExpression((self.bin, self.npv))),
@@ -5535,7 +5619,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.npv, self.invalid, NotImplemented),
             (self.npv, self.asbinary, PowExpression((self.npv, self.bin))),
-            (self.npv, self.zero, 1),
+            (self.npv, self.zero, NPV_PowExpression((self.npv, 0))),
             (self.npv, self.one, self.npv),
             # 4:
             (self.npv, self.native, NPV_PowExpression((self.npv, 5))),
@@ -5551,11 +5635,11 @@ class TestExprGen(unittest.TestCase):
             (self.npv, self.linear, PowExpression((self.npv, self.linear))),
             (self.npv, self.sum, PowExpression((self.npv, self.sum))),
             (self.npv, self.other, PowExpression((self.npv, self.other))),
-            (self.npv, self.mutable_l0, 1),
+            (self.npv, self.mutable_l0, NPV_PowExpression((self.npv, 0))),
             # 16:
             (self.npv, self.mutable_l1, PowExpression((self.npv, self.mon_npv))),
             (self.npv, self.mutable_l2, PowExpression((self.npv, self.mutable_l2))),
-            (self.npv, self.param0, 1),
+            (self.npv, self.param0, NPV_PowExpression((self.npv, 0))),
             (self.npv, self.param1, self.npv),
             # 20:
             (self.npv, self.mutable_l3, NPV_PowExpression((self.npv, self.npv))),
@@ -5599,7 +5683,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.param_mut, self.invalid, NotImplemented),
             (self.param_mut, self.asbinary, PowExpression((self.param_mut, self.bin))),
-            (self.param_mut, self.zero, 1),
+            (self.param_mut, self.zero, NPV_PowExpression((self.param_mut, 0))),
             (self.param_mut, self.one, self.param_mut),
             # 4:
             (self.param_mut, self.native, NPV_PowExpression((self.param_mut, 5))),
@@ -5631,7 +5715,7 @@ class TestExprGen(unittest.TestCase):
             (self.param_mut, self.linear, PowExpression((self.param_mut, self.linear))),
             (self.param_mut, self.sum, PowExpression((self.param_mut, self.sum))),
             (self.param_mut, self.other, PowExpression((self.param_mut, self.other))),
-            (self.param_mut, self.mutable_l0, 1),
+            (self.param_mut, self.mutable_l0, NPV_PowExpression((self.param_mut, 0))),
             # 16:
             (
                 self.param_mut,
@@ -5643,7 +5727,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.param_mut, self.mutable_l2)),
             ),
-            (self.param_mut, self.param0, 1),
+            (self.param_mut, self.param0, NPV_PowExpression((self.param_mut, 0))),
             (self.param_mut, self.param1, self.param_mut),
             # 20:
             (
@@ -5659,7 +5743,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.var, self.invalid, NotImplemented),
             (self.var, self.asbinary, PowExpression((self.var, self.bin))),
-            (self.var, self.zero, 1),
+            (self.var, self.zero, PowExpression((self.var, 0))),
             (self.var, self.one, self.var),
             # 4:
             (self.var, self.native, PowExpression((self.var, 5))),
@@ -5675,11 +5759,11 @@ class TestExprGen(unittest.TestCase):
             (self.var, self.linear, PowExpression((self.var, self.linear))),
             (self.var, self.sum, PowExpression((self.var, self.sum))),
             (self.var, self.other, PowExpression((self.var, self.other))),
-            (self.var, self.mutable_l0, 1),
+            (self.var, self.mutable_l0, PowExpression((self.var, 0))),
             # 16:
             (self.var, self.mutable_l1, PowExpression((self.var, self.mon_npv))),
             (self.var, self.mutable_l2, PowExpression((self.var, self.mutable_l2))),
-            (self.var, self.param0, 1),
+            (self.var, self.param0, PowExpression((self.var, 0))),
             (self.var, self.param1, self.var),
             # 20:
             (self.var, self.mutable_l3, PowExpression((self.var, self.npv))),
@@ -5695,7 +5779,7 @@ class TestExprGen(unittest.TestCase):
                 self.asbinary,
                 PowExpression((self.mon_native, self.bin)),
             ),
-            (self.mon_native, self.zero, 1),
+            (self.mon_native, self.zero, PowExpression((self.mon_native, 0))),
             (self.mon_native, self.one, self.mon_native),
             # 4:
             (self.mon_native, self.native, PowExpression((self.mon_native, 5))),
@@ -5731,7 +5815,7 @@ class TestExprGen(unittest.TestCase):
             ),
             (self.mon_native, self.sum, PowExpression((self.mon_native, self.sum))),
             (self.mon_native, self.other, PowExpression((self.mon_native, self.other))),
-            (self.mon_native, self.mutable_l0, 1),
+            (self.mon_native, self.mutable_l0, PowExpression((self.mon_native, 0))),
             # 16:
             (
                 self.mon_native,
@@ -5743,7 +5827,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.mon_native, self.mutable_l2)),
             ),
-            (self.mon_native, self.param0, 1),
+            (self.mon_native, self.param0, PowExpression((self.mon_native, 0))),
             (self.mon_native, self.param1, self.mon_native),
             # 20:
             (
@@ -5759,7 +5843,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.mon_param, self.invalid, NotImplemented),
             (self.mon_param, self.asbinary, PowExpression((self.mon_param, self.bin))),
-            (self.mon_param, self.zero, 1),
+            (self.mon_param, self.zero, PowExpression((self.mon_param, 0))),
             (self.mon_param, self.one, self.mon_param),
             # 4:
             (self.mon_param, self.native, PowExpression((self.mon_param, 5))),
@@ -5791,7 +5875,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_param, self.linear, PowExpression((self.mon_param, self.linear))),
             (self.mon_param, self.sum, PowExpression((self.mon_param, self.sum))),
             (self.mon_param, self.other, PowExpression((self.mon_param, self.other))),
-            (self.mon_param, self.mutable_l0, 1),
+            (self.mon_param, self.mutable_l0, PowExpression((self.mon_param, 0))),
             # 16:
             (
                 self.mon_param,
@@ -5803,7 +5887,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.mon_param, self.mutable_l2)),
             ),
-            (self.mon_param, self.param0, 1),
+            (self.mon_param, self.param0, PowExpression((self.mon_param, 0))),
             (self.mon_param, self.param1, self.mon_param),
             # 20:
             (
@@ -5819,7 +5903,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.mon_npv, self.invalid, NotImplemented),
             (self.mon_npv, self.asbinary, PowExpression((self.mon_npv, self.bin))),
-            (self.mon_npv, self.zero, 1),
+            (self.mon_npv, self.zero, PowExpression((self.mon_npv, 0))),
             (self.mon_npv, self.one, self.mon_npv),
             # 4:
             (self.mon_npv, self.native, PowExpression((self.mon_npv, 5))),
@@ -5847,7 +5931,7 @@ class TestExprGen(unittest.TestCase):
             (self.mon_npv, self.linear, PowExpression((self.mon_npv, self.linear))),
             (self.mon_npv, self.sum, PowExpression((self.mon_npv, self.sum))),
             (self.mon_npv, self.other, PowExpression((self.mon_npv, self.other))),
-            (self.mon_npv, self.mutable_l0, 1),
+            (self.mon_npv, self.mutable_l0, PowExpression((self.mon_npv, 0))),
             # 16:
             (
                 self.mon_npv,
@@ -5859,7 +5943,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.mon_npv, self.mutable_l2)),
             ),
-            (self.mon_npv, self.param0, 1),
+            (self.mon_npv, self.param0, PowExpression((self.mon_npv, 0))),
             (self.mon_npv, self.param1, self.mon_npv),
             # 20:
             (self.mon_npv, self.mutable_l3, PowExpression((self.mon_npv, self.npv))),
@@ -5871,7 +5955,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.linear, self.invalid, NotImplemented),
             (self.linear, self.asbinary, PowExpression((self.linear, self.bin))),
-            (self.linear, self.zero, 1),
+            (self.linear, self.zero, PowExpression((self.linear, 0))),
             (self.linear, self.one, self.linear),
             # 4:
             (self.linear, self.native, PowExpression((self.linear, 5))),
@@ -5891,7 +5975,7 @@ class TestExprGen(unittest.TestCase):
             (self.linear, self.linear, PowExpression((self.linear, self.linear))),
             (self.linear, self.sum, PowExpression((self.linear, self.sum))),
             (self.linear, self.other, PowExpression((self.linear, self.other))),
-            (self.linear, self.mutable_l0, 1),
+            (self.linear, self.mutable_l0, PowExpression((self.linear, 0))),
             # 16:
             (self.linear, self.mutable_l1, PowExpression((self.linear, self.mon_npv))),
             (
@@ -5899,7 +5983,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.linear, self.mutable_l2)),
             ),
-            (self.linear, self.param0, 1),
+            (self.linear, self.param0, PowExpression((self.linear, 0))),
             (self.linear, self.param1, self.linear),
             # 20:
             (self.linear, self.mutable_l3, PowExpression((self.linear, self.npv))),
@@ -5911,7 +5995,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.sum, self.invalid, NotImplemented),
             (self.sum, self.asbinary, PowExpression((self.sum, self.bin))),
-            (self.sum, self.zero, 1),
+            (self.sum, self.zero, PowExpression((self.sum, 0))),
             (self.sum, self.one, self.sum),
             # 4:
             (self.sum, self.native, PowExpression((self.sum, 5))),
@@ -5927,11 +6011,11 @@ class TestExprGen(unittest.TestCase):
             (self.sum, self.linear, PowExpression((self.sum, self.linear))),
             (self.sum, self.sum, PowExpression((self.sum, self.sum))),
             (self.sum, self.other, PowExpression((self.sum, self.other))),
-            (self.sum, self.mutable_l0, 1),
+            (self.sum, self.mutable_l0, PowExpression((self.sum, 0))),
             # 16:
             (self.sum, self.mutable_l1, PowExpression((self.sum, self.mon_npv))),
             (self.sum, self.mutable_l2, PowExpression((self.sum, self.mutable_l2))),
-            (self.sum, self.param0, 1),
+            (self.sum, self.param0, PowExpression((self.sum, 0))),
             (self.sum, self.param1, self.sum),
             # 20:
             (self.sum, self.mutable_l3, PowExpression((self.sum, self.npv))),
@@ -5943,7 +6027,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.other, self.invalid, NotImplemented),
             (self.other, self.asbinary, PowExpression((self.other, self.bin))),
-            (self.other, self.zero, 1),
+            (self.other, self.zero, PowExpression((self.other, 0))),
             (self.other, self.one, self.other),
             # 4:
             (self.other, self.native, PowExpression((self.other, 5))),
@@ -5959,11 +6043,11 @@ class TestExprGen(unittest.TestCase):
             (self.other, self.linear, PowExpression((self.other, self.linear))),
             (self.other, self.sum, PowExpression((self.other, self.sum))),
             (self.other, self.other, PowExpression((self.other, self.other))),
-            (self.other, self.mutable_l0, 1),
+            (self.other, self.mutable_l0, PowExpression((self.other, 0))),
             # 16:
             (self.other, self.mutable_l1, PowExpression((self.other, self.mon_npv))),
             (self.other, self.mutable_l2, PowExpression((self.other, self.mutable_l2))),
-            (self.other, self.param0, 1),
+            (self.other, self.param0, PowExpression((self.other, 0))),
             (self.other, self.param1, self.other),
             # 20:
             (self.other, self.mutable_l3, PowExpression((self.other, self.npv))),
@@ -6007,7 +6091,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.mutable_l1, self.invalid, NotImplemented),
             (self.mutable_l1, self.asbinary, PowExpression((self.mon_npv, self.bin))),
-            (self.mutable_l1, self.zero, 1),
+            (self.mutable_l1, self.zero, PowExpression((self.mon_npv, 0))),
             (self.mutable_l1, self.one, self.mon_npv),
             # 4:
             (self.mutable_l1, self.native, PowExpression((self.mon_npv, 5))),
@@ -6039,7 +6123,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l1, self.linear, PowExpression((self.mon_npv, self.linear))),
             (self.mutable_l1, self.sum, PowExpression((self.mon_npv, self.sum))),
             (self.mutable_l1, self.other, PowExpression((self.mon_npv, self.other))),
-            (self.mutable_l1, self.mutable_l0, 1),
+            (self.mutable_l1, self.mutable_l0, PowExpression((self.mon_npv, 0))),
             # 16:
             (
                 self.mutable_l1,
@@ -6051,7 +6135,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.mon_npv, self.mutable_l2)),
             ),
-            (self.mutable_l1, self.param0, 1),
+            (self.mutable_l1, self.param0, PowExpression((self.mon_npv, 0))),
             (self.mutable_l1, self.param1, self.mon_npv),
             # 20:
             (self.mutable_l1, self.mutable_l3, PowExpression((self.mon_npv, self.npv))),
@@ -6067,7 +6151,7 @@ class TestExprGen(unittest.TestCase):
                 self.asbinary,
                 PowExpression((self.mutable_l2, self.bin)),
             ),
-            (self.mutable_l2, self.zero, 1),
+            (self.mutable_l2, self.zero, PowExpression((self.mutable_l2, 0))),
             (self.mutable_l2, self.one, self.mutable_l2),
             # 4:
             (self.mutable_l2, self.native, PowExpression((self.mutable_l2, 5))),
@@ -6103,7 +6187,7 @@ class TestExprGen(unittest.TestCase):
             ),
             (self.mutable_l2, self.sum, PowExpression((self.mutable_l2, self.sum))),
             (self.mutable_l2, self.other, PowExpression((self.mutable_l2, self.other))),
-            (self.mutable_l2, self.mutable_l0, 1),
+            (self.mutable_l2, self.mutable_l0, PowExpression((self.mutable_l2, 0))),
             # 16:
             (
                 self.mutable_l2,
@@ -6115,7 +6199,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.mutable_l2, self.mutable_l2)),
             ),
-            (self.mutable_l2, self.param0, 1),
+            (self.mutable_l2, self.param0, PowExpression((self.mutable_l2, 0))),
             (self.mutable_l2, self.param1, self.mutable_l2),
             # 20:
             (
@@ -6195,7 +6279,7 @@ class TestExprGen(unittest.TestCase):
         tests = [
             (self.mutable_l3, self.invalid, NotImplemented),
             (self.mutable_l3, self.asbinary, PowExpression((self.npv, self.bin))),
-            (self.mutable_l3, self.zero, 1),
+            (self.mutable_l3, self.zero, NPV_PowExpression((self.npv, 0))),
             (self.mutable_l3, self.one, self.npv),
             # 4:
             (self.mutable_l3, self.native, NPV_PowExpression((self.npv, 5))),
@@ -6223,7 +6307,7 @@ class TestExprGen(unittest.TestCase):
             (self.mutable_l3, self.linear, PowExpression((self.npv, self.linear))),
             (self.mutable_l3, self.sum, PowExpression((self.npv, self.sum))),
             (self.mutable_l3, self.other, PowExpression((self.npv, self.other))),
-            (self.mutable_l3, self.mutable_l0, 1),
+            (self.mutable_l3, self.mutable_l0, NPV_PowExpression((self.npv, 0))),
             # 16:
             (self.mutable_l3, self.mutable_l1, PowExpression((self.npv, self.mon_npv))),
             (
@@ -6231,7 +6315,7 @@ class TestExprGen(unittest.TestCase):
                 self.mutable_l2,
                 PowExpression((self.npv, self.mutable_l2)),
             ),
-            (self.mutable_l3, self.param0, 1),
+            (self.mutable_l3, self.param0, NPV_PowExpression((self.npv, 0))),
             (self.mutable_l3, self.param1, self.npv),
             # 20:
             (self.mutable_l3, self.mutable_l3, NPV_PowExpression((self.npv, self.npv))),
@@ -6422,74 +6506,6 @@ class TestExprGen(unittest.TestCase):
     # MUTABLE SUM IADD EXPRESSIONS
     #
     #
-
-    def _run_iadd_cases(self, tests, op):
-        self.assertEqual(len(tests), self.NUM_TESTS)
-        # Check that this test is checking the correct arg type (catch
-        # copy/paste errors)
-        ref = tests[0][:-2]
-        for test_num, test in enumerate(tests):
-            self.assertIs(test[-2], self.TEMPLATE[test_num])
-            for i, j in zip(test[:-2], ref):
-                self.assertIs(i, j)
-        try:
-            for test_num, test in enumerate(tests):
-                ans = None
-                args = test[:-1]
-                result = test[-1]
-                if result is self.SKIP:
-                    continue
-                orig_args = list(args)
-                orig_args_clone = [clone_expression(arg) for arg in args]
-                try:
-                    mutable = [isinstance(arg, _MutableSumExpression) for arg in args]
-                    classes = [arg.__class__ for arg in args]
-                    with LoggingIntercept() as LOG:
-                        ans = op(*args)
-                    if not any(arg is self.asbinary for arg in args):
-                        self.assertEqual(LOG.getvalue(), "")
-                    assertExpressionsEqual(self, result, ans)
-                    for i, arg in enumerate(args):
-                        self.assertIs(arg, orig_args[i])
-                        if mutable[i]:
-                            if i:
-                                self.assertFalse(isinstance(arg, _MutableSumExpression))
-                                self.assertIsNot(arg.__class__, classes[i])
-                                assertExpressionsEqual(
-                                    self,
-                                    _MutableSumExpression(arg.args),
-                                    _MutableSumExpression(orig_args_clone[i].args),
-                                )
-                            else:
-                                self.assertIsInstance(arg, _MutableSumExpression)
-                                self.assertIs(arg, ans)
-                        else:
-                            self.assertIs(arg.__class__, classes[i])
-                            assertExpressionsEqual(self, arg, orig_args_clone[i])
-                except TypeError:
-                    if result is not NotImplemented:
-                        raise
-                except ZeroDivisionError:
-                    if result is not ZeroDivisionError:
-                        raise
-                except ValueError:
-                    if result is not ValueError:
-                        raise
-                else:
-                    # Don't reset mutable args yet: we need to print out the error!
-                    for i, arg in enumerate(args):
-                        if mutable[i]:
-                            arg.__class__ = classes[i]
-                            arg._args_ = orig_args_clone[i]._args_
-                            arg._nargs = orig_args_clone[i]._nargs
-        except:
-            self._print_error(test_num, orig_args_clone + [result], ans)
-            for i, arg in enumerate(args):
-                if mutable[i]:
-                    arg.__class__ = classes[i]
-                    arg._args_ = orig_args_clone[i]._args_
-                    arg._nargs = orig_args_clone[i]._nargs
-            raise
 
     def test_mutable_nvp_iadd(self):
         mutable_npv = _MutableNPVSumExpression([])
@@ -6795,6 +6811,24 @@ class TestExprGen(unittest.TestCase):
             ),
         ]
         self._run_iadd_cases(tests, operator.iadd)
+
+
+class TestExpressionGeneration_Misc(Base, unittest.TestCase):
+    def test_enable_optimizations(self):
+        enable_expression_optimizations(zero=False, one=False)
+        self.assertEqual(_zero_one_optimizations, set())
+
+        enable_expression_optimizations(zero=True, one=False)
+        self.assertEqual(_zero_one_optimizations, {0})
+
+        enable_expression_optimizations(zero=True, one=True)
+        self.assertEqual(_zero_one_optimizations, {0, 1})
+
+        enable_expression_optimizations(zero=False, one=True)
+        self.assertEqual(_zero_one_optimizations, {1})
+
+        enable_expression_optimizations()
+        self.assertEqual(_zero_one_optimizations, {1})
 
     def test_unreachable_dispatchers(self):
         # The following dispatchers cannot be triggered through the

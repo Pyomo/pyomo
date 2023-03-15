@@ -46,6 +46,54 @@ from .visitor import (
     clone_expression, sizeof_expression, _expression_is_fixed
 )
 
+_zero_one_optimizations = {1,}
+
+def enable_expression_optimizations(zero=None, one=None):
+    """Enable(disable) expression generation optimizations
+
+    There are currently two optimizations available duging expression generation:
+
+    - zero: aggressively resolve `0*f(.)` expressions to `0`, `0/f(.)`
+      expressions to `0`, and `f(.)**0` expressions to `1`
+
+    - one: aggressively resolve identities: `1*f(.)` expressions to
+      `f(.)`, `f(.)/1` expressions to `f(.)`, and `f(.)**1` expressions
+      to `f(.)`.
+
+    The default optimizations are `zero=False` and `one=True`.
+
+    Notes
+    -----
+    Enabling the `zero` can mask certain modeling errors.  In
+    particular, `ZeroDivisionError`s can be masked if `f(.)` resolves to
+    `0` (in the case of `0/f(.)`), or resolving `f(.)` would have
+    otherwise raised a ZeroDivisionError`.  In addition, `f(.)**0 == 1`
+    is only valid when `f(.)>=0`.  Users who enable this optimization
+    bear responsibility for ensuring that these conditions do not exist
+    in their model.
+
+    The `one` optimizations should generally be safe.
+
+    Parameters
+    ----------
+    zero: bool, optional
+
+        If `True` (`False`), enable (disable) the "zero" optimizations.
+        If None, leave the optimization state unchanged.
+
+    one: bool, optional
+
+        If `True` (`False`), enable (disable) the "one" optimizations.
+        If None, leave the optimization state unchanged.
+
+    """
+    for arg, key in ((zero, 0), (one, 1)):
+        if arg is None:
+            continue
+        if arg:
+            _zero_one_optimizations.add(key)
+        else:
+            _zero_one_optimizations.discard(key)
 
 class mutable_expression(object):
     """Context manager for mutable sums.
@@ -1959,40 +2007,40 @@ def _mul_native_native(a, b):
     return a * b
 
 def _mul_native_npv(a, b):
-    if a == 1:
-        return b
+    if a in _zero_one_optimizations:
+        return b if a else 0
     return NPV_ProductExpression((a, b))
 
 def _mul_native_param(a, b):
+    if a in _zero_one_optimizations:
+        return b if a else 0
     if b.is_constant():
         return a * b.value
-    if a == 1:
-        return b
     return NPV_ProductExpression((a, b))
 
 def _mul_native_var(a, b):
-    if a == 1:
-        return b
+    if a in _zero_one_optimizations:
+        return b if a else 0
     return MonomialTermExpression((a, b))
 
 def _mul_native_monomial(a, b):
-    if a == 1:
-        return b
+    if a in _zero_one_optimizations:
+        return b if a else 0
     return MonomialTermExpression((a * b._args_[0], b._args_[1]))
 
 def _mul_native_linear(a, b):
-    if a == 1:
-        return b
+    if a in _zero_one_optimizations:
+        return b if a else 0
     return ProductExpression((a, b))
 
 def _mul_native_sum(a, b):
-    if a == 1:
-        return b
+    if a in _zero_one_optimizations:
+        return b if a else 0
     return ProductExpression((a, b))
 
 def _mul_native_other(a, b):
-    if a == 1:
-        return b
+    if a in _zero_one_optimizations:
+        return b if a else 0
     return ProductExpression((a, b))
 
 #
@@ -2000,8 +2048,8 @@ def _mul_native_other(a, b):
 #
 
 def _mul_npv_native(a, b):
-    if b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 0
     return NPV_ProductExpression((a, b))
 
 def _mul_npv_npv(a, b):
@@ -2010,8 +2058,8 @@ def _mul_npv_npv(a, b):
 def _mul_npv_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 0
     return NPV_ProductExpression((a, b))
 
 def _mul_npv_var(a, b):
@@ -2037,63 +2085,63 @@ def _mul_npv_other(a, b):
 def _mul_param_native(a, b):
     if a.is_constant():
         return a.value * b
-    if b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 0
     return NPV_ProductExpression((a, b))
 
 def _mul_param_npv(a, b):
     if a.is_constant():
         a = a.value
-        if a == 1:
-            return b
+        if a in _zero_one_optimizations:
+            return b if a else 0
     return NPV_ProductExpression((a, b))
 
 def _mul_param_param(a, b):
     if a.is_constant():
         a = a.value
+        if a in _zero_one_optimizations:
+            return b if a else 0
         if b.is_constant():
             return a * b.value
-        elif a == 1:
-            return b
     elif b.is_constant():
         b = b.value
-        if b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 0
     return NPV_ProductExpression((a, b))
 
 def _mul_param_var(a, b):
     if a.is_constant():
         a = a.value
-        if a == 1:
-            return b
+        if a in _zero_one_optimizations:
+            return b if a else 0
     return MonomialTermExpression((a, b))
 
 def _mul_param_monomial(a, b):
     if a.is_constant():
         a = a.value
-        if a == 1:
-            return b
+        if a in _zero_one_optimizations:
+            return b if a else 0
     return MonomialTermExpression((a * b._args_[0], b._args_[1]))
 
 def _mul_param_linear(a, b):
     if a.is_constant():
         a = a.value
-        if a == 1:
-            return b
+        if a in _zero_one_optimizations:
+            return b if a else 0
     return ProductExpression((a, b))
 
 def _mul_param_sum(a, b):
     if a.is_constant():
         a = value(a)
-        if a == 1:
-            return b
+        if a in _zero_one_optimizations:
+            return b if a else 0
     return ProductExpression((a, b))
 
 def _mul_param_other(a, b):
     if a.is_constant():
         a = a.value
-        if a == 1:
-            return b
+        if a in _zero_one_optimizations:
+            return b if a else 0
     return ProductExpression((a, b))
 
 #
@@ -2101,8 +2149,8 @@ def _mul_param_other(a, b):
 #
 
 def _mul_var_native(a, b):
-    if b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 0
     return MonomialTermExpression((b, a))
 
 def _mul_var_npv(a, b):
@@ -2111,8 +2159,8 @@ def _mul_var_npv(a, b):
 def _mul_var_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 0
     return MonomialTermExpression((b, a))
 
 def _mul_var_var(a, b):
@@ -2135,8 +2183,8 @@ def _mul_var_other(a, b):
 #
 
 def _mul_monomial_native(a, b):
-    if b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 0
     return MonomialTermExpression((a._args_[0] * b, a._args_[1]))
 
 def _mul_monomial_npv(a, b):
@@ -2146,8 +2194,8 @@ def _mul_monomial_npv(a, b):
 def _mul_monomial_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 0
     return MonomialTermExpression((a._args_[0] * b, a._args_[1]))
 
 def _mul_monomial_var(a, b):
@@ -2170,8 +2218,8 @@ def _mul_monomial_other(a, b):
 #
 
 def _mul_linear_native(a, b):
-    if b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 0
     return ProductExpression((a, b))
 
 def _mul_linear_npv(a, b):
@@ -2180,8 +2228,8 @@ def _mul_linear_npv(a, b):
 def _mul_linear_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 0
     return ProductExpression((a, b))
 
 def _mul_linear_var(a, b):
@@ -2204,8 +2252,8 @@ def _mul_linear_other(a, b):
 #
 
 def _mul_sum_native(a, b):
-    if b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 0
     return ProductExpression((a, b))
 
 def _mul_sum_npv(a, b):
@@ -2214,8 +2262,8 @@ def _mul_sum_npv(a, b):
 def _mul_sum_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 0
     return ProductExpression((a, b))
 
 def _mul_sum_var(a, b):
@@ -2238,8 +2286,8 @@ def _mul_sum_other(a, b):
 #
 
 def _mul_other_native(a, b):
-    if b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 0
     return ProductExpression((a, b))
 
 def _mul_other_npv(a, b):
@@ -2248,8 +2296,8 @@ def _mul_other_npv(a, b):
 def _mul_other_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 0
     return ProductExpression((a, b))
 
 def _mul_other_var(a, b):
@@ -2365,26 +2413,40 @@ def _div_native_native(a, b):
     return a / b
 
 def _div_native_npv(a, b):
+    if not a and a in _zero_one_optimizations:
+        return 0
     return NPV_DivisionExpression((a, b))
 
 def _div_native_param(a, b):
     if b.is_constant():
         return a / b.value
+    if not a and a in _zero_one_optimizations:
+        return 0
     return NPV_DivisionExpression((a, b))
 
 def _div_native_var(a, b):
+    if not a and a in _zero_one_optimizations:
+        return 0
     return DivisionExpression((a, b))
 
 def _div_native_monomial(a, b):
+    if not a and a in _zero_one_optimizations:
+        return 0
     return DivisionExpression((a, b))
 
 def _div_native_linear(a, b):
+    if not a and a in _zero_one_optimizations:
+        return 0
     return DivisionExpression((a, b))
 
 def _div_native_sum(a, b):
+    if not a and a in _zero_one_optimizations:
+        return 0
     return DivisionExpression((a, b))
 
 def _div_native_other(a, b):
+    if not a and a in _zero_one_optimizations:
+        return 0
     return DivisionExpression((a, b))
 
 #
@@ -2392,7 +2454,7 @@ def _div_native_other(a, b):
 #
 
 def _div_npv_native(a, b):
-    if b == 1:
+    if b in _zero_one_optimizations and b:
         return a
     if not b:
         raise ZeroDivisionError()
@@ -2404,7 +2466,7 @@ def _div_npv_npv(a, b):
 def _div_npv_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
+        if b in _zero_one_optimizations and b:
             return a
         if not b:
             raise ZeroDivisionError()
@@ -2432,7 +2494,7 @@ def _div_npv_other(a, b):
 def _div_param_native(a, b):
     if a.is_constant():
         return a.value / b
-    if b == 1:
+    if b in _zero_one_optimizations and b:
         return a
     if not b:
         raise ZeroDivisionError()
@@ -2441,6 +2503,8 @@ def _div_param_native(a, b):
 def _div_param_npv(a, b):
     if a.is_constant():
         a = a.value
+        if not a and a in _zero_one_optimizations:
+            return 0
     return NPV_DivisionExpression((a, b))
 
 def _div_param_param(a, b):
@@ -2448,9 +2512,11 @@ def _div_param_param(a, b):
         a = a.value
         if b.is_constant():
             return a / b.value
+        if not a and a in _zero_one_optimizations:
+            return 0
     elif b.is_constant():
         b = b.value
-        if b == 1:
+        if b in _zero_one_optimizations and b:
             return a
         if not b:
             raise ZeroDivisionError()
@@ -2459,26 +2525,36 @@ def _div_param_param(a, b):
 def _div_param_var(a, b):
     if a.is_constant():
         a = a.value
+        if not a and a in _zero_one_optimizations:
+            return 0
     return DivisionExpression((a, b))
 
 def _div_param_monomial(a, b):
     if a.is_constant():
         a = a.value
+        if not a and a in _zero_one_optimizations:
+            return 0
     return DivisionExpression((a, b))
 
 def _div_param_linear(a, b):
     if a.is_constant():
         a = a.value
+        if not a and a in _zero_one_optimizations:
+            return 0
     return DivisionExpression((a, b))
 
 def _div_param_sum(a, b):
     if a.is_constant():
         a = value(a)
+        if not a and a in _zero_one_optimizations:
+            return 0
     return DivisionExpression((a, b))
 
 def _div_param_other(a, b):
     if a.is_constant():
         a = a.value
+        if not a and a in _zero_one_optimizations:
+            return 0
     return DivisionExpression((a, b))
 
 #
@@ -2486,7 +2562,7 @@ def _div_param_other(a, b):
 #
 
 def _div_var_native(a, b):
-    if b == 1:
+    if b in _zero_one_optimizations and b:
         return a
     return MonomialTermExpression((1/b, a))
 
@@ -2496,7 +2572,7 @@ def _div_var_npv(a, b):
 def _div_var_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
+        if b in _zero_one_optimizations and b:
             return a
         return MonomialTermExpression((1/b, a))
     return MonomialTermExpression((NPV_DivisionExpression((1, b)), a))
@@ -2521,7 +2597,7 @@ def _div_var_other(a, b):
 #
 
 def _div_monomial_native(a, b):
-    if b == 1:
+    if b in _zero_one_optimizations and b:
         return a
     return MonomialTermExpression((a._args_[0]/b, a._args_[1]))
 
@@ -2532,7 +2608,7 @@ def _div_monomial_npv(a, b):
 def _div_monomial_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
+        if b in _zero_one_optimizations and b:
             return a
         return MonomialTermExpression((a._args_[0]/b, a._args_[1]))
     return MonomialTermExpression((
@@ -2558,7 +2634,7 @@ def _div_monomial_other(a, b):
 #
 
 def _div_linear_native(a, b):
-    if b == 1:
+    if b in _zero_one_optimizations and b:
         return a
     if not b:
         raise ZeroDivisionError()
@@ -2570,7 +2646,7 @@ def _div_linear_npv(a, b):
 def _div_linear_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
+        if b in _zero_one_optimizations and b:
             return a
         if not b:
             raise ZeroDivisionError()
@@ -2596,7 +2672,7 @@ def _div_linear_other(a, b):
 #
 
 def _div_sum_native(a, b):
-    if b == 1:
+    if b in _zero_one_optimizations and b:
         return a
     if not b:
         raise ZeroDivisionError()
@@ -2608,7 +2684,7 @@ def _div_sum_npv(a, b):
 def _div_sum_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
+        if b in _zero_one_optimizations and b:
             return a
         if not b:
             raise ZeroDivisionError()
@@ -2634,7 +2710,7 @@ def _div_sum_other(a, b):
 #
 
 def _div_other_native(a, b):
-    if b == 1:
+    if b in _zero_one_optimizations and b:
         return a
     if not b:
         raise ZeroDivisionError()
@@ -2646,7 +2722,7 @@ def _div_other_npv(a, b):
 def _div_other_param(a, b):
     if b.is_constant():
         b = b.value
-        if b == 1:
+        if b in _zero_one_optimizations and b:
             return a
         if not b:
             raise ZeroDivisionError()
@@ -2777,10 +2853,8 @@ def _pow_native_other(a, b):
 
 
 def _pow_npv_native(a, b):
-    if not b:
-        return 1
-    elif b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 1
     return NPV_PowExpression((a, b))
 
 def _pow_npv_npv(a, b):
@@ -2789,10 +2863,8 @@ def _pow_npv_npv(a, b):
 def _pow_npv_param(a, b):
     if b.is_constant():
         b = b.value
-        if not b:
-            return 1
-        elif b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 1
     return NPV_PowExpression((a, b))
 
 def _pow_npv_other(a, b):
@@ -2802,10 +2874,8 @@ def _pow_npv_other(a, b):
 def _pow_param_native(a, b):
     if a.is_constant():
         return a.value ** b
-    if not b:
-        return 1
-    elif b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 1
     return NPV_PowExpression((a, b))
 
 def _pow_param_npv(a, b):
@@ -2820,10 +2890,8 @@ def _pow_param_param(a, b):
             return a ** b.value
     elif b.is_constant():
         b = b.value
-        if not b:
-            return 1
-        elif b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 1
     return NPV_PowExpression((a, b))
 
 def _pow_param_other(a, b):
@@ -2833,10 +2901,8 @@ def _pow_param_other(a, b):
 
 
 def _pow_other_native(a, b):
-    if not b:
-        return 1
-    elif b == 1:
-        return a
+    if b in _zero_one_optimizations:
+        return a if b else 1
     return PowExpression((a, b))
 
 def _pow_other_npv(a, b):
@@ -2845,10 +2911,8 @@ def _pow_other_npv(a, b):
 def _pow_other_param(a, b):
     if b.is_constant():
         b = b.value
-        if not b:
-            return 1
-        elif b == 1:
-            return a
+        if b in _zero_one_optimizations:
+            return a if b else 1
     return PowExpression((a, b))
 
 def _pow_other_other(a, b):
