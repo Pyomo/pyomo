@@ -19,44 +19,19 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import Constraint, SolverFactory, Var
 
 class TestTransformPiecewiseModelToReducedInnerRepnGDP(unittest.TestCase):
-    def check_log_disjunct(self, d, not_pts, f, substitute_var, x):
+    def check_disjunct(self, d, not_pts):
         self.assertEqual(len(d.component_map(Constraint)), 1)
         # just the indicator_var
         self.assertEqual(len(d.component_map(Var)), 1)
         self.assertIsInstance(d.lambdas_zero_for_other_simplices, Constraint)
-        self.assertEqual(len(d.lambdas_zero_for_other_simplices), 2)
+        self.assertEqual(len(d.lambdas_zero_for_other_simplices), len(not_pts))
         transBlock = d.parent_block()
         for i, cons in zip(not_pts,
-                            d.lambdas_zero_for_other_simplices.values()):
+                           d.lambdas_zero_for_other_simplices.values()):
             assertExpressionsEqual(self, cons.expr, transBlock.lambdas[i] <= 0)
 
-    def check_paraboloid_disjunct(self, d, pts, f, substitute_var, x1, x2):
-        self.assertEqual(len(d.component_map(Constraint)), 3)
-        # lambdas and indicator_var
-        self.assertEqual(len(d.component_map(Var)), 2)
-        self.assertIsInstance(d.lambdas, Var)
-        self.assertEqual(len(d.lambdas), 3)
-        for lamb in d.lambdas.values():
-            self.assertEqual(lamb.lb, 0)
-            self.assertEqual(lamb.ub, 1)
-        self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(self, d.convex_combo.expr,
-                               d.lambdas[0] + d.lambdas[1] + d.lambdas[2] == 1)
-        self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(self, d.set_substitute.expr,
-                               substitute_var == f(x1, x2), places=7)
-        self.assertIsInstance(d.linear_combo, Constraint)
-        self.assertEqual(len(d.linear_combo), 2)
-        assertExpressionsEqual(
-            self, d.linear_combo[0].expr,
-            x1 == pts[0][0]*d.lambdas[0] + pts[1][0]*d.lambdas[1] +
-            pts[2][0]*d.lambdas[2])
-        assertExpressionsEqual(
-            self, d.linear_combo[1].expr,
-            x2 == pts[0][1]*d.lambdas[0] + pts[1][1]*d.lambdas[1] +
-            pts[2][1]*d.lambdas[2])
-
-    def check_log_trans_block_structure(self, transBlock, x, pts):
+    def check_log_trans_block_structure(self, transBlock):
+        m = transBlock.model()
         # One (indexed) disjunct
         self.assertEqual(len(transBlock.component_map(Disjunct)), 1)
         # One disjunction
@@ -79,11 +54,80 @@ class TestTransformPiecewiseModelToReducedInnerRepnGDP(unittest.TestCase):
                                1)
         self.assertIsInstance(transBlock.linear_combo, Constraint)
         self.assertEqual(len(transBlock.linear_combo), 1)
-        assertExpressionsEqual(self, transBlock.linear_combo[0].expr, x ==
+        pts = m.pw_log._points
+        assertExpressionsEqual(self, transBlock.linear_combo[0].expr, m.x ==
                                pts[0][0]*transBlock.lambdas[0] +
                                pts[1][0]*transBlock.lambdas[1] +
                                pts[2][0]*transBlock.lambdas[2] +
                                pts[3][0]*transBlock.lambdas[3])
+
+        self.assertIsInstance(transBlock.linear_func, Constraint)
+        self.assertEqual(len(transBlock.linear_func), 1)
+        assertExpressionsEqual(
+            self, transBlock.linear_func.expr,
+            transBlock.lambdas[0]*m.f1(1) +
+            transBlock.lambdas[1]*m.f1(3) +
+            transBlock.lambdas[2]*m.f2(6) +
+            transBlock.lambdas[3]*m.f3(10) == transBlock.substitute_var,
+            places=7)
+
+    def check_paraboloid_trans_block_structure(self, transBlock):
+        m = transBlock.model()
+        # One (indexed) disjunct
+        self.assertEqual(len(transBlock.component_map(Disjunct)), 1)
+        # One disjunction
+        self.assertEqual(len(transBlock.component_map(Disjunction)), 1)
+        # substitute Var and lambdas:
+        self.assertEqual(len(transBlock.component_map(Var)), 2)
+        # 3 constraints: The convexity one, the x-is-a-linear-combo of extreme
+        # points one, and the
+        # z-is-a-linear-combo-of-pw-linear-function-values-at-extreme-ppoints
+        # one:
+        self.assertEqual(len(transBlock.component_map(Constraint)), 3)
+
+        # The 'z' var (that we will substitute in for the function being
+        # approximated) is here:
+        self.assertIsInstance(transBlock.substitute_var, Var)
+
+        self.assertIsInstance(transBlock.lambdas, Var)
+        self.assertEqual(len(transBlock.lambdas), 6)
+        for lamb in transBlock.lambdas.values():
+            self.assertEqual(lamb.lb, 0)
+            self.assertEqual(lamb.ub, 1)
+        self.assertIsInstance(transBlock.convex_combo, Constraint)
+        assertExpressionsEqual(self, transBlock.convex_combo.expr,
+                               transBlock.lambdas[0] + transBlock.lambdas[1] +
+                               transBlock.lambdas[2] + transBlock.lambdas[3] +
+                               transBlock.lambdas[4] + transBlock.lambdas[5] ==
+                               1)
+        self.assertIsInstance(transBlock.linear_combo, Constraint)
+        self.assertEqual(len(transBlock.linear_combo), 2)
+        pts = m.pw_paraboloid._points
+        assertExpressionsEqual(self, transBlock.linear_combo[0].expr, m.x1 ==
+                               pts[0][0]*transBlock.lambdas[0] +
+                               pts[1][0]*transBlock.lambdas[1] +
+                               pts[2][0]*transBlock.lambdas[2] +
+                               pts[3][0]*transBlock.lambdas[3] +
+                               pts[4][0]*transBlock.lambdas[4] +
+                               pts[5][0]*transBlock.lambdas[5])
+        assertExpressionsEqual(self, transBlock.linear_combo[1].expr, m.x2 ==
+                               pts[0][1]*transBlock.lambdas[0] +
+                               pts[1][1]*transBlock.lambdas[1] +
+                               pts[2][1]*transBlock.lambdas[2] +
+                               pts[3][1]*transBlock.lambdas[3] +
+                               pts[4][1]*transBlock.lambdas[4] +
+                               pts[5][1]*transBlock.lambdas[5])
+
+        self.assertIsInstance(transBlock.linear_func, Constraint)
+        self.assertEqual(len(transBlock.linear_func), 1)
+        assertExpressionsEqual(
+            self, transBlock.linear_func.expr,
+            transBlock.lambdas[0]*m.g1(0, 1) +
+            transBlock.lambdas[1]*m.g1(0, 4) +
+            transBlock.lambdas[2]*m.g1(3, 4) +
+            transBlock.lambdas[3]*m.g1(3, 1) +
+            transBlock.lambdas[4]*m.g2(3, 7) +
+            transBlock.lambdas[5]*m.g2(0, 7) == transBlock.substitute_var)
 
     def check_pw_log(self, m):
         ##
@@ -93,17 +137,18 @@ class TestTransformPiecewiseModelToReducedInnerRepnGDP(unittest.TestCase):
         self.assertIsInstance(z, Var)
         # Now we can use those Vars to check on what the transformation created
         log_block = z.parent_block()
-        self.check_log_trans_block_structure(log_block, m.x, m.pw_log._points)
+        self.check_log_trans_block_structure(log_block)
 
         # Check that all of the Disjuncts have what they should
         self.assertEqual(len(log_block.disjuncts), 3)
         disjuncts_dict = {
-            log_block.disjuncts[0]: ((2, 3), m.f1),
-            log_block.disjuncts[1]: ((0, 3), m.f2),
-            log_block.disjuncts[2]: ((0, 1), m.f3),
+            # disjunct : [extreme points *not* in corresponding x domain]
+            log_block.disjuncts[0]: (2, 3),
+            log_block.disjuncts[1]: (0, 3),
+            log_block.disjuncts[2]: (0, 1),
         }
-        for d, (pts, f) in disjuncts_dict.items():
-            self.check_log_disjunct(d, pts, f, log_block.substitute_var, m.x)
+        for d, not_pts in disjuncts_dict.items():
+            self.check_disjunct(d, not_pts)
 
         # Check the Disjunction
         self.assertIsInstance(log_block.pick_a_piece, Disjunction)
@@ -116,26 +161,24 @@ class TestTransformPiecewiseModelToReducedInnerRepnGDP(unittest.TestCase):
         self.assertIs(m.obj.expr.expr, log_block.substitute_var)
 
     def check_pw_paraboloid(self, m):
-        # TODO: you are here!
         ##
         # Check the approximation of the transformation of the paraboloid
         ##
         z = m.pw_paraboloid.get_transformation_var(m.paraboloid_expr)
         self.assertIsInstance(z, Var)
         paraboloid_block = z.parent_block()
-        ct.check_trans_block_structure(self, paraboloid_block)
+        self.check_paraboloid_trans_block_structure(paraboloid_block)
 
         self.assertEqual(len(paraboloid_block.disjuncts), 4)
         disjuncts_dict = {
-            paraboloid_block.disjuncts[0]: ([(0, 1), (0, 4), (3, 4)], m.g1),
-            paraboloid_block.disjuncts[1]: ([(0, 1), (3, 4), (3, 1)], m.g1),
-            paraboloid_block.disjuncts[2]: ([(3, 4), (3, 7), (0, 7)], m.g2),
-            paraboloid_block.disjuncts[3]: ([(0, 7), (0, 4), (3, 4)], m.g2),
+            # disjunct : [extreme points *not* in corresponding (x1, x2) domain]
+            paraboloid_block.disjuncts[0]: [3, 4, 5],
+            paraboloid_block.disjuncts[1]: [1, 4, 5],
+            paraboloid_block.disjuncts[2]: [0, 1, 3],
+            paraboloid_block.disjuncts[3]: [0, 3, 4],
         }
-        for d, (pts, f) in disjuncts_dict.items():
-            self.check_paraboloid_disjunct(d, pts, f,
-                                           paraboloid_block.substitute_var,
-                                           m.x1, m.x2)
+        for d, not_pts in disjuncts_dict.items():
+            self.check_disjunct(d, not_pts)
 
         # Check the Disjunction
         self.assertIsInstance(paraboloid_block.pick_a_piece, Disjunction)

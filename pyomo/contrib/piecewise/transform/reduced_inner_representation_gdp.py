@@ -28,7 +28,7 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
     simplices over which the linear functions are defined are represented
     in a reduced "inner" representation--as convex combinations of their extreme
     points. We refer to this as 'reduced' since we create only one multiplier
-    for each extreme point in the union of the extreme points over all the 
+    for each extreme point in the union of the extreme points over all the
     simplices. Within the Disjuncts, we then enforce that all of the multipliers
     for extreme points not in the simplex are 0.
 
@@ -63,13 +63,18 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         substitute_var_lb = float('inf')
         substitute_var_ub = -float('inf')
         extreme_pts_by_simplex = {}
+        linear_func_by_extreme_pt = {}
         # Save all the extreme points as sets since we will need to check set
-        # containment to build the constraints fixing the multipliers to 0
+        # containment to build the constraints fixing the multipliers to 0. We
+        # can also build the data structure that will allow us to later build
+        # the linear func expression
         for simplex, linear_func in zip(pw_linear_func._simplices,
                                         pw_linear_func._linear_functions):
             extreme_pts = extreme_pts_by_simplex[simplex] = set()
             for idx in simplex:
                 extreme_pts.add(idx)
+                if idx not in linear_func_by_extreme_pt:
+                    linear_func_by_extreme_pt[idx] = linear_func
 
             # We're going to want bounds on the substitute var, so we use
             # interval arithmetic to figure those out as we go.
@@ -103,14 +108,15 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         # Make the disjunction
         transBlock.pick_a_piece = Disjunction(
             expr=[d for d in transBlock.disjuncts.values()])
-        
+
         # Now we make the global constraints
         transBlock.convex_combo = Constraint(
             expr=sum(transBlock.lambdas[i] for i in
                      range(num_extreme_pts)) == 1)
         transBlock.linear_func = Constraint(
-            expr=sum(linear_func(*pt)*transBlock.lambdas[j] for (j, pt) in
-                     enumerate(pw_linear_func._points)) == substitute_var)
+            expr=sum(linear_func_by_extreme_pt[j](*pt)*transBlock.lambdas[j] for
+                     (j, pt) in enumerate(pw_linear_func._points)) ==
+            substitute_var)
         @transBlock.Constraint(range(dimension))
         def linear_combo(b, i):
             return pw_expr.args[i] == sum(pt[i]*transBlock.lambdas[j] for
