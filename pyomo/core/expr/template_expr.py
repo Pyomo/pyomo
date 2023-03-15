@@ -603,8 +603,6 @@ class IndexTemplate(NumericValue):
                 self._value = values[0]
             else:
                 self._value = values[self._index]
-                #raise ValueError("Passed multiple values %s to a scalar "
-                #                 "IndexTemplate %s" % (values, self))
         else:
             self._value = values
 

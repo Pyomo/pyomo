@@ -224,7 +224,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
             e.__class__, other.__class__](e, other)
 
     # Note: the default implementation of __isub__ leverages __iadd__
-    # and doesn't need t be reimplemented here
+    # and doesn't need to be reimplemented here
 
     def __imul__(self,other):
         e = self._expr
