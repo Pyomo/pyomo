@@ -68,8 +68,8 @@ class DesignOfExperiments:
             A  ``dictionary`` of parameter names and values. 
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
             Note: if sIPOPT is used, parameter shouldn't be indexed.
-        design_names:
-            A designvariable ``object``
+        design_object:
+            A DesignVariable ``object``
         measurement_object:
             A measurement ``object``.
         create_model:
@@ -586,8 +586,8 @@ class DesignOfExperiments:
             involved_s = scena_gen['scena_num'][para]
 
             # each parameter has two involved scenarios
-            s1 = involved_s[0] # upper perturbation
-            s2 = involved_s[1] # loweer perturbation
+            s1 = involved_s[0] # positive perturbation
+            s2 = involved_s[1] # negative perturbation
             list_jac = []
             for i in range(len(output_record[s1])):
                 sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen['eps-abs'][para] * self.scale_constant_value
@@ -633,8 +633,8 @@ class DesignOfExperiments:
 
         Parameters
         -----------
-        design_values:
-            designvariable object
+        design_object:
+            DesignVariable object
         design_ranges:
             a ``list`` of design variable values to go over
         design_dimension_names:

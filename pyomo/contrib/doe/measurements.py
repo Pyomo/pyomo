@@ -40,9 +40,8 @@ class SpecialSet:
 
         Parameter
         ---------
-        self_define_res: a ``list`` of ``string``, containing the measurement variable names with indexs, 
-            for e.g. "C['CA', 23, 0]". 
-            If this is defined, no need to define ``measurement_var``, ``extra_idx``, ``time_idx``.
+        self_define_res: a ``list`` of ``string``, containing the variable names with indexs, 
+            for e.g. "C['CA', 23, 0]".
         """
         self.special_set = self_define_res
 
@@ -54,7 +53,7 @@ class SpecialSet:
 
         Parameter 
         ---------
-        var_name: a ``list`` of measurement var names 
+        var_name: a ``list`` of var names 
         extra_index: a ``list`` containing extra indexes except for time indexes 
             if default (None), no extra indexes needed for all var in var_name
             if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
@@ -72,6 +71,8 @@ class SpecialSet:
         if not defining values, return a set of variable names 
         if defining values, return a dictionary of variable names and its value 
         """
+
+        self._names(var_name, extra_index,time_index)
 
         self._add_elements(var_name, extra_index=extra_index, time_index=time_index)
         if values:
@@ -126,7 +127,7 @@ class SpecialSet:
 
         Parameter 
         ---------
-        var_name: a ``list`` of measurement var names 
+        var_name: a ``list`` of var names 
         extra_index: a ``list`` containing extra indexes except for time indexes 
             if default (None), no extra indexes needed for all var in var_name
             if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
@@ -164,6 +165,20 @@ class SpecialSet:
                         name1 += ","
 
                 self.special_set.append(name1)
+
+
+    def _names(self, var_name, extra_index, time_index):
+        """
+        Check if the measurement information provided are valid to use. 
+        """
+        num_var = len(var_name)
+        
+        if extra_index and len(extra_index) != num_var: 
+            warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")
+
+        if len(time_index) != num_var:
+            warnings.warn("time_index is of different length with var_name. This warning indicates a potential modeling error.")
+
     
 class Measurements(SpecialSet):
     def __init__(self):
@@ -183,7 +198,7 @@ class Measurements(SpecialSet):
 
     def add_elements(self, var_name, extra_index=None, time_index=[0]):
         """
-        Parameters
+        Parameters 
         -----------
         var_name: a ``list`` of measurement var names 
             extra_index: a ``list`` containing extra indexes except for time indexes 
@@ -195,11 +210,11 @@ class Measurements(SpecialSet):
                 default choice is [0], means this is an algebraic variable
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
-        self._check_names(var_name, extra_index, time_index)
+        #self._check_names(var_name, extra_index, time_index)
         self.measurement_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index)
 
         # generate default variance
-        self._generate_variance()
+        self._use_identity_variance()
 
     def update_variance(self, variance):
         """If not using default variance 
@@ -225,25 +240,14 @@ class Measurements(SpecialSet):
             if nam not in self.measurement_name:
                 print("Measurement not in the set: ", nam)
 
-    def _generate_variance(self):
+    def _use_identity_variance(self):
         """Generate the variance dictionary. 
         """
         self.variance = {}
         for name in self.measurement_name:
             self.variance[name] = 1     
 
-    def _check_names(self, var_name, extra_index, time_index):
-        """
-        Check if the measurement information provided are valid to use. 
-        """
-        num_var = len(var_name)
-        
-        if len(extra_index) != num_var: 
-            warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")
-
-        if len(time_index) != num_var:
-            warnings.warn("time_index is of different length with var_name. This warning indicates a potential modeling error.")
-
+    
 
 
 class DesignVariables(SpecialSet):
@@ -262,7 +266,7 @@ class DesignVariables(SpecialSet):
 
         Parameters
         -----------
-        var_name: a ``list`` of measurement var names 
+        var_name: a ``list`` of design var names 
             extra_index: a ``list`` containing extra indexes except for time indexes 
                 if default (None), no extra indexes needed for all var in var_name
                 if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
@@ -272,7 +276,7 @@ class DesignVariables(SpecialSet):
                 default choice is [0], means this is an algebraic variable
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
-        #self._check_names(var_name, extra_index, time_index)
+        self._check_names(var_name, extra_index, time_index)
 
         self.design_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values)
         # initialize upper and lower bounds
@@ -286,11 +290,11 @@ class DesignVariables(SpecialSet):
 
     def _check_names(self, var_name, extra_index, time_index):
         """
-        Check if the measurement information provided are valid to use. 
+        Check if the design information provided are valid to use. 
         """
         num_var = len(var_name)
         
-        if len(extra_index) != num_var: 
+        if extra_index and len(extra_index) != num_var: 
             warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")
 
         if len(time_index) != num_var:
