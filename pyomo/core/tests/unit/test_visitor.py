@@ -859,7 +859,10 @@ class TestReplacementWithNPV(unittest.TestCase):
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
         assertExpressionsEqual(self, e2, m.p2 + 2)
-        assertExpressionsEqual(self, e3, SumExpression([m.x, 2]))
+        assertExpressionsEqual(self, e3, LinearExpression([
+            MonomialTermExpression((1, m.x)),
+            2
+        ]))
 
     def test_npv_negation(self):
         m = ConcreteModel()
