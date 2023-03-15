@@ -51,7 +51,7 @@ _zero_one_optimizations = {1,}
 def enable_expression_optimizations(zero=None, one=None):
     """Enable(disable) expression generation optimizations
 
-    There are currently two optimizations available duging expression generation:
+    There are currently two optimizations available during expression generation:
 
     - zero: aggressively resolve `0*f(.)` expressions to `0`, `0/f(.)`
       expressions to `0`, and `f(.)**0` expressions to `1`
@@ -64,13 +64,15 @@ def enable_expression_optimizations(zero=None, one=None):
 
     Notes
     -----
-    Enabling the `zero` can mask certain modeling errors.  In
-    particular, `ZeroDivisionError`s can be masked if `f(.)` resolves to
-    `0` (in the case of `0/f(.)`), or resolving `f(.)` would have
-    otherwise raised a ZeroDivisionError`.  In addition, `f(.)**0 == 1`
-    is only valid when `f(.)>=0`.  Users who enable this optimization
-    bear responsibility for ensuring that these conditions do not exist
-    in their model.
+
+    Enabling the `zero` optimization can mask certain modeling errors.
+    In particular, the optimization will suppress `ZeroDivisionError`s
+    that should be raised if `f(.)` resolves to `0` (in the case of
+    `0/f(.)`), as well as any errors that would have otherwise been
+    raised during the evaluation of `f(.)`.  In addition, optimizing
+    `f(.)**0 == 1` is only valid when `f(.)>=0`.  **Users who enable
+    this optimization bear responsibility for ensuring that these
+    conditions do not exist in the model.**
 
     The `one` optimizations should generally be safe.
 
