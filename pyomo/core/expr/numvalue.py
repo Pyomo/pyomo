@@ -440,6 +440,8 @@ def check_if_numeric_type(obj):
         # being added to native_numeric_types)
         if not (( obj < 0 ) ^ ( obj >= 0)):
             return False
+        # Native types *must* be hashable
+        hash(obj)
     except:
         return False
     if obj_p0_class is obj_class or obj_p0_class in native_numeric_types:
