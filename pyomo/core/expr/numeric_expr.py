@@ -310,9 +310,6 @@ class ExternalFunctionExpression(NumericExpression):
     def getname(self, *args, **kwds):
         return self._fcn.getname(*args, **kwds)
 
-    def _compute_polynomial_degree(self, result):
-        return 0 if all(arg == 0 for arg in result) else None
-
     def _apply_operation(self, result):
         return self._fcn.evaluate( result )
 
