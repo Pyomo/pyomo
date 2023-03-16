@@ -721,9 +721,8 @@ class LinearExpression(SumExpression):
         # I am not sure why LinearExpression allows omitting args, but
         # it does.  If they are provided, they should be the (non-zero)
         # constant followed by MonomialTermExpressions.
-        if args:
-            if any(arg is not None for arg in
-                   (constant, linear_coefs, linear_vars)):
+        if args is not None:
+            if not (constant is None and linear_coefs is None and linear_vars is None):
                 raise ValueError("Cannot specify both args and any of "
                                  "{constant, linear_coefs, or linear_vars}")
             # unlike other expressions, we expect (require) args to be a list
