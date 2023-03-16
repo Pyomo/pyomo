@@ -1271,15 +1271,22 @@ class _NLWriter_impl(object):
         single_use_subexpressions = {}
         self.next_V_line_id = n_vars
         for _id in self.subexpression_order:
-            cache_info = self.subexpression_cache[_id][2]
-            if cache_info[2]:
+            _con_id, _obj_id, _sub = self.subexpression_cache[_id][2]
+            if _sub:
                 # substitute expression directly into expression trees
                 # and do NOT emit the V line
                 continue
-            elif 0 in cache_info[:2] or None not in cache_info[:2]:
+            target_expr = 0
+            if _obj_id is None:
+                target_expr = _con_id
+            elif _con_id is None:
+                target_expr = _obj_id
+            if target_expr == 0:
+                # Note: checking target_expr == 0 is equivalent to
+                # testing "(_con_id is not None and _obj_id is not None)
+                # or _con_id == 0 or _obj_id == 0"
                 self._write_v_line(_id, 0)
             else:
-                target_expr = tuple(filter(None, cache_info))[0]
                 if target_expr not in single_use_subexpressions:
                     single_use_subexpressions[target_expr] = []
                 single_use_subexpressions[target_expr].append(_id)
