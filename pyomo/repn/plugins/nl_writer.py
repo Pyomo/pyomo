@@ -2235,7 +2235,7 @@ def handle_named_expression_node(visitor, node, arg1):
         if repn.linear:
             if (not repn.const
                 and len(repn.linear) == 1
-                and next(iter(repn.linear.values()))) == 1
+                and next(iter(repn.linear.values())) == 1
             ):
                 # This Expression holds only a variable (multiplied by
                 # 1).  Do not emit this as a named variable and instead
