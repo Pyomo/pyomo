@@ -2235,7 +2235,7 @@ def handle_named_expression_node(visitor, node, arg1):
         if repn.linear:
             if (not repn.const
                 and len(repn.linear) == 1
-                and next(repn.linear.values()) == 1
+                and next(iter(repn.linear.values()))) == 1
             ):
                 # This Expression holds only a variable (multiplied by
                 # 1).  Do not emit this as a named variable and instead
@@ -2265,7 +2265,7 @@ def handle_named_expression_node(visitor, node, arg1):
 
     if expression_source[2]:
         if repn.linear:
-            return (_MONOMIAL, next(repn.linear.keys()), 1)
+            return (_MONOMIAL, next(iter(repn.linear)), 1)
         else:
             return (_CONSTANT, repn.const)
 
@@ -2470,7 +2470,7 @@ def _before_named_expression(visitor, child):
         obj, repn, info = visitor.subexpression_cache[_id]
         if info[2]:
             if repn.linear:
-                return False, (_MONOMIAL, next(repn.linear.keys()), 1)
+                return False, (_MONOMIAL, next(iter(repn.linear)), 1)
             else:
                 return False, (_CONSTANT, repn.const)
         return False, (_GENERAL, repn.duplicate())
