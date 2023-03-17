@@ -144,7 +144,7 @@ def problem_milp_feasible():
 
     # a knapsack-type problem
 
-    number_binary_variables = 40  # may need to be tweaked depending on specs
+    number_binary_variables = 20  # may need to be tweaked depending on specs
 
     model.Y = pyo.RangeSet(number_binary_variables)
 
