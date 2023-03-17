@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.common.dependencies.numpy as np
+from pyomo.common.dependencies.scipy import spatial
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
     PiecewiseLinearToGDP)
@@ -16,19 +18,17 @@ from pyomo.core import Constraint, NonNegativeIntegers, Suffix, Var
 from pyomo.core.base import TransformationFactory
 from pyomo.gdp import Disjunct, Disjunction
 
-@TransformationFactory.register('contrib.piecewise.inner_repn_gdp',
+@TransformationFactory.register('contrib.piecewise.outer_repn_gdp',
                                 doc="Convert piecewise-linear model to a GDP "
-                                "using an inner representation of the "
-                                "simplices that are the domains of the linear "
-                                "functions.")
-class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
+                                "using an outer (Ax <= b) representation of "
+                                "the simplices that are the domains of the "
+                                "linear functions.")
+class OuterRepresentationGDPTransformation(PiecewiseLinearToGDP):
     """
     Convert a model involving piecewise linear expressions into a GDP by
     representing the piecewise linear functions as Disjunctions where the
     simplices over which the linear functions are defined are represented
-    in an "inner" representation--as convex combinations of their extreme
-    points. The multipliers defining the convex combination are local to
-    each Disjunct, so there is one per extreme point in each simplex.
+    in an "outer" representation--in sets of constraints of the form Ax <= b.
 
     This transformation can be called in one of two ways:
         1) The default, where 'descend_into_expressions' is False. This is
@@ -45,7 +45,7 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
            this mode, targets must be Blocks, Constraints, and/or Objectives.
     """
     CONFIG = PiecewiseLinearToGDP.CONFIG()
-    _transformation_name = 'pw_linear_inner_repn'
+    _transformation_name = 'pw_linear_outer_repn'
 
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func,
                                   transformation_block):
@@ -60,17 +60,39 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
                                               substitute_var)
         substitute_var_lb = float('inf')
         substitute_var_ub = -float('inf')
+        if dimension > 1:
+            A = np.ones((dimension + 1, dimension + 1))
+            b = np.zeros(dimension + 1)
+            b[-1] = 1
+
         for simplex, linear_func in zip(pw_linear_func._simplices,
                                         pw_linear_func._linear_functions):
             disj = transBlock.disjuncts[len(transBlock.disjuncts)]
-            disj.lambdas = Var(NonNegativeIntegers, dense=False,
-                               bounds=(0,1))
-            extreme_pts = []
-            for idx in simplex:
-                extreme_pts.append(pw_linear_func._points[idx])
 
-            disj.convex_combo = Constraint(
-                expr=sum(disj.lambdas[i] for i in range(len(extreme_pts))) == 1)
+            if dimension == 1:
+                # We don't need scipy, and the polytopes are 1-dimensional
+                # simplices, so they are defined by two bounds constraints:
+                disj.simplex_halfspaces = Constraint(
+                    expr=(pw_linear_func._points[simplex[0]][0], 
+                          pw_expr.args[0], 
+                          pw_linear_func._points[simplex[1]][0]))
+            else:
+                disj.simplex_halfspaces = Constraint(range(dimension + 1))
+                # we will use scipy to get the convex hull of the extreme
+                # points of the simplex
+                extreme_pts = []
+                for idx in simplex:
+                    extreme_pts.append(pw_linear_func._points[idx])
+                chull = spatial.ConvexHull(extreme_pts)
+                vars = pw_expr.args
+                for i, eqn in enumerate(chull.equations):
+                    # The equations are given as normal vectors (A) followed by
+                    # offsets (b) such that Ax + b <= 0 gives the halfspaces
+                    # defining the simplex. (See Qhull documentation)
+                    disj.simplex_halfspaces[i] = sum(eqn[j]*v for j, v in
+                                                    enumerate(vars)) + \
+                        float(eqn[dimension]) <= 0
+
             linear_func_expr = linear_func(*pw_expr.args)
             disj.set_substitute = Constraint(expr=substitute_var ==
                                              linear_func_expr)
@@ -79,15 +101,6 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
                 substitute_var_lb = lb
             if ub is not None and ub > substitute_var_ub:
                 substitute_var_ub = ub
-            @disj.Constraint(range(dimension))
-            def linear_combo(disj, i):
-                return pw_expr.args[i] == sum(disj.lambdas[j]*pt[i] for j, pt in
-                                              enumerate(extreme_pts))
-
-            # Mark the lambdas as local so that we don't do anything silly in
-            # the hull transformation.
-            disj.LocalVars = Suffix(direction=Suffix.LOCAL)
-            disj.LocalVars[disj] = [v for v in disj.lambdas.values()]
 
         if substitute_var_lb < float('inf'):
             transBlock.substitute_var.setlb(substitute_var_lb)
