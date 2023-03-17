@@ -25,7 +25,7 @@ env:
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
-  BASE_REF: ${{ github.base_ref }}
+  SRC_REF: ${{ github.head_ref }}
 
 jobs:
   build:
@@ -531,7 +531,7 @@ jobs:
         echo ""
         echo "Clone Pyomo-model-libraries..."
         URL=https://github.com/Pyomo/pyomo-model-libraries.git
-        git clone -b ${BASE_REF##*/} $URL || git clone -b main $URL
+        git clone -b ${SRC_REF##*/} $URL || git clone -b main $URL
         echo ""
         echo "Install Pyomo..."
         echo ""
