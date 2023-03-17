@@ -25,7 +25,7 @@ env:
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
-  SRC_REF: ${{ github.head_ref }}
+  SRC_REF: ${{ github.head_ref || github.ref }}
 
 jobs:
   build:
