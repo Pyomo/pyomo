@@ -552,6 +552,9 @@ jobs:
         echo "Clone Pyomo-model-libraries..."
         git clone -b main https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
+        echo "Attempt to check out an alternative branch (${GITHUB_REF##*/})"
+        git checkout ${GITHUB_REF##*/} || echo "Branch not found"
+        echo ""
         echo "Install Pyomo..."
         echo ""
         $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
