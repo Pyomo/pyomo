@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from math import sqrt
+from pyomo.common.dependencies import scipy_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.tests import models
 import pyomo.contrib.piecewise.tests.common_tests as ct
@@ -18,53 +20,35 @@ from pyomo.core.expr.compare import (
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import Constraint, SolverFactory, Var
 
-class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
+class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
     def check_log_disjunct(self, d, pts, f, substitute_var, x):
-        self.assertEqual(len(d.component_map(Constraint)), 3)
-        # lambdas and indicator_var
-        self.assertEqual(len(d.component_map(Var)), 2)
-        self.assertIsInstance(d.lambdas, Var)
-        self.assertEqual(len(d.lambdas), 2)
-        for lamb in d.lambdas.values():
-            self.assertEqual(lamb.lb, 0)
-            self.assertEqual(lamb.ub, 1)
-        self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(self, d.convex_combo.expr,
-                               d.lambdas[0] + d.lambdas[1] == 1)
+        # We can fit both bounds constraints in one constraint, then we have the
+        # linear function
+        self.assertEqual(len(d.component_map(Constraint)), 2)
+        # indicator_var
+        self.assertEqual(len(d.component_map(Var)), 1)
+        self.assertIsInstance(d.simplex_halfspaces, Constraint)
+        self.assertEqual(d.simplex_halfspaces.lower, pts[0])
+        self.assertEqual(d.simplex_halfspaces.upper, pts[1])
+        self.assertIs(d.simplex_halfspaces.body, x)
+
         self.assertIsInstance(d.set_substitute, Constraint)
         assertExpressionsEqual(self, d.set_substitute.expr,
                                substitute_var == f(x), places=7)
-        self.assertIsInstance(d.linear_combo, Constraint)
-        self.assertEqual(len(d.linear_combo), 1)
-        assertExpressionsEqual(
-            self, d.linear_combo[0].expr,
-            x == pts[0]*d.lambdas[0] + pts[1]*d.lambdas[1])
 
-    def check_paraboloid_disjunct(self, d, pts, f, substitute_var, x1, x2):
-        self.assertEqual(len(d.component_map(Constraint)), 3)
-        # lambdas and indicator_var
-        self.assertEqual(len(d.component_map(Var)), 2)
-        self.assertIsInstance(d.lambdas, Var)
-        self.assertEqual(len(d.lambdas), 3)
-        for lamb in d.lambdas.values():
-            self.assertEqual(lamb.lb, 0)
-            self.assertEqual(lamb.ub, 1)
-        self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(self, d.convex_combo.expr,
-                               d.lambdas[0] + d.lambdas[1] + d.lambdas[2] == 1)
+    def check_paraboloid_disjunct(self, d, constraint_coefs, f,
+                                  substitute_var, x1, x2):
+        self.assertEqual(len(d.component_map(Constraint)), 2)
+        # just indicator_var
+        self.assertEqual(len(d.component_map(Var)), 1)
+        for i, cons in d.simplex_halfspaces.items():
+            coefs = constraint_coefs[i]
+            assertExpressionsEqual(self, cons.expr, coefs[0]*x1 + coefs[1]*x2 +
+                                   coefs[2] <= 0, places=6)
+        
         self.assertIsInstance(d.set_substitute, Constraint)
         assertExpressionsEqual(self, d.set_substitute.expr,
                                substitute_var == f(x1, x2), places=7)
-        self.assertIsInstance(d.linear_combo, Constraint)
-        self.assertEqual(len(d.linear_combo), 2)
-        assertExpressionsEqual(
-            self, d.linear_combo[0].expr,
-            x1 == pts[0][0]*d.lambdas[0] + pts[1][0]*d.lambdas[1] +
-            pts[2][0]*d.lambdas[2])
-        assertExpressionsEqual(
-            self, d.linear_combo[1].expr,
-            x2 == pts[0][1]*d.lambdas[0] + pts[1][1]*d.lambdas[1] +
-            pts[2][1]*d.lambdas[2])
 
     def check_pw_log(self, m):
         ##
@@ -107,13 +91,28 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
 
         self.assertEqual(len(paraboloid_block.disjuncts), 4)
         disjuncts_dict = {
-            paraboloid_block.disjuncts[0]: ([(0, 1), (0, 4), (3, 4)], m.g1),
-            paraboloid_block.disjuncts[1]: ([(0, 1), (3, 4), (3, 1)], m.g1),
-            paraboloid_block.disjuncts[2]: ([(3, 4), (3, 7), (0, 7)], m.g2),
-            paraboloid_block.disjuncts[3]: ([(0, 7), (0, 4), (3, 4)], m.g2),
+            # the normal vectors of the faces are normalized when we get
+            # them from scipy:
+            paraboloid_block.disjuncts[0]: ([[sqrt(2)/2, -sqrt(2)/2, sqrt(2)/2],
+                                             [-1.0, 0.0, 0.0],
+                                             [0.0, 1.0, -4.0]], m.g1),
+            paraboloid_block.disjuncts[1]: ([[-sqrt(2)/2, sqrt(2)/2,
+                                              -sqrt(2)/2],
+                                             [0.0, -1.0, 1.0],
+                                             [1.0, 0.0, -3.0],
+                                             ], m.g1),
+            paraboloid_block.disjuncts[2]: ([[-sqrt(2)/2, -sqrt(2)/2,
+                                              7*sqrt(2)/2],
+                                             [0.0, 1.0, -7.0],
+                                             [1.0, 0.0, -3.0],
+                                         ], m.g2),
+            paraboloid_block.disjuncts[3]: ([[sqrt(2)/2, sqrt(2)/2,
+                                              -7*sqrt(2)/2],
+                                             [-1.0, 0.0, 0.0],
+                                             [0.0, -1.0, 4.0]], m.g2),
         }
-        for d, (pts, f) in disjuncts_dict.items():
-            self.check_paraboloid_disjunct(d, pts, f,
+        for d, (constraint_coefs, f) in disjuncts_dict.items():
+            self.check_paraboloid_disjunct(d, constraint_coefs, f,
                                            paraboloid_block.substitute_var,
                                            m.x1, m.x2)
 
@@ -128,35 +127,36 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.assertIs(m.indexed_c[0].body.args[0].expr,
                       paraboloid_block.substitute_var)
 
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_transformation_do_not_descend(self):
-       ct.check_transformation_do_not_descend(self,
-                                             'contrib.piecewise.inner_repn_gdp')
+        ct.check_transformation_do_not_descend(
+            self,
+            'contrib.piecewise.outer_repn_gdp')
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
         ct.check_transformation_PiecewiseLinearFunction_targets(
-            self,
-            'contrib.piecewise.inner_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp')
 
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_descend_into_expressions(self):
         ct.check_descend_into_expressions(self,
-                                         'contrib.piecewise.inner_repn_gdp')
+                                          'contrib.piecewise.outer_repn_gdp')
 
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_descend_into_expressions_constraint_target(self):
         ct.check_descend_into_expressions_constraint_target(
-            self,
-            'contrib.piecewise.inner_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp')
 
     def test_descend_into_expressions_objective_target(self):
         ct.check_descend_into_expressions_objective_target(
-            self,
-            'contrib.piecewise.inner_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp')
 
-    @unittest.skipUnless(SolverFactory('gurobi').available(),
-                         'Gurobi is not available')
-    def test_solve_disaggregated_convex_combo_model(self):
+    @unittest.skipUnless(SolverFactory('gurobi').available() and 
+                         scipy_available,
+                         'Gurobi and/or scipy is not available')
+    def test_solve_multiple_choice_model(self):
         m = models.make_log_x_model()
-        TransformationFactory(
-            'contrib.piecewise.disaggregated_convex_combination').apply_to(m)
+        TransformationFactory('contrib.piecewise.multiple_choice').apply_to(m)
         SolverFactory('gurobi').solve(m)
 
         ct.check_log_x_model_soln(self, m)
