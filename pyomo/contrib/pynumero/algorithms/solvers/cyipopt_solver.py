@@ -395,6 +395,8 @@ class PyomoCyIpoptSolver(object):
         results.solver.status = TerminationCondition.to_solver_status(
             results.solver.termination_condition)
 
+        problem.close()
+
         if config.return_nlp:
             return results, nlp
 
