@@ -142,11 +142,11 @@ def load_nl_baseline(baseline, testfile, version='nl'):
         baseline = _tmp
     with open(baseline, 'r') as FILE:
         base = FILE.read()
-    return base, test
+    return base, test, baseline, testfile
 
 
 def load_and_compare_nl_baseline(baseline, testfile, version='nl'):
-    return nl_diff(*load_nl_baseline(baseline, testfile, version), baseline, testfile)
+    return nl_diff(*load_nl_baseline(baseline, testfile, version))
 
 
 if __name__ == '__main__':
