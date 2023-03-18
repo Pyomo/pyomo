@@ -183,7 +183,7 @@ class TestCyIpoptSolver(unittest.TestCase):
 
         with open('_cyipopt-scaling.log', 'r') as fd:
             solver_trace = fd.read()
-        import gc; gc.collect()
+        solver._problem.close()
         os.remove('_cyipopt-scaling.log')
 
         # check for the following strings in the log and then delete the log

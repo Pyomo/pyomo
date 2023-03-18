@@ -161,7 +161,7 @@ class TestExternalInputOutputModel(unittest.TestCase):
 
         with open('_cyipopt-pyomo-ext-scaling.log', 'r') as fd:
             solver_trace = fd.read()
-        import gc; gc.collect()
+        cyipopt_problem.close()
         os.remove('_cyipopt-pyomo-ext-scaling.log')
 
         self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
