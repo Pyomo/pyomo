@@ -708,7 +708,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nl, ('v%s\n', (id(m.e),)))
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 3)
-        self.assertEqual(repn.linear, [(id(m.x), 1)])
+        self.assertEqual(repn.linear, {id(m.x): 1})
         self.assertEqual(repn.nonlinear, None)
         self.assertEqual(info, [None, None, False])
 
