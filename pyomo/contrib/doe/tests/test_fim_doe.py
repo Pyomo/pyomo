@@ -26,54 +26,116 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe import Measurements, Scenario_generator
+from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator
 
 class TestMeasurement(unittest.TestCase):
-    """Test the measurement class
+    """Test the Measurements class, specify, add_element, update_variance, check_subset functions.
     """
     def test_setup(self):
-        # generate a set of measurements with extra index CA, CB, CC
-        # each extra index has different measure time points
-        t_measure_ca = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
-        t_measure_cb = [0, 0.25, 0.5, 0.75, 1]
-        t_measure_cc = [0, 0.125, 0.375, 0.625, 0.875, 1]
-        var = {'C':{'CA': 5, 'CB': 2, 'CC': 1}}
-        measure_pass = {'C':{"CA": t_measure_ca, "CB": t_measure_cb, "CC": t_measure_cc}}
+        ### add_element function 
+        
+        # control time for C [h]
+        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
+        # control time for T [h]
+        t_control2 = [0.2,0.4,0.6,0.8]
 
-        measure_class = Measurements(measure_pass, variance=var)
+        # set up measurements 
+        total_name = ["C", "T"]
+        extra_index = [[["CA", "CB", "CC"]], [[1,3,5]]]
+        time_index = [t_control, t_control2]  
         
-        # test names, variance, time sets
-        self.assertEqual(measure_class.flatten_measure_name, ['C_index_CA', 'C_index_CB', 'C_index_CC'])
-        self.assertEqual(measure_class.flatten_variance, {'C_index_CA': 5, 'C_index_CB': 2, 'C_index_CC': 1})
-        self.assertEqual(measure_class.flatten_measure_timeset['C_index_CB'], [0, 0.25, 0.5, 0.75, 1])
+        measure_class = Measurements()
+        measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
         
-        # test subset feature
-        subset_1 = {'C':{'CA': t_measure_cb}}
-        measure_subclass1 = Measurements(subset_1)
-        self.assertTrue(measure_class.check_subset(measure_subclass1))
+        # test names, variance 
+        self.assertEqual(measure_class.measurement_name[0], 'C[CA,0]')
+        self.assertEqual(measure_class.measurement_name[1], 'C[CA,0.125]')
+        self.assertEqual(measure_class.measurement_name[-1], 'T[5,0.8]')
+        self.assertEqual(measure_class.measurement_name[-2], 'T[5,0.6]')
+        self.assertEqual(measure_class.variance['T[5,0.4]'], 1)
+        self.assertEqual(measure_class.variance['T[5,0.6]'], 1)
+
+
+        ### update_variance 
+        new_var = {'C[CA,0]': 1, 'C[CA,0.125]': 1, 'C[CA,0.25]': 1, 'C[CA,0.375]': 1, 'C[CA,0.5]': 1, 
+                   'C[CA,0.625]': 1, 'C[CA,0.75]': 1, 'C[CA,0.875]': 1, 'C[CA,1]': 1, 'C[CB,0]': 1, 
+                   'C[CB,0.125]': 1, 'C[CB,0.25]': 1, 'C[CB,0.375]': 1, 'C[CB,0.5]': 1, 'C[CB,0.625]': 1, 
+                   'C[CB,0.75]': 1, 'C[CB,0.875]': 1, 'C[CB,1]': 1, 'C[CC,0]': 1, 'C[CC,0.125]': 1, 
+                   'C[CC,0.25]': 1, 'C[CC,0.375]': 1, 'C[CC,0.5]': 1, 'C[CC,0.625]': 1, 'C[CC,0.75]': 1, 
+                   'C[CC,0.875]': 1, 'C[CC,1]': 1, 'T[1,0.2]': 1, 'T[1,0.4]': 1, 'T[1,0.6]': 1, 
+                   'T[1,0.8]': 1, 'T[3,0.2]': 1, 'T[3,0.4]': 1, 'T[3,0.6]': 1, 'T[3,0.8]': 1, 'T[5,0.2]': 1,
+                     'T[5,0.4]': 10, 'T[5,0.6]': 12, 'T[5,0.8]': 1}
+        measure_class.update_variance(new_var)
+
+        self.assertEqual(measure_class.variance['T[5,0.4]'], 10)
+        self.assertEqual(measure_class.variance['T[5,0.6]'], 12)
+
+        ### specify function 
+        var_names = ['C[CA,0]', 'C[CA,0.125]', 'C[CA,0.875]', 'C[CA,1]', 
+                     'C[CB,0]', 'C[CB,0.125]', 'C[CB,0.25]', 'C[CB,0.375]', 
+                     'C[CC,0]', 'C[CC,0.125]', 'C[CC,0.25]', 'C[CC,0.375]']
+
+        measure_class2 = Measurements()
+        measure_class2.specify(var_names)
+
+        self.assertEqual(measure_class2.measurement_name[1], 'C[CA,0.125]')
+        self.assertEqual(measure_class2.measurement_name[-1], 'C[CC,0.375]')
+
+        ### check_subset function 
+        self.assertTrue(measure_class.check_subset(measure_class2))
         
+
+class TestDesignVariable(unittest.TestCase):
+    """Test the DesignVariable class, specify, add_element, add_bounds, update_values.
+    """
+    def test_setup(self):
+        ### add_element function 
+        total_name = ["CA0", "T"]
+        # control time for C [h]
+        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
+        dtime_index = [[0], t_control] 
+        exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+        upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700]
+        lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
+
+        design_gen = DesignVariables()
+        design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
+        design_gen.add_bounds(upper_bound=upper_bound, lower_bound=lower_bound)
+
+        self.assertEqual(design_gen.design_name, ['CA0[0]', 'T[0]', 'T[0.125]', 'T[0.25]', 'T[0.375]',
+                                                   'T[0.5]', 'T[0.625]', 'T[0.75]', 'T[0.875]', 'T[1]'])
+        self.assertEqual(design_gen.special_set_value['CA0[0]'], 5)
+        self.assertEqual(design_gen.special_set_value['T[0]'], 570)
+        self.assertEqual(design_gen.upper_bound['CA0[0]'], 5)
+        self.assertEqual(design_gen.upper_bound['T[0]'], 700)
+        self.assertEqual(design_gen.lower_bound['CA0[0]'], 1)
+        self.assertEqual(design_gen.lower_bound['T[0]'], 300)
+
+        exp1 = [4, 600, 300, 300, 300, 300, 300, 300, 300, 300]
+        design_gen.update_values(exp1)
+        self.assertEqual(design_gen.special_set_value['CA0[0]'], 4)
+        self.assertEqual(design_gen.special_set_value['T[0]'], 600)
+
 
 class TestParameter(unittest.TestCase):
-    """ Test the parameter class
+    """ Test the ScenarioGenerator class, generate_scenario function.
     """
     def test_setup(self):
         # set up parameter class
         param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
-        scenario_gene = Scenario_generator(param_dict, formula='central', step=0.1)
-        parameter_set = scenario_gene.simultaneous_scenario()
+        scenario_gene = ScenarioGenerator(param_dict, formula='central', step=0.1)
+        parameter_set = scenario_gene.generate_scenario()
     
-        self.assertAlmostEqual(parameter_set['A1'][0], 93.269, places=1)
-        self.assertAlmostEqual(parameter_set['A1'][4], 76.311, places=1)
-        self.assertEqual(parameter_set['jac-index']['A2'], [1,5])
-        self.assertEqual(parameter_set['scena-name'], [0, 1, 2, 3, 4, 5, 6, 7])
-        self.assertAlmostEqual(parameter_set['eps-abs']['E1'], 1.556, places=1)
-        
-        scenario_gene.generate_sequential_para()
-        self.assertEqual(scenario_gene.scenario_para['A2'], [1,5])
-        self.assertAlmostEqual(scenario_gene.eps_abs['A1'], 16.958, places=1)
-        self.assertAlmostEqual(scenario_gene.next_sequential_scenario(2)['E1'][0], 8.558, places=1)
-        self.assertEqual(scenario_gene.next_sequential_scenario(2)['scena-name'], [0])
+        self.assertAlmostEqual(parameter_set['eps-abs']['A1'], 16,9582, places=1)
+        self.assertAlmostEqual(parameter_set['eps-abs']['E1'], 1,5554, places=1)
+        self.assertEqual(parameter_set['scena_num']['A2'], [2,3])
+        self.assertEqual(parameter_set['scena_num']['E1'], [4,5])
+        self.assertAlmostEqual(parameter_set['scenario'][0]['A1'], 93.2699, places=1)
+        self.assertAlmostEqual(parameter_set['scenario'][2]['A2'], 408.8895, places=1)
+        self.assertAlmostEqual(parameter_set['scenario'][-1]['E2'], 13.54, places=1)
+        self.assertAlmostEqual(parameter_set['scenario'][-2]['E2'], 16.55, places=1)
+
         
 if __name__ == '__main__':
     unittest.main()

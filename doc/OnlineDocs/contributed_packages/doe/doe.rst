@@ -125,26 +125,25 @@ The required inputs to the Pyomo.DoE solver are the following:
 
 * A function that creates the process model
 * Dictionary of parameters and their nominal value
-* Dictionary of measurements and their measurement time points
-* Dictionary of design variables and their control time points
+* A measurement object
+* A design variables object
 * A Numpy ``array`` containing the Prior FIM
-* Local and global optimization solver
+* Optimization solver
 
 Below is a list of arguments that Pyomo.DoE expects the user to provide.
 
 param_init : ``dictionary``
     A ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index in a nested ``Dictionary``.
 
-design_variable_timepoints : ``dictionary``
-    A ``dictionary`` of design variable names and its control time points. If this design var is independent of time (constant), set the time to [0]
+design_variable_timepoints : ``object``
+    A ``object`` of design variables, provided by the design class.
+    If this design var is independent of time (constant), set the time to [0]
 
 measurement_object : ``object``
     An ``object`` of the measurements, provided by the measurement class.
 
-
 create_model : ``function``
     A ``function`` returning a deterministic process model.
-
 
 prior_FIM : ``array``
     An ``array`` defining the Fisher information matrix (FIM) for prior experiments, default is a zero matrix.
@@ -166,15 +165,18 @@ Pyomo.DoE Solver Interface
         #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
 
 .. autoclass:: pyomo.contrib.doe.measurements.Measurements
-    :members: __init__, check_subset
+    :members: __init__, add_elements
 
-.. autoclass:: pyomo.contrib.doe.scenario.Scenario_generator
+.. autoclass:: pyomo.contrib.doe.measurements.DesignVariabless
+    :members: __init__, add_elements
+
+.. autoclass:: pyomo.contrib.doe.scenario.ScenarioGenerator
     :special-members: __init__
 
-.. autoclass:: pyomo.contrib.doe.result.FIM_result
+.. autoclass:: pyomo.contrib.doe.result.FisherResults
     :special-members: __init__, calculate_FIM
 
-.. autoclass:: pyomo.contrib.doe.result.Grid_Search_Result
+.. autoclass:: pyomo.contrib.doe.result.GridSearchResult
     :special-members: __init__
 
 
