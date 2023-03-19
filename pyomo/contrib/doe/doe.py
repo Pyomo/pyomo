@@ -41,7 +41,7 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
 #from pyomo.contrib.doe.scenario import Scenario_generator
 #from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-from scenario import ScenarioGenerator
+from scenario import ScenarioGenerator,formula_lib
 from result import FisherResults, GridSearchResult
 
 
@@ -137,7 +137,7 @@ class DesignOfExperiments:
                      jac_involved_measurement=None,
                      scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-7, L_initial=None,
                      jac_initial=None, fim_initial=None,
-                     formula='central', step=0.001, check=True, tee_opt=True):
+                     formula=formula_lib.central, step=0.001, check=True, tee_opt=True):
         """
         Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
