@@ -64,6 +64,7 @@ class Solution(MapContainer):
         self.declare('constraint', value={})
 
         self._option = default_print_options
+        self._cuid = False
 
     def load(self, repn):
         # delete key from dictionary, call base class load, handle variable loading.
