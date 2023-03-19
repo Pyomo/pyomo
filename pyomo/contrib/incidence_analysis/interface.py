@@ -111,26 +111,25 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     graph.add_nodes_from(range(M), bipartite=0)
     graph.add_nodes_from(range(M, M + N), bipartite=1)
     var_node_map = ComponentMap((v, M + i) for i, v in enumerate(variables))
+    vars_in_cons = list(
+        _generate_variables_in_constraints(constraints, include_fixed=True)
+    )
+    to_reset = [
+        var for var in vars_in_cons if var.fixed and var.value is None
+    ]
     if include_fixed:
         # AMPLRepnVisitor will not include fixed variables, so if we need to
         # include these variables, we temporarily unfix them to generate the
         # AMPLRepn, then re-fix them when we are done.
         to_unfix = [var for var in variables if var.fixed]
-        to_reset = []
-        context = TemporarySubsystemManager(to_unfix=to_unfix)
+        context = TemporarySubsystemManager(to_unfix=to_unfix, to_reset=to_reset)
     else:
-        vars_in_cons = list(
-            _generate_variables_in_constraints(constraints, include_fixed=True)
-        )
         # Note that AMPLRepnVisitor evaluates the constant term in an
         # expression, including fixed variables. If any fixed variable
         # does not have a value, this will fail. Since the constant term
         # is irrelevant for the purpose of an incidence graph, we will
         # temporarily assign these uninitialized fixed variables a value of
         # 0.0, then reset them to None after generating the incidence graph.
-        to_reset = [
-            var for var in vars_in_cons if var.fixed and var.value is None
-        ]
         context = TemporarySubsystemManager(to_reset=to_reset)
 
     with context:
@@ -218,7 +217,7 @@ def _get_ampl_expr(comp):
     var_map = dict()
     used_named_expressions = set()
     symbolic_solver_labels = False
-    export_defined_variables = True
+    export_defined_variables = False
     visitor = AMPLRepnVisitor(
         template,
         subexpression_cache,
