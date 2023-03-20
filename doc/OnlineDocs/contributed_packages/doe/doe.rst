@@ -217,7 +217,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import ContinuousSet, DerivativeVar
-    >>> from pyomo.contrib.doe import Measurements, DesignOfExperiments
+    >>> from pyomo.contrib.doe import DesignOfExperiments, Measurements, mode_lib, DesignVariables, formula_lib
     >>> import numpy as np
 
 Step 1: Define the Pyomo process model
@@ -227,95 +227,129 @@ The process model for the reaction kinetics problem is shown below.
 
 .. doctest::
 
-    >>> def create_model(scena, CA_init=5, T_initial=300,args=None):
-    ...     # === Create model ==
-    ...     m = pyo.ConcreteModel()
-    ...     m.R = 8.31446261815324  # J/K/mol
-    ...     # === Define set ===
-    ...     m.t0 = pyo.Set(initialize=[0])
-    ...     m.t = ContinuousSet(bounds=(0, 1))
-    ...     m.t_con = pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
-    ...     m.scena = pyo.Set(initialize=scena['scena-name'])
-    ...     m.y_set = pyo.Set(initialize=['CA', 'CB', 'CC'])
-    ...     # === Define variables ===
-    ...     m.CA0 = pyo.Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=pyo.NonNegativeReals) # mol/L
-    ...     m.T = pyo.Var(m.t, initialize =T_initial, bounds=(300, 700), within=pyo.NonNegativeReals)
-    ...     m.C = pyo.Var(m.scena, m.y_set, m.t, initialize=3, within=pyo.NonNegativeReals)
-    ...     m.dCdt = DerivativeVar(m.C, wrt=m.t)
-    ...     m.kp1 = pyo.Var(m.scena, m.t, initialize=3)
-    ...     m.kp2 = pyo.Var(m.scena, m.t, initialize=1)
-    ...     # === Define Param ===
-    ...     m.A1 = pyo.Param(m.scena, initialize=scena['A1'],mutable=True)
-    ...     m.A2 = pyo.Param(m.scena, initialize=scena['A2'],mutable=True)
-    ...     m.E1 = pyo.Param(m.scena, initialize=scena['E1'],mutable=True)
-    ...     m.E2 = pyo.Param(m.scena, initialize=scena['E2'],mutable=True)
-    ...     # === Constraints ===
-    ...     def T_control(m,t):
-    ...         if t in m.t_con:
-    ...             return pyo.Constraint.Skip
-    ...         else:
-    ...             j = -1
-    ...             for t_con in m.t_con:
-    ...                 if t>t_con:
-    ...                     j+=1
-    ...             neighbour_t = t_control[j]
-    ...         return m.T[t] == m.T[neighbour_t]
-    ...     def cal_kp1(m,z,t):
-    ...         return m.kp1[z,t] == m.A1[z]*pyo.exp(-m.E1[z]*1000/(m.R*m.T[t]))
-    ...     def cal_kp2(m,z,t):
-    ...         return m.kp2[z,t] == m.A2[z]*pyo.exp(-m.E2[z]*1000/(m.R*m.T[t]))
-    ...     def dCdt_control(m,z,y,t):
-    ...         if y=='CA':
-    ...             return m.dCdt[z,y,t] == -m.kp1[z,t]*m.C[z,'CA',t]
-    ...         elif y=='CB':
-    ...             return m.dCdt[z,y,t] == m.kp1[z,t]*m.C[z,'CA',t] - m.kp2[z,t]*m.C[z,'CB',t]
-    ...         elif y=='CC':
-    ...             return pyo.Constraint.Skip
-    ...     def alge(m,z,t):
-    ...         return m.C[z,'CA',t] + m.C[z,'CB',t] + m.C[z,'CC', t] == m.CA0[0]
-    ...     m.T_rule = pyo.Constraint(m.t, rule=T_control)
-    ...     m.k1_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp1)
-    ...     m.k2_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp2)
-    ...     m.dCdt_rule = pyo.Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
-    ...     m.alge_rule = pyo.Constraint(m.scena, m.t, rule=alge)
-    ...     for z in m.scena:
-    ...         m.C[z,'CB',0.0].fix(0.0)
-    ...         m.C[z,'CC',0.0].fix(0.0)
-    ...     return m
+    >>> def create_model(mod=None, model_option="block"):
+    ...     # === model information === 
+    ...     theta = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05} # parameters
+    ...     t_control =  [0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1] # control timepoints
+    ...     # === model options ===
+    ...     if model_option == "parmest":
+    ...         mod = pyo.ConcreteModel()
+    ...         return_m = True # the created model will be returned
+    ...     elif model_option in ["block", "global"]: # a model needs to be passed
+    ...         if not mod:
+    ...             raise ValueError("If model option is global or block, a created model needs to be provided.")
+    ...         return_m = False # no need to return the model 
+    ...     else:
+    ...         raise ValueError("model_option needs to be defined as global, block, or parmest.")
+    ...     
+    ...     mod.t0 = pyo.Set(initialize=[0])
+    ...     mod.t_con = pyo.Set(initialize=t_control)
+    ...     mod.CA0 = pyo.Var(mod.t0, initialize = 1, bounds=(1.0,5.0), within=pyo.NonNegativeReals) # mol/L
+    ...     if model_option=="global":
+    ...         mod.T = pyo.Var(mod.t_con, initialize = 300, bounds=(300, 700), within=pyo.NonNegativeReals)
+    ...     else:
+    ...         para_list = ['A1', 'A2', 'E1', 'E2']
+    ...         mod.t = ContinuousSet(bounds=(0, 1))
+    ...         mod.T = pyo.Var(mod.t, initialize =300, bounds=(300, 700), within=pyo.NonNegativeReals)
+    ...         mod.R = 8.31446261815324 # J / K / mole
+    ...         # Define parameters as Param
+    ...         mod.A1 = pyo.Var(initialize = theta['A1'])
+    ...         mod.A2 = pyo.Var(initialize = theta['A2'])
+    ...         mod.E1 = pyo.Var(initialize = theta['E1'])
+    ...         mod.E2 = pyo.Var(initialize = theta['E2'])
+    ...         # Concentration variables under perturbation
+    ...         mod.C_set = pyo.Set(initialize=['CA','CB','CC'])
+    ...         mod.C = pyo.Var(mod.C_set, mod.t, initialize=C_init, within=pyo.NonNegativeReals)
+    ...         # time derivative of C
+    ...         mod.dCdt = DerivativeVar(mod.C, wrt=mod.t)  
+    ...         # kinetic parameters
+    ...         def kp1_init(m,t):
+    ...             return m.A1 * pyo.exp(-m.E1*1000/(m.R*m.T[t]))
+    ...         def kp2_init(m,t):
+    ...             return m.A2 * pyo.exp(-m.E2*1000/(m.R*m.T[t]))
+    ...         mod.kp1 = pyo.Var(mod.t, initialize=kp1_init)
+    ...         mod.kp2 = pyo.Var(mod.t, initialize=kp2_init)
+    ...         # === Constraints ===
+    ...         def T_control(m,t):
+    ...             if t in m.t_con:
+    ...                 return pyo.Constraint.Skip
+    ...             else:
+    ...                 j = -1
+    ...                 for t_con in m.t_con:
+    ...                     if t>t_con:
+    ...                         j+=1
+    ...                 neighbour_t = t_control[j]
+    ...                 return m.T[t] == m.T[neighbour_t]
+    ...         def cal_kp1(m,t):
+    ...             return m.kp1[t] == m.A1*pyo.exp(-m.E1*1000/(m.R*m.T[t])) 
+    ...         def cal_kp2(m,t):
+    ...             return m.kp2[t] == m.A2*pyo.exp(-m.E2*1000/(m.R*m.T[t])) 
+    ...         def dCdt_control(m,y,t):
+    ...             if y=='CA':
+    ...                 return m.dCdt[y,t] == -m.kp1[t]*m.C['CA',t]
+    ...             elif y=='CB':
+    ...                 return m.dCdt[y,t] == m.kp1[t]*m.C['CA',t] - m.kp2[t]*m.C['CB',t]
+    ...             elif y=='CC':
+    ...                 return pyo.Constraint.Skip
+    ...         def alge(m,t):
+    ...             return m.C['CA',t] + m.C['CB',t] + m.C['CC', t] == m.CA0[0]
+    ...         mod.T_rule = pyo.Constraint(mod.t, rule=T_control)
+    ...         mod.k1_pert_rule = pyo.Constraint(mod.t, rule=cal_kp1)
+    ...         mod.k2_pert_rule = pyo.Constraint(mod.t, rule=cal_kp2)
+    ...         mod.dCdt_rule = pyo.Constraint(mod.C_set, mod.t, rule=dCdt_control)
+    ...         mod.alge_rule = pyo.Constraint(mod.t, rule=alge)
+    ...         mod.C['CB',0.0].fix(0.0)
+    ...         mod.C['CC',0.0].fix(0.0)
+    ...     if return_m:
+    ...         return m
 .. doctest::
 
     >>> # === Discretization ===
-    >>> def disc(m, NFE=32):
+    >>> def disc_for_measure(m, NFE=32, block=True):
     ...     discretizer = pyo.TransformationFactory('dae.collocation')
-    ...     discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
+    ...     if block:
+    ...         for s in range(len(m.block)):
+    ...             discretizer.apply_to(m.block[s], nfe=NFE, ncp=3, wrt=m.block[s].t)
+    ...     else: 
+    ...         discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
     ...     return m
 
 .. note::
-    The first argument of the ``create_model`` function should be ``scena``.
+    The model requires at least two options: "block" and "global". Both options requires the pass of a created empty Pyomo model. 
+    With "global" option, only design variables and their time sets need to be defined; 
+    With "block" option, a full model needs to be defined. 
 
-.. note::
-    The model parameters (  :math:`A_1, A_2, E_1, E_2`) are defined as either ``Var`` or ``Param`` objects. This is suggested since it allows an easy transition when changing mode to ``direct_kaug``.
 
 Step 2: Define the inputs for Pyomo.DoE
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
-    >>> # === Design variables, time points
     >>> t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]    # Control time set [h]
-    >>> dv_pass = {'CA0': [0],'T': t_control}  # design variable and its control time set
 
     >>> # === Measurement object ===
-    >>> t_measure = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]   # Measurement time points [h]
-    >>> measure_pass = {'C':{'CA': t_measure, 'CB': t_measure, 'CC': t_measure}}
-    >>> measure_variance = {'C': {'CA': 1, 'CB': 1, 'CC': 1}} # provide measurement uncertainty
-    >>> measure_class =  Measurements(measure_pass, variance=measure_variance)  # Use Pyomo.DoE.Measurements to achieve a measurement object
+    >>> total_name = ["C"]   # Measurement names 
+    >>> extra_index = [[["CA", "CB", "CC"]]] # extra indexes
+    >>> time_index = [t_control]  # time list 
+    >>> measure_class = Measurements()  # Use Pyomo.DoE.Measurements to achieve a measurement object
+    >>> measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
 
     >>> # === Parameter dictionary ===
     >>> parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
+    >>> # === Design variables object === 
+    >>> total_name = ["CA0", "T"] # names
+    >>> dtime_index = [[0], t_control] # time indexes 
+    >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+    >>> upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700]
+    >>> lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
+
+    >>> design_gen = DesignVariables() # create object
+    >>> design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
+    >>> design_gen.add_bounds(upper_bound=upper_bound, lower_bound=lower_bound)
+
     >>> # === Define prior information ==
-    >>> prior_none = np.zeros((4,4))
+    >>> prior_pass = np.zeros((4,4))
 
 
 Step 3: Compute the FIM of a square MBDoE problem
@@ -329,15 +363,17 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
 .. doctest::
 
     >>> # === Decide mode ===
-    >>> sensi_opt = 'sequential_finite'
+    >>> sensi_opt = mode_lib.sequential_finite
     >>> # === Specify an experiment ===
-    >>> exp1 = {'CA0': {0: 5}, 'T': {0: 570, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
+    >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+    >>> design_gen.update_values(exp1) # update values for design object
     >>> # === Create the DOE object ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
-    ...                            prior_FIM=prior_none, discretize_model=disc)
+    >>> doe_object = DesignOfExperiments(parameter_dict, design_gen,
+    ...                          measure_class, create_model,
+    ...                         prior_FIM=prior_pass, discretize_model=disc_for_measure)
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
-    >>> result = doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
-    ...                            store_output = 'store_output') # doctest: +SKIP
+    >>> result = doe_object.compute_FIM(design_gen, mode=sensi_opt,  scale_nominal_param_value=True,
+    ...                            formula = formula_lib.central) # doctest: +SKIP
     >>> # === Use ``calculate_FIM`` method of the result object to evaluate the FIM ===
     >>> result.calculate_FIM(doe_object.design_values) # doctest: +SKIP
     >>> # === Print FIM and its trace, determinant, condition number and minimal eigen value ===
@@ -351,38 +387,37 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
 Step 4: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
+Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, 
+i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
 
 Pyomo.DoE accomplishes the exploratory analysis with the ``run_grid_search`` function.
 It allows users to define any number of design decisions. Heatmaps can be drawn by two design variables, fixing other design variables.
 1D curve can be drawn by one design variable, fixing all other variables.
-The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method. Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
+The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method.
+Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
 
 
 .. doctest::
 
     >>> # === Specify inputs===
-    >>> design_ranges = [[1,2,3,4,5], [300,400,500,600,700]] # [CA0 [M], T [K]]
-    >>> dv_apply_name = ['CA0','T']
-    >>> dv_apply_time = [[0],t_control]
-    >>> exp1 = {'CA0': {0: 5}, 'T': {0: 570, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}} # CA0 in [M], T in [K]
-    >>> sensi_opt = 'sequential_finite'
-    >>> prior_all = np.zeros((4,4))
-    >>> prior_pass=np.asarray(prior_all)
+    >>> design_ranges = [list(np.linspace(1,5,3)), list(np.linspace(300,700,3))] # CA0, T
+    >>> dv_apply_name = ['CA0[0]',['T[0]','T[0.125]','T[0.25]','T[0.375]','T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]']]
+    >>> sensi_opt = mode_lib.direct_kaug
+    >>> prior_pass = np.zeros((4,4))
 
     >>> # === Run enumeration ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
-    ...                            prior_FIM=prior_none, discretize_model=disc) # doctest: +SKIP
-    >>> all_fim = doe_object.run_grid_search(exp1, design_ranges, dv_apply_name, dv_apply_time, mode=sensi_opt) # doctest: +SKIP
+    >>> doe_object = DesignOfExperiments(parameter_dict, design_gen,measure_class, create_model,
+    ...                            prior_FIM=prior_pass, discretize_model=disc_for_measure) # doctest: +SKIP
+    >>> all_fim = doe_object.run_grid_search(design_gen, design_ranges, dv_apply_name, mode=sensi_opt) # doctest: +SKIP
 
     >>> # === Analyze results ===
-    >>> test = all_fim.extract_criteria() # doctest: +SKIP
+    >>> all_fim.extract_criteria() # doctest: +SKIP
     >>> # === Draw 1D sensitivity curve===
-    >>> fixed = {"'CA0'": 5.0} # fix a dimension
-    >>> all_fim.figure_drawing(fixed, ['T'], 'Reactor case','T [K]','$C_{A0}$ [M]' ) # doctest: +SKIP
+    >>> fixed = {"'CA0[0]'": 5.0} # fix a dimension
+    >>> all_fim.figure_drawing(fixed, ['T[0]'], 'Reactor case','T [K]','$C_{A0}$ [M]' ) # doctest: +SKIP
     >>> # === Draw 2D heatmap ===
     >>> fixed = {} # do not need to fix
-    >>> all_fim.figure_drawing(fixed, ['CA0','T'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' ) # doctest: +SKIP
+    >>> all_fim.figure_drawing(fixed, ['CA0[0]','T[0]'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' ) # doctest: +SKIP
 
 
 Successful run of the above code shows the following figure:
@@ -402,16 +437,14 @@ This function solves twice: It solves the square version of the MBDoE problem fi
 .. doctest::
 
     >>> # === Specify a starting point ===
-    >>> exp1 = {'CA0': {0: 5}, 'T': {0: 300, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
+    >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+    >>> design_gen.update_values(exp1)
     >>> # === Define DOE object ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
-    ...                            prior_FIM=prior_pass, discretize_model=disc) # doctest: +SKIP
+    >>> doe_object = DesignOfExperiments(parameter_dict, design_gen,measure_class, create_model,
+    ...                            prior_FIM=prior, discretize_model=disc_for_measure) # doctest: +SKIP
     >>> # === Optimize ===
-    >>> square_result, optimize_result= doe_object.stochastic_program(exp1,
-    ...                                                         if_optimize=True,
-    ...                                                          if_Cholesky=True,
-    ...                                                         scale_nominal_param_value=True,
-    ...                                                         objective_option='det',
-    ...                                                         L_initial=None) # doctest: +SKIP
+    >>> square_result, optimize_result= doe_object2.stochastic_program(design_gen, if_optimize=True, if_Cholesky=True,
+    ...                                                         scale_nominal_param_value=True, objective_option='det', 
+    ...                                                          L_initial=np.linalg.cholesky(prior)) # doctest: +SKIP
 
 
