@@ -34,14 +34,6 @@ from pyomo.contrib.doe import Measurements, DesignOfExperiments
 
 
 def main():
-    # Create model function
-    ## TODO: use create_model directly
-    createmod = create_model
-
-    # discretization by Pyomo.DAE
-    ## TODO: directly use 
-    disc = disc_for_measure
-
     # Control time set [h]
     t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
 
