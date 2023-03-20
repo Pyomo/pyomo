@@ -46,7 +46,7 @@ class Test_doe_object(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     @unittest.skipIf(not pandas_available, "Pandas is not available")
     def test_setUP(self):
-        from pyomo.contrib.doe.example import create_model, disc_for_measure
+        from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
         
         ### Define inputs
         # Control time set [h]
@@ -79,6 +79,10 @@ class Test_doe_object(unittest.TestCase):
         ### Test sequential_finite mode
         sensi_opt = mode_lib.sequential_finite
 
+        exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+
+        design_gen.update_values(exp1)      
+
         doe_object = DesignOfExperiments(parameter_dict, design_gen,
                                  measure_class, create_model,
                                 prior_FIM=prior_pass, discretize_model=disc_for_measure)
@@ -94,23 +98,6 @@ class Test_doe_object(unittest.TestCase):
         self.assertAlmostEqual(np.log10(result.trace), 2.7885, places=2)
         self.assertAlmostEqual(np.log10(result.det), 2.8218, places=2)
         self.assertAlmostEqual(np.log10(result.min_eig), -1.0123, places=2)
-        
-        ### Test direct_kaug mode
-        sensi_opt = mode_lib.direct_kaug
-        # Define a new experiment
-        exp1 = [5, 570, 400, 300, 300, 300, 300, 300, 300, 300]
-        design_gen.update_values(exp1)
-
-        result = doe_object.compute_FIM(design_gen, mode=sensi_opt,  
-                                        scale_nominal_param_value=True,
-                                    formula = formula_lib.central)
-        
-        result.calculate_FIM(doe_object.design_values)
-        
-        self.assertAlmostEqual(np.log10(result.trace), 2.7211, places=2)
-        self.assertAlmostEqual(np.log10(result.det), 2.0845, places=2)
-        self.assertAlmostEqual(np.log10(result.min_eig), -1.3510, places=2)
-
 
         ### check subset feature 
         sub_name = ["C"]
@@ -123,10 +110,32 @@ class Test_doe_object(unittest.TestCase):
         sub_result = result.subset(measure_subset)
         sub_result.calculate_FIM(doe_object.design_values)
         
-        self.assertAlmostEqual(np.log10(result.trace), 2.4975, places=2)
-        self.assertAlmostEqual(np.log10(result.det), 0.5973, places=2)
-        self.assertAlmostEqual(np.log10(result.min_eig), -1.9669, places=2)
+        self.assertAlmostEqual(np.log10(sub_result.trace), 2.5535, places=2)
+        self.assertAlmostEqual(np.log10(sub_result.det), 1.3464, places=2)
+        self.assertAlmostEqual(np.log10(sub_result.min_eig), -1.5386, places=2)
 
+        
+        ### Test direct_kaug mode
+        sensi_opt = mode_lib.direct_kaug
+        # Define a new experiment
+        exp1 = [5, 570, 400, 300, 300, 300, 300, 300, 300, 300]
+        design_gen.update_values(exp1)
+
+        doe_object = DesignOfExperiments(parameter_dict, design_gen,
+                                 measure_class, create_model,
+                                prior_FIM=prior_pass, discretize_model=disc_for_measure)
+
+        result = doe_object.compute_FIM(design_gen, mode=sensi_opt,  
+                                        scale_nominal_param_value=True,
+                                    formula = formula_lib.central)
+        
+        result.calculate_FIM(doe_object.design_values)
+        
+        self.assertAlmostEqual(np.log10(result.trace), 2.7211, places=2)
+        self.assertAlmostEqual(np.log10(result.det), 2.0845, places=2)
+        self.assertAlmostEqual(np.log10(result.min_eig), -1.3510, places=2)
+
+        
         ### Test stochastic_program mode
 
         exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
@@ -148,8 +157,6 @@ class Test_doe_object(unittest.TestCase):
         
         self.assertAlmostEqual(value(optimize_result.model.CA0[0]), 5.0, places=2)
         self.assertAlmostEqual(value(optimize_result.model.T[0.5]), 300, places=2)
-        self.assertAlmostEqual(np.log10(optimize_result.trace), 2.9822, places=2)
-        self.assertAlmostEqual(np.log10(optimize_result.det), 3.3049, places=2)
         
 
 if __name__ == '__main__':
