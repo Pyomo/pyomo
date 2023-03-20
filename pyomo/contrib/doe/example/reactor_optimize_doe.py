@@ -28,64 +28,50 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import Measurements, DesignOfExperiments
+from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables
 
 def main():
-    # Create model function
-    createmod = create_model
-
-    # discretization by Pyomo.DAE
-    disc = disc_for_measure
-
+    ### Define inputs
     # Control time set [h]
     t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
-
-    # Measurement time points [h]
-    t_measure = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
-
-    # design variable and its control time set
-    dv_pass = {'CA0': [0],'T': t_control}
-
-    # Create measurement object
-    measure_pass = {'C':{'CA': t_measure, 'CB': t_measure, 'CC': t_measure}}
-    measure_class =  Measurements(measure_pass)
-
     # Define parameter nominal value 
-    parameter_dict = {'A1': 84.79085853498033, 'A2': 371.71773413976416, 'E1': 7.777032028026428, 'E2': 15.047135137500822}
-    
-    def generate_exp(t_set, CA0, T):  
-        """Generate experiments. 
-        t_set: time control set for T.
-        CA0: CA0 value
-        T: A list of T 
-        """
-        assert(len(t_set)==len(T)), 'T should have the same length as t_set'
+    parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
-        T_con_initial = {}
-        for t, tim in enumerate(t_set):
-            T_con_initial[tim] = T[t]
+    # measurement object 
+    total_name = ["C"]
+    extra_index = [[["CA", "CB", "CC"]]]
+    time_index = [t_control] 
 
-        dv_dict_overall = {'CA0': {0: CA0},'T': T_con_initial}
-        return dv_dict_overall
+    measure_class = Measurements()
+    measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
+
+    # design object 
+    total_name = ["CA0", "T"]
+    dtime_index = [[0], t_control] 
+    exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+    upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700]
+    lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
+
+    design_gen = DesignVariables()
+    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
+    design_gen.add_bounds(upper_bound=upper_bound, lower_bound=lower_bound)
     
-    # prior
-    exp1 = generate_exp(t_control, 3, [500, 300, 300, 300, 300, 300, 300, 300, 300])
+    exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+    design_gen.update_values(exp1)
 
     # add a prior information (scaled FIM with T=500 and T=300 experiments)
     prior = np.asarray([[  28.67892806 ,   5.41249739 , -81.73674601 , -24.02377324],
-          [   5.41249739 ,  26.40935036 , -12.41816477 , -139.23992532],
-          [ -81.73674601 , -12.41816477 , 240.46276004 ,  58.76422806],
-          [ -24.02377324 , -139.23992532 ,  58.76422806 , 767.25584508]])
+    [   5.41249739 ,  26.40935036 , -12.41816477 , -139.23992532],
+    [ -81.73674601 , -12.41816477 , 240.46276004 ,  58.76422806],
+    [ -24.02377324 , -139.23992532 ,  58.76422806 , 767.25584508]])
 
+    doe_object2 = DesignOfExperiments(parameter_dict, design_gen,
+                                measure_class, create_model,
+                            prior_FIM=prior, discretize_model=disc_for_measure)
 
-    doe_object = DesignOfExperiments(parameter_dict, dv_pass,
-                                 measure_class, createmod,
-                                prior_FIM=prior, discretize_model=disc, args=[True])
-
-    square_result, optimize_result= doe_object.stochastic_program(exp1, if_optimize=True, if_Cholesky=True, 
-                                                         scale_nominal_param_value=True, objective_option='det', 
-                                                         L_initial=np.linalg.cholesky(prior))
-    
+    square_result, optimize_result= doe_object2.stochastic_program(design_gen, if_optimize=True, if_Cholesky=True, 
+                                                            scale_nominal_param_value=True, objective_option='det', 
+                                                            L_initial=np.linalg.cholesky(prior))
     
 if __name__ == "__main__":
     main()

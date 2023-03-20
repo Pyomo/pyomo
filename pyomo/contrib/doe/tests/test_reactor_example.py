@@ -140,7 +140,7 @@ class Test_doe_object(unittest.TestCase):
 
         doe_object2 = DesignOfExperiments(parameter_dict, design_gen,
                                  measure_class, create_model,
-                                prior_FIM=prior_pass, discretize_model=disc_for_measure)
+                                prior_FIM=prior, discretize_model=disc_for_measure)
 
         square_result, optimize_result= doe_object2.stochastic_program(design_gen, if_optimize=True, if_Cholesky=True, 
                                                                 scale_nominal_param_value=True, objective_option='det', 
