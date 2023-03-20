@@ -194,7 +194,7 @@ class Measurements(SpecialSet):
         self.measurement_name = super().specify(self_define_res)
 
         # generate default variance
-        self._generate_variance()
+        self._use_identity_variance()
 
     def add_elements(self, var_name, extra_index=None, time_index=[0]):
         """

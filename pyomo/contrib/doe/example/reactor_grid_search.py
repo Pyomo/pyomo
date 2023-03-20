@@ -29,7 +29,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables， mode_lib
+from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables, mode_lib
 
 
 def main():

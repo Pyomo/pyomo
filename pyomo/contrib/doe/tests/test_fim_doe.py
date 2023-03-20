@@ -26,7 +26,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator
+from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator, formula_lib
 
 class TestMeasurement(unittest.TestCase):
     """Test the Measurements class, specify, add_element, update_variance, check_subset functions.
@@ -124,11 +124,11 @@ class TestParameter(unittest.TestCase):
         # set up parameter class
         param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
-        scenario_gene = ScenarioGenerator(param_dict, formula='central', step=0.1)
+        scenario_gene = ScenarioGenerator(param_dict, formula=formula_lib.central, step=0.1)
         parameter_set = scenario_gene.generate_scenario()
     
-        self.assertAlmostEqual(parameter_set['eps-abs']['A1'], 16,9582, places=1)
-        self.assertAlmostEqual(parameter_set['eps-abs']['E1'], 1,5554, places=1)
+        self.assertAlmostEqual(parameter_set['eps-abs']['A1'], 16.9582, places=1)
+        self.assertAlmostEqual(parameter_set['eps-abs']['E1'], 1.5554, places=1)
         self.assertEqual(parameter_set['scena_num']['A2'], [2,3])
         self.assertEqual(parameter_set['scena_num']['E1'], [4,5])
         self.assertAlmostEqual(parameter_set['scenario'][0]['A1'], 93.2699, places=1)

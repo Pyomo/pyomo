@@ -39,10 +39,10 @@ import logging
 from enum import Enum
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
-#from pyomo.contrib.doe.scenario import Scenario_generator
-#from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-from scenario import ScenarioGenerator,formula_lib
-from result import FisherResults, GridSearchResult
+from pyomo.contrib.doe.scenario import ScenarioGenerator, formula_lib
+from pyomo.contrib.doe.result import FisherResults, GridSearchResult
+#from scenario import ScenarioGenerator,formula_lib
+#from result import FisherResults, GridSearchResult
 
 
 class mode_lib(Enum):
