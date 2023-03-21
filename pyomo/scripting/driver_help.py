@@ -364,6 +364,7 @@ def print_components(data):
     Print information about modeling components supported by Pyomo.
     """
     from pyomo.core.base.component import ModelComponentFactory, GlobalSets
+
     print("")
     print("----------------------------------------------------------------")
     print("Pyomo Model Components:")
