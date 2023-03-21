@@ -18,9 +18,20 @@ from os.path import abspath, dirname
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import SolverFactory, ConcreteModel, Set, Block, Var, Constraint, TransformationFactory
+from pyomo.environ import (
+    SolverFactory,
+    ConcreteModel,
+    Set,
+    Block,
+    Var,
+    Constraint,
+    TransformationFactory,
+)
 from pyomo.dae import ContinuousSet, DerivativeVar
-from pyomo.dae.initialization import solve_consistent_initial_conditions, get_inconsistent_initial_conditions
+from pyomo.dae.initialization import (
+    solve_consistent_initial_conditions,
+    get_inconsistent_initial_conditions,
+)
 
 currdir = dirname(abspath(__file__)) + os.sep
 
@@ -42,8 +53,9 @@ def make_model():
         b.v = Var(m.time, m.space, initialize=1)
         b.dv = DerivativeVar(b.v, wrt=m.time, initialize=0)
 
-        b.con = Constraint(m.time, m.space,
-                rule=lambda b, t, x: b.dv[t, x] == 7 - b.v[t, x])
+        b.con = Constraint(
+            m.time, m.space, rule=lambda b, t, x: b.dv[t, x] == 7 - b.v[t, x]
+        )
         # Inconsistent
 
         @b.Block(m.time)
@@ -60,25 +72,26 @@ def make_model():
 
             @b.Constraint(m.set2)
             def con(b, s):
-                return (5*b.v[s] ==
-                        m.fs.b2[m.time.first(), m.space.first()].v[c])
+                return 5 * b.v[s] == m.fs.b2[m.time.first(), m.space.first()].v[c]
                 # inconsistent
 
     @m.fs.Constraint(m.time)
     def con1(fs, t):
         return fs.b1.v[t, m.space.last()] == 5
+
     # Will be inconsistent
 
     @m.fs.Constraint(m.space)
     def con2(fs, x):
         return fs.b1.v[m.time.first(), x] == fs.v0[x]
+
     # will be consistent
 
     @m.fs.Constraint(m.time, m.space)
     def con3(fs, t, x):
         if x == m.space.first():
             return Constraint.Skip
-        return fs.b2[t, x].v['a'] == 7.
+        return fs.b2[t, x].v['a'] == 7.0
 
     disc = TransformationFactory('dae.collocation')
     disc.apply_to(m, wrt=m.time, nfe=5, ncp=2, scheme='LAGRANGE-RADAU')
@@ -88,17 +101,14 @@ def make_model():
 
 
 class TestDaeInitCond(unittest.TestCase):
-    
     def test_get_inconsistent_initial_conditions(self):
         m = make_model()
         inconsistent = get_inconsistent_initial_conditions(m, m.time)
 
         self.assertIn(m.fs.b1.con[m.time[1], m.space[1]], inconsistent)
-        self.assertIn(m.fs.b2[m.time[1], m.space[1]].b3['a'].con['d'],
-                inconsistent)
+        self.assertIn(m.fs.b2[m.time[1], m.space[1]].b3['a'].con['d'], inconsistent)
         self.assertIn(m.fs.con1[m.time[1]], inconsistent)
         self.assertNotIn(m.fs.con2[m.space[1]], inconsistent)
-
 
     @unittest.skipIf(not ipopt_available, 'ipopt is not available')
     def test_solve_consistent_initial_conditions(self):
@@ -114,12 +124,7 @@ class TestDaeInitCond(unittest.TestCase):
         self.assertTrue(m.fs.b1.con[m.time[3], m.space[1]].active)
 
         with self.assertRaises(KeyError):
-            solve_consistent_initial_conditions(
-                    m,
-                    m.time,
-                    solver,
-                    allow_skip=False,
-                    )
+            solve_consistent_initial_conditions(m, m.time, solver, allow_skip=False)
 
 
 if __name__ == "__main__":

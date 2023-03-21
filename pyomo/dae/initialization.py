@@ -11,13 +11,18 @@
 
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base import Constraint, Block, value
-from pyomo.dae.set_utils import (is_explicitly_indexed_by, 
-        get_index_set_except, is_in_block_indexed_by,
-        deactivate_model_at, index_warning)
+from pyomo.dae.set_utils import (
+    is_explicitly_indexed_by,
+    get_index_set_except,
+    is_in_block_indexed_by,
+    deactivate_model_at,
+    index_warning,
+)
 
 
-def get_inconsistent_initial_conditions(model, time, tol=1e-8, t0=None, 
-        allow_skip=True, suppress_warnings=False):
+def get_inconsistent_initial_conditions(
+    model, time, tol=1e-8, t0=None, allow_skip=True, suppress_warnings=False
+):
     """Finds constraints of the model that are implicitly or explicitly
     indexed by time and checks if they are consistent to within a tolerance
     at the initial value of time.
@@ -54,8 +59,10 @@ def get_inconsistent_initial_conditions(model, time, tol=1e-8, t0=None,
                 if not allow_skip:
                     raise
                 continue
-            if (value(condata.body) - value(condata.upper) > tol or
-                value(condata.lower) - value(condata.body) > tol):
+            if (
+                value(condata.body) - value(condata.upper) > tol
+                or value(condata.lower) - value(condata.body) > tol
+            ):
                 inconsistent.add(condata)
 
     for blk in model.component_objects(Block, active=True):
@@ -74,22 +81,25 @@ def get_inconsistent_initial_conditions(model, time, tol=1e-8, t0=None,
         for non_time_index in non_time_set:
             index = index_getter(non_time_index, t0)
             blkdata = blk[index]
-            for condata in blkdata.component_data_objects(Constraint,
-                    active=True):
-                if (value(condata.body) - value(condata.upper) > tol or
-                    value(condata.lower) - value(condata.body) > tol):
+            for condata in blkdata.component_data_objects(Constraint, active=True):
+                if (
+                    value(condata.body) - value(condata.upper) > tol
+                    or value(condata.lower) - value(condata.body) > tol
+                ):
                     if condata in inconsistent:
                         raise ValueError(
                             '%s has already been visited. The only way this '
                             'should happen is if the model has nested time-'
-                            'indexed blocks, which is not supported.')
+                            'indexed blocks, which is not supported.'
+                        )
                     inconsistent.add(condata)
 
     return list(inconsistent)
 
 
-def solve_consistent_initial_conditions(model, time, solver, tee=False,
-        allow_skip=True, suppress_warnings=False):
+def solve_consistent_initial_conditions(
+    model, time, solver, tee=False, allow_skip=True, suppress_warnings=False
+):
     """
     Solves a model with all Constraints and Blocks deactivated except
     at the initial value of the Set time. Reactivates Constraints and
@@ -114,7 +124,7 @@ def solve_consistent_initial_conditions(model, time, solver, tee=False,
     # is to identify_variables in the expression, find the (assume only one?)
     # DerivativeVar, and access its get_continuousset_list
     # I would like a get_continuousset_list for discretization equations.
-    # Possibly as a ComponentMap, possibly as an attribute of some new 
+    # Possibly as a ComponentMap, possibly as an attribute of some new
     # DiscEquation subclass of Constraint
     # Until I have this, this function will only work for backward
     # discretization schemes
@@ -123,16 +133,16 @@ def solve_consistent_initial_conditions(model, time, solver, tee=False,
 
     scheme = time.get_discretization_info()['scheme']
     if scheme != 'LAGRANGE-RADAU' and scheme != 'BACKWARD Difference':
-        raise NotImplementedError(
-            '%s discretization scheme is not supported' % scheme)
+        raise NotImplementedError('%s discretization scheme is not supported' % scheme)
 
     timelist = list(time)[1:]
     deactivated_dict = deactivate_model_at(
-            model,
-            time,
-            timelist,
-            allow_skip=allow_skip,
-            suppress_warnings=suppress_warnings)
+        model,
+        time,
+        timelist,
+        allow_skip=allow_skip,
+        suppress_warnings=suppress_warnings,
+    )
 
     result = solver.solve(model, tee=tee)
 
@@ -141,4 +151,3 @@ def solve_consistent_initial_conditions(model, time, solver, tee=False,
             comp.activate()
 
     return result
-

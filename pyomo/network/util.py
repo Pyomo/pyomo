@@ -12,6 +12,7 @@
 from pyomo.core import Var
 from pyomo.core.base.indexed_component import UnindexedComponent_set
 
+
 def create_var(comp, name, block, index_set=None):
     if index_set is None:
         if comp.is_indexed():
@@ -22,6 +23,7 @@ def create_var(comp, name, block, index_set=None):
     new_var = Var(index_set)
     block.add_component(name, new_var)
     return new_var
+
 
 def _tighten(src, dest):
     starting_lb = dest.lb
@@ -38,6 +40,7 @@ def _tighten(src, dest):
             dest.setub(src.ub)
         else:
             dest.setub(min(starting_ub, src.ub))
+
 
 def tighten_var_domain(comp, new_var, index_set=None):
     if index_set is None:
@@ -61,6 +64,7 @@ def tighten_var_domain(comp, new_var, index_set=None):
             pass
 
     return new_var
+
 
 def replicate_var(comp, name, block, index_set=None):
     """
