@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 #  ___________________________________________________________________________
@@ -23,15 +22,15 @@ from pyomo.opt import TerminationCondition as tc
 
 
 @SolverFactory.register(
-    'mindtpy.ecp',
-    doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
+    'mindtpy.ecp', doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo'
+)
 class MindtPy_OA_Solver(_MindtPyAlgorithm):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
-    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver 
-    applies a variety of decomposition-based approaches to solve Mixed-Integer 
-    Nonlinear Programming (MINLP) problems. 
+    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver
+    applies a variety of decomposition-based approaches to solve Mixed-Integer
+    Nonlinear Programming (MINLP) problems.
     These approaches include:
 
     - Outer approximation (OA)
@@ -44,11 +43,11 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
     This solver implementation has been developed by David Bernal <https://github.com/bernalde>
     and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann
-    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at 
+    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at
     Carnegie Mellon University.
     """
-    CONFIG = _get_MindtPy_ECP_config()
 
+    CONFIG = _get_MindtPy_ECP_config()
 
     def MindtPy_iteration_loop(self, config):
         """Main loop for MindtPy Algorithms.
@@ -80,7 +79,8 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                         break
                     else:
                         self.handle_main_other_conditions(
-                            main_mip, main_mip_results, config)
+                            main_mip, main_mip_results, config
+                        )
                     # Call the MILP post-solve callback
                     with time_code(self.timing, 'Call after main solve'):
                         config.call_after_main_solve(main_mip)
@@ -96,10 +96,13 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
         # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
         # we correct it after the iteration.
-        if (config.add_no_good_cuts or config.use_tabu_list) and not self.should_terminate:
+        if (
+            config.add_no_good_cuts or config.use_tabu_list
+        ) and not self.should_terminate:
             self.fix_dual_bound(config, self.last_iter_cuts)
         config.logger.info(
-            ' ===============================================================================================')
+            ' ==============================================================================================='
+        )
 
     def check_config(self):
         config = self.config
@@ -108,14 +111,13 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             config.ecp_tolerance = config.absolute_bound_tolerance
         super().check_config()
 
-
     def initialize_mip_problem(self):
-        ''' Deactivate the nonlinear constraints to create the MIP problem.
-        '''
+        '''Deactivate the nonlinear constraints to create the MIP problem.'''
         super().initialize_mip_problem()
         self.jacobians = calc_jacobians(self.mip, self.config)  # preload jacobians
-        self.mip.MindtPy_utils.cuts.ecp_cuts = ConstraintList(doc='Extended Cutting Planes')
-
+        self.mip.MindtPy_utils.cuts.ecp_cuts = ConstraintList(
+            doc='Extended Cutting Planes'
+        )
 
     def init_rNLP(self, config):
         """Initialize the problem by solving the relaxed NLP and then store the optimal variable
@@ -132,7 +134,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             MindtPy unable to handle the termination condition of the relaxed NLP.
         """
         super().init_rNLP(config, add_oa_cuts=False)
-
 
     def algorithm_should_terminate(self, config):
         """Checks if the algorithm should terminate at the given point.
@@ -158,11 +159,13 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 self.results.solver.termination_condition = tc.feasible
             return True
 
-        return (self.bounds_converged() or 
-                self.reached_iteration_limit() or 
-                self.reached_time_limit() or 
-                self.reached_stalling_limit() or 
-                self.all_nonlinear_constraint_satisfied())
+        return (
+            self.bounds_converged()
+            or self.reached_iteration_limit()
+            or self.reached_time_limit()
+            or self.reached_stalling_limit()
+            or self.all_nonlinear_constraint_satisfied()
+        )
 
     def all_nonlinear_constraint_satisfied(self):
         # check to see if the nonlinear constraints are satisfied
@@ -175,29 +178,34 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                     lower_slack = nlc.lslack()
                 except (ValueError, OverflowError):
                     # Set lower_slack (upper_slack below) less than -config.ecp_tolerance in this case.
-                    lower_slack = -10*config.ecp_tolerance
+                    lower_slack = -10 * config.ecp_tolerance
                 if lower_slack < -config.ecp_tolerance:
                     config.logger.debug(
                         'MindtPy-ECP continuing as {} has not met the '
                         'nonlinear constraints satisfaction.'
-                        '\n'.format(nlc))
+                        '\n'.format(nlc)
+                    )
                     return False
             if nlc.has_ub():
                 try:
                     upper_slack = nlc.uslack()
                 except (ValueError, OverflowError):
-                    upper_slack = -10*config.ecp_tolerance
+                    upper_slack = -10 * config.ecp_tolerance
                 if upper_slack < -config.ecp_tolerance:
                     config.logger.debug(
                         'MindtPy-ECP continuing as {} has not met the '
                         'nonlinear constraints satisfaction.'
-                        '\n'.format(nlc))
+                        '\n'.format(nlc)
+                    )
                     return False
         # For ECP to know whether to know which bound to copy over (primal or dual)
         self.primal_bound = self.dual_bound
         config.logger.info(
             'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
-            'Primal Bound: {} Dual Bound: {}\n'.format(self.primal_bound, self.dual_bound))
+            'Primal Bound: {} Dual Bound: {}\n'.format(
+                self.primal_bound, self.dual_bound
+            )
+        )
 
         self.best_solution_found = self.mip.clone()
         self.results.solver.termination_condition = tc.optimal

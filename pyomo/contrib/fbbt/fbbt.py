@@ -23,7 +23,13 @@ from pyomo.gdp import Disjunct
 from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
-from pyomo.common.config import ConfigBlock, ConfigValue, In, NonNegativeFloat, NonNegativeInt
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    In,
+    NonNegativeFloat,
+    NonNegativeInt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +119,9 @@ def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
     bnds_dict[node] = (lb, ub)
 
 
-def _prop_bnds_leaf_to_root_LinearExpression(node: numeric_expr.LinearExpression, bnds_dict, feasibility_tol):
+def _prop_bnds_leaf_to_root_LinearExpression(
+    node: numeric_expr.LinearExpression, bnds_dict, feasibility_tol
+):
     """
     This is very similar to sum expression
     """
@@ -165,7 +173,9 @@ def _prop_bnds_leaf_to_root_PowExpression(node, bnds_dict, feasibility_tol):
     arg1, arg2 = node.args
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[node] = interval.power(lb1, ub1, lb2, ub2, feasibility_tol=feasibility_tol)
+    bnds_dict[node] = interval.power(
+        lb1, ub1, lb2, ub2, feasibility_tol=feasibility_tol
+    )
 
 
 def _prop_bnds_leaf_to_root_NegationExpression(node, bnds_dict, feasibility_tol):
@@ -325,7 +335,9 @@ def _prop_bnds_leaf_to_root_asin(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.asin(lb1, ub1, -interval.inf, interval.inf, feasibility_tol)
+    bnds_dict[node] = interval.asin(
+        lb1, ub1, -interval.inf, interval.inf, feasibility_tol
+    )
 
 
 def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
@@ -345,7 +357,9 @@ def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.acos(lb1, ub1, -interval.inf, interval.inf, feasibility_tol)
+    bnds_dict[node] = interval.acos(
+        lb1, ub1, -interval.inf, interval.inf, feasibility_tol
+    )
 
 
 def _prop_bnds_leaf_to_root_atan(node, bnds_dict, feasibility_tol):
@@ -385,7 +399,9 @@ def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.power(lb1, ub1, 0.5, 0.5, feasibility_tol=feasibility_tol)
+    bnds_dict[node] = interval.power(
+        lb1, ub1, 0.5, 0.5, feasibility_tol=feasibility_tol
+    )
 
 
 def _prop_bnds_leaf_to_root_abs(node, bnds_dict, feasibility_tol):
@@ -449,18 +465,38 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
 
 
 _prop_bnds_leaf_to_root_map = dict()
-_prop_bnds_leaf_to_root_map[numeric_expr.ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.DivisionExpression] = _prop_bnds_leaf_to_root_DivisionExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.PowExpression] = _prop_bnds_leaf_to_root_PowExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.SumExpression] = _prop_bnds_leaf_to_root_SumExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.MonomialTermExpression] = _prop_bnds_leaf_to_root_ProductExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.LinearExpression] = _prop_bnds_leaf_to_root_LinearExpression
+_prop_bnds_leaf_to_root_map[
+    numeric_expr.ProductExpression
+] = _prop_bnds_leaf_to_root_ProductExpression
+_prop_bnds_leaf_to_root_map[
+    numeric_expr.DivisionExpression
+] = _prop_bnds_leaf_to_root_DivisionExpression
+_prop_bnds_leaf_to_root_map[
+    numeric_expr.PowExpression
+] = _prop_bnds_leaf_to_root_PowExpression
+_prop_bnds_leaf_to_root_map[
+    numeric_expr.SumExpression
+] = _prop_bnds_leaf_to_root_SumExpression
+_prop_bnds_leaf_to_root_map[
+    numeric_expr.MonomialTermExpression
+] = _prop_bnds_leaf_to_root_ProductExpression
+_prop_bnds_leaf_to_root_map[
+    numeric_expr.NegationExpression
+] = _prop_bnds_leaf_to_root_NegationExpression
+_prop_bnds_leaf_to_root_map[
+    numeric_expr.UnaryFunctionExpression
+] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
+_prop_bnds_leaf_to_root_map[
+    numeric_expr.LinearExpression
+] = _prop_bnds_leaf_to_root_LinearExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.AbsExpression] = _prop_bnds_leaf_to_root_abs
 
-_prop_bnds_leaf_to_root_map[_GeneralExpressionData] = _prop_bnds_leaf_to_root_GeneralExpression
-_prop_bnds_leaf_to_root_map[ScalarExpression] = _prop_bnds_leaf_to_root_GeneralExpression
+_prop_bnds_leaf_to_root_map[
+    _GeneralExpressionData
+] = _prop_bnds_leaf_to_root_GeneralExpression
+_prop_bnds_leaf_to_root_map[
+    ScalarExpression
+] = _prop_bnds_leaf_to_root_GeneralExpression
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
@@ -483,7 +519,9 @@ def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
     if arg1 is arg2:
-        _lb1, _ub1 = interval._inverse_power1(lb0, ub0, 2, 2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol)
+        _lb1, _ub1 = interval._inverse_power1(
+            lb0, ub0, 2, 2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol
+        )
         _lb2, _ub2 = _lb1, _ub1
     else:
         _lb1, _ub1 = interval.div(lb0, ub0, lb2, ub2, feasibility_tol)
@@ -542,17 +580,23 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict, feasibility_tol):
     accumulated_bounds.append(bnds_dict[node.arg(0)])
     lb0, ub0 = bnds_dict[node]
     for i in range(1, node.nargs()):
-        _lb0, _ub0 = accumulated_bounds[i-1]
+        _lb0, _ub0 = accumulated_bounds[i - 1]
         _lb1, _ub1 = bnds_dict[node.arg(i)]
         accumulated_bounds.append(interval.add(_lb0, _ub0, _lb1, _ub1))
     if lb0 > accumulated_bounds[node.nargs() - 1][0]:
-        accumulated_bounds[node.nargs() - 1] = (lb0, accumulated_bounds[node.nargs()-1][1])
+        accumulated_bounds[node.nargs() - 1] = (
+            lb0,
+            accumulated_bounds[node.nargs() - 1][1],
+        )
     if ub0 < accumulated_bounds[node.nargs() - 1][1]:
-        accumulated_bounds[node.nargs() - 1] = (accumulated_bounds[node.nargs()-1][0], ub0)
+        accumulated_bounds[node.nargs() - 1] = (
+            accumulated_bounds[node.nargs() - 1][0],
+            ub0,
+        )
 
     for i in reversed(range(1, node.nargs())):
         lb0, ub0 = accumulated_bounds[i]
-        lb1, ub1 = accumulated_bounds[i-1]
+        lb1, ub1 = accumulated_bounds[i - 1]
         lb2, ub2 = bnds_dict[node.arg(i)]
         _lb1, _ub1 = interval.sub(lb0, ub0, lb2, ub2)
         _lb2, _ub2 = interval.sub(lb0, ub0, lb1, ub1)
@@ -564,7 +608,7 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict, feasibility_tol):
             lb2 = _lb2
         if _ub2 < ub2:
             ub2 = _ub2
-        accumulated_bounds[i-1] = (lb1, ub1)
+        accumulated_bounds[i - 1] = (lb1, ub1)
         bnds_dict[node.arg(i)] = (lb2, ub2)
     lb, ub = bnds_dict[node.arg(0)]
     _lb, _ub = accumulated_bounds[0]
@@ -575,9 +619,9 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict, feasibility_tol):
     bnds_dict[node.arg(0)] = (lb, ub)
 
 
-def _prop_bnds_root_to_leaf_LinearExpression(node: numeric_expr.LinearExpression,
-                                             bnds_dict: ComponentMap,
-                                             feasibility_tol: float):
+def _prop_bnds_root_to_leaf_LinearExpression(
+    node: numeric_expr.LinearExpression, bnds_dict: ComponentMap, feasibility_tol: float
+):
     """
     This is very similar to SumExpression.
     """
@@ -615,7 +659,9 @@ def _prop_bnds_root_to_leaf_LinearExpression(node: numeric_expr.LinearExpression
         if _ub2 < ub2:
             ub2 = _ub2
         accumulated_bounds[i] = (lb1, ub1)
-        bnds_dict[v] = interval.div(lb2, ub2, *coef_bnds, feasibility_tol=feasibility_tol)
+        bnds_dict[v] = interval.div(
+            lb2, ub2, *coef_bnds, feasibility_tol=feasibility_tol
+        )
 
 
 def _prop_bnds_root_to_leaf_DivisionExpression(node, bnds_dict, feasibility_tol):
@@ -670,17 +716,23 @@ def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict, feasibility_tol):
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    _lb1, _ub1 = interval._inverse_power1(lb0, ub0, lb2, ub2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol)
+    _lb1, _ub1 = interval._inverse_power1(
+        lb0, ub0, lb2, ub2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol
+    )
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
         ub1 = _ub1
     bnds_dict[arg1] = (lb1, ub1)
 
-    if is_fixed(arg2) and lb2 == ub2:  # No need to tighten the bounds on arg2 if arg2 is fixed
+    if (
+        is_fixed(arg2) and lb2 == ub2
+    ):  # No need to tighten the bounds on arg2 if arg2 is fixed
         pass
     else:
-        _lb2, _ub2 = interval._inverse_power2(lb0, ub0, lb1, ub1, feasiblity_tol=feasibility_tol)
+        _lb2, _ub2 = interval._inverse_power2(
+            lb0, ub0, lb1, ub1, feasiblity_tol=feasibility_tol
+        )
         if _lb2 > lb2:
             lb2 = _lb2
         if _ub2 < ub2:
@@ -707,7 +759,9 @@ def _prop_bnds_root_to_leaf_sqrt(node, bnds_dict, feasibility_tol):
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = (0.5, 0.5)
-    _lb1, _ub1 = interval._inverse_power1(lb0, ub0, lb2, ub2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol)
+    _lb1, _ub1 = interval._inverse_power1(
+        lb0, ub0, lb2, ub2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol
+    )
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -1019,9 +1073,11 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict, feasibility
     if node.getname() in _unary_root_to_leaf_map:
         _unary_root_to_leaf_map[node.getname()](node, bnds_dict, feasibility_tol)
     else:
-        logger.warning('Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
-                       'the tree.'
-                       ''.format(node.getname()))
+        logger.warning(
+            'Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
+            'the tree.'
+            ''.format(node.getname())
+        )
 
 
 def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
@@ -1044,18 +1100,38 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
 
 
 _prop_bnds_root_to_leaf_map = dict()
-_prop_bnds_root_to_leaf_map[numeric_expr.ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.DivisionExpression] = _prop_bnds_root_to_leaf_DivisionExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.PowExpression] = _prop_bnds_root_to_leaf_PowExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.SumExpression] = _prop_bnds_root_to_leaf_SumExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.MonomialTermExpression] = _prop_bnds_root_to_leaf_ProductExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = _prop_bnds_root_to_leaf_LinearExpression
+_prop_bnds_root_to_leaf_map[
+    numeric_expr.ProductExpression
+] = _prop_bnds_root_to_leaf_ProductExpression
+_prop_bnds_root_to_leaf_map[
+    numeric_expr.DivisionExpression
+] = _prop_bnds_root_to_leaf_DivisionExpression
+_prop_bnds_root_to_leaf_map[
+    numeric_expr.PowExpression
+] = _prop_bnds_root_to_leaf_PowExpression
+_prop_bnds_root_to_leaf_map[
+    numeric_expr.SumExpression
+] = _prop_bnds_root_to_leaf_SumExpression
+_prop_bnds_root_to_leaf_map[
+    numeric_expr.MonomialTermExpression
+] = _prop_bnds_root_to_leaf_ProductExpression
+_prop_bnds_root_to_leaf_map[
+    numeric_expr.NegationExpression
+] = _prop_bnds_root_to_leaf_NegationExpression
+_prop_bnds_root_to_leaf_map[
+    numeric_expr.UnaryFunctionExpression
+] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
+_prop_bnds_root_to_leaf_map[
+    numeric_expr.LinearExpression
+] = _prop_bnds_root_to_leaf_LinearExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.AbsExpression] = _prop_bnds_root_to_leaf_abs
 
-_prop_bnds_root_to_leaf_map[_GeneralExpressionData] = _prop_bnds_root_to_leaf_GeneralExpression
-_prop_bnds_root_to_leaf_map[ScalarExpression] = _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[
+    _GeneralExpressionData
+] = _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[
+    ScalarExpression
+] = _prop_bnds_root_to_leaf_GeneralExpression
 
 
 def _check_and_reset_bounds(var, lb, ub):
@@ -1080,7 +1156,10 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
-    def __init__(self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False):
+
+    def __init__(
+        self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False
+    ):
         """
         Parameters
         ----------
@@ -1100,7 +1179,9 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
 
     def visit(self, node, values):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
-            _prop_bnds_leaf_to_root_map[node.__class__](node, self.bnds_dict, self.feasibility_tol)
+            _prop_bnds_leaf_to_root_map[node.__class__](
+                node, self.bnds_dict, self.feasibility_tol
+            )
         else:
             self.bnds_dict[node] = (-interval.inf, interval.inf)
         return None
@@ -1124,7 +1205,11 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                 if ub is None:
                     ub = interval.inf
                 if lb - self.feasibility_tol > ub:
-                    raise InfeasibleConstraintException('Variable has a lower bound which is larger than its upper bound: {0}'.format(str(node)))
+                    raise InfeasibleConstraintException(
+                        'Variable has a lower bound which is larger than its upper bound: {0}'.format(
+                            str(node)
+                        )
+                    )
             self.bnds_dict[node] = (lb, ub)
             return True, None
 
@@ -1143,7 +1228,9 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                 self.bnds_dict[coef] = (coef_val, coef_val)
             for v in node.linear_vars:
                 self.visiting_potential_leaf(v)
-            _prop_bnds_leaf_to_root_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
+            _prop_bnds_leaf_to_root_LinearExpression(
+                node, self.bnds_dict, self.feasibility_tol
+            )
             return True, None
 
         if node.__class__ is numeric_expr.ExternalFunctionExpression:
@@ -1162,6 +1249,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
     variables. Note that the bounds on every node in the tree must
     first be computed with _FBBTVisitorLeafToRoot.
     """
+
     def __init__(self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8):
         """
         Parameters
@@ -1186,9 +1274,13 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             lb, ub = self.bnds_dict[node]
             if abs(lb - value(node)) > self.feasibility_tol:
-                raise InfeasibleConstraintException('Detected an infeasible constraint.')
+                raise InfeasibleConstraintException(
+                    'Detected an infeasible constraint.'
+                )
             if abs(ub - value(node)) > self.feasibility_tol:
-                raise InfeasibleConstraintException('Detected an infeasible constraint.')
+                raise InfeasibleConstraintException(
+                    'Detected an infeasible constraint.'
+                )
             return True, None
 
         if node.is_variable_type():
@@ -1197,13 +1289,17 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
             lb, ub = self.bnds_dict[node]
             if lb > ub:
                 if lb - self.feasibility_tol > ub:
-                    raise InfeasibleConstraintException('Lower bound ({1}) computed for variable {0} is larger than the computed upper bound ({2}).'.format(node, lb, ub))
+                    raise InfeasibleConstraintException(
+                        'Lower bound ({1}) computed for variable {0} is larger than the computed upper bound ({2}).'.format(
+                            node, lb, ub
+                        )
+                    )
                 else:
                     """
-                    If we reach this code, then lb > ub, but not by more than feasibility_tol. 
+                    If we reach this code, then lb > ub, but not by more than feasibility_tol.
                     Now we want to decrease lb slightly and increase ub slightly so that lb <= ub.
                     However, we also have to make sure we do not make lb lower than the original lower bound
-                    and make sure we do not make ub larger than the original upper bound. This is what 
+                    and make sure we do not make ub larger than the original upper bound. This is what
                     _check_and_reset_bounds is for.
                     """
                     lb -= self.feasibility_tol
@@ -1211,18 +1307,22 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                     lb, ub = _check_and_reset_bounds(node, lb, ub)
                     self.bnds_dict[node] = (lb, ub)
             if lb == interval.inf:
-                raise InfeasibleConstraintException('Computed a lower bound of +inf for variable {0}'.format(node))
+                raise InfeasibleConstraintException(
+                    'Computed a lower bound of +inf for variable {0}'.format(node)
+                )
             if ub == -interval.inf:
-                raise InfeasibleConstraintException('Computed an upper bound of -inf for variable {0}'.format(node))
+                raise InfeasibleConstraintException(
+                    'Computed an upper bound of -inf for variable {0}'.format(node)
+                )
 
             if node.is_binary() or node.is_integer():
                 """
                 This bit of code has two purposes:
                 1) Improve the bounds on binary and integer variables with the fact that they are integer.
-                2) Account for roundoff error. If the lower bound of a binary variable comes back as 
-                   1e-16, the lower bound may actually be 0. This could potentially cause problems when 
+                2) Account for roundoff error. If the lower bound of a binary variable comes back as
+                   1e-16, the lower bound may actually be 0. This could potentially cause problems when
                    handing the problem to a MIP solver. Some solvers are robust to this, but some may not be
-                   and may give the wrong solution. Even if the correct solution is found, this could 
+                   and may give the wrong solution. Even if the correct solution is found, this could
                    introduce numerical problems.
                 """
                 if lb > -interval.inf:
@@ -1246,13 +1346,19 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         if not node.is_potentially_variable():
             lb, ub = self.bnds_dict[node]
             if abs(lb - value(node)) > self.feasibility_tol:
-                raise InfeasibleConstraintException('Detected an infeasible constraint.')
+                raise InfeasibleConstraintException(
+                    'Detected an infeasible constraint.'
+                )
             if abs(ub - value(node)) > self.feasibility_tol:
-                raise InfeasibleConstraintException('Detected an infeasible constraint.')
+                raise InfeasibleConstraintException(
+                    'Detected an infeasible constraint.'
+                )
             return True, None
 
         if node.__class__ is numeric_expr.LinearExpression:
-            _prop_bnds_root_to_leaf_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
+            _prop_bnds_root_to_leaf_LinearExpression(
+                node, self.bnds_dict, self.feasibility_tol
+            )
             for v in node.linear_vars:
                 self.visiting_potential_leaf(v)
             return True, None
@@ -1261,11 +1367,15 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
             return True, None
 
         if node.__class__ in _prop_bnds_root_to_leaf_map:
-            _prop_bnds_root_to_leaf_map[node.__class__](node, self.bnds_dict, self.feasibility_tol)
+            _prop_bnds_root_to_leaf_map[node.__class__](
+                node, self.bnds_dict, self.feasibility_tol
+            )
         else:
-            logger.warning('Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
-                           'the tree.'
-                           ''.format(str(type(node))))
+            logger.warning(
+                'Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
+                'the tree.'
+                ''.format(str(type(node)))
+            )
 
         return False, None
 
@@ -1303,7 +1413,9 @@ def _fbbt_con(con, config):
     if not con.active:
         return ComponentMap()
 
-    bnds_dict = ComponentMap()  # a dictionary to store the bounds of every node in the tree
+    bnds_dict = (
+        ComponentMap()
+    )  # a dictionary to store the bounds of every node in the tree
 
     # a walker to propagate bounds from the variables to the root
     visitorA = _FBBTVisitorLeafToRoot(bnds_dict, feasibility_tol=config.feasibility_tol)
@@ -1323,7 +1435,9 @@ def _fbbt_con(con, config):
 
     # check if the constraint is infeasible
     if lb > _ub + config.feasibility_tol or ub < _lb - config.feasibility_tol:
-        raise InfeasibleConstraintException('Detected an infeasible constraint during FBBT: {0}'.format(str(con)))
+        raise InfeasibleConstraintException(
+            'Detected an infeasible constraint during FBBT: {0}'.format(str(con))
+        )
 
     # check if the constraint is always satisfied
     if config.deactivate_satisfied_constraints:
@@ -1337,7 +1451,11 @@ def _fbbt_con(con, config):
     bnds_dict[con.body] = (lb, ub)
 
     # Now, propagate bounds back from the root to the variables
-    visitorB = _FBBTVisitorRootToLeaf(bnds_dict, integer_tol=config.integer_tol, feasibility_tol=config.feasibility_tol)
+    visitorB = _FBBTVisitorRootToLeaf(
+        bnds_dict,
+        integer_tol=config.integer_tol,
+        feasibility_tol=config.feasibility_tol,
+    )
     visitorB.dfs_postorder_stack(con.body)
 
     new_var_bounds = ComponentMap()
@@ -1382,8 +1500,9 @@ def _fbbt_block(m, config):
     var_lbs = ComponentMap()
     var_ubs = ComponentMap()
     n_cons = 0
-    for c in m.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=config.descend_into, sort=True):
+    for c in m.component_data_objects(
+        ctype=Constraint, active=True, descend_into=config.descend_into, sort=True
+    ):
         for v in identify_variables(c.body):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
@@ -1398,7 +1517,9 @@ def _fbbt_block(m, config):
             var_to_con_map[v].append(c)
         n_cons += 1
 
-    for _v in m.component_data_objects(ctype=Var, active=True, descend_into=True, sort=True):
+    for _v in m.component_data_objects(
+        ctype=Var, active=True, descend_into=True, sort=True
+    ):
         if _v.is_fixed():
             _v.setlb(_v.value)
             _v.setub(_v.value)
@@ -1407,8 +1528,9 @@ def _fbbt_block(m, config):
     n_fbbt = 0
 
     improved_vars = ComponentSet()
-    for c in m.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=config.descend_into, sort=True):
+    for c in m.component_data_objects(
+        ctype=Constraint, active=True, descend_into=config.descend_into, sort=True
+    ):
         _new_var_bounds = _fbbt_con(c, config)
         n_fbbt += 1
         new_var_bounds.update(_new_var_bounds)
@@ -1445,8 +1567,15 @@ def _fbbt_block(m, config):
     return new_var_bounds
 
 
-def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibility_tol=1e-8, max_iter=10,
-         improvement_tol=1e-4, descend_into=True):
+def fbbt(
+    comp,
+    deactivate_satisfied_constraints=False,
+    integer_tol=1e-5,
+    feasibility_tol=1e-8,
+    max_iter=10,
+    improvement_tol=1e-4,
+    descend_into=True,
+):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use _fbbt_con and _fbbt_block. For detailed documentation, see
@@ -1489,11 +1618,15 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
         from FBBT.
     """
     config = ConfigBlock()
-    dsc_config = ConfigValue(default=deactivate_satisfied_constraints, domain=In({True, False}))
+    dsc_config = ConfigValue(
+        default=deactivate_satisfied_constraints, domain=In({True, False})
+    )
     integer_tol_config = ConfigValue(default=integer_tol, domain=NonNegativeFloat)
     ft_config = ConfigValue(default=feasibility_tol, domain=NonNegativeFloat)
     mi_config = ConfigValue(default=max_iter, domain=NonNegativeInt)
-    improvement_tol_config = ConfigValue(default=improvement_tol, domain=NonNegativeFloat)
+    improvement_tol_config = ConfigValue(
+        default=improvement_tol, domain=NonNegativeFloat
+    )
     descend_into_config = ConfigValue(default=descend_into)
     config.declare('deactivate_satisfied_constraints', dsc_config)
     config.declare('integer_tol', integer_tol_config)
@@ -1515,7 +1648,9 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
         _new_var_bounds = _fbbt_block(comp, config)
         new_var_bounds.update(_new_var_bounds)
     else:
-        raise FBBTException('Cannot perform FBBT on objects of type {0}'.format(type(comp)))
+        raise FBBTException(
+            'Cannot perform FBBT on objects of type {0}'.format(type(comp))
+        )
 
     return new_var_bounds
 
@@ -1557,7 +1692,9 @@ class BoundsManager(object):
             else:
                 self._vars.update(identify_variables(comp.body))
         else:
-            for c in comp.component_data_objects(Constraint, descend_into=True, active=True, sort=True):
+            for c in comp.component_data_objects(
+                Constraint, descend_into=True, active=True, sort=True
+            ):
                 self._vars.update(identify_variables(c.body))
 
     def save_bounds(self):

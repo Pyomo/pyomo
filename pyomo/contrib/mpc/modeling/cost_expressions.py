@@ -30,18 +30,11 @@ from pyomo.contrib.mpc.data.series_data import get_indexed_cuid
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
-from pyomo.contrib.mpc.data.convert import (
-    interval_to_series,
-    _process_to_dynamic_data,
-)
+from pyomo.contrib.mpc.data.convert import interval_to_series, _process_to_dynamic_data
 
 
 def get_penalty_from_constant_target(
-    variables,
-    time,
-    setpoint_data,
-    weight_data=None,
-    variable_set=None,
+    variables, time, setpoint_data, weight_data=None, variable_set=None
 ):
     """
     This function returns a tracking cost IndexedExpression for the given
@@ -99,13 +92,12 @@ def get_penalty_from_constant_target(
     cuids = [get_indexed_cuid(var) for var in variables]
     setpoint_data = setpoint_data.get_data()
     weight_data = weight_data.get_data()
+
     def tracking_rule(m, i, t):
         return get_quadratic_penalty_at_time(
-            variables[i],
-            t,
-            setpoint_data[cuids[i]],
-            weight=weight_data[cuids[i]],
+            variables[i], t, setpoint_data[cuids[i]], weight=weight_data[cuids[i]]
         )
+
     tracking_expr = Expression(variable_set, time, rule=tracking_rule)
     return variable_set, tracking_expr
 
@@ -171,14 +163,11 @@ def get_penalty_from_piecewise_constant_target(
 def get_quadratic_penalty_at_time(var, t, setpoint, weight=None):
     if weight is None:
         weight = 1.0
-    return weight * (var[t] - setpoint)**2
+    return weight * (var[t] - setpoint) ** 2
 
 
 def _get_penalty_expressions_from_time_varying_target(
-    variables,
-    time,
-    setpoint_data,
-    weight_data=None,
+    variables, time, setpoint_data, weight_data=None
 ):
     if weight_data is None:
         weight_data = ScalarData(ComponentMap((var, 1.0) for var in variables))
@@ -196,46 +185,31 @@ def _get_penalty_expressions_from_time_varying_target(
     for var in variables:
         if not setpoint_data.contains_key(var):
             raise KeyError(
-                "Setpoint data does not contain a key for variable"
-                " %s" % var 
+                "Setpoint data does not contain a key for variable %s" % var
             )
         if not weight_data.contains_key(var):
             raise KeyError(
-                "Tracking weight does not contain a key for"
-                " variable %s" % var
+                "Tracking weight does not contain a key for variable %s" % var
             )
 
     # Get lists of weights and setpoints so we don't have to process
     # the variables (to get CUIDs) and hash the CUIDs for every
     # time index.
-    cuids = [
-        get_indexed_cuid(var, sets=(time,))
-        for var in variables
-    ]
-    weights = [
-        weight_data.get_data_from_key(var)
-        for var in variables
-    ]
-    setpoints = [
-        setpoint_data.get_data_from_key(var)
-        for var in variables
-    ]
+    cuids = [get_indexed_cuid(var, sets=(time,)) for var in variables]
+    weights = [weight_data.get_data_from_key(var) for var in variables]
+    setpoints = [setpoint_data.get_data_from_key(var) for var in variables]
     tracking_costs = [
         {
-            t: get_quadratic_penalty_at_time(
-                var, t, setpoints[j][i], weights[j]
-            ) for i, t in enumerate(time)
-        } for j, var in enumerate(variables)
+            t: get_quadratic_penalty_at_time(var, t, setpoints[j][i], weights[j])
+            for i, t in enumerate(time)
+        }
+        for j, var in enumerate(variables)
     ]
     return tracking_costs
 
 
 def get_penalty_from_time_varying_target(
-    variables,
-    time,
-    setpoint_data,
-    weight_data=None,
-    variable_set=None,
+    variables, time, setpoint_data, weight_data=None, variable_set=None
 ):
     """Constructs a penalty expression for the specified variables and
     specified time-varying target data.
@@ -273,6 +247,7 @@ def get_penalty_from_time_varying_target(
 
     def tracking_rule(m, i, t):
         return tracking_costs[i][t]
+
     tracking_cost = Expression(variable_set, time, rule=tracking_rule)
     return variable_set, tracking_cost
 
@@ -329,6 +304,7 @@ def get_penalty_from_target(
     setpoint_data = _process_to_dynamic_data(setpoint_data)
     args = (variables, time, setpoint_data)
     kwds = dict(weight_data=weight_data, variable_set=variable_set)
+
     def _error_if_used(tolerance, prefer_left, sp_type):
         if tolerance is not None or prefer_left is not None:
             raise RuntimeError(
@@ -337,6 +313,7 @@ def get_penalty_from_target(
                 " tolerance=%s, prefer_left=%s when using %s as a target."
                 % (tolerance, prefer_left, sp_type)
             )
+
     if isinstance(setpoint_data, ScalarData):
         _error_if_used(tolerance, prefer_left, type(setpoint_data))
         return get_penalty_from_constant_target(*args, **kwds)

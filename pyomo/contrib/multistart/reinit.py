@@ -64,10 +64,11 @@ def reinitialize_variables(model, config):
                     'Skipping reinitialization of unbounded variable '
                     '%s with bounds (%s, %s). '
                     'To suppress this message, set the '
-                    'suppress_unbounded_warning flag.'
-                    % (var.name, var.lb, var.ub))
+                    'suppress_unbounded_warning flag.' % (var.name, var.lb, var.ub)
+                )
             continue
         val = var.value if var.value is not None else (var.lb + var.ub) / 2
         # apply reinitialization strategy to variable
-        var.set_value(strategies[config.strategy](val, var.lb, var.ub),
-                      skip_validation=True)
+        var.set_value(
+            strategies[config.strategy](val, var.lb, var.ub), skip_validation=True
+        )

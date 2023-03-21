@@ -27,7 +27,7 @@ def create_problem(begin, end):
     def _x1dot(M, i):
         if i == M.t.first():
             return pyo.Constraint.Skip
-        return M.xdot[1, i] == (1-M.x[2, i] ** 2) * M.x[1, i] - M.x[2, i] + M.u[i]
+        return M.xdot[1, i] == (1 - M.x[2, i] ** 2) * M.x[1, i] - M.x[2, i] + M.u[i]
 
     m.x1dotcon = pyo.Constraint(m.t, rule=_x1dot)
 
@@ -65,10 +65,9 @@ def main(show_plot=True):
     # Discretize model using Orthogonal Collocation
     discretizer = pyo.TransformationFactory('dae.collocation')
     discretizer.apply_to(instance, nfe=100, ncp=3, scheme='LAGRANGE-RADAU')
-    discretizer.reduce_collocation_points(instance,
-                                          var=instance.u,
-                                          ncp=1,
-                                          contset=instance.t)
+    discretizer.reduce_collocation_points(
+        instance, var=instance.u, ncp=1, contset=instance.t
+    )
 
     # Interface pyomo model with nlp
     nlp = PyomoNLP(instance)

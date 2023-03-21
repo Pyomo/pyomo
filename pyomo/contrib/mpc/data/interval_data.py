@@ -25,10 +25,7 @@
 from collections import namedtuple
 from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
-from pyomo.contrib.mpc.data.dynamic_data_base import (
-    _is_iterable,
-    _DynamicDataBase,
-)
+from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable, _DynamicDataBase
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
@@ -58,7 +55,7 @@ def assert_disjoint_intervals(intervals):
                 "Lower endpoint of interval is higher than upper endpoint"
             )
         if i != 0:
-            prev_lo, prev_hi = intervals[i-1]
+            prev_lo, prev_hi = intervals[i - 1]
             if not prev_hi <= lo:
                 raise RuntimeError(
                     "Intervals %s and %s are not disjoint"
@@ -67,13 +64,10 @@ def assert_disjoint_intervals(intervals):
 
 
 class IntervalData(_DynamicDataBase):
-
     def __init__(self, data, intervals, time_set=None, context=None):
         intervals = list(intervals)
         if not intervals == list(sorted(intervals)):
-            raise RuntimeError(
-                "Intervals are not sorted in increasing order."
-            )
+            raise RuntimeError("Intervals are not sorted in increasing order.")
         assert_disjoint_intervals(intervals)
         self._intervals = intervals
 
@@ -84,8 +78,7 @@ class IntervalData(_DynamicDataBase):
                 raise ValueError(
                     "Data lists must have same length as time. "
                     "Length of time is %s while length of data for "
-                    "key %s is %s."
-                    % (len(intervals), key, len(data_list))
+                    "key %s is %s." % (len(intervals), key, len(data_list))
                 )
         super().__init__(data, time_set=time_set, context=context)
 
@@ -97,8 +90,7 @@ class IntervalData(_DynamicDataBase):
             )
         else:
             raise TypeError(
-                "%s and %s are not comparable"
-                % (self.__class__, other.__class__)
+                "%s and %s are not comparable" % (self.__class__, other.__class__)
             )
 
     def get_intervals(self):
@@ -117,18 +109,15 @@ class IntervalData(_DynamicDataBase):
             time_set = self._orig_time_set
             return IntervalData(data, interval_list, time_set=time_set)
         else:
-            return ScalarData({
-                cuid: values[indices] for cuid, values in self._data.items()
-            })
+            return ScalarData(
+                {cuid: values[indices] for cuid, values in self._data.items()}
+            )
 
     # TODO: get_data_at_interval, get_data_at_time
     def get_data_at_time(self, time, tolerance=None, prefer_left=True):
         if not _is_iterable(time):
             index = find_nearest_interval_index(
-                self._intervals,
-                time,
-                tolerance=tolerance,
-                prefer_left=prefer_left,
+                self._intervals, time, tolerance=tolerance, prefer_left=prefer_left
             )
             if index is None:
                 raise RuntimeError(
@@ -168,7 +157,7 @@ class IntervalData(_DynamicDataBase):
             return
         if other_intervals[0][0] < intervals[-1][1] + tolerance:
             # First point of new intervals is less than (within
-            # tolerance) 
+            # tolerance)
             raise ValueError(
                 "Initial time point of target, %s, is not greater than"
                 " final time point of source, %s, within tolerance %s."
@@ -190,9 +179,7 @@ class IntervalData(_DynamicDataBase):
         """
         # Note that this is different from what we are doing in
         # shift_values_by_time in the helper class.
-        self._intervals = [
-            (lo + offset, hi + offset) for lo, hi in self._intervals
-        ]
+        self._intervals = [(lo + offset, hi + offset) for lo, hi in self._intervals]
 
     def extract_variables(self, variables, context=None, copy_values=False):
         """
@@ -202,22 +189,15 @@ class IntervalData(_DynamicDataBase):
         if copy_values:
             raise NotImplementedError(
                 "extract_variables with copy_values=True has not been"
-                " implemented by %s"
-                % self.__class__
+                " implemented by %s" % self.__class__
             )
         data = {}
         if not isinstance(variables, (list, tuple)):
             # If variables is not a sequence and is instead a slice (or
             # indexed variable), we get either a confusing error message
             # or a lot of repeated work.
-            raise TypeError(
-                "extract_values only accepts a list or tuple of variables"
-            )
+            raise TypeError("extract_values only accepts a list or tuple of variables")
         for var in variables:
-            cuid = get_indexed_cuid(
-                var, (self._orig_time_set,), context=context
-            )
+            cuid = get_indexed_cuid(var, (self._orig_time_set,), context=context)
             data[cuid] = self._data[cuid]
-        return IntervalData(
-            data, self._intervals, time_set=self._orig_time_set
-        )
+        return IntervalData(data, self._intervals, time_set=self._orig_time_set)

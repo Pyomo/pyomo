@@ -13,32 +13,41 @@ import pyomo.common.unittest as unittest
 import os
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_available
+    numpy as np,
+    numpy_available,
+    scipy_available,
 )
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 from pyomo.contrib.pynumero.asl import AmplInterface
+
 if not AmplInterface.available():
-    raise unittest.SkipTest(
-        "Pynumero needs the ASL extension to run NLP tests")
+    raise unittest.SkipTest("Pynumero needs the ASL extension to run NLP tests")
 
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.nlp_projections import (
-    RenamedNLP, ProjectedNLP, ProjectedExtendedNLP
+    RenamedNLP,
+    ProjectedNLP,
+    ProjectedExtendedNLP,
 )
+
 
 def create_pyomo_model():
     m = pyo.ConcreteModel()
-    m.x = pyo.Var(range(3), bounds=(-10,10), initialize={0:1.0, 1:2.0, 2:4.0})
+    m.x = pyo.Var(range(3), bounds=(-10, 10), initialize={0: 1.0, 1: 2.0, 2: 4.0})
 
-    m.obj = pyo.Objective(expr=m.x[0]**2 + m.x[0]*m.x[1] + m.x[0]*m.x[2] + m.x[2]**2)
+    m.obj = pyo.Objective(
+        expr=m.x[0] ** 2 + m.x[0] * m.x[1] + m.x[0] * m.x[2] + m.x[2] ** 2
+    )
 
-    m.con1 = pyo.Constraint(expr=m.x[0]*m.x[1] + m.x[0]*m.x[2] == 4)
+    m.con1 = pyo.Constraint(expr=m.x[0] * m.x[1] + m.x[0] * m.x[2] == 4)
     m.con2 = pyo.Constraint(expr=m.x[0] + m.x[2] == 4)
 
     return m
+
 
 class TestRenamedNLP(unittest.TestCase):
     def test_rename(self):
@@ -46,8 +55,9 @@ class TestRenamedNLP(unittest.TestCase):
         nlp = PyomoNLP(m)
         expected_names = ['x[0]', 'x[1]', 'x[2]']
         self.assertEqual(nlp.primals_names(), expected_names)
-        renamed_nlp = RenamedNLP(nlp, {'x[0]': 'y[0]', 'x[1]':'y[1]', 'x[2]':'y[2]'})
+        renamed_nlp = RenamedNLP(nlp, {'x[0]': 'y[0]', 'x[1]': 'y[1]', 'x[2]': 'y[2]'})
         expected_names = ['y[0]', 'y[1]', 'y[2]']
+
 
 class TestProjectedNLP(unittest.TestCase):
     def test_projected(self):
@@ -56,33 +66,37 @@ class TestProjectedNLP(unittest.TestCase):
         projected_nlp = ProjectedNLP(nlp, ['x[0]', 'x[1]', 'x[2]'])
         expected_names = ['x[0]', 'x[1]', 'x[2]']
         self.assertEqual(projected_nlp.primals_names(), expected_names)
-        self.assertTrue(np.array_equal(projected_nlp.get_primals(),
-                                       np.asarray([1.0, 2.0, 4.0])))
-        self.assertTrue(np.array_equal(projected_nlp.evaluate_grad_objective(),
-                                       np.asarray([8.0, 1.0, 9.0])))
+        self.assertTrue(
+            np.array_equal(projected_nlp.get_primals(), np.asarray([1.0, 2.0, 4.0]))
+        )
+        self.assertTrue(
+            np.array_equal(
+                projected_nlp.evaluate_grad_objective(), np.asarray([8.0, 1.0, 9.0])
+            )
+        )
         self.assertEqual(projected_nlp.nnz_jacobian(), 5)
         self.assertEqual(projected_nlp.nnz_hessian_lag(), 6)
 
         J = projected_nlp.evaluate_jacobian()
         self.assertEqual(len(J.data), 5)
         denseJ = J.todense()
-        expected_jac = np.asarray([[6.0, 1.0, 1.0],[1.0, 0.0, 1.0]])
+        expected_jac = np.asarray([[6.0, 1.0, 1.0], [1.0, 0.0, 1.0]])
         self.assertTrue(np.array_equal(denseJ, expected_jac))
 
         # test the use of "out"
-        J = 0.0*J
+        J = 0.0 * J
         projected_nlp.evaluate_jacobian(out=J)
         denseJ = J.todense()
         self.assertTrue(np.array_equal(denseJ, expected_jac))
 
         H = projected_nlp.evaluate_hessian_lag()
         self.assertEqual(len(H.data), 6)
-        expectedH = np.asarray([[2.0, 1.0, 1.0],[1.0, 0.0, 0.0], [1.0, 0.0, 2.0]])
+        expectedH = np.asarray([[2.0, 1.0, 1.0], [1.0, 0.0, 0.0], [1.0, 0.0, 2.0]])
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
 
         # test the use of "out"
-        H = 0.0*H
+        H = 0.0 * H
         projected_nlp.evaluate_hessian_lag(out=H)
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
@@ -91,32 +105,37 @@ class TestProjectedNLP(unittest.TestCase):
         projected_nlp = ProjectedNLP(nlp, ['x[0]', 'x[2]', 'x[1]'])
         expected_names = ['x[0]', 'x[2]', 'x[1]']
         self.assertEqual(projected_nlp.primals_names(), expected_names)
-        self.assertTrue(np.array_equal(projected_nlp.get_primals(), np.asarray([1.0, 4.0, 2.0])))
-        self.assertTrue(np.array_equal(projected_nlp.evaluate_grad_objective(),
-                                       np.asarray([8.0, 9.0, 1.0])))
+        self.assertTrue(
+            np.array_equal(projected_nlp.get_primals(), np.asarray([1.0, 4.0, 2.0]))
+        )
+        self.assertTrue(
+            np.array_equal(
+                projected_nlp.evaluate_grad_objective(), np.asarray([8.0, 9.0, 1.0])
+            )
+        )
         self.assertEqual(projected_nlp.nnz_jacobian(), 5)
         self.assertEqual(projected_nlp.nnz_hessian_lag(), 6)
 
         J = projected_nlp.evaluate_jacobian()
         self.assertEqual(len(J.data), 5)
         denseJ = J.todense()
-        expected_jac = np.asarray([[6.0, 1.0, 1.0],[1.0, 1.0, 0.0]])
+        expected_jac = np.asarray([[6.0, 1.0, 1.0], [1.0, 1.0, 0.0]])
         self.assertTrue(np.array_equal(denseJ, expected_jac))
 
         # test the use of "out"
-        J = 0.0*J
+        J = 0.0 * J
         projected_nlp.evaluate_jacobian(out=J)
         denseJ = J.todense()
         self.assertTrue(np.array_equal(denseJ, expected_jac))
 
         H = projected_nlp.evaluate_hessian_lag()
         self.assertEqual(len(H.data), 6)
-        expectedH = np.asarray([[2.0, 1.0, 1.0],[1.0, 2.0, 0.0], [1.0, 0.0, 0.0]])
+        expectedH = np.asarray([[2.0, 1.0, 1.0], [1.0, 2.0, 0.0], [1.0, 0.0, 0.0]])
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
 
         # test the use of "out"
-        H = 0.0*H
+        H = 0.0 * H
         projected_nlp.evaluate_hessian_lag(out=H)
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
@@ -125,33 +144,46 @@ class TestProjectedNLP(unittest.TestCase):
         projected_nlp = ProjectedNLP(nlp, ['x[0]', 'x[2]', 'y', 'x[1]'])
         expected_names = ['x[0]', 'x[2]', 'y', 'x[1]']
         self.assertEqual(projected_nlp.primals_names(), expected_names)
-        np.testing.assert_equal(projected_nlp.get_primals(),np.asarray([1.0, 4.0, np.nan, 2.0]))
-        
-        self.assertTrue(np.array_equal(projected_nlp.evaluate_grad_objective(),
-                                       np.asarray([8.0, 9.0, 0.0, 1.0])))
+        np.testing.assert_equal(
+            projected_nlp.get_primals(), np.asarray([1.0, 4.0, np.nan, 2.0])
+        )
+
+        self.assertTrue(
+            np.array_equal(
+                projected_nlp.evaluate_grad_objective(),
+                np.asarray([8.0, 9.0, 0.0, 1.0]),
+            )
+        )
         self.assertEqual(projected_nlp.nnz_jacobian(), 5)
         self.assertEqual(projected_nlp.nnz_hessian_lag(), 6)
 
         J = projected_nlp.evaluate_jacobian()
         self.assertEqual(len(J.data), 5)
         denseJ = J.todense()
-        expected_jac = np.asarray([[6.0, 1.0, 0.0, 1.0],[1.0, 1.0, 0.0, 0.0]])
+        expected_jac = np.asarray([[6.0, 1.0, 0.0, 1.0], [1.0, 1.0, 0.0, 0.0]])
         self.assertTrue(np.array_equal(denseJ, expected_jac))
 
         # test the use of "out"
-        J = 0.0*J
+        J = 0.0 * J
         projected_nlp.evaluate_jacobian(out=J)
         denseJ = J.todense()
         self.assertTrue(np.array_equal(denseJ, expected_jac))
 
         H = projected_nlp.evaluate_hessian_lag()
         self.assertEqual(len(H.data), 6)
-        expectedH = np.asarray([[2.0, 1.0, 0.0, 1.0],[1.0, 2.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]])
+        expectedH = np.asarray(
+            [
+                [2.0, 1.0, 0.0, 1.0],
+                [1.0, 2.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+            ]
+        )
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
 
         # test the use of "out"
-        H = 0.0*H
+        H = 0.0 * H
         projected_nlp.evaluate_hessian_lag(out=H)
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
@@ -160,52 +192,54 @@ class TestProjectedNLP(unittest.TestCase):
         projected_nlp = ProjectedNLP(nlp, ['x[0]', 'x[2]'])
         expected_names = ['x[0]', 'x[2]']
         self.assertEqual(projected_nlp.primals_names(), expected_names)
-        np.testing.assert_equal(projected_nlp.get_primals(),np.asarray([1.0, 4.0]))
-        
-        self.assertTrue(np.array_equal(projected_nlp.evaluate_grad_objective(),
-                                       np.asarray([8.0, 9.0])))
+        np.testing.assert_equal(projected_nlp.get_primals(), np.asarray([1.0, 4.0]))
+
+        self.assertTrue(
+            np.array_equal(
+                projected_nlp.evaluate_grad_objective(), np.asarray([8.0, 9.0])
+            )
+        )
         self.assertEqual(projected_nlp.nnz_jacobian(), 4)
         self.assertEqual(projected_nlp.nnz_hessian_lag(), 4)
 
         J = projected_nlp.evaluate_jacobian()
         self.assertEqual(len(J.data), 4)
         denseJ = J.todense()
-        expected_jac = np.asarray([[6.0, 1.0],[1.0, 1.0]])
+        expected_jac = np.asarray([[6.0, 1.0], [1.0, 1.0]])
         self.assertTrue(np.array_equal(denseJ, expected_jac))
 
         # test the use of "out"
-        J = 0.0*J
+        J = 0.0 * J
         projected_nlp.evaluate_jacobian(out=J)
         denseJ = J.todense()
         self.assertTrue(np.array_equal(denseJ, expected_jac))
 
         H = projected_nlp.evaluate_hessian_lag()
         self.assertEqual(len(H.data), 4)
-        expectedH = np.asarray([[2.0, 1.0],[1.0, 2.0]])
+        expectedH = np.asarray([[2.0, 1.0], [1.0, 2.0]])
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
 
         # test the use of "out"
-        H = 0.0*H
+        H = 0.0 * H
         projected_nlp.evaluate_hessian_lag(out=H)
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
 
 
 class TestProjectedExtendedNLP(unittest.TestCase):
-
     def _make_model_with_inequalities(self):
         m = pyo.ConcreteModel()
         m.I = pyo.Set(initialize=range(4))
         m.x = pyo.Var(m.I, initialize=1.1)
         m.obj = pyo.Objective(
-            expr=1*m.x[0] + 2*m.x[1]**2 + 3*m.x[1]*m.x[2] + 4*m.x[3]**3
+            expr=1 * m.x[0] + 2 * m.x[1] ** 2 + 3 * m.x[1] * m.x[2] + 4 * m.x[3] ** 3
         )
         m.eq_con_1 = pyo.Constraint(
-            expr=m.x[0] * (m.x[1]**1.1) * (m.x[2]**1.2) == 3.0
+            expr=m.x[0] * (m.x[1] ** 1.1) * (m.x[2] ** 1.2) == 3.0
         )
-        m.eq_con_2 = pyo.Constraint(expr=m.x[0]**2 + m.x[3]**2 + m.x[1] == 2.0)
-        m.ineq_con_1 = pyo.Constraint(expr=m.x[0] + m.x[3]*m.x[0] <= 4.0)
+        m.eq_con_2 = pyo.Constraint(expr=m.x[0] ** 2 + m.x[3] ** 2 + m.x[1] == 2.0)
+        m.ineq_con_1 = pyo.Constraint(expr=m.x[0] + m.x[3] * m.x[0] <= 4.0)
         m.ineq_con_2 = pyo.Constraint(expr=m.x[1] + m.x[2] >= 1.0)
         m.ineq_con_3 = pyo.Constraint(expr=m.x[2] >= 0)
         return m
@@ -233,14 +267,14 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         indices = nlp.get_constraint_indices(
             [m.eq_con_1, m.eq_con_2, m.ineq_con_1, m.ineq_con_2, m.ineq_con_3]
         )
-        reordered_values = [None]*5
+        reordered_values = [None] * 5
         for i, val in zip(indices, values):
             reordered_values[i] = val
         return reordered_values
 
     def _eq_to_nlp(self, m, nlp, values):
         indices = nlp.get_equality_constraint_indices([m.eq_con_1, m.eq_con_2])
-        reordered_values = [None]*2
+        reordered_values = [None] * 2
         for i, val in zip(indices, values):
             reordered_values[i] = val
         return reordered_values
@@ -249,7 +283,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         indices = nlp.get_inequality_constraint_indices(
             [m.ineq_con_1, m.ineq_con_2, m.ineq_con_3]
         )
-        reordered_values = [None]*3
+        reordered_values = [None] * 3
         for i, val in zip(indices, values):
             reordered_values[i] = val
         return reordered_values
@@ -274,9 +308,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         # Expects variable coords in order [x0, x1], constraint coords
         # in order [eq1, eq2]
         var_indices = [1, 0]
-        con_indices = nlp.get_equality_constraint_indices(
-            [m.eq_con_1, m.eq_con_2]
-        )
+        con_indices = nlp.get_equality_constraint_indices([m.eq_con_1, m.eq_con_2])
         i, j = rc
         return (con_indices[i], var_indices[j])
 
@@ -338,9 +370,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         np.testing.assert_array_equal(proj_nlp.get_duals(), [2, 3, 4, 5, 6])
 
         proj_nlp.set_duals([-1, -2, -3, -4, -5])
-        np.testing.assert_array_equal(
-            proj_nlp.get_duals(), [-1, -2, -3, -4, -5]
-        )
+        np.testing.assert_array_equal(proj_nlp.get_duals(), [-1, -2, -3, -4, -5])
         np.testing.assert_array_equal(nlp.get_duals(), [-1, -2, -3, -4, -5])
 
     def test_eval_constraints(self):
@@ -350,36 +380,23 @@ class TestProjectedExtendedNLP(unittest.TestCase):
 
         con_resids = nlp.evaluate_constraints()
         pred_con_body = [
-            x0*x1**1.1*x2**1.2 - 3.0,
+            x0 * x1**1.1 * x2**1.2 - 3.0,
             x0**2 + x3**2 + x1 - 2.0,
-            x0 + x0*x3,
+            x0 + x0 * x3,
             x1 + x2,
             x2,
         ]
-        np.testing.assert_array_equal(
-            con_resids, self._c_to_nlp(m, nlp, pred_con_body)
-        )
+        np.testing.assert_array_equal(con_resids, self._c_to_nlp(m, nlp, pred_con_body))
 
         con_resids = proj_nlp.evaluate_constraints()
-        np.testing.assert_array_equal(
-            con_resids, self._c_to_nlp(m, nlp, pred_con_body)
-        )
+        np.testing.assert_array_equal(con_resids, self._c_to_nlp(m, nlp, pred_con_body))
 
         eq_resids = proj_nlp.evaluate_eq_constraints()
-        pred_eq_body = [
-            x0*x1**1.1*x2**1.2 - 3.0,
-            x0**2 + x3**2 + x1 - 2.0,
-        ]
-        np.testing.assert_array_equal(
-            eq_resids, self._eq_to_nlp(m, nlp, pred_eq_body)
-        )
+        pred_eq_body = [x0 * x1**1.1 * x2**1.2 - 3.0, x0**2 + x3**2 + x1 - 2.0]
+        np.testing.assert_array_equal(eq_resids, self._eq_to_nlp(m, nlp, pred_eq_body))
 
         ineq_body = proj_nlp.evaluate_ineq_constraints()
-        pred_ineq_body = [
-            x0 + x0*x3,
-            x1 + x2,
-            x2,
-        ]
+        pred_ineq_body = [x0 + x0 * x3, x1 + x2, x2]
         np.testing.assert_array_equal(
             ineq_body, self._ineq_to_nlp(m, nlp, pred_ineq_body)
         )
@@ -392,11 +409,17 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         jac = nlp.evaluate_jacobian()
         # Predicted row/col indices in the "natural ordering" of the model
         pred_rc = [
-            (0, 0), (0, 1), (0, 2), # eq 1
-            (1, 0), (1, 1), (1, 3), # eq 2
-            (2, 0), (2, 3),         # ineq 1
-            (3, 1), (3, 2),         # ineq 2
-            (4, 2),                 # ineq 3
+            (0, 0),
+            (0, 1),
+            (0, 2),  # eq 1
+            (1, 0),
+            (1, 1),
+            (1, 3),  # eq 2
+            (2, 0),
+            (2, 3),  # ineq 1
+            (3, 1),
+            (3, 2),  # ineq 2
+            (4, 2),  # ineq 3
         ]
         pred_data_dict = {
             # eq 1
@@ -404,9 +427,9 @@ class TestProjectedExtendedNLP(unittest.TestCase):
             (0, 1): 1.1 * x0 * (x1**0.1) * x2**1.2,
             (0, 2): 1.2 * x0 * x1**1.1 * x2**0.2,
             # eq 2
-            (1, 0): 2*x0,
+            (1, 0): 2 * x0,
             (1, 1): 1.0,
-            (1, 3): 2*x3,
+            (1, 3): 2 * x3,
             # ineq 1
             (2, 0): 1.0 + x3,
             (2, 3): x0,
@@ -418,8 +441,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         }
         pred_rc_set = set(self._rc_to_nlp(m, nlp, rc) for rc in pred_rc)
         pred_data_dict = {
-            self._rc_to_nlp(m, nlp, rc): val
-            for rc, val in pred_data_dict.items()
+            self._rc_to_nlp(m, nlp, rc): val for rc, val in pred_data_dict.items()
         }
         rc_set = set(zip(jac.row, jac.col))
         self.assertEqual(pred_rc_set, rc_set)
@@ -436,17 +458,19 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (5, 2))
         # Predicted row/col indices. In the "natural ordering" of the model.
         pred_rc = [
-            (0, 0), (0, 1), # eq 1
-            (1, 0), (1, 1), # eq 2
-            (2, 0),         # ineq 1
-            (3, 1),         # ineq 2
+            (0, 0),
+            (0, 1),  # eq 1
+            (1, 0),
+            (1, 1),  # eq 2
+            (2, 0),  # ineq 1
+            (3, 1),  # ineq 2
         ]
         pred_data_dict = {
             # eq 1
             (0, 0): x1**1.1 * x2**1.2,
             (0, 1): 1.1 * x0 * (x1**0.1) * x2**1.2,
             # eq 2
-            (1, 0): 2*x0,
+            (1, 0): 2 * x0,
             (1, 1): 1.0,
             # ineq 1
             (2, 0): 1.0 + x3,
@@ -456,8 +480,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         # Projected NLP has primals: [x1, x0]
         pred_rc_set = set(self._rc_to_proj_nlp(m, nlp, rc) for rc in pred_rc)
         pred_data_dict = {
-            self._rc_to_proj_nlp(m, nlp, rc): val
-            for rc, val in pred_data_dict.items()
+            self._rc_to_proj_nlp(m, nlp, rc): val for rc, val in pred_data_dict.items()
         }
         rc_set = set(zip(jac.row, jac.col))
         self.assertEqual(pred_rc_set, rc_set)
@@ -474,16 +497,13 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (2, 2))
         # Predicted row/col indices. In the "natural ordering" of the equality
         # constraints (eq1, eq2)
-        pred_rc = [
-            (0, 0), (0, 1), # eq 1
-            (1, 0), (1, 1), # eq 2
-        ]
+        pred_rc = [(0, 0), (0, 1), (1, 0), (1, 1)]  # eq 1  # eq 2
         pred_data_dict = {
             # eq 1
             (0, 0): x1**1.1 * x2**1.2,
             (0, 1): 1.1 * x0 * (x1**0.1) * x2**1.2,
             # eq 2
-            (1, 0): 2*x0,
+            (1, 0): 2 * x0,
             (1, 1): 1.0,
         }
         # Projected NLP has primals: [x1, x0]
@@ -507,10 +527,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (3, 2))
         # Predicted row/col indices. In the "natural ordering" of the inequality
         # constraints (ineq1, ineq2, ineq3)
-        pred_rc = [
-            (0, 0),         # ineq 1
-            (1, 1),         # ineq 2
-        ]
+        pred_rc = [(0, 0), (1, 1)]  # ineq 1  # ineq 2
         pred_data_dict = {
             # ineq 1
             (0, 0): 1.0 + x3,
@@ -518,9 +535,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
             (1, 1): 1.0,
         }
         # Projected NLP has primals: [x1, x0]
-        pred_rc_set = set(
-            self._rc_to_proj_nlp_ineq(m, nlp, rc) for rc in pred_rc
-        )
+        pred_rc_set = set(self._rc_to_proj_nlp_ineq(m, nlp, rc) for rc in pred_rc)
         pred_data_dict = {
             self._rc_to_proj_nlp_ineq(m, nlp, rc): val
             for rc, val in pred_data_dict.items()
@@ -541,16 +556,13 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (2, 2))
         # Predicted row/col indices. In the "natural ordering" of the equality
         # constraints (eq1, eq2)
-        pred_rc = [
-            (0, 0), (0, 1), # eq 1
-            (1, 0), (1, 1), # eq 2
-        ]
+        pred_rc = [(0, 0), (0, 1), (1, 0), (1, 1)]  # eq 1  # eq 2
         pred_data_dict = {
             # eq 1
             (0, 0): x1**1.1 * x2**1.2,
             (0, 1): 1.1 * x0 * (x1**0.1) * x2**1.2,
             # eq 2
-            (1, 0): 2*x0,
+            (1, 0): 2 * x0,
             (1, 1): 1.0,
         }
         # Projected NLP has primals: [x1, x0]
@@ -575,10 +587,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (3, 2))
         # Predicted row/col indices. In the "natural ordering" of the inequality
         # constraints (ineq1, ineq2, ineq3)
-        pred_rc = [
-            (0, 0),         # ineq 1
-            (1, 1),         # ineq 2
-        ]
+        pred_rc = [(0, 0), (1, 1)]  # ineq 1  # ineq 2
         pred_data_dict = {
             # ineq 1
             (0, 0): 1.0 + x3,
@@ -586,9 +595,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
             (1, 1): 1.0,
         }
         # Projected NLP has primals: [x1, x0]
-        pred_rc_set = set(
-            self._rc_to_proj_nlp_ineq(m, nlp, rc) for rc in pred_rc
-        )
+        pred_rc_set = set(self._rc_to_proj_nlp_ineq(m, nlp, rc) for rc in pred_rc)
         pred_data_dict = {
             self._rc_to_proj_nlp_ineq(m, nlp, rc): val
             for rc, val in pred_data_dict.items()

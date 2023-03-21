@@ -30,13 +30,9 @@ from pyomo.common.dependencies.scipy import sparse as sps
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 if not AmplInterface.available():
-    raise unittest.SkipTest(
-        "Pynumero needs the ASL extension to run cyipopt tests"
-    )
+    raise unittest.SkipTest("Pynumero needs the ASL extension to run cyipopt tests")
 
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    cyipopt_available,
-)
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import cyipopt_available
 from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
     CyIpoptSolverWrapper,
     ImplicitFunctionSolver,
@@ -96,9 +92,7 @@ def _add_linking_constraints(m):
         elif i == 2:
             return m.r == m.ex_block.inputs["input_2"]
 
-    m.linking_constraint = pyo.Constraint(
-        range(n_inputs), rule=linking_constraint_rule
-    )
+    m.linking_constraint = pyo.Constraint(range(n_inputs), rule=linking_constraint_rule)
 
 
 def _add_nonlinear_linking_constraints(m):
@@ -119,9 +113,7 @@ def _add_nonlinear_linking_constraints(m):
         elif i == 2:
             return m.r**2 - 0.5 * m.ex_block.inputs["input_2"] ** 2 == 0
 
-    m.linking_constraint = pyo.Constraint(
-        range(n_inputs), rule=linking_constraint_rule
-    )
+    m.linking_constraint = pyo.Constraint(range(n_inputs), rule=linking_constraint_rule)
 
 
 def make_dynamic_model():
@@ -175,10 +167,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
         external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
+            input_vars, external_vars, residual_cons, external_cons
         )
         block.set_external_model(ex_model)
 
@@ -196,10 +185,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
         external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
+            input_vars, external_vars, residual_cons, external_cons
         )
 
         for i in block:
@@ -221,10 +207,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
         external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
+            input_vars, external_vars, residual_cons, external_cons
         )
         block.set_external_model(ex_model)
 
@@ -266,10 +249,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
         external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
+            input_vars, external_vars, residual_cons, external_cons
         )
         block.set_external_model(ex_model)
 
@@ -473,8 +453,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
 
         reduced_space = pyo.Block(concrete=True)
         reduced_space.external_block = ExternalGreyBoxBlock(
-            time,
-            external_model=external_model_dict,
+            time, external_model=external_model_dict
         )
         block = reduced_space.external_block
         block[t0].deactivate()
@@ -555,10 +534,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                 residual_cons = [m.h_diff_eqn[t]]
                 external_cons = [m.flow_out_eqn[t]]
                 external_model = ExternalPyomoModel(
-                    input_vars,
-                    external_vars,
-                    residual_cons,
-                    external_cons,
+                    input_vars, external_vars, residual_cons, external_cons
                 )
                 block[t].set_external_model(external_model)
 
@@ -573,9 +549,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                 return m.deriv_var[t] == m.external_block[t].inputs["input_1"]
 
         reduced_space.linking_constraint = pyo.Constraint(
-            range(n_inputs),
-            time,
-            rule=linking_constraint_rule,
+            range(n_inputs), time, rule=linking_constraint_rule
         )
         # Initialize new variables
         for t in time:
@@ -609,9 +583,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         m.h[t0].fix(1.2)
         m.flow_in[t0].fix(1.5)
 
-        m.obj = pyo.Objective(
-            expr=sum((m.h[t] - 2.0) ** 2 for t in m.time if t != t0)
-        )
+        m.obj = pyo.Objective(expr=sum((m.h[t] - 2.0) ** 2 for t in m.time if t != t0))
 
         # Create the block that will hold the reduced space model.
         reduced_space = pyo.Block(concrete=True)
@@ -632,10 +604,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                 residual_cons = [m.h_diff_eqn[t]]
                 external_cons = [m.flow_out_eqn[t]]
                 external_model = ExternalPyomoModel(
-                    input_vars,
-                    external_vars,
-                    residual_cons,
-                    external_cons,
+                    input_vars, external_vars, residual_cons, external_cons
                 )
                 block[t].set_external_model(external_model)
 
@@ -652,9 +621,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                 return m.input_var[t] == m.external_block[t].inputs["input_2"]
 
         reduced_space.linking_constraint = pyo.Constraint(
-            range(n_inputs),
-            time,
-            rule=linking_constraint_rule,
+            range(n_inputs), time, rule=linking_constraint_rule
         )
         # Initialize new variables
         for t in time:
@@ -702,9 +669,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         m.h[t0].fix(1.2)
         m.flow_in[t0].fix(1.5)
 
-        m.obj = pyo.Objective(
-            expr=sum((m.h[t] - 2.0) ** 2 for t in m.time if t != t0)
-        )
+        m.obj = pyo.Objective(expr=sum((m.h[t] - 2.0) ** 2 for t in m.time if t != t0))
 
         # Create the block that will hold the reduced space model.
         reduced_space = pyo.Block(concrete=True)
@@ -725,10 +690,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                 residual_cons = [m.h_diff_eqn[t]]
                 external_cons = [m.flow_out_eqn[t]]
                 external_model = ExternalPyomoModel(
-                    input_vars,
-                    external_vars,
-                    residual_cons,
-                    external_cons,
+                    input_vars, external_vars, residual_cons, external_cons
                 )
                 block[t].set_external_model(external_model, inputs=input_vars)
 
@@ -771,10 +733,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
         external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
+            input_vars, external_vars, residual_cons, external_cons
         )
         block.set_external_model(ex_model)
 
@@ -845,9 +804,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 6.0 - 3.583839997,
             ]
         )
-        np.testing.assert_allclose(
-            residuals, nlp.evaluate_constraints(), rtol=1e-8
-        )
+        np.testing.assert_allclose(residuals, nlp.evaluate_constraints(), rtol=1e-8)
 
         duals = np.array([1, 2, 3, 4, 5])
         nlp.set_duals(duals)
@@ -866,10 +823,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
         external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
+            input_vars, external_vars, residual_cons, external_cons
         )
         block.set_external_model(ex_model)
 
@@ -913,42 +867,8 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         #     "ex_block.inputs[input_4]",
         #     "r",
         # ]
-        row = [
-            0,
-            0,
-            1,
-            1,
-            2,
-            2,
-            3,
-            3,
-            3,
-            3,
-            3,
-            4,
-            4,
-            4,
-            4,
-            4,
-        ]
-        col = [
-            0,
-            2,
-            1,
-            3,
-            7,
-            4,
-            2,
-            3,
-            4,
-            5,
-            6,
-            2,
-            3,
-            4,
-            5,
-            6,
-        ]
+        row = [0, 0, 1, 1, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4]
+        col = [0, 2, 1, 3, 7, 4, 2, 3, 4, 5, 6, 2, 3, 4, 5, 6]
         data = [
             1,
             -1,
@@ -985,10 +905,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
         external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
+            input_vars, external_vars, residual_cons, external_cons
         )
         block.set_external_model(ex_model)
 
@@ -1080,10 +997,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
         external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
-            input_vars,
-            external_vars,
-            residual_cons,
-            external_cons,
+            input_vars, external_vars, residual_cons, external_cons
         )
         block.set_external_model(ex_model)
 
@@ -1197,11 +1111,7 @@ class TestExternalGreyBoxBlockWithReferences(unittest.TestCase):
         # This is "model 3" from the external_grey_box_models.py file.
         ex_model = PressureDropTwoOutputsWithHessian()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_model,
-            inputs=inputs,
-            outputs=outputs,
-        )
+        m.egb.set_external_model(ex_model, inputs=inputs, outputs=outputs)
         return m
 
     def test_pressure_drop_model(self):
@@ -1268,9 +1178,7 @@ class TestExternalGreyBoxBlockWithReferences(unittest.TestCase):
             name = var.name
             var_idx_map[var] = nlp_vars.index(name)
 
-        incident_vars = {
-            con.name: list(identify_variables(con.expr)) for con in cons
-        }
+        incident_vars = {con.name: list(identify_variables(con.expr)) for con in cons}
         incident_vars["egb.output_constraints[P2]"] = inputs + [outputs[0]]
         incident_vars["egb.output_constraints[Pout]"] = inputs + [outputs[1]]
 

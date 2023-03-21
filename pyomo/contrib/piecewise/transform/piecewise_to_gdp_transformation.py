@@ -14,10 +14,24 @@ from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
 from pyomo.contrib.piecewise.transform.piecewise_to_mip_visitor import (
-    PiecewiseLinearToMIP)
+    PiecewiseLinearToMIP,
+)
 from pyomo.core import (
-    Constraint, Objective, Var, BooleanVar, Expression, Suffix, Param, Set,
-    SetOf, RangeSet, ExternalFunction, Connector, SortComponents, Any)
+    Constraint,
+    Objective,
+    Var,
+    BooleanVar,
+    Expression,
+    Suffix,
+    Param,
+    Set,
+    SetOf,
+    RangeSet,
+    ExternalFunction,
+    Connector,
+    SortComponents,
+    Any,
+)
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.util import target_list
@@ -25,30 +39,37 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import is_child_of
 from pyomo.network import Port
 
+
 class PiecewiseLinearToGDP(Transformation):
     """
     Base class for transformations of piecewise-linear models to GDPs
     """
+
     CONFIG = ConfigDict('contrib.piecewise_to_gdp')
-    CONFIG.declare('targets', ConfigValue(
-        default=None,
-        domain=target_list,
-        description="target or list of targets that will be transformed",
-        doc="""
+    CONFIG.declare(
+        'targets',
+        ConfigValue(
+            default=None,
+            domain=target_list,
+            description="target or list of targets that will be transformed",
+            doc="""
         This specifies the list of components to transform. If None (default),
         the entire model is transformed. Note that if the transformation is
         done out of place, the list of targets should be attached to the model
         before it is cloned, and the list will specify the targets on the cloned
-        instance."""
-    ))
-    CONFIG.declare('descend_into_expressions', ConfigValue(
-        default=False,
-        domain=bool,
-        description="Whether to look for uses of PiecewiseLinearFunctions in "
-        "the Constraint and Objective expressions, rather than assuming "
-        "all PiecewiseLinearFunctions are on the active tree(s) of 'instance' "
-        "and 'targets.'",
-        doc="""
+        instance.""",
+        ),
+    )
+    CONFIG.declare(
+        'descend_into_expressions',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="Whether to look for uses of PiecewiseLinearFunctions in "
+            "the Constraint and Objective expressions, rather than assuming "
+            "all PiecewiseLinearFunctions are on the active tree(s) of 'instance' "
+            "and 'targets.'",
+            doc="""
         It is *strongly* recommended that, in hierarchical models, the
         PiecewiseLinearFunction components are on the same Block as where
         they are used in expressions. If you follow this recommendation,
@@ -57,28 +78,29 @@ class PiecewiseLinearToGDP(Transformation):
         unless you know what you are doing, turn this option to 'True' to
         ensure that all of the uses of PiecewiseLinearFunctions are
         transformed.
-        """
-    ))
+        """,
+        ),
+    )
 
     def __init__(self):
         super().__init__()
         self.handlers = {
             Constraint: self._transform_constraint,
             Objective: self._transform_objective,
-            Var:         False,
-            BooleanVar:  False,
-            Connector:   False,
-            Expression:  False,
-            Suffix:      False,
-            Param:       False,
-            Set:         False,
-            SetOf:       False,
-            RangeSet:    False,
+            Var: False,
+            BooleanVar: False,
+            Connector: False,
+            Expression: False,
+            Suffix: False,
+            Param: False,
+            Set: False,
+            SetOf: False,
+            RangeSet: False,
             Disjunction: False,
-            Disjunct:    False,
-            Block:       self._transform_block,
+            Disjunct: False,
+            Block: self._transform_block,
             ExternalFunction: False,
-            Port:        False,
+            Port: False,
             PiecewiseLinearFunction: self._transform_piecewise_linear_function,
         }
         self._transformation_blocks = {}
@@ -95,7 +117,7 @@ class PiecewiseLinearToGDP(Transformation):
 
         targets = config.targets
         if targets is None:
-            targets = (instance, )
+            targets = (instance,)
 
         knownBlocks = {}
         not_walking_exprs_msg = (
@@ -104,12 +126,14 @@ class PiecewiseLinearToGDP(Transformation):
             "PiecewiseLinearFunction component and the Blocks "
             "containing them, or (at the cost of some performance "
             "in this transformation), set the 'descend_into_expressions' "
-            "option to 'True'.")
+            "option to 'True'."
+        )
         for t in targets:
-            if not is_child_of(parent=instance, child=t,
-                               knownBlocks=knownBlocks):
-                raise ValueError("Target '%s' is not a component on instance "
-                                 "'%s'!" % (t.name, instance.name))
+            if not is_child_of(parent=instance, child=t, knownBlocks=knownBlocks):
+                raise ValueError(
+                    "Target '%s' is not a component on instance "
+                    "'%s'!" % (t.name, instance.name)
+                )
             if t.ctype is PiecewiseLinearFunction:
                 if config.descend_into_expressions:
                     raise ValueError(
@@ -118,36 +142,41 @@ class PiecewiseLinearToGDP(Transformation):
                         "targets. Please instead specify the Blocks, "
                         "Constraints, and Objectives where your "
                         "PiecewiseLinearFunctions have been used in "
-                        "expressions.")
+                        "expressions."
+                    )
                 self._transform_piecewise_linear_function(
-                    t, config.descend_into_expressions)
+                    t, config.descend_into_expressions
+                )
             elif t.ctype is Block or isinstance(t, _BlockData):
                 self._transform_block(t, config.descend_into_expressions)
             elif t.ctype is Constraint:
                 if not config.descend_into_expressions:
                     raise ValueError(
                         "Encountered Constraint target '%s':\n%s"
-                        % (t.name, not_walking_exprs_msg))
+                        % (t.name, not_walking_exprs_msg)
+                    )
                 self._transform_constraint(t, config.descend_into_expressions)
             elif t.ctype is Objective:
                 if not config.descend_into_expressions:
                     raise ValueError(
                         "Encountered Objective target '%s':\n%s"
-                        % (t.name, not_walking_exprs_msg))
+                        % (t.name, not_walking_exprs_msg)
+                    )
                 self._transform_objective(t, config.descend_into_expressions)
             else:
                 raise ValueError(
                     "Target '%s' is not a PiecewiseLinearFunction, Block or "
                     "Constraint. It was of type '%s' and can't be transformed."
-                    % (t.name, type(t)))
+                    % (t.name, type(t))
+                )
 
     def _get_transformation_block(self, parent):
         if parent in self._transformation_blocks:
             return self._transformation_blocks[parent]
 
         nm = unique_component_name(
-            parent,
-            '_pyomo_contrib_%s' % self._transformation_name)
+            parent, '_pyomo_contrib_%s' % self._transformation_name
+        )
         self._transformation_blocks[parent] = transBlock = Block()
         parent.add_component(nm, transBlock)
 
@@ -158,32 +187,37 @@ class PiecewiseLinearToGDP(Transformation):
         blocks = block.values() if block.is_indexed() else (block,)
         for b in blocks:
             for obj in b.component_objects(
-                    active=True,
-                    descend_into=(Block, Disjunct),
-                    sort=SortComponents.deterministic):
+                active=True,
+                descend_into=(Block, Disjunct),
+                sort=SortComponents.deterministic,
+            ):
                 handler = self.handlers.get(obj.ctype, None)
                 if not handler:
                     if handler is None:
                         raise RuntimeError(
                             "No transformation handler registered for modeling "
-                            "components of type '%s'." % obj.ctype)
+                            "components of type '%s'." % obj.ctype
+                        )
                     continue
                 handler(obj, descend_into_expressions)
 
-    def _transform_piecewise_linear_function(self, pw_linear_func,
-                                             descend_into_expressions):
+    def _transform_piecewise_linear_function(
+        self, pw_linear_func, descend_into_expressions
+    ):
         if descend_into_expressions:
             return
 
-        transBlock = self._get_transformation_block(
-            pw_linear_func.parent_block())
-        _functions = pw_linear_func.values() if pw_linear_func.is_indexed() \
-                     else (pw_linear_func,)
+        transBlock = self._get_transformation_block(pw_linear_func.parent_block())
+        _functions = (
+            pw_linear_func.values()
+            if pw_linear_func.is_indexed()
+            else (pw_linear_func,)
+        )
         for pw_func in _functions:
             for pw_expr in pw_func._expressions.values():
-                substitute_var = self._transform_pw_linear_expr(pw_expr.expr,
-                                                                pw_func,
-                                                                transBlock)
+                substitute_var = self._transform_pw_linear_expr(
+                    pw_expr.expr, pw_func, transBlock
+                )
                 # We change the named expression to point to the variable that
                 # will take the appropriate value of the piecewise linear
                 # function.
@@ -194,11 +228,9 @@ class PiecewiseLinearToGDP(Transformation):
             return
 
         transBlock = self._get_transformation_block(constraint.parent_block())
-        visitor = PiecewiseLinearToMIP(self._transform_pw_linear_expr,
-                                       transBlock)
+        visitor = PiecewiseLinearToMIP(self._transform_pw_linear_expr, transBlock)
 
-        _constraints = constraint.values() if constraint.is_indexed() else \
-                       (constraint,)
+        _constraints = constraint.values() if constraint.is_indexed() else (constraint,)
         for c in _constraints:
             visitor.walk_expression((c.expr, c, 0))
 
@@ -207,15 +239,13 @@ class PiecewiseLinearToGDP(Transformation):
             return
 
         transBlock = self._get_transformation_block(objective.parent_block())
-        visitor = PiecewiseLinearToMIP(self._transform_pw_linear_expr,
-                                       transBlock)
+        visitor = PiecewiseLinearToMIP(self._transform_pw_linear_expr, transBlock)
 
-        _objectives = objective.values() if objective.is_indexed() else \
-                      (objective,)
+        _objectives = objective.values() if objective.is_indexed() else (objective,)
         for o in _objectives:
             visitor.walk_expression((o.expr, o, 0))
 
-    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func,
-                                  transformation_block):
-        raise DeveloperError("Derived class failed to implement "
-                             "'_transform_pw_linear_expr'")
+    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
+        raise DeveloperError(
+            "Derived class failed to implement '_transform_pw_linear_expr'"
+        )

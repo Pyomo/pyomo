@@ -13,20 +13,31 @@
 from pyomo.core import Constraint, Expression, Objective, minimize, value, maximize
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
-from pyomo.contrib.gdpopt.util import copy_var_list_values, _DoNothing, get_main_elapsed_time, time_code
-from pyomo.contrib.gdpopt.solve_discrete_problem import distinguish_mip_infeasible_or_unbounded
+from pyomo.contrib.gdpopt.util import (
+    copy_var_list_values,
+    _DoNothing,
+    get_main_elapsed_time,
+    time_code,
+)
+from pyomo.contrib.gdpopt.solve_discrete_problem import (
+    distinguish_mip_infeasible_or_unbounded,
+)
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import (generate_norm1_objective_function, generate_norm2sq_objective_function,
-                                        generate_norm_inf_objective_function, generate_lag_objective_function,
-                                        set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, 
-                                        update_suboptimal_dual_bound)
+from pyomo.contrib.mindtpy.util import (
+    generate_norm1_objective_function,
+    generate_norm2sq_objective_function,
+    generate_norm_inf_objective_function,
+    generate_lag_objective_function,
+    set_solver_options,
+    GurobiPersistent4MindtPy,
+    update_dual_bound,
+    update_suboptimal_dual_bound,
+)
 
 
-single_tree, single_tree_available = attempt_import(
-    'pyomo.contrib.mindtpy.single_tree')
-tabu_list, tabu_list_available = attempt_import(
-    'pyomo.contrib.mindtpy.tabu_list')
+single_tree, single_tree_available = attempt_import('pyomo.contrib.mindtpy.single_tree')
+tabu_list, tabu_list_available = attempt_import('pyomo.contrib.mindtpy.tabu_list')
 
 
 def solve_main(solve_data, config, fp=False, regularization_problem=False):
@@ -58,16 +69,33 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
     mainopt = set_up_mip_solver(solve_data, config, regularization_problem)
 
     mip_args = dict(config.mip_solver_args)
-    if config.mip_solver in {'cplex', 'cplex_persistent', 'gurobi', 'gurobi_persistent'}:
+    if config.mip_solver in {
+        'cplex',
+        'cplex_persistent',
+        'gurobi',
+        'gurobi_persistent',
+    }:
         mip_args['warmstart'] = True
-    set_solver_options(mainopt, solve_data.timing, config,
-                       solver_type='mip', regularization=regularization_problem)
+    set_solver_options(
+        mainopt,
+        solve_data.timing,
+        config,
+        solver_type='mip',
+        regularization=regularization_problem,
+    )
     try:
-        with time_code(solve_data.timing, 'regularization main' if regularization_problem else ('fp main' if fp else 'main')):
-            main_mip_results = mainopt.solve(solve_data.mip,
-                                            tee=config.mip_solver_tee, 
-                                            load_solutions=False,
-                                            **mip_args)
+        with time_code(
+            solve_data.timing,
+            'regularization main'
+            if regularization_problem
+            else ('fp main' if fp else 'main'),
+        ):
+            main_mip_results = mainopt.solve(
+                solve_data.mip,
+                tee=config.mip_solver_tee,
+                load_solutions=False,
+                **mip_args,
+            )
             if len(main_mip_results.solution) > 0:
                 solve_data.mip.solutions.load_from(main_mip_results)
     except (ValueError, AttributeError):
@@ -77,29 +105,45 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
                 config.logger.warning('due to the timelimit.')
                 solve_data.results.solver.termination_condition = tc.maxTimeLimit
             if config.strategy == 'GOA' or config.add_no_good_cuts:
-                config.logger.warning('ValueError: Cannot load a SolverResults object with bad status: error. '
-                                      'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
-                                      "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
-                                      'No integer solution is found, so the cplex solver will report an error status. ')
+                config.logger.warning(
+                    'ValueError: Cannot load a SolverResults object with bad status: error. '
+                    'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
+                    "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
+                    'No integer solution is found, so the cplex solver will report an error status. '
+                )
         return None, None
     if config.solution_pool:
         main_mip_results._solver_model = mainopt._solver_model
-        main_mip_results._pyomo_var_to_solver_var_map = mainopt._pyomo_var_to_solver_var_map
+        main_mip_results._pyomo_var_to_solver_var_map = (
+            mainopt._pyomo_var_to_solver_var_map
+        )
     if main_mip_results.solver.termination_condition is tc.optimal:
-        if config.single_tree and not config.add_no_good_cuts and not regularization_problem:
+        if (
+            config.single_tree
+            and not config.add_no_good_cuts
+            and not regularization_problem
+        ):
             update_suboptimal_dual_bound(solve_data, main_mip_results)
         if regularization_problem:
-            config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'Reg '+solve_data.regularization_mip_type,
-                                                               value(solve_data.mip.MindtPy_utils.roa_proj_mip_obj),
-                                                               solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
-                                                               get_main_elapsed_time(solve_data.timing)))
+            config.logger.info(
+                solve_data.log_formatter.format(
+                    solve_data.mip_iter,
+                    'Reg ' + solve_data.regularization_mip_type,
+                    value(solve_data.mip.MindtPy_utils.roa_proj_mip_obj),
+                    solve_data.primal_bound,
+                    solve_data.dual_bound,
+                    solve_data.rel_gap,
+                    get_main_elapsed_time(solve_data.timing),
+                )
+            )
 
     elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
         main_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
-            solve_data.mip, config)
+            solve_data.mip, config
+        )
         return solve_data.mip, main_mip_results
 
     if regularization_problem:
@@ -109,8 +153,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         if config.add_regularization == 'level_L1':
             solve_data.mip.MindtPy_utils.del_component('L1_obj')
         elif config.add_regularization == 'level_L_infinity':
-            solve_data.mip.MindtPy_utils.del_component(
-                'L_infinity_obj')
+            solve_data.mip.MindtPy_utils.del_component('L_infinity_obj')
 
     return solve_data.mip, main_mip_results
 
@@ -153,7 +196,8 @@ def set_up_mip_solver(solve_data, config, regularization_problem):
         # Configuration of cplex lazy callback
         if config.mip_solver == 'cplex_persistent':
             lazyoa = mainopt._solver_model.register_callback(
-                single_tree.LazyOACallback_cplex)
+                single_tree.LazyOACallback_cplex
+            )
             # pass necessary data and parameters to lazyoa
             lazyoa.main_mip = solve_data.mip
             lazyoa.solve_data = solve_data
@@ -166,7 +210,8 @@ def set_up_mip_solver(solve_data, config, regularization_problem):
             mainopt.set_callback(single_tree.LazyOACallback_gurobi)
     if config.use_tabu_list:
         tabulist = mainopt._solver_model.register_callback(
-            tabu_list.IncumbentCallback_cplex)
+            tabu_list.IncumbentCallback_cplex
+        )
         tabulist.solve_data = solve_data
         tabulist.opt = mainopt
         tabulist.config = config
@@ -185,7 +230,7 @@ def set_up_mip_solver(solve_data, config, regularization_problem):
 
 def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
     """This function copies the results from 'solve_main' to the working model and updates
-    the upper/lower bound. This function is called after an optimal solution is found for 
+    the upper/lower bound. This function is called after an optimal solution is found for
     the main problem.
 
     Parameters
@@ -207,19 +252,30 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
         if var.value is None:
             config.logger.warning(
                 f"Integer variable {var.name} not initialized.  "
-                "Setting it to its lower bound")
+                "Setting it to its lower bound"
+            )
             var.set_value(var.lb, skip_validation=True)  # nlp_var.bounds[0]
     # warm start for the nlp subproblem
     copy_var_list_values(
         main_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
-        config)
+        config,
+    )
 
     if update_bound:
         update_dual_bound(solve_data, value(MindtPy.mip_obj.expr))
-        config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
-                                                           solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
-                                                           get_main_elapsed_time(solve_data.timing)))
+        config.logger.info(
+            solve_data.log_formatter.format(
+                solve_data.mip_iter,
+                'MILP',
+                value(MindtPy.mip_obj.expr),
+                solve_data.primal_bound,
+                solve_data.dual_bound,
+                solve_data.rel_gap,
+                get_main_elapsed_time(solve_data.timing),
+            )
+        )
+
 
 def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config):
     """Handles the result of the regularization main problem.
@@ -243,38 +299,45 @@ def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config
     if main_mip_results is None:
         config.logger.info(
             'Failed to solve the regularization problem.'
-            'The solution of the OA main problem will be adopted.')
+            'The solution of the OA main problem will be adopted.'
+        )
     elif main_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
-        handle_main_optimal(
-            main_mip, solve_data, config, update_bound=False)
+        handle_main_optimal(main_mip, solve_data, config, update_bound=False)
     elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
         config.logger.info(
-            'Regularization problem failed to converge within the time limit.')
+            'Regularization problem failed to converge within the time limit.'
+        )
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
         # break
     elif main_mip_results.solver.termination_condition is tc.infeasible:
-        config.logger.info(
-            'Regularization problem infeasible.')
+        config.logger.info('Regularization problem infeasible.')
     elif main_mip_results.solver.termination_condition is tc.unbounded:
         config.logger.info(
             'Regularization problem ubounded.'
-            'Sometimes solving MIQP in cplex, unbounded means infeasible.')
+            'Sometimes solving MIQP in cplex, unbounded means infeasible.'
+        )
     elif main_mip_results.solver.termination_condition is tc.unknown:
         config.logger.info(
-            'Termination condition of the regularization problem is unknown.')
+            'Termination condition of the regularization problem is unknown.'
+        )
         if main_mip_results.problem.lower_bound != float('-inf'):
             config.logger.info('Solution limit has been reached.')
-            handle_main_optimal(
-                main_mip, solve_data, config, update_bound=False)
+            handle_main_optimal(main_mip, solve_data, config, update_bound=False)
         else:
-            config.logger.info('No solution obtained from the regularization subproblem.'
-                               'Please set mip_solver_tee to True for more informations.'
-                               'The solution of the OA main problem will be adopted.')
+            config.logger.info(
+                'No solution obtained from the regularization subproblem.'
+                'Please set mip_solver_tee to True for more informations.'
+                'The solution of the OA main problem will be adopted.'
+            )
     else:
         raise ValueError(
             'MindtPy unable to handle regularization problem termination condition '
-            'of %s. Solver message: %s' %
-            (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
+            'of %s. Solver message: %s'
+            % (
+                main_mip_results.solver.termination_condition,
+                main_mip_results.solver.message,
+            )
+        )
 
 
 def setup_main(solve_data, config, fp, regularization_problem):
@@ -294,12 +357,15 @@ def setup_main(solve_data, config, fp, regularization_problem):
     MindtPy = solve_data.mip.MindtPy_utils
 
     for c in MindtPy.constraint_list:
-        if c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree:
+        if (
+            c.body.polynomial_degree()
+            not in solve_data.mip_constraint_polynomial_degree
+        ):
             c.deactivate()
 
     MindtPy.cuts.activate()
 
-    sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
+    sign_adjust = 1 if solve_data.objective_sense == minimize else -1
     MindtPy.del_component('mip_obj')
     if regularization_problem and config.single_tree:
         MindtPy.del_component('roa_proj_mip_obj')
@@ -316,59 +382,81 @@ def setup_main(solve_data, config, fp, regularization_problem):
             MindtPy.fp_mip_obj = generate_norm1_objective_function(
                 solve_data.mip,
                 solve_data.working_model,
-                discrete_only=config.fp_discrete_only)
+                discrete_only=config.fp_discrete_only,
+            )
         elif config.fp_main_norm == 'L2':
             MindtPy.fp_mip_obj = generate_norm2sq_objective_function(
                 solve_data.mip,
                 solve_data.working_model,
-                discrete_only=config.fp_discrete_only)
+                discrete_only=config.fp_discrete_only,
+            )
         elif config.fp_main_norm == 'L_infinity':
             MindtPy.fp_mip_obj = generate_norm_inf_objective_function(
                 solve_data.mip,
                 solve_data.working_model,
-                discrete_only=config.fp_discrete_only)
+                discrete_only=config.fp_discrete_only,
+            )
     elif regularization_problem:
         # The epigraph constraint is very "flat" for branching rules.
         # In ROA, if the objective function is linear(or quadratic when quadratic_strategy = 1 or 2), the original objective function is used in the MIP problem.
         # In the MIP projection problem, we need to reactivate the epigraph constraint(objective_constr).
-        if MindtPy.objective_list[0].expr.polynomial_degree() in solve_data.mip_objective_polynomial_degree:
+        if (
+            MindtPy.objective_list[0].expr.polynomial_degree()
+            in solve_data.mip_objective_polynomial_degree
+        ):
             MindtPy.objective_constr.activate()
         if config.add_regularization == 'level_L1':
-            MindtPy.roa_proj_mip_obj = generate_norm1_objective_function(solve_data.mip,
-                                                                         solve_data.best_solution_found,
-                                                                         discrete_only=False)
+            MindtPy.roa_proj_mip_obj = generate_norm1_objective_function(
+                solve_data.mip, solve_data.best_solution_found, discrete_only=False
+            )
         elif config.add_regularization == 'level_L2':
-            MindtPy.roa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
-                                                                           solve_data.best_solution_found,
-                                                                           discrete_only=False)
+            MindtPy.roa_proj_mip_obj = generate_norm2sq_objective_function(
+                solve_data.mip, solve_data.best_solution_found, discrete_only=False
+            )
         elif config.add_regularization == 'level_L_infinity':
-            MindtPy.roa_proj_mip_obj = generate_norm_inf_objective_function(solve_data.mip,
-                                                                            solve_data.best_solution_found,
-                                                                            discrete_only=False)
-        elif config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-            MindtPy.roa_proj_mip_obj = generate_lag_objective_function(solve_data.mip,
-                                                                       solve_data.best_solution_found,
-                                                                       config,
-                                                                       solve_data.timing,
-                                                                       discrete_only=False)
+            MindtPy.roa_proj_mip_obj = generate_norm_inf_objective_function(
+                solve_data.mip, solve_data.best_solution_found, discrete_only=False
+            )
+        elif config.add_regularization in {
+            'grad_lag',
+            'hess_lag',
+            'hess_only_lag',
+            'sqp_lag',
+        }:
+            MindtPy.roa_proj_mip_obj = generate_lag_objective_function(
+                solve_data.mip,
+                solve_data.best_solution_found,
+                config,
+                solve_data.timing,
+                discrete_only=False,
+            )
         if solve_data.objective_sense == minimize:
             MindtPy.cuts.obj_reg_estimate = Constraint(
-                expr=sum(MindtPy.objective_value[:]) <= (1 - config.level_coef) * solve_data.primal_bound + config.level_coef * solve_data.dual_bound)
+                expr=sum(MindtPy.objective_value[:])
+                <= (1 - config.level_coef) * solve_data.primal_bound
+                + config.level_coef * solve_data.dual_bound
+            )
         else:
             MindtPy.cuts.obj_reg_estimate = Constraint(
-                expr=sum(MindtPy.objective_value[:]) >= (1 - config.level_coef) * solve_data.primal_bound + config.level_coef * solve_data.dual_bound)
+                expr=sum(MindtPy.objective_value[:])
+                >= (1 - config.level_coef) * solve_data.primal_bound
+                + config.level_coef * solve_data.dual_bound
+            )
     else:
         if config.add_slack:
             MindtPy.del_component('aug_penalty_expr')
 
             MindtPy.aug_penalty_expr = Expression(
-                expr=sign_adjust * config.OA_penalty_factor * sum(
-                    v for v in MindtPy.cuts.slack_vars[...]))
+                expr=sign_adjust
+                * config.OA_penalty_factor
+                * sum(v for v in MindtPy.cuts.slack_vars[...])
+            )
         main_objective = MindtPy.objective_list[-1]
         MindtPy.mip_obj = Objective(
-            expr=main_objective.expr +
-            (MindtPy.aug_penalty_expr if config.add_slack else 0),
-            sense=solve_data.objective_sense)
+            expr=main_objective.expr
+            + (MindtPy.aug_penalty_expr if config.add_slack else 0),
+            sense=solve_data.objective_sense,
+        )
 
         if config.use_dual_bound:
             # Delete previously added dual bound constraint
@@ -376,11 +464,15 @@ def setup_main(solve_data, config, fp, regularization_problem):
             if solve_data.dual_bound not in {float('inf'), float('-inf')}:
                 if solve_data.objective_sense == minimize:
                     MindtPy.cuts.dual_bound = Constraint(
-                        expr=main_objective.expr +
-                        (MindtPy.aug_penalty_expr if config.add_slack else 0) >= solve_data.dual_bound,
-                        doc='Objective function expression should improve on the best found dual bound')
+                        expr=main_objective.expr
+                        + (MindtPy.aug_penalty_expr if config.add_slack else 0)
+                        >= solve_data.dual_bound,
+                        doc='Objective function expression should improve on the best found dual bound',
+                    )
                 else:
                     MindtPy.cuts.dual_bound = Constraint(
-                        expr=main_objective.expr +
-                        (MindtPy.aug_penalty_expr if config.add_slack else 0) <= solve_data.dual_bound,
-                        doc='Objective function expression should improve on the best found dual bound')
+                        expr=main_objective.expr
+                        + (MindtPy.aug_penalty_expr if config.add_slack else 0)
+                        <= solve_data.dual_bound,
+                        doc='Objective function expression should improve on the best found dual bound',
+                    )

@@ -60,12 +60,11 @@ def get_indexed_cuid(var, sets=None, dereference=None, context=None):
                 # If dereference is None, we propagate None, dereferencing
                 # until we either reach a component attached to a block
                 # or reach a non-reference component.
-                dereference = dereference if dereference is None else\
-                        remaining_dereferences
-                # NOTE: Calling this function recursively
-                return get_indexed_cuid(
-                    referent, sets, dereference=dereference
+                dereference = (
+                    dereference if dereference is None else remaining_dereferences
                 )
+                # NOTE: Calling this function recursively
+                return get_indexed_cuid(referent, sets, dereference=dereference)
         else:
             # Assume that var is indexed only by time
             # TODO: Should we call slice_component_along_sets here as well?
@@ -83,16 +82,13 @@ def get_indexed_cuid(var, sets=None, dereference=None, context=None):
             #
             # TODO: Assert that we're only indexed by the specified set(s)?
             # (If these sets are provided, of course...)
-            index = tuple(
-                get_slice_for_set(s) for s in var.index_set().subsets()
-            )
+            index = tuple(get_slice_for_set(s) for s in var.index_set().subsets())
             return ComponentUID(var[index], context=context)
     else:
         if sets is None:
             raise ValueError(
                 "A ComponentData %s was provided but no set. We need to know\n"
-                "what set this component should be indexed by."
-                % var.name
+                "what set this component should be indexed by." % var.name
             )
         slice_ = slice_component_along_sets(var, sets)
         return ComponentUID(slice_, context=context)

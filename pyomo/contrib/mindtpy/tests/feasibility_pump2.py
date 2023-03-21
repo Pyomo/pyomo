@@ -12,8 +12,16 @@ Ref:
 """
 from math import pi
 
-from pyomo.environ import (Binary, ConcreteModel, Constraint, Objective,
-                           Var, minimize, Reals, sin)
+from pyomo.environ import (
+    Binary,
+    ConcreteModel,
+    Constraint,
+    Objective,
+    Var,
+    minimize,
+    Reals,
+    sin,
+)
 from pyomo.common.collections import ComponentMap
 
 
@@ -29,10 +37,10 @@ class Feasibility_Pump2(ConcreteModel):
         m.x = Var(within=Binary)
         m.y = Var(within=Reals)
 
-        m.objective = Objective(expr=- m.y, sense=minimize)
+        m.objective = Objective(expr=-m.y, sense=minimize)
 
         m.c1 = Constraint(expr=m.y - sin(m.x * pi * (5 / 3)) <= 0)
-        m.c2 = Constraint(expr=- m.y - sin(m.x * pi * (5 / 3)) <= 0)
+        m.c2 = Constraint(expr=-m.y - sin(m.x * pi * (5 / 3)) <= 0)
         m.optimal_value = 0
         m.optimal_solution = ComponentMap()
         m.optimal_solution[m.x] = 0.0

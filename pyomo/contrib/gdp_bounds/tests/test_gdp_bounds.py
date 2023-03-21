@@ -1,9 +1,13 @@
 """Tests explicit bound to variable bound transformation module."""
 import pyomo.common.unittest as unittest
-from pyomo.contrib.gdp_bounds.info import (
-    disjunctive_lb, disjunctive_ub)
-from pyomo.environ import (ConcreteModel, Constraint, Objective,
-                           TransformationFactory, Var)
+from pyomo.contrib.gdp_bounds.info import disjunctive_lb, disjunctive_ub
+from pyomo.environ import (
+    ConcreteModel,
+    Constraint,
+    Objective,
+    TransformationFactory,
+    Var,
+)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import check_available_solvers
 
@@ -24,7 +28,9 @@ class TestGDPBounds(unittest.TestCase):
         m.d2.c = Constraint(expr=m.x <= 4)
         m.disj = Disjunction(expr=[m.d1, m.d2])
         m.obj = Objective(expr=m.x)
-        TransformationFactory('contrib.compute_disj_var_bounds').apply_to(m, solver='cbc')
+        TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
+            m, solver='cbc'
+        )
         self.assertEqual(m.d1._disj_var_bounds[m.x], (2, 8))
         self.assertEqual(m.d2._disj_var_bounds[m.x], (0, 4))
         self.assertEqual(disjunctive_lb(m.x, m.d1), 2)
@@ -43,7 +49,9 @@ class TestGDPBounds(unittest.TestCase):
         m.d2.c = Constraint(expr=m.x + 3 == 0)
         m.disj = Disjunction(expr=[m.d1, m.d2])
         m.obj = Objective(expr=m.x)
-        TransformationFactory('contrib.compute_disj_var_bounds').apply_to(m, solver='cbc')
+        TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
+            m, solver='cbc'
+        )
         self.assertFalse(m.d1.active)
         self.assertEqual(m.d1.binary_indicator_var.value, 0)
         self.assertTrue(m.d1.indicator_var.fixed)

@@ -13,14 +13,21 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.gdpopt.enumerate import GDP_Enumeration_Solver
 
 from pyomo.environ import (
-    SolverFactory, Objective, maximize, TerminationCondition, value, Var,
-    Integers, Constraint, ConcreteModel
+    SolverFactory,
+    Objective,
+    maximize,
+    TerminationCondition,
+    value,
+    Var,
+    Integers,
+    Constraint,
+    ConcreteModel,
 )
 from pyomo.gdp import Disjunction
 import pyomo.gdp.tests.models as models
 
-@unittest.skipUnless(SolverFactory('gurobi').available(),
-                     'Gurobi not available')
+
+@unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi not available')
 class TestGDPoptEnumerate(unittest.TestCase):
     def test_solve_two_term_disjunction(self):
         m = models.makeTwoTermDisj()
@@ -29,8 +36,9 @@ class TestGDPoptEnumerate(unittest.TestCase):
         results = SolverFactory('gdpopt.enumerate').solve(m)
 
         self.assertEqual(results.solver.iterations, 2)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertEqual(results.problem.lower_bound, 9)
         self.assertEqual(results.problem.upper_bound, 9)
 
@@ -42,7 +50,7 @@ class TestGDPoptEnumerate(unittest.TestCase):
         # Make first disjunct feasible
         m.a.setlb(0)
         # Discrete variable
-        m.y = Var(domain=Integers, bounds=(2,4))
+        m.y = Var(domain=Integers, bounds=(2, 4))
         m.d[1].c3 = Constraint(expr=m.x <= 6)
         m.d[0].c2 = Constraint(expr=m.y + m.a - 5 <= 2)
 
@@ -52,12 +60,12 @@ class TestGDPoptEnumerate(unittest.TestCase):
         m = models.makeTwoTermDisj()
         self.modify_two_term_disjunction(m)
 
-        results = SolverFactory('gdpopt.enumerate').solve(
-            m, force_subproblem_nlp=True)
+        results = SolverFactory('gdpopt.enumerate').solve(m, force_subproblem_nlp=True)
 
         self.assertEqual(results.solver.iterations, 6)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertEqual(results.problem.lower_bound, -11)
         self.assertEqual(results.problem.upper_bound, -11)
 
@@ -73,8 +81,9 @@ class TestGDPoptEnumerate(unittest.TestCase):
         results = SolverFactory('gdpopt.enumerate').solve(m)
 
         self.assertEqual(results.solver.iterations, 2)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertEqual(results.problem.lower_bound, -11)
         self.assertEqual(results.problem.upper_bound, -11)
 
@@ -86,12 +95,12 @@ class TestGDPoptEnumerate(unittest.TestCase):
     def test_solve_GDP_iterate_over_Boolean_variables(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
 
-        results = SolverFactory('gdpopt.enumerate').solve(
-            m, force_subproblem_nlp=True)
+        results = SolverFactory('gdpopt.enumerate').solve(m, force_subproblem_nlp=True)
 
         self.assertEqual(results.solver.iterations, 16)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertEqual(results.problem.lower_bound, 8)
         self.assertEqual(results.problem.upper_bound, 8)
 
@@ -109,8 +118,9 @@ class TestGDPoptEnumerate(unittest.TestCase):
         results = SolverFactory('gdpopt.enumerate').solve(m)
 
         self.assertEqual(results.solver.iterations, 4)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertEqual(results.problem.lower_bound, 8)
         self.assertEqual(results.problem.upper_bound, 8)
 
@@ -126,22 +136,24 @@ class TestGDPoptEnumerate(unittest.TestCase):
         m = models.makeLogicalConstraintsOnDisjuncts()
 
         results = SolverFactory('gdpopt.enumerate').solve(
-            m, iterlim=4, force_subproblem_nlp=True)
+            m, iterlim=4, force_subproblem_nlp=True
+        )
 
         self.assertEqual(results.solver.iterations, 4)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.maxIterations)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxIterations
+        )
 
-    @unittest.skipUnless(SolverFactory('ipopt').available(),
-                         'Ipopt not available')
+    @unittest.skipUnless(SolverFactory('ipopt').available(), 'Ipopt not available')
     def test_infeasible_GDP(self):
         m = models.make_infeasible_gdp_model()
 
         results = SolverFactory('gdpopt.enumerate').solve(m)
 
         self.assertEqual(results.solver.iterations, 2)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.infeasible)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.infeasible
+        )
         self.assertEqual(results.problem.lower_bound, float('inf'))
 
     def test_unbounded_GDP(self):
@@ -149,30 +161,28 @@ class TestGDPoptEnumerate(unittest.TestCase):
         m.x = Var(bounds=(-1, 10))
         m.y = Var(bounds=(2, 3))
         m.z = Var()
-        m.d = Disjunction(expr=[
-            [m.x + m.y >= 5], [m.x - m.y <= 3]
-        ])
+        m.d = Disjunction(expr=[[m.x + m.y >= 5], [m.x - m.y <= 3]])
         m.o = Objective(expr=m.z)
 
         results = SolverFactory('gdpopt.enumerate').solve(m)
 
         self.assertEqual(results.solver.iterations, 1)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.unbounded)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.unbounded
+        )
         self.assertEqual(results.problem.lower_bound, -float('inf'))
         self.assertEqual(results.problem.upper_bound, -float('inf'))
 
-    @unittest.skipUnless(SolverFactory('ipopt').available(),
-                         'Ipopt not available')
+    @unittest.skipUnless(SolverFactory('ipopt').available(), 'Ipopt not available')
     def test_algorithm_specified_to_solve(self):
         m = models.twoDisj_twoCircles_easy()
 
-        results = SolverFactory('gdpopt').solve(m, algorithm='enumerate',
-                                                tee=True)
+        results = SolverFactory('gdpopt').solve(m, algorithm='enumerate', tee=True)
 
         self.assertEqual(results.solver.iterations, 2)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertAlmostEqual(results.problem.lower_bound, 9)
         self.assertAlmostEqual(results.problem.upper_bound, 9)
 
