@@ -16,7 +16,7 @@ import os
 from os.path import abspath, dirname, normpath, join
 
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..','..','..','examples','pyomo','core'))
+exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'pyomo', 'core'))
 
 from filecmp import cmp
 import pyomo.common.unittest as unittest
@@ -27,6 +27,8 @@ import pyomo.scripting.pyomo_main as main
 
 
 solver = None
+
+
 class CommonTests(object):
 
     solve = True
@@ -34,7 +36,7 @@ class CommonTests(object):
     def run_bilevel(self, *_args, **kwds):
         if self.solve:
             args = ['solve']
-            _solver = kwds.get('solver','glpk')
+            _solver = kwds.get('solver', 'glpk')
             args.append('--solver=%s' % _solver)
             args.append('--save-results=result.yml')
             args.append('--results-format=json')
@@ -48,7 +50,7 @@ class CommonTests(object):
 
         if False:
             args.append('--stream-solver')
-            args.append('--tempdir='+currdir)
+            args.append('--tempdir=' + currdir)
             args.append('--keepfiles')
             args.append('--debug')
             args.append('--logging=verbose')
@@ -57,7 +59,7 @@ class CommonTests(object):
         os.chdir(currdir)
 
         print('***')
-        #print(' '.join(args))
+        # print(' '.join(args))
         output = main.main(args)
         try:
             output = main.main(args)
@@ -71,7 +73,7 @@ class CommonTests(object):
         pass
 
     def referenceFile(self, problem, solver):
-        return join(currdir, problem+'.txt')
+        return join(currdir, problem + '.txt')
 
     def getObjective(self, fname):
         FILE = open(fname)
@@ -86,98 +88,104 @@ class CommonTests(object):
     def updateDocStrings(self):
         for key in dir(self):
             if key.startswith('test'):
-                getattr(self,key).__doc__ = " (%s)" % getattr(self,key).__name__
+                getattr(self, key).__doc__ = " (%s)" % getattr(self, key).__name__
 
     def test_t5(self):
-        self.problem='test_t5'
-        self.run_bilevel(join(exdir,'t5.py'))
-        self.check( 't5', 'linear_dual' )
+        self.problem = 'test_t5'
+        self.run_bilevel(join(exdir, 't5.py'))
+        self.check('t5', 'linear_dual')
 
     def test_t1(self):
-        self.problem='test_t1'
-        self.run_bilevel(join(exdir,'t1.py'))
-        self.check( 't1', 'linear_dual' )
+        self.problem = 'test_t1'
+        self.run_bilevel(join(exdir, 't1.py'))
+        self.check('t1', 'linear_dual')
 
 
 class Reformulate(unittest.TestCase, CommonTests):
 
-    solve=False
+    solve = False
 
     def tearDown(self):
-        if os.path.exists(os.path.join(currdir,'result.yml')):
-            os.remove(os.path.join(currdir,'result.yml'))
+        if os.path.exists(os.path.join(currdir, 'result.yml')):
+            os.remove(os.path.join(currdir, 'result.yml'))
 
     @classmethod
     def setUpClass(cls):
         import pyomo.environ
 
-    def run_bilevel(self,  *args, **kwds):
+    def run_bilevel(self, *args, **kwds):
         args = list(args)
-        args.append('--output='+self.problem+'_result.lp')
+        args.append('--output=' + self.problem + '_result.lp')
         kwds['transform'] = 'duality.linear_dual'
         CommonTests.run_bilevel(self, *args, **kwds)
 
     def referenceFile(self, problem, solver):
-        return join(currdir, problem+"_"+solver+'.lp')
+        return join(currdir, problem + "_" + solver + '.lp')
 
     def check(self, problem, solver):
-        _prob, _solv = join(currdir,self.problem+'_result.lp'), self.referenceFile(problem,solver)
-        self.assertTrue(cmp(_prob, _solv),
-                        msg="Files %s and %s differ" % (_prob, _solv))
+        _prob, _solv = join(currdir, self.problem + '_result.lp'), self.referenceFile(
+            problem, solver
+        )
+        self.assertTrue(
+            cmp(_prob, _solv), msg="Files %s and %s differ" % (_prob, _solv)
+        )
 
 
 class Solver(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         import pyomo.environ
 
     def tearDown(self):
-        if os.path.exists(os.path.join(currdir,'result.yml')):
-            os.remove(os.path.join(currdir,'result.yml'))
+        if os.path.exists(os.path.join(currdir, 'result.yml')):
+            os.remove(os.path.join(currdir, 'result.yml'))
 
     def check(self, problem, solver):
-        refObj = self.getObjective(self.referenceFile(problem,solver))
-        ansObj = self.getObjective(join(currdir,'result.yml'))
+        refObj = self.getObjective(self.referenceFile(problem, solver))
+        ansObj = self.getObjective(join(currdir, 'result.yml'))
         self.assertEqual(len(refObj), len(ansObj))
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
-            for key,val in refObj[i].items():
-                self.assertAlmostEqual(val['Value'], ansObj[i].get(key,None)['Value'], places=3)
+            for key, val in refObj[i].items():
+                self.assertAlmostEqual(
+                    val['Value'], ansObj[i].get(key, None)['Value'], places=3
+                )
 
 
 class Solve_GLPK(Solver, CommonTests):
-
     @classmethod
     def setUpClass(cls):
         global solvers
         import pyomo.environ
+
         solvers = pyomo.opt.check_available_solvers('glpk')
 
     def setUp(self):
         if (not yaml_available) or (not 'glpk' in solvers):
-            self.skipTest("YAML is not available or "
-                          "the 'glpk' executable is not available")
+            self.skipTest(
+                "YAML is not available or the 'glpk' executable is not available"
+            )
 
-    def run_bilevel(self,  *args, **kwds):
+    def run_bilevel(self, *args, **kwds):
         kwds['solver'] = 'glpk'
         CommonTests.run_bilevel(self, *args, **kwds)
 
 
 class Solve_CPLEX(Solver, CommonTests):
-
     @classmethod
     def setUpClass(cls):
         global solvers
         import pyomo.environ
+
         solvers = pyomo.opt.check_available_solvers('cplex')
 
     def setUp(self):
         if (not yaml_available) or (not 'cplex' in solvers):
-            self.skipTest("YAML is not available or "
-                          "the 'cplex' executable is not available")
+            self.skipTest(
+                "YAML is not available or the 'cplex' executable is not available"
+            )
 
-    def run_bilevel(self,  *args, **kwds):
+    def run_bilevel(self, *args, **kwds):
         kwds['solver'] = 'cplex'
         CommonTests.run_bilevel(self, *args, **kwds)
 
