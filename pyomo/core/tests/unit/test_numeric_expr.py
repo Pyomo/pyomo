@@ -4639,7 +4639,7 @@ class TestLinearExpression(unittest.TestCase):
             e = LinearExpression([20, 6, 7, m.x, m.y])
         self.assertIn("LinearExpression has been updated to expect args= "
                       "to be a constant followed by MonomialTermExpressions",
-                      OUT.getvalue().replace("\n", ))
+                      OUT.getvalue().replace("\n", " "))
         self.assertIsNotNone(e._args_cache_)
         self.assertEqual(len(e._args_cache_), 3)
         self.assertEqual(e._args_cache_[0], 20)
@@ -4654,7 +4654,7 @@ class TestLinearExpression(unittest.TestCase):
             e = LinearExpression([20, 6, 7, 8, m.x, m.y, m.x])
         self.assertIn("LinearExpression has been updated to expect args= "
                       "to be a constant followed by MonomialTermExpressions",
-                      OUT.getvalue().replace("\n", ))
+                      OUT.getvalue().replace("\n", " "))
         self.assertIsNotNone(e._args_cache_)
         self.assertEqual(len(e._args_cache_), 4)
         self.assertEqual(e._args_cache_[0], 20)
