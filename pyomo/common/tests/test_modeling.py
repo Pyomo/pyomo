@@ -16,6 +16,7 @@ import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, Var
 from pyomo.common.modeling import unique_component_name, NOTSET
 
+
 class TestModeling(unittest.TestCase):
     def test_unique_component_name(self):
         m = ConcreteModel()

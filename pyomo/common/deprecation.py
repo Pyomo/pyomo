@@ -56,8 +56,10 @@ def default_deprecation_msg(obj, user_msg, version, remove_in):
         elif _qual and _obj:
             _obj += f' ({_qual})'
 
-        user_msg = 'This%s has been deprecated and may be removed in a ' \
-                   'future release.' % (_obj,)
+        user_msg = (
+            'This%s has been deprecated and may be removed in a '
+            'future release.' % (_obj,)
+        )
     comment = []
     if version:
         comment.append('deprecated in %s' % (version,))
@@ -111,16 +113,18 @@ def _wrap_class(cls, msg, logger, version, remove_in):
             for f in ('__new__', '__init__'):
                 if getattr(c, f, None) is not getattr(cls, f, None):
                     field = f
-        setattr(cls, field, _wrap_func(
-            getattr(cls, field), msg, logger, version, remove_in))
+        setattr(
+            cls, field, _wrap_func(getattr(cls, field), msg, logger, version, remove_in)
+        )
     return cls
 
 
 def _wrap_func(func, msg, logger, version, remove_in):
     message = default_deprecation_msg(func, msg, version, remove_in)
 
-    @functools.wraps(func, assigned=(
-        '__module__', '__name__', '__qualname__', '__annotations__'))
+    @functools.wraps(
+        func, assigned=('__module__', '__name__', '__qualname__', '__annotations__')
+    )
     def wrapper(*args, **kwargs):
         cf = _find_calling_frame(1)
         deprecation_warning(message, logger, version='', calling_frame=cf)
@@ -155,12 +159,12 @@ def in_testing_environment():
 
     """
 
-    return any(mod in sys.modules for mod in (
-        'nose', 'nose2', 'pytest', 'sphinx'))
+    return any(mod in sys.modules for mod in ('nose', 'nose2', 'pytest', 'sphinx'))
 
 
-def deprecation_warning(msg, logger=None, version=None,
-                        remove_in=None, calling_frame=None):
+def deprecation_warning(
+    msg, logger=None, version=None, remove_in=None, calling_frame=None
+):
     """Standardized formatter for deprecation warnings
 
     This is a standardized routine for formatting deprecation warnings
@@ -212,7 +216,8 @@ def deprecation_warning(msg, logger=None, version=None,
 
     msg = textwrap.fill(
         f'DEPRECATED: {default_deprecation_msg(None, msg, version, remove_in)}',
-        width=70)
+        width=70,
+    )
     if calling_frame is None:
         # The useful thing to let the user know is what called the
         # function that generated the deprecation warning.  The current
@@ -231,6 +236,7 @@ def deprecation_warning(msg, logger=None, version=None,
             deprecation_warning.emitted_warnings.add(msg)
 
     logger.warning(msg)
+
 
 if in_testing_environment():
     deprecation_warning.emitted_warnings = None
@@ -275,17 +281,20 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
     10
 
     """
+
     def wrap(obj):
         if inspect.isclass(obj):
             return _wrap_class(obj, msg, logger, version, remove_in)
         else:
             return _wrap_func(obj, msg, logger, version, remove_in)
+
     return wrap
 
 
 def _import_object(name, target, version, remove_in, msg):
     from importlib import import_module
-    modname, targetname = target.rsplit('.',1)
+
+    modname, targetname = target.rsplit('.', 1)
     _object = getattr(import_module(modname), targetname)
     if msg is None:
         if inspect.isclass(_object):
@@ -294,14 +303,15 @@ def _import_object(name, target, version, remove_in, msg):
             _type = 'function'
         else:
             _type = 'attribute'
-        msg = (f"the '{name}' {_type} has been moved to '{target}'."
-               "  Please update your import.")
+        msg = (
+            f"the '{name}' {_type} has been moved to '{target}'."
+            "  Please update your import."
+        )
     deprecation_warning(msg, version=version, remove_in=remove_in)
     return _object
 
 
-def relocated_module(new_name, msg=None, logger=None,
-                     version=None, remove_in=None):
+def relocated_module(new_name, msg=None, logger=None, version=None, remove_in=None):
     """Provide a deprecation path for moved / renamed modules
 
     Upon import, the old module (that called `relocated_module()`) will
@@ -341,6 +351,7 @@ def relocated_module(new_name, msg=None, logger=None,
 
     """
     from importlib import import_module
+
     new_module = import_module(new_name)
 
     # The relevant module (the one being deprecated) is the one that
@@ -353,19 +364,23 @@ def relocated_module(new_name, msg=None, logger=None,
     cf = cf.f_back
     if cf is not None:
         importer = cf.f_back.f_globals['__name__'].split('.')[0]
-        while cf is not None and \
-              cf.f_globals['__name__'].split('.')[0] == importer:
+        while cf is not None and cf.f_globals['__name__'].split('.')[0] == importer:
             cf = cf.f_back
     if cf is None:
         cf = _find_calling_frame(1)
 
     sys.modules[old_name] = new_module
     if msg is None:
-        msg = f"The '{old_name}' module has been moved to '{new_name}'. " \
-              'Please update your import.'
+        msg = (
+            f"The '{old_name}' module has been moved to '{new_name}'. "
+            'Please update your import.'
+        )
     deprecation_warning(msg, logger, version, remove_in, cf)
 
-def relocated_module_attribute(local, target, version, remove_in=None, msg=None, f_globals=None):
+
+def relocated_module_attribute(
+    local, target, version, remove_in=None, msg=None, f_globals=None
+):
     """Provide a deprecation path for moved / renamed module attributes
 
     This function declares that a local module attribute has been moved
@@ -410,11 +425,13 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None,
         if f_globals['__name__'].startswith('importlib.'):
             raise DeveloperError(
                 "relocated_module_attribute() called from a cythonized "
-                "module without passing f_globals")
+                "module without passing f_globals"
+            )
     _relocated = f_globals.get('__relocated_attrs__', None)
     if _relocated is None:
         f_globals['__relocated_attrs__'] = _relocated = {}
         _mod_getattr = f_globals.get('__getattr__', None)
+
         def __getattr__(name):
             info = _relocated.get(name, None)
             if info is not None:
@@ -423,8 +440,10 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None,
                 return target_obj
             elif _mod_getattr is not None:
                 return _mod_getattr(name)
-            raise AttributeError("module '%s' has no attribute '%s'"
-                                 % (f_globals['__name__'], name))
+            raise AttributeError(
+                "module '%s' has no attribute '%s'" % (f_globals['__name__'], name)
+            )
+
         f_globals['__getattr__'] = __getattr__
     _relocated[local] = (target, version, remove_in, msg)
 
@@ -471,38 +490,44 @@ class RenamedClass(type):
     True
 
     """
+
     def __new__(cls, name, bases, classdict, *args, **kwargs):
         new_class = classdict.get('__renamed__new_class__', None)
         if new_class is not None:
+
             def __renamed__new__(cls, *args, **kwargs):
-                cls.__renamed__warning__(
-                    "Instantiating class '%s'." % (cls.__name__,))
+                cls.__renamed__warning__("Instantiating class '%s'." % (cls.__name__,))
                 return new_class(*args, **kwargs)
+
             classdict['__new__'] = __renamed__new__
 
             def __renamed__warning__(msg):
                 version = classdict.get('__renamed__version__')
                 remove_in = classdict.get('__renamed__remove_in__')
                 deprecation_warning(
-                    "%s  The class '%s' has been renamed to '%s'." % (
-                        msg, name, new_class.__name__),
-                    version=version, remove_in=remove_in,
-                    calling_frame=_find_calling_frame(1))
+                    "%s  The class '%s' has been renamed to '%s'."
+                    % (msg, name, new_class.__name__),
+                    version=version,
+                    remove_in=remove_in,
+                    calling_frame=_find_calling_frame(1),
+                )
+
             classdict['__renamed__warning__'] = __renamed__warning__
 
             if not classdict.get('__renamed__version__'):
                 raise DeveloperError(
                     "Declaring class '%s' using the RenamedClass metaclass, "
                     "but without specifying the __renamed__version__ class "
-                    "attribute" % (name,))
+                    "attribute" % (name,)
+                )
 
         renamed_bases = []
         for base in bases:
             new_class = getattr(base, '__renamed__new_class__', None)
             if new_class is not None:
                 base.__renamed__warning__(
-                    "Declaring class '%s' derived from '%s'." % (
-                        name, base.__name__,))
+                    "Declaring class '%s' derived from '%s'." % (name, base.__name__)
+                )
                 base = new_class
                 # Flag that this class is derived from a renamed class
                 classdict.setdefault('__renamed__new_class__', None)
@@ -520,26 +545,33 @@ class RenamedClass(type):
             renamed_bases.append(new_class)
 
         if new_class is None and '__renamed__new_class__' not in classdict:
-            if not any(hasattr(base, '__renamed__new_class__') for mro in
-                       itertools.chain.from_iterable(
-                           base.__mro__ for base in renamed_bases)):
+            if not any(
+                hasattr(base, '__renamed__new_class__')
+                for mro in itertools.chain.from_iterable(
+                    base.__mro__ for base in renamed_bases
+                )
+            ):
                 raise TypeError(
                     "Declaring class '%s' using the RenamedClass metaclass, "
                     "but without specifying the __renamed__new_class__ class "
-                    "attribute" % (name,))
+                    "attribute" % (name,)
+                )
 
         return super().__new__(
-            cls, name, tuple(renamed_bases), classdict, *args, **kwargs)
+            cls, name, tuple(renamed_bases), classdict, *args, **kwargs
+        )
 
     def __instancecheck__(cls, instance):
         # Note: the warning is issued by subclasscheck
-        return any(cls.__subclasscheck__(c)
-            for c in {type(instance), instance.__class__})
+        return any(
+            cls.__subclasscheck__(c) for c in {type(instance), instance.__class__}
+        )
 
     def __subclasscheck__(cls, subclass):
         if hasattr(cls, '__renamed__warning__'):
             cls.__renamed__warning__(
-                "Checking type relative to '%s'." % (cls.__name__,))
+                "Checking type relative to '%s'." % (cls.__name__,)
+            )
         if subclass is cls:
             return True
         elif getattr(cls, '__renamed__new_class__') is not None:

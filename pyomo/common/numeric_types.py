@@ -34,10 +34,10 @@ nonpyomo_leaf_types = set([])
 #: Python set used to identify numeric constants.  This set includes
 #: native Python types as well as numeric types from Python packages
 #: like numpy, which may be registered by users.
-native_numeric_types = set([ int, float, bool, complex ])
-native_integer_types = set([ int, bool ])
-native_boolean_types = set([ int, bool, str, bytes ])
-native_logical_types = {bool, }
+native_numeric_types = set([int, float, bool, complex])
+native_integer_types = set([int, bool])
+native_boolean_types = set([int, bool, str, bytes])
+native_logical_types = {bool}
 pyomo_constant_types = set()  # includes NumericConstant
 
 #: Python set used to identify numeric constants and related native
@@ -46,12 +46,13 @@ pyomo_constant_types = set()  # includes NumericConstant
 #: like numpy.
 #:
 #: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
-native_types = set([ bool, str, type(None), slice, bytes])
-native_types.update( native_numeric_types )
-native_types.update( native_integer_types )
-native_types.update( native_boolean_types )
+native_types = set([bool, str, type(None), slice, bytes])
+native_types.update(native_numeric_types)
+native_types.update(native_integer_types)
+native_types.update(native_boolean_types)
 
-nonpyomo_leaf_types.update( native_types )
+nonpyomo_leaf_types.update(native_types)
+
 
 def RegisterNumericType(new_type):
     """
@@ -63,6 +64,7 @@ def RegisterNumericType(new_type):
     native_numeric_types.add(new_type)
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
+
 
 def RegisterIntegerType(new_type):
     """
@@ -76,6 +78,7 @@ def RegisterIntegerType(new_type):
     native_integer_types.add(new_type)
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
+
 
 def RegisterBooleanType(new_type):
     """

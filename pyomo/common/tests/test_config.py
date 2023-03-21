@@ -38,19 +38,42 @@ from io import StringIO
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 
+
 def yaml_load(arg):
     return yaml.load(arg, **yaml_load_args)
 
+
 from pyomo.common.config import (
-    ConfigDict, ConfigValue,
-    ConfigList, MarkImmutable, ImmutableConfigValue,
-    Bool, Integer, PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
-    PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
-    In, ListOf, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
-    ConfigFormatter, String_ConfigFormatter,
-    document_kwargs_from_configdict, add_docstring_list,
-    USER_OPTION, DEVELOPER_OPTION,
-    _UnpickleableDomain, _picklable,
+    ConfigDict,
+    ConfigValue,
+    ConfigList,
+    MarkImmutable,
+    ImmutableConfigValue,
+    Bool,
+    Integer,
+    PositiveInt,
+    NegativeInt,
+    NonPositiveInt,
+    NonNegativeInt,
+    PositiveFloat,
+    NegativeFloat,
+    NonPositiveFloat,
+    NonNegativeFloat,
+    In,
+    ListOf,
+    Module,
+    Path,
+    PathList,
+    ConfigEnum,
+    DynamicImplicitDomain,
+    ConfigFormatter,
+    String_ConfigFormatter,
+    document_kwargs_from_configdict,
+    add_docstring_list,
+    USER_OPTION,
+    DEVELOPER_OPTION,
+    _UnpickleableDomain,
+    _picklable,
 )
 from pyomo.common.log import LoggingIntercept
 
@@ -83,7 +106,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, False)
         c.a = '1'
         self.assertEqual(c.a, True)
-        c.a = 0.
+        c.a = 0.0
         self.assertEqual(c.a, False)
         c.a = True
         self.assertEqual(c.a, True)
@@ -97,7 +120,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, True)
         c.a = '0'
         self.assertEqual(c.a, False)
-        c.a = 1.
+        c.a = 1.0
         self.assertEqual(c.a, True)
 
         with self.assertRaises(ValueError):
@@ -114,7 +137,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(5, Integer))
         self.assertEqual(c.a, 5)
-        c.a = 4.
+        c.a = 4.0
         self.assertEqual(c.a, 4)
         c.a = -6
         self.assertEqual(c.a, -6)
@@ -134,7 +157,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(5, PositiveInt))
         self.assertEqual(c.a, 5)
-        c.a = 4.
+        c.a = 4.0
         self.assertEqual(c.a, 4)
         c.a = 6
         self.assertEqual(c.a, 6)
@@ -155,7 +178,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(-5, NegativeInt))
         self.assertEqual(c.a, -5)
-        c.a = -4.
+        c.a = -4.0
         self.assertEqual(c.a, -4)
         c.a = -6
         self.assertEqual(c.a, -6)
@@ -176,7 +199,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(-5, NonPositiveInt))
         self.assertEqual(c.a, -5)
-        c.a = -4.
+        c.a = -4.0
         self.assertEqual(c.a, -4)
         c.a = -6
         self.assertEqual(c.a, -6)
@@ -196,7 +219,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(5, NonNegativeInt))
         self.assertEqual(c.a, 5)
-        c.a = 4.
+        c.a = 4.0
         self.assertEqual(c.a, 4)
         c.a = 6
         self.assertEqual(c.a, 6)
@@ -216,7 +239,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(5, PositiveFloat))
         self.assertEqual(c.a, 5)
-        c.a = 4.
+        c.a = 4.0
         self.assertEqual(c.a, 4)
         c.a = 6
         self.assertEqual(c.a, 6)
@@ -236,7 +259,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(-5, NegativeFloat))
         self.assertEqual(c.a, -5)
-        c.a = -4.
+        c.a = -4.0
         self.assertEqual(c.a, -4)
         c.a = -6
         self.assertEqual(c.a, -6)
@@ -256,7 +279,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(-5, NonPositiveFloat))
         self.assertEqual(c.a, -5)
-        c.a = -4.
+        c.a = -4.0
         self.assertEqual(c.a, -4)
         c.a = -6
         self.assertEqual(c.a, -6)
@@ -275,7 +298,7 @@ class TestConfigDomains(unittest.TestCase):
         c = ConfigDict()
         c.declare('a', ConfigValue(5, NonNegativeFloat))
         self.assertEqual(c.a, 5)
-        c.a = 4.
+        c.a = 4.0
         self.assertEqual(c.a, 4)
         c.a = 6
         self.assertEqual(c.a, 6)
@@ -292,7 +315,7 @@ class TestConfigDomains(unittest.TestCase):
 
     def test_In(self):
         c = ConfigDict()
-        c.declare('a', ConfigValue(None, In([1,3,5])))
+        c.declare('a', ConfigValue(None, In([1, 3, 5])))
         self.assertEqual(c.get('a').domain_name(), 'In[1, 3, 5]')
         self.assertEqual(c.a, None)
         c.a = 3
@@ -307,7 +330,7 @@ class TestConfigDomains(unittest.TestCase):
             c.a = '1'
         self.assertEqual(c.a, 3)
 
-        c.declare('b', ConfigValue(None, In([1,3,5], int)))
+        c.declare('b', ConfigValue(None, In([1, 3, 5], int)))
         self.assertEqual(c.b, None)
         c.b = 3
         self.assertEqual(c.b, 3)
@@ -323,12 +346,14 @@ class TestConfigDomains(unittest.TestCase):
         class Container(object):
             def __init__(self, vals):
                 self._vals = vals
+
             def __str__(self):
                 return f'Container{self._vals}'
+
             def __contains__(self, val):
                 return val in self._vals
 
-        c.declare('c', ConfigValue(None, In(Container([1,3,5]))))
+        c.declare('c', ConfigValue(None, In(Container([1, 3, 5]))))
         self.assertEqual(c.get('c').domain_name(), 'In(Container[1, 3, 5])')
         self.assertEqual(c.c, None)
         c.c = 3
@@ -343,10 +368,7 @@ class TestConfigDomains(unittest.TestCase):
             ITEM_TWO = 'two'
 
         cfg = ConfigDict()
-        cfg.declare('enum', ConfigValue(
-            default=TestEnum.ITEM_TWO,
-            domain=In(TestEnum)
-        ))
+        cfg.declare('enum', ConfigValue(default=TestEnum.ITEM_TWO, domain=In(TestEnum)))
         self.assertEqual(cfg.get('enum').domain_name(), 'InEnum[TestEnum]')
         self.assertEqual(cfg.enum, TestEnum.ITEM_TWO)
         cfg.enum = 'ITEM_ONE'
@@ -360,14 +382,14 @@ class TestConfigDomains(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '.*3 is not a valid'):
             cfg.enum = 3
         with self.assertRaisesRegex(ValueError, '.*invalid value'):
-            cfg.enum ='ITEM_THREE'
-
+            cfg.enum = 'ITEM_THREE'
 
     def test_Path(self):
         def norm(x):
             if cwd[1] == ':' and x[0] == '/':
                 x = cwd[:2] + x
-            return x.replace('/',os.path.sep)
+            return x.replace('/', os.path.sep)
+
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
 
@@ -378,10 +400,10 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, norm('/a/b/c'))
         c.a = "a/b/c"
         self.assertTrue(os.path.sep in c.a)
-        self.assertEqual(c.a, norm(cwd+'a/b/c'))
+        self.assertEqual(c.a, norm(cwd + 'a/b/c'))
         c.a = "${CWD}/a/b/c"
         self.assertTrue(os.path.sep in c.a)
-        self.assertEqual(c.a, norm(cwd+'a/b/c'))
+        self.assertEqual(c.a, norm(cwd + 'a/b/c'))
         c.a = None
         self.assertIs(c.a, None)
 
@@ -392,10 +414,10 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.b, norm('/a/b/c'))
         c.b = "a/b/c"
         self.assertTrue(os.path.sep in c.b)
-        self.assertEqual(c.b, norm(cwd+'rel/path/a/b/c'))
+        self.assertEqual(c.b, norm(cwd + 'rel/path/a/b/c'))
         c.b = "${CWD}/a/b/c"
         self.assertTrue(os.path.sep in c.b)
-        self.assertEqual(c.b, norm(cwd+'a/b/c'))
+        self.assertEqual(c.b, norm(cwd + 'a/b/c'))
         c.b = None
         self.assertIs(c.b, None)
 
@@ -409,7 +431,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.c, norm('/my/dir/a/b/c'))
         c.c = "${CWD}/a/b/c"
         self.assertTrue(os.path.sep in c.c)
-        self.assertEqual(c.c, norm(cwd+'a/b/c'))
+        self.assertEqual(c.c, norm(cwd + 'a/b/c'))
         c.c = None
         self.assertIs(c.c, None)
 
@@ -421,10 +443,10 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.d, norm('/a/b/c'))
         c.d = "a/b/c"
         self.assertTrue(os.path.sep in c.d)
-        self.assertEqual(c.d, norm(cwd+'a/b/c'))
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
         c.d = "${CWD}/a/b/c"
         self.assertTrue(os.path.sep in c.d)
-        self.assertEqual(c.d, norm(cwd+'a/b/c'))
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
 
         c.d_base = '/my/dir'
         c.d = "/a/b/c"
@@ -435,7 +457,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.d, norm('/my/dir/a/b/c'))
         c.d = "${CWD}/a/b/c"
         self.assertTrue(os.path.sep in c.d)
-        self.assertEqual(c.d, norm(cwd+'a/b/c'))
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
 
         c.d_base = 'rel/path'
         c.d = "/a/b/c"
@@ -443,10 +465,10 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.d, norm('/a/b/c'))
         c.d = "a/b/c"
         self.assertTrue(os.path.sep in c.d)
-        self.assertEqual(c.d, norm(cwd+'rel/path/a/b/c'))
+        self.assertEqual(c.d, norm(cwd + 'rel/path/a/b/c'))
         c.d = "${CWD}/a/b/c"
         self.assertTrue(os.path.sep in c.d)
-        self.assertEqual(c.d, norm(cwd+'a/b/c'))
+        self.assertEqual(c.d, norm(cwd + 'a/b/c'))
 
         try:
             Path.SuppressPathExpansion = True
@@ -469,7 +491,8 @@ class TestConfigDomains(unittest.TestCase):
         def norm(x):
             if cwd[1] == ':' and x[0] == '/':
                 x = cwd[:2] + x
-            return x.replace('/',os.path.sep)
+            return x.replace('/', os.path.sep)
+
         cwd = os.getcwd() + os.path.sep
         c = ConfigDict()
 
@@ -485,11 +508,11 @@ class TestConfigDomains(unittest.TestCase):
         c.a = ["a/b/c", "/a/b/c", "${CWD}/a/b/c"]
         self.assertEqual(len(c.a), 3)
         self.assertTrue(os.path.sep in c.a[0])
-        self.assertEqual(c.a[0], norm(cwd+'a/b/c'))
+        self.assertEqual(c.a[0], norm(cwd + 'a/b/c'))
         self.assertTrue(os.path.sep in c.a[1])
         self.assertEqual(c.a[1], norm('/a/b/c'))
         self.assertTrue(os.path.sep in c.a[2])
-        self.assertEqual(c.a[2], norm(cwd+'a/b/c'))
+        self.assertEqual(c.a[2], norm(cwd + 'a/b/c'))
 
         c.a = ()
         self.assertEqual(len(c.a), 0)
@@ -508,8 +531,10 @@ class TestConfigDomains(unittest.TestCase):
         c.a = '7,8'
         self.assertEqual(c.a, [7, 8])
 
-        ref=(r"(?m)Failed casting a\s+to ListOf\(int\)\s+"
-             r"Error: invalid literal for int\(\) with base 10: 'a'")
+        ref = (
+            r"(?m)Failed casting a\s+to ListOf\(int\)\s+"
+            r"Error: invalid literal for int\(\) with base 10: 'a'"
+        )
         with self.assertRaisesRegex(ValueError, ref):
             c.a = 'a'
 
@@ -525,8 +550,9 @@ class TestConfigDomains(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.b = "'Hello, World"
 
-        c.declare('b1', ConfigValue(domain=ListOf(
-            str, string_lexer=None), default=None))
+        c.declare(
+            'b1', ConfigValue(domain=ListOf(str, string_lexer=None), default=None)
+        )
         self.assertEqual(c.get('b1').domain_name(), 'ListOf[str]')
         self.assertEqual(c.b1, None)
         c.b1 = "'Hello, World'"
@@ -544,8 +570,10 @@ class TestConfigDomains(unittest.TestCase):
         c.c = 6
         self.assertEqual(c.c, [6])
 
-        ref=(r"(?m)Failed casting %s\s+to ListOf\(PositiveInt\)\s+"
-             r"Error: Expected positive int, but received %s")
+        ref = (
+            r"(?m)Failed casting %s\s+to ListOf\(PositiveInt\)\s+"
+            r"Error: Expected positive int, but received %s"
+        )
         with self.assertRaisesRegex(ValueError, ref % (6.5, 6.5)):
             c.c = 6.5
         with self.assertRaisesRegex(ValueError, ref % (r"\[0\]", "0")):
@@ -562,10 +590,12 @@ class TestConfigDomains(unittest.TestCase):
         # Set using python module name to be imported
         c.a = 'os.path'
         import os.path
+
         self.assertIs(c.a, os.path)
 
         # Set to python module object
         import os
+
         c.a = os
         self.assertIs(c.a, os)
 
@@ -579,22 +609,20 @@ class TestConfigDomains(unittest.TestCase):
     def test_ConfigEnum(self):
         out = StringIO()
         with LoggingIntercept(out):
+
             class TestEnum(ConfigEnum):
                 ITEM_ONE = 1
                 ITEM_TWO = 2
+
         self.assertIn('The ConfigEnum base class is deprecated', out.getvalue())
-        self.assertEqual(TestEnum.from_enum_or_string(1),
-                TestEnum.ITEM_ONE)
-        self.assertEqual(TestEnum.from_enum_or_string(
-            TestEnum.ITEM_TWO), TestEnum.ITEM_TWO)
-        self.assertEqual(TestEnum.from_enum_or_string('ITEM_ONE'),
-                TestEnum.ITEM_ONE)
+        self.assertEqual(TestEnum.from_enum_or_string(1), TestEnum.ITEM_ONE)
+        self.assertEqual(
+            TestEnum.from_enum_or_string(TestEnum.ITEM_TWO), TestEnum.ITEM_TWO
+        )
+        self.assertEqual(TestEnum.from_enum_or_string('ITEM_ONE'), TestEnum.ITEM_ONE)
 
         cfg = ConfigDict()
-        cfg.declare('enum', ConfigValue(
-            default=2,
-            domain=TestEnum.from_enum_or_string
-        ))
+        cfg.declare('enum', ConfigValue(default=2, domain=TestEnum.from_enum_or_string))
         self.assertEqual(cfg.enum, TestEnum.ITEM_TWO)
         cfg.enum = 'ITEM_ONE'
         self.assertEqual(cfg.enum, TestEnum.ITEM_ONE)
@@ -605,7 +633,7 @@ class TestConfigDomains(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '.*3 is not a valid'):
             cfg.enum = 3
         with self.assertRaisesRegex(ValueError, '.*invalid value'):
-            cfg.enum ='ITEM_THREE'
+            cfg.enum = 'ITEM_THREE'
 
     def test_DynamicImplicitDomain(self):
         def _rule(key, val):
@@ -619,11 +647,10 @@ class TestConfigDomains(unittest.TestCase):
             if 'l' in key:
                 raise ValueError('invalid key: %s' % key)
             return ans(val)
-        cfg = ConfigDict(
-            implicit=True, implicit_domain=DynamicImplicitDomain(_rule))
+
+        cfg = ConfigDict(implicit=True, implicit_domain=DynamicImplicitDomain(_rule))
         self.assertEqual(len(cfg), 0)
-        test = cfg({'hi': {'option_i': 10},
-                    'fast': {'option_f': 20}})
+        test = cfg({'hi': {'option_i': 10}, 'fast': {'option_f': 20}})
         self.assertEqual(len(test), 2)
         self.assertEqual(test.hi.value(), {'option_i': 10})
         self.assertEqual(test.fast.value(), {'option_f': 20, 'option_s': '3'})
@@ -639,9 +666,13 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(fit.value(), {'option_f': 2, 'option_i': 1})
 
         with self.assertRaisesRegex(ValueError, "invalid key: fail"):
-            test = cfg({'hi': {'option_i': 10},
-                        'fast': {'option_f': 20},
-                        'fail': {'option_f': 20}})
+            test = cfg(
+                {
+                    'hi': {'option_i': 10},
+                    'fast': {'option_f': 20},
+                    'fail': {'option_f': 20},
+                }
+            )
 
 
 class TestImmutableConfigValue(unittest.TestCase):
@@ -668,8 +699,8 @@ class TestImmutableConfigValue(unittest.TestCase):
         self.assertEqual(config.a, 4)
         self.assertEqual(config.b, 5)
         with self.assertRaisesRegex(
-                ValueError,
-                'Only ConfigValue instances can be marked immutable'):
+            ValueError, 'Only ConfigValue instances can be marked immutable'
+        ):
             locker = MarkImmutable(config.get('a'), config.b)
         self.assertEqual(type(config.get('a')), ConfigValue)
         config.a = 6
@@ -732,7 +763,6 @@ class TestImmutableConfigValue(unittest.TestCase):
 
 
 class TestConfig(unittest.TestCase):
-
     def setUp(self):
         # Save the original environment, then force a fixed column width
         # so tests do not fail on some platforms (notably, OSX)
@@ -740,100 +770,129 @@ class TestConfig(unittest.TestCase):
         os.environ["COLUMNS"] = "80"
 
         self.config = config = ConfigDict(
-            "Basic configuration for Flushing models", implicit=True)
+            "Basic configuration for Flushing models", implicit=True
+        )
         net = config.declare('network', ConfigDict())
-        net.declare('epanet file',
-                    ConfigValue('Net3.inp', str, 'EPANET network inp file',
-                                None)).declare_as_argument(dest='epanet')
+        net.declare(
+            'epanet file', ConfigValue('Net3.inp', str, 'EPANET network inp file', None)
+        ).declare_as_argument(dest='epanet')
 
         sc = config.declare(
             'scenario',
-            ConfigDict(
-                "Single scenario block", implicit=True, implicit_domain=str))
-        sc.declare('scenario file', ConfigValue(
-            'Net3.tsg', str,
-            'Scenario generation file, see the TEVASIM documentation',
-            """This is the (long) documentation for the 'scenario file'
+            ConfigDict("Single scenario block", implicit=True, implicit_domain=str),
+        )
+        sc.declare(
+            'scenario file',
+            ConfigValue(
+                'Net3.tsg',
+                str,
+                'Scenario generation file, see the TEVASIM documentation',
+                """This is the (long) documentation for the 'scenario file'
             parameter.  It contains multiple lines, and some internal
             formatting; like a bulleted list:
               - item 1
               - item 2
-            """)).declare_as_argument(group='Scenario definition')
-        sc.declare('merlion', ConfigValue(
-            default=False,
-            domain=bool,
-            description='Water quality model',
-            doc="""
+            """,
+            ),
+        ).declare_as_argument(group='Scenario definition')
+        sc.declare(
+            'merlion',
+            ConfigValue(
+                default=False,
+                domain=bool,
+                description='Water quality model',
+                doc="""
 
             This is the (long) documentation for the 'merlion'
             parameter.  It contains multiple lines, but no apparent internal
-            formatting; so the outputter should re-wrap everything."""
-        )).declare_as_argument(group='Scenario definition')
-        sc.declare('detection',
-                   ConfigValue(
-                       # Note use of lambda for an "integer list domain"
-                       [1, 2, 3],
-                       lambda x: list(int(i) for i in x),
-                       'Sensor placement list, epanetID',
-                       None))
+            formatting; so the outputter should re-wrap everything.""",
+            ),
+        ).declare_as_argument(group='Scenario definition')
+        sc.declare(
+            'detection',
+            ConfigValue(
+                # Note use of lambda for an "integer list domain"
+                [1, 2, 3],
+                lambda x: list(int(i) for i in x),
+                'Sensor placement list, epanetID',
+                None,
+            ),
+        )
 
-        config.declare('scenarios', ConfigList([], sc,
-                                               "List of scenario blocks", None))
+        config.declare('scenarios', ConfigList([], sc, "List of scenario blocks", None))
 
-        config.declare('nodes', ConfigList(
-            [], ConfigValue(0, int, 'Node ID', None), "List of node IDs", None))
+        config.declare(
+            'nodes',
+            ConfigList(
+                [], ConfigValue(0, int, 'Node ID', None), "List of node IDs", None
+            ),
+        )
 
         im = config.declare('impact', ConfigDict())
-        im.declare('metric', ConfigValue(
-            'MC', str, 'Population or network based impact metric', None))
+        im.declare(
+            'metric',
+            ConfigValue('MC', str, 'Population or network based impact metric', None),
+        )
 
         fl = config.declare('flushing', ConfigDict())
         n = fl.declare('flush nodes', ConfigDict())
-        n.declare('feasible nodes', ConfigValue(
-            'ALL', str, 'ALL, NZD, NONE, list or filename', None))
-        n.declare('infeasible nodes', ConfigValue(
-            'NONE', str, 'ALL, NZD, NONE, list or filename', None))
-        n.declare('max nodes',
-                  ConfigValue(2, int, 'Maximum number of nodes to flush', None))
-        n.declare('rate', ConfigValue(600, float, 'Flushing rate [gallons/min]',
-                                      None))
-        n.declare('response time', ConfigValue(
-            60, float, 'Time [min] between detection and flushing', None))
-        n.declare('duration', ConfigValue(600, float, 'Time [min] for flushing',
-                                          None))
+        n.declare(
+            'feasible nodes',
+            ConfigValue('ALL', str, 'ALL, NZD, NONE, list or filename', None),
+        )
+        n.declare(
+            'infeasible nodes',
+            ConfigValue('NONE', str, 'ALL, NZD, NONE, list or filename', None),
+        )
+        n.declare(
+            'max nodes', ConfigValue(2, int, 'Maximum number of nodes to flush', None)
+        )
+        n.declare('rate', ConfigValue(600, float, 'Flushing rate [gallons/min]', None))
+        n.declare(
+            'response time',
+            ConfigValue(60, float, 'Time [min] between detection and flushing', None),
+        )
+        n.declare('duration', ConfigValue(600, float, 'Time [min] for flushing', None))
 
         v = fl.declare('close valves', ConfigDict())
-        v.declare('feasible pipes', ConfigValue(
-            'ALL', str, 'ALL, DIAM min max [inch], NONE, list or filename',
-            None))
-        v.declare('infeasible pipes', ConfigValue(
-            'NONE', str, 'ALL, DIAM min max [inch], NONE, list or filename',
-            None))
-        v.declare('max pipes',
-                  ConfigValue(2, int, 'Maximum number of pipes to close', None))
-        v.declare('response time', ConfigValue(
-            60, float, 'Time [min] between detection and closing valves', None))
+        v.declare(
+            'feasible pipes',
+            ConfigValue(
+                'ALL', str, 'ALL, DIAM min max [inch], NONE, list or filename', None
+            ),
+        )
+        v.declare(
+            'infeasible pipes',
+            ConfigValue(
+                'NONE', str, 'ALL, DIAM min max [inch], NONE, list or filename', None
+            ),
+        )
+        v.declare(
+            'max pipes', ConfigValue(2, int, 'Maximum number of pipes to close', None)
+        )
+        v.declare(
+            'response time',
+            ConfigValue(
+                60, float, 'Time [min] between detection and closing valves', None
+            ),
+        )
 
         self._reference = {
-            'network': {
-                'epanet file': 'Net3.inp'
-            },
+            'network': {'epanet file': 'Net3.inp'},
             'scenario': {
                 'detection': [1, 2, 3],
                 'scenario file': 'Net3.tsg',
-                'merlion': False
+                'merlion': False,
             },
             'scenarios': [],
             'nodes': [],
-            'impact': {
-                'metric': 'MC'
-            },
+            'impact': {'metric': 'MC'},
             'flushing': {
                 'close valves': {
                     'infeasible pipes': 'NONE',
                     'max pipes': 2,
                     'feasible pipes': 'ALL',
-                    'response time': 60.0
+                    'response time': 60.0,
                 },
                 'flush nodes': {
                     'feasible nodes': 'ALL',
@@ -841,10 +900,11 @@ class TestConfig(unittest.TestCase):
                     'infeasible nodes': 'NONE',
                     'rate': 600.0,
                     'duration': 600.0,
-                    'response time': 60.0
+                    'response time': 60.0,
                 },
             },
         }
+
     def tearDown(self):
         # Restore the original environment
         os.environ = self.original_environ
@@ -921,8 +981,7 @@ flushing:
       response time: 60.0     # Time [min] between detection and closing
                               #   valves
 """
-        self._validateTemplate(self.config, reference_template,
-                               indent_spacing=3)
+        self._validateTemplate(self.config, reference_template, indent_spacing=3)
 
     def test_template_4space(self):
         reference_template = """# Basic configuration for Flushing models
@@ -954,8 +1013,7 @@ flushing:
         response time: 60.0     # Time [min] between detection and closing
                                 #   valves
 """
-        self._validateTemplate(self.config, reference_template,
-                               indent_spacing=4)
+        self._validateTemplate(self.config, reference_template, indent_spacing=4)
 
     def test_template_3space_narrow(self):
         reference_template = """# Basic configuration for Flushing models
@@ -988,8 +1046,9 @@ flushing:
       response time: 60.0     # Time [min] between detection and closing
                               #   valves
 """
-        self._validateTemplate(self.config, reference_template,
-                               indent_spacing=3, width=72)
+        self._validateTemplate(
+            self.config, reference_template, indent_spacing=3, width=72
+        )
 
     def test_display_default(self):
         reference = """network:
@@ -1068,41 +1127,52 @@ flushing:
         self.config['scenarios'].append()
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios:
+        self.assertEqual(
+            test,
+            """scenarios:
   -
-""")
+""",
+        )
 
     def test_display_userdata_list_nonDefault(self):
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios:
+        self.assertEqual(
+            test,
+            """scenarios:
   -
   -
     merlion: true
     detection: []
-""")
+""",
+        )
 
     def test_display_userdata_add_block(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, """foo: 0
+        self.assertEqual(
+            test,
+            """foo: 0
 bar:
-""")
+""",
+        )
 
     def test_display_userdata_add_block_nonDefault(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
-        self.config.add("bar", ConfigDict(implicit=True)) \
-                   .add("baz", ConfigDict())
+        self.config.add("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, """foo: 0
+        self.assertEqual(
+            test,
+            """foo: 0
 bar:
   baz:
-""")
+""",
+        )
 
     def test_display_userdata_declare_block(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
@@ -1113,8 +1183,7 @@ bar:
 
     def test_display_userdata_declare_block_nonDefault(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
-        self.config.declare("bar", ConfigDict(implicit=True)) \
-                   .add("baz", ConfigDict())
+        self.config.declare("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(test, "bar:\n  baz:\n")
@@ -1141,10 +1210,13 @@ bar:
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios[0]
+        self.assertEqual(
+            test,
+            """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
-scenarios[1].detection""")
+scenarios[1].detection""",
+        )
 
     def test_unusedUserValues_list_nonDefault_listAccessed(self):
         self.config['scenarios'].append()
@@ -1153,10 +1225,13 @@ scenarios[1].detection""")
             pass
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios[0]
+        self.assertEqual(
+            test,
+            """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
-scenarios[1].detection""")
+scenarios[1].detection""",
+        )
 
     def test_unusedUserValues_list_nonDefault_itemAccessed(self):
         self.config['scenarios'].append()
@@ -1164,16 +1239,18 @@ scenarios[1].detection""")
         self.config['scenarios'][1]['merlion']
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios[0]
-scenarios[1].detection""")
+        self.assertEqual(
+            test,
+            """scenarios[0]
+scenarios[1].detection""",
+        )
 
     def test_unusedUserValues_add_topBlock(self):
         self.config.add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
         self.assertEqual(test, "foo")
-        test = '\n'.join(x.name(True) for x in
-                         self.config.foo.unused_user_values())
+        test = '\n'.join(x.name(True) for x in self.config.foo.unused_user_values())
         sys.stdout.write(test)
         self.assertEqual(test, "foo")
 
@@ -1217,10 +1294,13 @@ scenarios[1].detection""")
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios[0]
+        self.assertEqual(
+            test,
+            """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
-scenarios[1].detection""")
+scenarios[1].detection""",
+        )
 
     def test_UserValues_list_nonDefault_listAccessed(self):
         self.config['scenarios'].append()
@@ -1229,10 +1309,13 @@ scenarios[1].detection""")
             pass
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios[0]
+        self.assertEqual(
+            test,
+            """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
-scenarios[1].detection""")
+scenarios[1].detection""",
+        )
 
     def test_UserValues_list_nonDefault_itemAccessed(self):
         self.config['scenarios'].append()
@@ -1240,10 +1323,13 @@ scenarios[1].detection""")
         self.config['scenarios'][1]['merlion']
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios[0]
+        self.assertEqual(
+            test,
+            """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
-scenarios[1].detection""")
+scenarios[1].detection""",
+        )
 
     def test_UserValues_add_topBlock(self):
         self.config.add('foo', ConfigDict())
@@ -1303,12 +1389,11 @@ scenarios[1].detection""")
     def test_parseDisplay_userdata_list_nonDefault(self):
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
-        test = _display(self.config,'userdata')
+        test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(
-            yaml_load(test), {'scenarios':
-                                  [None, {'merlion': True,
-                                          'detection': []}]})
+            yaml_load(test), {'scenarios': [None, {'merlion': True, 'detection': []}]}
+        )
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_add_block(self):
@@ -1321,8 +1406,7 @@ scenarios[1].detection""")
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_add_block_nonDefault(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
-        self.config.add("bar", ConfigDict(implicit=True)) \
-                   .add("baz", ConfigDict())
+        self.config.add("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), {'bar': {'baz': None}, foo: 0})
@@ -1338,8 +1422,7 @@ scenarios[1].detection""")
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_add_block_nonDefault(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
-        self.config.declare("bar", ConfigDict(implicit=True)) \
-                   .add("baz", ConfigDict())
+        self.config.declare("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), {'bar': {'baz': None}})
@@ -1368,25 +1451,27 @@ scenarios[1].detection""")
         val = self.config['scenarios'].value()
         self.assertIs(type(val), list)
         self.assertEqual(len(val), 1)
-        self.assertEqual(val, [{'detection': [1, 2, 3],
-                                'merlion': False,
-                                'scenario file': 'Net3.tsg'}])
+        self.assertEqual(
+            val,
+            [{'detection': [1, 2, 3], 'merlion': False, 'scenario file': 'Net3.tsg'}],
+        )
 
     def test_name(self):
         self.config['scenarios'].append()
         self.assertEqual(self.config.name(), "")
         self.assertEqual(self.config['scenarios'].name(), "scenarios")
         self.assertEqual(self.config['scenarios'][0].name(), "[0]")
-        self.assertEqual(self.config['scenarios'][0].get('merlion').name(),
-                         "merlion")
+        self.assertEqual(self.config['scenarios'][0].get('merlion').name(), "merlion")
 
     def test_name_fullyQualified(self):
         self.config['scenarios'].append()
         self.assertEqual(self.config.name(True), "")
         self.assertEqual(self.config['scenarios'].name(True), "scenarios")
         self.assertEqual(self.config['scenarios'][0].name(True), "scenarios[0]")
-        self.assertEqual(self.config['scenarios'][0].get('merlion').name(True),
-                         "scenarios[0].merlion")
+        self.assertEqual(
+            self.config['scenarios'][0].get('merlion').name(True),
+            "scenarios[0].merlion",
+        )
 
     def test_setValue_scalar(self):
         self.config['flushing']['flush nodes']['rate'] = 50
@@ -1395,8 +1480,7 @@ scenarios[1].detection""")
         self.assertEqual(val, 50.0)
 
     def test_setValue_scalar_badDomain(self):
-        with self.assertRaisesRegex(
-                ValueError, 'invalid value for configuration'):
+        with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
             self.config['flushing']['flush nodes']['rate'] = 'a'
         val = self.config['flushing']['flush nodes']['rate']
         self.assertIs(type(val), float)
@@ -1415,16 +1499,14 @@ scenarios[1].detection""")
         self.assertEqual(val, [6])
 
     def test_setValue_scalarList_badDomain(self):
-        with self.assertRaisesRegex(
-                ValueError, 'invalid value for configuration'):
+        with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
             self.config['scenario']['detection'] = 50
         val = self.config['scenario']['detection']
         self.assertIs(type(val), list)
         self.assertEqual(val, [1, 2, 3])
 
     def test_setValue_scalarList_badSubDomain(self):
-        with self.assertRaisesRegex(
-                ValueError, 'invalid value for configuration'):
+        with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
             self.config['scenario']['detection'] = [5.5, 'a']
         val = self.config['scenario']['detection']
         self.assertIs(type(val), list)
@@ -1443,8 +1525,7 @@ scenarios[1].detection""")
         self.assertEqual(val, [10])
 
     def test_setValue_list_badSubDomain(self):
-        with self.assertRaisesRegex(
-                ValueError, 'invalid value for configuration'):
+        with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
             self.config['nodes'] = [5, 'a']
         val = self.config['nodes'].value()
         self.assertIs(type(val), list)
@@ -1498,8 +1579,8 @@ scenarios[1].detection""")
     def test_setValue_block_noImplicit(self):
         _test = {'epanet file': 'no_file.inp', 'foo': 1}
         with self.assertRaisesRegex(
-                ValueError, "key 'foo' not defined for ConfigDict "
-                "'network' and implicit"):
+            ValueError, "key 'foo' not defined for ConfigDict " "'network' and implicit"
+        ):
             self.config['network'] = _test
         self.assertEqual(self._reference, self.config.value())
 
@@ -1529,14 +1610,13 @@ scenarios[1].detection""")
 
     def test_setValue_block_badDomain(self):
         _test = {'merlion': True, 'detection': ['a'], 'foo': 1, 'a': 1}
-        with self.assertRaisesRegex(
-                ValueError, 'invalid value for configuration'):
+        with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
             self.config['scenario'] = _test
         self.assertEqual(self._reference, self.config.value())
 
         with self.assertRaisesRegex(
-                ValueError, 'Expected dict value for scenario.set_value, '
-                'found list'):
+            ValueError, 'Expected dict value for scenario.set_value, found list'
+        ):
             self.config['scenario'] = []
         self.assertEqual(self._reference, self.config.value())
 
@@ -1548,12 +1628,10 @@ scenarios[1].detection""")
         c.reset()
         self.assertEqual(c.value(), 10)
 
-        with self.assertRaisesRegex(
-                TypeError, r"<lambda>\(\) .* argument"):
+        with self.assertRaisesRegex(TypeError, r"<lambda>\(\) .* argument"):
             c = ConfigValue(default=lambda x: 10 * x, domain=int)
 
-        with self.assertRaisesRegex(
-                ValueError, 'invalid value for configuration'):
+        with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
             c = ConfigValue('a', domain=int)
 
     def test_set_default(self):
@@ -1572,17 +1650,15 @@ scenarios[1].detection""")
         # a freshly-initialized object should not be accessed
         self.assertFalse(self.config._userAccessed)
         self.assertFalse(self.config._data['scenario']._userAccessed)
-        self.assertFalse(self.config._data['scenario']._data['detection']\
-                             ._userAccessed)
+        self.assertFalse(self.config._data['scenario']._data['detection']._userAccessed)
 
         # Getting a ConfigValue should not access it
         self.assertFalse(self.config['scenario'].get('detection')._userAccessed)
 
-        #... but should access the parent blocks traversed to get there
+        # ... but should access the parent blocks traversed to get there
         self.assertTrue(self.config._userAccessed)
         self.assertTrue(self.config._data['scenario']._userAccessed)
-        self.assertFalse(self.config._data['scenario']._data['detection']\
-                             ._userAccessed)
+        self.assertFalse(self.config._data['scenario']._data['detection']._userAccessed)
 
         # a freshly-initialized object should not be set
         self.assertFalse(self.config._userSet)
@@ -1633,17 +1709,16 @@ scenarios[1].detection""")
         self.assertEqual(sorted(config._declared), [])
 
         with self.assertRaisesRegex(
-                AttributeError,
-                "'ConfigDict' object attribute 'get' is read-only"):
+            AttributeError, "'ConfigDict' object attribute 'get' is read-only"
+        ):
             del config.get
         with self.assertRaisesRegex(
-                AttributeError,
-                "'ConfigDict' object has no attribute 'foo'"):
+            AttributeError, "'ConfigDict' object has no attribute 'foo'"
+        ):
             del config.foo
 
     def test_generate_custom_documentation(self):
-        reference = \
-"""startBlock{}
+        reference = """startBlock{}
   startItem{network}
   endItem{network}
   startBlock{network}
@@ -1749,51 +1824,52 @@ endBlock{}
 """
         with LoggingIntercept() as LOG:
             test = self.config.generate_documentation(
-                block_start= "startBlock{%s}\n",
-                block_end=   "endBlock{%s}\n",
-                item_start=  "startItem{%s}\n",
-                item_body=   "item{%s}\n",
-                item_end=    "endItem{%s}\n",
+                block_start="startBlock{%s}\n",
+                block_end="endBlock{%s}\n",
+                item_start="startItem{%s}\n",
+                item_body="item{%s}\n",
+                item_end="endItem{%s}\n",
             )
         LOG = LOG.getvalue().replace('\n', ' ')
         for name in ('block_start', 'block_end', 'item_start', 'item_end', 'item_body'):
             self.assertIn(
                 f"Overriding '{name}' by passing strings to "
                 "generate_documentation is deprecated.",
-                LOG
+                LOG,
             )
         self.maxDiff = None
-        #print(test)
-        self.assertEqual(test, reference)
-
-        with LoggingIntercept() as LOG:
-            test = self.config.generate_documentation(format=String_ConfigFormatter(
-                block_start= "startBlock{%s}\n",
-                block_end=   "endBlock{%s}\n",
-                item_start=  "startItem{%s}\n",
-                item_body=   "item{%s}\n",
-                item_end=    "endItem{%s}\n",
-            ))
-        self.assertEqual(LOG.getvalue(), "")
-        self.maxDiff = None
-        #print(test)
+        # print(test)
         self.assertEqual(test, reference)
 
         with LoggingIntercept() as LOG:
             test = self.config.generate_documentation(
-                block_start= "startBlock\n",
-                block_end=   "endBlock\n",
-                item_start=  "startItem\n",
-                item_body=   "item\n",
-                item_end=    "endItem\n",
+                format=String_ConfigFormatter(
+                    block_start="startBlock{%s}\n",
+                    block_end="endBlock{%s}\n",
+                    item_start="startItem{%s}\n",
+                    item_body="item{%s}\n",
+                    item_end="endItem{%s}\n",
+                )
+            )
+        self.assertEqual(LOG.getvalue(), "")
+        self.maxDiff = None
+        # print(test)
+        self.assertEqual(test, reference)
+
+        with LoggingIntercept() as LOG:
+            test = self.config.generate_documentation(
+                block_start="startBlock\n",
+                block_end="endBlock\n",
+                item_start="startItem\n",
+                item_body="item\n",
+                item_end="endItem\n",
             )
 
-        stripped_reference = re.sub(r'\{[^\}]*\}','',reference,flags=re.M)
-        #print(test)
+        stripped_reference = re.sub(r'\{[^\}]*\}', '', reference, flags=re.M)
+        # print(test)
         self.assertEqual(test, stripped_reference)
 
-        reference = \
-"""startBlock{}
+        reference = """startBlock{}
   startBlock{network}
   startBlock{scenario}
   startBlock{scenarios}
@@ -1814,39 +1890,45 @@ endBlock{}
             self.assertIn(
                 f"Overriding '{name}' by passing strings to "
                 "generate_documentation is deprecated.",
-                LOG
+                LOG,
             )
-        for name in ('item_end'):
+        for name in 'item_end':
             self.assertNotIn(
                 f"Overriding '{name}' by passing strings to "
                 "generate_documentation is deprecated.",
-                LOG
+                LOG,
             )
         self.maxDiff = None
-        #print(test)
+        # print(test)
         self.assertEqual(test, reference)
-
 
     def test_generate_latex_documentation(self):
         cfg = ConfigDict()
-        cfg.declare('int', ConfigValue(
-            domain=int, default=10,
-            doc="This is an integer parameter",
-        ))
-        cfg.declare('in', ConfigValue(
-            domain=In([1,3,5]), default=1,
-            description="This parameter must be in {1,3,5}",
-        ))
-        cfg.declare('lambda', ConfigValue(
-            domain=lambda x: int(x), default=1,
-            description="This is a float",
-            doc="This parameter is actually a float, but for testing "
-            "purposes we will use a lambda function for validation"
-        ))
-        cfg.declare('list', ConfigList(
-            domain=str,
-            description="A simple list of strings",
-        ))
+        cfg.declare(
+            'int',
+            ConfigValue(domain=int, default=10, doc="This is an integer parameter"),
+        )
+        cfg.declare(
+            'in',
+            ConfigValue(
+                domain=In([1, 3, 5]),
+                default=1,
+                description="This parameter must be in {1,3,5}",
+            ),
+        )
+        cfg.declare(
+            'lambda',
+            ConfigValue(
+                domain=lambda x: int(x),
+                default=1,
+                description="This is a float",
+                doc="This parameter is actually a float, but for testing "
+                "purposes we will use a lambda function for validation",
+            ),
+        )
+        cfg.declare(
+            'list', ConfigList(domain=str, description="A simple list of strings")
+        )
         self.assertEqual(
             cfg.generate_documentation(format='latex').strip(),
             """
@@ -1861,83 +1943,80 @@ endBlock{}
   \\item[{list}]\\hfill
     \\\\A simple list of strings
 \\end{description}
-            """.strip())
+            """.strip(),
+        )
 
     def test_empty_ConfigFormatter(self):
         cfg = ConfigDict()
         cfg.declare('field', ConfigValue())
         with self.assertRaisesRegex(
-                ValueError, "Unrecognized documentation formatter, 'unknown'"):
+            ValueError, "Unrecognized documentation formatter, 'unknown'"
+        ):
             cfg.generate_documentation(format="unknown")
 
-        self.assertEqual(
-            cfg.generate_documentation(format=ConfigFormatter()), ''
-        )
+        self.assertEqual(cfg.generate_documentation(format=ConfigFormatter()), '')
 
     def test_block_get(self):
         self.assertTrue('scenario' in self.config)
-        self.assertNotEqual(
-            self.config.get('scenario', 'bogus').value(), 'bogus')
+        self.assertNotEqual(self.config.get('scenario', 'bogus').value(), 'bogus')
         self.assertFalse('fubar' in self.config)
-        self.assertEqual(
-            self.config.get('fubar', 'bogus').value(), 'bogus')
+        self.assertEqual(self.config.get('fubar', 'bogus').value(), 'bogus')
 
         cfg = ConfigDict()
         cfg.declare('foo', ConfigValue(1, int))
-        self.assertEqual( cfg.get('foo', 5).value(), 1 )
-        self.assertEqual( len(cfg), 1 )
-        self.assertIs( cfg.get('bar'), None )
-        self.assertEqual( cfg.get('bar',None).value(), None )
-        self.assertEqual( len(cfg), 1 )
+        self.assertEqual(cfg.get('foo', 5).value(), 1)
+        self.assertEqual(len(cfg), 1)
+        self.assertIs(cfg.get('bar'), None)
+        self.assertEqual(cfg.get('bar', None).value(), None)
+        self.assertEqual(len(cfg), 1)
 
         cfg = ConfigDict(implicit=True)
         cfg.declare('foo', ConfigValue(1, int))
-        self.assertEqual( cfg.get('foo', 5).value(), 1 )
-        self.assertEqual( len(cfg), 1 )
-        self.assertEqual( cfg.get('bar', 5).value(), 5 )
-        self.assertEqual( len(cfg), 1 )
-        self.assertIs( cfg.get('baz'), None )
-        self.assertIs( cfg.get('baz', None).value(), None )
-        self.assertEqual( len(cfg), 1 )
+        self.assertEqual(cfg.get('foo', 5).value(), 1)
+        self.assertEqual(len(cfg), 1)
+        self.assertEqual(cfg.get('bar', 5).value(), 5)
+        self.assertEqual(len(cfg), 1)
+        self.assertIs(cfg.get('baz'), None)
+        self.assertIs(cfg.get('baz', None).value(), None)
+        self.assertEqual(len(cfg), 1)
 
-        cfg = ConfigDict( implicit=True,
-                           implicit_domain=ConfigList(domain=str) )
+        cfg = ConfigDict(implicit=True, implicit_domain=ConfigList(domain=str))
         cfg.declare('foo', ConfigValue(1, int))
-        self.assertEqual( cfg.get('foo', 5).value(), 1 )
-        self.assertEqual( len(cfg), 1 )
-        self.assertEqual( cfg.get('bar', [5]).value(), ['5'] )
-        self.assertEqual( len(cfg), 1 )
-        self.assertIs( cfg.get('baz'), None )
-        self.assertEqual( cfg.get('baz', None).value(), [] )
-        self.assertEqual( len(cfg), 1 )
+        self.assertEqual(cfg.get('foo', 5).value(), 1)
+        self.assertEqual(len(cfg), 1)
+        self.assertEqual(cfg.get('bar', [5]).value(), ['5'])
+        self.assertEqual(len(cfg), 1)
+        self.assertIs(cfg.get('baz'), None)
+        self.assertEqual(cfg.get('baz', None).value(), [])
+        self.assertEqual(len(cfg), 1)
 
     def test_setdefault(self):
         cfg = ConfigDict()
         cfg.declare('foo', ConfigValue(1, int))
-        self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
-        self.assertEqual( len(cfg), 1 )
-        self.assertRaisesRegex(ValueError, '.*disallows implicit entries',
-                                cfg.setdefault, 'bar', 0)
-        self.assertEqual( len(cfg), 1 )
+        self.assertEqual(cfg.setdefault('foo', 5).value(), 1)
+        self.assertEqual(len(cfg), 1)
+        self.assertRaisesRegex(
+            ValueError, '.*disallows implicit entries', cfg.setdefault, 'bar', 0
+        )
+        self.assertEqual(len(cfg), 1)
 
         cfg = ConfigDict(implicit=True)
         cfg.declare('foo', ConfigValue(1, int))
-        self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
-        self.assertEqual( len(cfg), 1 )
-        self.assertEqual( cfg.setdefault('bar', 5).value(), 5 )
-        self.assertEqual( len(cfg), 2 )
-        self.assertEqual( cfg.setdefault('baz').value(), None )
-        self.assertEqual( len(cfg), 3 )
+        self.assertEqual(cfg.setdefault('foo', 5).value(), 1)
+        self.assertEqual(len(cfg), 1)
+        self.assertEqual(cfg.setdefault('bar', 5).value(), 5)
+        self.assertEqual(len(cfg), 2)
+        self.assertEqual(cfg.setdefault('baz').value(), None)
+        self.assertEqual(len(cfg), 3)
 
-        cfg = ConfigDict( implicit=True,
-                           implicit_domain=ConfigList(domain=str) )
+        cfg = ConfigDict(implicit=True, implicit_domain=ConfigList(domain=str))
         cfg.declare('foo', ConfigValue(1, int))
-        self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
-        self.assertEqual( len(cfg), 1 )
-        self.assertEqual( cfg.setdefault('bar', [5]).value(), ['5'] )
-        self.assertEqual( len(cfg), 2 )
-        self.assertEqual( cfg.setdefault('baz').value(), [] )
-        self.assertEqual( len(cfg), 3 )
+        self.assertEqual(cfg.setdefault('foo', 5).value(), 1)
+        self.assertEqual(len(cfg), 1)
+        self.assertEqual(cfg.setdefault('bar', [5]).value(), ['5'])
+        self.assertEqual(len(cfg), 2)
+        self.assertEqual(cfg.setdefault('baz').value(), [])
+        self.assertEqual(len(cfg), 3)
 
     def test_block_keys(self):
         ref = ['scenario file', 'merlion', 'detection']
@@ -1987,8 +2066,11 @@ endBlock{}
         self.assertEqual(list(valueiter), ref)
 
     def test_block_items(self):
-        ref = [('scenario file', 'Net3.tsg'), ('merlion', False),
-               ('detection', [1, 2, 3])]
+        ref = [
+            ('scenario file', 'Net3.tsg'),
+            ('merlion', False),
+            ('detection', [1, 2, 3]),
+        ]
 
         # items iterator
         items = self.config['scenario'].items()
@@ -2008,7 +2090,7 @@ endBlock{}
         self.assertEqual(list(itemiter), ref)
 
     def test_value(self):
-        #print(self.config.value())
+        # print(self.config.value())
         self.assertEqual(self._reference, self.config.value())
 
     def test_list_manipulation(self):
@@ -2017,25 +2099,31 @@ endBlock{}
         os = StringIO()
         with LoggingIntercept(os):
             self.config['scenarios'].add()
-        self.assertIn("ConfigList.add() has been deprecated.  Use append()",
-                      os.getvalue())
+        self.assertIn(
+            "ConfigList.add() has been deprecated.  Use append()", os.getvalue()
+        )
         self.assertEqual(len(self.config['scenarios']), 2)
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         self.assertEqual(len(self.config['scenarios']), 3)
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios:
+        self.assertEqual(
+            test,
+            """scenarios:
   -
   -
   -
     merlion: true
     detection: []
-""")
+""",
+        )
         self.config['scenarios'][0] = {'merlion': True, 'detection': []}
         self.assertEqual(len(self.config['scenarios']), 3)
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios:
+        self.assertEqual(
+            test,
+            """scenarios:
   -
     merlion: true
     detection: []
@@ -2043,10 +2131,13 @@ endBlock{}
   -
     merlion: true
     detection: []
-""")
+""",
+        )
         test = _display(self.config['scenarios'])
         sys.stdout.write(test)
-        self.assertEqual(test, """-
+        self.assertEqual(
+            test,
+            """-
   scenario file: Net3.tsg
   merlion: true
   detection: []
@@ -2058,7 +2149,8 @@ endBlock{}
   scenario file: Net3.tsg
   merlion: true
   detection: []
-""")
+""",
+        )
 
     def test_list_get(self):
         X = ConfigDict(implicit=True)
@@ -2066,12 +2158,11 @@ endBlock{}
         self.assertEqual(_display(X, 'userdata'), "")
         with self.assertRaisesRegex(IndexError, 'list index out of range'):
             self.assertIs(X.config.get(0), None)
-        self.assertIs(X.config.get(0,None).value(), None )
+        self.assertIs(X.config.get(0, None).value(), None)
         val = X.config.get(0, 1)
         self.assertIsInstance(val, ConfigValue)
         self.assertEqual(val.value(), 1)
-        self.assertRaisesRegex(
-            IndexError, '.*out of range', X.config.__getitem__, 0 )
+        self.assertRaisesRegex(IndexError, '.*out of range', X.config.__getitem__, 0)
         # get() shouldn't change the userdata flag...
         self.assertEqual(_display(X, 'userdata'), "")
 
@@ -2091,15 +2182,13 @@ endBlock{}
 
         with self.assertRaisesRegex(IndexError, 'list index out of range'):
             self.assertIs(X.config.get(1), None)
-        self.assertRaisesRegex(
-            IndexError, '.*out of range', X.config.__getitem__, 1)
+        self.assertRaisesRegex(IndexError, '.*out of range', X.config.__getitem__, 1)
 
         # this should ONLY change the userSet flag on the item (and not
         # the list)
         X.config.get(0).set_value(20)
         self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
-        self.assertEqual([_.name(True) for _ in X.user_values()],
-                         ["config[0]"])
+        self.assertEqual([_.name(True) for _ in X.user_values()], ["config[0]"])
 
         # this should ONLY change the userSet flag on the item (and not
         # the list)
@@ -2107,8 +2196,7 @@ endBlock{}
         X.declare('config', ConfigList([42], int))
         X.config[0] = 20
         self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
-        self.assertEqual([_.name(True) for _ in X.user_values()],
-                         ["config[0]"])
+        self.assertEqual([_.name(True) for _ in X.user_values()], ["config[0]"])
 
         # this should ONLY change the userSet flag on the item (and not
         # the list)
@@ -2116,8 +2204,7 @@ endBlock{}
         X.declare('config', ConfigList([42], int))
         X.config.append(20)
         self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
-        self.assertEqual([_.name(True) for _ in X.user_values()],
-                         ["config[1]"])
+        self.assertEqual([_.name(True) for _ in X.user_values()], ["config[1]"])
 
         # This should change both... because the [42] was "declared" as
         # the default for the List, it will *not* be a user-set value
@@ -2125,14 +2212,17 @@ endBlock{}
         X.add('config', ConfigList([42], int))
         X.config.append(20)
         self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
-        self.assertEqual([_.name(True) for _ in X.user_values()],
-                         ["config", "config[1]"])
+        self.assertEqual(
+            [_.name(True) for _ in X.user_values()], ["config", "config[1]"]
+        )
 
     def test_implicit_entries(self):
         config = ConfigDict()
         with self.assertRaisesRegex(
-                ValueError, "Key 'test' not defined in ConfigDict '' "
-                "and Dict disallows implicit entries"):
+            ValueError,
+            "Key 'test' not defined in ConfigDict '' "
+            "and Dict disallows implicit entries",
+        ):
             config['test'] = 5
 
         config = ConfigDict(implicit=True)
@@ -2140,8 +2230,7 @@ endBlock{}
         config.declare('formal', ConfigValue(42, int))
         config['implicit_2'] = 5
         self.assertEqual(3, len(config))
-        self.assertEqual(['implicit_1', 'formal', 'implicit_2'],
-                         list(config.keys()))
+        self.assertEqual(['implicit_1', 'formal', 'implicit_2'], list(config.keys()))
         config.reset()
         self.assertEqual(1, len(config))
         self.assertEqual(['formal'], list(config.keys()))
@@ -2151,19 +2240,22 @@ endBlock{}
         self.config.initialize_argparse(parser)
         help = parser.format_help()
         self.assertIn(
-"""  -h, --help            show this help message and exit
+            """  -h, --help            show this help message and exit
   --epanet-file EPANET  EPANET network inp file
 
 Scenario definition:
   --scenario-file STR   Scenario generation file, see the TEVASIM
                         documentation
   --merlion             Water quality model
-""", help)
+""",
+            help,
+        )
 
     def test_argparse_help_implicit_disable(self):
-        self.config['scenario'].declare('epanet', ConfigValue(
-            True, bool, 'Use EPANET as the Water quality model',
-            None)).declare_as_argument(group='Scenario definition')
+        self.config['scenario'].declare(
+            'epanet',
+            ConfigValue(True, bool, 'Use EPANET as the Water quality model', None),
+        ).declare_as_argument(group='Scenario definition')
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
@@ -2178,7 +2270,9 @@ Scenario definition:
                         documentation
   --merlion             Water quality model
   --disable-epanet      [DON'T] Use EPANET as the Water quality model
-""", help)
+""",
+            help,
+        )
 
     def test_argparse_import(self):
         parser = argparse.ArgumentParser(prog='tester')
@@ -2196,8 +2290,9 @@ Scenario definition:
         self.assertEqual(1, len(vars(args)))
         leftovers = self.config.import_argparse(args)
         self.assertEqual(0, len(vars(args)))
-        self.assertEqual(['scenario.merlion'],
-                         [x.name(True) for x in self.config.user_values()])
+        self.assertEqual(
+            ['scenario.merlion'], [x.name(True) for x in self.config.user_values()]
+        )
 
         args = parser.parse_args(['--merlion', '--epanet-file', 'foo'])
         self.config.reset()
@@ -2206,8 +2301,10 @@ Scenario definition:
         self.assertEqual(2, len(vars(args)))
         leftovers = self.config.import_argparse(args)
         self.assertEqual(1, len(vars(args)))
-        self.assertEqual(['network.epanet file', 'scenario.merlion'],
-                         [x.name(True) for x in self.config.user_values()])
+        self.assertEqual(
+            ['network.epanet file', 'scenario.merlion'],
+            [x.name(True) for x in self.config.user_values()],
+        )
         self.assertTrue(self.config['scenario']['merlion'])
         self.assertEqual('foo', self.config['network']['epanet file'])
 
@@ -2216,15 +2313,18 @@ Scenario definition:
         subp = parser.add_subparsers(title="Subcommands").add_parser('flushing')
 
         # Declare an argument by passing in the name of the subparser
-        self.config['flushing']['flush nodes'].get(
-            'duration').declare_as_argument(group='flushing')
+        self.config['flushing']['flush nodes'].get('duration').declare_as_argument(
+            group='flushing'
+        )
         # Declare an argument by passing in the name of the subparser
         # and an implicit group
-        self.config['flushing']['flush nodes'].get('feasible nodes') \
-            .declare_as_argument( group=('flushing','Node information') )
+        self.config['flushing']['flush nodes'].get(
+            'feasible nodes'
+        ).declare_as_argument(group=('flushing', 'Node information'))
         # Declare an argument by passing in the subparser and a group name
-        self.config['flushing']['flush nodes'].get('infeasible nodes') \
-            .declare_as_argument( group=(subp,'Node information') )
+        self.config['flushing']['flush nodes'].get(
+            'infeasible nodes'
+        ).declare_as_argument(group=(subp, 'Node information'))
         self.config.initialize_argparse(parser)
 
         # Note that the output for argparse changes in diffeent versions
@@ -2243,7 +2343,9 @@ Scenario definition:
   --scenario-file STR   Scenario generation file, see the TEVASIM
                         documentation
   --merlion             Water quality model
-""", help)
+""",
+            help,
+        )
 
         help = subp.format_help()
         self.assertIn(
@@ -2255,7 +2357,9 @@ Node information:
   --feasible-nodes STR  ALL, NZD, NONE, list or filename
   --infeasible-nodes STR
                         ALL, NZD, NONE, list or filename
-""", help)
+""",
+            help,
+        )
 
     def test_argparse_lists(self):
         c = ConfigDict()
@@ -2266,14 +2370,11 @@ Node information:
         self.assertEqual(c.sub_dict.domain_name(), 'sub-dict')
         self.assertEqual(c.sub_dict.get('a').domain_name(), 'int')
         self.assertEqual(c.sub_dict.get('b').domain_name(), '')
-        c.declare(
-            'lst',
-            ConfigList(domain=int)).declare_as_argument(action='append')
-        c.declare(
-            'sub',
-            ConfigList(domain=c.sub_dict)).declare_as_argument(action='append')
-        c.declare('listof', ConfigValue(
-            domain=ListOf(int))).declare_as_argument()
+        c.declare('lst', ConfigList(domain=int)).declare_as_argument(action='append')
+        c.declare('sub', ConfigList(domain=c.sub_dict)).declare_as_argument(
+            action='append'
+        )
+        c.declare('listof', ConfigValue(domain=ListOf(int))).declare_as_argument()
 
         parser = argparse.ArgumentParser(prog='tester')
         c.initialize_argparse(parser)
@@ -2281,44 +2382,56 @@ Node information:
         # Note that the output for argparse changes in diffeent versions
         # (in particular, "options:" vs "optional arguments:").  We will
         # only test for a subset of the output that should stay consistent.
-        self.assertIn("""
+        self.assertIn(
+            """
   -h, --help            show this help message and exit
   --lst INT
   --sub SUB-DICT
-  --listof LISTOF[INT]""".strip(), parser.format_help())
+  --listof LISTOF[INT]""".strip(),
+            parser.format_help(),
+        )
 
-        args = parser.parse_args([
-            '--lst', '42', '--lst', '1',
-            '--sub', 'a=4', '--sub', 'b=12,a:0',
-            '--listof', '3,2 4'
-        ])
+        args = parser.parse_args(
+            [
+                '--lst',
+                '42',
+                '--lst',
+                '1',
+                '--sub',
+                'a=4',
+                '--sub',
+                'b=12,a:0',
+                '--listof',
+                '3,2 4',
+            ]
+        )
         leftovers = c.import_argparse(args)
         self.assertEqual(c.lst.value(), [42, 1])
-        self.assertEqual(c.sub.value(), [{'a':4, 'b':None}, {'a':0, 'b':'12'}])
+        self.assertEqual(c.sub.value(), [{'a': 4, 'b': None}, {'a': 0, 'b': '12'}])
         self.assertEqual(c.listof, [3, 2, 4])
 
         args = parser.parse_args(['--sub', 'b=12,a 0'])
         with self.assertRaisesRegex(
-                ValueError, r"(?s)invalid value for configuration 'sub':.*"
-                r"Expected ':' or '=' but found '0' at Line 1 Column 8"):
+            ValueError,
+            r"(?s)invalid value for configuration 'sub':.*"
+            r"Expected ':' or '=' but found '0' at Line 1 Column 8",
+        ):
             leftovers = c.import_argparse(args)
         args = parser.parse_args(['--sub', 'b='])
         with self.assertRaisesRegex(
-                ValueError, r"(?s)Expected value following '=' "
-                "but encountered end of string"):
+            ValueError,
+            r"(?s)Expected value following '=' " "but encountered end of string",
+        ):
             leftovers = c.import_argparse(args)
         args = parser.parse_args(['--sub', 'b'])
         with self.assertRaisesRegex(
-                ValueError, r"(?s)Expected ':' or '=' "
-                "but encountered end of string"):
+            ValueError, r"(?s)Expected ':' or '=' " "but encountered end of string"
+        ):
             leftovers = c.import_argparse(args)
-
 
     def test_getattr_setattr(self):
         config = ConfigDict()
-        foo = config.declare(
-            'foo', ConfigDict(
-                implicit=True, implicit_domain=int))
+        foo = config.declare('foo', ConfigDict(implicit=True, implicit_domain=int))
         foo.declare('explicit_bar', ConfigValue(0, int))
 
         self.assertEqual(1, len(foo))
@@ -2335,14 +2448,14 @@ Node information:
         self.assertEqual(20, foo.implicit_bar)
 
         with self.assertRaisesRegex(
-                ValueError, "Key 'baz' not defined in ConfigDict '' "
-                "and Dict disallows implicit entries"):
+            ValueError,
+            "Key 'baz' not defined in ConfigDict '' "
+            "and Dict disallows implicit entries",
+        ):
             config.baz = 10
 
-        with self.assertRaisesRegex(
-                AttributeError, "Unknown attribute 'baz'"):
+        with self.assertRaisesRegex(AttributeError, "Unknown attribute 'baz'"):
             a = config.baz
-
 
     def test_nonString_keys(self):
         config = ConfigDict(implicit=True)
@@ -2372,7 +2485,7 @@ Node information:
 
         self.assertEqual(_display(config), "5: 500\n1: 10\n")
 
-        config.set_value({5:5000})
+        config.set_value({5: 5000})
         self.assertIn(1, config)
         self.assertIn('1', config)
         self.assertEqual(config[1], 10)
@@ -2392,7 +2505,7 @@ Node information:
         config.declare('a_c', ConfigValue())
         config.declare('a d e', ConfigValue())
 
-        config.set_value({'a_b':10, 'a_c': 20, 'a_d_e': 30})
+        config.set_value({'a_b': 10, 'a_c': 20, 'a_d_e': 30})
         self.assertEqual(config.a_b, 10)
         self.assertEqual(config.a_c, 20)
         self.assertEqual(config.a_d_e, 30)
@@ -2437,10 +2550,9 @@ Node information:
         self.assertIn('g_h', config)
 
     def test_call_options(self):
-        config = ConfigDict(description="base description",
-                             doc="base doc",
-                             visibility=1,
-                             implicit=True)
+        config = ConfigDict(
+            description="base description", doc="base doc", visibility=1, implicit=True
+        )
         config.declare("a", ConfigValue(domain=int, doc="a doc", default=1))
         config.declare("b", config.get("a")(2))
         config.declare("c", config.get("a")(domain=float, doc="c doc"))
@@ -2478,9 +2590,7 @@ c: 1.0
         self.assertEqual(simple_copy._description, "base description")
         self.assertEqual(simple_copy._visibility, 1)
 
-        mod_copy = config(description="new description",
-                          doc="new doc",
-                          visibility=0)
+        mod_copy = config(description="new description", doc="new doc", visibility=0)
         reference_template = """# new description
 a: 1
 b: 2
@@ -2495,10 +2605,12 @@ c: 1.0
         def anon_domain(domain):
             def cast(x):
                 return domain(x)
+
             return cast
+
         cfg = ConfigDict()
         cfg.declare('int', ConfigValue(domain=int, default=10))
-        cfg.declare('in', ConfigValue(domain=In([1,3,5]), default=1))
+        cfg.declare('in', ConfigValue(domain=In([1, 3, 5]), default=1))
         cfg.declare('anon', ConfigValue(domain=anon_domain(int), default=1))
         cfg.declare('lambda', ConfigValue(domain=lambda x: int(x), default=1))
         cfg.declare('list', ConfigList(domain=str))
@@ -2506,27 +2618,23 @@ c: 1.0
         out = StringIO()
         with LoggingIntercept(out, module=None):
             cfg.set_value(
-                {'int': 100, 'in': 3, 'anon': 2.5, 'lambda': 1.5,
-                 'list': [2, 'a']}
+                {'int': 100, 'in': 3, 'anon': 2.5, 'lambda': 1.5, 'list': [2, 'a']}
             )
             self.assertEqual(
                 cfg.value(),
-                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
-                 'list': ['2', 'a']}
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1, 'list': ['2', 'a']},
             )
 
             cfg2 = pickle.loads(pickle.dumps(cfg))
             self.assertEqual(
                 cfg2.value(),
-                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
-                 'list': ['2', 'a']}
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1, 'list': ['2', 'a']},
             )
 
             cfg2.list.append(10)
             self.assertEqual(
                 cfg2.value(),
-                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
-                 'list': ['2', 'a', '10']}
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1, 'list': ['2', 'a', '10']},
             )
         # No warnings due to anything above.
         self.assertEqual(out.getvalue(), "")
@@ -2544,7 +2652,7 @@ c: 1.0
         if type(cfg2.get('anon')._domain) is _UnpickleableDomain:
             self.assertIn(
                 "ConfigValue 'anon' was pickled with an unpicklable domain",
-                out.getvalue()
+                out.getvalue(),
             )
             self.assertEqual(cfg2['anon'], 5.5)
         else:
@@ -2558,7 +2666,7 @@ c: 1.0
         if type(cfg2.get('lambda')._domain) is _UnpickleableDomain:
             self.assertIn(
                 "ConfigValue 'lambda' was pickled with an unpicklable domain",
-                out.getvalue()
+                out.getvalue(),
             )
             self.assertEqual(cfg2['lambda'], 6.5)
         else:
@@ -2568,8 +2676,10 @@ c: 1.0
 
     def test_unknowable_types(self):
         obj = ConfigValue()
+
         def local_fcn():
             pass
+
         try:
             pickle.dumps(local_fcn)
             local_picklable = True
@@ -2598,7 +2708,9 @@ c: 1.0
         def local_fcn():
             class LocalClass(object):
                 pass
+
             return LocalClass
+
         local_class = local_fcn()
 
         self.assertIsNone(_picklable.known.get(local_class, None))
@@ -2627,7 +2739,6 @@ c: 1.0
         # "known" dict
         self.assertNotIn(type, _picklable.known)
 
-
     def test_self_assignment(self):
         cfg = ConfigDict()
         self.assertNotIn('d', dir(cfg))
@@ -2638,21 +2749,20 @@ c: 1.0
         # test that dir is sorted
         self.assertEqual(dir(cfg), sorted(dir(cfg)))
         # check that inconsistent name is flagged
-        with self.assertRaisesRegex(
-                ValueError, "Key 'b' not defined in ConfigDict ''"):
+        with self.assertRaisesRegex(ValueError, "Key 'b' not defined in ConfigDict ''"):
             cfg.b = cfg.declare('bb', ConfigValue(2, int))
-
 
     def test_declaration_errors(self):
         cfg = ConfigDict()
         cfg.b = cfg.declare('b', ConfigValue(2, int))
         with self.assertRaisesRegex(
-                ValueError, "duplicate config 'b' defined for ConfigDict ''"):
+            ValueError, "duplicate config 'b' defined for ConfigDict ''"
+        ):
             cfg.b = cfg.declare('b', ConfigValue(2, int))
         with self.assertRaisesRegex(
-                ValueError, "config 'dd' is already assigned to ConfigDict ''"):
+            ValueError, "config 'dd' is already assigned to ConfigDict ''"
+        ):
             cfg.declare('dd', cfg.get('b'))
-
 
     def test_declare_from(self):
         cfg = ConfigDict()
@@ -2670,11 +2780,11 @@ c: 1.0
         self.assertNotIn('a', cfg2)
 
         with self.assertRaisesRegex(
-                ValueError, "passed a block with a duplicate field, 'b'"):
+            ValueError, "passed a block with a duplicate field, 'b'"
+        ):
             cfg2.declare_from(cfg)
 
-        with self.assertRaisesRegex(
-                ValueError, "only accepts other ConfigDicts"):
+        with self.assertRaisesRegex(ValueError, "only accepts other ConfigDicts"):
             cfg2.declare_from({})
 
     def test_docstring_decorator(self):
@@ -2683,22 +2793,28 @@ c: 1.0
         @document_kwargs_from_configdict('CONFIG')
         class ExampleClass(object):
             CONFIG = ConfigDict()
-            CONFIG.declare('option_1', ConfigValue(
-                default=5,
-                domain=int,
-                doc='The first configuration option',
-            ))
+            CONFIG.declare(
+                'option_1',
+                ConfigValue(
+                    default=5, domain=int, doc='The first configuration option'
+                ),
+            )
             SOLVER = CONFIG.declare('solver_options', ConfigDict())
-            SOLVER.declare('solver_option_1', ConfigValue(
-                default=1,
-                domain=float,
-                doc='The first solver configuration option',
-                visibility=DEVELOPER_OPTION,
-            ))
-            SOLVER.declare('solver_option_2', ConfigValue(
-                default=1,
-                domain=float,
-                doc="""The second solver configuration option
+            SOLVER.declare(
+                'solver_option_1',
+                ConfigValue(
+                    default=1,
+                    domain=float,
+                    doc='The first solver configuration option',
+                    visibility=DEVELOPER_OPTION,
+                ),
+            )
+            SOLVER.declare(
+                'solver_option_2',
+                ConfigValue(
+                    default=1,
+                    domain=float,
+                    doc="""The second solver configuration option
 
                 With a very long line containing
                 wrappable text in a long, silly paragraph
@@ -2706,16 +2822,20 @@ c: 1.0
                 #) but a bulleted list
                 #) with two bullets
                 """,
-            ))
-            CONFIG.declare('option_2', ConfigValue(
-                default=5,
-                domain=int,
-                doc="""The second solver configuration option
+                ),
+            )
+            CONFIG.declare(
+                'option_2',
+                ConfigValue(
+                    default=5,
+                    domain=int,
+                    doc="""The second solver configuration option
                 with a very long line containing
                 wrappable text in a long, silly paragraph
                 with little actual information.
                 """,
-            ))
+                ),
+            )
 
             @document_kwargs_from_configdict(CONFIG)
             def __init__(self):
@@ -2726,7 +2846,6 @@ c: 1.0
             )
             def fcn(self):
                 pass
-
 
         ref = """
 Keyword Arguments
@@ -2799,6 +2918,6 @@ option_2: int, default=5
             self.assertEqual(add_docstring_list("", ExampleClass.CONFIG), ref)
         self.assertIn('add_docstring_list is deprecated', LOG.getvalue())
 
+
 if __name__ == "__main__":
     unittest.main()
-

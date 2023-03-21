@@ -33,7 +33,7 @@ class TestAmplbook2(unittest.TestCase): pass
 #for file in files:
 #    bname=os.path.basename(file)
 #    name=bname.split('.')[0]
-#    TestAmplbook2.add_commandline_test(cmd="cd "+data_dir+"; "+topdir+os.sep+"scripts/pyomo "+bname+" "+name+".dat", baseline=data_dir+name+".log", name=name)
+#    TestAmplbook2.add_commandline_test(cmd="cd "+data_dir+"; "+topdir+os.sep+"scripts/pyomo "+bname++name+".dat", baseline=data_dir+name+".log", name=name)
 
 if __name__ == "__main__":
     unittest.main()

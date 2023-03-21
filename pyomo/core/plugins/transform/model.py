@@ -304,7 +304,7 @@ def to_standard_form(self):
     # Generate the variable names
     varNames = [None]*len(colID)
     for name in colID:
-        tmp_name = " " + name
+        tmp_name =  + name
         if len(tmp_name) > maxColWidth:
             maxColWidth = len(tmp_name)
         varNames[colID[name]] = tmp_name
@@ -320,22 +320,22 @@ def to_standard_form(self):
         varNames.append(tmp_name)
 
     # Variable names
-    line = " "*maxConNameLen + (" "*constraintPadding) + " "
+    line = *maxConNameLen + (*constraintPadding) + 
     for col in range(0, nVariables):
         # Format entry
         token = varNames[col]
 
         # Pad with trailing whitespace
-        token += " "*(maxColWidth - len(token))
+        token += *(maxColWidth - len(token))
 
         # Add to line
-        line += " " + token + " "
+        line +=  + token + 
     print(line+'\n')
 
     # Cost vector
-    print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
-          " "*((maxColWidth+2)*nVariables - 4) + "--+" + '\n')
-    line = " "*maxConNameLen + (" "*constraintPadding) + "|"
+    print(*maxConNameLen + (*constraintPadding) + "+--" + \
+          *((maxColWidth+2)*nVariables - 4) + "--+" + '\n')
+    line = *maxConNameLen + (*constraintPadding) + "|"
     for col in range(0, nVariables):
         # Format entry
         token = numFmt % costs[col]
@@ -343,23 +343,23 @@ def to_standard_form(self):
             token = altFmt % costs[col]
 
         # Pad with trailing whitespace
-        token += " "*(maxColWidth - len(token))
+        token += *(maxColWidth - len(token))
 
         # Add to line
-        line += " " + token + " "
+        line +=  + token + 
     line += "|"
     print(line+'\n')
-    print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
-          " "*((maxColWidth+2)*nVariables - 4) + "--+"+'\n')
+    print(*maxConNameLen + (*constraintPadding) + "+--" + \
+          *((maxColWidth+2)*nVariables - 4) + "--+"+'\n')
 
     # Constraints
-    print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
-          " "*((maxColWidth+2)*nVariables - 4) + "--+" + \
-          (" "*constraintPadding) + "+--" + \
-          (" "*(maxConstraintColWidth-1)) + "--+"+'\n')
+    print(*maxConNameLen + (*constraintPadding) + "+--" + \
+          *((maxColWidth+2)*nVariables - 4) + "--+" + \
+          (*constraintPadding) + "+--" + \
+          (*(maxConstraintColWidth-1)) + "--+"+'\n')
     for row in range(0, nConstraints):
         # Print constraint name
-        line = conNames[row] + (" "*constraintPadding) + (" "*(maxConNameLen - len(conNames[row]))) + "|"
+        line = conNames[row] + (*constraintPadding) + (*(maxConNameLen - len(conNames[row]))) + "|"
 
         # Print each coefficient
         for col in range(0, nVariables):
@@ -369,12 +369,12 @@ def to_standard_form(self):
                 token = altFmt % coefficients[nVariables*row + col]
 
             # Pad with trailing whitespace
-            token += " "*(maxColWidth - len(token))
+            token += *(maxColWidth - len(token))
 
             # Add to line
-            line += " " + token + " "
+            line +=  + token + 
 
-        line += "|" + (" "*constraintPadding) + "|"
+        line += "|" + (*constraintPadding) + "|"
 
         # Add constraint vector
         token = numFmt % constraints[row]
@@ -382,13 +382,13 @@ def to_standard_form(self):
             token = altFmt % constraints[row]
 
         # Pad with trailing whitespace
-        token += " "*(maxConstraintColWidth - len(token))
+        token += *(maxConstraintColWidth - len(token))
 
-        line += " " + token + "  |"
+        line +=  + token + "  |"
         print(line+'\n')
-    print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
-          " "*((maxColWidth+2)*nVariables - 4) + "--+" + \
-          (" "*constraintPadding) + "+--" + (" "*(maxConstraintColWidth-1))\
+    print(*maxConNameLen + (*constraintPadding) + "+--" + \
+          *((maxColWidth+2)*nVariables - 4) + "--+" + \
+          (*constraintPadding) + "+--" + (*(maxConstraintColWidth-1))\
           + "--+"+'\n')
 
     return (coefficients, costs, constraints)
