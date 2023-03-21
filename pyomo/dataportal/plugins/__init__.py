@@ -11,6 +11,7 @@
 
 from pyomo.common.dependencies import pyutilib, pyutilib_available
 
+
 def load():
     import pyomo.dataportal.plugins.csv_table
     import pyomo.dataportal.plugins.datacommands
@@ -18,6 +19,6 @@ def load():
     import pyomo.dataportal.plugins.json_dict
     import pyomo.dataportal.plugins.text
     import pyomo.dataportal.plugins.xml_table
+
     if pyutilib_available:
         import pyomo.dataportal.plugins.sheet
-
