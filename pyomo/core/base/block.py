@@ -383,7 +383,7 @@ class PseudoMap(AutoSlots.Mixin):
             msg += self._active and "active " or "inactive "
         if self._ctypes is not Any:
             if len(self._ctypes) == 1:
-                msg += next(iter(self._ctypes)).__name__ + 
+                msg += next(iter(self._ctypes)).__name__ + " "
             else:
                 types = sorted(x.__name__ for x in self._ctypes)
                 msg += '%s or %s ' % (', '.join(types[:-1]), types[-1])
