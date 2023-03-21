@@ -184,9 +184,7 @@ def _get_penalty_expressions_from_time_varying_target(
         )
     for var in variables:
         if not setpoint_data.contains_key(var):
-            raise KeyError(
-                "Setpoint data does not contain a key for variable %s" % var
-            )
+            raise KeyError("Setpoint data does not contain a key for variable %s" % var)
         if not weight_data.contains_key(var):
             raise KeyError(
                 "Tracking weight does not contain a key for variable %s" % var

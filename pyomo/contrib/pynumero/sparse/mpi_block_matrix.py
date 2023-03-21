@@ -1015,9 +1015,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
             assert other.bshape == self.bshape, 'dimension mismatch {} != {}'.format(
                 self.bshape, other.bshape
             )
-            assert np.array_equal(self.rank_ownership, other.rank_ownership), (
-                'MPIBlockMatrices must be distributed in the same processors'
-            )
+            assert np.array_equal(
+                self.rank_ownership, other.rank_ownership
+            ), 'MPIBlockMatrices must be distributed in the same processors'
 
             for i, j in zip(*np.nonzero(self.ownership_mask)):
                 mat1 = self.get_block(i, j)

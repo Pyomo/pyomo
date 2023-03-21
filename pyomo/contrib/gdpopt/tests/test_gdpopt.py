@@ -189,9 +189,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.x = Var()
         m.o = Objective(expr=m.x)
         m.o2 = Objective(expr=m.x + 1)
-        with self.assertRaisesRegex(
-            ValueError, "Model has multiple active objectives"
-        ):
+        with self.assertRaisesRegex(ValueError, "Model has multiple active objectives"):
             SolverFactory('gdpopt.loa').solve(m)
 
     def test_is_feasible_function(self):

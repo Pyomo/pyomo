@@ -19,9 +19,7 @@ def get_objs(scenario_instance):
     )
     scenario_objs = list(scenario_objs)
     if len(scenario_objs) == 0:
-        raise RuntimeError(
-            "Scenario " + sname + " has no active objective functions."
-        )
+        raise RuntimeError("Scenario " + sname + " has no active objective functions.")
     if len(scenario_objs) > 1:
         print(
             "WARNING: Scenario",

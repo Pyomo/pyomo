@@ -215,9 +215,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                     config.logger.debug("Affine cut is trivially True.")
                 else:
                     # something went wrong.
-                    raise DeveloperError(
-                        "One of the affine cuts is trivially False."
-                    )
+                    raise DeveloperError("One of the affine cuts is trivially False.")
             else:
                 concave_cut = cut_body + ccStart >= lb_int
                 convex_cut = cut_body + cvStart <= ub_int

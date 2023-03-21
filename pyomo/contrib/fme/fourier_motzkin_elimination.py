@@ -344,9 +344,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 else:
                     # This would actually make a lot of sense in this case...
                     # projected_constraints.add(Constraint.Infeasible)
-                    raise RuntimeError(
-                        "Fourier-Motzkin found the model is infeasible!"
-                    )
+                    raise RuntimeError("Fourier-Motzkin found the model is infeasible!")
             else:
                 projected_constraints.add(lhs >= lower)
 

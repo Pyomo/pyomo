@@ -1143,9 +1143,7 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         np.testing.assert_allclose(
             new_half_lengths,
             aset.half_lengths,
-            err_msg=(
-                "AxisAlignedEllipsoidalSet half lengths update not as expected"
-            ),
+            err_msg=("AxisAlignedEllipsoidalSet half lengths update not as expected"),
         )
 
     def test_error_on_axis_aligned_dim_change(self):
@@ -3441,7 +3439,6 @@ class testIntersectionSetClass(unittest.TestCase):
 
 # === master_problem_methods.py
 class testInitialConstructMaster(unittest.TestCase):
-
     def test_initial_construct_master(self):
         model_data = MasterProblemData()
         model_data.timing = None
@@ -3455,7 +3452,6 @@ class testInitialConstructMaster(unittest.TestCase):
 
 
 class testAddScenarioToMaster(unittest.TestCase):
-
     def test_add_scenario_to_master(self):
         working_model = ConcreteModel()
         working_model.p = Param([1, 2], initialize=0, mutable=True)
@@ -4158,9 +4154,7 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(
             len(list(global_subsolver.options.keys())),
             1,
-            msg=(
-                f"Global subsolver {global_subsolver} options were changed by PyROS"
-            ),
+            msg=(f"Global subsolver {global_subsolver} options were changed by PyROS"),
         )
         self.assertEqual(
             global_subsolver.options["MaxTime"],
