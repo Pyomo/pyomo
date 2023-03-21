@@ -72,6 +72,7 @@ class BinarySet(object):
     def is_binary():
         return True
 
-#TODO: Deprecate BooleanSet (that will soon be replaced by a true BooleanSet
+
+# TODO: Deprecate BooleanSet (that will soon be replaced by a true BooleanSet
 #      admitting {True, False})
 BooleanSet = BinarySet

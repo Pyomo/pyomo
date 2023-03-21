@@ -13,8 +13,8 @@ import pyomo.common.unittest as unittest
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.variable import variable
 
-class TestSymbolMap(unittest.TestCase):
 
+class TestSymbolMap(unittest.TestCase):
     def test_no_labeler(self):
         s = SymbolMap()
         v = variable()
@@ -34,6 +34,7 @@ class TestSymbolMap(unittest.TestCase):
         s.alias(v1, "A")
         self.assertIs(s.aliases["v"](), v1)
         self.assertIs(s.aliases["A"](), v1)
+
 
 if __name__ == "__main__":
     unittest.main()

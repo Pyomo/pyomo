@@ -15,12 +15,24 @@
 import pickle
 import os
 from os.path import abspath, dirname, join
-currdir = dirname(abspath(__file__))+os.sep
+
+currdir = dirname(abspath(__file__)) + os.sep
 import platform
 
 from filecmp import cmp
 import pyomo.common.unittest as unittest
-from pyomo.environ import AbstractModel, ConcreteModel, Set, Param, Var, Constraint, Objective, Reals, NonNegativeReals, sum_product
+from pyomo.environ import (
+    AbstractModel,
+    ConcreteModel,
+    Set,
+    Param,
+    Var,
+    Constraint,
+    Objective,
+    Reals,
+    NonNegativeReals,
+    sum_product,
+)
 
 
 using_pypy = platform.python_implementation() == "PyPy"
@@ -28,22 +40,26 @@ using_pypy = platform.python_implementation() == "PyPy"
 
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)
-def constr_rule(model,a):
+
+
+def constr_rule(model, a):
     return model.x[a] >= model.y[a]
+
+
 def simple_con_rule(model, i):
     return model.x <= i
 
-class Test(unittest.TestCase):
 
+class Test(unittest.TestCase):
     def verifyModel(self, ref, new):
         # Verify the block indices
         self.assertEqual(sorted(ref._data.keys()), sorted(new._data.keys()))
         for idx in ref._data.keys():
-            self.assertEqual(type(ref._data[idx]),  type(new._data[idx]))
+            self.assertEqual(type(ref._data[idx]), type(new._data[idx]))
             if idx is not None:
-                self.assertNotEqual(id(ref._data[idx]),  id(new._data[idx]))
-        self.assertEqual( id(ref.solutions._instance()), id(ref) )
-        self.assertEqual( id(new.solutions._instance()), id(new) )
+                self.assertNotEqual(id(ref._data[idx]), id(new._data[idx]))
+        self.assertEqual(id(ref.solutions._instance()), id(ref))
+        self.assertEqual(id(new.solutions._instance()), id(new))
 
         # Verify the block attributes
         for idx in ref._data.keys():
@@ -53,10 +69,10 @@ class Test(unittest.TestCase):
             # exception.
             ref_c = ref._data[idx].component_map()
             new_c = new._data[idx].component_map()
-            self.assertEqual( sorted(ref_c.keys()), sorted(new_c.keys()) )
+            self.assertEqual(sorted(ref_c.keys()), sorted(new_c.keys()))
             for a in ref_c.keys():
-                self.assertEqual(type(ref_c[a]),  type(new_c[a]))
-                self.assertNotEqual(id(ref_c[a]),  id(new_c[a]))
+                self.assertEqual(type(ref_c[a]), type(new_c[a]))
+                self.assertNotEqual(id(ref_c[a]), id(new_c[a]))
 
     def test_pickle_empty_abstract_model(self):
         model = AbstractModel()
@@ -66,14 +82,14 @@ class Test(unittest.TestCase):
 
     def test_pickle_abstract_model_set(self):
         model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
+        model.A = Set(initialize=[1, 2, 3])
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
 
     def test_pickle_abstract_model_virtual_set(self):
         model = AbstractModel()
-        model._a = Set(initialize=[1,2,3])
+        model._a = Set(initialize=[1, 2, 3])
         model.A = model._a * model._a
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
@@ -88,7 +104,7 @@ class Test(unittest.TestCase):
 
     def test_pickle_abstract_model_indexed_param(self):
         model = AbstractModel()
-        model.A = Param([1,2,3], initialize={1:100,2:200,3:300})
+        model.A = Param([1, 2, 3], initialize={1: 100, 2: 200, 3: 300})
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
@@ -102,7 +118,7 @@ class Test(unittest.TestCase):
 
     def test_pickle_abstract_model_mutable_indexed_param(self):
         model = AbstractModel()
-        model.A = Param([1,2,3], initialize={1:100,3:300}, mutable=True)
+        model.A = Param([1, 2, 3], initialize={1: 100, 3: 300}, mutable=True)
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
@@ -116,7 +132,7 @@ class Test(unittest.TestCase):
 
     def test_pickle_abstract_model_indexed_var(self):
         model = AbstractModel()
-        model.A = Var([1,2,3], initialize={1:100,2:200,3:300})
+        model.A = Var([1, 2, 3], initialize={1: 100, 2: 200, 3: 300})
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
@@ -147,7 +163,7 @@ class Test(unittest.TestCase):
     def test_pickle_abstract_model_indexed_constraint(self):
         model = AbstractModel()
         model.x = Var()
-        model.A = Constraint([1,2,3], rule=simple_con_rule)
+        model.A = Constraint([1, 2, 3], rule=simple_con_rule)
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
@@ -162,14 +178,14 @@ class Test(unittest.TestCase):
 
     def test_pickle_concrete_model_set(self):
         model = ConcreteModel()
-        model.A = Set(initialize=[1,2,3])
+        model.A = Set(initialize=[1, 2, 3])
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
 
     def test_pickle_concrete_model_virtual_set(self):
         model = ConcreteModel()
-        model._a = Set(initialize=[1,2,3])
+        model._a = Set(initialize=[1, 2, 3])
         model.A = model._a * model._a
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
@@ -184,7 +200,7 @@ class Test(unittest.TestCase):
 
     def test_pickle_concrete_model_indexed_param(self):
         model = ConcreteModel()
-        model.A = Param([1,2,3], initialize={1:100,2:200,3:300})
+        model.A = Param([1, 2, 3], initialize={1: 100, 2: 200, 3: 300})
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
@@ -198,7 +214,7 @@ class Test(unittest.TestCase):
 
     def test_pickle_concrete_model_mutable_indexed_param(self):
         model = ConcreteModel()
-        model.A = Param([1,2,3], initialize={1:100,3:300}, mutable=True)
+        model.A = Param([1, 2, 3], initialize={1: 100, 3: 300}, mutable=True)
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
@@ -212,7 +228,7 @@ class Test(unittest.TestCase):
 
     def test_pickle_concrete_model_indexed_var(self):
         model = ConcreteModel()
-        model.A = Var([1,2,3], initialize={1:100,2:200,3:300})
+        model.A = Var([1, 2, 3], initialize={1: 100, 2: 200, 3: 300})
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
@@ -243,13 +259,12 @@ class Test(unittest.TestCase):
     def test_pickle_concrete_model_indexed_constraint(self):
         model = ConcreteModel()
         model.x = Var()
-        model.A = Constraint([1,2,3], rule=simple_con_rule)
+        model.A = Constraint([1, 2, 3], rule=simple_con_rule)
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
 
     ##########
-
 
     # tests the ability to pickle an abstract model prior to construction,
     # read it back it, and create an instance from it. validation is relatively
@@ -257,52 +272,53 @@ class Test(unittest.TestCase):
     # using the resulting model.
     def test_pickle1(self):
         model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.A = Set(initialize=[1, 2, 3])
+        model.B = Param(model.A, initialize={1: 100, 2: 200, 3: 300}, mutable=True)
         model.x = Var(model.A)
         model.y = Var(model.A)
         model.obj = Objective(rule=obj_rule)
-        model.constr = Constraint(model.A,rule=constr_rule)
+        model.constr = Constraint(model.A, rule=constr_rule)
         pickle_str = pickle.dumps(model)
         tmodel = pickle.loads(pickle_str)
-        instance=tmodel.create_instance()
-        expr = sum_product(instance.x,instance.B,instance.y)
+        instance = tmodel.create_instance()
+        expr = sum_product(instance.x, instance.B, instance.y)
         baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
-        self.assertEqual( str(expr), baseline )
+        self.assertEqual(str(expr), baseline)
 
     # same as above, but pickles the constructed AbstractModel and
     # then operates on the unpickled instance.
     def test_pickle2(self):
         model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.A = Set(initialize=[1, 2, 3])
+        model.B = Param(model.A, initialize={1: 100, 2: 200, 3: 300}, mutable=True)
         model.x = Var(model.A)
         model.y = Var(model.A)
         model.obj = Objective(rule=obj_rule)
-        model.constr = Constraint(model.A,rule=constr_rule)
-        tmp=model.create_instance()
+        model.constr = Constraint(model.A, rule=constr_rule)
+        tmp = model.create_instance()
         pickle_str = pickle.dumps(tmp)
         instance = pickle.loads(pickle_str)
-        expr = sum_product(instance.x,instance.B,instance.y)
+        expr = sum_product(instance.x, instance.B, instance.y)
         baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
-        self.assertEqual( str(expr), baseline )
+        self.assertEqual(str(expr), baseline)
 
     # verifies that the use of lambda expressions as rules yields model instances
     # that are not pickle'able.
     def test_pickle3(self):
         def rule1(model):
-            return (1,model.x+model.y[1],2)
+            return (1, model.x + model.y[1], 2)
+
         def rule2(model, i):
-            return (1,model.x+model.y[1]+i,2)
+            return (1, model.x + model.y[1] + i, 2)
 
         model = AbstractModel()
-        model.a = Set(initialize=[1,2,3])
+        model.a = Set(initialize=[1, 2, 3])
         model.A = Param(initialize=1, mutable=True)
         model.B = Param(model.a, mutable=True)
-        model.x = Var(initialize=1,within=Reals)
-        model.y = Var(model.a, initialize=1,within=Reals)
-        model.obj = Objective(rule=lambda model: model.x+model.y[1])
-        model.obj2 = Objective(model.a,rule=lambda model,i: i+model.x+model.y[1])
+        model.x = Var(initialize=1, within=Reals)
+        model.y = Var(model.a, initialize=1, within=Reals)
+        model.obj = Objective(rule=lambda model: model.x + model.y[1])
+        model.obj2 = Objective(model.a, rule=lambda model, i: i + model.x + model.y[1])
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
@@ -310,9 +326,7 @@ class Test(unittest.TestCase):
             str_ = pickle.dumps(instance)
             tmp_ = pickle.loads(str_)
         else:
-            with self.assertRaises((pickle.PicklingError,
-                                    TypeError,
-                                    AttributeError)):
+            with self.assertRaises((pickle.PicklingError, TypeError, AttributeError)):
                 pickle.dumps(instance)
 
     # verifies that we can print a constructed model and
@@ -324,28 +338,31 @@ class Test(unittest.TestCase):
     def test_pickle4(self):
 
         model = ConcreteModel()
-        model.s = Set(initialize=[1,2])
+        model.s = Set(initialize=[1, 2])
         model.x = Var(within=NonNegativeReals)
         model.x_indexed = Var(model.s, within=NonNegativeReals)
         model.obj = Objective(expr=model.x + model.x_indexed[1] + model.x_indexed[2])
         model.con = Constraint(expr=model.x >= 1)
         model.con2 = Constraint(expr=model.x_indexed[1] + model.x_indexed[2] >= 4)
 
-        OUTPUT=open(join(currdir, "test_pickle4_baseline.out"), "w")
+        OUTPUT = open(join(currdir, "test_pickle4_baseline.out"), "w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        _out, _txt = join(currdir, "test_pickle4_baseline.out"), join(currdir, "test_pickle4_baseline.txt")
-        self.assertTrue(cmp(_out, _txt),
-                        msg="Files %s and %s differ" % (_out, _txt))
+        _out, _txt = join(currdir, "test_pickle4_baseline.out"), join(
+            currdir, "test_pickle4_baseline.txt"
+        )
+        self.assertTrue(cmp(_out, _txt), msg="Files %s and %s differ" % (_out, _txt))
 
         str = pickle.dumps(model)
 
-        OUTPUT=open(join(currdir, "test_pickle4_after.out"), "w")
+        OUTPUT = open(join(currdir, "test_pickle4_after.out"), "w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        _out, _txt = join(currdir, "test_pickle4_after.out"), join(currdir, "test_pickle4_baseline.txt")
-        self.assertTrue(cmp(_out, _txt),
-                        msg="Files %s and %s differ" % (_out, _txt))
+        _out, _txt = join(currdir, "test_pickle4_after.out"), join(
+            currdir, "test_pickle4_baseline.txt"
+        )
+        self.assertTrue(cmp(_out, _txt), msg="Files %s and %s differ" % (_out, _txt))
+
 
 if __name__ == "__main__":
     unittest.main()

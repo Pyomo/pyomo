@@ -20,8 +20,8 @@ class SymbolMap(object):
     input to an optimizer.
 
     Warning:
-        A symbol map should never be pickled.  This class is 
-        typically constructed by solvers and writers, and it may be 
+        A symbol map should never be pickled.  This class is
+        typically constructed by solvers and writers, and it may be
         owned by models.
 
     Note:
@@ -52,16 +52,14 @@ class SymbolMap(object):
         # to pickle one of them, and bySymbol is easier.
         #
         return {
-            'bySymbol': tuple(
-                (key, obj()) for key, obj in self.bySymbol.items() ),
-            'aliases': tuple(
-                (key, obj()) for key, obj in self.aliases.items() ),
+            'bySymbol': tuple((key, obj()) for key, obj in self.bySymbol.items()),
+            'aliases': tuple((key, obj()) for key, obj in self.aliases.items()),
         }
 
     def __setstate__(self, state):
-        self.byObject = {id(obj):key for key, obj  in state['bySymbol']}
-        self.bySymbol = {key:weakref_ref(obj) for key,obj in state['bySymbol']}
-        self.aliases = {key:weakref_ref(obj) for key, obj in state['aliases']}
+        self.byObject = {id(obj): key for key, obj in state['bySymbol']}
+        self.bySymbol = {key: weakref_ref(obj) for key, obj in state['bySymbol']}
+        self.aliases = {key: weakref_ref(obj) for key, obj in state['aliases']}
 
     def addSymbol(self, obj, symb):
         """
@@ -86,9 +84,9 @@ class SymbolMap(object):
         error checking is done to ensure that the generated symbol
         name is unique.
         """
-        #if args:
+        # if args:
         #    symb = labeler(obj, *args)
-        #else:
+        # else:
         #    symb = labeler(obj)
         if labeler:
             symb = labeler(obj)
@@ -106,11 +104,11 @@ class SymbolMap(object):
         error checking is done to ensure that the generated symbol
         names are unique.
         """
-        #if args:
+        # if args:
         #    self.addSymbols([(obj,labeler(obj, *args)) for obj in objs])
-        #else:
+        # else:
         #    self.addSymbols([(obj,labeler(obj)) for obj in objs])
-        self.addSymbols([(obj,labeler(obj)) for obj in objs])
+        self.addSymbols([(obj, labeler(obj)) for obj in objs])
 
     def getSymbol(self, obj, labeler=None, *args):
         """
@@ -134,7 +132,8 @@ class SymbolMap(object):
                 raise RuntimeError(
                     "Duplicate symbol '%s' already associated with "
                     "component '%s' (conflicting component: '%s')"
-                    % (symb, self.bySymbol[symb]().name, obj.name) )
+                    % (symb, self.bySymbol[symb]().name, obj.name)
+                )
         self.bySymbol[symb] = weakref_ref(obj)
         self.byObject[obj_id] = symb
         return symb
@@ -156,7 +155,12 @@ class SymbolMap(object):
                 raise RuntimeError(
                     "Duplicate alias '%s' already associated with "
                     "component '%s' (conflicting component: '%s')"
-                    % (name, "UNKNOWN" if old_object is None else old_object.name, obj.name) )
+                    % (
+                        name,
+                        "UNKNOWN" if old_object is None else old_object.name,
+                        obj.name,
+                    )
+                )
         else:
             #
             # Add the alias

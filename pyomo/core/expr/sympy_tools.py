@@ -25,63 +25,71 @@ _operatorMap = {}
 _pyomo_operator_map = {}
 _functionMap = {}
 
+
 def _configure_sympy(sympy, available):
     if not available:
         return
 
-    _operatorMap.update({
-        sympy.Add: _sum,
-        sympy.Mul: _prod,
-        sympy.Pow: lambda x, y: x**y,
-        sympy.exp: lambda x: EXPR.exp(x),
-        sympy.log: lambda x: EXPR.log(x),
-        sympy.sin: lambda x: EXPR.sin(x),
-        sympy.asin: lambda x: EXPR.asin(x),
-        sympy.sinh: lambda x: EXPR.sinh(x),
-        sympy.asinh: lambda x: EXPR.asinh(x),
-        sympy.cos: lambda x: EXPR.cos(x),
-        sympy.acos: lambda x: EXPR.acos(x),
-        sympy.cosh: lambda x: EXPR.cosh(x),
-        sympy.acosh: lambda x: EXPR.acosh(x),
-        sympy.tan: lambda x: EXPR.tan(x),
-        sympy.atan: lambda x: EXPR.atan(x),
-        sympy.tanh: lambda x: EXPR.tanh(x),
-        sympy.atanh: lambda x: EXPR.atanh(x),
-        sympy.ceiling: lambda x: EXPR.ceil(x),
-        sympy.floor: lambda x: EXPR.floor(x),
-        sympy.sqrt: lambda x: EXPR.sqrt(x),
-        sympy.Abs: lambda x: abs(x),
-        sympy.Derivative: _nondifferentiable,
-        sympy.Tuple: lambda *x: x,
-    })
+    _operatorMap.update(
+        {
+            sympy.Add: _sum,
+            sympy.Mul: _prod,
+            sympy.Pow: lambda x, y: x**y,
+            sympy.exp: lambda x: EXPR.exp(x),
+            sympy.log: lambda x: EXPR.log(x),
+            sympy.sin: lambda x: EXPR.sin(x),
+            sympy.asin: lambda x: EXPR.asin(x),
+            sympy.sinh: lambda x: EXPR.sinh(x),
+            sympy.asinh: lambda x: EXPR.asinh(x),
+            sympy.cos: lambda x: EXPR.cos(x),
+            sympy.acos: lambda x: EXPR.acos(x),
+            sympy.cosh: lambda x: EXPR.cosh(x),
+            sympy.acosh: lambda x: EXPR.acosh(x),
+            sympy.tan: lambda x: EXPR.tan(x),
+            sympy.atan: lambda x: EXPR.atan(x),
+            sympy.tanh: lambda x: EXPR.tanh(x),
+            sympy.atanh: lambda x: EXPR.atanh(x),
+            sympy.ceiling: lambda x: EXPR.ceil(x),
+            sympy.floor: lambda x: EXPR.floor(x),
+            sympy.sqrt: lambda x: EXPR.sqrt(x),
+            sympy.Abs: lambda x: abs(x),
+            sympy.Derivative: _nondifferentiable,
+            sympy.Tuple: lambda *x: x,
+        }
+    )
 
-    _pyomo_operator_map.update({
-        EXPR.SumExpression: sympy.Add,
-        EXPR.ProductExpression: sympy.Mul,
-        EXPR.NPV_ProductExpression: sympy.Mul,
-        EXPR.MonomialTermExpression: sympy.Mul,
-    })
+    _pyomo_operator_map.update(
+        {
+            EXPR.SumExpression: sympy.Add,
+            EXPR.ProductExpression: sympy.Mul,
+            EXPR.NPV_ProductExpression: sympy.Mul,
+            EXPR.MonomialTermExpression: sympy.Mul,
+        }
+    )
 
-    _functionMap.update({
-        'exp': sympy.exp,
-        'log': sympy.log,
-        'log10': lambda x: sympy.log(x)/sympy.log(10),
-        'sin': sympy.sin,
-        'asin': sympy.asin,
-        'sinh': sympy.sinh,
-        'asinh': sympy.asinh,
-        'cos': sympy.cos,
-        'acos': sympy.acos,
-        'cosh': sympy.cosh,
-        'acosh': sympy.acosh,
-        'tan': sympy.tan,
-        'atan': sympy.atan,
-        'tanh': sympy.tanh,
-        'atanh': sympy.atanh,
-        'ceil': sympy.ceiling,
-        'floor': sympy.floor,
-        'sqrt': sympy.sqrt,
-    })
+    _functionMap.update(
+        {
+            'exp': sympy.exp,
+            'log': sympy.log,
+            'log10': lambda x: sympy.log(x) / sympy.log(10),
+            'sin': sympy.sin,
+            'asin': sympy.asin,
+            'sinh': sympy.sinh,
+            'asinh': sympy.asinh,
+            'cos': sympy.cos,
+            'acos': sympy.acos,
+            'cosh': sympy.cosh,
+            'acosh': sympy.acosh,
+            'tan': sympy.tan,
+            'atan': sympy.atan,
+            'tanh': sympy.tanh,
+            'atanh': sympy.atanh,
+            'ceil': sympy.ceiling,
+            'floor': sympy.floor,
+            'sqrt': sympy.sqrt,
+        }
+    )
+
 
 sympy, sympy_available = attempt_import('sympy', callback=_configure_sympy)
 
@@ -92,8 +100,10 @@ def _prod(*x):
         ans *= i
     return ans
 
+
 def _sum(*x):
     return sum(x_ for x_ in x)
+
 
 def _nondifferentiable(*x):
     if type(x[1]) is tuple:
@@ -103,8 +113,9 @@ def _nondifferentiable(*x):
         # early versions of sympy returned the bare var
         wrt = x[1]
     raise NondifferentiableError(
-        "The sub-expression '%s' is not differentiable with respect to %s"
-        % (x[0], wrt) )
+        "The sub-expression '%s' is not differentiable with respect to %s" % (x[0], wrt)
+    )
+
 
 class PyomoSympyBimap(object):
     def __init__(self):
@@ -130,12 +141,13 @@ class PyomoSympyBimap(object):
     def sympyVars(self):
         return self.sympy2pyomo.keys()
 
+
 # =====================================================
 # sympyify_expression
 # =====================================================
 
-class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
 
+class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
     def __init__(self, object_map):
         sympy.Add  # this ensures _configure_sympy gets run
         super(Pyomo2SympyVisitor, self).__init__()
@@ -174,8 +186,8 @@ class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
         #
         return False, value(child)
 
-class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
 
+class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
     def __init__(self, object_map):
         sympy.Add  # this ensures _configure_sympy gets run
         super(Sympy2PyomoVisitor, self).__init__()
@@ -188,13 +200,14 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
         return (node._args, [])
 
     def exitNode(self, node, values):
-        """ Visit nodes that have been expanded """
+        """Visit nodes that have been expanded"""
         _sympyOp = node
-        _op = _operatorMap.get( type(_sympyOp), None )
+        _op = _operatorMap.get(type(_sympyOp), None)
         if _op is None:
             raise DeveloperError(
                 "sympy expression type '%s' not found in the operator "
-                "map" % type(_sympyOp) )
+                "map" % type(_sympyOp)
+            )
         return _op(*tuple(values))
 
     def beforeChild(self, node, child, child_idx):
@@ -204,6 +217,7 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
                 item = float(child.evalf())
             return False, item
         return True, None
+
 
 def sympyify_expression(expr):
     """Convert a Pyomo expression to a Sympy expression"""

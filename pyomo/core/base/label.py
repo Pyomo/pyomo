@@ -9,9 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
-           'AlphaNumericTextLabeler','NameLabeler', 'CuidLabeler',
-           'ShortNameLabeler']
+__all__ = [
+    'CounterLabeler',
+    'NumericLabeler',
+    'CNameLabeler',
+    'TextLabeler',
+    'AlphaNumericTextLabeler',
+    'NameLabeler',
+    'CuidLabeler',
+    'ShortNameLabeler',
+]
 
 import re
 
@@ -26,6 +33,7 @@ from pyomo.core.base.componentuid import ComponentUID
 # broadly problematic symbols. if solver-specific remaps are required,
 # they should be handled in the corresponding solver plugin.
 
+
 class _CharMapper(object):
     def __init__(self, preserve, translate, other):
         """
@@ -35,13 +43,16 @@ class _CharMapper(object):
            other: the character to return for all characters not in
                   preserve or translate
         """
-        self.table = {k if isinstance(k, int) else ord(k): v
-            for k,v in dict(translate).items() }
+        self.table = {
+            k if isinstance(k, int) else ord(k): v for k, v in dict(translate).items()
+        }
         for c in preserve:
             _c = ord(c)
             if _c in self.table and self.table[_c] != c:
-                raise RuntimeError("Duplicate character '%s' appears in both "
-                                   "translate table and preserve list" % (c,))
+                raise RuntimeError(
+                    "Duplicate character '%s' appears in both "
+                    "translate table and preserve list" % (c,)
+                )
             self.table[_c] = c
         self.other = other
 
@@ -58,34 +69,43 @@ class _CharMapper(object):
     def make_table(self):
         return ''.join(self[i] for i in range(256))
 
+
 _alpha = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJLKMNOPQRSTUVWXYZ'
 _digit = '1234567890'
-_cpxlp_translation_table = _CharMapper( preserve=_alpha+_digit+'()_',
-                                        translate = zip('[]{}', '()()'),
-                                        other='_' ).make_table()
+_cpxlp_translation_table = _CharMapper(
+    preserve=_alpha + _digit + '()_', translate=zip('[]{}', '()()'), other='_'
+).make_table()
+
+
 def cpxlp_label_from_name(name):
 
     if name is None:
-        raise RuntimeError("Illegal name=None supplied to "
-                           "cpxlp_label_from_name function")
+        raise RuntimeError(
+            "Illegal name=None supplied to cpxlp_label_from_name function"
+        )
 
     return str.translate(name, _cpxlp_translation_table)
 
-_alphanum_translation_table = _CharMapper( preserve=_alpha+_digit+'_',
-                                       translate = {},
-                                       other='_' ).make_table()
+
+_alphanum_translation_table = _CharMapper(
+    preserve=_alpha + _digit + '_', translate={}, other='_'
+).make_table()
+
+
 def alphanum_label_from_name(name):
 
     if name is None:
-        raise RuntimeError("Illegal name=None supplied to "
-                           "alphanum_label_from_name function")
+        raise RuntimeError(
+            "Illegal name=None supplied to alphanum_label_from_name function"
+        )
 
     return str.translate(name, _alphanum_translation_table)
 
-class CuidLabeler(object):
 
+class CuidLabeler(object):
     def __call__(self, obj=None):
         return ComponentUID(obj)
+
 
 class CounterLabeler(object):
     def __init__(self, start=0):
@@ -94,6 +114,7 @@ class CounterLabeler(object):
     def __call__(self, obj=None):
         self._id += 1
         return self._id
+
 
 class NumericLabeler(object):
     def __init__(self, prefix, start=0):
@@ -104,11 +125,16 @@ class NumericLabeler(object):
         self.id += 1
         return self.prefix + str(self.id)
 
-    @deprecated("The 'remove_obj' method is no longer "
-                "necessary now that 'getname' does not "
-                "support the use of a name buffer", version="6.4.1")
+    @deprecated(
+        "The 'remove_obj' method is no longer "
+        "necessary now that 'getname' does not "
+        "support the use of a name buffer",
+        version="6.4.1",
+    )
     def remove_obj(self, obj):
         pass
+
+
 #
 # TODO: [JDS] I would like to rename TextLabeler to LPLabeler - as it
 # generated LP-file-compliant labels - and make the CNameLabeler the
@@ -123,27 +149,42 @@ class CNameLabeler(object):
     def __call__(self, obj):
         return obj.getname(True)
 
+
 class TextLabeler(object):
     def __call__(self, obj):
         return cpxlp_label_from_name(obj.getname(True))
 
-    @deprecated("The 'remove_obj' method is no longer "
-                "necessary now that 'getname' does not "
-                "support the use of a name buffer", version="6.4.1")
+    @deprecated(
+        "The 'remove_obj' method is no longer "
+        "necessary now that 'getname' does not "
+        "support the use of a name buffer",
+        version="6.4.1",
+    )
     def remove_obj(self, obj):
         pass
+
 
 class AlphaNumericTextLabeler(object):
     def __call__(self, obj):
         return alphanum_label_from_name(obj.getname(True))
 
+
 class NameLabeler(object):
     def __call__(self, obj):
         return obj.getname(True)
 
+
 class ShortNameLabeler(object):
-    def __init__(self, limit, suffix, start=0, labeler=None,
-                 prefix="", caseInsensitive=False, legalRegex=None):
+    def __init__(
+        self,
+        limit,
+        suffix,
+        start=0,
+        labeler=None,
+        prefix="",
+        caseInsensitive=False,
+        legalRegex=None,
+    ):
         self.id = start
         self.prefix = prefix
         self.suffix = suffix
@@ -165,8 +206,11 @@ class ShortNameLabeler(object):
         shorten = False
         if lbl_len > self.limit:
             shorten = True
-        elif lbl_len == self.limit and lbl.startswith(self.prefix) \
-             and lbl.endswith(self.suffix):
+        elif (
+            lbl_len == self.limit
+            and lbl.startswith(self.prefix)
+            and lbl.endswith(self.suffix)
+        ):
             shorten = True
         elif (lbl.upper() if self.caseInsensitive else lbl) in self.known_labels:
             shorten = True
@@ -180,7 +224,8 @@ class ShortNameLabeler(object):
                 raise RuntimeError(
                     "Too many identifiers.\n\t"
                     "The ShortNameLabeler cannot generate a guaranteed unique "
-                    "label limited to %d characters" % (self.limit,))
+                    "label limited to %d characters" % (self.limit,)
+                )
             lbl = self.prefix + lbl[tail:] + suffix
         if self.known_labels is not None:
             self.known_labels.add(lbl.upper() if self.caseInsensitive else lbl)

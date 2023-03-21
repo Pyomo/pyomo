@@ -11,17 +11,28 @@
 from pyomo.common import unittest
 import pyomo.environ as pe
 from pyomo.core.expr.numeric_expr import (
-    LinearExpression, MonomialTermExpression, SumExpression,
-    ProductExpression, DivisionExpression, PowExpression,
-    NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
-    Expr_ifExpression, AbsExpression
+    LinearExpression,
+    MonomialTermExpression,
+    SumExpression,
+    ProductExpression,
+    DivisionExpression,
+    PowExpression,
+    NegationExpression,
+    UnaryFunctionExpression,
+    ExternalFunctionExpression,
+    Expr_ifExpression,
+    AbsExpression,
 )
 from pyomo.core.expr.relational_expr import (
-    InequalityExpression, EqualityExpression, RangedExpression
+    InequalityExpression,
+    EqualityExpression,
+    RangedExpression,
 )
 from pyomo.core.expr.compare import (
-    convert_expression_to_prefix_notation, compare_expressions,
-    assertExpressionsEqual, assertExpressionsStructurallyEqual,
+    convert_expression_to_prefix_notation,
+    compare_expressions,
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual,
 )
 from pyomo.common.gsl import find_GSL
 
@@ -30,8 +41,21 @@ class TestConvertToPrefixNotation(unittest.TestCase):
     def test_linear_expression(self):
         m = pe.ConcreteModel()
         m.x = pe.Var([1, 2, 3, 4])
-        e = LinearExpression(constant=3, linear_coefs=list(m.x.keys()), linear_vars=list(m.x.values()))
-        expected = [(LinearExpression, 9), 3, 1, 2, 3, 4, m.x[1], m.x[2], m.x[3], m.x[4]]
+        e = LinearExpression(
+            constant=3, linear_coefs=list(m.x.keys()), linear_vars=list(m.x.values())
+        )
+        expected = [
+            (LinearExpression, 9),
+            3,
+            1,
+            2,
+            3,
+            4,
+            m.x[1],
+            m.x[2],
+            m.x[3],
+            m.x[4],
+        ]
         pn = convert_expression_to_prefix_notation(e)
         self.assertEqual(pn, expected)
 
@@ -40,21 +64,23 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.x = pe.Var()
         m.y = pe.Var()
 
-        e = m.x**2 + m.x*m.y/3 + 4
-        expected = [(SumExpression, 3),
-                    (PowExpression, 2),
-                    m.x,
-                    2,
-                    (DivisionExpression, 2),
-                    (ProductExpression, 2),
-                    m.x,
-                    m.y,
-                    3,
-                    4]
+        e = m.x**2 + m.x * m.y / 3 + 4
+        expected = [
+            (SumExpression, 3),
+            (PowExpression, 2),
+            m.x,
+            2,
+            (DivisionExpression, 2),
+            (ProductExpression, 2),
+            m.x,
+            m.y,
+            3,
+            4,
+        ]
         pn = convert_expression_to_prefix_notation(e)
         self.assertEqual(pn, expected)
-        e2 = m.x**2 + m.x*m.y/3 + 4
-        e3 = m.y**2 + m.x*m.y/3 + 4
+        e2 = m.x**2 + m.x * m.y / 3 + 4
+        e3 = m.y**2 + m.x * m.y / 3 + 4
         self.assertTrue(compare_expressions(e, e2))
         self.assertFalse(compare_expressions(e, e3))
 
@@ -75,14 +101,16 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.hypot = pe.ExternalFunction(library=DLL, function='gsl_hypot')
         m.x = pe.Var(initialize=0.5)
         m.y = pe.Var(initialize=1.5)
-        e = 2 * m.hypot(m.x, m.x*m.y)
-        expected = [(ProductExpression, 2),
-                    2,
-                    (ExternalFunctionExpression, 2, m.hypot),
-                    m.x,
-                    (ProductExpression, 2),
-                    m.x,
-                    m.y]
+        e = 2 * m.hypot(m.x, m.x * m.y)
+        expected = [
+            (ProductExpression, 2),
+            2,
+            (ExternalFunctionExpression, 2, m.hypot),
+            m.x,
+            (ProductExpression, 2),
+            m.x,
+            m.y,
+        ]
         pn = convert_expression_to_prefix_notation(e)
         self.assertEqual(expected, pn)
 
@@ -99,11 +127,9 @@ class TestConvertToPrefixNotation(unittest.TestCase):
     def test_monomial(self):
         m = pe.ConcreteModel()
         m.x = pe.Var()
-        e = 2*m.x
+        e = 2 * m.x
         pn = convert_expression_to_prefix_notation(e)
-        expected = [(MonomialTermExpression, 2),
-                    2,
-                    m.x]
+        expected = [(MonomialTermExpression, 2), 2, m.x]
         self.assertEqual(pn, expected)
 
     def test_negation(self):
@@ -111,10 +137,7 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.x = pe.Var()
         e = -m.x**2
         pn = convert_expression_to_prefix_notation(e)
-        expected = [(NegationExpression, 1),
-                    (PowExpression, 2),
-                    m.x,
-                    2]
+        expected = [(NegationExpression, 1), (PowExpression, 2), m.x, 2]
         self.assertEqual(pn, expected)
 
     def test_abs(self):
@@ -122,8 +145,7 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.x = pe.Var()
         e = abs(m.x)
         pn = convert_expression_to_prefix_notation(e)
-        expected = [(AbsExpression, 1, 'abs'),
-                    m.x]
+        expected = [(AbsExpression, 1, 'abs'), m.x]
         self.assertEqual(pn, expected)
 
     def test_expr_if(self):
@@ -132,22 +154,24 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.y = pe.Var()
         e = pe.Expr_if(m.x <= 0, m.y + m.x == 0, m.y - m.x == 0)
         pn = convert_expression_to_prefix_notation(e)
-        expected = [(Expr_ifExpression, 3),
-                    (InequalityExpression, 2),
-                    m.x,
-                    0,
-                    (EqualityExpression, 2),
-                    (SumExpression, 2),
-                    m.y,
-                    m.x,
-                    0,
-                    (EqualityExpression, 2),
-                    (SumExpression, 2),
-                    m.y,
-                    (MonomialTermExpression, 2),
-                    -1,
-                    m.x,
-                    0]
+        expected = [
+            (Expr_ifExpression, 3),
+            (InequalityExpression, 2),
+            m.x,
+            0,
+            (EqualityExpression, 2),
+            (SumExpression, 2),
+            m.y,
+            m.x,
+            0,
+            (EqualityExpression, 2),
+            (SumExpression, 2),
+            m.y,
+            (MonomialTermExpression, 2),
+            -1,
+            m.x,
+            0,
+        ]
         self.assertEqual(pn, expected)
 
     def test_ranged_expression(self):
@@ -155,10 +179,7 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.x = pe.Var()
         e = pe.inequality(-1, m.x, 1)
         pn = convert_expression_to_prefix_notation(e)
-        expected = [(RangedExpression, 3),
-                    -1,
-                    m.x,
-                    1]
+        expected = [(RangedExpression, 3), -1, m.x, 1]
         self.assertEqual(pn, expected)
 
     def test_assertExpressionsEqual(self):
@@ -166,22 +187,21 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.x = pe.Var()
         m.e1 = pe.Expression(expr=m.x**2 + m.x - 1)
         m.e2 = pe.Expression(expr=m.x**2 + m.x - 1)
-        m.f = pe.Expression(expr=m.x**2 + 2*m.x - 1)
+        m.f = pe.Expression(expr=m.x**2 + 2 * m.x - 1)
         m.g = pe.Expression(expr=m.x**2 + m.x - 2)
 
         assertExpressionsEqual(self, m.e1.expr, m.e2.expr)
         assertExpressionsStructurallyEqual(self, m.e1.expr, m.e2.expr)
-        with self.assertRaisesRegex(
-                AssertionError, 'Expressions not equal:'):
+        with self.assertRaisesRegex(AssertionError, 'Expressions not equal:'):
             assertExpressionsEqual(self, m.e1.expr, m.f.expr)
         with self.assertRaisesRegex(
-                AssertionError, 'Expressions not structurally equal:'):
+            AssertionError, 'Expressions not structurally equal:'
+        ):
             assertExpressionsStructurallyEqual(self, m.e1.expr, m.f.expr)
 
         # Structurally equal will compare across clones, whereas strict
         # equality will not
         i = m.clone()
-        with self.assertRaisesRegex(
-                AssertionError, 'Expressions not equal:'):
+        with self.assertRaisesRegex(AssertionError, 'Expressions not equal:'):
             assertExpressionsEqual(self, m.e1.expr, i.e1.expr)
         assertExpressionsStructurallyEqual(self, m.e1.expr, i.e1.expr)

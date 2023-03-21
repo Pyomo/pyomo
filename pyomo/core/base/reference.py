@@ -11,22 +11,21 @@
 
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
-    UserDict, OrderedDict, Mapping, MutableMapping,
-    Set as collections_Set, Sequence,
+    UserDict,
+    OrderedDict,
+    Mapping,
+    MutableMapping,
+    Set as collections_Set,
+    Sequence,
 )
 from pyomo.common.modeling import NOTSET
-from pyomo.core.base.set import (
-    DeclareGlobalSet, Set, SetOf, OrderedSetOf, _SetDataBase,
-)
+from pyomo.core.base.set import DeclareGlobalSet, Set, SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
-from pyomo.core.base.global_set import (
-    UnindexedComponent_set,
-)
-from pyomo.core.base.indexed_component import (
-    IndexedComponent, normalize_index,
-)
+from pyomo.core.base.global_set import UnindexedComponent_set
+from pyomo.core.base.indexed_component import IndexedComponent, normalize_index
 from pyomo.core.base.indexed_component_slice import (
-    IndexedComponent_slice, _IndexedComponent_slice_iter
+    IndexedComponent_slice,
+    _IndexedComponent_slice_iter,
 )
 from pyomo.core.base.util import flatten_tuple
 from pyomo.common.deprecation import deprecated
@@ -34,12 +33,15 @@ from pyomo.common.deprecation import deprecated
 _UnindexedComponent_key = list(UnindexedComponent_set)
 _UnindexedComponent_base_key = tuple(UnindexedComponent_set)
 
-DeclareGlobalSet(Set(
-    initialize=UnindexedComponent_set,
-    name='UnindexedComponent_ReferenceSet',
-    doc='An indexing set used by references to unindexed (scalar) '
-    'components that is equivalent to but NOT the UnindexedComponent_set',
-), globals())
+DeclareGlobalSet(
+    Set(
+        initialize=UnindexedComponent_set,
+        name='UnindexedComponent_ReferenceSet',
+        doc='An indexing set used by references to unindexed (scalar) '
+        'components that is equivalent to but NOT the UnindexedComponent_set',
+    ),
+    globals(),
+)
 
 
 class _fill_in_known_wildcards(object):
@@ -73,9 +75,8 @@ class _fill_in_known_wildcards(object):
         look_in_index.  [default: False]
 
     """
-    def __init__(self, wildcard_values,
-                 look_in_index=False,
-                 get_if_not_present=False):
+
+    def __init__(self, wildcard_values, look_in_index=False, get_if_not_present=False):
         self.base_key = wildcard_values
         self.key = list(wildcard_values)
         self.known_slices = set()
@@ -116,13 +117,15 @@ class _fill_in_known_wildcards(object):
                 raise SliceEllipsisLookupError(
                     "Cannot lookup elements in a _ReferenceDict when the "
                     "underlying slice object contains ellipsis over a jagged "
-                    "(dimen=None) Set")
+                    "(dimen=None) Set"
+                )
         try:
             # Here we assemble the index we will actually use to access
             # the component.
             idx = tuple(
                 _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
-                for i in range(idx_count))
+                for i in range(idx_count)
+            )
             # _slice corresponds to some sliced entry in the call/iter stacks
             # that contains the information describing the slice.
             # Here we fill in an index with the fixed indices from the slice
@@ -132,7 +135,8 @@ class _fill_in_known_wildcards(object):
             raise KeyError(
                 "Insufficient values for slice of indexed component '%s' "
                 "(found evaluating slice index %s)"
-                % (_slice.component.name, self.base_key))
+                % (_slice.component.name, self.base_key)
+            )
 
         if idx in _slice.component:
             # We have found a matching component at this level of the
@@ -158,30 +162,31 @@ class _fill_in_known_wildcards(object):
             # creation (and return) of the new component data.
             if idx in _slice.component.index_set():
                 _slice.last_index = idx
-                return _slice.component[idx] if self.get_if_not_present \
-                    else None
+                return _slice.component[idx] if self.get_if_not_present else None
             elif len(idx) == 1 and idx[0] in _slice.component.index_set():
                 _slice.last_index = idx
-                return _slice.component[idx[0]] if self.get_if_not_present \
-                    else None
+                return _slice.component[idx[0]] if self.get_if_not_present else None
 
         raise KeyError(
             "Index %s is not valid for indexed component '%s' "
             "(found evaluating slice index %s)"
-            % (idx, _slice.component.name, self.base_key))
+            % (idx, _slice.component.name, self.base_key)
+        )
 
     def check_complete(self):
         if not self.key:
             return
-        if (self.key == _UnindexedComponent_key and
-            self.base_key == _UnindexedComponent_base_key):
+        if (
+            self.key == _UnindexedComponent_key
+            and self.base_key == _UnindexedComponent_base_key
+        ):
             return
-        raise KeyError("Extra (unused) values for slice index %s"
-                       % ( self.base_key, ))
+        raise KeyError("Extra (unused) values for slice index %s" % (self.base_key,))
 
 
 class SliceEllipsisLookupError(LookupError):
     pass
+
 
 class _ReferenceDict(MutableMapping):
     """A dict-like object whose values are defined by a slice.
@@ -197,6 +202,7 @@ class _ReferenceDict(MutableMapping):
     component_slice : :py:class:`IndexedComponent_slice`
         The slice object that defines the "members" of this mutable mapping.
     """
+
     def __init__(self, component_slice):
         self._slice = component_slice
 
@@ -235,9 +241,7 @@ class _ReferenceDict(MutableMapping):
         try:
             # This calls IC_slice_iter.__next__, which calls
             # _fill_in_known_wildcards.
-            return next(
-                self._get_iter(self._slice, key, get_if_not_present=True)
-            )
+            return next(self._get_iter(self._slice, key, get_if_not_present=True))
         except SliceEllipsisLookupError:
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
@@ -261,20 +265,22 @@ class _ReferenceDict(MutableMapping):
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_item,
                 tmp._call_stack[-1][1],
-                val )
+                val,
+            )
         elif op == IndexedComponent_slice.slice_info:
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_item,
                 tmp._call_stack[-1][1],
-                val )
+                val,
+            )
         elif op == IndexedComponent_slice.get_attribute:
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_attribute,
                 tmp._call_stack[-1][1],
-                val )
+                val,
+            )
         else:
-            raise DeveloperError(
-                "Unexpected slice _call_stack operation: %s" % op)
+            raise DeveloperError("Unexpected slice _call_stack operation: %s" % op)
         try:
             next(self._get_iter(tmp, key, get_if_not_present=True))
         except StopIteration:
@@ -288,7 +294,8 @@ class _ReferenceDict(MutableMapping):
             # change it to delete the item
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.del_item,
-                tmp._call_stack[-1][1] )
+                tmp._call_stack[-1][1],
+            )
         elif op == IndexedComponent_slice.slice_info:
             assert len(tmp._call_stack) == 1
             _iter = self._get_iter(tmp, key)
@@ -303,10 +310,10 @@ class _ReferenceDict(MutableMapping):
             # change it to delete the attribute
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.del_attribute,
-                tmp._call_stack[-1][1] )
+                tmp._call_stack[-1][1],
+            )
         else:
-            raise DeveloperError(
-                "Unexpected slice _call_stack operation: %s" % op)
+            raise DeveloperError("Unexpected slice _call_stack operation: %s" % op)
         try:
             next(self._get_iter(tmp, key))
         except StopIteration:
@@ -350,13 +357,13 @@ class _ReferenceDict(MutableMapping):
         """
         return iter(self._slice)
 
-    @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='6.0')
+    @deprecated('The iteritems method is deprecated. Use dict.items().', version='6.0')
     def iteritems(self):
         return self.items()
 
-    @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='6.0')
+    @deprecated(
+        'The itervalues method is deprecated. Use dict.values().', version='6.0'
+    )
     def itervalues(self):
         return self.values()
 
@@ -371,9 +378,7 @@ class _ReferenceDict(MutableMapping):
         if normalize_index.flatten:
             key = flatten_tuple(key)
         return _IndexedComponent_slice_iter(
-            _slice,
-            _fill_in_known_wildcards(
-                key, get_if_not_present=get_if_not_present)
+            _slice, _fill_in_known_wildcards(key, get_if_not_present=get_if_not_present)
         )
 
 
@@ -401,6 +406,7 @@ class _ReferenceSet(collections_Set):
         The slice object that defines the "members" of this set
 
     """
+
     def __init__(self, component_slice):
         self._slice = component_slice
 
@@ -434,7 +440,7 @@ class _ReferenceSet(collections_Set):
         return _IndexedComponent_slice_iter(
             _slice,
             _fill_in_known_wildcards(key, look_in_index=True),
-            iter_over_index=True
+            iter_over_index=True,
         )
 
     def __str__(self):
@@ -457,7 +463,7 @@ def _identify_wildcard_sets(iter_stack, index):
     # _iter_stack.  Each dict maps position within that level's
     # component's "subsets" list to the set at that position if it is a
     # wildcard set.
-    wildcard_stack = [None]*len(iter_stack)
+    wildcard_stack = [None] * len(iter_stack)
     for i, level in enumerate(iter_stack):
         if level is not None:
             offset = 0
@@ -466,8 +472,9 @@ def _identify_wildcard_sets(iter_stack, index):
             wildcard_sets = {}
             # `wildcard_sets` maps position in the current level's
             # "subsets list" to its set if that set is a wildcard.
-            for j, s in enumerate(level.component.index_set().subsets(
-                    expand_all_set_operators=False)):
+            for j, s in enumerate(
+                level.component.index_set().subsets(expand_all_set_operators=False)
+            ):
                 # Iterate over the sets that could possibly be wildcards
                 if s is UnindexedComponent_set:
                     wildcard_sets[j] = s
@@ -481,8 +488,9 @@ def _identify_wildcard_sets(iter_stack, index):
                 if level.fixed is None:
                     wildcard_count = s.dimen
                 else:
-                    wildcard_count = sum( 1 for k in range(s.dimen)
-                                          if k+offset not in level.fixed )
+                    wildcard_count = sum(
+                        1 for k in range(s.dimen) if k + offset not in level.fixed
+                    )
                 # `k+offset` is a position in the "total" (flattened)
                 # index tuple.  All the _slice_generator's information
                 # is in terms of this total index tuple.
@@ -506,7 +514,7 @@ def _identify_wildcard_sets(iter_stack, index):
             # with ellipsis should get caught by the check for s.dimen
             # above.
             #
-            #if offset != level.explicit_index_count:
+            # if offset != level.explicit_index_count:
             #    return None
             wildcard_stack[i] = wildcard_sets
     if not index:
@@ -535,7 +543,7 @@ def _identify_wildcard_sets(iter_stack, index):
         if len(index[i]) != len(level):
             return None
         # if any wildcard "subset" differs in position or set.
-        if any(index[i].get(j,None) is not _set for j,_set in level.items()):
+        if any(index[i].get(j, None) is not _set for j, _set in level.items()):
             return None
         # These checks seem to intentionally preclude
         #     m.b1[:].v and m.b2[1,:].v
@@ -547,6 +555,7 @@ def _identify_wildcard_sets(iter_stack, index):
         #     m.c[2] = Reference(m.b2[1,:])
         #     Reference(m.c[:].v)
     return index
+
 
 def Reference(reference, ctype=NOTSET):
     """Creates a component that references other components
@@ -678,7 +687,8 @@ def Reference(reference, ctype=NOTSET):
         if ctype is NOTSET:
             ctype = reference.ctype
         reference = IndexedComponent_slice(reference.parent_component())[
-            reference.index()]
+            reference.index()
+        ]
         _data = _ReferenceDict(reference)
         # index and ctype are now set; no need to iterate over the slice
         _iter = ()
@@ -696,7 +706,8 @@ def Reference(reference, ctype=NOTSET):
         raise TypeError(
             "First argument to Reference constructors must be a "
             "component, component slice, Sequence, or Mapping (received %s)"
-            % (type(reference).__name__,))
+            % (type(reference).__name__,)
+        )
 
     if ctype is NOTSET:
         ctypes = set()
@@ -749,8 +760,9 @@ def Reference(reference, ctype=NOTSET):
         if not slice_idx:
             index = SetOf(_ReferenceSet(reference))
         else:
-            wildcards = sum((sorted(lvl.items()) for lvl in slice_idx
-                             if lvl is not None), [])
+            wildcards = sum(
+                (sorted(lvl.items()) for lvl in slice_idx if lvl is not None), []
+            )
             # Wildcards is a list of (coordinate, set) tuples.  Coordinate
             # is that within the subsets list, and set is a wildcard set.
             index = wildcards[0][1]

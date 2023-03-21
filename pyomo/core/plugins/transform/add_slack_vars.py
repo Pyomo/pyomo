@@ -9,7 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import TransformationFactory, Var, NonNegativeReals, Constraint, Objective, Block, value
+from pyomo.core import (
+    TransformationFactory,
+    Var,
+    NonNegativeReals,
+    Constraint,
+    Objective,
+    Block,
+    value,
+)
 
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
@@ -18,11 +26,14 @@ from pyomo.core.base import ComponentUID
 from pyomo.core.base.constraint import _ConstraintData
 from pyomo.common.deprecation import deprecation_warning
 
+
 def target_list(x):
-    deprecation_msg = ("In future releases ComponentUID targets will no "
-                       "longer be supported in the core.add_slack_variables "
-                       "transformation. Specify targets as a Constraint or "
-                       "list of Constraints.")
+    deprecation_msg = (
+        "In future releases ComponentUID targets will no "
+        "longer be supported in the core.add_slack_variables "
+        "transformation. Specify targets as a Constraint or "
+        "list of Constraints."
+    )
     if isinstance(x, ComponentUID):
         if deprecation_msg:
             deprecation_warning(deprecation_msg, version='5.7.1')
@@ -30,9 +41,9 @@ def target_list(x):
             deprecation_msg = None
         # [ESJ 07/15/2020] We have to just pass it through because we need the
         # instance in order to be able to do anything about it...
-        return [ x ]
+        return [x]
     elif isinstance(x, (Constraint, _ConstraintData)):
-        return [ x ]
+        return [x]
     elif hasattr(x, '__iter__'):
         ans = []
         for i in x:
@@ -47,20 +58,25 @@ def target_list(x):
             else:
                 raise ValueError(
                     "Expected Constraint or list of Constraints."
-                    "\n\tReceived %s" % (type(i),))
+                    "\n\tReceived %s" % (type(i),)
+                )
         return ans
     else:
         raise ValueError(
-            "Expected Constraint or list of Constraints."
-            "\n\tReceived %s" % (type(x),))
+            "Expected Constraint or list of Constraints.\n\tReceived %s" % (type(x),)
+        )
+
 
 import logging
+
 logger = logging.getLogger('pyomo.core')
 
 
-@TransformationFactory.register('core.add_slack_variables', \
-          doc="Create a model where we add slack variables to every constraint "
-          "and add new objective penalizing the sum of the slacks")
+@TransformationFactory.register(
+    'core.add_slack_variables',
+    doc="Create a model where we add slack variables to every constraint "
+    "and add new objective penalizing the sum of the slacks",
+)
 class AddSlackVariables(NonIsomorphicTransformation):
     """
     This plugin adds slack variables to every constraint or to the constraints
@@ -68,15 +84,18 @@ class AddSlackVariables(NonIsomorphicTransformation):
     """
 
     CONFIG = ConfigBlock("core.add_slack_variables")
-    CONFIG.declare('targets', ConfigValue(
-        default=None,
-        domain=target_list,
-        description="target or list of targets to which slacks will be added",
-        doc="""
+    CONFIG.declare(
+        'targets',
+        ConfigValue(
+            default=None,
+            domain=target_list,
+            description="target or list of targets to which slacks will be added",
+            doc="""
 
         This specifies the list of Constraints to add slack variables to.
-        """
-    ))
+        """,
+        ),
+    )
 
     def __init__(self, **kwds):
         kwds['name'] = "add_slack_vars"
@@ -92,7 +111,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
         if targets is None:
             constraintDatas = instance.component_data_objects(
-                Constraint, descend_into=True)
+                Constraint, descend_into=True
+            )
         else:
             constraintDatas = []
             for t in targets:
@@ -123,13 +143,16 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
         obj_expr = 0
         for cons in constraintDatas:
-            if (cons.lower is not None and cons.upper is not None) and \
-               value(cons.lower) > value(cons.upper):
+            if (cons.lower is not None and cons.upper is not None) and value(
+                cons.lower
+            ) > value(cons.upper):
                 # this is a structural infeasibility so slacks aren't going to
                 # help:
-                raise RuntimeError("Lower bound exceeds upper bound in "
-                                   "constraint %s" % cons.name)
-            if not cons.active: continue
+                raise RuntimeError(
+                    "Lower bound exceeds upper bound in constraint %s" % cons.name
+                )
+            if not cons.active:
+                continue
             cons_name = cons.getname(fully_qualified=True)
             if cons.lower is not None:
                 # we add positive slack variable to body:
