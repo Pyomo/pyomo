@@ -24,8 +24,8 @@ logger = logging.getLogger('pyomo.common')
 def get_gsl(downloader):
     logger.info(
         "As of February 9, 2023, AMPL GSL can no longer be downloaded\
-                through download-extensions. Visit https://portal.ampl.com/\
-                to download the AMPL GSL binaries."
+        through download-extensions. Visit https://portal.ampl.com/\
+        to download the AMPL GSL binaries."
     )
 
 
