@@ -490,7 +490,7 @@ def attempt_import(
         )
         if catch_exceptions is not None:
             raise ValueError(
-                "Cannot specify both only_catch_importerror " "and catch_exceptions"
+                "Cannot specify both only_catch_importerror and catch_exceptions"
             )
         if only_catch_importerror:
             catch_exceptions = (ImportError,)

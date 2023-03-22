@@ -1579,7 +1579,7 @@ scenarios[1].detection""",
     def test_setValue_block_noImplicit(self):
         _test = {'epanet file': 'no_file.inp', 'foo': 1}
         with self.assertRaisesRegex(
-            ValueError, "key 'foo' not defined for ConfigDict " "'network' and implicit"
+            ValueError, "key 'foo' not defined for ConfigDict 'network' and implicit"
         ):
             self.config['network'] = _test
         self.assertEqual(self._reference, self.config.value())
@@ -2420,12 +2420,12 @@ Node information:
         args = parser.parse_args(['--sub', 'b='])
         with self.assertRaisesRegex(
             ValueError,
-            r"(?s)Expected value following '=' " "but encountered end of string",
+            r"(?s)Expected value following '=' but encountered end of string",
         ):
             leftovers = c.import_argparse(args)
         args = parser.parse_args(['--sub', 'b'])
         with self.assertRaisesRegex(
-            ValueError, r"(?s)Expected ':' or '=' " "but encountered end of string"
+            ValueError, r"(?s)Expected ':' or '=' but encountered end of string"
         ):
             leftovers = c.import_argparse(args)
 

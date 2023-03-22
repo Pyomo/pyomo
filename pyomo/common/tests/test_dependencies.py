@@ -55,7 +55,7 @@ class TestDependencies(unittest.TestCase):
         # AttributeErrors and NOT DeferredImportError:
         with self.assertRaisesRegex(
             AttributeError,
-            "'ModuleUnavailable' object has no " "attribute '__sphinx_mock__'",
+            "'ModuleUnavailable' object has no attribute '__sphinx_mock__'",
         ):
             module_obj.__sphinx_mock__
 

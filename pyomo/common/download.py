@@ -386,7 +386,7 @@ class FileDownloader(object):
             if len(target) <= dirOffset:
                 if f[-1] != '/':
                     logger.warning(
-                        "Skipping file (%s) in zip archive due to " "dirOffset" % (f,)
+                        "Skipping file (%s) in zip archive due to dirOffset" % (f,)
                     )
                 continue
             info.filename = target[-1] + '/' if f[-1] == '/' else target[-1]

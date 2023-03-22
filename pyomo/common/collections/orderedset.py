@@ -14,7 +14,7 @@ from collections import OrderedDict
 
 
 class OrderedSet(MutableSet):
-    __slots__ = '_dict'
+    __slots__ = ('_dict',)
 
     def __init__(self, iterable=None):
         # TODO: Starting in Python 3.7, dict is ordered (and is faster

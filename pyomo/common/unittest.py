@@ -141,7 +141,7 @@ def assertStructuredAlmostEqual(
 
     """
     if sum(1 for _ in (places, delta, abstol) if _ is not None) > 1:
-        raise ValueError("Cannot specify more than one of " "{places, delta, abstol}")
+        raise ValueError("Cannot specify more than one of {places, delta, abstol}")
 
     if places is not None:
         abstol = 10 ** (-places)

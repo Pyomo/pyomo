@@ -84,7 +84,7 @@ class TestPyomoUnittest(unittest.TestCase):
 
     def test_assertStructuredAlmostEqual_errorChecking(self):
         with self.assertRaisesRegex(
-            ValueError, "Cannot specify more than one of " "{places, delta, abstol}"
+            ValueError, "Cannot specify more than one of {places, delta, abstol}"
         ):
             self.assertStructuredAlmostEqual(1, 1, places=7, delta=1)
 

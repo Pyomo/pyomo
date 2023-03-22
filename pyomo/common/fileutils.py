@@ -514,7 +514,7 @@ class PathData(object):
             )
 
     @deprecated(
-        "get_path() is deprecated; use " "pyomo.common.Executable(name).path()",
+        "get_path() is deprecated; use pyomo.common.Executable(name).path()",
         version='5.6.2',
     )
     def get_path(self):

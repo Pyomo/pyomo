@@ -52,7 +52,7 @@ class Test_FileDownloader(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "cacert='nonexistent_file_name' does not " "refer to a valid file.",
+            "cacert='nonexistent_file_name' does not refer to a valid file.",
         ):
             FileDownloader(True, 'nonexistent_file_name')
 
@@ -96,7 +96,7 @@ class Test_FileDownloader(unittest.TestCase):
         f = FileDownloader()
         with self.assertRaisesRegex(
             RuntimeError,
-            "--cacert='nonexistent_file_name' does " "not refer to a valid file",
+            "--cacert='nonexistent_file_name' does not refer to a valid file",
         ):
             f.parse_args(['--cacert', 'nonexistent_file_name'])
 

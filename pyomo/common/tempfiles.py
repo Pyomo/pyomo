@@ -465,9 +465,7 @@ class TempfileContext:
                         # Failure to delete a tempfile
                         # should NOT be fatal
                         logger = logging.getLogger(__name__)
-                        logger.warning(
-                            "Unable to delete temporary " "file %s" % (name,)
-                        )
+                        logger.warning("Unable to delete temporary file %s" % (name,))
             return
         assert os.path.isdir(name)
         shutil.rmtree(name, ignore_errors=not deletion_errors_are_fatal)

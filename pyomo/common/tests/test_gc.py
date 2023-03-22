@@ -52,7 +52,7 @@ class TestPauseGC(unittest.TestCase):
         with pgc:
             with self.assertRaisesRegex(
                 RuntimeError,
-                "Entering PauseGC context manager that " "was already entered",
+                "Entering PauseGC context manager that was already entered",
             ):
                 with pgc:
                     pass

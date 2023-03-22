@@ -18,7 +18,7 @@ logger = logging.getLogger('pyomo.common')
 
 
 @deprecated(
-    "Use of get_gsl is deprecated and NO LONGER FUNCTIONS as of February 9, " "2023. ",
+    "Use of get_gsl is deprecated and NO LONGER FUNCTIONS as of February 9, 2023. ",
     version='6.5.0',
 )
 def get_gsl(downloader):

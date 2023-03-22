@@ -256,7 +256,7 @@ class _MsvcrtDLL(object):
             size += len(line)
             if len(line) == 0:
                 raise ValueError(
-                    "Error processing MSVCRT _environ: " "0-length string encountered"
+                    "Error processing MSVCRT _environ: 0-length string encountered"
                 )
             if size > 32767:
                 raise ValueError(
