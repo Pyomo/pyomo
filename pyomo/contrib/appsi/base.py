@@ -1330,8 +1330,8 @@ class LegacySolverInterface(object):
 
         symbol_map = SymbolMap()
         symbol_map.byObject = dict(self.symbol_map.byObject)
-        symbol_map.bySymbol = {symb: weakref.ref(obj()) for symb, obj in self.symbol_map.bySymbol.items()}
-        symbol_map.aliases = {symb: weakref.ref(obj()) for symb, obj in self.symbol_map.aliases.items()}
+        symbol_map.bySymbol = dict(self.symbol_map.bySymbol)
+        symbol_map.aliases = dict(self.symbol_map.aliases)
         symbol_map.default_labeler = self.symbol_map.default_labeler
         model.solutions.add_symbol_map(symbol_map)
         legacy_results._smap_id = id(symbol_map)
