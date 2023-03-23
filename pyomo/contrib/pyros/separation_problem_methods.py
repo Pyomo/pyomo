@@ -285,8 +285,7 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
     )
     for (row_idx, viol_con_idx), (col_idx, viol_param_idx) in idxs_product:
         # get (index of) uncert param realization which
-        # maximizes violation of perf constraint indexed by
-        # column
+        # maximizes violation of perf constraint indexed by column
         scenario_idx = con_to_worst_param_idx_map[viol_param_idx]
 
         violations_arr[row_idx, col_idx] = max(
@@ -294,8 +293,6 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
             (
                 # violation of this row's performance constraint
                 # by this column's separation solution
-                # if separation problems were solved globally,
-                # then diagonal entries should be the largest in each row
                 solve_data_list[viol_param_idx][scenario_idx]
                 .list_of_scaled_violations[viol_con_idx]
             ),
