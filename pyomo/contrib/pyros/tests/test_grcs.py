@@ -4005,8 +4005,8 @@ class RegressionTest(unittest.TestCase):
 
     @unittest.skipUnless(baron_license_is_valid,
                          "Global NLP solver is not available and licensed.")
-    @unittest.skipUnless(baron_version>=(23,1,5),
-                         "Test runs >90 minutes with Baron 22.9.30")
+    @unittest.skipUnless(baron_version == (23, 1, 5),
+                         "Test runs >90 minutes with Baron 22.9.30 and 23.3.11")
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
