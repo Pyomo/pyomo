@@ -846,7 +846,8 @@ def solver_call_separation(
     save_dir = config.subproblem_file_directory
     if save_dir and config.keepfiles:
         objective = str(
-            list(nlp_model.component_data_objects(Objective, active=True))[0].name
+            list(nlp_model.component_data_objects(Objective, active=True))[0]
+            .name
         )
         name = os.path.join(
             save_dir,
@@ -861,7 +862,7 @@ def solver_call_separation(
                 + ".bar"
             ),
         )
-        nlp_model.write(name, io_options={'symbolic_solver_labels':True})
+        nlp_model.write(name, io_options={'symbolic_solver_labels': True})
         output_logger(
             config=config,
             separation_error=True,
