@@ -305,15 +305,15 @@ class PiecewiseLinearFunction(Block):
         idx = obj._index
 
         points = self._points_rule(parent, idx)
-        dimension = self._get_dimension_and_simplices_from_points(points)
+        dimension = self._get_dimension_from_points(points)
         function_values = self._function_values_rule(parent, idx)
 
         if dimension == 1:
             # This is univariate and we'll handle it separately in order to
             # avoid a dependence on scipy.
-            self._construct_one_dimensional_simplices_from_points(obj)
+            self._construct_one_dimensional_simplices_from_points(obj, points)
             point_tuples = [(pt,) for pt in points]
-            return self._construct_from_univariate_function_and_segements(
+            return self._construct_from_univariate_function_and_segments(
                 obj, _tabular_data_functor(point_tuples, function_values)
             )
 

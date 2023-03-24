@@ -109,6 +109,13 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         )
         self.check_ln_x_approx(m.pw, m.x)
 
+    def test_pw_linear_approx_of_ln_x_points_and_values(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(
+            points=[1, 3, 6, 10], function_values=[0, log(3), log(6), log(10)]
+        )
+        self.check_ln_x_approx(m.pw, m.x)
+
     def test_use_pw_function_in_constraint(self):
         m = self.make_ln_x_model()
         m.pw = PiecewiseLinearFunction(
@@ -164,6 +171,25 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
 
         m.pw = PiecewiseLinearFunction(
             [1, 2], points=silly_pts_rule, function_rule=lambda m, i: m.funcs[i]
+        )
+        self.check_ln_x_approx(m.pw[2], m.z[2])
+        self.check_x_squared_approx(m.pw[1], m.z[1])
+
+    def test_indexed_pw_linear_function_points_and_values(self):
+        m = self.make_ln_x_model()
+        m.z = Var([1, 2], bounds=(-10, 10))
+
+        def silly_pts_rule(m, i):
+            return [1, 3, 6, 10]
+
+        def silly_values_rule(m, i):
+            if i == 1:
+                return [1, 9, 36, 100]
+            if i == 2:
+                return [0, log(3), log(6), log(10)]
+
+        m.pw = PiecewiseLinearFunction(
+            [1, 2], points=silly_pts_rule, function_values=silly_values_rule
         )
         self.check_ln_x_approx(m.pw[2], m.z[2])
         self.check_x_squared_approx(m.pw[1], m.z[1])
@@ -294,6 +320,16 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
 
         m.pw = PiecewiseLinearFunction(
             simplices=self.simplices, linear_functions=[g1, g1, g2, g2]
+        )
+        self.check_pw_linear_approximation(m)
+
+    @unittest.skipUnless(scipy_available, "scipy is not available")
+    def test_pw_linear_approx_points_and_values(self):
+        m = self.make_model()
+
+        m.pw = PiecewiseLinearFunction(
+            points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7)],
+            function_values=[g(0, 1), g(0, 4), g(0, 7), g(3, 1), g(3, 4), g(3, 7)]
         )
         self.check_pw_linear_approximation(m)
 
