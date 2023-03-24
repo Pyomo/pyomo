@@ -18,9 +18,8 @@ __all__ = ['AmplModel']
 
 import os
 
-from pyomo.opt.base import (ProblemFormat,
-                            convert_problem,
-                            guess_format)
+from pyomo.opt.base import ProblemFormat, convert_problem, guess_format
+
 
 class AmplModel(object):
     """
@@ -67,4 +66,3 @@ class AmplModel(object):
             if os.path.exists(filename):
                 os.remove(filename)
             os.rename(res[0][0], filename)
-

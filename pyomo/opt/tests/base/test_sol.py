@@ -27,14 +27,14 @@ from pyomo.opt import (
     SolutionStatus,
     SolverStatus,
     check_optimal_termination,
-    assert_optimal_termination
+    assert_optimal_termination,
 )
 
 currdir = this_file_dir()
 deleteFiles = True
 
-class Test(unittest.TestCase):
 
+class Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import pyomo.environ
@@ -52,23 +52,24 @@ class Test(unittest.TestCase):
             soln = reader(join(currdir, "test4_sol.sol"), suffixes=["dual"])
             _test = TempfileManager.create_tempfile('factory.txt')
             soln.write(filename=_test, format='json')
-            with open(_test, 'r') as out, \
-                open(join(currdir, "test4_sol.jsn"), 'r') as txt:
-                self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
-                                                 allow_second_superset=True)
+            with open(_test, 'r') as out, open(
+                join(currdir, "test4_sol.jsn"), 'r'
+            ) as txt:
+                self.assertStructuredAlmostEqual(
+                    json.load(txt), json.load(out), allow_second_superset=True
+                )
 
     def test_infeasible1(self):
         with ReaderFactory("sol") as reader:
             if reader is None:
                 raise IOError("Reader 'sol' is not registered")
             soln = reader(join(currdir, "infeasible1.sol"))
-            self.assertEqual(soln.solver.termination_condition,
-                             TerminationCondition.infeasible)
-            self.assertEqual(soln.solution.status,
-                             SolutionStatus.infeasible)
-            self.assertEqual(soln.solver.status,
-                             SolverStatus.warning)
-            
+            self.assertEqual(
+                soln.solver.termination_condition, TerminationCondition.infeasible
+            )
+            self.assertEqual(soln.solution.status, SolutionStatus.infeasible)
+            self.assertEqual(soln.solver.status, SolverStatus.warning)
+
             self.assertFalse(check_optimal_termination(soln))
 
             with self.assertRaises(RuntimeError):
@@ -79,24 +80,22 @@ class Test(unittest.TestCase):
             if reader is None:
                 raise IOError("Reader 'sol' is not registered")
             soln = reader(join(currdir, "infeasible2.sol"))
-            self.assertEqual(soln.solver.termination_condition,
-                             TerminationCondition.infeasible)
-            self.assertEqual(soln.solution.status,
-                             SolutionStatus.infeasible)
-            self.assertEqual(soln.solver.status,
-                             SolverStatus.warning)
+            self.assertEqual(
+                soln.solver.termination_condition, TerminationCondition.infeasible
+            )
+            self.assertEqual(soln.solution.status, SolutionStatus.infeasible)
+            self.assertEqual(soln.solver.status, SolverStatus.warning)
 
     def test_conopt_optimal(self):
         with ReaderFactory("sol") as reader:
             if reader is None:
                 raise IOError("Reader 'sol' is not registered")
             soln = reader(join(currdir, "conopt_optimal.sol"))
-            self.assertEqual(soln.solver.termination_condition,
-                             TerminationCondition.optimal)
-            self.assertEqual(soln.solution.status,
-                             SolutionStatus.optimal)
-            self.assertEqual(soln.solver.status,
-                             SolverStatus.ok)
+            self.assertEqual(
+                soln.solver.termination_condition, TerminationCondition.optimal
+            )
+            self.assertEqual(soln.solution.status, SolutionStatus.optimal)
+            self.assertEqual(soln.solver.status, SolverStatus.ok)
             self.assertTrue(check_optimal_termination(soln))
             assert_optimal_termination(soln)
 
@@ -125,8 +124,9 @@ class Test(unittest.TestCase):
         with ReaderFactory("sol") as reader:
             if reader is None:
                 raise IOError("Reader 'sol' is not registered")
-            result = reader(join(currdir, "iis_no_variable_values.sol"),
-                            suffixes=["iis"])
+            result = reader(
+                join(currdir, "iis_no_variable_values.sol"), suffixes=["iis"]
+            )
             soln = result.solution(0)
             self.assertEqual(len(list(soln.variable['v0'].keys())), 1)
             self.assertEqual(soln.variable['v0']['iis'], 1)
@@ -135,12 +135,14 @@ class Test(unittest.TestCase):
             self.assertEqual(len(list(soln.constraint['c0'].keys())), 1)
             self.assertEqual(soln.constraint['c0']['Iis'], 4)
             import pyomo.kernel as pmo
+
             m = pmo.block()
             m.v0 = pmo.variable()
             m.v1 = pmo.variable()
             m.c0 = pmo.constraint()
             m.iis = pmo.suffix(direction=pmo.suffix.IMPORT)
             from pyomo.core.expr.symbol_map import SymbolMap
+
             soln.symbol_map = SymbolMap()
             soln.symbol_map.addSymbol(m.v0, 'v0')
             soln.symbol_map.addSymbol(m.v1, 'v1')
@@ -150,6 +152,7 @@ class Test(unittest.TestCase):
             self.assertEqual(m.iis[m.v0], 1)
             self.assertEqual(m.iis[m.v1], 1)
             self.assertEqual(m.iis[m.c0], 4)
+
 
 if __name__ == "__main__":
     deleteFiles = False

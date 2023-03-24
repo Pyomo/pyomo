@@ -9,11 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [
-    "AbstractProblemWriter",
-    "WriterFactory",
-    "BranchDirection",
-]
+__all__ = ["AbstractProblemWriter", "WriterFactory", "BranchDirection"]
 
 from pyomo.common import Factory
 
@@ -24,11 +20,13 @@ WriterFactory = Factory('problem writer')
 class AbstractProblemWriter(object):
     """Base class that can write optimization problems."""
 
-    def __init__(self, problem_format): #pragma:nocover
-        self.format=problem_format
+    def __init__(self, problem_format):  # pragma:nocover
+        self.format = problem_format
 
-    def __call__(self, model, filename, solver_capability, **kwds): #pragma:nocover
-        raise TypeError("Method __call__ undefined in writer for format "+str(self.format))
+    def __call__(self, model, filename, solver_capability, **kwds):  # pragma:nocover
+        raise TypeError(
+            "Method __call__ undefined in writer for format " + str(self.format)
+        )
 
     #
     # Support "with" statements.
@@ -41,7 +39,7 @@ class AbstractProblemWriter(object):
 
 
 class BranchDirection(object):
-    """ Allowed values for MIP variable branching directions in the `direction` Suffix of a model. """
+    """Allowed values for MIP variable branching directions in the `direction` Suffix of a model."""
 
     default = 0
     down = -1
