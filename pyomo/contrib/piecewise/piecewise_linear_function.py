@@ -305,6 +305,12 @@ class PiecewiseLinearFunction(Block):
         points = self._points_rule(parent, idx)
         dimension = self._get_dimension_from_points(points)
         function_values = self._function_values_rule(parent, idx)
+        if len(points) != len(function_values):
+            raise ValueError(
+                "Length of 'points' does not match length of list of "
+                "'function_values.` Cannot construct PiecewiseLinearFunction "
+                "from this data."
+            )
 
         if dimension == 1:
             # This is univariate and we'll handle it separately in order to
