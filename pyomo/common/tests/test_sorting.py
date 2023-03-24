@@ -24,28 +24,37 @@ from pyomo.common.sorting import sorted_robust, _robust_sort_keyfcn
 class LikeFloat(object):
     def __init__(self, n):
         self.n = n
+
     def __lt__(self, other):
         return self.n < other
+
     def __gt__(self, other):
         return self.n > other
+
 
 class Comparable(object):
     def __init__(self, n):
         self.n = str(n)
+
     def __lt__(self, other):
         return self.n < other
+
     def __gt__(self, other):
         return self.n > other
+
 
 class ToStr(object):
     def __init__(self, n):
         self.n = str(n)
+
     def __str__(self):
         return self.n
+
 
 class NoStr(object):
     def __init__(self, n):
         self.n = str(n)
+
     def __str__(self):
         raise ValueError('')
 
@@ -75,26 +84,20 @@ class TestSortedRobust(unittest.TestCase):
     def test_user_key(self):
         # ensure it doesn't throw an error
         # Test for issue https://github.com/Pyomo/pyomo/issues/2019
-        sorted_robust(
-            [
-                (("10_1", 2), None),
-                ((10, 2), None)
-            ],
-            key=lambda x: x[0]
-        )
+        sorted_robust([(("10_1", 2), None), ((10, 2), None)], key=lambda x: x[0])
 
     def test_unknown_types(self):
         orig = [
-            LikeFloat(4), # 0
-            Comparable('hello'), # 1
-            LikeFloat(1), # 2
-            2., # 3
-            Comparable('world'), # 4
-            ToStr(1), # 5
-            NoStr('bogus'), # 6
-            ToStr('a'), # 7
-            ToStr('A'), # 8
-            3, # 9
+            LikeFloat(4),  # 0
+            Comparable('hello'),  # 1
+            LikeFloat(1),  # 2
+            2.0,  # 3
+            Comparable('world'),  # 4
+            ToStr(1),  # 5
+            NoStr('bogus'),  # 6
+            ToStr('a'),  # 7
+            ToStr('A'),  # 8
+            3,  # 9
         ]
 
         ref = [orig[i] for i in (1, 4, 6, 5, 8, 7, 2, 3, 9, 0)]
@@ -102,15 +105,13 @@ class TestSortedRobust(unittest.TestCase):
         self.assertEqual(len(orig), len(ans))
         for _r, _a in zip(ref, ans):
             self.assertIs(_r, _a)
-        self.assertEqual(_robust_sort_keyfcn._typemap[LikeFloat],
-                         (1, float.__name__))
-        self.assertEqual(_robust_sort_keyfcn._typemap[Comparable],
-                         (1, Comparable.__name__))
-        self.assertEqual(_robust_sort_keyfcn._typemap[ToStr],
-                         (2, ToStr.__name__))
-        self.assertEqual(_robust_sort_keyfcn._typemap[NoStr],
-                         (3, NoStr.__name__))
+        self.assertEqual(_robust_sort_keyfcn._typemap[LikeFloat], (1, float.__name__))
+        self.assertEqual(
+            _robust_sort_keyfcn._typemap[Comparable], (1, Comparable.__name__)
+        )
+        self.assertEqual(_robust_sort_keyfcn._typemap[ToStr], (2, ToStr.__name__))
+        self.assertEqual(_robust_sort_keyfcn._typemap[NoStr], (3, NoStr.__name__))
+
 
 if __name__ == "__main__":
     unittest.main()
-
