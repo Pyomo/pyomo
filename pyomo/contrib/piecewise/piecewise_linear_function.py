@@ -226,7 +226,8 @@ class PiecewiseLinearFunction(Block):
 
     _ComponentDataClass = PiecewiseLinearFunctionData
 
-    # Map 4-tuple of bool to hander: "(f, pts, simplices, linear_funcs) : handler"
+    # Map 5-tuple of bool to hander: "(f, pts, simplices, linear_funcs,
+    # func_values) : handler"
     _handlers = {}
 
     def __new__(cls, *args, **kwds):
@@ -240,9 +241,6 @@ class PiecewiseLinearFunction(Block):
             )
 
     def __init__(self, *args, **kwargs):
-        # [ESJ 1/24/23]: TODO: Eventually we should also support constructing
-        # this from table data--a mapping of points to function values.
-
         _func_arg = kwargs.pop('function', None)
         _func_rule_arg = kwargs.pop('function_rule', None)
         _points_arg = kwargs.pop('points', None)
