@@ -154,13 +154,25 @@ class _univariate_linear_functor(AutoSlots.Mixin):
 
 
 class _multivariate_linear_functor(AutoSlots.Mixin):
-    __slots__ = 'normal'
+    __slots__ = ('normal',)
 
     def __init__(self, normal):
         self.normal = normal
 
     def __call__(self, *args):
         return sum(self.normal[i] * arg for i, arg in enumerate(args)) + self.normal[-1]
+
+
+class _tabular_data_functor(AutoSlots.Mixin):
+    __slots__ = ('function_values',)
+
+    def __init__(self, points, function_values):
+        # points is a list of tuples, function_values is a list (of equal
+        # length) of function values.
+        self.function_values = {pt : val for (pt, val) in zip(points, function_values)}
+        
+    def __call__(self, *args):
+        return self.function_values[args]
 
 
 def _define_handler(handle_map, *key):
@@ -190,10 +202,12 @@ class PiecewiseLinearFunction(Block):
         3) List of simplices and list of functions that return linear function
            expressions. These are the desired piecewise functions
            corresponding to each simplex.
+        4) List of points and corresponding list of function values at each
+           of those points. (Essentially, this lets you construct a
+           piecewise linear function from tabular data.)
 
     Args:
-        function: Nonlinear function to approximate, given as a Pyomo
-            expression
+        function: Nonlinear function to approximate: must be callable
         function_rule: Function that returns a nonlinear function to
             approximate for each index in an IndexedPiecewiseLinearFunction
         points: List of points in the same dimension as the domain of the
@@ -204,6 +218,10 @@ class PiecewiseLinearFunction(Block):
             will be approximated as a linear function.
         linear_functions: A list of functions, each of which returns an
             expression for a linear function of the arguments.
+        function_values: A list of values of the function of the same length
+            and order as the 'points' argument, specifying the value of the
+            nonlinear function being approximated at each of the points in
+            'points'
     """
 
     _ComponentDataClass = PiecewiseLinearFunctionData
@@ -230,6 +248,7 @@ class PiecewiseLinearFunction(Block):
         _points_arg = kwargs.pop('points', None)
         _simplices_arg = kwargs.pop('simplices', None)
         _linear_functions = kwargs.pop('linear_functions', None)
+        _function_values_arg = kwargs.pop('function_values', None)
 
         kwargs.setdefault('ctype', PiecewiseLinearFunction)
         Block.__init__(self, *args, **kwargs)
@@ -244,13 +263,11 @@ class PiecewiseLinearFunction(Block):
         self._linear_funcs_rule = Initializer(
             _linear_functions, treat_sequences_as_mappings=False
         )
+        self._function_values_rule = Initializer(
+            _function_values_arg, treat_sequences_as_mappings=False
+        )
 
-    @_define_handler(_handlers, True, True, False, False)
-    def _construct_from_function_and_points(self, obj, parent, nonlinear_function):
-        parent = obj.parent_block()
-        idx = obj._index
-
-        points = self._points_rule(parent, idx)
+    def _get_dimension_from_points(self, points):
         if len(points) < 1:
             raise ValueError(
                 "Cannot construct PiecewiseLinearFunction from "
@@ -262,20 +279,18 @@ class PiecewiseLinearFunction(Block):
         else:
             dimension = 1
 
-        if dimension == 1:
-            # This is univariate and we'll handle it separately in order to
-            # avoid a dependence on numpy.
-            points.sort()
-            obj._simplices = []
-            for i in range(len(points) - 1):
-                obj._simplices.append((i, i + 1))
-                obj._points.append((points[i],))
-            # Add the last one
-            obj._points.append((points[-1],))
-            return self._construct_from_univariate_function_and_segments(
-                obj, nonlinear_function
-            )
+        return dimension
 
+    def _construct_one_dimensional_simplices_from_points(self, obj, points):
+        points.sort()
+        obj._simplices = []
+        for i in range(len(points) - 1):
+            obj._simplices.append((i, i + 1))
+            obj._points.append((points[i],))
+        # Add the last one
+        obj._points.append((points[-1],))
+
+    def _construct_simplices_from_multivariate_points(self, obj, points):
         try:
             triangulation = spatial.Delaunay(points)
         except (spatial.QhullError, ValueError) as error:
@@ -285,6 +300,44 @@ class PiecewiseLinearFunction(Block):
         obj._points = [pt for pt in points]
         obj._simplices = [simplex for simplex in map(tuple, triangulation.simplices)]
 
+    @_define_handler(_handlers, False, True, False, False, True)
+    def _construct_from_points_and_values(self, obj, parent, nonlinear_function):
+        idx = obj._index
+
+        points = self._points_rule(parent, idx)
+        dimension = self._get_dimension_and_simplices_from_points(points)
+        function_values = self._function_values_rule(parent, idx)
+
+        if dimension == 1:
+            # This is univariate and we'll handle it separately in order to
+            # avoid a dependence on scipy.
+            self._construct_one_dimensional_simplices_from_points(obj)
+            point_tuples = [(pt,) for pt in points]
+            return self._construct_from_univariate_function_and_segements(
+                obj, _tabular_data_functor(point_tuples, function_values)
+            )
+
+        self._construct_simplices_from_multivariate_points(obj, points)
+        return self._construct_from_function_and_simplices(
+            obj, parent, _tabular_data_functor(points, function_values)
+        )
+
+    @_define_handler(_handlers, True, True, False, False, False)
+    def _construct_from_function_and_points(self, obj, parent, nonlinear_function):
+        idx = obj._index
+
+        points = self._points_rule(parent, idx)
+        dimension = self._get_dimension_from_points(points)
+
+        if dimension == 1:
+            # This is univariate and we'll handle it separately in order to
+            # avoid a dependence on scipy.
+            self._construct_one_dimensional_simplices_from_points(obj, points)
+            return self._construct_from_univariate_function_and_segments(
+                obj, nonlinear_function
+            )
+
+        self._construct_simplices_from_multivariate_points(obj, points)
         return self._construct_from_function_and_simplices(
             obj, parent, nonlinear_function
         )
@@ -300,7 +353,7 @@ class PiecewiseLinearFunction(Block):
 
         return obj
 
-    @_define_handler(_handlers, True, False, True, False)
+    @_define_handler(_handlers, True, False, True, False, False)
     def _construct_from_function_and_simplices(self, obj, parent, nonlinear_function):
         if obj._simplices is None:
             obj._get_simplices_from_arg(self._simplices_rule(parent, obj._index))
@@ -345,7 +398,7 @@ class PiecewiseLinearFunction(Block):
 
         return obj
 
-    @_define_handler(_handlers, False, False, True, True)
+    @_define_handler(_handlers, False, False, True, True, False)
     def _construct_from_linear_functions_and_simplices(
         self, obj, parent, nonlinear_function
     ):
@@ -376,6 +429,7 @@ class PiecewiseLinearFunction(Block):
                 self._points_rule is not None,
                 self._simplices_rule is not None,
                 self._linear_funcs_rule is not None,
+                self._function_values_rule is not None,
             )
         )
         if handler is None:
@@ -384,8 +438,10 @@ class PiecewiseLinearFunction(Block):
                 "constructing PiecewiseLinearFunction. "
                 "Expected a nonlinear function and a list"
                 "of breakpoints, a nonlinear function and a list "
-                "of simplices, or a list of linear functions and "
-                "a list of corresponding simplices."
+                "of simplices, a list of linear functions and "
+                "a list of corresponding simplices, or a list "
+                "of points and a list of corresponding function "
+                "values."
             )
         return handler(self, obj, parent, nonlinear_function)
 
