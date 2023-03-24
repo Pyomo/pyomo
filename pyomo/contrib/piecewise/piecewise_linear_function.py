@@ -169,8 +169,8 @@ class _tabular_data_functor(AutoSlots.Mixin):
     def __init__(self, points, function_values):
         # points is a list of tuples, function_values is a list (of equal
         # length) of function values.
-        self.function_values = {pt : val for (pt, val) in zip(points, function_values)}
-        
+        self.function_values = {pt: val for (pt, val) in zip(points, function_values)}
+
     def __call__(self, *args):
         return self.function_values[args]
 
