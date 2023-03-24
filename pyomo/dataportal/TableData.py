@@ -180,7 +180,7 @@ class TableData(object):
 
         elif self.options.format == 'set_array':
             if not self.options.index is None:
-                msg = "Cannot specify index for data with the 'set_array' " 'format: %s'
+                msg = "Cannot specify index for data with the 'set_array' format: %s"
                 raise IOError(msg % str(self.options.index))
 
             self._info = ["set", self.options.set, ":"]
