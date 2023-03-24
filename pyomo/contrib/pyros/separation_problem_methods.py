@@ -293,6 +293,9 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
             (
                 # violation of this row's performance constraint
                 # by this column's separation solution
+                # if separation problems were solved globally,
+                # then diagonal entries should be the largest
+                # row-wise (within tolerances)
                 solve_data_list[viol_param_idx][scenario_idx]
                 .list_of_scaled_violations[viol_con_idx]
             ),
