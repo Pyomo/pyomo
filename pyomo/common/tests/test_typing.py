@@ -16,6 +16,7 @@ import inspect
 from pyomo.common.pyomo_typing import get_overloads_for
 from pyomo.environ import Block
 
+
 class TestTyping(unittest.TestCase):
     def test_get_overloads_for(self):
         func_list = get_overloads_for(Block.__init__)

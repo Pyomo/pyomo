@@ -1746,9 +1746,9 @@ class AMPLRepn(object):
             # by side-effect, which prevents iterating over the linear
             # terms twice.
             nl_sum = ''.join(
-                args.append(v) or (
-                    _v_template if c == 1 else _m_template % c
-                ) for v, c in self.linear.items() if c
+                args.append(v) or (_v_template if c == 1 else _m_template % c)
+                for v, c in self.linear.items()
+                if c
             )
             nterms += len(args)
         else:
@@ -2233,7 +2233,8 @@ def handle_named_expression_node(visitor, node, arg1):
     else:
         repn.nonlinear = None
         if repn.linear:
-            if (not repn.const
+            if (
+                not repn.const
                 and len(repn.linear) == 1
                 and next(iter(repn.linear.values())) == 1
             ):
