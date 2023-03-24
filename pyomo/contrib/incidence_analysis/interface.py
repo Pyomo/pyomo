@@ -344,7 +344,8 @@ class IncidenceGraphInterface(object):
         else:
             raise TypeError(
                 "Unsupported type for incidence matrix. Expected "
-                "%s or %s but got %s." % (pyomo_nlp.PyomoNLP, Block, type(model))
+                "%s or %s but got %s."
+                % (pyomo_nlp.PyomoNLP, _BlockData, type(model))
             )
 
     @property
