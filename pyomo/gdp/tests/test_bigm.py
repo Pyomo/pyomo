@@ -13,13 +13,24 @@ from pyomo.common.dependencies import dill_available
 import pyomo.common.unittest as unittest
 from pyomo.common.deprecation import RenamedClass
 
-from pyomo.environ import (TransformationFactory, Block, Set, Constraint,
-                           ComponentMap, Suffix, ConcreteModel, Var,
-                           Any, value)
+from pyomo.environ import (
+    TransformationFactory,
+    Block,
+    Set,
+    Constraint,
+    ComponentMap,
+    Suffix,
+    ConcreteModel,
+    Var,
+    Any,
+    value,
+)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, _ConstraintData
 from pyomo.core.expr.compare import (
-    assertExpressionsEqual, assertExpressionsStructurallyEqual)
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual,
+)
 from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
 import logging
@@ -33,9 +44,11 @@ import random
 
 from io import StringIO
 
+
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
         ct.diff_apply_to_and_create_using(self, model, 'gdp.bigm')
+
 
 class TwoTermDisj(unittest.TestCase, CommonTests):
     def setUp(self):
@@ -88,7 +101,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # we are counting on the fact that the disjuncts get relaxed in the
         # same order every time.
-        for i in [0,1]:
+        for i in [0, 1]:
             self.assertIs(oldblock[i].transformation_block, disjBlock[i])
             self.assertIs(bigm.get_src_disjunct(disjBlock[i]), oldblock[i])
 
@@ -154,8 +167,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_improperly_deactivated_disjuncts(self, 'bigm')
 
     def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
-        ct.check_do_not_transform_userDeactivated_indexedDisjunction(self,
-                                                                     'bigm')
+        ct.check_do_not_transform_userDeactivated_indexedDisjunction(self, 'bigm')
 
     # helper method to check the M values in all of the transformed
     # constraints (m, M) is the tuple for M.  This also relies on the
@@ -300,7 +312,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             "and upper sides of the constraint respectively.*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
-            bigM=(-18, 19.2, 3))
+            bigM=(-18, 19.2, 3),
+        )
 
     def test_singleArg_M_list(self):
         m = models.makeTwoTermDisj()
@@ -327,7 +340,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             r"tuple or list of length two*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
-            bigM=[-18, 19.2, 3])
+            bigM=[-18, 19.2, 3],
+        )
 
     def test_arg_M_simpleConstraint(self):
         m = models.makeTwoTermDisj()
@@ -341,21 +355,14 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # give an arg
         bigm = TransformationFactory('gdp.bigm')
-        bigm.apply_to(
-            m,
-            bigM={None: 19,
-                  m.d[0].c: 18,
-                  m.d[1].c1: 17,
-                  m.d[1].c2: 16})
+        bigm.apply_to(m, bigM={None: 19, m.d[0].c: 18, m.d[1].c1: 17, m.d[1].c2: 16})
         self.checkMs(m, bigm, -18, -17, 17, 16)
 
     def test_tuple_M_arg(self):
         m = models.makeTwoTermDisj()
         # give a tuple arg
         bigm = TransformationFactory('gdp.bigm')
-        bigm.apply_to(
-            m,
-            bigM={None: (-20,19)})
+        bigm.apply_to(m, bigM={None: (-20, 19)})
         self.checkMs(m, bigm, -20, -20, 19, 19)
 
     def test_tuple_M_suffix(self):
@@ -370,9 +377,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj()
         # give a tuple arg
         bigm = TransformationFactory('gdp.bigm')
-        bigm.apply_to(
-            m,
-            bigM={None: [-20,19]})
+        bigm.apply_to(m, bigM={None: [-20, 19]})
         self.checkMs(m, bigm, -20, -20, 19, 19)
 
     def test_list_M_suffix(self):
@@ -385,7 +390,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_tuple_wrong_length_err(self):
         m = models.makeTwoTermDisj()
-        M = (-20,19, 32)
+        M = (-20, 19, 32)
         self.assertRaisesRegex(
             GDP_Error,
             r"Big-M \(-20, 19, 32\) for constraint d\[0\].c is not of "
@@ -393,7 +398,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             r"tuple or list of length two*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
-            bigM={None: M})
+            bigM={None: M},
+        )
 
     def test_list_wrong_length_err(self):
         m = models.makeTwoTermDisj()
@@ -405,7 +411,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             r"tuple or list of length two*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
-            bigM={None: M})
+            bigM={None: M},
+        )
 
     def test_create_using(self):
         m = models.makeTwoTermDisj()
@@ -413,14 +420,17 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_indexed_constraints_in_disjunct(self):
         m = ConcreteModel()
-        m.I = [1,2,3]
-        m.x = Var(m.I, bounds=(0,10))
-        def c_rule(b,i):
+        m.I = [1, 2, 3]
+        m.x = Var(m.I, bounds=(0, 10))
+
+        def c_rule(b, i):
             m = b.model()
             return m.x[i] >= i
-        def d_rule(d,j):
+
+        def d_rule(d, j):
             m = d.model()
             d.c = Constraint(m.I[:j], rule=c_rule)
+
         m.d = Disjunct(m.I, rule=d_rule)
         m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
 
@@ -428,31 +438,29 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         transBlock = m._pyomo_gdp_bigm_reformulation
 
         # 2 blocks: the original Disjunct and the transformation block
-        self.assertEqual(
-            len(list(m.component_objects(Block, descend_into=False))), 1)
-        self.assertEqual(
-            len(list(m.component_objects(Disjunct))), 1)
+        self.assertEqual(len(list(m.component_objects(Block, descend_into=False))), 1)
+        self.assertEqual(len(list(m.component_objects(Disjunct))), 1)
 
         # Each relaxed disjunct should have 1 var (the reference to the
         # indicator var), and i "d[i].c" Constraints
-        for i in [1,2,3]:
-            relaxed = transBlock.relaxedDisjuncts[i-1]
+        for i in [1, 2, 3]:
+            relaxed = transBlock.relaxedDisjuncts[i - 1]
             self.assertEqual(len(list(relaxed.component_objects(Var))), 1)
             self.assertEqual(len(list(relaxed.component_data_objects(Var))), 1)
-            self.assertEqual(
-                len(list(relaxed.component_objects(Constraint))), 1)
-            self.assertEqual(
-                len(list(relaxed.component_data_objects(Constraint))), i)
+            self.assertEqual(len(list(relaxed.component_objects(Constraint))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Constraint))), i)
 
     def test_virtual_indexed_constraints_in_disjunct(self):
         m = ConcreteModel()
-        m.I = [1,2,3]
-        m.x = Var(m.I, bounds=(0,10))
-        def d_rule(d,j):
+        m.I = [1, 2, 3]
+        m.x = Var(m.I, bounds=(0, 10))
+
+        def d_rule(d, j):
             m = d.model()
             d.c = Constraint(Any)
             for k in range(j):
-                d.c[k+1] = m.x[k+1] >= k+1
+                d.c[k + 1] = m.x[k + 1] >= k + 1
+
         m.d = Disjunct(m.I, rule=d_rule)
         m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
 
@@ -460,21 +468,17 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         transBlock = m._pyomo_gdp_bigm_reformulation
 
         # 2 blocks: the original Disjunct and the transformation block
-        self.assertEqual(
-            len(list(m.component_objects(Block, descend_into=False))), 1)
-        self.assertEqual(
-            len(list(m.component_objects(Disjunct))), 1)
+        self.assertEqual(len(list(m.component_objects(Block, descend_into=False))), 1)
+        self.assertEqual(len(list(m.component_objects(Disjunct))), 1)
 
         # Each relaxed disjunct should have 1 var (the reference to the
         # indicator var), and i "d[i].c" Constraints
-        for i in [1,2,3]:
-            relaxed = transBlock.relaxedDisjuncts[i-1]
+        for i in [1, 2, 3]:
+            relaxed = transBlock.relaxedDisjuncts[i - 1]
             self.assertEqual(len(list(relaxed.component_objects(Var))), 1)
             self.assertEqual(len(list(relaxed.component_data_objects(Var))), 1)
-            self.assertEqual(
-                len(list(relaxed.component_objects(Constraint))), 1)
-            self.assertEqual(
-                len(list(relaxed.component_data_objects(Constraint))), i)
+            self.assertEqual(len(list(relaxed.component_objects(Constraint))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Constraint))), i)
 
     def test_local_var(self):
         m = models.localVar()
@@ -493,6 +497,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         ct.check_linear_coef(self, repn, m.disj2.indicator_var, 3)
+
 
 class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
     def test_nonlinear_bigM(self):
@@ -524,16 +529,19 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
             r"expressions.\n\t\(found while processing "
             r"constraint 'd\[0\].c'\)",
             TransformationFactory('gdp.bigm').apply_to,
-            m)
+            m,
+        )
 
     def test_nonlinear_disjoint(self):
         m = ConcreteModel()
         x = m.x = Var(bounds=(-4, 4))
         y = m.y = Var(bounds=(-10, 10))
-        m.disj = Disjunction(expr=[
-            [x**2 + y**2 <= 2, x**3 + y**2 + x * y >= 1.0/2.0],
-            [(x - 3)**2 + (y - 3)**2 <= 1]
-        ])
+        m.disj = Disjunction(
+            expr=[
+                [x**2 + y**2 <= 2, x**3 + y**2 + x * y >= 1.0 / 2.0],
+                [(x - 3) ** 2 + (y - 3) ** 2 <= 1],
+            ]
+        )
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m)
         disjBlock = m._pyomo_gdp_bigm_reformulation.relaxedDisjuncts
@@ -547,8 +555,7 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         self.assertEqual(len(repn.linear_vars), 1)
         ct.check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, 114)
         self.assertEqual(repn.constant, -114)
-        self.assertEqual(c_ub.upper,
-                         m.disj_disjuncts[0].constraint[1].upper)
+        self.assertEqual(c_ub.upper, m.disj_disjuncts[0].constraint[1].upper)
         self.assertIsNone(c_ub.lower)
         # first disjunct, second constraint
         c = bigm.get_transformed_constraints(m.disj_disjuncts[0].constraint[2])
@@ -557,11 +564,9 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c_lb.body)
         self.assertFalse(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 1)
-        ct.check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var,
-                             -104.5)
+        ct.check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, -104.5)
         self.assertEqual(repn.constant, 104.5)
-        self.assertEqual(c_lb.lower,
-                         m.disj_disjuncts[0].constraint[2].lower)
+        self.assertEqual(c_lb.lower, m.disj_disjuncts[0].constraint[2].lower)
         self.assertIsNone(c_lb.upper)
         # second disjunct, first constraint
         c = bigm.get_transformed_constraints(m.disj_disjuncts[1].constraint[1])
@@ -574,8 +579,7 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, m.y, -6)
         ct.check_linear_coef(self, repn, m.disj_disjuncts[1].indicator_var, 217)
         self.assertEqual(repn.constant, -199)
-        self.assertEqual(c_ub.upper,
-                         m.disj_disjuncts[1].constraint[1].upper)
+        self.assertEqual(c_ub.upper, m.disj_disjuncts[1].constraint[1].upper)
         self.assertIsNone(c_ub.lower)
 
 
@@ -588,14 +592,14 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         # block. This is needed in multiple tests, so I am storing it
         # here.
         self.pairs = [
-            ( (0,1,'A'), 0 ),
-            ( (1,1,'A'), 1 ),
-            ( (0,1,'B'), 2 ),
-            ( (1,1,'B'), 3 ),
-            ( (0,2,'A'), 4 ),
-            ( (1,2,'A'), 5 ),
-            ( (0,2,'B'), 6 ),
-            ( (1,2,'B'), 7 ),
+            ((0, 1, 'A'), 0),
+            ((1, 1, 'A'), 1),
+            ((0, 1, 'B'), 2),
+            ((1, 1, 'B'), 3),
+            ((0, 2, 'A'), 4),
+            ((1, 2, 'A'), 5),
+            ((0, 2, 'B'), 6),
+            ((1, 2, 'B'), 7),
         ]
 
     def test_xor_constraints(self):
@@ -615,7 +619,7 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(disjBlock), 8)
 
         # check that all 8 blocks have exactly one constraint on them.
-        for i,j in self.pairs:
+        for i, j in self.pairs:
             self.assertEqual(len(disjBlock[j].component_map(Constraint)), 1)
 
     def test_disjunct_and_constraint_maps(self):
@@ -632,10 +636,8 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         for src, dest in self.pairs:
             srcDisjunct = oldblock[src]
             transformedDisjunct = disjBlock[dest]
-            self.assertIs(bigm.get_src_disjunct(transformedDisjunct),
-                          srcDisjunct)
-            self.assertIs(transformedDisjunct,
-                          srcDisjunct.transformation_block)
+            self.assertIs(bigm.get_src_disjunct(transformedDisjunct), srcDisjunct)
+            self.assertIs(transformedDisjunct, srcDisjunct.transformation_block)
 
             transformed = bigm.get_transformed_constraints(srcDisjunct.c)
             if src[0]:
@@ -643,17 +645,14 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
                 self.assertEqual(len(transformed), 2)
                 self.assertIsInstance(transformed[0], _ConstraintData)
                 self.assertIsInstance(transformed[1], _ConstraintData)
-                self.assertIs(bigm.get_src_constraint(transformed[0]),
-                              srcDisjunct.c)
-                self.assertIs(bigm.get_src_constraint(transformed[1]),
-                              srcDisjunct.c)
+                self.assertIs(bigm.get_src_constraint(transformed[0]), srcDisjunct.c)
+                self.assertIs(bigm.get_src_constraint(transformed[1]), srcDisjunct.c)
             else:
                 # >=
                 self.assertEqual(len(transformed), 1)
                 self.assertIsInstance(transformed[0], _ConstraintData)
                 # check reverse map from the container
-                self.assertIs(bigm.get_src_constraint(transformed[0]),
-                              srcDisjunct.c)
+                self.assertIs(bigm.get_src_constraint(transformed[0]), srcDisjunct.c)
 
     def test_deactivated_disjuncts(self):
         ct.check_deactivated_disjuncts(self, 'bigm')
@@ -664,6 +663,7 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
     def test_create_using(self):
         m = models.makeTwoTermMultiIndexedDisjunction()
         self.diff_apply_to_and_create_using(m)
+
 
 class DisjOnBlock(unittest.TestCase, CommonTests):
     # when the disjunction is on a block, we want all of the stuff created by
@@ -686,13 +686,11 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1lb)
-        ct.check_linear_coef(
-            self, repn, model.b.disjunct[0].indicator_var, disj1c1lb)
+        ct.check_linear_coef(self, repn, model.b.disjunct[0].indicator_var, disj1c1lb)
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1ub)
-        ct.check_linear_coef(
-            self, repn, model.b.disjunct[0].indicator_var, disj1c1ub)
+        ct.check_linear_coef(self, repn, model.b.disjunct[0].indicator_var, disj1c1ub)
 
         c2 = bigm.get_transformed_constraints(model.b.disjunct[1].c)
         self.assertEqual(len(c2), 1)
@@ -700,8 +698,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2)
-        ct.check_linear_coef(
-            self, repn, model.b.disjunct[1].indicator_var, disj1c2)
+        ct.check_linear_coef(self, repn, model.b.disjunct[1].indicator_var, disj1c2)
 
     def checkMs(self, model, disj1c1lb, disj1c1ub, disj1c2, disj2c1, disj2c2):
         bigm = TransformationFactory('gdp.bigm')
@@ -713,8 +710,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c1)
-        ct.check_linear_coef(
-            self, repn, model.simpledisj.indicator_var, disj2c1)
+        ct.check_linear_coef(self, repn, model.simpledisj.indicator_var, disj2c1)
 
         c = bigm.get_transformed_constraints(model.simpledisj2.c)
         self.assertEqual(len(c), 1)
@@ -722,8 +718,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c2)
-        ct.check_linear_coef(
-            self, repn, model.simpledisj2.indicator_var, disj2c2)
+        ct.check_linear_coef(self, repn, model.simpledisj2.indicator_var, disj2c2)
 
     def test_suffix_M_onBlock(self):
         m = models.makeTwoTermDisjOnBlock()
@@ -739,8 +734,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.checkMs(m, -34, 34, 34, -3, 1.5)
 
         # check the source of the values
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj.c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -751,8 +747,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -3)
         self.assertIsNone(u_val)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj2.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj2.c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -763,8 +760,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 1.5)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[0].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[0].c
+        )
         self.assertIs(l_src, m.b.BigM)
         self.assertIs(u_src, m.b.BigM)
         self.assertIsNone(l_key)
@@ -775,8 +773,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -34)
         self.assertEqual(u_val, 34)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[1].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[1].c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, m.b.BigM)
         self.assertIsNone(l_key)
@@ -796,8 +795,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.checkMs(m, -100, 100, 13, -3, 1.5)
 
         # check the source of the values
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj.c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -808,8 +808,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -3)
         self.assertIsNone(u_val)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj2.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj2.c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -820,8 +821,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 1.5)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[0].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[0].c
+        )
         self.assertIs(l_src, bigms)
         self.assertIs(u_src, bigms)
         self.assertIs(l_key, m.b)
@@ -832,8 +834,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -100)
         self.assertEqual(u_val, 100)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[1].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[1].c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, bigms)
         self.assertIsNone(l_key)
@@ -853,8 +856,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.checkMs(m, -100, 100, 13, -3, 1.5)
 
         # check the source of the values
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj.c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -865,8 +869,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -3)
         self.assertIsNone(u_val)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj2.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj2.c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -877,8 +882,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 1.5)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[0].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[0].c
+        )
         self.assertIs(l_src, bigms)
         self.assertIs(u_src, bigms)
         self.assertIs(l_key, m.b)
@@ -889,8 +895,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -100)
         self.assertEqual(u_val, 100)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[1].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[1].c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, bigms)
         self.assertIsNone(l_key)
@@ -905,14 +912,19 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisjOnBlock()
         m = models.add_disj_not_on_block(m)
         bigm = TransformationFactory('gdp.bigm')
-        bigms = {m.b: 100, m.b.disjunct[1].c: 13,
-                 m.b.disjunct[0].c: (None, 50), None: 34}
+        bigms = {
+            m.b: 100,
+            m.b.disjunct[1].c: 13,
+            m.b.disjunct[0].c: (None, 50),
+            None: 34,
+        }
         bigm.apply_to(m, bigM=bigms)
         self.checkMs(m, -100, 50, 13, -34, 34)
 
         # check the source of the values
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj.c
+        )
         self.assertIs(l_src, bigms)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -923,8 +935,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -34)
         self.assertIsNone(u_val)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj2.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj2.c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, bigms)
         self.assertIsNone(l_key)
@@ -935,8 +948,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 34)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[0].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[0].c
+        )
         self.assertIs(l_src, bigms)
         self.assertIs(u_src, bigms)
         self.assertIs(l_key, m.b)
@@ -947,8 +961,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -100)
         self.assertEqual(u_val, 50)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[1].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[1].c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, bigms)
         self.assertIsNone(l_key)
@@ -965,9 +980,8 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
             TransformationFactory('gdp.bigm').apply_to(
-                m,
-                bigM={m: 100,
-                      m.b.disjunct[1].c: 13})
+                m, bigM={m: 100, m.b.disjunct[1].c: 13}
+            )
         self.checkMs(m, -100, 100, 13, -100, 100)
         # make sure we didn't get any warnings when we used all the args
         self.assertEqual(out.getvalue(), '')
@@ -978,15 +992,15 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
             TransformationFactory('gdp.bigm').apply_to(
-                m,
-                bigM={m: 100,
-                      m.b.disjunct[1].c: 13,
-                      None: 34})
+                m, bigM={m: 100, m.b.disjunct[1].c: 13, None: 34}
+            )
         self.checkMs(m, -100, 100, 13, -100, 100)
-        self.assertEqual(out.getvalue(),
-                         "Unused arguments in the bigM map! "
-                         "These arguments were not used by the "
-                         "transformation:\n\tNone\n\n")
+        self.assertEqual(
+            out.getvalue(),
+            "Unused arguments in the bigM map! "
+            "These arguments were not used by the "
+            "transformation:\n\tNone\n\n",
+        )
 
     def test_warning_for_crazy_bigm_args(self):
         m = models.makeTwoTermDisjOnBlock()
@@ -996,12 +1010,14 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         # this is silly
         bigM[m.a] = 34
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
-            TransformationFactory('gdp.bigm').apply_to( m, bigM=bigM)
+            TransformationFactory('gdp.bigm').apply_to(m, bigM=bigM)
         self.checkMs(m, -100, 100, 13, -100, 100)
-        self.assertEqual(out.getvalue(),
-                         "Unused arguments in the bigM map! "
-                         "These arguments were not used by the "
-                         "transformation:\n\ta\n\n")
+        self.assertEqual(
+            out.getvalue(),
+            "Unused arguments in the bigM map! "
+            "These arguments were not used by the "
+            "transformation:\n\ta\n\n",
+        )
 
     def test_use_above_scope_m_value(self):
         m = models.makeTwoTermDisjOnBlock()
@@ -1011,7 +1027,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         # transform just the block. We expect to use the M value specified on
         # the model, and we should comment on nothing.
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
-            TransformationFactory('gdp.bigm').apply_to( m.b, bigM=bigM)
+            TransformationFactory('gdp.bigm').apply_to(m.b, bigM=bigM)
         self.checkFirstDisjMs(m, -100, 100, 13)
         self.assertEqual(out.getvalue(), '')
 
@@ -1027,19 +1043,19 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
             TransformationFactory('gdp.bigm').apply_to(
-                m.b,
-                bigM={m: 100,
-                      m.b: 13,
-                      m.simpledisj2.c: 10})
+                m.b, bigM={m: 100, m.b: 13, m.simpledisj2.c: 10}
+            )
 
         self.checkFirstDisjMs(m, -13, 13, 13)
 
         # The order these get printed depends on a dictionary order, so test
         # this way...
-        self.assertIn("Unused arguments in the bigM map! "
-                      "These arguments were not used by the "
-                      "transformation:",
-                      out.getvalue())
+        self.assertIn(
+            "Unused arguments in the bigM map! "
+            "These arguments were not used by the "
+            "transformation:",
+            out.getvalue(),
+        )
         self.assertIn("simpledisj2.c", out.getvalue())
         self.assertIn("unknown", out.getvalue())
 
@@ -1056,8 +1072,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.checkMs(m, -20, 20, 20, -45, 20)
 
         # check source of the m values
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj.c
+        )
         self.assertIs(l_src, m.simpledisj.BigM)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -1068,8 +1085,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -45)
         self.assertIsNone(u_val)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj2.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj2.c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, m.BigM)
         self.assertIsNone(l_key)
@@ -1080,8 +1098,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 20)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[0].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[0].c
+        )
         self.assertIs(l_src, m.BigM)
         self.assertIs(u_src, m.BigM)
         self.assertIsNone(l_key)
@@ -1092,8 +1111,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -20)
         self.assertEqual(u_val, 20)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[1].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[1].c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, m.BigM)
         self.assertIsNone(l_key)
@@ -1139,8 +1159,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.checkMs(m, -15, 20, 20, -87, 20)
 
         # check source of the m values
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj.c
+        )
         self.assertIs(l_src, m.simpledisj.BigM)
         self.assertIsNone(u_src)
         self.assertIs(l_key, m.simpledisj.c)
@@ -1151,8 +1172,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -87)
         self.assertIsNone(u_val)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.simpledisj2.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisj2.c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, m.BigM)
         self.assertIsNone(l_key)
@@ -1163,8 +1185,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 20)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[0].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[0].c
+        )
         self.assertIs(l_src, bigms)
         self.assertIs(u_src, m.BigM)
         self.assertIs(l_key, m.b.disjunct[0].c)
@@ -1175,8 +1198,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -15)
         self.assertEqual(u_val, 20)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.b.disjunct[1].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.b.disjunct[1].c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, m.BigM)
         self.assertIsNone(l_key)
@@ -1215,7 +1239,8 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
             r"came from different sources, please use the "
             r"get_M_value_src method.",
             bigm.get_m_value_src,
-            m.b.disjunct[0].c)
+            m.b.disjunct[0].c,
+        )
         (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
         self.assertIs(src, m.BigM)
         self.assertIsNone(key)
@@ -1284,10 +1309,12 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
                 KeyError,
                 r".*b.simpledisj1.c\[1\]",
                 bigm.get_transformed_constraints,
-                m.b.simpledisj1.c[1])
-        self.assertRegex(log.getvalue(),
-                         r".*Constraint 'b.simpledisj1.c\[1\]' "
-                         r"has not been transformed.")
+                m.b.simpledisj1.c[1],
+            )
+        self.assertRegex(
+            log.getvalue(),
+            r".*Constraint 'b.simpledisj1.c\[1\]' " r"has not been transformed.",
+        )
 
         # and the rest of the container was transformed
         cons_list = bigm.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -1297,8 +1324,9 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertIsInstance(lb, constraint._GeneralConstraintData)
         self.assertIsInstance(ub, constraint._GeneralConstraintData)
 
-    def checkMs(self, m, disj1c1lb, disj1c1ub, disj1c2lb, disj1c2ub, disj2c1ub,
-                disj2c2ub):
+    def checkMs(
+        self, m, disj1c1lb, disj1c1ub, disj1c2lb, disj1c2ub, disj2c1ub, disj2c2ub
+    ):
         bigm = TransformationFactory('gdp.bigm')
         m_values = bigm.get_all_M_values_by_constraint(m)
 
@@ -1309,13 +1337,11 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1lb)
-        ct.check_linear_coef(
-            self, repn, m.b.simpledisj1.indicator_var, disj1c1lb)
+        ct.check_linear_coef(self, repn, m.b.simpledisj1.indicator_var, disj1c1lb)
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1ub)
-        ct.check_linear_coef(
-            self, repn, m.b.simpledisj1.indicator_var, disj1c1ub)
+        ct.check_linear_coef(self, repn, m.b.simpledisj1.indicator_var, disj1c1ub)
         self.assertIn(m.b.simpledisj1.c[1], m_values.keys())
         self.assertEqual(m_values[m.b.simpledisj1.c[1]][0], disj1c1lb)
         self.assertEqual(m_values[m.b.simpledisj1.c[1]][1], disj1c1ub)
@@ -1327,13 +1353,11 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2lb)
-        ct.check_linear_coef(
-            self, repn, m.b.simpledisj1.indicator_var, disj1c2lb)
+        ct.check_linear_coef(self, repn, m.b.simpledisj1.indicator_var, disj1c2lb)
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2ub)
-        ct.check_linear_coef(
-            self, repn, m.b.simpledisj1.indicator_var, disj1c2ub)
+        ct.check_linear_coef(self, repn, m.b.simpledisj1.indicator_var, disj1c2ub)
         self.assertIn(m.b.simpledisj1.c[2], m_values.keys())
         self.assertEqual(m_values[m.b.simpledisj1.c[2]][0], disj1c2lb)
         self.assertEqual(m_values[m.b.simpledisj1.c[2]][1], disj1c2ub)
@@ -1344,8 +1368,7 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c1ub)
-        ct.check_linear_coef(
-            self, repn, m.b.simpledisj2.indicator_var, disj2c1ub)
+        ct.check_linear_coef(self, repn, m.b.simpledisj2.indicator_var, disj2c1ub)
         self.assertIn(m.b.simpledisj2.c[1], m_values.keys())
         self.assertEqual(m_values[m.b.simpledisj2.c[1]][1], disj2c1ub)
         self.assertIsNone(m_values[m.b.simpledisj2.c[1]][0])
@@ -1356,8 +1379,7 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c2ub)
-        ct.check_linear_coef(
-            self, repn, m.b.simpledisj2.indicator_var, disj2c2ub)
+        ct.check_linear_coef(self, repn, m.b.simpledisj2.indicator_var, disj2c2ub)
         self.assertIn(m.b.simpledisj2.c[2], m_values.keys())
         self.assertEqual(m_values[m.b.simpledisj2.c[2]][1], disj2c2ub)
         self.assertIsNone(m_values[m.b.simpledisj2.c[2]][0])
@@ -1414,7 +1436,8 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
             r"or ensure all variables that appear in the "
             r"constraint are bounded.",
             TransformationFactory('gdp.bigm').apply_to,
-            m)
+            m,
+        )
 
     def test_create_using(self):
         m = models.makeTwoTermDisj_IndexedConstraints()
@@ -1546,9 +1569,8 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
 
         # give an arg
         TransformationFactory('gdp.bigm').apply_to(
-            m,
-            bigM={None: 19, m.disjunct[0].c[1]: 17,
-                  m.disjunct[0].c[2]: 18})
+            m, bigM={None: 19, m.disjunct[0].c[1]: 17, m.disjunct[0].c[2]: 18}
+        )
 
         # check that m values are what we expect
         self.checkMs(m, -17, -18, -19, 19, -19, 19)
@@ -1563,8 +1585,8 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
 
         # give an arg. Doing this one as a ComponentMap, just to make sure.
         TransformationFactory('gdp.bigm').apply_to(
-            m,
-            bigM=ComponentMap({None: 19, m.disjunct[0].c: 17}))
+            m, bigM=ComponentMap({None: 19, m.disjunct[0].c: 17})
+        )
         self.checkMs(m, -17, -17, -19, 19, -19, 19)
 
     def test_suffix_M_None_on_indexedConstraint(self):
@@ -1644,6 +1666,7 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
     #     # No error, and we've transformed the whole model
     #     m.pprint()
 
+
 class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
     def test_indexedDisj_targets_inactive(self):
         ct.check_indexedDisj_targets_inactive(self, 'bigm')
@@ -1689,11 +1712,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         ct.check_disjuncts_inactive_nested(self, 'bigm')
 
     def test_deactivated_disjunct_leaves_nested_disjuncts_active(self):
-        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self,
-                                                                    'bigm')
+        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self, 'bigm')
 
-    def check_disjunction_transformation_block_structure(self, transBlock,
-                                                         pairs):
+    def check_disjunction_transformation_block_structure(self, transBlock, pairs):
         self.assertIsInstance(transBlock, Block)
 
         disjBlock = transBlock.relaxedDisjuncts
@@ -1709,7 +1730,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             for comp in j:
                 self.assertIs(
                     bigm.get_transformed_constraints(comp)[0].parent_block(),
-                    disjBlock[i])
+                    disjBlock[i],
+                )
 
     def test_transformation_block_structure(self):
         m = models.makeNestedDisjunctions()
@@ -1720,23 +1742,21 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         pairs = [
             (0, [m.simpledisjunct.innerdisjunct0.c]),
             (1, [m.simpledisjunct.innerdisjunct1.c]),
-            (2, []),# No constraints, just a reference to simpledisjunct's
-                    # indicator_var
+            (2, []),  # No constraints, just a reference to simpledisjunct's
+            # indicator_var
             (3, [m.disjunct[0].c]),
             (4, [m.disjunct[1].innerdisjunct[0].c]),
             (5, [m.disjunct[1].innerdisjunct[1].c]),
-            (6, []),# Again no constraints, just indicator var ref
+            (6, []),  # Again no constraints, just indicator var ref
         ]
         self.check_disjunction_transformation_block_structure(transBlock, pairs)
         # we have the XOR constraints for both the outer and inner disjunctions
-        self.assertIsInstance(transBlock.component("disjunction_xor"),
-                              Constraint)
+        self.assertIsInstance(transBlock.component("disjunction_xor"), Constraint)
 
     def test_transformation_block_on_inner_disjunct_empty(self):
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(m)
-        self.assertIsNone(m.disjunct[1].component(
-            "_pyomo_gdp_bigm_reformulation"))
+        self.assertIsNone(m.disjunct[1].component("_pyomo_gdp_bigm_reformulation"))
 
     def test_mappings_between_disjunctions_and_xors(self):
         m = models.makeNestedDisjunctions()
@@ -1747,10 +1767,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         disjunctionPairs = [
             (m.disjunction, transBlock1.disjunction_xor),
-            (m.disjunct[1].innerdisjunction[0],
-             transBlock1.innerdisjunction_xor_4[0]),
-            (m.simpledisjunct.innerdisjunction,
-             transBlock1.innerdisjunction_xor)
+            (m.disjunct[1].innerdisjunction[0], transBlock1.innerdisjunction_xor_4[0]),
+            (m.simpledisjunct.innerdisjunction, transBlock1.innerdisjunction_xor),
         ]
 
         # check disjunction mappings
@@ -1767,25 +1785,29 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # I want to check that I correctly updated the pointers to the
         # transformation blocks on the inner Disjuncts.
-        self.assertIs(m.disjunct[1].innerdisjunct[0].transformation_block,
-                      disjunctBlocks[4])
-        self.assertIs(disjunctBlocks[4]._src_disjunct(),
-                      m.disjunct[1].innerdisjunct[0])
+        self.assertIs(
+            m.disjunct[1].innerdisjunct[0].transformation_block, disjunctBlocks[4]
+        )
+        self.assertIs(disjunctBlocks[4]._src_disjunct(), m.disjunct[1].innerdisjunct[0])
 
-        self.assertIs(m.disjunct[1].innerdisjunct[1].transformation_block,
-                      disjunctBlocks[5])
-        self.assertIs(disjunctBlocks[5]._src_disjunct(),
-                      m.disjunct[1].innerdisjunct[1])
+        self.assertIs(
+            m.disjunct[1].innerdisjunct[1].transformation_block, disjunctBlocks[5]
+        )
+        self.assertIs(disjunctBlocks[5]._src_disjunct(), m.disjunct[1].innerdisjunct[1])
 
-        self.assertIs(m.simpledisjunct.innerdisjunct0.transformation_block,
-                      disjunctBlocks[0])
-        self.assertIs(disjunctBlocks[0]._src_disjunct(),
-                      m.simpledisjunct.innerdisjunct0)
+        self.assertIs(
+            m.simpledisjunct.innerdisjunct0.transformation_block, disjunctBlocks[0]
+        )
+        self.assertIs(
+            disjunctBlocks[0]._src_disjunct(), m.simpledisjunct.innerdisjunct0
+        )
 
-        self.assertIs(m.simpledisjunct.innerdisjunct1.transformation_block,
-                      disjunctBlocks[1])
-        self.assertIs(disjunctBlocks[1]._src_disjunct(),
-                      m.simpledisjunct.innerdisjunct1)
+        self.assertIs(
+            m.simpledisjunct.innerdisjunct1.transformation_block, disjunctBlocks[1]
+        )
+        self.assertIs(
+            disjunctBlocks[1]._src_disjunct(), m.simpledisjunct.innerdisjunct1
+        )
 
     def test_m_value_mappings(self):
         m = models.makeNestedDisjunctions()
@@ -1796,9 +1818,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         bigms = {m.disjunct[1].innerdisjunct[0]: 89}
         bigm.apply_to(m, bigM=bigms)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(
-             m.disjunct[1].innerdisjunct[0].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.disjunct[1].innerdisjunct[0].c
+        )
         self.assertIs(l_src, bigms)
         self.assertIs(u_src, bigms)
         self.assertIs(l_key, m.disjunct[1].innerdisjunct[0])
@@ -1806,9 +1828,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -89)
         self.assertEqual(u_val, 89)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(
-             m.disjunct[1].innerdisjunct[1].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.disjunct[1].innerdisjunct[1].c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -1816,8 +1838,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -5)
         self.assertIsNone(u_val)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.disjunct[0].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.disjunct[0].c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -1825,8 +1848,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -11)
         self.assertEqual(u_val, 7)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(m.disjunct[1].c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.disjunct[1].c
+        )
         self.assertIsNone(l_src)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -1834,9 +1858,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 21)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(
-             m.simpledisjunct.innerdisjunct0.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisjunct.innerdisjunct0.c
+        )
         self.assertIsNone(l_src)
         self.assertIs(u_src, m.simpledisjunct.BigM)
         self.assertIsNone(l_key)
@@ -1844,9 +1868,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 42)
 
-        ((l_val, l_src, l_key),
-         (u_val, u_src, u_key)) = bigm.get_M_value_src(
-             m.simpledisjunct.innerdisjunct1.c)
+        ((l_val, l_src, l_key), (u_val, u_src, u_key)) = bigm.get_M_value_src(
+            m.simpledisjunct.innerdisjunct1.c
+        )
         self.assertIs(l_src, m.simpledisjunct.BigM)
         self.assertIsNone(u_src)
         self.assertIsNone(l_key)
@@ -1864,8 +1888,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, variable, 1)
         ct.check_linear_coef(self, repn, indicator_var, M)
 
-    def check_inner_xor_constraint(self, inner_disjunction, outer_disjunct,
-                                   inner_disjuncts):
+    def check_inner_xor_constraint(
+        self, inner_disjunction, outer_disjunct, inner_disjuncts
+    ):
         self.assertIsNotNone(inner_disjunction.algebraic_constraint)
         cons = inner_disjunction.algebraic_constraint
         self.assertEqual(cons.lower, 0)
@@ -1874,9 +1899,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, 0)
         for disj in inner_disjuncts:
-            ct.check_linear_coef( self, repn, disj.binary_indicator_var, 1)
-        ct.check_linear_coef(self, repn, outer_disjunct.binary_indicator_var,
-                             -1)
+            ct.check_linear_coef(self, repn, disj.binary_indicator_var, 1)
+        ct.check_linear_coef(self, repn, outer_disjunct.binary_indicator_var, -1)
 
     def test_transformed_constraints(self):
         # We'll check all the transformed constraints to make sure
@@ -1886,8 +1910,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m = models.makeNestedDisjunctions()
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m)
-        cons1 = bigm.get_transformed_constraints(
-            m.disjunct[1].innerdisjunct[0].c)
+        cons1 = bigm.get_transformed_constraints(m.disjunct[1].innerdisjunct[0].c)
         self.assertEqual(len(cons1), 2)
         cons1lb = cons1[0]
         cons1ub = cons1[1]
@@ -1896,46 +1919,46 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertIs(cons1lb.body, m.z)
         self.assertIsNone(cons1ub.lower)
         self.assertEqual(cons1ub.upper, 0)
-        self.check_bigM_constraint(cons1ub, m.z, 10,
-                                   m.disjunct[1].innerdisjunct[0].indicator_var)
+        self.check_bigM_constraint(
+            cons1ub, m.z, 10, m.disjunct[1].innerdisjunct[0].indicator_var
+        )
 
-        cons2 = bigm.get_transformed_constraints(
-            m.disjunct[1].innerdisjunct[1].c)
+        cons2 = bigm.get_transformed_constraints(m.disjunct[1].innerdisjunct[1].c)
         self.assertEqual(len(cons2), 1)
         cons2lb = cons2[0]
         self.assertEqual(cons2lb.lower, 5)
         self.assertIsNone(cons2lb.upper)
-        self.check_bigM_constraint(cons2lb, m.z, -5,
-                                   m.disjunct[1].innerdisjunct[1].indicator_var)
+        self.check_bigM_constraint(
+            cons2lb, m.z, -5, m.disjunct[1].innerdisjunct[1].indicator_var
+        )
 
-        cons3 = bigm.get_transformed_constraints(
-            m.simpledisjunct.innerdisjunct0.c)
+        cons3 = bigm.get_transformed_constraints(m.simpledisjunct.innerdisjunct0.c)
         self.assertEqual(len(cons3), 1)
         cons3ub = cons3[0]
         self.assertEqual(cons3ub.upper, 2)
         self.assertIsNone(cons3ub.lower)
         self.check_bigM_constraint(
-            cons3ub, m.x, 7,
-            m.simpledisjunct.innerdisjunct0.indicator_var)
+            cons3ub, m.x, 7, m.simpledisjunct.innerdisjunct0.indicator_var
+        )
 
-        cons4 = bigm.get_transformed_constraints(
-            m.simpledisjunct.innerdisjunct1.c)
+        cons4 = bigm.get_transformed_constraints(m.simpledisjunct.innerdisjunct1.c)
         self.assertEqual(len(cons4), 1)
         cons4lb = cons4[0]
         self.assertEqual(cons4lb.lower, 4)
         self.assertIsNone(cons4lb.upper)
         self.check_bigM_constraint(
-            cons4lb, m.x, -13,
-            m.simpledisjunct.innerdisjunct1.indicator_var)
+            cons4lb, m.x, -13, m.simpledisjunct.innerdisjunct1.indicator_var
+        )
 
         # Here we check that the xor constraint from
         # simpledisjunct.innerdisjunction is transformed.
         cons5 = m.simpledisjunct.innerdisjunction.algebraic_constraint
         self.assertIsNotNone(cons5)
-        self.check_inner_xor_constraint(m.simpledisjunct.innerdisjunction,
-                                        m.simpledisjunct,
-                                        [m.simpledisjunct.innerdisjunct0,
-                                         m.simpledisjunct.innerdisjunct1])
+        self.check_inner_xor_constraint(
+            m.simpledisjunct.innerdisjunction,
+            m.simpledisjunct,
+            [m.simpledisjunct.innerdisjunct0, m.simpledisjunct.innerdisjunct1],
+        )
         self.assertIsInstance(cons5, Constraint)
         self.assertEqual(cons5.lower, 0)
         self.assertEqual(cons5.upper, 0)
@@ -1943,19 +1966,19 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, 0)
         ct.check_linear_coef(
-            self, repn, m.simpledisjunct.innerdisjunct0.binary_indicator_var, 1)
+            self, repn, m.simpledisjunct.innerdisjunct0.binary_indicator_var, 1
+        )
         ct.check_linear_coef(
-            self, repn, m.simpledisjunct.innerdisjunct1.binary_indicator_var, 1)
-        ct.check_linear_coef(self, repn, m.simpledisjunct.binary_indicator_var,
-                             -1)
+            self, repn, m.simpledisjunct.innerdisjunct1.binary_indicator_var, 1
+        )
+        ct.check_linear_coef(self, repn, m.simpledisjunct.binary_indicator_var, -1)
 
         cons6 = bigm.get_transformed_constraints(m.disjunct[0].c)
         self.assertEqual(len(cons6), 2)
         cons6lb = cons6[0]
         self.assertIsNone(cons6lb.upper)
         self.assertEqual(cons6lb.lower, 2)
-        self.check_bigM_constraint(cons6lb, m.x, -11,
-                                   m.disjunct[0].indicator_var)
+        self.check_bigM_constraint(cons6lb, m.x, -11, m.disjunct[0].indicator_var)
         cons6ub = cons6[1]
         self.assertIsNone(cons6ub.lower)
         self.assertEqual(cons6ub.upper, 2)
@@ -1963,18 +1986,18 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # now we check that the xor constraint from disjunct[1].innerdisjunction
         # is correct.
-        self.check_inner_xor_constraint(m.disjunct[1].innerdisjunction[0],
-                                        m.disjunct[1],
-                                        [m.disjunct[1].innerdisjunct[0],
-                                         m.disjunct[1].innerdisjunct[1]])
+        self.check_inner_xor_constraint(
+            m.disjunct[1].innerdisjunction[0],
+            m.disjunct[1],
+            [m.disjunct[1].innerdisjunct[0], m.disjunct[1].innerdisjunct[1]],
+        )
 
         cons8 = bigm.get_transformed_constraints(m.disjunct[1].c)
         self.assertEqual(len(cons8), 1)
         cons8ub = cons8[0]
         self.assertIsNone(cons8ub.lower)
         self.assertEqual(cons8ub.upper, 2)
-        self.check_bigM_constraint(cons8ub, m.a, 21,
-                                   m.disjunct[1].indicator_var)
+        self.check_bigM_constraint(cons8ub, m.a, 21, m.disjunct[1].indicator_var)
 
     def test_unique_reference_to_nested_indicator_var(self):
         ct.check_unique_reference_to_nested_indicator_var(self, 'bigm')
@@ -2015,11 +2038,13 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # the second time.
         m = ConcreteModel()
         m.d1 = Disjunct()
-        m.d1.indexedDisjunct1 = Disjunct([0,1])
-        m.d1.indexedDisjunct2 = Disjunct([0,1])
-        @m.d1.Disjunction([0,1])
+        m.d1.indexedDisjunct1 = Disjunct([0, 1])
+        m.d1.indexedDisjunct2 = Disjunct([0, 1])
+
+        @m.d1.Disjunction([0, 1])
         def innerIndexed(d, i):
             return [d.indexedDisjunct1[i], d.indexedDisjunct2[i]]
+
         m.d2 = Disjunct()
         m.outer = Disjunction(expr=[m.d1, m.d2])
 
@@ -2027,12 +2052,19 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # we check that they all ended up on the same Block in the end (I don't
         # really care in what order for this test)
-        disjuncts = [m.d1, m.d2, m.d1.indexedDisjunct1[0],
-                     m.d1.indexedDisjunct1[1], m.d1.indexedDisjunct2[0],
-                     m.d1.indexedDisjunct2[1]]
+        disjuncts = [
+            m.d1,
+            m.d2,
+            m.d1.indexedDisjunct1[0],
+            m.d1.indexedDisjunct1[1],
+            m.d1.indexedDisjunct2[0],
+            m.d1.indexedDisjunct2[1],
+        ]
         for disjunct in disjuncts:
-            self.assertIs(disjunct.transformation_block.parent_component(),
-                          m._pyomo_gdp_bigm_reformulation.relaxedDisjuncts)
+            self.assertIs(
+                disjunct.transformation_block.parent_component(),
+                m._pyomo_gdp_bigm_reformulation.relaxedDisjuncts,
+            )
 
     def check_first_disjunct_constraint(self, disj1c, x, ind_var):
         self.assertEqual(len(disj1c), 1)
@@ -2057,7 +2089,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertTrue(repn.is_quadratic())
         self.assertEqual(len(repn.linear_vars), 5)
         self.assertEqual(len(repn.quadratic_vars), 4)
-        self.assertEqual(repn.constant, -63) # M = 99, so this is 36 - 99
+        self.assertEqual(repn.constant, -63)  # M = 99, so this is 36 - 99
         ct.check_linear_coef(self, repn, ind_var, 99)
         for i in range(1, 5):
             ct.check_squared_term_coef(self, repn, x[i], 1)
@@ -2065,8 +2097,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
     def check_hierarchical_nested_model(self, m, bigm):
         outer_xor = m.disjunction_block.disjunction.algebraic_constraint
-        ct.check_two_term_disjunction_xor(self, outer_xor, m.disj1,
-                                          m.disjunct_block.disj2)
+        ct.check_two_term_disjunction_xor(
+            self, outer_xor, m.disj1, m.disjunct_block.disj2
+        )
 
         inner_xor = m.disjunct_block.disj2.disjunction.algebraic_constraint
         self.assertEqual(inner_xor.lower, 0)
@@ -2075,39 +2108,49 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 3)
         self.assertEqual(repn.constant, 0)
-        ct.check_linear_coef(self, repn,
-                             m.disjunct_block.disj2.disjunction_disjuncts[0].\
-                             binary_indicator_var, 1)
-        ct.check_linear_coef(self, repn,
-                             m.disjunct_block.disj2.disjunction_disjuncts[1].\
-                             binary_indicator_var, 1)
-        ct.check_linear_coef(self, repn,
-                             m.disjunct_block.disj2.binary_indicator_var, -1)
+        ct.check_linear_coef(
+            self,
+            repn,
+            m.disjunct_block.disj2.disjunction_disjuncts[0].binary_indicator_var,
+            1,
+        )
+        ct.check_linear_coef(
+            self,
+            repn,
+            m.disjunct_block.disj2.disjunction_disjuncts[1].binary_indicator_var,
+            1,
+        )
+        ct.check_linear_coef(
+            self, repn, m.disjunct_block.disj2.binary_indicator_var, -1
+        )
 
         # outer disjunction constraints
         disj1c = bigm.get_transformed_constraints(m.disj1.c)
-        self.check_first_disjunct_constraint(disj1c, m.x,
-                                             m.disj1.binary_indicator_var)
+        self.check_first_disjunct_constraint(disj1c, m.x, m.disj1.binary_indicator_var)
 
         disj2c = bigm.get_transformed_constraints(m.disjunct_block.disj2.c)
         self.check_second_disjunct_constraint(
-            disj2c, m.x,
-            m.disjunct_block.disj2.binary_indicator_var)
+            disj2c, m.x, m.disjunct_block.disj2.binary_indicator_var
+        )
 
         # inner disjunction constraints
         innerd1c = bigm.get_transformed_constraints(
-            m.disjunct_block.disj2.disjunction_disjuncts[0].constraint[1])
+            m.disjunct_block.disj2.disjunction_disjuncts[0].constraint[1]
+        )
         self.check_first_disjunct_constraint(
-            innerd1c, m.x,
-            m.disjunct_block.disj2.disjunction_disjuncts[0].\
-            binary_indicator_var)
+            innerd1c,
+            m.x,
+            m.disjunct_block.disj2.disjunction_disjuncts[0].binary_indicator_var,
+        )
 
         innerd2c = bigm.get_transformed_constraints(
-            m.disjunct_block.disj2.disjunction_disjuncts[1].constraint[1])
+            m.disjunct_block.disj2.disjunction_disjuncts[1].constraint[1]
+        )
         self.check_second_disjunct_constraint(
-            innerd2c, m.x,
-            m.disjunct_block.disj2.disjunction_disjuncts[1].\
-            binary_indicator_var)
+            innerd2c,
+            m.x,
+            m.disjunct_block.disj2.disjunction_disjuncts[1].binary_indicator_var,
+        )
 
     def test_hierarchical_badly_ordered_targets(self):
         m = models.makeHierarchicalNested_DeclOrderMatchesInstantationOrder()
@@ -2130,6 +2173,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # the same check to make sure everything is transformed correctly.
         self.check_hierarchical_nested_model(m, bigm)
 
+
 class IndexedDisjunction(unittest.TestCase):
     # this tests that if the targets are a subset of the
     # _DisjunctDatas in an IndexedDisjunction that the xor constraint
@@ -2139,6 +2183,7 @@ class IndexedDisjunction(unittest.TestCase):
 
     def test_partial_deactivate_indexed_disjunction(self):
         ct.check_partial_deactivate_indexed_disjunction(self, 'bigm')
+
 
 class BlocksOnDisjuncts(unittest.TestCase):
     # ESJ: All of these tests are specific to bigm because they check how much
@@ -2202,10 +2247,12 @@ class BlocksOnDisjuncts(unittest.TestCase):
                 KeyError,
                 r".*.evil\[1\].b.anotherblock.c",
                 bigm.get_transformed_constraints,
-                m.evil[1].b.anotherblock.c)
-        self.assertRegex(out.getvalue(),
-                         r".*Constraint 'evil\[1\].b.anotherblock.c' "
-                         r"has not been transformed.")
+                m.evil[1].b.anotherblock.c,
+            )
+        self.assertRegex(
+            out.getvalue(),
+            r".*Constraint 'evil\[1\].b.anotherblock.c' " r"has not been transformed.",
+        )
         evil1 = bigm.get_transformed_constraints(m.evil[1].bb[1].c)
         self.assertEqual(len(evil1), 2)
         self.assertIs(evil1[0].parent_block(), disjBlock[1])
@@ -2250,7 +2297,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
         m.b.d = Disjunct()
         m.b.d.foo = Block()
 
-        m.b.d.c = Constraint(expr=m.x>=9)
+        m.b.d.c = Constraint(expr=m.x >= 9)
 
         m.b.BigM = Suffix()
         m.b.BigM[None] = 10
@@ -2277,12 +2324,14 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIs(repn.linear_vars[1], m.b.d.binary_indicator_var)
         self.assertEqual(repn.linear_coefs[1], -10)
 
+
 class UntransformableObjectsOnDisjunct(unittest.TestCase):
     def test_RangeSet(self):
         ct.check_RangeSet(self, 'bigm')
 
     def test_Expression(self):
         ct.check_Expression(self, 'bigm')
+
 
 class TransformABlock(unittest.TestCase):
     def test_transformation_simple_block(self):
@@ -2300,6 +2349,7 @@ class TransformABlock(unittest.TestCase):
     def test_indexed_block_target(self):
         ct.check_indexed_block_target(self, 'bigm')
 
+
 class IndexedDisjunctions(unittest.TestCase):
     def setUp(self):
         # set seed so we can test name collisions predictably
@@ -2309,7 +2359,7 @@ class IndexedDisjunctions(unittest.TestCase):
         ct.check_disjunction_data_target(self, 'bigm')
 
     def test_disjunction_data_target_any_index(self):
-       ct.check_disjunction_data_target_any_index(self, 'bigm')
+        ct.check_disjunction_data_target_any_index(self, 'bigm')
 
     # ESJ: This and the following tests are *very* similar to those in hull,
     # but I actually bothered to check the additional transformed objects in
@@ -2324,20 +2374,16 @@ class IndexedDisjunctions(unittest.TestCase):
         bigm = TransformationFactory('gdp.bigm')
         self.assertEqual(len(transBlock1.relaxedDisjuncts), 4)
         firstTerm1 = bigm.get_transformed_constraints(m.firstTerm[1].cons)
-        self.assertIs(firstTerm1[0].parent_block(),
-                      transBlock1.relaxedDisjuncts[0])
+        self.assertIs(firstTerm1[0].parent_block(), transBlock1.relaxedDisjuncts[0])
         self.assertEqual(len(firstTerm1), 2)
         secondTerm1 = bigm.get_transformed_constraints(m.secondTerm[1].cons)
-        self.assertIs(secondTerm1[0].parent_block(),
-                      transBlock1.relaxedDisjuncts[1])
+        self.assertIs(secondTerm1[0].parent_block(), transBlock1.relaxedDisjuncts[1])
         self.assertEqual(len(secondTerm1), 1)
         firstTerm2 = bigm.get_transformed_constraints(m.firstTerm[2].cons)
-        self.assertIs(firstTerm2[0].parent_block(),
-                      transBlock1.relaxedDisjuncts[2])
+        self.assertIs(firstTerm2[0].parent_block(), transBlock1.relaxedDisjuncts[2])
         self.assertEqual(len(firstTerm2), 2)
         secondTerm2 = bigm.get_transformed_constraints(m.secondTerm[2].cons)
-        self.assertIs(secondTerm2[0].parent_block(),
-                      transBlock1.relaxedDisjuncts[3])
+        self.assertIs(secondTerm2[0].parent_block(), transBlock1.relaxedDisjuncts[3])
         self.assertEqual(len(secondTerm2), 1)
 
     def test_simple_disjunction_of_disjunct_datas(self):
@@ -2353,37 +2399,30 @@ class IndexedDisjunctions(unittest.TestCase):
         self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 4)
         firstTerm1 = bigm.get_transformed_constraints(m.firstTerm[1].cons)
-        self.assertIs(firstTerm1[0].parent_block(),
-                      transBlock.relaxedDisjuncts[0])
+        self.assertIs(firstTerm1[0].parent_block(), transBlock.relaxedDisjuncts[0])
         self.assertEqual(len(firstTerm1), 2)
         secondTerm1 = bigm.get_transformed_constraints(m.secondTerm[1].cons)
-        self.assertIs(secondTerm1[0].parent_block(),
-                      transBlock.relaxedDisjuncts[1])
+        self.assertIs(secondTerm1[0].parent_block(), transBlock.relaxedDisjuncts[1])
         self.assertEqual(len(secondTerm1), 1)
         firstTerm2 = bigm.get_transformed_constraints(m.firstTerm[2].cons)
-        self.assertIs(firstTerm2[0].parent_block(),
-                      transBlock.relaxedDisjuncts[2])
+        self.assertIs(firstTerm2[0].parent_block(), transBlock.relaxedDisjuncts[2])
         self.assertEqual(len(firstTerm1), 2)
         secondTerm2 = bigm.get_transformed_constraints(m.secondTerm[2].cons)
-        self.assertIs(secondTerm2[0].parent_block(),
-                      transBlock.relaxedDisjuncts[3])
+        self.assertIs(secondTerm2[0].parent_block(), transBlock.relaxedDisjuncts[3])
         self.assertEqual(len(secondTerm1), 1)
 
         self.assertIsInstance(
-            m.disjunction[1].algebraic_constraint.parent_component(),
-            Constraint)
+            m.disjunction[1].algebraic_constraint.parent_component(), Constraint
+        )
         self.assertIsInstance(
-            m.disjunction[2].algebraic_constraint.parent_component(),
-            Constraint)
+            m.disjunction[2].algebraic_constraint.parent_component(), Constraint
+        )
 
     def check_first_iteration(self, model):
         transBlock = model.component("_pyomo_gdp_bigm_reformulation")
         self.assertIsInstance(transBlock, Block)
-        self.assertIsInstance(
-            transBlock.component("disjunctionList_xor"),
-            Constraint)
-        self.assertEqual(
-            len(transBlock.disjunctionList_xor), 1)
+        self.assertIsInstance(transBlock.component("disjunctionList_xor"), Constraint)
+        self.assertEqual(len(transBlock.disjunctionList_xor), 1)
         self.assertFalse(model.disjunctionList[0].active)
 
     def check_second_iteration(self, model):
@@ -2401,21 +2440,19 @@ class IndexedDisjunctions(unittest.TestCase):
             secondTerm1 = model.secondTerm[1]
 
         firstTerm = bigm.get_transformed_constraints(firstTerm1.cons)
-        self.assertIs(firstTerm[0].parent_block(),
-                      transBlock.relaxedDisjuncts[0])
+        self.assertIs(firstTerm[0].parent_block(), transBlock.relaxedDisjuncts[0])
         self.assertEqual(len(firstTerm), 2)
 
         secondTerm = bigm.get_transformed_constraints(secondTerm1.cons)
-        self.assertIs(secondTerm[0].parent_block(),
-                      transBlock.relaxedDisjuncts[1])
+        self.assertIs(secondTerm[0].parent_block(), transBlock.relaxedDisjuncts[1])
         self.assertEqual(len(secondTerm), 1)
 
         self.assertIsInstance(
-            model.disjunctionList[1].algebraic_constraint.parent_component(),
-            Constraint)
+            model.disjunctionList[1].algebraic_constraint.parent_component(), Constraint
+        )
         self.assertIsInstance(
-            model.disjunctionList[0].algebraic_constraint.parent_component(),
-            Constraint)
+            model.disjunctionList[0].algebraic_constraint.parent_component(), Constraint
+        )
         self.assertFalse(model.disjunctionList[1].active)
         self.assertFalse(model.disjunctionList[0].active)
 
@@ -2423,40 +2460,37 @@ class IndexedDisjunctions(unittest.TestCase):
         ct.check_disjunction_and_disjuncts_indexed_by_any(self, 'bigm')
 
     def test_iteratively_adding_disjunctions_transform_container(self):
-        ct.check_iteratively_adding_disjunctions_transform_container(self,
-                                                                     'bigm')
+        ct.check_iteratively_adding_disjunctions_transform_container(self, 'bigm')
 
     def test_iteratively_adding_disjunctions_transform_model(self):
         ct.check_iteratively_adding_disjunctions_transform_model(self, 'bigm')
 
     def test_iteratively_adding_to_indexed_disjunction_on_block(self):
-        ct.check_iteratively_adding_to_indexed_disjunction_on_block(self,
-                                                                    'bigm')
+        ct.check_iteratively_adding_to_indexed_disjunction_on_block(self, 'bigm')
+
 
 class TestErrors(unittest.TestCase):
     def test_transform_empty_disjunction(self):
         ct.check_transform_empty_disjunction(self, 'bigm')
 
     def test_deactivated_disjunct_nonzero_indicator_var(self):
-        ct.check_deactivated_disjunct_nonzero_indicator_var(self,
-                                                            'bigm')
+        ct.check_deactivated_disjunct_nonzero_indicator_var(self, 'bigm')
 
     def test_deactivated_disjunct_unfixed_indicator_var(self):
         ct.check_deactivated_disjunct_unfixed_indicator_var(self, 'bigm')
 
     def test_infeasible_xor_because_all_disjuncts_deactivated(self):
-        m = ct.setup_infeasible_xor_because_all_disjuncts_deactivated(self,
-                                                                      'bigm')
+        m = ct.setup_infeasible_xor_because_all_disjuncts_deactivated(self, 'bigm')
         bigm = TransformationFactory('gdp.bigm')
 
         transBlock = m.component("_pyomo_gdp_bigm_reformulation")
         self.assertIsInstance(transBlock, Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
-        self.assertIsInstance(transBlock.component("disjunction_xor"),
-                              Constraint)
+        self.assertIsInstance(transBlock.component("disjunction_xor"), Constraint)
         disjunct1 = transBlock.relaxedDisjuncts[0]
         relaxed_xor = bigm.get_transformed_constraints(
-            m.disjunction_disjuncts[0].nestedDisjunction.algebraic_constraint)
+            m.disjunction_disjuncts[0].nestedDisjunction.algebraic_constraint
+        )
         # It was an equality
         self.assertEqual(len(relaxed_xor), 2)
         self.assertIsInstance(relaxed_xor[0].parent_component(), Constraint)
@@ -2467,24 +2501,21 @@ class TestErrors(unittest.TestCase):
         self.assertIsNone(relaxed_xor_lb.upper)
         # the other variables got eaten in the constant because they are fixed.
         self.assertEqual(len(repn.linear_vars), 1)
-        ct.check_linear_coef(self, repn,
-                             m.disjunction.disjuncts[0].indicator_var, -1)
+        ct.check_linear_coef(self, repn, m.disjunction.disjuncts[0].indicator_var, -1)
         self.assertEqual(repn.constant, 1)
         repn = generate_standard_repn(relaxed_xor_ub.body)
         self.assertIsNone(relaxed_xor_ub.lower)
         self.assertEqual(value(relaxed_xor_ub.upper), 1)
         self.assertEqual(len(repn.linear_vars), 1)
-        ct.check_linear_coef(self, repn,
-                             m.disjunction.disjuncts[0].indicator_var, 1)
+        ct.check_linear_coef(self, repn, m.disjunction.disjuncts[0].indicator_var, 1)
 
         # and last check that the other constraints here look fine
-        x0 = bigm.get_transformed_constraints(
-            m.disjunction_disjuncts[0].constraint[1])
+        x0 = bigm.get_transformed_constraints(m.disjunction_disjuncts[0].constraint[1])
         self.assertEqual(len(x0), 2)
         lb = x0[0]
         ub = x0[1]
         self.assertIsInstance(lb.parent_component(), Constraint)
-        #lb = x0[(1, 'lb')]
+        # lb = x0[(1, 'lb')]
         self.assertEqual(value(lb.lower), 0)
         self.assertIsNone(lb.upper)
         repn = generate_standard_repn(lb.body)
@@ -2499,21 +2530,22 @@ class TestErrors(unittest.TestCase):
         self.assertEqual(repn.constant, -8)
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, m.x, 1)
-        ct.check_linear_coef(self, repn,
-                             m.disjunction_disjuncts[0].indicator_var, 8)
+        ct.check_linear_coef(self, repn, m.disjunction_disjuncts[0].indicator_var, 8)
 
     def test_retrieving_nondisjunctive_components(self):
         ct.check_retrieving_nondisjunctive_components(self, 'bigm')
 
     def test_ask_for_transformed_constraint_from_untransformed_disjunct(self):
         ct.check_ask_for_transformed_constraint_from_untransformed_disjunct(
-            self, 'bigm')
+            self, 'bigm'
+        )
 
     def test_silly_target(self):
         ct.check_silly_target(self, 'bigm')
 
     def test_untransformed_arcs(self):
         ct.check_untransformed_network_raises_GDPError(self, 'bigm')
+
 
 class EstimatingMwithFixedVars(unittest.TestCase):
     def test_tighter_Ms_when_vars_fixed_forever(self):
@@ -2555,8 +2587,8 @@ class EstimatingMwithFixedVars(unittest.TestCase):
         ct.check_linear_coef(self, repn, promise.x, 1)
         ct.check_linear_coef(self, repn, promise.d.indicator_var, 7)
 
-class NetworkDisjuncts(unittest.TestCase, CommonTests):
 
+class NetworkDisjuncts(unittest.TestCase, CommonTests):
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_maximize(self):
         ct.check_network_disjuncts(self, minimize=False, transformation='bigm')
@@ -2564,6 +2596,7 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_minimize(self):
         ct.check_network_disjuncts(self, minimize=True, transformation='bigm')
+
 
 class LogicalConstraintsOnDisjuncts(unittest.TestCase):
     def test_logical_constraints_transformed(self):
@@ -2578,7 +2611,8 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
 
         # first d[1]:
         cons = bigm.get_transformed_constraints(
-            m.d[1]._logical_to_disjunctive.transformed_constraints[1])
+            m.d[1]._logical_to_disjunctive.transformed_constraints[1]
+        )
         # big-M transformation of z = 1 - y1:
         #     z <= 1 - y1 + (1 - d[1].indicator_var)
         #     z >= 1 - y1 - (1 - d[1].indicator_var)
@@ -2590,31 +2624,32 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(leq.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            z + y1 - m.d[1].binary_indicator_var)
+            self, simplified, z + y1 - m.d[1].binary_indicator_var
+        )
         geq = cons[1]
         self.assertEqual(geq.upper, 0)
         self.assertIsNone(geq.lower)
         repn = generate_standard_repn(geq.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            z + y1 + m.d[1].binary_indicator_var - 2)
+            self, simplified, z + y1 + m.d[1].binary_indicator_var - 2
+        )
 
         # then d[4]:
         z1 = m.d[4]._logical_to_disjunctive.auxiliary_vars[1]
         z2 = m.d[4]._logical_to_disjunctive.auxiliary_vars[2]
-        z3 = m.d[4]._logical_to_disjunctive.auxiliary_vars[3] # fixed True
+        z3 = m.d[4]._logical_to_disjunctive.auxiliary_vars[3]  # fixed True
         cons = bigm.get_transformed_constraints(
-            m.d[4]._logical_to_disjunctive.transformed_constraints[1])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[1]
+        )
         self.assertEqual(len(cons), 1)
         c = cons[0]
         # (1 - z1) + (1 - y1) + y2 >= 1 - (1 - d4.ind_var)
@@ -2623,14 +2658,15 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            -z1 - y1 + y2 - m.d[4].binary_indicator_var + 3)
+            self, simplified, -z1 - y1 + y2 - m.d[4].binary_indicator_var + 3
+        )
         cons = bigm.get_transformed_constraints(
-            m.d[4]._logical_to_disjunctive.transformed_constraints[2])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[2]
+        )
         self.assertEqual(len(cons), 1)
         c = cons[0]
         # z1 + 1 - (1 - y1) >= 1 - (1 - d4.ind_var)
@@ -2639,14 +2675,15 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            y1 + z1 - m.d[4].binary_indicator_var + 1)
+            self, simplified, y1 + z1 - m.d[4].binary_indicator_var + 1
+        )
         cons = bigm.get_transformed_constraints(
-            m.d[4]._logical_to_disjunctive.transformed_constraints[3])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[3]
+        )
         self.assertEqual(len(cons), 1)
         c = cons[0]
         # z1 + (1 - y2) >= 1 - (1 - d4.ind_var)
@@ -2655,14 +2692,15 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            - y2 + z1 - m.d[4].binary_indicator_var + 2)
+            self, simplified, -y2 + z1 - m.d[4].binary_indicator_var + 2
+        )
         cons = bigm.get_transformed_constraints(
-            m.d[4]._logical_to_disjunctive.transformed_constraints[4])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[4]
+        )
         self.assertEqual(len(cons), 1)
         c = cons[0]
         # (1 - z2) + y1 + (1 - y2) >= 1 - (1 - d4.ind_var)
@@ -2671,14 +2709,15 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            -z2 - y2 + y1 - m.d[4].binary_indicator_var + 3)
+            self, simplified, -z2 - y2 + y1 - m.d[4].binary_indicator_var + 3
+        )
         cons = bigm.get_transformed_constraints(
-            m.d[4]._logical_to_disjunctive.transformed_constraints[5])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[5]
+        )
         self.assertEqual(len(cons), 1)
         c = cons[0]
         # z2 + (1 - y1) >= 1 - (1 - d4.ind_var)
@@ -2687,14 +2726,15 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            - y1 + z2 - m.d[4].binary_indicator_var + 2)
+            self, simplified, -y1 + z2 - m.d[4].binary_indicator_var + 2
+        )
         cons = bigm.get_transformed_constraints(
-            m.d[4]._logical_to_disjunctive.transformed_constraints[6])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[6]
+        )
         self.assertEqual(len(cons), 1)
         c = cons[0]
         # z2 + 1 - (1 - y2) >= 1 - (1 - d4.ind_var)
@@ -2703,14 +2743,15 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            y2 + z2 - m.d[4].binary_indicator_var + 1)
+            self, simplified, y2 + z2 - m.d[4].binary_indicator_var + 1
+        )
         cons = bigm.get_transformed_constraints(
-            m.d[4]._logical_to_disjunctive.transformed_constraints[7])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[7]
+        )
         self.assertEqual(len(cons), 1)
         c = cons[0]
         # z3 <= z1 + (1 - d4.ind_var)
@@ -2719,14 +2760,15 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            z3 - z1 + m.d[4].binary_indicator_var - 1)
+            self, simplified, z3 - z1 + m.d[4].binary_indicator_var - 1
+        )
         cons = bigm.get_transformed_constraints(
-            m.d[4]._logical_to_disjunctive.transformed_constraints[8])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[8]
+        )
         self.assertEqual(len(cons), 1)
         c = cons[0]
         # z3 <= z2 + (1 - d4.ind_var)
@@ -2735,12 +2777,12 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
-            self,
-            simplified,
-            z3 - z2 + m.d[4].binary_indicator_var - 1)
+            self, simplified, z3 - z2 + m.d[4].binary_indicator_var - 1
+        )
 
         # check that the global logical constraints were also transformed.
         self.assertFalse(m.p.active)
@@ -2764,6 +2806,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
     @unittest.skipIf(not dill_available, "Dill is not available")
     def test_dill_pickle(self):
         ct.check_transformed_model_pickles_with_dill(self, 'bigm')
+
 
 if __name__ == '__main__':
     unittest.main()
