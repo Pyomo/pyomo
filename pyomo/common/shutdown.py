@@ -1,5 +1,6 @@
 import atexit
 
+
 def python_is_shutting_down():
     """Returns `True` if the interpreter is in the process of shutting down.
 
@@ -10,7 +11,9 @@ def python_is_shutting_down():
     """
     return not python_is_shutting_down.isalive
 
+
 python_is_shutting_down.isalive = [True]
+
 
 @atexit.register
 def _flag_shutting_down():

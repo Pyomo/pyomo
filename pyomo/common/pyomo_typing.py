@@ -13,8 +13,10 @@ import typing
 
 _overloads = {}
 
+
 def _get_fullqual_name(func: typing.Callable) -> str:
     return f"{func.__module__}.{func.__qualname__}"
+
 
 def overload(func: typing.Callable):
     """Wrap typing.overload that remembers the overloaded signatures
@@ -26,6 +28,7 @@ def overload(func: typing.Callable):
     """
     _overloads.setdefault(_get_fullqual_name(func), []).append(func)
     return typing.overload(func)
+
 
 def get_overloads_for(func: typing.Callable):
     return _overloads.get(_get_fullqual_name(func), [])

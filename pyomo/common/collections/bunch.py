@@ -19,6 +19,7 @@
 import shlex
 from collections.abc import Mapping
 
+
 class Bunch(dict):
     """A class that can be used to store a bunch of data dynamically.
 
@@ -42,7 +43,8 @@ class Bunch(dict):
                 if len(item) != 2:
                     raise ValueError(
                         "Bunch() positional arguments must be space separated "
-                        f"strings of form 'key=value', got '{item[0]}'")
+                        f"strings of form 'key=value', got '{item[0]}'"
+                    )
 
                 # Historically, this used 'exec'.  That is unsafe in
                 # this context (because anyone can pass arguments to a
@@ -67,6 +69,7 @@ class Bunch(dict):
         The update is specialized for JSON-like data.  This
         recursively replaces dictionaries with Bunch objects.
         """
+
         def _replace_dict_in_list(lst):
             ans = []
             for v in lst:
@@ -97,22 +100,19 @@ class Bunch(dict):
 
     def __getitem__(self, name):
         if not isinstance(name, str):
-            raise ValueError(
-                f'Bunch keys must be str (got {type(name).__name__})')
+            raise ValueError(f'Bunch keys must be str (got {type(name).__name__})')
         # Map through Python's standard getattr functionality (which
         # will resolve known attributes without hitting __getattr__)
         return getattr(self, name)
 
     def __setitem__(self, name, val):
         if not isinstance(name, str):
-            raise ValueError(
-                f'Bunch keys must be str (got {type(name).__name__})')
+            raise ValueError(f'Bunch keys must be str (got {type(name).__name__})')
         setattr(self, name, val)
 
     def __delitem__(self, name):
         if not isinstance(name, str):
-            raise ValueError(
-                f'Bunch keys must be str (got {type(name).__name__})')
+            raise ValueError(f'Bunch keys must be str (got {type(name).__name__})')
         delattr(self, name)
 
     def __getattr__(self, name):
@@ -133,8 +133,9 @@ class Bunch(dict):
             super().__delitem__(name)
 
     def __repr__(self):
-        attrs = sorted("%s = %r" % (k, v) for k, v in self.items()
-                       if not k.startswith("_"))
+        attrs = sorted(
+            "%s = %r" % (k, v) for k, v in self.items() if not k.startswith("_")
+        )
         return "%s(%s)" % (self.__class__.__name__, ", ".join(attrs))
 
     def __str__(self, nesting=0, indent=''):

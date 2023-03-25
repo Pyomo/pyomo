@@ -34,21 +34,24 @@ _indentation_re = re.compile(r'\s*')
 
 _RTD_URL = "https://pyomo.readthedocs.io/en/%s/errors.html" % (
     'stable'
-    if (releaselevel == 'final'
-        or 'sphinx' in sys.modules
-        or 'Sphinx' in sys.modules)
-    else 'latest')
+    if (releaselevel == 'final' or 'sphinx' in sys.modules or 'Sphinx' in sys.modules)
+    else 'latest'
+)
+
 
 def RTD(_id):
     _id = str(_id).lower()
     assert _id[0] in 'wex'
     return f"{_RTD_URL}#{_id}"
 
+
 _DEBUG = logging.DEBUG
 _NOTSET = logging.NOTSET
 if not __debug__:
+
     def is_debug_set(logger):
         return False
+
 elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
     # This works for CPython and PyPy, but relies on a manager attribute
     # to get the current value of the logging.disabled() flag
@@ -72,6 +75,7 @@ elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
         _level = logger.getEffectiveLevel()
         # Filter out NOTSET and higher levels
         return _NOTSET < _level <= _DEBUG
+
 else:
     # This is inefficient (it indirectly checks effective level twice),
     # but is included for [as yet unknown] platforms that ONLY implement
@@ -80,6 +84,7 @@ else:
         if not logger.isEnabledFor(_DEBUG):
             return False
         return logger.getEffectiveLevel() > _NOTSET
+
 
 class WrappingFormatter(logging.Formatter):
     _flag = "<<!MSG!>>"
@@ -93,18 +98,18 @@ class WrappingFormatter(logging.Formatter):
             elif kwds['style'] == '$':
                 kwds['fmt'] = '$levelname: $message'
             else:
-                raise ValueError('unrecognized style flag "%s"'
-                                 % (kwds['style'],))
+                raise ValueError('unrecognized style flag "%s"' % (kwds['style'],))
         self._wrapper = textwrap.TextWrapper(width=kwds.pop('wrap', 78))
-        self._wrapper.subsequent_indent = kwds.pop('hang', ' '*4)
+        self._wrapper.subsequent_indent = kwds.pop('hang', ' ' * 4)
         if not self._wrapper.subsequent_indent:
             self._wrapper.subsequent_indent = ''
         self.basepath = kwds.pop('base', None)
         super(WrappingFormatter, self).__init__(**kwds)
 
     def format(self, record):
-        _orig = {k: getattr(record, k)
-                 for k in ('msg', 'args', 'pathname', 'levelname')}
+        _orig = {
+            k: getattr(record, k) for k in ('msg', 'args', 'pathname', 'levelname')
+        }
         _id = getattr(record, 'id', None)
         msg = record.getMessage()
         record.msg = self._flag
@@ -112,11 +117,11 @@ class WrappingFormatter(logging.Formatter):
         if _id:
             record.levelname += f" ({_id.upper()})"
         if self.basepath and record.pathname.startswith(self.basepath):
-            record.pathname = '[base]' + record.pathname[len(self.basepath):]
+            record.pathname = '[base]' + record.pathname[len(self.basepath) :]
         try:
             raw_msg = super(WrappingFormatter, self).format(record)
         finally:
-            for k,v in _orig.items():
+            for k, v in _orig.items():
                 setattr(record, k, v)
 
         # We want to normalize the incoming message *before* we start
@@ -171,13 +176,12 @@ class LegacyPyomoFormatter(logging.Formatter):
     templates will be used.
 
     """
+
     def __init__(self, **kwds):
         if 'fmt' in kwds:
-            raise ValueError(
-                "'fmt' is not a valid option for the LegacyFormatter")
+            raise ValueError("'fmt' is not a valid option for the LegacyFormatter")
         if 'style' in kwds:
-            raise ValueError(
-                "'style' is not a valid option for the LegacyFormatter")
+            raise ValueError("'style' is not a valid option for the LegacyFormatter")
 
         self.verbosity = kwds.pop('verbosity', lambda: True)
         self.standard_formatter = WrappingFormatter(**kwds)
@@ -185,7 +189,7 @@ class LegacyPyomoFormatter(logging.Formatter):
             fmt='%(levelname)s: "%(pathname)s", %(lineno)d, %(funcName)s\n'
             '    %(message)s',
             hang=False,
-            **kwds
+            **kwds,
         )
         super(LegacyPyomoFormatter, self).__init__()
 
@@ -223,29 +227,26 @@ class _GlobalLogFilter(object):
 pyomo_logger = logging.getLogger('pyomo')
 pyomo_handler = StdoutHandler()
 pyomo_formatter = LegacyPyomoFormatter(
-    base=PYOMO_ROOT_DIR,
-    verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG),
+    base=PYOMO_ROOT_DIR, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG)
 )
 pyomo_handler.setFormatter(pyomo_formatter)
 pyomo_handler.addFilter(_GlobalLogFilter())
 pyomo_logger.addHandler(pyomo_handler)
 
 
-@deprecated('The pyomo.common.log.LogHandler class has been deprecated '
-            'in favor of standard Handlers from the Python logging module '
-            'combined with the pyomo.common.log.WrappingFormatter.',
-            version='5.7.3')
+@deprecated(
+    'The pyomo.common.log.LogHandler class has been deprecated '
+    'in favor of standard Handlers from the Python logging module '
+    'combined with the pyomo.common.log.WrappingFormatter.',
+    version='5.7.3',
+)
 class LogHandler(logging.StreamHandler):
-    def __init__(self, base='', stream=None,
-                 level=logging.NOTSET, verbosity=None):
+    def __init__(self, base='', stream=None, level=logging.NOTSET, verbosity=None):
         super(LogHandler, self).__init__(stream)
         self.setLevel(level),
         if verbosity is None:
             verbosity = lambda: True
-        self.setFormatter(LegacyPyomoFormatter(
-            base=base,
-            verbosity=verbosity,
-        ))
+        self.setFormatter(LegacyPyomoFormatter(base=base, verbosity=verbosity))
 
 
 class LoggingIntercept(object):
@@ -281,8 +282,7 @@ class LoggingIntercept(object):
 
     """
 
-    def __init__(self, output=None, module=None, level=logging.WARNING,
-                 formatter=None):
+    def __init__(self, output=None, module=None, level=logging.WARNING, formatter=None):
         self.handler = None
         self.output = output
         self.module = module
@@ -326,6 +326,7 @@ class LogStream(io.TextIOBase):
     This is useful for logging solver output (a LogStream
     instance can be handed to TeeStream from pyomo.common.tee).
     """
+
     def __init__(self, level, logger):
         self._level = level
         self._logger = logger

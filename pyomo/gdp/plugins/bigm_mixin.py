@@ -14,6 +14,7 @@ from pyomo.common.collections import ComponentSet
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import Suffix
 
+
 def _convert_M_to_tuple(M, constraint, disjunct=None):
     if not isinstance(M, (tuple, list)):
         if M is None:
@@ -22,22 +23,26 @@ def _convert_M_to_tuple(M, constraint, disjunct=None):
             try:
                 M = (-M, M)
             except:
-                logger.error("Error converting scalar M-value %s "
-                             "to (-M,M).  Is %s not a numeric type?"
-                             % (M, type(M)))
+                logger.error(
+                    "Error converting scalar M-value %s "
+                    "to (-M,M).  Is %s not a numeric type?" % (M, type(M))
+                )
                 raise
     if len(M) != 2:
         constraint_name = constraint.name
         if disjunct is not None:
             constraint_name += " relative to Disjunct %s" % disjunct.name
-        raise GDP_Error("Big-M %s for constraint %s is not of "
-                        "length two. "
-                        "Expected either a single value or "
-                        "tuple or list of length two specifying M values for "
-                        "the lower and upper sides of the constraint "
-                        "respectively." % (str(M), constraint.name))
+        raise GDP_Error(
+            "Big-M %s for constraint %s is not of "
+            "length two. "
+            "Expected either a single value or "
+            "tuple or list of length two specifying M values for "
+            "the lower and upper sides of the constraint "
+            "respectively." % (str(M), constraint.name)
+        )
 
     return M
+
 
 def _get_bigM_suffix_list(block, stopping_block=None):
     # Note that you can only specify suffixes on BlockData objects or
@@ -59,25 +64,30 @@ def _get_bigM_suffix_list(block, stopping_block=None):
 
     return suffix_list
 
+
 def _warn_for_unused_bigM_args(bigM, used_args, logger):
     # issue warnings about anything that was in the bigM args dict that we
     # didn't use
     if bigM is not None:
-        unused_args = ComponentSet(bigM.keys()) - \
-                      ComponentSet(used_args.keys())
+        unused_args = ComponentSet(bigM.keys()) - ComponentSet(used_args.keys())
         if len(unused_args) > 0:
-            warning_msg = ("Unused arguments in the bigM map! "
-                           "These arguments were not used by the "
-                           "transformation:\n")
+            warning_msg = (
+                "Unused arguments in the bigM map! "
+                "These arguments were not used by the "
+                "transformation:\n"
+            )
             for component in unused_args:
                 if isinstance(component, (tuple, list)) and len(component) == 2:
-                    warning_msg += "\t(%s, %s)\n" % (component[0].name,
-                                                     component[1].name)
+                    warning_msg += "\t(%s, %s)\n" % (
+                        component[0].name,
+                        component[1].name,
+                    )
                 elif hasattr(component, 'name'):
                     warning_msg += "\t%s\n" % component.name
                 else:
                     warning_msg += "\t%s\n" % component
             logger.warning(warning_msg)
+
 
 class _BigM_MixIn(object):
     def _get_bigM_arg_list(self, bigm_args, block):
@@ -93,8 +103,18 @@ class _BigM_MixIn(object):
             block = block.parent_block()
         return arg_list
 
-    def _process_M_value(self, m, lower, upper, need_lower, need_upper, src,
-                         key, constraint, from_args=False):
+    def _process_M_value(
+        self,
+        m,
+        lower,
+        upper,
+        need_lower,
+        need_upper,
+        src,
+        key,
+        constraint,
+        from_args=False,
+    ):
         m = _convert_M_to_tuple(m, constraint)
         if need_lower and m[0] is not None:
             if from_args:
@@ -124,51 +144,66 @@ class _BigM_MixIn(object):
         parent = constraint.parent_component()
         if constraint in bigMargs:
             m = bigMargs[constraint]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs,
-                                                             constraint,
-                                                             constraint,
-                                                             from_args=True)
+            (lower, upper, need_lower, need_upper) = self._process_M_value(
+                m,
+                lower,
+                upper,
+                need_lower,
+                need_upper,
+                bigMargs,
+                constraint,
+                constraint,
+                from_args=True,
+            )
             if not need_lower and not need_upper:
                 return lower, upper
         elif parent in bigMargs:
             m = bigMargs[parent]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs, parent,
-                                                             constraint,
-                                                             from_args=True)
+            (lower, upper, need_lower, need_upper) = self._process_M_value(
+                m,
+                lower,
+                upper,
+                need_lower,
+                need_upper,
+                bigMargs,
+                parent,
+                constraint,
+                from_args=True,
+            )
             if not need_lower and not need_upper:
                 return lower, upper
 
         # use the precomputed traversal up the blocks
         for arg in arg_list:
             for block, val in arg.items():
-                (lower, upper,
-                 need_lower,
-                 need_upper) = self._process_M_value(val, lower, upper,
-                                                     need_lower, need_upper,
-                                                     bigMargs, block,
-                                                     constraint,
-                                                     from_args=True)
+                (lower, upper, need_lower, need_upper) = self._process_M_value(
+                    val,
+                    lower,
+                    upper,
+                    need_lower,
+                    need_upper,
+                    bigMargs,
+                    block,
+                    constraint,
+                    from_args=True,
+                )
                 if not need_lower and not need_upper:
                     return lower, upper
 
         # last check for value for None!
         if None in bigMargs:
             m = bigMargs[None]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs, None,
-                                                             constraint,
-                                                             from_args=True)
+            (lower, upper, need_lower, need_upper) = self._process_M_value(
+                m,
+                lower,
+                upper,
+                need_lower,
+                need_upper,
+                bigMargs,
+                None,
+                constraint,
+                from_args=True,
+            )
             if not need_lower and not need_upper:
                 return lower, upper
 
@@ -176,19 +211,23 @@ class _BigM_MixIn(object):
 
     def _estimate_M(self, expr, constraint):
         expr_lb, expr_ub = compute_bounds_on_expr(
-            expr, ignore_fixed=not self._config.assume_fixed_vars_permanent)
+            expr, ignore_fixed=not self._config.assume_fixed_vars_permanent
+        )
         if expr_lb is None or expr_ub is None:
-            raise GDP_Error("Cannot estimate M for unbounded "
-                            "expressions.\n\t(found while processing "
-                            "constraint '%s'). Please specify a value of M "
-                            "or ensure all variables that appear in the "
-                            "constraint are bounded." % constraint.name)
+            raise GDP_Error(
+                "Cannot estimate M for unbounded "
+                "expressions.\n\t(found while processing "
+                "constraint '%s'). Please specify a value of M "
+                "or ensure all variables that appear in the "
+                "constraint are bounded." % constraint.name
+            )
         else:
             M = (expr_lb, expr_ub)
         return tuple(M)
 
-    def _add_constraint_expressions(self, c, i, M, indicator_var, newConstraint,
-                                    constraintMap):
+    def _add_constraint_expressions(
+        self, c, i, M, indicator_var, newConstraint, constraintMap
+    ):
         # Since we are both combining components from multiple blocks and using
         # local names, we need to make sure that the first index for
         # transformedConstraints is guaranteed to be unique. We just grab the
@@ -202,28 +241,29 @@ class _BigM_MixIn(object):
 
         if c.lower is not None:
             if M[0] is None:
-                raise GDP_Error("Cannot relax disjunctive constraint '%s' "
-                                "because M is not defined." % name)
+                raise GDP_Error(
+                    "Cannot relax disjunctive constraint '%s' "
+                    "because M is not defined." % name
+                )
             M_expr = M[0] * (1 - indicator_var)
-            newConstraint.add((name, i, 'lb'), c.lower <= c. body - M_expr)
-            constraintMap[
-                'transformedConstraints'][c] = [
-                    newConstraint[name, i, 'lb']]
-            constraintMap['srcConstraints'][
-                newConstraint[name, i, 'lb']] = c
+            newConstraint.add((name, i, 'lb'), c.lower <= c.body - M_expr)
+            constraintMap['transformedConstraints'][c] = [newConstraint[name, i, 'lb']]
+            constraintMap['srcConstraints'][newConstraint[name, i, 'lb']] = c
         if c.upper is not None:
             if M[1] is None:
-                raise GDP_Error("Cannot relax disjunctive constraint '%s' "
-                                "because M is not defined." % name)
+                raise GDP_Error(
+                    "Cannot relax disjunctive constraint '%s' "
+                    "because M is not defined." % name
+                )
             M_expr = M[1] * (1 - indicator_var)
             newConstraint.add((name, i, 'ub'), c.body - M_expr <= c.upper)
             transformed = constraintMap['transformedConstraints'].get(c)
             if transformed is not None:
-                constraintMap['transformedConstraints'][
-                    c].append(newConstraint[name, i, 'ub'])
+                constraintMap['transformedConstraints'][c].append(
+                    newConstraint[name, i, 'ub']
+                )
             else:
-                constraintMap[
-                    'transformedConstraints'][c] = [
-                        newConstraint[name, i, 'ub']]
-            constraintMap['srcConstraints'][
-                newConstraint[name, i, 'ub']] = c
+                constraintMap['transformedConstraints'][c] = [
+                    newConstraint[name, i, 'ub']
+                ]
+            constraintMap['srcConstraints'][newConstraint[name, i, 'ub']] = c

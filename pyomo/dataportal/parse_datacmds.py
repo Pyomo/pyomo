@@ -33,20 +33,18 @@ _re_number = r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?'
 
 _parse_info = None
 
-states = (
-  ('data','inclusive'),
-)
+states = (('data', 'inclusive'),)
 
 reserved = {
-    'data' : 'DATA',
-    'set' : 'SET',
-    'param' : 'PARAM',
-    'end' : 'END',
-    'store' : 'STORE',
-    'load' : 'LOAD',
-    'table' : 'TABLE',
-    'include' : 'INCLUDE',
-    'namespace' : 'NAMESPACE',
+    'data': 'DATA',
+    'set': 'SET',
+    'param': 'PARAM',
+    'end': 'END',
+    'store': 'STORE',
+    'load': 'LOAD',
+    'table': 'TABLE',
+    'include': 'INCLUDE',
+    'namespace': 'NAMESPACE',
 }
 
 # Token names
@@ -70,24 +68,24 @@ tokens = [
     "TR",
     "ASTERISK",
     "NUM_VAL",
-    #"NONWORD",
+    # "NONWORD",
 ] + list(reserved.values())
 
 # Ignore space and tab
 t_ignore = " \t\r"
 
 # Regular expression rules
-t_COMMA     = r","
-t_LBRACKET  = r"\["
-t_RBRACKET  = r"\]"
-t_LBRACE  = r"\{"
-t_RBRACE  = r"\}"
-t_COLON     = r":"
-t_EQ        = r"="
-t_TR        = r"\(tr\)"
-t_LPAREN    = r"\("
-t_RPAREN    = r"\)"
-t_ASTERISK  = r"\*"
+t_COMMA = r","
+t_LBRACKET = r"\["
+t_RBRACKET = r"\]"
+t_LBRACE = r"\{"
+t_RBRACE = r"\}"
+t_COLON = r":"
+t_EQ = r"="
+t_TR = r"\(tr\)"
+t_LPAREN = r"\("
+t_RPAREN = r"\)"
+t_ASTERISK = r"\*"
 
 #
 # Notes on PLY tokenization
@@ -97,11 +95,14 @@ t_ASTERISK  = r"\*"
 def t_newline(t):
     r'[\n]+'
     t.lexer.lineno += len(t.value)
-    t.lexer.linepos.extend(t.lexpos+i for i,_ in enumerate(t.value))
+    t.lexer.linepos.extend(t.lexpos + i for i, _ in enumerate(t.value))
+
 
 # Discard comments
 _re_singleline_comment = r'(?:\#[^\n]*)'
 _re_multiline_comment = r'(?:/\*(?:[\n]|.)*?\*/)'
+
+
 @lex.TOKEN('|'.join([_re_singleline_comment, _re_multiline_comment]))
 def t_COMMENT(t):
     # Single-line and multi-line strings
@@ -113,15 +114,18 @@ def t_COMMENT(t):
     lastpos = t.lexpos + t.value.rfind('\n')
     t.lexer.linepos.extend(lastpos for i in range(nlines))
 
+
 def t_COLONEQ(t):
     r':='
     t.lexer.begin('data')
     return t
 
+
 def t_SEMICOLON(t):
     r';'
     t.lexer.begin('INITIAL')
     return t
+
 
 # Numbers must be followed by a delimiter token (EOF is not a concern,
 # as valid DAT files always end with a ';').
@@ -135,21 +139,25 @@ def t_NUM_VAL(t):
         t.value = _int if _num == _int else _num
     return t
 
+
 def t_WORDWITHLBRACKET(t):
     r'[a-zA-Z_][a-zA-Z0-9_\.\-]*\['
     return t
 
+
 def t_WORD(t):
     r'[a-zA-Z_][a-zA-Z_0-9\.+\-]*'
     if t.value in reserved:
-        t.type = reserved[t.value]    # Check for reserved words
+        t.type = reserved[t.value]  # Check for reserved words
     return t
+
 
 def t_STRING(t):
     r'[a-zA-Z0-9_\.+\-\\\/]+'
     # Note: RE guarantees the string has no embedded quotation characters
-    t.value = '"'+t.value+'"'
+    t.value = '"' + t.value + '"'
     return t
+
 
 def t_data_BRACKETEDSTRING(t):
     r'[a-zA-Z0-9_\.+\-]*\[[a-zA-Z0-9_\.+\-\*,\s]+\]'
@@ -158,20 +166,27 @@ def t_data_BRACKETEDSTRING(t):
     # [1,*,'foo bar']
     return t
 
+
 _re_quoted_str = r'"(?:[^"]|"")*"'
-@lex.TOKEN("|".join([_re_quoted_str, _re_quoted_str.replace('"',"'")]))
+
+
+@lex.TOKEN("|".join([_re_quoted_str, _re_quoted_str.replace('"', "'")]))
 def t_QUOTEDSTRING(t):
     # Normalize the quotes to use '"', and replace doubled ("escaped")
     # quotation characters with a single character
-    t.value = '"' + t.value[1:-1].replace(2*t.value[0], t.value[0]) + '"'
+    t.value = '"' + t.value[1:-1].replace(2 * t.value[0], t.value[0]) + '"'
     return t
 
-#t_NONWORD   = r"[^\.A-Za-z0-9,;:=<>\*\(\)\#{}\[\] \n\t\r]+"
+
+# t_NONWORD   = r"[^\.A-Za-z0-9,;:=<>\*\(\)\#{}\[\] \n\t\r]+"
 
 # Error handling rule
 def t_error(t):
-    raise IOError("ERROR: Token %s Value %s Line %s Column %s"
-                  % (t.type, t.value, t.lineno, t.lexpos))
+    raise IOError(
+        "ERROR: Token %s Value %s Line %s Column %s"
+        % (t.type, t.value, t.lineno, t.lexpos)
+    )
+
 
 ## DEBUGGING: uncomment to get tokenization information
 # def _wrap(_name, _fcn):
@@ -185,11 +200,13 @@ def t_error(t):
 #     if _name.startswith('t_') and inspect.isfunction(globals()[_name]):
 #         globals()[_name] = _wrap(_name, globals()[_name])
 
+
 def _lex_token_position(t):
     i = bisect.bisect_left(t.lexer.linepos, t.lexpos)
     if i:
-        return t.lexpos - t.lexer.linepos[i-1]
+        return t.lexpos - t.lexer.linepos[i - 1]
     return t.lexpos
+
 
 ## -----------------------------------------------------------
 ##
@@ -197,11 +214,12 @@ def _lex_token_position(t):
 ##
 ## -----------------------------------------------------------
 
+
 def p_expr(p):
     '''expr : statements
-            | '''
+    |'''
     if len(p) == 2:
-        #print "STMTS",p[1]
+        # print "STMTS",p[1]
         for stmt in p[1]:
             if type(stmt) is list:
                 _parse_info[None].append(stmt)
@@ -212,12 +230,13 @@ def p_expr(p):
                     else:
                         _parse_info[key] = stmt[key]
 
+
 def p_statements(p):
     '''statements : statements statement
-                  | statement
-                  | statements NAMESPACE WORD LBRACE statements RBRACE
-                  | NAMESPACE WORD LBRACE statements RBRACE '''
-    #print "STMT X",p[1:],p[1]
+    | statement
+    | statements NAMESPACE WORD LBRACE statements RBRACE
+    | NAMESPACE WORD LBRACE statements RBRACE'''
+    # print "STMT X",p[1:],p[1]
     len_p = len(p)
     if len_p == 3:
         # NB: statements will never be None, but statement *could* be None
@@ -232,46 +251,50 @@ def p_statements(p):
     elif len_p == 7:
         # NB: statements will never be None
         p[0] = p[1]
-        p[0].append({p[3]:p[5]})
+        p[0].append({p[3]: p[5]})
     else:
         # NB: statements will never be None
-        p[0] = [{p[2] : p[4]}]
+        p[0] = [{p[2]: p[4]}]
+
 
 def p_statement(p):
     '''statement : SET WORD COLONEQ datastar SEMICOLON
-                 | SET WORDWITHLBRACKET args RBRACKET COLONEQ datastar SEMICOLON
-                 | SET WORD COLON itemstar COLONEQ datastar SEMICOLON
-                 | PARAM items COLONEQ datastar SEMICOLON
-                 | TABLE items COLONEQ datastar SEMICOLON
-                 | LOAD items SEMICOLON
-                 | STORE items SEMICOLON
-                 | INCLUDE WORD SEMICOLON
-                 | INCLUDE QUOTEDSTRING SEMICOLON
-                 | DATA SEMICOLON
-                 | END SEMICOLON
+    | SET WORDWITHLBRACKET args RBRACKET COLONEQ datastar SEMICOLON
+    | SET WORD COLON itemstar COLONEQ datastar SEMICOLON
+    | PARAM items COLONEQ datastar SEMICOLON
+    | TABLE items COLONEQ datastar SEMICOLON
+    | LOAD items SEMICOLON
+    | STORE items SEMICOLON
+    | INCLUDE WORD SEMICOLON
+    | INCLUDE QUOTEDSTRING SEMICOLON
+    | DATA SEMICOLON
+    | END SEMICOLON
     '''
-    #print "STATEMENT",len(p), p[1:]
+    # print "STATEMENT",len(p), p[1:]
     stmt = p[1]
     if stmt == 'set':
         if p[2][-1] == '[':
             # Just turn off the flatten_list and see what happens
-            p[0] = ['set', p[2][:-1], '['] + list(flatten_tuple([p[i] for i in range(3,len(p)-1)]))
+            p[0] = ['set', p[2][:-1], '['] + list(
+                flatten_tuple([p[i] for i in range(3, len(p) - 1)])
+            )
         else:
-            p[0] = list(flatten_tuple([p[i] for i in range(1,len(p)-1)]))
+            p[0] = list(flatten_tuple([p[i] for i in range(1, len(p) - 1)]))
     elif stmt == 'param':
-        p[0] = list(flatten_tuple([p[i] for i in range(1,len(p)-1)]))
+        p[0] = list(flatten_tuple([p[i] for i in range(1, len(p) - 1)]))
     elif stmt == 'include':
-        p[0] = [p[i] for i in range(1,len(p)-1)]
+        p[0] = [p[i] for i in range(1, len(p) - 1)]
     elif stmt == 'load':
-        p[0] = [p[1]]+ p[2]
+        p[0] = [p[1]] + p[2]
     elif stmt == 'store':
-        p[0] = [p[1]]+ p[2]
+        p[0] = [p[1]] + p[2]
     elif stmt == 'table':
-        p[0] = [p[1]]+ [p[2]] + [p[4]]
+        p[0] = [p[1]] + [p[2]] + [p[4]]
     else:
         # Not necessary, but nice to document how statement could end up None
         p[0] = None
-    #print(p[0])
+    # print(p[0])
+
 
 def p_datastar(p):
     '''
@@ -282,6 +305,7 @@ def p_datastar(p):
         p[0] = p[1]
     else:
         p[0] = []
+
 
 def p_data(p):
     '''
@@ -316,7 +340,7 @@ def p_data(p):
         tmp = p[1]
     else:
         tmp = p[2]
-    #if type(tmp) is str and tmp[0] == '"' and tmp[-1] == '"' and len(tmp) > 2 and not ' ' in tmp:
+    # if type(tmp) is str and tmp[0] == '"' and tmp[-1] == '"' and len(tmp) > 2 and not ' ' in tmp:
     #    tmp = tmp[1:-1]
 
     # Grow items list according to parsed item length
@@ -329,6 +353,7 @@ def p_data(p):
         tmp_lst.append(tmp)
         p[0] = tmp_lst
 
+
 def p_args(p):
     '''
     args : arg
@@ -338,6 +363,7 @@ def p_args(p):
         p[0] = p[1]
     else:
         p[0] = []
+
 
 def p_arg(p):
     '''
@@ -362,7 +388,13 @@ def p_arg(p):
         tmp = p[1]
     else:
         tmp = p[3]
-    if type(tmp) is str and tmp[0] == '"' and tmp[-1] == '"' and len(tmp) > 2 and not ' ' in tmp:
+    if (
+        type(tmp) is str
+        and tmp[0] == '"'
+        and tmp[-1] == '"'
+        and len(tmp) > 2
+        and not ' ' in tmp
+    ):
         tmp = tmp[1:-1]
 
     # Grow items list according to parsed item length
@@ -375,6 +407,7 @@ def p_arg(p):
         tmp_lst.append(tmp)
         p[0] = tmp_lst
 
+
 def p_itemstar(p):
     '''
     itemstar : items
@@ -384,6 +417,7 @@ def p_itemstar(p):
         p[0] = p[1]
     else:
         p[0] = []
+
 
 def p_items(p):
     '''
@@ -430,7 +464,13 @@ def p_items(p):
         tmp = p[1]
     else:
         tmp = p[2]
-    if type(tmp) is str and tmp[0] == '"' and tmp[-1] == '"' and len(tmp) > 2 and not ' ' in tmp:
+    if (
+        type(tmp) is str
+        and tmp[0] == '"'
+        and tmp[-1] == '"'
+        and len(tmp) > 2
+        and not ' ' in tmp
+    ):
         tmp = tmp[1:-1]
 
     # Grow items list according to parsed item length
@@ -443,13 +483,19 @@ def p_items(p):
         tmp_lst.append(tmp)
         p[0] = tmp_lst
 
+
 def p_error(p):
     if p is None:
         tmp = "Syntax error at end of file."
     else:
-        tmp = "Syntax error at token '%s' with value '%s' (line %s, column %s)"\
-              % (p.type, p.value, p.lineno, _lex_token_position(p))
+        tmp = "Syntax error at token '%s' with value '%s' (line %s, column %s)" % (
+            p.type,
+            p.value,
+            p.lineno,
+            _lex_token_position(p),
+        )
     raise IOError(tmp)
+
 
 # --------------------------------------------------------------
 # the DAT file lexer and yaccer only need to be
@@ -474,30 +520,32 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
 
     if outputdir is None:
         # Try and write this into the module source...
-        outputdir = os.path.dirname(getfile( currentframe() ))
-        _tabfile = os.path.join(outputdir, tabmodule+".py")
+        outputdir = os.path.dirname(getfile(currentframe()))
+        _tabfile = os.path.join(outputdir, tabmodule + ".py")
         # Ideally, we would pollute a per-user configuration directory
         # first -- something like ~/.pyomo.
         if not os.access(outputdir, os.W_OK):
             _file = this_file()
             logger = logging.getLogger('pyomo.dataportal')
 
-            if os.path.exists(_tabfile) and \
-               os.path.getmtime(_file) >= os.path.getmtime(_tabfile):
+            if os.path.exists(_tabfile) and os.path.getmtime(_file) >= os.path.getmtime(
+                _tabfile
+            ):
                 logger.warning(
                     "Potentially outdated DAT Parse Table found in source "
                     "tree (%s), but you do not have write access to that "
                     "directory, so we cannot update it.  Please notify "
-                    "you system administrator to remove that file"
-                    % (_tabfile,))
-            if os.path.exists(_tabfile+'c') and \
-               os.path.getmtime(_file) >= os.path.getmtime(_tabfile+'c'):
+                    "you system administrator to remove that file" % (_tabfile,)
+                )
+            if os.path.exists(_tabfile + 'c') and os.path.getmtime(
+                _file
+            ) >= os.path.getmtime(_tabfile + 'c'):
                 logger.warning(
                     "Potentially outdated DAT Parse Table found in source "
                     "tree (%s), but you do not have write access to that "
                     "directory, so we cannot update it.  Please notify "
-                    "you system administrator to remove that file"
-                    % (_tabfile+'c',))
+                    "you system administrator to remove that file" % (_tabfile + 'c',)
+                )
 
             # Switch the directory for the tabmodule to the current directory
             outputdir = os.getcwd()
@@ -512,31 +560,31 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
         if os.path.exists(_parser_out):
             os.remove(_parser_out)
 
-        _tabfile = dat_yaccer_tabfile = os.path.join(outputdir, tabmodule+".py")
-        if debug > 0 or \
-           ( os.path.exists(_tabfile) and
-             os.path.getmtime(__file__) >= os.path.getmtime(_tabfile) ):
+        _tabfile = dat_yaccer_tabfile = os.path.join(outputdir, tabmodule + ".py")
+        if debug > 0 or (
+            os.path.exists(_tabfile)
+            and os.path.getmtime(__file__) >= os.path.getmtime(_tabfile)
+        ):
             #
             # Remove the parsetab.py* files.  These apparently need to
             # be removed to ensure the creation of a parser.out file.
             #
             if os.path.exists(_tabfile):
                 os.remove(_tabfile)
-            if os.path.exists(_tabfile+"c"):
-                os.remove(_tabfile+"c")
+            if os.path.exists(_tabfile + "c"):
+                os.remove(_tabfile + "c")
 
             for _mod in list(sys.modules.keys()):
-                if _mod == tabmodule or _mod.endswith('.'+tabmodule):
+                if _mod == tabmodule or _mod.endswith('.' + tabmodule):
                     del sys.modules[_mod]
 
         dat_lexer = lex.lex()
         #
         tmpsyspath = sys.path
         sys.path.append(outputdir)
-        dat_yaccer = yacc.yacc(debug=debug,
-                               tabmodule=tabmodule,
-                               outputdir=outputdir,
-                               optimize=True)
+        dat_yaccer = yacc.yacc(
+            debug=debug, tabmodule=tabmodule, outputdir=outputdir, optimize=True
+        )
         sys.path = tmpsyspath
 
     #
@@ -552,8 +600,10 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
     #
     if filename is not None:
         if data is not None:
-            raise ValueError("parse_data_commands: cannot specify both "
-                             "data and filename arguments")
+            raise ValueError(
+                "parse_data_commands: cannot specify both "
+                "data and filename arguments"
+            )
         with open(filename, 'r') as FILE:
             data = FILE.read()
 
@@ -562,6 +612,7 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
 
     dat_yaccer.parse(data, lexer=dat_lexer, debug=debug)
     return _parse_info
+
 
 if __name__ == '__main__':
     parse_data_commands(filename=sys.argv[1], debug=100)

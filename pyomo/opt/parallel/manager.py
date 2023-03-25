@@ -10,16 +10,24 @@
 #  ___________________________________________________________________________
 
 
-__all__ = ['ActionManagerError', 'ActionHandle', 'AsynchronousActionManager', 'ActionStatus', 'FailedActionHandle', 'solve_all_instances']
+__all__ = [
+    'ActionManagerError',
+    'ActionHandle',
+    'AsynchronousActionManager',
+    'ActionStatus',
+    'FailedActionHandle',
+    'solve_all_instances',
+]
 
 import enum
 
+
 class ActionStatus(str, enum.Enum):
-    done='done'
-    error='error'
-    queued='queued'
-    executing='executing'
-    unknown='unknown'
+    done = 'done'
+    error = 'error'
+    queued = 'queued'
+    executing = 'executing'
+    unknown = 'unknown'
 
     # Overloading __str__ is needed to match the behavior of the old
     # pyutilib.enum class (removed June 2020). There are spots in the
@@ -29,19 +37,22 @@ class ActionStatus(str, enum.Enum):
     def __str__(self):
         return self.value
 
+
 def solve_all_instances(solver_manager, solver, instances, **kwds):
     """
     A simple utility to apply a solver to a list of problem instances.
     """
     solver_manager.solve_all(solver, instances, **kwds)
 
+
 class ActionManagerError(Exception):
     """
     An exception used when an error occurs within an ActionManager.
     """
 
-    def __init__(self,*args,**kargs):
-        Exception.__init__(self,*args,**kargs)      #pragma:nocover
+    def __init__(self, *args, **kargs):
+        Exception.__init__(self, *args, **kargs)  # pragma:nocover
+
 
 class ActionHandle(object):
 
@@ -58,7 +69,7 @@ class ActionHandle(object):
         self.explanation = explanation
 
     def update(self, ah):
-        """ Update the contents of the provided ActionHandle """
+        """Update the contents of the provided ActionHandle"""
         self.id = ah.id
         self.status = ah.status
 
@@ -69,9 +80,11 @@ class ActionHandle(object):
         return self.id.__hash__()
 
     def __eq__(self, other):
-        return (self.__class__ is other.__class__) and \
-            (self.id.__hash__() == other.__hash__()) and \
-            (self.id == other.id)
+        return (
+            (self.__class__ is other.__class__)
+            and (self.id.__hash__() == other.__hash__())
+            and (self.id == other.id)
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -82,8 +95,8 @@ class ActionHandle(object):
 
 FailedActionHandle = ActionHandle(error=True)
 
-class AsynchronousActionManager(object):
 
+class AsynchronousActionManager(object):
     @staticmethod
     def _flatten(*args):
         ahs = set()
@@ -93,10 +106,10 @@ class AsynchronousActionManager(object):
                     ahs.add(item)
                 elif type(item) in (list, tuple, dict, set):
                     for ah in item:
-                        if type(ah) is not ActionHandle:     #pragma:nocover
+                        if type(ah) is not ActionHandle:  # pragma:nocover
                             raise ActionManagerError("Bad argument type %s" % str(ah))
                         ahs.add(ah)
-                else:                       #pragma:nocover
+                else:  # pragma:nocover
                     raise ActionManagerError("Bad argument type %s" % str(item))
         return ahs
 
@@ -120,7 +133,8 @@ class AsynchronousActionManager(object):
         results = self.wait_for(ah)
         if results is None:
             raise ActionManagerError(
-                "Problem executing an event.  No results are available.")
+                "Problem executing an event.  No results are available."
+            )
         return results
 
     def queue(self, *args, **kwds):
@@ -145,8 +159,11 @@ class AsynchronousActionManager(object):
         #
         ahs = set()
         if len(args) == 0:
-            ahs.update(ah for ah in self.event_handle.values()
-                       if ah.status == ActionStatus.queued)
+            ahs.update(
+                ah
+                for ah in self.event_handle.values()
+                if ah.status == ActionStatus.queued
+            )
         else:
             ahs = self._flatten(*args)
         #
@@ -184,8 +201,7 @@ class AsynchronousActionManager(object):
         while tmp != ah:
             tmp = self.wait_any()
             if tmp == FailedActionHandle:
-                raise ActionManagerError(
-                    "Action %s failed: %s" % (ah, tmp.explanation))
+                raise ActionManagerError("Action %s failed: %s" % (ah, tmp.explanation))
         return self.get_results(ah)
 
     def num_queued(self):
@@ -220,7 +236,9 @@ class AsynchronousActionManager(object):
         ActionHandle, and the ActionHandle status indicates whether
         the queue was successful.
         """
-        raise ActionManagerError("The _perform_queue method is not defined")     #pragma:nocover
+        raise ActionManagerError(
+            "The _perform_queue method is not defined"
+        )  # pragma:nocover
 
     def _perform_wait_any(self):
         """
@@ -230,4 +248,6 @@ class AsynchronousActionManager(object):
         again.  Note that an ActionHandle can be returned with a dummy
         value, to indicate an error.
         """
-        raise ActionManagerError("The _perform_wait_any method is not defined")      #pragma:nocover
+        raise ActionManagerError(
+            "The _perform_wait_any method is not defined"
+        )  # pragma:nocover
