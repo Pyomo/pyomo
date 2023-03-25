@@ -310,7 +310,7 @@ class IncidenceGraphInterface(object):
                 # Note that include_fixed is not necessary here. We have
                 # already checked this condition above.
             )
-        elif isinstance(model, pyomo_nlp.PyomoNLP):
+        elif pyomo_nlp_available and isinstance(model, pyomo_nlp.PyomoNLP):
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "
@@ -343,9 +343,9 @@ class IncidenceGraphInterface(object):
             self._incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
         else:
             raise TypeError(
-                "Unsupported type for incidence matrix. Expected "
-                "%s or %s but got %s."
-                % (pyomo_nlp.PyomoNLP, _BlockData, type(model))
+                "Unsupported type for incidence graph. Expected PyomoNLP"
+                " or _BlockData but got %s."
+                % type(model)
             )
 
     @property
