@@ -38,9 +38,11 @@ class PATHAMPL(ASL):
 
     def _default_executable(self):
         executable = Executable("pathampl")
-        if not executable:                      #pragma:nocover
-            logger.warning("Could not locate the 'pathampl' executable, "
-                           "which is required for solver %s" % self.name)
+        if not executable:  # pragma:nocover
+            logger.warning(
+                "Could not locate the 'pathampl' executable, "
+                "which is required for solver %s" % self.name
+            )
             self.enable = False
             return None
         return executable.path()

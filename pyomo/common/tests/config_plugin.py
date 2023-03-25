@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 from pyomo.common.config import ConfigDict, ConfigValue
 
+
 def get_configuration(config):
     ans = ConfigDict()
     ans.declare('key1', ConfigValue(default=0, domain=int))

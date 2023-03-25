@@ -20,6 +20,7 @@ import pickle
 import unittest
 from pyomo.common.collections import Bunch
 
+
 class Test(unittest.TestCase):
     def test_Bunch1(self):
         opt = Bunch('a=None c=d e="1 2 3" f=" 5 "', foo=1, bar='x')
@@ -34,20 +35,20 @@ class Test(unittest.TestCase):
         opt.xx = 1
         opt['yy'] = 2
         self.assertEqual(
-            set(opt.keys()),
-            set(['a', 'bar', 'c', 'f', 'foo', 'e', 'xx', 'yy'])
+            set(opt.keys()), set(['a', 'bar', 'c', 'f', 'foo', 'e', 'xx', 'yy'])
         )
         opt.x = Bunch(a=1, b=2)
         self.assertEqual(
-            set(opt.keys()),
-            set(['a', 'bar', 'c', 'f', 'foo', 'e', 'xx', 'yy', 'x'])
+            set(opt.keys()), set(['a', 'bar', 'c', 'f', 'foo', 'e', 'xx', 'yy', 'x'])
         )
         self.assertEqual(
             repr(opt),
             "Bunch(a = None, bar = 'x', c = 'd', e = '1 2 3', f = 5, "
-            "foo = 1, x = Bunch(a = 1, b = 2), xx = 1, yy = 2)")
+            "foo = 1, x = Bunch(a = 1, b = 2), xx = 1, yy = 2)",
+        )
         self.assertEqual(
-            str(opt), """a: None
+            str(opt),
+            """a: None
 bar: 'x'
 c: 'd'
 e: '1 2 3'
@@ -57,18 +58,20 @@ x:
     a: 1
     b: 2
 xx: 1
-yy: 2""")
+yy: 2""",
+        )
         opt._name_ = 'BUNCH'
         self.assertEqual(
-            set(opt.keys()),
-            set(['a', 'bar', 'c', 'f', 'foo', 'e', 'xx', 'yy', 'x'])
+            set(opt.keys()), set(['a', 'bar', 'c', 'f', 'foo', 'e', 'xx', 'yy', 'x'])
         )
         self.assertEqual(
             repr(opt),
             "Bunch(a = None, bar = 'x', c = 'd', e = '1 2 3', f = 5, "
-            "foo = 1, x = Bunch(a = 1, b = 2), xx = 1, yy = 2)")
+            "foo = 1, x = Bunch(a = 1, b = 2), xx = 1, yy = 2)",
+        )
         self.assertEqual(
-            str(opt), """a: None
+            str(opt),
+            """a: None
 bar: 'x'
 c: 'd'
 e: '1 2 3'
@@ -78,15 +81,19 @@ x:
     a: 1
     b: 2
 xx: 1
-yy: 2""")
+yy: 2""",
+        )
 
         with self.assertRaisesRegex(
-                TypeError, r"Bunch\(\) positional arguments must be strings"):
+            TypeError, r"Bunch\(\) positional arguments must be strings"
+        ):
             Bunch(5)
 
         with self.assertRaisesRegex(
-                ValueError, r"Bunch\(\) positional arguments must be space "
-                "separated strings of form 'key=value', got 'foo'"):
+            ValueError,
+            r"Bunch\(\) positional arguments must be space "
+            "separated strings of form 'key=value', got 'foo'",
+        ):
             Bunch('a=5 foo = 6')
 
     def test_pickle(self):
@@ -113,8 +120,7 @@ yy: 2""")
         del b._foo
         self.assertEqual(list(b.keys()), [])
         self.assertEqual(b.foo, None)
-        with self.assertRaisesRegex(
-                AttributeError, "Unknown attribute '_foo'"):
+        with self.assertRaisesRegex(AttributeError, "Unknown attribute '_foo'"):
             b._foo
 
     def test_item_methods(self):
@@ -135,28 +141,24 @@ yy: 2""")
         del b['_foo']
         self.assertEqual(list(b.keys()), [])
         self.assertEqual(b['foo'], None)
-        with self.assertRaisesRegex(
-                AttributeError, "Unknown attribute '_foo'"):
+        with self.assertRaisesRegex(AttributeError, "Unknown attribute '_foo'"):
             b['_foo']
 
-        with self.assertRaisesRegex(
-                ValueError, r"Bunch keys must be str \(got int\)"):
+        with self.assertRaisesRegex(ValueError, r"Bunch keys must be str \(got int\)"):
             b[5]
 
-        with self.assertRaisesRegex(
-                ValueError, r"Bunch keys must be str \(got int\)"):
+        with self.assertRaisesRegex(ValueError, r"Bunch keys must be str \(got int\)"):
             b[5] = 5
 
-        with self.assertRaisesRegex(
-                ValueError, r"Bunch keys must be str \(got int\)"):
+        with self.assertRaisesRegex(ValueError, r"Bunch keys must be str \(got int\)"):
             del b[5]
 
     def test_update(self):
         data = {
             'a': 1,
-            'b': [2, {'bb':3}, [4, {'bbb':5}]],
+            'b': [2, {'bb': 3}, [4, {'bbb': 5}]],
             'c': {'cc': 6, 'ccc': {'e': 7}},
-            'd': []
+            'd': [],
         }
 
         # Test passing a dict
@@ -167,7 +169,7 @@ yy: 2""")
             'Bunch(a = 1, '
             'b = [2, Bunch(bb = 3), [4, Bunch(bbb = 5)]], '
             'c = Bunch(cc = 6, ccc = Bunch(e = 7)), '
-            'd = [])'
+            'd = [])',
         )
 
         # Test passing a generator
@@ -178,7 +180,7 @@ yy: 2""")
             'Bunch(a = 1, '
             'b = [2, Bunch(bb = 3), [4, Bunch(bbb = 5)]], '
             'c = Bunch(cc = 6, ccc = Bunch(e = 7)), '
-            'd = [])'
+            'd = [])',
         )
 
         # Test passing a list
@@ -189,22 +191,22 @@ yy: 2""")
             'Bunch(a = 1, '
             'b = [2, Bunch(bb = 3), [4, Bunch(bbb = 5)]], '
             'c = Bunch(cc = 6, ccc = Bunch(e = 7)), '
-            'd = [])'
+            'd = [])',
         )
 
     def test_str(self):
         data = {
             'a': 1,
-            'b': [2, {'bb':3}, [4, {'bbb':5}]],
+            'b': [2, {'bb': 3}, [4, {'bbb': 5}]],
             'c': {'cc': 6, 'ccc': {'e': 7}},
-            'd': []
+            'd': [],
         }
 
         b = Bunch()
         b.update(data)
         self.assertEqual(
             str(b),
-'''
+            '''
 a: 1
 b:
 - 2
@@ -216,7 +218,7 @@ c:
     ccc:
         e: 7
 d: []
-'''.strip()
+'''.strip(),
         )
 
     def test_set_name(self):

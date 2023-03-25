@@ -18,11 +18,11 @@ from pyomo.dataportal.factory import DataManagerFactory
 
 
 def detuplize(d, sort=False):
-    #print("detuplize %s" % str(d))
-    if type(d) in (list,tuple,set):
+    # print("detuplize %s" % str(d))
+    if type(d) in (list, tuple, set):
         ans = []
         for item in d:
-            if type(item) in (list,tuple,set):
+            if type(item) in (list, tuple, set):
                 ans.append(list(item))
             else:
                 ans.append(item)
@@ -36,17 +36,18 @@ def detuplize(d, sort=False):
         # De-tuplize keys via list of key/value pairs
         #
         ans = []
-        for k,v in d.items():
+        for k, v in d.items():
             if type(k) is tuple:
-                ans.append( {'index':list(k), 'value':v} )
+                ans.append({'index': list(k), 'value': v})
             else:
-                ans.append( {'index':k, 'value':v} )
+                ans.append({'index': k, 'value': v})
         if sort:
-            return sorted(ans, key=lambda x:x['value'])
+            return sorted(ans, key=lambda x: x['value'])
         return ans
 
+
 def tuplize(d):
-    #print("tuplize %s" % str(d))
+    # print("tuplize %s" % str(d))
     if type(d) is list and len(d) > 0 and not type(d[0]) is dict:
         ans = []
         for val in d:
@@ -85,12 +86,11 @@ def tuplize(d):
     elif type(d) is dict:
         return d
     else:
-        return {None:d}
+        return {None: d}
 
 
 @DataManagerFactory.register("json", "JSON file interface")
 class JSONDictionary(object):
-
     def __init__(self):
         self._info = {}
         self.options = Bunch()
@@ -125,7 +125,7 @@ class JSONDictionary(object):
         if jdata is None or len(jdata) == 0:
             raise IOError("Empty JSON data file")
         self._info = {}
-        for k,v in jdata.items():
+        for k, v in jdata.items():
             self._info[k] = tuplize(v)
 
     def write(self, data):
@@ -135,7 +135,7 @@ class JSONDictionary(object):
         with open(self.filename, 'w') as OUTPUT:
             jdata = {}
             if self.options.data is None:
-                for k,v in data.items():
+                for k, v in data.items():
                     jdata[k] = detuplize(v)
             elif type(self.options.data) in (list, tuple):
                 for k in self.options.data:
@@ -163,7 +163,10 @@ class JSONDictionary(object):
                 key = self.options.data
                 self._set_data(data, self.options.namespace, key, self._info[key])
         except KeyError:
-            raise IOError("Data value for '%s' is not available in JSON file '%s'" % (key, self.filename))
+            raise IOError(
+                "Data value for '%s' is not available in JSON file '%s'"
+                % (key, self.filename)
+            )
 
     def _set_data(self, data, namespace, name, value):
         if type(value) is dict:
@@ -175,10 +178,8 @@ class JSONDictionary(object):
         self._info = {}
 
 
-
 @DataManagerFactory.register("yaml", "YAML file interface")
 class YamlDictionary(object):
-
     def __init__(self):
         self._info = {}
         self.options = Bunch()
@@ -216,7 +217,7 @@ class YamlDictionary(object):
         if jdata is None:
             raise IOError("Empty YAML file")
         self._info = {}
-        for k,v in jdata.items():
+        for k, v in jdata.items():
             self._info[k] = tuplize(v)
 
     def write(self, data):
@@ -226,7 +227,7 @@ class YamlDictionary(object):
         with open(self.filename, 'w') as OUTPUT:
             jdata = {}
             if self.options.data is None:
-                for k,v in data.items():
+                for k, v in data.items():
                     jdata[k] = detuplize(v)
             elif type(self.options.data) in (list, tuple):
                 for k in self.options.data:
@@ -254,7 +255,10 @@ class YamlDictionary(object):
                 key = self.options.data
                 self._set_data(data, self.options.namespace, key, self._info[key])
         except KeyError:
-            raise IOError("Data value for '%s' is not available in YAML file '%s'" % (key, self.filename))
+            raise IOError(
+                "Data value for '%s' is not available in YAML file '%s'"
+                % (key, self.filename)
+            )
 
     def _set_data(self, data, namespace, name, value):
         if type(value) is dict:
@@ -264,5 +268,3 @@ class YamlDictionary(object):
 
     def clear(self):
         self._info = {}
-
-

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 class _robust_sort_keyfcn(object):
     """Class for robustly generating sortable keys for arbitrary data.
 
@@ -23,6 +24,7 @@ class _robust_sort_keyfcn(object):
     user's original key function, if provided
 
     """
+
     _typemap = {
         int: (1, float.__name__),
         float: (1, float.__name__),
@@ -60,7 +62,7 @@ class _robust_sort_keyfcn(object):
             # it is, sort it as if it were a float.
             try:
                 # Extra check that the comparison returns a meaningful result
-                if bool(val < 1.) != bool(1. < val or 1. == val):
+                if bool(val < 1.0) != bool(1.0 < val or 1.0 == val):
                     _typename = float.__name__
             except:
                 pass

@@ -75,6 +75,7 @@ class redirect_fd(object):
         If True, and `fd` is 1 or 2, then update `sys.stdout` or
         `sys.stderr` to also point to the new file descriptor
     """
+
     def __init__(self, fd=1, output=None, synchronize=True):
         if output is None:
             # /dev/null is used just to discard what is being printed
@@ -156,6 +157,7 @@ class capture_output(object):
     Takes in a StringIO, file-like object, or filename and temporarily
     redirects output to a string buffer.
     """
+
     def __init__(self, output=None, capture_fd=False):
         if output is None:
             output = StringIO()
@@ -179,7 +181,7 @@ class capture_output(object):
         if self.capture_fd:
             self.fd_redirect = (
                 redirect_fd(1, sys.stdout.fileno()),
-                redirect_fd(2, sys.stderr.fileno())
+                redirect_fd(2, sys.stderr.fileno()),
             )
             self.fd_redirect[0].__enter__()
             self.fd_redirect[1].__enter__()
@@ -223,9 +225,14 @@ class _StreamHandle(object):
             # While we support "unbuffered" behavior in text mode,
             # python does not
             buffering = -1
-        self.write_file = os.fdopen(self.write_pipe, mode=mode,
-                                    buffering=buffering, encoding=encoding,
-                                    newline=newline, closefd=False)
+        self.write_file = os.fdopen(
+            self.write_pipe,
+            mode=mode,
+            buffering=buffering,
+            encoding=encoding,
+            newline=newline,
+            closefd=False,
+        )
         self.decoder_buffer = b''
         try:
             self.encoding = encoding or self.write_file.encoding
@@ -270,12 +277,14 @@ class _StreamHandle(object):
             logger.error(
                 "Stream handle closed with a partial line "
                 "in the output buffer that was not emitted to the "
-                "output stream(s):\n\t'%s'" % (self.output_buffer,))
+                "output stream(s):\n\t'%s'" % (self.output_buffer,)
+            )
         if self.decoder_buffer:
             logger.error(
                 "Stream handle closed with un-decoded characters "
                 "in the decoder buffer that was not emitted to the "
-                "output stream(s):\n\t%r" % (self.decoder_buffer,))
+                "output stream(s):\n\t%r" % (self.decoder_buffer,)
+            )
 
     def decodeIncomingBuffer(self):
         if not self.encoding:
@@ -326,8 +335,8 @@ class _StreamHandle(object):
                 logger.error(
                     "Output stream (%s) closed before all output was "
                     "written to it. The following was left in "
-                    "the output buffer:\n\t%r" % (
-                        stream, ostring[written:],))
+                    "the output buffer:\n\t%r" % (stream, ostring[written:])
+                )
 
 
 class TeeStream(object):
@@ -391,17 +400,19 @@ class TeeStream(object):
             if not self._threads:
                 break
             _poll *= 2
-            if _poll_timeout <= _poll < 2*_poll_timeout:
+            if _poll_timeout <= _poll < 2 * _poll_timeout:
                 if in_exception:
                     # We are already processing an exception: no reason
                     # to trigger another, nor to deadlock for an extended time
                     break
                 logger.warning(
                     "Significant delay observed waiting to join reader "
-                    "threads, possible output stream deadlock")
+                    "threads, possible output stream deadlock"
+                )
             elif _poll >= _poll_timeout_deadlock:
                 raise RuntimeError(
-                    "TeeStream: deadlock observed joining reader threads")
+                    "TeeStream: deadlock observed joining reader threads"
+                )
 
         for h in list(self._handles):
             h.finalize(self.ostreams)
@@ -439,7 +450,7 @@ class TeeStream(object):
             # The merged reader is already running... nothing additional
             # needs to be done
             pass
-            
+
     def _streamReader(self, handle):
         while True:
             new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
@@ -453,14 +464,14 @@ class TeeStream(object):
             # Now, output whatever we have decoded to the output streams
             handle.writeOutputBuffer(self.ostreams)
         #
-        #print("STREAM READER: DONE")
+        # print("STREAM READER: DONE")
 
     def _mergedReader(self):
         noop = []
         handles = self._active_handles
         _poll = _poll_interval
         _fast_poll_ct = _poll_rampup
-        new_data = '' # something not None
+        new_data = ''  # something not None
         while handles:
             if new_data is None:
                 # For performance reasons, we use very aggressive
@@ -503,8 +514,7 @@ class TeeStream(object):
                 # send select() a *copy* of the handles list, as we see
                 # deadlocks when handles are added while select() is
                 # waiting
-                ready_handles = select(
-                    list(handles), noop, noop, _poll)[0]
+                ready_handles = select(list(handles), noop, noop, _poll)[0]
                 if not ready_handles:
                     new_data = None
                     continue
@@ -523,4 +533,4 @@ class TeeStream(object):
             # Now, output whatever we have decoded to the output streams
             handle.writeOutputBuffer(self.ostreams)
         #
-        #print("MERGED READER: DONE")
+        # print("MERGED READER: DONE")
