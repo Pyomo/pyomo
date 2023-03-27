@@ -13,7 +13,15 @@
 # NOTE: deprecated code
 #
 from pyomo.common.deprecation import deprecated
-from pyomo.core import TransformationFactory, Constraint, Set, Var, Objective, AbstractModel, maximize
+from pyomo.core import (
+    TransformationFactory,
+    Constraint,
+    Set,
+    Var,
+    Objective,
+    AbstractModel,
+    maximize,
+)
 from pyomo.repn import generate_standard_repn
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.standard_form import StandardForm
@@ -42,7 +50,8 @@ class DualTransformation(IsomorphicTransformation):
         "Development of dualization capabilities has been shifted to "
         "the Pyomo Adversarial Optimization (PAO) library. Please contact "
         "William Hart for further details (wehart@sandia.gov).",
-        version='5.6.2')
+        version='5.6.2',
+    )
     def __init__(self, **kwds):
         kwds['name'] = "linear_dual"
         super(DualTransformation, self).__init__(**kwds)
@@ -95,8 +104,7 @@ class DualTransformation(IsomorphicTransformation):
                 cname = "%s%s" % (variable_prefix, con.local_name)
 
                 # Process the body of the constraint
-                body_terms = process_canonical_repn(
-                    generate_standard_repn(con.body))
+                body_terms = process_canonical_repn(generate_standard_repn(con.body))
 
                 # Add a numeric constant to the 'b' vector, if present
                 b[cname] -= body_terms.pop(None, 0)
@@ -109,8 +117,7 @@ class DualTransformation(IsomorphicTransformation):
                 # Process the upper bound of the constraint. We rely on
                 # StandardForm to produce equality constraints, thus
                 # requiring us only to check the lower bounds.
-                lower_terms = process_canonical_repn(
-                    generate_standard_repn(con.lower))
+                lower_terms = process_canonical_repn(generate_standard_repn(con.lower))
 
                 # Add a numeric constant to the 'b' matrix, if present
                 b[cname] += lower_terms.pop(None, 0)
@@ -128,12 +135,11 @@ class DualTransformation(IsomorphicTransformation):
                 # The qualified objective name
 
                 # Process the objective
-                terms = process_canonical_repn(
-                    generate_standard_repn(obj.expr))
+                terms = process_canonical_repn(generate_standard_repn(obj.expr))
 
                 # Add coefficients
                 for (name, coef) in terms.items():
-                    c["%s%s" % (name, constraint_suffix)] += coef*obj_array.sense
+                    c["%s%s" % (name, constraint_suffix)] += coef * obj_array.sense
 
         # Form the dual
         dual = AbstractModel()
@@ -142,8 +148,7 @@ class DualTransformation(IsomorphicTransformation):
         constraint_set_init = []
         for (var_name, var_array) in sf.component_map(Var, active=True).items():
             for var in (var_array[ndx] for ndx in var_array.index_set()):
-                constraint_set_init.append("%s%s" %
-                                           (var.local_name, constraint_suffix))
+                constraint_set_init.append("%s%s" % (var.local_name, constraint_suffix))
 
         # Make variable index set
         variable_set_init = []
@@ -160,14 +165,14 @@ class DualTransformation(IsomorphicTransformation):
 
         # Make the dual constraints
         def constraintRule(A, c, ndx, model):
-            return sum(A[v][ndx] * model.vars[v] for v in model.var_set) <= \
-                   c[ndx]
-        dual.cons = Constraint(dual.con_set,
-                               rule=partial(constraintRule, A, c))
+            return sum(A[v][ndx] * model.vars[v] for v in model.var_set) <= c[ndx]
+
+        dual.cons = Constraint(dual.con_set, rule=partial(constraintRule, A, c))
 
         # Make the dual objective (maximizing)
         def objectiveRule(b, model):
             return sum(b[v] * model.vars[v] for v in model.var_set)
+
         dual.obj = Objective(rule=partial(objectiveRule, b), sense=maximize)
 
         return dual.create()
@@ -207,4 +212,3 @@ class _sparse(dict):
                 return self._default_func()
             else:
                 return self._default_value
-

@@ -35,7 +35,7 @@ class TestDisjunction(unittest.TestCase):
         self.assertEqual(len(m.x1), 1)
         self.assertEqual(m.x1.disjuncts, [m.d, m.e])
 
-        m.x2 = Disjunction([1,2,3,4])
+        m.x2 = Disjunction([1, 2, 3, 4])
         self.assertEqual(len(m.x2), 0)
 
         m.x2[2] = [m.d, m.e]
@@ -46,7 +46,7 @@ class TestDisjunction(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.d = Disjunction(expr=[m.x<=0, m.y>=1])
+        m.d = Disjunction(expr=[m.x <= 0, m.y >= 1])
         self.assertEqual(len(m.component_map(Disjunction)), 1)
         self.assertEqual(len(m.component_map(Disjunct)), 1)
 
@@ -61,7 +61,7 @@ class TestDisjunction(unittest.TestCase):
 
         # Test that the implicit disjuncts get a unique name
         m.add_component('e_disjuncts', Var())
-        m.e = Disjunction(expr=[m.y<=0, m.x>=1])
+        m.e = Disjunction(expr=[m.y <= 0, m.x >= 1])
         self.assertEqual(len(m.component_map(Disjunction)), 2)
         self.assertEqual(len(m.component_map(Disjunct)), 2)
         implicit_disjuncts = list(m.component_map(Disjunct).keys())
@@ -77,14 +77,10 @@ class TestDisjunction(unittest.TestCase):
 
         # Test that the implicit disjuncts can be lists/tuples/generators
         def _gen():
-            yield m.y<=4
-            yield m.x>=5
-        m.f = Disjunction(expr=[
-            [ m.y<=0,
-              m.x>=1 ],
-            ( m.y<=2,
-              m.x>=3 ),
-            _gen() ])
+            yield m.y <= 4
+            yield m.x >= 5
+
+        m.f = Disjunction(expr=[[m.y <= 0, m.x >= 1], (m.y <= 2, m.x >= 3), _gen()])
         self.assertEqual(len(m.component_map(Disjunction)), 3)
         self.assertEqual(len(m.component_map(Disjunct)), 3)
         implicit_disjuncts = list(m.component_map(Disjunct).keys())
@@ -118,8 +114,8 @@ class TestDisjunct(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.d1 = Disjunct()
-        m.d1.constraint = Constraint(expr=m.x<=0)
-        m.d = Disjunction(expr=[m.d1, m.x>=1, m.x>=5])
+        m.d1.constraint = Constraint(expr=m.x <= 0)
+        m.d = Disjunction(expr=[m.d1, m.x >= 1, m.x >= 5])
         d2 = m.d.disjuncts[1].parent_component()
         self.assertEqual(len(m.component_map(Disjunction)), 1)
         self.assertEqual(len(m.component_map(Disjunct)), 2)
@@ -198,8 +194,8 @@ class TestDisjunct(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.d1 = Disjunct()
-        m.d1.constraint = Constraint(expr=m.x<=0)
-        m.d = Disjunction(expr=[m.d1, m.x>=1, m.x>=5])
+        m.d1.constraint = Constraint(expr=m.x <= 0)
+        m.d = Disjunction(expr=[m.d1, m.x >= 1, m.x >= 5])
         d2 = m.d.disjuncts[1].parent_component()
         self.assertEqual(len(m.component_map(Disjunction)), 1)
         self.assertEqual(len(m.component_map(Disjunct)), 2)
@@ -237,6 +233,7 @@ class TestDisjunct(unittest.TestCase):
     def test_indexed_disjunct_active_property(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 12))
+
         @m.Disjunct([0, 1, 2])
         def disjunct(d, i):
             m = d.model()
@@ -263,9 +260,10 @@ class TestDisjunct(unittest.TestCase):
     def test_indexed_disjunction_active_property(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 12))
+
         @m.Disjunction([0, 1, 2])
         def disjunction(m, i):
-            return [m.x == i*5, m.x == i*5 + 1]
+            return [m.x == i * 5, m.x == i * 5 + 1]
 
         self.assertTrue(m.disjunction.active)
         m.disjunction[2].deactivate()
@@ -279,6 +277,7 @@ class TestDisjunct(unittest.TestCase):
         self.assertFalse(m.disjunction.active)
         for i in range(3):
             self.assertFalse(m.disjunction[i].active)
+
 
 class TestAutoVars(unittest.TestCase):
     def test_synchronize_value(self):
@@ -381,8 +380,10 @@ class TestAutoVars(unittest.TestCase):
 
         with LoggingIntercept() as LOG:
             m.biv.fix(0.5)
-        self.assertEqual(LOG.getvalue().strip(), "Setting Var 'biv' to a "
-                         "value `0.5` (float) not in domain Binary.")
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'biv' to a value `0.5` (float) not in domain Binary.",
+        )
         self.assertEqual(m.iv.value, None)
         self.assertEqual(m.biv.value, 0.5)
 
@@ -400,11 +401,14 @@ class TestAutoVars(unittest.TestCase):
 
         # Note that fixing to a near-True value will toggle the iv
         with LoggingIntercept() as LOG:
-            m.biv.fix(1-eps)
-        self.assertEqual(LOG.getvalue().strip(), "Setting Var 'biv' to a "
-                         "value `%s` (float) not in domain Binary." % (1-eps))
+            m.biv.fix(1 - eps)
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'biv' to a "
+            "value `%s` (float) not in domain Binary." % (1 - eps),
+        )
         self.assertEqual(m.iv.value, True)
-        self.assertEqual(m.biv.value, 1-eps)
+        self.assertEqual(m.biv.value, 1 - eps)
 
         with LoggingIntercept() as LOG:
             m.biv.fix(eps, True)
@@ -458,8 +462,7 @@ class TestAutoVars(unittest.TestCase):
 
         m.biv = 1
 
-        deprecation_msg = (
-            "Implicit conversion of the Boolean indicator_var 'iv'")
+        deprecation_msg = "Implicit conversion of the Boolean indicator_var 'iv'"
 
         out = StringIO()
         with LoggingIntercept(out):
@@ -473,7 +476,7 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertEqual(m.iv.bounds, (0,1))
+            self.assertEqual(m.iv.bounds, (0, 1))
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
@@ -488,7 +491,7 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            m.iv.bounds = (1,1)
+            m.iv.bounds = (1, 1)
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
@@ -513,24 +516,27 @@ class TestAutoVars(unittest.TestCase):
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                    PyomoException, r"Cannot convert non-constant Pyomo "
-                    r"numeric value \(biv\) to bool"):
+                PyomoException,
+                r"Cannot convert non-constant Pyomo " r"numeric value \(biv\) to bool",
+            ):
                 bool(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                    TypeError, r"Implicit conversion of Pyomo numeric "
-                    r"value \(biv\) to float"):
+                TypeError,
+                r"Implicit conversion of Pyomo numeric " r"value \(biv\) to float",
+            ):
                 float(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                    TypeError, r"Implicit conversion of Pyomo numeric "
-                    r"value \(biv\) to int"):
+                TypeError,
+                r"Implicit conversion of Pyomo numeric " r"value \(biv\) to int",
+            ):
                 int(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 
@@ -599,7 +605,6 @@ class TestAutoVars(unittest.TestCase):
             self.assertIs((m.iv > 0).args[1], m.biv)
         self.assertIn(deprecation_msg, out.getvalue())
 
-
         out = StringIO()
         with LoggingIntercept(out):
             e = m.iv + 1
@@ -638,9 +643,8 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertIs((m.iv ** 2).args[0], m.biv)
+            self.assertIs((m.iv**2).args[0], m.biv)
         self.assertIn(deprecation_msg, out.getvalue())
-
 
         out = StringIO()
         with LoggingIntercept(out):
@@ -680,9 +684,8 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertIs((2 ** m.iv).args[1], m.biv)
+            self.assertIs((2**m.iv).args[1], m.biv)
         self.assertIn(deprecation_msg, out.getvalue())
-
 
         out = StringIO()
         with LoggingIntercept(out):
@@ -734,7 +737,5 @@ class TestAutoVars(unittest.TestCase):
         self.assertIn(deprecation_msg, out.getvalue())
 
 
-
 if __name__ == '__main__':
     unittest.main()
-

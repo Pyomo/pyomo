@@ -11,4 +11,6 @@
 
 RELO_ATTR = 42
 
-class ReloClass(object): pass
+
+class ReloClass(object):
+    pass

@@ -16,10 +16,23 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.formatting import tostr, tabular_writer, StreamIndenter
 
-class DerivedList(list): pass
-class DerivedTuple(tuple): pass
-class DerivedDict(dict): pass
-class DerivedStr(str): pass
+
+class DerivedList(list):
+    pass
+
+
+class DerivedTuple(tuple):
+    pass
+
+
+class DerivedDict(dict):
+    pass
+
+
+class DerivedStr(str):
+    pass
+
+
 NamedTuple = namedtuple('NamedTuple', ['x', 'y'])
 
 
@@ -37,7 +50,7 @@ class TestToStr(unittest.TestCase):
         self.assertIs(tostr.handlers[DerivedStr], tostr.handlers[str])
 
     def test_new_type_list(self):
-        self.assertEqual(tostr(DerivedList([1,2])), '[1, 2]')
+        self.assertEqual(tostr(DerivedList([1, 2])), '[1, 2]')
         self.assertIs(tostr.handlers[DerivedList], tostr.handlers[list])
 
     def test_new_type_dict(self):
@@ -45,7 +58,7 @@ class TestToStr(unittest.TestCase):
         self.assertIs(tostr.handlers[DerivedDict], tostr.handlers[dict])
 
     def test_new_type_tuple(self):
-        self.assertEqual(tostr(DerivedTuple([1,2])), '(1, 2)')
+        self.assertEqual(tostr(DerivedTuple([1, 2])), '(1, 2)')
         self.assertIs(tostr.handlers[DerivedTuple], tostr.handlers[tuple])
 
     def test_new_type_namedtuple(self):
@@ -100,9 +113,11 @@ Key : s : val
     def test_multiline_generator(self):
         os = StringIO()
         data = {'a': 0, 'b': 1, 'c': 3}
+
         def _data_gen(i, j):
             for n in range(j):
-                yield (n, chr(ord('a')+n)*j)
+                yield (n, chr(ord('a') + n) * j)
+
         tabular_writer(os, "", data.items(), ['i', 'j'], _data_gen)
         ref = u"""
 Key : i    : j
@@ -117,11 +132,13 @@ Key : i    : j
     def test_multiline_generator_exception(self):
         os = StringIO()
         data = {'a': 0, 'b': 1, 'c': 3}
+
         def _data_gen(i, j):
             if i == 'b':
                 raise ValueError("invalid")
             for n in range(j):
-                yield (n, chr(ord('a')+n)*j)
+                yield (n, chr(ord('a') + n) * j)
+
         tabular_writer(os, "", data.items(), ['i', 'j'], _data_gen)
         ref = u"""
 Key : i    : j
@@ -136,10 +153,12 @@ Key : i    : j
     def test_data_exception(self):
         os = StringIO()
         data = {'a': 0, 'b': 1, 'c': 3}
+
         def _data_gen(i, j):
             if i == 'b':
                 raise ValueError("invalid")
-            return (j, i*(j+1))
+            return (j, i * (j + 1))
+
         tabular_writer(os, "", data.items(), ['i', 'j'], _data_gen)
         ref = u"""
 Key : i    : j
@@ -152,14 +171,16 @@ Key : i    : j
     def test_multiline_alignment(self):
         os = StringIO()
         data = {'a': 1, 'b': 2, 'c': 3}
+
         def _data_gen(i, j):
             for n in range(j):
-                _str = chr(ord('a')+n)*(j+1)
+                _str = chr(ord('a') + n) * (j + 1)
                 if n % 2:
                     _str = list(_str)
                     _str[1] = ' '
                     _str = ''.join(_str)
                 yield (n, _str)
+
         tabular_writer(os, "", data.items(), ['i', 'j'], _data_gen)
         ref = u"""
 Key : i : j
@@ -178,8 +199,7 @@ class TestStreamIndenter(unittest.TestCase):
         OUT1 = StringIO()
         OUT2 = StreamIndenter(OUT1)
         OUT2.write('Hello?\nHello, world!')
-        self.assertEqual('    Hello?\n    Hello, world!',
-                         OUT2.getvalue())
+        self.assertEqual('    Hello?\n    Hello, world!', OUT2.getvalue())
 
     def test_prefix(self):
         prefix = 'foo:'
@@ -192,12 +212,10 @@ class TestStreamIndenter(unittest.TestCase):
         OUT1 = StringIO()
         OUT2 = StreamIndenter(OUT1)
         OUT2.write('Hello?\n\nText\n\nHello, world!')
-        self.assertEqual('    Hello?\n\n    Text\n\n    Hello, world!',
-                         OUT2.getvalue())
+        self.assertEqual('    Hello?\n\n    Text\n\n    Hello, world!', OUT2.getvalue())
 
     def test_writelines(self):
         OUT1 = StringIO()
         OUT2 = StreamIndenter(OUT1)
         OUT2.writelines(['Hello?\n', '\n', 'Text\n', '\n', 'Hello, world!'])
-        self.assertEqual('    Hello?\n\n    Text\n\n    Hello, world!',
-                         OUT2.getvalue())
+        self.assertEqual('    Hello?\n\n    Text\n\n    Hello, world!', OUT2.getvalue())

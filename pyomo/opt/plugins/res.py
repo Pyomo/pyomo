@@ -40,7 +40,6 @@ class ResultsReader_yaml(results.AbstractResultsReader):
         return res
 
 
-
 @results.ReaderFactory.register(str(ResultsFormat.json))
 class ResultsReader_json(results.AbstractResultsReader):
     """
@@ -60,4 +59,3 @@ class ResultsReader_json(results.AbstractResultsReader):
         #
         res.read(filename, using_yaml=False)
         return res
-

@@ -16,14 +16,18 @@ from pyomo.common.deprecation import deprecated
 
 logger = logging.getLogger('pyomo.common')
 
+
 @deprecated(
-    "Use of get_gsl is deprecated and NO LONGER FUNCTIONS as of February 9, "
-    "2023. ",
-    version='6.5.0')
+    "Use of get_gsl is deprecated and NO LONGER FUNCTIONS as of February 9, 2023. ",
+    version='6.5.0',
+)
 def get_gsl(downloader):
-    logger.info("As of February 9, 2023, AMPL GSL can no longer be downloaded\
-                through download-extensions. Visit https://portal.ampl.com/\
-                to download the AMPL GSL binaries.")
+    logger.info(
+        "As of February 9, 2023, AMPL GSL can no longer be downloaded\
+        through download-extensions. Visit https://portal.ampl.com/\
+        to download the AMPL GSL binaries."
+    )
+
 
 def find_GSL():
     # FIXME: the GSL interface is currently broken in PyPy:

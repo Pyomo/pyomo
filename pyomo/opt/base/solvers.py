@@ -9,10 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('OptSolver',
-           'SolverFactory',
-           'UnknownSolver',
-           'check_available_solvers')
+__all__ = ('OptSolver', 'SolverFactory', 'UnknownSolver', 'check_available_solvers')
 
 import re
 import sys
@@ -43,7 +40,7 @@ def _extract_version(x, length=4):
     Attempts to extract solver version information from a string.
     """
     assert (1 <= length) and (length <= 4)
-    m = re.search('[t,T]runk',x)
+    m = re.search('[t,T]runk', x)
     if m is not None:
         # Since most version checks are comparing if the current
         # version is greater/less than some other version, it makes
@@ -53,25 +50,23 @@ def _extract_version(x, length=4):
     m = re.search(r'[0-9]+(\.[0-9]+){1,3}', x)
     if not m is None:
         version = tuple(int(i) for i in m.group(0).split('.')[:length])
-        while(len(version) < length):
+        while len(version) < length:
             version += (0,)
         return version
-    return None #(0,0,0,0)[:length]
+    return None  # (0,0,0,0)[:length]
 
 
 class UnknownSolver(object):
-
     def __init__(self, *args, **kwds):
-        #super(UnknownSolver,self).__init__(**kwds)
+        # super(UnknownSolver,self).__init__(**kwds)
 
         #
         # The 'type' is the class type of the solver instance
         #
         if "type" in kwds:
             self.type = kwds["type"]
-        else:  #pragma:nocover
-            raise ValueError(
-                "Expected option 'type' for UnknownSolver constructor")
+        else:  # pragma:nocover
+            raise ValueError("Expected option 'type' for UnknownSolver constructor")
 
         self.options = {}
         self._args = args
@@ -98,7 +93,7 @@ class UnknownSolver(object):
         return False
 
     def warm_start_capable(self):
-        """ True is the solver can accept a warm-start solution."""
+        """True is the solver can accept a warm-start solution."""
         return False
 
     def solve(self, *args, **kwds):
@@ -120,7 +115,8 @@ class UnknownSolver(object):
         self._solver_error(attr)
 
     def _solver_error(self, method_name):
-        raise RuntimeError("""Attempting to use an unavailable solver.
+        raise RuntimeError(
+            """Attempting to use an unavailable solver.
 
 The SolverFactory was unable to create the solver "%s"
 and returned an UnknownSolver object.  This error is raised at the point
@@ -128,20 +124,21 @@ where the UnknownSolver object was used as if it were valid (by calling
 method "%s").
 
 The original solver was created with the following parameters:
-\t""" % ( self.type, method_name )
-+ "\n\t".join("%s: %s" % i for i in sorted(self._kwds.items()))
-+ "\n\t_args: %s" % ( self._args, )
-+ "\n\toptions: %s" % ( self.options, ) )
+\t"""
+            % (self.type, method_name)
+            + "\n\t".join("%s: %s" % i for i in sorted(self._kwds.items()))
+            + "\n\t_args: %s" % (self._args,)
+            + "\n\toptions: %s" % (self.options,)
+        )
 
 
 class SolverFactoryClass(Factory):
-
     def __call__(self, _name=None, **kwds):
         if _name is None:
             return self
-        _name=str(_name)
+        _name = str(_name)
         if ':' in _name:
-            _name, subsolver = _name.split(':',1)
+            _name, subsolver = _name.split(':', 1)
             kwds['solver'] = subsolver
         elif 'solver' in kwds:
             subsolver = kwds['solver']
@@ -155,29 +152,33 @@ class SolverFactoryClass(Factory):
                 mode = kwds.get('solver_io', 'nl')
                 if mode is None:
                     mode = 'nl'
-                _implicit_solvers = {'nl': 'asl' }
+                _implicit_solvers = {'nl': 'asl'}
                 if "executable" not in kwds:
                     kwds["executable"] = _name
                 if mode in _implicit_solvers:
                     if _implicit_solvers[mode] not in self._cls:
                         raise RuntimeError(
                             "  The solver plugin was not registered.\n"
-                            "  Please confirm that the 'pyomo.environ' package has been imported.")
+                            "  Please confirm that the 'pyomo.environ' package has been imported."
+                        )
                     opt = self._cls[_implicit_solvers[mode]](**kwds)
                     if opt is not None:
-                        opt.set_options('solver='+_name)
+                        opt.set_options('solver=' + _name)
         except:
             err = sys.exc_info()
-            logger.warning("Failed to create solver with name '%s':\n%s"
-                           % (_name, err[1]), exc_info=err)
+            logger.warning(
+                "Failed to create solver with name '%s':\n%s" % (_name, err[1]),
+                exc_info=err,
+            )
             opt = None
         if opt is not None and _name != "py" and subsolver is not None:
             # py just creates instance of its subsolver, no need for this option
-            opt.set_options('solver='+subsolver)
+            opt.set_options('solver=' + subsolver)
         if opt is None:
-            opt = UnknownSolver( type=_name, **kwds )
+            opt = UnknownSolver(type=_name, **kwds)
             opt.name = _name
         return opt
+
 
 SolverFactory = SolverFactoryClass('solver type')
 
@@ -196,23 +197,23 @@ def check_available_solvers(*args):
 
     ans = []
     for arg in args:
-        if not isinstance(arg,tuple):
+        if not isinstance(arg, tuple):
             name = arg
             arg = (arg,)
         else:
             name = arg[0]
         opt = SolverFactory(*arg)
         if opt is None or isinstance(opt, UnknownSolver):
-            continue # not available
+            continue  # not available
 
         if not opt.available(exception_flag=False):
-            continue # not available
+            continue  # not available
 
         if hasattr(opt, 'executable') and opt.executable() is None:
-            continue # not available
+            continue  # not available
 
         if not opt.license_is_valid():
-            continue # not available
+            continue  # not available
 
         # At this point, the solver is available (and licensed)
         ans.append(name)
@@ -221,13 +222,15 @@ def check_available_solvers(*args):
 
     return ans
 
+
 def _raise_ephemeral_error(name, keyword=""):
     raise AttributeError(
         "The property '%s' can no longer be set directly on "
         "the solver object. It should instead be passed as a "
         "keyword into the solve method%s. It will automatically "
         "be reset to its default value after each invocation of "
-        "solve." % (name, keyword))
+        "solve." % (name, keyword)
+    )
 
 
 class OptSolver(object):
@@ -250,6 +253,7 @@ class OptSolver(object):
     @property
     def tee(self):
         _raise_ephemeral_error('tee')
+
     @tee.setter
     def tee(self, val):
         _raise_ephemeral_error('tee')
@@ -257,6 +261,7 @@ class OptSolver(object):
     @property
     def suffixes(self):
         _raise_ephemeral_error('suffixes')
+
     @suffixes.setter
     def suffixes(self, val):
         _raise_ephemeral_error('suffixes')
@@ -264,6 +269,7 @@ class OptSolver(object):
     @property
     def keepfiles(self):
         _raise_ephemeral_error('keepfiles')
+
     @keepfiles.setter
     def keepfiles(self, val):
         _raise_ephemeral_error('keepfiles')
@@ -271,6 +277,7 @@ class OptSolver(object):
     @property
     def soln_file(self):
         _raise_ephemeral_error('soln_file')
+
     @soln_file.setter
     def soln_file(self, val):
         _raise_ephemeral_error('soln_file')
@@ -278,6 +285,7 @@ class OptSolver(object):
     @property
     def log_file(self):
         _raise_ephemeral_error('log_file')
+
     @log_file.setter
     def log_file(self, val):
         _raise_ephemeral_error('log_file')
@@ -285,6 +293,7 @@ class OptSolver(object):
     @property
     def symbolic_solver_labels(self):
         _raise_ephemeral_error('symbolic_solver_labels')
+
     @symbolic_solver_labels.setter
     def symbolic_solver_labels(self, val):
         _raise_ephemeral_error('symbolic_solver_labels')
@@ -292,6 +301,7 @@ class OptSolver(object):
     @property
     def warm_start_solve(self):
         _raise_ephemeral_error('warm_start_solve', keyword=" (warmstart)")
+
     @warm_start_solve.setter
     def warm_start_solve(self, val):
         _raise_ephemeral_error('warm_start_solve', keyword=" (warmstart)")
@@ -299,18 +309,19 @@ class OptSolver(object):
     @property
     def warm_start_file_name(self):
         _raise_ephemeral_error('warm_start_file_name', keyword=" (warmstart_file)")
+
     @warm_start_file_name.setter
     def warm_start_file_name(self, val):
         _raise_ephemeral_error('warm_start_file_name', keyword=" (warmstart_file)")
 
     def __init__(self, **kwds):
-        """ Constructor """
+        """Constructor"""
         #
         # The 'type' is the class type of the solver instance
         #
         if "type" in kwds:
             self.type = kwds["type"]
-        else:                           #pragma:nocover
+        else:  # pragma:nocover
             raise ValueError("Expected option 'type' for OptSolver constructor")
 
         #
@@ -325,12 +336,12 @@ class OptSolver(object):
         if "doc" in kwds:
             self._doc = kwds["doc"]
         else:
-            if self.type is None:           # pragma:nocover
+            if self.type is None:  # pragma:nocover
                 self._doc = ""
             elif self.name == self.type:
                 self._doc = "%s OptSolver" % self.name
             else:
-                self._doc = "%s OptSolver (type %s)" % (self.name,self.type)
+                self._doc = "%s OptSolver (type %s)" % (self.name, self.type)
         #
         # Options are persistent, meaning users must modify the
         # options dict directly rather than pass them into _presolve
@@ -400,11 +411,12 @@ class OptSolver(object):
             index = token.find('=')
             if index == -1:
                 raise ValueError(
-                    "Solver options must have the form option=value: '%s'" % istr)
+                    "Solver options must have the form option=value: '%s'" % istr
+                )
             try:
-                val = eval(token[(index+1):])
+                val = eval(token[(index + 1) :])
             except:
-                val = token[(index+1):]
+                val = token[(index + 1) :]
             ans[token[:index]] = val
         return ans
 
@@ -439,8 +451,9 @@ class OptSolver(object):
         if format in self._valid_problem_formats:
             self._problem_format = format
         else:
-            raise ValueError("%s is not a valid problem format for solver plugin %s"
-                             % (format, self))
+            raise ValueError(
+                "%s is not a valid problem format for solver plugin %s" % (format, self)
+            )
         self._results_format = self._default_results_format(self._problem_format)
 
     def results_format(self):
@@ -449,18 +462,21 @@ class OptSolver(object):
         """
         return self._results_format
 
-    def set_results_format(self,format):
+    def set_results_format(self, format):
         """
         Set the current results format (if it's valid for the current
         problem format).
         """
-        if (self._problem_format in self._valid_results_formats) and \
-           (format in self._valid_results_formats[self._problem_format]):
+        if (self._problem_format in self._valid_results_formats) and (
+            format in self._valid_results_formats[self._problem_format]
+        ):
             self._results_format = format
         else:
-            raise ValueError("%s is not a valid results format for "
-                             "problem format %s with solver plugin %s"
-                             % (format, self._problem_format, self))
+            raise ValueError(
+                "%s is not a valid results format for "
+                "problem format %s with solver plugin %s"
+                % (format, self._problem_format, self)
+            )
 
     def has_capability(self, cap):
         """
@@ -486,8 +502,10 @@ class OptSolver(object):
             Whether or not the solver has the specified capability.
         """
         if not isinstance(cap, str):
-            raise TypeError("Expected argument to be of type '%s', not "
-                "'%s'." % (type(str()), type(cap)))
+            raise TypeError(
+                "Expected argument to be of type '%s', not "
+                "'%s'." % (type(str()), type(cap))
+            )
         else:
             val = self._capabilities[str(cap)]
             if val is None:
@@ -496,7 +514,7 @@ class OptSolver(object):
                 return val
 
     def available(self, exception_flag=True):
-        """ True if the solver is available """
+        """True if the solver is available"""
         return True
 
     def license_is_valid(self):
@@ -504,11 +522,11 @@ class OptSolver(object):
         return True
 
     def warm_start_capable(self):
-        """ True is the solver can accept a warm-start solution """
+        """True is the solver can accept a warm-start solution"""
         return False
 
     def solve(self, *args, **kwds):
-        """ Solve the problem """
+        """Solve the problem"""
 
         self.available(exception_flag=True)
         #
@@ -519,6 +537,7 @@ class OptSolver(object):
         import pyomo.core.base.suffix
         from pyomo.core.kernel.block import IBlock
         import pyomo.core.kernel.suffix
+
         _model = None
         for arg in args:
             if isinstance(arg, (_BlockData, IBlock)):
@@ -526,24 +545,30 @@ class OptSolver(object):
                     if not arg.is_constructed():
                         raise RuntimeError(
                             "Attempting to solve model=%s with unconstructed "
-                            "component(s)" % (arg.name,) )
+                            "component(s)" % (arg.name,)
+                        )
 
                 _model = arg
                 # import suffixes must be on the top-level model
                 if isinstance(arg, _BlockData):
-                    model_suffixes = list(name for (name,comp) \
-                                          in pyomo.core.base.suffix.\
-                                          active_import_suffix_generator(arg))
+                    model_suffixes = list(
+                        name
+                        for (
+                            name,
+                            comp,
+                        ) in pyomo.core.base.suffix.active_import_suffix_generator(arg)
+                    )
                 else:
                     assert isinstance(arg, IBlock)
-                    model_suffixes = list(comp.storage_key for comp
-                                          in pyomo.core.kernel.suffix.\
-                                          import_suffix_generator(arg,
-                                                                  active=True,
-                                                                  descend_into=False))
+                    model_suffixes = list(
+                        comp.storage_key
+                        for comp in pyomo.core.kernel.suffix.import_suffix_generator(
+                            arg, active=True, descend_into=False
+                        )
+                    )
 
                 if len(model_suffixes) > 0:
-                    kwds_suffixes = kwds.setdefault('suffixes',[])
+                    kwds_suffixes = kwds.setdefault('suffixes', [])
                     for name in model_suffixes:
                         if name not in kwds_suffixes:
                             kwds_suffixes.append(name)
@@ -561,7 +586,8 @@ class OptSolver(object):
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(
-            self._options_string_to_dict(kwds.pop('options_string', '')))
+            self._options_string_to_dict(kwds.pop('options_string', ''))
+        )
         try:
 
             # we're good to go.
@@ -571,7 +597,10 @@ class OptSolver(object):
 
             presolve_completion_time = time.time()
             if self._report_timing:
-                print("      %6.2f seconds required for presolve" % (presolve_completion_time - initial_time))
+                print(
+                    "      %6.2f seconds required for presolve"
+                    % (presolve_completion_time - initial_time)
+                )
 
             if not _model is None:
                 self._initialize_callbacks(_model)
@@ -583,21 +612,24 @@ class OptSolver(object):
                 logger.warning(
                     "Solver (%s) did not return a solver status code.\n"
                     "This is indicative of an internal solver plugin error.\n"
-                    "Please report this to the Pyomo developers." )
+                    "Please report this to the Pyomo developers."
+                )
             elif _status.rc:
                 logger.error(
                     "Solver (%s) returned non-zero return code (%s)"
-                    % (self.name, _status.rc,))
+                    % (self.name, _status.rc)
+                )
                 if self._tee:
-                    logger.error(
-                        "See the solver log above for diagnostic information." )
+                    logger.error("See the solver log above for diagnostic information.")
                 elif hasattr(_status, 'log') and _status.log:
                     logger.error("Solver log:\n" + str(_status.log))
-                raise ApplicationError(
-                    "Solver (%s) did not exit normally" % self.name)
+                raise ApplicationError("Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
             if self._report_timing:
-                print("      %6.2f seconds required for solver" % (solve_completion_time - presolve_completion_time))
+                print(
+                    "      %6.2f seconds required for solver"
+                    % (solve_completion_time - presolve_completion_time)
+                )
 
             result = self._postsolve()
             result._smap_id = self._smap_id
@@ -605,10 +637,12 @@ class OptSolver(object):
             if _model:
                 if isinstance(_model, IBlock):
                     if len(result.solution) == 1:
-                        result.solution(0).symbol_map = \
-                            getattr(_model, "._symbol_maps")[result._smap_id]
-                        result.solution(0).default_variable_value = \
-                            self._default_variable_value
+                        result.solution(0).symbol_map = getattr(
+                            _model, "._symbol_maps"
+                        )[result._smap_id]
+                        result.solution(
+                            0
+                        ).default_variable_value = self._default_variable_value
                         if self._load_solutions:
                             _model.load_solution(result.solution(0))
                     else:
@@ -619,15 +653,15 @@ class OptSolver(object):
                     assert len(getattr(_model, "._symbol_maps")) == 1
                     delattr(_model, "._symbol_maps")
                     del result._smap_id
-                    if self._load_solutions and \
-                       (len(result.solution) == 0):
+                    if self._load_solutions and (len(result.solution) == 0):
                         logger.error("No solution is available")
                 else:
                     if self._load_solutions:
                         _model.solutions.load_from(
                             result,
                             select=self._select_index,
-                            default_variable_value=self._default_variable_value)
+                            default_variable_value=self._default_variable_value,
+                        )
                         result._smap_id = None
                         result.solution.clear()
                     else:
@@ -636,8 +670,10 @@ class OptSolver(object):
             postsolve_completion_time = time.time()
 
             if self._report_timing:
-                print("      %6.2f seconds required for postsolve"
-                      % (postsolve_completion_time - solve_completion_time))
+                print(
+                    "      %6.2f seconds required for postsolve"
+                    % (postsolve_completion_time - solve_completion_time)
+                )
 
         finally:
             #
@@ -649,36 +685,42 @@ class OptSolver(object):
 
     def _presolve(self, *args, **kwds):
 
-        self._log_file                = kwds.pop("logfile", None)
-        self._soln_file               = kwds.pop("solnfile", None)
-        self._select_index            = kwds.pop("select", 0)
-        self._load_solutions          = kwds.pop("load_solutions", True)
-        self._timelimit               = kwds.pop("timelimit", None)
-        self._report_timing           = kwds.pop("report_timing", False)
-        self._tee                     = kwds.pop("tee", False)
-        self._assert_available        = kwds.pop("available", True)
-        self._suffixes                = kwds.pop("suffixes", [])
+        self._log_file = kwds.pop("logfile", None)
+        self._soln_file = kwds.pop("solnfile", None)
+        self._select_index = kwds.pop("select", 0)
+        self._load_solutions = kwds.pop("load_solutions", True)
+        self._timelimit = kwds.pop("timelimit", None)
+        self._report_timing = kwds.pop("report_timing", False)
+        self._tee = kwds.pop("tee", False)
+        self._assert_available = kwds.pop("available", True)
+        self._suffixes = kwds.pop("suffixes", [])
 
         self.available()
 
         if self._problem_format:
             write_start_time = time.time()
-            (self._problem_files, self._problem_format, self._smap_id) = \
-                self._convert_problem(args,
-                                      self._problem_format,
-                                      self._valid_problem_formats,
-                                      **kwds)
+            (
+                self._problem_files,
+                self._problem_format,
+                self._smap_id,
+            ) = self._convert_problem(
+                args, self._problem_format, self._valid_problem_formats, **kwds
+            )
             total_time = time.time() - write_start_time
             if self._report_timing:
                 print("      %6.2f seconds required to write file" % total_time)
         else:
             if len(kwds):
                 raise ValueError(
-                    "Solver="+self.type+" passed unrecognized keywords: \n\t"
-                    +("\n\t".join("%s = %s" % (k,v) for k,v in kwds.items())))
+                    "Solver="
+                    + self.type
+                    + " passed unrecognized keywords: \n\t"
+                    + ("\n\t".join("%s = %s" % (k, v) for k, v in kwds.items()))
+                )
 
-        if (type(self._problem_files) in (list,tuple)) and \
-           (not isinstance(self._problem_files[0], str)):
+        if (type(self._problem_files) in (list, tuple)) and (
+            not isinstance(self._problem_files[0], str)
+        ):
             self._problem_files = self._problem_files[0]._problem_files()
         if self._results_format is None:
             self._results_format = self._default_results_format(self._problem_format)
@@ -687,7 +729,7 @@ class OptSolver(object):
         # Disabling this check for now.  A solver doesn't have just
         # _one_ results format.
         #
-        #if self._results_format not in \
+        # if self._results_format not in \
         #   self._valid_result_formats[self._problem_format]:
         #    raise ValueError("Results format '"+str(self._results_format)+"' "
         #                     "cannot be used with problem format '"
@@ -695,8 +737,9 @@ class OptSolver(object):
         if self._results_format == ResultsFormat.soln:
             self._results_reader = None
         else:
-            self._results_reader = \
-                pyomo.opt.base.results.ReaderFactory(self._results_format)
+            self._results_reader = pyomo.opt.base.results.ReaderFactory(
+                self._results_format
+            )
 
     def _initialize_callbacks(self, model):
         """Initialize call-back functions"""
@@ -704,26 +747,20 @@ class OptSolver(object):
 
     def _apply_solver(self):
         """The routine that performs the solve"""
-        raise NotImplementedError       #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     def _postsolve(self):
         """The routine that does solve post-processing"""
         return self.results
 
-    def _convert_problem(self,
-                         args,
-                         problem_format,
-                         valid_problem_formats,
-                         **kwds):
-        return convert_problem(args,
-                               problem_format,
-                               valid_problem_formats,
-                               self.has_capability,
-                               **kwds)
+    def _convert_problem(self, args, problem_format, valid_problem_formats, **kwds):
+        return convert_problem(
+            args, problem_format, valid_problem_formats, self.has_capability, **kwds
+        )
 
     def _default_results_format(self, prob_format):
         """Returns the default results format for different problem
-            formats.
+        formats.
         """
         return ResultsFormat.results
 
@@ -765,8 +802,7 @@ class OptSolver(object):
         a Pyomo model instance object.
         """
         if not self._allow_callbacks:
-            raise ApplicationError(
-                "Callbacks disabled for solver %s" % self.name)
+            raise ApplicationError("Callbacks disabled for solver %s" % self.name)
         if callback_fn is None:
             if name in self._callback:
                 del self._callback[name]
@@ -775,4 +811,5 @@ class OptSolver(object):
 
     def config_block(self, init=False):
         from pyomo.scripting.solve_config import default_config_block
+
         return default_config_block(self, init)[0]

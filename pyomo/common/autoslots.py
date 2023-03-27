@@ -15,9 +15,9 @@ from copy import deepcopy
 from weakref import ref as _weakref_ref
 
 _autoslot_info = namedtuple(
-    '_autoslot_info',
-    ['has_dict', 'slots', 'slot_mappers', 'field_mappers']
+    '_autoslot_info', ['has_dict', 'slots', 'slot_mappers', 'field_mappers']
 )
+
 
 def _deepcopy_tuple(obj, memo, _id):
     ans = []
@@ -42,11 +42,13 @@ def _deepcopy_tuple(obj, memo, _id):
     memo[_id] = ans = tuple(ans)
     return ans
 
+
 def _deepcopy_list(obj, memo, _id):
     # Two steps here because a list can include itself
     memo[_id] = ans = []
     ans.extend(fast_deepcopy(x, memo) for x in obj)
     return ans
+
 
 def _deepcopy_dict(obj, memo, _id):
     # Two steps here because a dict can include itself
@@ -55,17 +57,26 @@ def _deepcopy_dict(obj, memo, _id):
         ans[fast_deepcopy(key, memo)] = fast_deepcopy(val, memo)
     return ans
 
+
 def _deepcopier(obj, memo, _id):
     return deepcopy(obj, memo)
 
-_atomic_types = {int, float, bool, complex, bytes, str, type, range,
-                 type(None), types.BuiltinFunctionType, types.FunctionType}
 
-_deepcopy_mapper = {
-    tuple: _deepcopy_tuple,
-    list: _deepcopy_list,
-    dict: _deepcopy_dict,
+_atomic_types = {
+    int,
+    float,
+    bool,
+    complex,
+    bytes,
+    str,
+    type,
+    range,
+    type(None),
+    types.BuiltinFunctionType,
+    types.FunctionType,
 }
+
+_deepcopy_mapper = {tuple: _deepcopy_tuple, list: _deepcopy_list, dict: _deepcopy_dict}
 
 
 def fast_deepcopy(obj, memo):
@@ -141,6 +152,7 @@ class AutoSlots(type):
         decode that field value.
 
     """
+
     _ignore_slots = {'__weakref__', '__dict__'}
 
     def __init__(cls, name, bases, classdict):
@@ -172,8 +184,7 @@ class AutoSlots(type):
                 else:
                     dict_mappers[slot] = mapper
 
-        cls.__auto_slots__ = _autoslot_info(
-            has_dict, slots, slot_mappers, dict_mappers)
+        cls.__auto_slots__ = _autoslot_info(has_dict, slots, slot_mappers, dict_mappers)
 
     @staticmethod
     def weakref_mapper(encode, val):
@@ -231,6 +242,7 @@ class AutoSlots(type):
         `__setstate__`.
 
         """
+
         __slots__ = ()
 
         def __init_subclass__(cls, **kwds):
@@ -258,9 +270,9 @@ class AutoSlots(type):
             # Note: this implementation avoids deepcopying the temporary
             # 'state' list, significantly speeding things up.
             memo[id(self)] = ans = self.__class__.__new__(self.__class__)
-            ans.__setstate__([
-                fast_deepcopy(field, memo) for field in self.__getstate__()
-            ])
+            ans.__setstate__(
+                [fast_deepcopy(field, memo) for field in self.__getstate__()]
+            )
             return ans
 
         def __getstate__(self):
@@ -330,4 +342,3 @@ class AutoSlots(type):
                 # than to simplify assign to __dict__.
                 self.__dict__.clear()
                 self.__dict__.update(fields)
-    

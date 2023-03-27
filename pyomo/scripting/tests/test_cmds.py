@@ -20,7 +20,6 @@ from pyomo.scripting.pyomo_main import main
 
 
 class Test(unittest.TestCase):
-
     def test_pyomo_main_deprecation(self):
         with LoggingIntercept() as LOG:
             with unittest.pytest.raises(SystemExit) as e:
