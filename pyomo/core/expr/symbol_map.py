@@ -63,6 +63,8 @@ class SymbolMap(object):
     def addSymbol(self, obj, symb):
         """
         Add a symbol for a given object
+
+        This method assumes that objects and symbol names will not conflict.
         """
         nSymbols = len(self.byObject) + 1
         self.byObject[id(obj)] = symb
@@ -82,7 +84,7 @@ class SymbolMap(object):
         """
         Add (object, symbol) tuples from an iterable object.
 
-        This method assumes that symbol names will not conflict.
+        This method assumes that objects and symbol names will not conflict.
         """
         nSymbols = len(self.bySymbol)
         for obj, symbol in obj_symbol_tuples:
