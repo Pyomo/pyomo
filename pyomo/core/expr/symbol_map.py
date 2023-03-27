@@ -146,11 +146,10 @@ class SymbolMap(object):
                 labeler = str
         symbol = labeler(obj, *args)
         if symbol in self.bySymbol:
-            if self.bySymbol[symbol] is not obj:
-                raise RuntimeError(
-                    "Duplicate symbol '%s' already associated with "
-                    "component '%s' (conflicting component: '%s')"
-                    % (symbol, self.bySymbol[symbol].name, obj.name) )
+            raise RuntimeError(
+                "Duplicate symbol '%s' already associated with "
+                "component '%s' (conflicting component: '%s')"
+                % (symbol, self.bySymbol[symbol].name, obj.name) )
         self.bySymbol[symbol] = obj
         self.byObject[obj_id] = symbol
         return symbol
