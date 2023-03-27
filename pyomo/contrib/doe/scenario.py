@@ -28,7 +28,7 @@
 import pickle
 from enum import Enum
 
-class formula_lib(Enum):
+class finite_difference_lib(Enum):
     forward = 1
     central = 2
     backward =3 
@@ -38,7 +38,7 @@ class formula_lib(Enum):
         return value in cls._value2member_map_
 
 class ScenarioGenerator:
-    def __init__(self, para_dict, formula=formula_lib.central, step=0.001, store=False):
+    def __init__(self, para_dict, formula=finite_difference_lib.central, step=0.001, store=False):
         """Generate scenarios.
         DoE library first calls this function to generate scenarios.
 
@@ -97,7 +97,7 @@ class ScenarioGenerator:
         for p, para in enumerate(self.para_names):
 
             ## get scenario dictionary
-            if self.formula == formula_lib.central:
+            if self.formula == finite_difference_lib.central:
                 scena_num[para] = [2*p, 2*p+1]
                 scena_dict_up, scena_dict_lo = self.para_dict.copy(), self.para_dict.copy()
                 # corresponding parameter dictionary for the scenario
@@ -107,14 +107,14 @@ class ScenarioGenerator:
                 scenario.append(scena_dict_up)
                 scenario.append(scena_dict_lo)
 
-            elif self.formula in [formula_lib.forward, formula_lib.backward]:
+            elif self.formula in [finite_difference_lib.forward, finite_difference_lib.backward]:
                 # the base case is added as the last one
                 scena_num[para] = [p,len(self.param_names)]
                 scena_dict_up, scena_dict_lo = self.para_dict.copy(), self.para_dict.copy()
-                if self.formula==formula_lib.forward:
+                if self.formula==finite_difference_lib.forward:
                     scena_dict_up[para] *= (1+self.step)
                 
-                elif self.formula==formula_lib.backward:
+                elif self.formula==finite_difference_lib.backward:
                     scena_dict_lo[para] *= (1-self.step)
 
                 scenario.append(scena_dict_up)
@@ -122,7 +122,7 @@ class ScenarioGenerator:
 
             ## get perturbation sizes
             # for central difference scheme, perturbation size is two times the step size
-            if self.formula == formula_lib.central:
+            if self.formula == finite_difference_lib.central:
                 eps_abs[para] = 2 * self.step * self.para_dict[para]
             else:
                 eps_abs[para] = self.step * self.para_dict[para]

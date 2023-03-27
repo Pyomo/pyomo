@@ -47,7 +47,8 @@ class FisherResults:
         para_name:
             A ``list`` of parameter names
         measure_object:
-            measurement information object
+            A measurement ``object`` which contains the Pyomo variable names and their corresponding indices and 
+            bounds for experimental measurements
         jacobian_info:
             the jacobian for this measurement object
         all_jacobian_info:
@@ -65,7 +66,7 @@ class FisherResults:
         """
         self.para_name = para_name
         self.measure_object = measure_object
-        self.measurement_variables = measure_object.measurement_name
+        self.measurement_variables = measure_object.name
 
         if jacobian_info is None:
             self.jaco_information = all_jacobian_info
@@ -169,7 +170,7 @@ class FisherResults:
         for p, par in enumerate(self.para_name):
             jaco_info[par] = []
             # loop over measurements
-            for n, nam in enumerate(measure_subset.measurement_name):
+            for n, nam in enumerate(measure_subset.name):
                 try: 
                     n_all_measure = self.measurement_variables.index(nam)
                     jaco_info[par].append(self.all_jacobian_info[par][n_all_measure])

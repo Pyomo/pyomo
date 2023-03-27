@@ -191,7 +191,7 @@ class Measurements(SpecialSet):
         """
         User can pass already defined measurement names here
         """
-        self.measurement_name = super().specify(self_define_res)
+        self.name = super().specify(self_define_res)
 
         # generate default variance
         self._use_identity_variance()
@@ -211,7 +211,7 @@ class Measurements(SpecialSet):
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
         #self._check_names(var_name, extra_index, time_index)
-        self.measurement_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index)
+        self.name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index)
 
         # generate default variance
         self._use_identity_variance()
@@ -236,8 +236,8 @@ class Measurements(SpecialSet):
         ----------
         subset_class: a measurement object
         """
-        for nam in subset_class.measurement_name:
-            if nam not in self.measurement_name:
+        for nam in subset_class.name:
+            if nam not in self.name:
                 raise ValueError("Measurement not in the set: ", nam)
         
         return True
@@ -246,7 +246,7 @@ class Measurements(SpecialSet):
         """Generate the variance dictionary. 
         """
         self.variance = {}
-        for name in self.measurement_name:
+        for name in self.name:
             self.variance[name] = 1     
 
     
@@ -261,7 +261,7 @@ class DesignVariables(SpecialSet):
 
     def specify(self, self_define_res):
 
-        self.design_name = super().specify(self_define_res)
+        self.name = super().specify(self_define_res)
 
     def add_elements(self, var_name, extra_index=None, time_index=[0], values=None):
         """
@@ -278,7 +278,7 @@ class DesignVariables(SpecialSet):
                 default choice is [0], means this is an algebraic variable
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
-        self.design_name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values)
+        self.name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values)
         # initialize upper and lower bounds
         self.upper_bound, self.lower_bound = None, None
 

@@ -39,22 +39,31 @@ import logging
 from enum import Enum
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
-from pyomo.contrib.doe.scenario import ScenarioGenerator, formula_lib
-from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-#from scenario import ScenarioGenerator,formula_lib
-#from result import FisherResults, GridSearchResult
+#from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_lib
+#from pyomo.contrib.doe.result import FisherResults, GridSearchResult
+from scenario import ScenarioGenerator,finite_difference_lib
+from result import FisherResults, GridSearchResult
 
 
-class mode_lib(Enum):
+class calculation_mode(Enum):
     sequential_finite = 1
     direct_kaug = 2
 
     @classmethod
     def has_value(cls, value):
         return value in cls._value2member_map_
+    
+class objective_lib(Enum):
+    det = 1
+    trace = 2 
+    zero = 3
+
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
 
 class DesignOfExperiments:
-    def __init__(self, param_init, design_object, measurement_object, create_model, solver=None,
+    def __init__(self, param_init, design_vars, measurement_vars, create_model, solver=None,
                   prior_FIM=None, discretize_model=None, args=None):
         """
         This package enables model-based design of experiments analysis with Pyomo. 
@@ -67,13 +76,14 @@ class DesignOfExperiments:
         param_init:
             A  ``dictionary`` of parameter names and values. 
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
-            Note: if sIPOPT is used, parameter shouldn't be indexed.
-        design_object:
-            A DesignVariable ``object``
-        measurement_object:
-            A measurement ``object``.
+        design_vars:
+            A DesignVariable ``object`` which contains the Pyomo variable names and their corresponding indices
+            and bounds for experiment design of freedom 
+        measurement_vars:
+            A measurement ``object`` which contains the Pyomo variable names and their corresponding indices and 
+            bounds for experimental measurements
         create_model:
-            A  ``function`` that returns the model
+            A Python ``function`` that returns a Concrete Pyomo model, similar to the interface for ``parmest``
         solver:
             A ``solver`` object that User specified, default=None. 
             If not specified, default solver is IPOPT MA57.
@@ -88,13 +98,14 @@ class DesignOfExperiments:
         # parameters
         self.param = param_init
         # design variable name
-        self.design_name = design_object.design_name
+        self.design_name = design_vars.name
+        self.design_vars = design_vars
         self.create_model = create_model
         self.args = args
 
         # create the measurement information object
-        self.measure = measurement_object
-        self.measure_name = self.measure.measurement_name
+        self.measure = measurement_vars
+        self.measure_name = self.measure.name
 
         # check if user-defined solver is given
         if solver:
@@ -121,23 +132,14 @@ class DesignOfExperiments:
         ----------
         check_mode: check FIM calculation mode
         """
-        if self.objective_option not in ['det', 'trace', 'zero']:
-            raise ValueError('Objective function should be chosen from "det", "zero" and "trace" while receiving {}'.format(self.objective_option))
-
         if type(self.prior_FIM)!=type(None):
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
                 raise ValueError('Found wrong prior information matrix shape.')
-            
-        #if check_mode:
-            
-            #if not (mode_lib.has_value(self.mode)):
-            #    raise ValueError('Mode scheme should be choosen from "sequential_finite" and "direct_kaug".')
 
-    def stochastic_program(self,  design_object, if_optimize=True, objective_option='det',
-                     jac_involved_measurement=None,
+    def stochastic_program(self,  if_optimize=True, objective_option=objective_lib.det,
                      scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-7, L_initial=None,
                      jac_initial=None, fim_initial=None,
-                     formula=formula_lib.central, step=0.001, check=True, tee_opt=True):
+                     formula=finite_difference_lib.central, step=0.001, check=True, tee_opt=True):
         """
         Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
@@ -148,14 +150,10 @@ class DesignOfExperiments:
 
         Parameters
         -----------
-        design_values:
-            designVariable object
         if_optimize:
             if true, continue to do optimization. else, just run square problem with given design variable values
         objective_option:
-            supporting maximizing the 'det' determinant or the 'trace' trace of the FIM
-        jac_involved_measurement:
-            the measurement class involved in calculation. If None, take the overall measurement class
+            supporting maximizing the 'det' determinant or the 'trace' trace of the FIM in the objective_lib class
         scale_nominal_param_value:
             if True, the parameters are scaled by its own nominal value in param_init
         scale_constant_value:
@@ -175,7 +173,7 @@ class DesignOfExperiments:
         fim_initial:
             a matrix used to initialize FIM matrix
         formula:
-            choose from 'central', 'forward', 'backward', None. This option is only used for 'sequential_finite' mode.
+            choose from 'central', 'forward', 'backward', None in the finite_difference_lib class
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
         check:
@@ -188,8 +186,7 @@ class DesignOfExperiments:
 
         """
         # store inputs in object
-        self.design_values = design_object.special_set_value
-        self.design_object = design_object
+        self.design_values = self.design_vars.special_set_value
         self.optimize = if_optimize
         self.objective_option = objective_option
         self.scale_nominal_param_value = scale_nominal_param_value
@@ -279,22 +276,20 @@ class DesignOfExperiments:
 
 
 
-    def compute_FIM(self, design_object, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
+    def compute_FIM(self, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
                     store_output = None, read_output=None, extract_single_model=None,
                     formula='central', step=0.001):
         """
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
-        It calculates FIM with sensitivity information from four modes:
+        It calculates FIM with sensitivity information from two modes:
             1.  sequential_finite: use finite difference scheme to evaluate sensitivity
             2.  direct_kaug: use k_aug to evaluate sensitivity
 
         Parameters
         -----------
-        design_values:
-            designVariable object 
         mode:
-            use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'
+            use sequential_finite, direct_kaug in calculation_mode.
         FIM_store_name:
             if storing the FIM in a .csv or .txt, give the file name here as a string.
         specified_prior:
@@ -314,7 +309,7 @@ class DesignOfExperiments:
             The output file uses the name AB.csv, where string A is store_output input, B is the index of scenario.  
             scenario index is the number of the scenario outputs which is stored.
         formula:
-            choose from 'central', 'forward', 'backward', None. This option is only used for 'sequential_finite' mode.
+            choose from 'central', 'forward', 'backward' in finite_difference_lib, None. This option is only used for sequential_finite mode.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
@@ -324,7 +319,7 @@ class DesignOfExperiments:
         """
         
         # save inputs in object
-        self.design_values = design_object.special_set_value
+        self.design_values = self.design_vars.special_set_value
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
         self.formula = formula
@@ -334,7 +329,7 @@ class DesignOfExperiments:
         # This method only solves square problem
         self.optimize = False
         # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option = 'zero'
+        self.objective_option = objective_lib.zero
         self.tee_opt = tee_opt
 
         self.FIM_store_name = FIM_store_name
@@ -349,10 +344,10 @@ class DesignOfExperiments:
 
         square_timer = TicTocTimer()
         square_timer.tic(msg=None)
-        if mode==mode_lib.sequential_finite:
+        if mode==calculation_mode.sequential_finite:
             FIM_analysis = self._sequential_finite(read_output, extract_single_model, store_output)
 
-        elif mode==mode_lib.direct_kaug:
+        elif mode==calculation_mode.direct_kaug:
             FIM_analysis = self._direct_kaug()
             
         else:
@@ -511,6 +506,9 @@ class DesignOfExperiments:
         return FIM_analysis
 
     def _create_block(self):
+        """
+        Create a pyomo Concrete model and add blocks with different parameter perturbation scenarios. 
+        """
 
         # create scenario information for block scenarios
         scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
@@ -619,7 +617,7 @@ class DesignOfExperiments:
             jac[p] = jac_para
         return jac
 
-    def run_grid_search(self, design_object, design_ranges, design_dimension_names, 
+    def run_grid_search(self, design_ranges, design_dimension_names, 
                      mode='sequential_finite', tee_option=False, 
                     scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
                         filename=None, formula='central', step=0.001):
@@ -633,8 +631,6 @@ class DesignOfExperiments:
 
         Parameters
         -----------
-        design_object:
-            DesignVariable object
         design_ranges:
             a ``list`` of design variable values to go over
         design_dimension_names:
@@ -667,7 +663,7 @@ class DesignOfExperiments:
         figure_draw_object: a combined result object of class Grid_search_result
         """
         # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option='zero'
+        self.objective_option=objective_lib.zero
         self.filename = filename
 
         # calculate how much the FIM element is scaled
@@ -693,7 +689,7 @@ class DesignOfExperiments:
         for design_set_iter in search_design_set:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_values
-            design_iter = design_object.special_set_value.copy()
+            design_iter = self.design_vars.special_set_value.copy()
 
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
@@ -705,7 +701,7 @@ class DesignOfExperiments:
                 else:
                     design_iter[names] = list(design_set_iter)[i]
 
-            design_object.special_set_value = design_iter
+            self.design_vars.special_set_value = design_iter
 
             iter_timer = TicTocTimer()
             self.logger.info('=======Iteration Number: %s =====', count+1)
@@ -724,7 +720,7 @@ class DesignOfExperiments:
 
             # call compute_FIM to get FIM
             try:
-                result_iter = self.compute_FIM(design_object, mode=mode,
+                result_iter = self.compute_FIM(mode=mode,
                                                 tee_opt=tee_option,
                                                 scale_nominal_param_value=scale_nominal_param_value,
                                                 scale_constant_value = scale_constant_value,
@@ -922,14 +918,14 @@ class DesignOfExperiments:
             m.cholesky_cons = pyo.Constraint(m.param, m.param, rule=cholesky_imp)
             m.Obj = pyo.Objective(expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.param), sense=pyo.maximize)
         # if not cholesky but determinant, calculating det and evaluate the OBJ with det
-        elif (self.objective_option == 'det'):
+        elif (self.objective_option == objective_lib.det):
             m.det_rule = pyo.Constraint(rule=det_general)
             m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
         # if not determinant or cholesky, calculating the OBJ with trace
-        elif (self.objective_option == 'trace'):
+        elif (self.objective_option == objective_lib.trace):
             m.trace_rule = pyo.Constraint(rule=trace_calc)
             m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
-        elif (self.objective_option == 'zero'):
+        elif (self.objective_option == objective_lib.zero):
             m.Obj = pyo.Objective(expr=0)
 
         return m
@@ -949,11 +945,10 @@ class DesignOfExperiments:
         --------
         m: model
         """
-        for i, name in enumerate(self.design_name):
+        for name in self.design_name:
             cuid = pyo.ComponentUID(name)
             var = cuid.find_component_on(m)
-            if fix_opt:
-                #getattr(m, dname)[time].fix(fix_v)    
+            if fix_opt:   
                 var.fix(design_val[name])
             else:
                 if optimize_option is None:
