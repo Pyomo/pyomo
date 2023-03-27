@@ -167,10 +167,10 @@ class FisherResults:
 
         # reorganize the jacobian subset with the same form of the jacobian
         # loop over parameters
-        for p, par in enumerate(self.para_name):
+        for par in self.para_name:
             jaco_info[par] = []
             # loop over measurements
-            for n, nam in enumerate(measure_subset.name):
+            for nam in measure_subset.name:
                 try: 
                     n_all_measure = self.measurement_variables.index(nam)
                     jaco_info[par].append(self.all_jacobian_info[par][n_all_measure])

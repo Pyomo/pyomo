@@ -47,7 +47,8 @@ class SpecialSet:
 
         return self.special_set
 
-    def add_elements(self, var_name, extra_index=None, time_index=None, values=None):
+    def add_elements(self, var_name, extra_index=None, time_index=None, values=None, 
+                     upper_bound=None, lower_bound=None):
         """
         Used for generating string names with indexes. 
 
@@ -65,22 +66,33 @@ class SpecialSet:
             if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         values: a ``list`` containing values which has the same shape of flattened variables 
             default choice is None, means there is no give nvalues 
+        upper_bound: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
+        lower_bound: a ``list `` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
 
         Return
         ------
         if not defining values, return a set of variable names 
         if defining values, return a dictionary of variable names and its value 
         """
-
-        self._names(var_name, extra_index,time_index)
+        self._names(var_name, extra_index,time_index, values, upper_bound, lower_bound, check_values_bounds=False)
 
         self._add_elements(var_name, extra_index=extra_index, time_index=time_index)
+
+        self._names(var_name, extra_index,time_index, values, upper_bound, lower_bound, check_values_bounds=True)
+
         if values:
             # this dictionary keys are special set, values are its value
-            #self.special_set_value = {}
-            #for i in range(len(self.special_set)):
-            #    self.special_set_value[self.special_set[i]] = values[i]
             self.special_set_value = self._generate_dict(values)
+
+        if upper_bound:
+            if type(upper_bound) in [int, float]:
+                upper_bound = [upper_bound]*len(self.special_set)
+            self.upper_bound = self._generate_dict(upper_bound)
+            
+        if lower_bound:
+            if type(lower_bound) in [int, float]:
+                lower_bound = [lower_bound]*len(self.special_set)
+            self.lower_bound = self._generate_dict(lower_bound)
 
         return self.special_set
     
@@ -94,21 +106,7 @@ class SpecialSet:
             default choice is None, means there is no give nvalues 
         """
         self.special_set_value = self._generate_dict(values)
-
-    def add_bounds(self, upper_bound=None, lower_bound=None):
-        """
-        add bounds
-
-        Parameters
-        ----------
-        upper_bound: a ``list`` of upper bounds 
-        lower_bound: a ``list `` of lower bounds
-        """
-        if upper_bound:
-            self.upper_bound = self._generate_dict(upper_bound)
-            
-        if lower_bound:
-            self.lower_bound = self._generate_dict(lower_bound)
+        
 
     def _generate_dict(self, values):
         """
@@ -167,17 +165,29 @@ class SpecialSet:
                 self.special_set.append(name1)
 
 
-    def _names(self, var_name, extra_index, time_index):
+    def _names(self, var_name, extra_index, time_index, values, upper_bound, lower_bound, check_values_bounds=False):
         """
         Check if the measurement information provided are valid to use. 
         """
         num_var = len(var_name)
         
         if extra_index and len(extra_index) != num_var: 
-            warnings.warn("Extra_index is of different length with var_name. This warning indicates a potential modeling error.")
+            raise ValueError("Extra_index is of different length with var_name. ")
 
         if len(time_index) != num_var:
-            warnings.warn("time_index is of different length with var_name. This warning indicates a potential modeling error.")
+            raise ValueError("time_index is of different length with var_name.")
+
+        if check_values_bounds:
+            num_name = len(self.special_set)
+
+            if values and len(values) != num_name:
+                raise ValueError("Values is of different length with var_name.")
+            
+            if upper_bound and type(upper_bound)==list and len(upper_bound)!= num_name:
+                raise ValueError("Upperbounds is of different length with var_name.")
+            
+            if lower_bound and type(lower_bound)==list and len(lower_bound)!= num_name:
+                raise ValueError("Lowerbounds is of different length with var_name.")
 
     
 class Measurements(SpecialSet):
@@ -210,7 +220,6 @@ class Measurements(SpecialSet):
                 default choice is [0], means this is an algebraic variable
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
-        #self._check_names(var_name, extra_index, time_index)
         self.name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index)
 
         # generate default variance
@@ -263,7 +272,8 @@ class DesignVariables(SpecialSet):
 
         self.name = super().specify(self_define_res)
 
-    def add_elements(self, var_name, extra_index=None, time_index=[0], values=None):
+    def add_elements(self, var_name, extra_index=None, time_index=[0], values=None, 
+                     upper_bound = None, lower_bound = None):
         """
 
         Parameters
@@ -278,12 +288,8 @@ class DesignVariables(SpecialSet):
                 default choice is [0], means this is an algebraic variable
                 if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
         """
-        self.name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values)
-        # initialize upper and lower bounds
-        self.upper_bound, self.lower_bound = None, None
+        self.name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values, 
+                                          upper_bound = upper_bound, lower_bound = lower_bound)
 
-    def add_bounds(self, upper_bound=None, lower_bound=None):
-        return super().add_bounds(upper_bound, lower_bound)
-    
     def update_values(self, values):
         return super().update_values(values)

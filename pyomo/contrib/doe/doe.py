@@ -441,9 +441,10 @@ class DesignOfExperiments:
 
         # set ub and lb to parameters
         for par in self.param.keys():
-            component = getattr(mod, par)
-            component.setlb(self.param[par])
-            component.setub(self.param[par])
+            cuid = pyo.ComponentUID(par)
+            var = cuid.find_component_on(mod)
+            var.setlb(self.param[par])
+            var.setub(self.param[par])
 
         # generate parameter name list and value dictionary with index
         var_name = list(self.param.keys())
