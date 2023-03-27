@@ -64,8 +64,19 @@ class SymbolMap(object):
         """
         Add a symbol for a given object
         """
+        nSymbols = len(self.byObject) + 1
         self.byObject[id(obj)] = symb
         self.bySymbol[symb] = obj
+        if nSymbols != len(self.bySymbol):
+            raise RuntimeError(
+                "SymbolMap.addSymbol(): duplicate symbol.  "
+                "SymbolMap likely in an inconsistent state"
+            )
+        if len(self.byObject) != len(self.bySymbol):
+            raise RuntimeError(
+                "SymbolMap.addSymbol(): duplicate object.  "
+                "SymbolMap likely in an inconsistent state"
+            )
 
     def addSymbols(self, obj_symbol_tuples):
         """
