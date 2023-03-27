@@ -32,17 +32,16 @@ from pyomo.common.dependencies import (
 
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
-import time
 import pickle
 from itertools import permutations, product
 import logging
 from enum import Enum
 from pyomo.common.timing import TicTocTimer
-from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation, get_dsdp
-#from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_lib
-#from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-from scenario import ScenarioGenerator,finite_difference_lib
-from result import FisherResults, GridSearchResult
+from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
+from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_lib
+from pyomo.contrib.doe.result import FisherResults, GridSearchResult
+#from scenario import ScenarioGenerator,finite_difference_lib
+#from result import FisherResults, GridSearchResult
 
 
 class calculation_mode(Enum):
@@ -53,7 +52,7 @@ class calculation_mode(Enum):
     def has_value(cls, value):
         return value in cls._value2member_map_
     
-class objective_lib(Enum):
+class objective_lib(Enum): 
     det = 1
     trace = 2 
     zero = 3

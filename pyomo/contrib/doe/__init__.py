@@ -9,6 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from .measurements import Measurements, DesignVariables
-from .doe import DesignOfExperiments, mode_lib
-from .scenario import ScenarioGenerator, formula_lib
+from .doe import DesignOfExperiments, calculation_mode, objective_lib
+from .scenario import ScenarioGenerator, finite_difference_lib
 from .result import FisherResults, GridSearchResult

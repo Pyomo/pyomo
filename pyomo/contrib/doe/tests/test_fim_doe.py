@@ -26,7 +26,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator, formula_lib
+from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator, finite_difference_lib
 
 class TestMeasurement(unittest.TestCase):
     """Test the Measurements class, specify, add_element, update_variance, check_subset functions.
@@ -48,10 +48,10 @@ class TestMeasurement(unittest.TestCase):
         measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
         
         # test names, variance 
-        self.assertEqual(measure_class.measurement_name[0], 'C[CA,0]')
-        self.assertEqual(measure_class.measurement_name[1], 'C[CA,0.125]')
-        self.assertEqual(measure_class.measurement_name[-1], 'T[5,0.8]')
-        self.assertEqual(measure_class.measurement_name[-2], 'T[5,0.6]')
+        self.assertEqual(measure_class.name[0], 'C[CA,0]')
+        self.assertEqual(measure_class.name[1], 'C[CA,0.125]')
+        self.assertEqual(measure_class.name[-1], 'T[5,0.8]')
+        self.assertEqual(measure_class.name[-2], 'T[5,0.6]')
         self.assertEqual(measure_class.variance['T[5,0.4]'], 1)
         self.assertEqual(measure_class.variance['T[5,0.6]'], 1)
 
@@ -78,8 +78,8 @@ class TestMeasurement(unittest.TestCase):
         measure_class2 = Measurements()
         measure_class2.specify(var_names)
 
-        self.assertEqual(measure_class2.measurement_name[1], 'C[CA,0.125]')
-        self.assertEqual(measure_class2.measurement_name[-1], 'C[CC,0.375]')
+        self.assertEqual(measure_class2.name[1], 'C[CA,0.125]')
+        self.assertEqual(measure_class2.name[-1], 'C[CC,0.375]')
 
         ### check_subset function 
         self.assertTrue(measure_class.check_subset(measure_class2))
@@ -99,10 +99,10 @@ class TestDesignVariable(unittest.TestCase):
         lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
         design_gen = DesignVariables()
-        design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
-        design_gen.add_bounds(upper_bound=upper_bound, lower_bound=lower_bound)
+        design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, 
+                                upper_bound=upper_bound, lower_bound=lower_bound)
 
-        self.assertEqual(design_gen.design_name, ['CA0[0]', 'T[0]', 'T[0.125]', 'T[0.25]', 'T[0.375]',
+        self.assertEqual(design_gen.name, ['CA0[0]', 'T[0]', 'T[0.125]', 'T[0.25]', 'T[0.375]',
                                                    'T[0.5]', 'T[0.625]', 'T[0.75]', 'T[0.875]', 'T[1]'])
         self.assertEqual(design_gen.special_set_value['CA0[0]'], 5)
         self.assertEqual(design_gen.special_set_value['T[0]'], 570)
@@ -124,7 +124,7 @@ class TestParameter(unittest.TestCase):
         # set up parameter class
         param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
-        scenario_gene = ScenarioGenerator(param_dict, formula=formula_lib.central, step=0.1)
+        scenario_gene = ScenarioGenerator(param_dict, formula=finite_difference_lib.central, step=0.1)
         parameter_set = scenario_gene.generate_scenario()
     
         self.assertAlmostEqual(parameter_set['eps-abs']['A1'], 16.9582, places=1)

@@ -30,7 +30,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import DesignOfExperiments, Measurements, mode_lib, DesignVariables, formula_lib
+from pyomo.contrib.doe import DesignOfExperiments, Measurements, calculation_mode, DesignVariables, finite_difference_lib
 
 def main():
     ### Define inputs
@@ -55,23 +55,22 @@ def main():
     lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
     design_gen = DesignVariables()
-    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
-    design_gen.add_bounds(upper_bound=upper_bound, lower_bound=lower_bound)
+    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, upper_bound=upper_bound, lower_bound=lower_bound)
     
     # empty prior
     prior_pass = np.zeros((4,4))
     
     ### Test sequential_finite mode
-    sensi_opt = mode_lib.sequential_finite
+    sensi_opt = calculation_mode.sequential_finite
 
     doe_object = DesignOfExperiments(parameter_dict, design_gen,
                                 measure_class, create_model,
                             prior_FIM=prior_pass, discretize_model=disc_for_measure)
 
 
-    result = doe_object.compute_FIM(design_gen, mode=sensi_opt,  
+    result = doe_object.compute_FIM(mode=sensi_opt,  
                                     scale_nominal_param_value=True,
-                                formula = formula_lib.central)
+                                formula = finite_difference_lib.central)
 
 
     result.calculate_FIM(doe_object.design_values)

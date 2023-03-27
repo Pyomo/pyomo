@@ -28,7 +28,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables
+from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables, objective_lib
 
 def main():
     ### Define inputs
@@ -53,8 +53,7 @@ def main():
     lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
     design_gen = DesignVariables()
-    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
-    design_gen.add_bounds(upper_bound=upper_bound, lower_bound=lower_bound)
+    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, upper_bound=upper_bound, lower_bound=lower_bound)
     
     exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
     design_gen.update_values(exp1)
@@ -69,8 +68,8 @@ def main():
                                 measure_class, create_model,
                             prior_FIM=prior, discretize_model=disc_for_measure)
 
-    square_result, optimize_result= doe_object2.stochastic_program(design_gen, if_optimize=True, if_Cholesky=True, 
-                                                            scale_nominal_param_value=True, objective_option='det', 
+    square_result, optimize_result= doe_object2.stochastic_program(if_optimize=True, if_Cholesky=True, 
+                                                            scale_nominal_param_value=True, objective_option=objective_lib.det, 
                                                             L_initial=np.linalg.cholesky(prior))
     
 if __name__ == "__main__":

@@ -29,7 +29,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables, mode_lib
+from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables, calculation_mode
 
 
 def main():
@@ -55,8 +55,7 @@ def main():
     lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
     design_gen = DesignVariables()
-    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
-    design_gen.add_bounds(upper_bound=upper_bound, lower_bound=lower_bound)
+    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, upper_bound=upper_bound, lower_bound=lower_bound)
     
     # Design variable ranges as lists 
     design_ranges = [list(np.linspace(1,5,3)), list(np.linspace(300,700,3))]
@@ -65,8 +64,7 @@ def main():
     dv_apply_name = ['CA0[0]',['T[0]','T[0.125]','T[0.25]','T[0.375]','T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]']]
 
     ## choose from 'sequential_finite', 'direct_kaug'
-    #sensi_opt = 'sequential_finite'
-    sensi_opt = mode_lib.direct_kaug
+    sensi_opt = calculation_mode.direct_kaug
 
     prior_pass = np.zeros((4,4))
         
@@ -74,7 +72,7 @@ def main():
                                  measure_class, create_model,
                                 prior_FIM=prior_pass, discretize_model=disc_for_measure)
 
-    all_fim = doe_object.run_grid_search(design_gen, design_ranges, dv_apply_name, 
+    all_fim = doe_object.run_grid_search(design_ranges, dv_apply_name, 
                                         mode=sensi_opt)
     
     all_fim.extract_criteria()
@@ -89,13 +87,13 @@ def main():
     # Define experiments
     exp1 = [5, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
-    sensi_opt = mode_lib.direct_kaug
+    sensi_opt = calculation_mode.direct_kaug
 
     doe_object = DesignOfExperiments(parameter_dict, design_gen,
                                  measure_class, create_model,
                                 prior_FIM=prior_pass, discretize_model=disc_for_measure)
 
-    all_fim = doe_object.run_grid_search(design_gen, design_ranges, dv_apply_name, 
+    all_fim = doe_object.run_grid_search(design_ranges, dv_apply_name, 
                                         mode=sensi_opt)
     
     test = all_fim.extract_criteria()

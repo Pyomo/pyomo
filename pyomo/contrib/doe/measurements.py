@@ -25,7 +25,6 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
-import warnings
 import itertools
 
 class SpecialSet: 
