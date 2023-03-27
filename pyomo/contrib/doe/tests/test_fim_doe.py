@@ -26,7 +26,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator, finite_difference_lib, DesignOfExperiments
+from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator, finite_difference_lib, DesignOfExperiments, SpecialSet
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
 import numpy as np
 
@@ -198,6 +198,38 @@ class TestParameter(unittest.TestCase):
         self.assertAlmostEqual(parameter_set['scenario'][2]['A2'], 408.8895, places=1)
         self.assertAlmostEqual(parameter_set['scenario'][-1]['E2'], 13.54, places=1)
         self.assertAlmostEqual(parameter_set['scenario'][-2]['E2'], 16.55, places=1)
+
+
+class TestSpecialSet(unittest.TestCase):
+    """Test the DesignVariable class, specify, add_element, add_bounds, update_values.
+    """
+    def test_setup(self):
+        ### add_element function 
+        total_name = ["CA0", "T"]
+        # control time for C [h]
+        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
+        dtime_index = [[0], t_control] 
+        exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+        upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700]
+        lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
+
+        special = SpecialSet()
+        special.add_elements(total_name, time_index = dtime_index, values=exp1, 
+                                upper_bound=upper_bound, lower_bound=lower_bound)
+
+        self.assertEqual(special.special_set, ['CA0[0]', 'T[0]', 'T[0.125]', 'T[0.25]', 'T[0.375]',
+                                                   'T[0.5]', 'T[0.625]', 'T[0.75]', 'T[0.875]', 'T[1]'])
+        self.assertEqual(special.special_set_value['CA0[0]'], 5)
+        self.assertEqual(special.special_set_value['T[0]'], 570)
+        self.assertEqual(special.upper_bound['CA0[0]'], 5)
+        self.assertEqual(special.upper_bound['T[0]'], 700)
+        self.assertEqual(special.lower_bound['CA0[0]'], 1)
+        self.assertEqual(special.lower_bound['T[0]'], 300)
+
+        exp1 = [4, 600, 300, 300, 300, 300, 300, 300, 300, 300]
+        special.update_values(exp1)
+        self.assertEqual(special.special_set_value['CA0[0]'], 4)
+        self.assertEqual(special.special_set_value['T[0]'], 600)
 
         
 if __name__ == '__main__':

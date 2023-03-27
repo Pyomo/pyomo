@@ -141,7 +141,7 @@ class DesignOfExperiments:
     def stochastic_program(self,  if_optimize=True, objective_option=objective_lib.det,
                      scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-7, L_initial=None,
                      jac_initial=None, fim_initial=None,
-                     formula=finite_difference_lib.central, step=0.001, check=True, tee_opt=True):
+                     formula=finite_difference_lib.central, step=0.001, tee_opt=True):
         """
         Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
@@ -178,8 +178,6 @@ class DesignOfExperiments:
             choose from 'central', 'forward', 'backward', None in the finite_difference_lib class
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-        check:
-            if True, inputs are checked for consistency, default is True.
 
         Returns
         --------
@@ -358,7 +356,7 @@ class DesignOfExperiments:
             with open(read_output, 'rb') as f:
                 output_record = pickle.load(f)
                 f.close()
-            jac = self._finite_calculation(output_record, scena_gen)
+            jac = self._finite_calculation(output_record, self.scena_gen)
 
         # if measurements are not provided
         else:
