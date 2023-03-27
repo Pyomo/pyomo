@@ -118,12 +118,13 @@ class DesignOfExperiments:
 
         # check if there is prior info
         self.prior_FIM = prior_FIM
+        self._check_inputs()
 
         # if print statements
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.INFO)
         
-    def _check_inputs(self, check_mode=False):
+    def _check_inputs(self):
         """
         Check if inputs are consistent
 
@@ -133,6 +134,8 @@ class DesignOfExperiments:
         """
         if type(self.prior_FIM)!=type(None):
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
+                raise ValueError('Found wrong prior information matrix shape.')
+            elif np.shape(self.prior_FIM)[0] != len(self.param):
                 raise ValueError('Found wrong prior information matrix shape.')
 
     def stochastic_program(self,  if_optimize=True, objective_option=objective_lib.det,
@@ -202,11 +205,6 @@ class DesignOfExperiments:
         # calculate how much the FIM element is scaled by a constant number
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
         self.fim_scale_constant_value = self.scale_constant_value **2
-    
-        # check if inputs are valid
-        # simultaneous mode does not need to check mode and dimension of design variables
-        if check:
-            self._check_inputs(check_mode=False)
 
         sp_timer = TicTocTimer()
         sp_timer.tic()
@@ -275,7 +273,7 @@ class DesignOfExperiments:
 
 
 
-    def compute_FIM(self, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
+    def compute_FIM(self, mode=calculation_mode.direct_kaug, FIM_store_name=None, specified_prior=None,
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
                     store_output = None, read_output=None, extract_single_model=None,
                     formula='central', step=0.001):
@@ -338,9 +336,6 @@ class DesignOfExperiments:
         # As FIM~Jacobian.T@Jacobian, FIM is scaled twice the number the Q is scaled
         self.fim_scale_constant_value = self.scale_constant_value ** 2
 
-        # check inputs valid
-        self._check_inputs(check_mode=True)
-
         square_timer = TicTocTimer()
         square_timer.tic(msg=None)
         if mode==calculation_mode.sequential_finite:
@@ -348,10 +343,7 @@ class DesignOfExperiments:
 
         elif mode==calculation_mode.direct_kaug:
             FIM_analysis = self._direct_kaug()
-            
-        else:
-            raise ValueError(mode+' is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
-        
+
         dT = square_timer.toc(msg=None)
         self.logger.info("elapsed time: %0.1f"%dT)
         

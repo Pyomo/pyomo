@@ -26,7 +26,70 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator, finite_difference_lib
+from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator, finite_difference_lib, DesignOfExperiments
+from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
+import numpy as np
+
+class TestMeasurementError(unittest.TestCase):
+    def test(self):
+        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
+        t_control2 = [0.2,0.4,0.6,0.8]
+        measure_class=Measurements()
+
+        # set up measurements 
+        total_name = ["C", "T", "A"] # wrong total name
+        extra_index = [[["CA", "CB", "CC"]], [[1,3,5]]]
+        time_index = [t_control, t_control2]  
+
+        self.assertRaises(ValueError, Measurements.add_elements, measure_class, 
+                          var_name=total_name, extra_index = extra_index, time_index = time_index)
+        
+class TestDesignError(unittest.TestCase):
+    def test(self):
+        total_name = ["CA0", "T"]
+        # control time for C [h]
+        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
+        dtime_index = [[0], t_control] 
+        exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+        upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700, 800] # wrong upper bound
+        lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
+
+        design_gen = DesignVariables()
+
+        self.assertRaises(ValueError, DesignVariables.add_elements, design_gen, 
+                          var_name=total_name, time_index = dtime_index, values=exp1, 
+                          upper_bound=upper_bound, lower_bound=lower_bound)
+        
+class TestPriorFIMError(unittest.TestCase):
+    def test(self):
+
+        # Control time set [h]
+        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
+        # measurement object 
+        total_name = ["C"]
+        time_index = [t_control] 
+        measure_class = Measurements()
+        measure_class.add_elements(total_name, time_index = time_index)
+
+        # design object 
+        total_name = ["CA0", "T"]
+        dtime_index = [[0], t_control] 
+        exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+        design_gen = DesignVariables()
+        design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
+        
+        parameter_dict = {"A1":1, "A2":1, "E1":1}
+
+        # empty prior
+        prior_right = np.zeros((3,3))
+        prior_pass = np.zeros((60,5))
+
+        doe_object = DesignOfExperiments(parameter_dict, design_gen,
+                                 measure_class, create_model,
+                                prior_FIM=prior_right, discretize_model=disc_for_measure)
+        
+        self.assertRaises(ValueError, DesignOfExperiments.__init__, doe_object, parameter_dict, design_gen, measure_class,
+                          create_model, prior_FIM=prior_pass)
 
 class TestMeasurement(unittest.TestCase):
     """Test the Measurements class, specify, add_element, update_variance, check_subset functions.

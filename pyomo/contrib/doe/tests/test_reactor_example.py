@@ -34,10 +34,27 @@ from pyomo.common.dependencies import (
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import DesignOfExperiments, Measurements, calculation_mode, DesignVariables, finite_difference_lib, objective_lib
-from pyomo.environ import value
-
+from pyomo.environ import value, ConcreteModel
+from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
+
+class Test_example_options(unittest.TestCase):
+    """ Test the three options in the kinetics example. 
+    """
+    def test_setUP(self):
+        # parmest option 
+        mod = create_model(model_option='parmest')
+        
+        # global and block option
+        mod = ConcreteModel()
+        create_model(mod, model_option='global')
+        create_model(mod, model_option='block')
+        # both options need a given model, or raise errors 
+        self.assertRaises(ValueError, create_model, model_option='global')
+        self.assertRaises(ValueError, create_model, model_option='block')
+
+        self.assertRaises(ValueError, create_model, model_option='NotDefine')
 
 class Test_doe_object(unittest.TestCase):
     """ Test the kinetics example with both the sequential_finite mode and the direct_kaug mode
@@ -45,9 +62,7 @@ class Test_doe_object(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     @unittest.skipIf(not pandas_available, "Pandas is not available")
-    def test_setUP(self):
-        from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-        
+    def test_setUP(self):   
         ### Define inputs
         # Control time set [h]
         t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
