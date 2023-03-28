@@ -1,2 +1,18 @@
+[files]
+extend-exclude = ["*.eps"]
+
 [default.extend-words]
-# Insert list here
+# Ignore IDAES
+IDAES = "IDAES"
+idaes = "idaes"
+# Ignore datas
+Datas = "Datas"
+datas = "datas"
+# Ignore ND
+ND = "ND"
+nd = "nd"
+# Ignore INOUT
+inout = "inout"
+INOUT= "INOUT"
+# Add More Words Here
+
