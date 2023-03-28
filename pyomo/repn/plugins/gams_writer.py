@@ -807,9 +807,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write("MODELSTAT = %s.modelstat;\n" % model_name)
         output_file.write("SOLVESTAT = %s.solvestat;\n\n" % model_name)
 
-        output_file.write(
-            "Scalar OBJEST 'best objective', OBJVAL 'objective value';\n"
-        )
+        output_file.write("Scalar OBJEST 'best objective', OBJVAL 'objective value';\n")
         output_file.write("OBJEST = %s.objest;\n" % model_name)
         output_file.write("OBJVAL = %s.objval;\n\n" % model_name)
 

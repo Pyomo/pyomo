@@ -21,11 +21,12 @@ import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.tee as tee
 
+
 class TestTeeStream(unittest.TestCase):
     def test_stdout(self):
         a = StringIO()
         b = StringIO()
-        with tee.TeeStream(a,b) as t:
+        with tee.TeeStream(a, b) as t:
             t.STDOUT.write("Hello\n")
         self.assertEqual(a.getvalue(), "Hello\n")
         self.assertEqual(b.getvalue(), "Hello\n")
@@ -38,8 +39,10 @@ class TestTeeStream(unittest.TestCase):
             self.assertIs(err, t.STDERR)
             self.assertIsNot(out, err)
 
-    @unittest.skipIf(not tee._peek_available,
-                     "Requires the _mergedReader, but _peek_available==False")
+    @unittest.skipIf(
+        not tee._peek_available,
+        "Requires the _mergedReader, but _peek_available==False",
+    )
     def test_merge_out_and_err(self):
         # Test that the STDERR/STDOUT streams are merged correctly
         # (i.e., STDOUT is line buffered and STDERR is not).  This merge
@@ -49,12 +52,12 @@ class TestTeeStream(unittest.TestCase):
         b = StringIO()
         # make sure this doesn't accidentally become a very long wait
         assert tee._poll_interval <= 0.1
-        with tee.TeeStream(a,b) as t:
+        with tee.TeeStream(a, b) as t:
             # This is a slightly nondeterministic (on Windows), so a
             # flush() and short pause should help
             t.STDOUT.write("Hello\nWorld")
             t.STDOUT.flush()
-            time.sleep(tee._poll_interval*100)
+            time.sleep(tee._poll_interval * 100)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
             # For determinism, it is important that the STDERR message
@@ -65,9 +68,9 @@ class TestTeeStream(unittest.TestCase):
             while 'cow' not in a.getvalue() and time.time() - start_time < 1:
                 time.sleep(tee._poll_interval)
         acceptable_results = {
-            "Hello\ninterrupting\ncowWorld", # expected
-            "interrupting\ncowHello\nWorld", # Windows occasionally puts
-                                             # all error before stdout
+            "Hello\ninterrupting\ncowWorld",  # expected
+            "interrupting\ncowHello\nWorld",  # Windows occasionally puts
+            # all error before stdout
         }
         self.assertIn(a.getvalue(), acceptable_results)
         self.assertEqual(b.getvalue(), a.getvalue())
@@ -77,7 +80,7 @@ class TestTeeStream(unittest.TestCase):
         b = StringIO()
         try:
             _tmp, tee._peek_available = tee._peek_available, False
-            with tee.TeeStream(a,b) as t:
+            with tee.TeeStream(a, b) as t:
                 # Ensure both threads are running
                 t.STDOUT
                 t.STDERR
@@ -85,7 +88,7 @@ class TestTeeStream(unittest.TestCase):
                 # nondeterministic, so a short pause should help
                 t.STDERR.write("Hello\n")
                 t.STDERR.flush()
-                time.sleep(tee._poll_interval*2)
+                time.sleep(tee._poll_interval * 2)
                 t.STDOUT.write("World\n")
         finally:
             tee._peek_available = _tmp
@@ -95,7 +98,7 @@ class TestTeeStream(unittest.TestCase):
     def test_binary_tee(self):
         a = BytesIO()
         b = BytesIO()
-        with tee.TeeStream(a,b) as t:
+        with tee.TeeStream(a, b) as t:
             t.open('wb').write(b"Hello\n")
         self.assertEqual(a.getvalue(), b"Hello\n")
         self.assertEqual(b.getvalue(), b"Hello\n")
@@ -115,7 +118,7 @@ class TestTeeStream(unittest.TestCase):
             "\t'Hello, '\n"
             "Stream handle closed with un-decoded characters in the decoder "
             "buffer that was not emitted to the output stream(s):\n"
-            "\tb'\\xc2'\n"
+            "\tb'\\xc2'\n",
         )
 
         out = StringIO()
@@ -127,7 +130,7 @@ class TestTeeStream(unittest.TestCase):
         self.assertRegex(
             log.getvalue(),
             r"^Output stream \(<.*?>\) closed before all output was written "
-            r"to it. The following was left in the output buffer:\n\t'hi\\n'\n$"
+            r"to it. The following was left in the output buffer:\n\t'hi\\n'\n$",
         )
 
     def test_capture_output(self):
@@ -140,8 +143,10 @@ class TestTeeStream(unittest.TestCase):
         out = StringIO()
         capture = tee.capture_output(out)
         capture.setup()
-        try: 
-            with self.assertRaisesRegex(RuntimeError, 'Duplicate call to capture_output.setup'):
+        try:
+            with self.assertRaisesRegex(
+                RuntimeError, 'Duplicate call to capture_output.setup'
+            ):
                 capture.setup()
         finally:
             capture.reset()
@@ -166,7 +171,8 @@ class TestTeeStream(unittest.TestCase):
             b = tee.capture_output(OUT2)
             b.setup()
             with self.assertRaisesRegex(
-                    RuntimeError, 'Captured output does not match sys.stdout'):
+                RuntimeError, 'Captured output does not match sys.stdout'
+            ):
                 a.reset()
             b.tee = None
         finally:
@@ -179,21 +185,23 @@ class TestTeeStream(unittest.TestCase):
 
         _save = tee._poll_timeout, tee._poll_timeout_deadlock
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
-        tee._poll_timeout_deadlock = tee._poll_interval * 2**7 # 0.0128
+        tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
 
         try:
             with LoggingIntercept() as LOG, self.assertRaisesRegex(
-                    RuntimeError, 'deadlock'):
+                RuntimeError, 'deadlock'
+            ):
                 with tee.TeeStream(MockStream()) as t:
                     err = t.STDERR
                     err.write('*')
             self.assertEqual(
                 'Significant delay observed waiting to join reader '
                 'threads, possible output stream deadlock\n',
-                LOG.getvalue()
+                LOG.getvalue(),
             )
         finally:
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
+
 
 class TestFileDescriptor(unittest.TestCase):
     def setUp(self):
@@ -220,7 +228,7 @@ class TestFileDescriptor(unittest.TestCase):
             F.flush()
 
     def test_redirect_synchronize_stdout(self):
-        r,w = os.pipe()
+        r, w = os.pipe()
         os.dup2(w, 1)
         sys.stdout = os.fdopen(1, 'w', closefd=False)
         rd = tee.redirect_fd(synchronize=True)
@@ -232,7 +240,7 @@ class TestFileDescriptor(unittest.TestCase):
             self.assertEqual(FILE.read(), "to_stdout_2\nto_fd1_2\n")
 
     def test_redirect_no_synchronize_stdout(self):
-        r,w = os.pipe()
+        r, w = os.pipe()
         os.dup2(w, 1)
         sys.stdout = os.fdopen(1, 'w', closefd=False)
         rd = tee.redirect_fd(synchronize=False)
@@ -241,8 +249,7 @@ class TestFileDescriptor(unittest.TestCase):
         with os.fdopen(r, 'r') as FILE:
             os.close(w)
             os.close(1)
-            self.assertEqual(FILE.read(),
-                             "to_stdout_1\nto_stdout_2\nto_fd1_2\n")
+            self.assertEqual(FILE.read(), "to_stdout_1\nto_stdout_2\nto_fd1_2\n")
 
     # Pytest's default capture method causes failures for the following
     # two tests. This re-implementation of the capfd fixture allows
@@ -256,7 +263,7 @@ class TestFileDescriptor(unittest.TestCase):
 
     def test_redirect_synchronize_stdout_not_fd1(self):
         self.capfd.disabled()
-        r,w = os.pipe()
+        r, w = os.pipe()
         os.dup2(w, 1)
         rd = tee.redirect_fd(synchronize=True)
         self._generate_output(rd)
@@ -268,7 +275,7 @@ class TestFileDescriptor(unittest.TestCase):
 
     def test_redirect_no_synchronize_stdout_not_fd1(self):
         self.capfd.disabled()
-        r,w = os.pipe()
+        r, w = os.pipe()
         os.dup2(w, 1)
         rd = tee.redirect_fd(synchronize=False)
         self._generate_output(rd)
@@ -279,7 +286,7 @@ class TestFileDescriptor(unittest.TestCase):
             self.assertEqual(FILE.read(), "to_fd1_2\n")
 
     def test_redirect_synchronize_stringio(self):
-        r,w = os.pipe()
+        r, w = os.pipe()
         os.dup2(w, 1)
         try:
             sys.stdout, out = StringIO(), sys.stdout
@@ -295,7 +302,7 @@ class TestFileDescriptor(unittest.TestCase):
             self.assertEqual(FILE.read(), "to_fd1_2\n")
 
     def test_redirect_no_synchronize_stringio(self):
-        r,w = os.pipe()
+        r, w = os.pipe()
         os.dup2(w, 1)
         try:
             sys.stdout, out = StringIO(), sys.stdout
@@ -311,7 +318,7 @@ class TestFileDescriptor(unittest.TestCase):
             self.assertEqual(FILE.read(), "to_fd1_2\n")
 
     def test_caputure_output_fd(self):
-        r,w = os.pipe()
+        r, w = os.pipe()
         os.dup2(w, 1)
         sys.stdout = os.fdopen(1, 'w', closefd=False)
         with tee.capture_output(capture_fd=True) as OUT:
@@ -332,6 +339,7 @@ class TestFileDescriptor(unittest.TestCase):
             os.close(1)
             os.close(w)
             self.assertEqual(FILE.read(), "to_stdout_2\nto_fd1_2\n")
+
 
 if __name__ == '__main__':
     unittest.main()

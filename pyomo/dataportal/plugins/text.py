@@ -19,7 +19,6 @@ from pyomo.dataportal import TableData
 
 @DataManagerFactory.register("tab", "TAB file interface")
 class TextTable(TableData):
-
     def __init__(self):
         TableData.__init__(self)
         self.FILE = None
@@ -39,10 +38,10 @@ class TextTable(TableData):
             raise IOError("Cannot find file '%s'" % self.filename)
         self.FILE = open(self.filename, 'r')
         try:
-            tmp=[]
+            tmp = []
             for line in self.FILE:
-                line=line.strip()
-                tokens = re.split("[\t ]+",line)
+                line = line.strip()
+                tokens = re.split("[\t ]+", line)
                 if tokens != ['']:
                     tmp.append(tokens)
             if len(tmp) == 0:
@@ -56,11 +55,19 @@ class TextTable(TableData):
                     if isinstance(p, Param):
                         self.options.model = p.model()
                         p = p.local_name
-                    self._info = ["param",p,":=",tmp[0][0]]
+                    self._info = ["param", p, ":=", tmp[0][0]]
                 elif len(self.options.symbol_map) == 1:
-                    self._info = ["param",self.options.symbol_map[self.options.symbol_map.keys()[0]],":=",tmp[0][0]]
+                    self._info = [
+                        "param",
+                        self.options.symbol_map[self.options.symbol_map.keys()[0]],
+                        ":=",
+                        tmp[0][0],
+                    ]
                 else:
-                    raise IOError("Data looks like a parameter, but multiple parameter names have been specified: %s" % str(self.options.symbol_map))
+                    raise IOError(
+                        "Data looks like a parameter, but multiple parameter names have been specified: %s"
+                        % str(self.options.symbol_map)
+                    )
             else:
                 self._set_data(tmp[0], tmp[1:])
         except Exception:
@@ -78,7 +85,6 @@ class TextTable(TableData):
         self.FILE = open(self.filename, 'w')
         table = self._get_table()
         for line in table:
-            self.FILE.write(' '.join(map(str, line))+'\n')
+            self.FILE.write(' '.join(map(str, line)) + '\n')
         self.FILE.close()
         self.FILE = None
-

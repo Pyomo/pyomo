@@ -5,8 +5,9 @@ import logging
 from math import fabs
 
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
-from pyomo.contrib.cp.transform .logical_to_disjunctive_program import (
-    LogicalToDisjunctive)
+from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
+    LogicalToDisjunctive,
+)
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.block import Block
 from pyomo.core.expr.numvalue import value
@@ -15,19 +16,23 @@ from pyomo.gdp.disjunct import Disjunct, Disjunction
 
 logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
+
 def _is_transformation(transformation_name):
     xform = TransformationFactory(transformation_name)
     if xform is None:
         raise ValueError(
             "Expected valid name for a registered Pyomo transformation. "
-            "\n\tRecieved: %s" % transformation_name)
+            "\n\tRecieved: %s" % transformation_name
+        )
     return transformation_name
+
 
 @TransformationFactory.register(
     'gdp.fix_disjuncts',
     doc="""Fix disjuncts to their current Boolean values and transforms any
     LogicalConstraints and BooleanVars so that the resulting model is a
-    (MI)(N)LP.""")
+    (MI)(N)LP.""",
+)
 class GDP_Disjunct_Fixer(Transformation):
     """Fix disjuncts to their current Boolean values.
 
@@ -45,21 +50,26 @@ class GDP_Disjunct_Fixer(Transformation):
         super(GDP_Disjunct_Fixer, self).__init__(**kwargs)
 
     CONFIG = ConfigDict("gdp.fix_disjuncts")
-    CONFIG.declare("GDP_to_MIP_transformation", ConfigValue(
-        default='gdp.bigm',
-        domain=_is_transformation,
-        description="The name of the transformation to call after the "
-        "'logical_to_disjunctive' transformation in order to finish "
-        "transforming to a MI(N)LP.",
-        doc="""
+    CONFIG.declare(
+        "GDP_to_MIP_transformation",
+        ConfigValue(
+            default='gdp.bigm',
+            domain=_is_transformation,
+            description="The name of the transformation to call after the "
+            "'logical_to_disjunctive' transformation in order to finish "
+            "transforming to a MI(N)LP.",
+            doc="""
         If there are no logical constraints on the model being transformed,
         this option is not used. However, if there are logical constraints
         that involve mixtures of Boolean and integer variables, this option
         specifies the transformation to use to transform the model with fixed
         Disjuncts to a MI(N)LP. Uses 'gdp.bigm' by default.
-        """))
+        """,
+        ),
+    )
+
     def _apply_to(self, model, **kwds):
-        """Fix all disjuncts in the given model and reclassify them to 
+        """Fix all disjuncts in the given model and reclassify them to
         Blocks."""
         config = self.config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
@@ -67,11 +77,12 @@ class GDP_Disjunct_Fixer(Transformation):
         self._transformContainer(model)
 
         # Reclassify all disjuncts
-        for disjunct_object in model.component_objects(Disjunct,
-                                                       descend_into=(Block,
-                                                                     Disjunct)):
+        for disjunct_object in model.component_objects(
+            Disjunct, descend_into=(Block, Disjunct)
+        ):
             disjunct_object.parent_block().reclassify_component_type(
-                disjunct_object, Block)
+                disjunct_object, Block
+            )
 
         # Transform any remaining logical stuff
         TransformationFactory('contrib.logical_to_disjunctive').apply_to(model)
@@ -80,14 +91,17 @@ class GDP_Disjunct_Fixer(Transformation):
 
     def _transformContainer(self, obj):
         """Find all disjuncts in the container and transform them."""
-        for disjunct in obj.component_data_objects(ctype=Disjunct, active=True,
-                                                   descend_into=True):
+        for disjunct in obj.component_data_objects(
+            ctype=Disjunct, active=True, descend_into=True
+        ):
             _bool = disjunct.indicator_var
             if _bool.value is None:
-                raise GDP_Error("The value of the indicator_var of "
-                                "Disjunct '%s' is None. All indicator_vars "
-                                "must have values before calling "
-                                "'fix_disjuncts'." % disjunct.name)
+                raise GDP_Error(
+                    "The value of the indicator_var of "
+                    "Disjunct '%s' is None. All indicator_vars "
+                    "must have values before calling "
+                    "'fix_disjuncts'." % disjunct.name
+                )
             elif _bool.value:
                 disjunct.indicator_var.fix(True)
                 self._transformContainer(disjunct)
@@ -95,16 +109,17 @@ class GDP_Disjunct_Fixer(Transformation):
                 # Deactivating fixes the indicator_var to False
                 disjunct.deactivate()
 
-        for disjunction in obj.component_data_objects(ctype=Disjunction,
-                                                      active=True,
-                                                      descend_into=True):
+        for disjunction in obj.component_data_objects(
+            ctype=Disjunction, active=True, descend_into=True
+        ):
             self._transformDisjunctionData(disjunction)
 
     def _transformDisjunctionData(self, disjunction):
         # the sum of all the indicator variable values of disjuncts in the
         # disjunction
-        logical_sum = sum(value(disj.binary_indicator_var)
-                          for disj in disjunction.disjuncts)
+        logical_sum = sum(
+            value(disj.binary_indicator_var) for disj in disjunction.disjuncts
+        )
 
         # Check that the disjunctions are not being fixed to an infeasible
         # realization.
@@ -113,14 +128,16 @@ class GDP_Disjunct_Fixer(Transformation):
             raise GDP_Error(
                 "Disjunction %s violated. "
                 "Expected 1 disjunct to be active, but %s were active."
-                % (disjunction.name, logical_sum))
+                % (disjunction.name, logical_sum)
+            )
         elif not logical_sum >= 1:
             # for non-XOR disjunctions, the sum of all disjunct values should
             # be at least 1
             raise GDP_Error(
                 "Disjunction %s violated. "
                 "Expected at least 1 disjunct to be active, "
-                "but none were active.")
+                "but none were active."
+            )
         else:
             # disjunction is in feasible realization. Deactivate it.
             disjunction.deactivate()
