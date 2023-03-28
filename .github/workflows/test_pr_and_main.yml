@@ -31,8 +31,17 @@ env:
   SRC_REF: ${{ github.head_ref || github.ref }}
 
 jobs:
+  lint:
+    name: code-linting
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v3
+    - name: Black Formatting Check
+      uses: rickstaa/action-black@v1
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
+    needs: lint
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -657,6 +666,7 @@ jobs:
 
   bare-python-env:
     name: linux/3.8/bare-env
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
