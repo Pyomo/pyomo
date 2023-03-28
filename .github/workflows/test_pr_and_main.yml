@@ -32,13 +32,17 @@ env:
 
 jobs:
   lint:
-    name: code-linting
+    name: lint/style-and-typos
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v3
-    - name: Black Formatting Check
-      uses: rickstaa/action-black@v1
+    # - name: Black Formatting Check
+    #   uses: rickstaa/action-black@v1
+    - name: Spell Check
+      uses: crate-ci/typos@master
+      with: 
+        config: ./.github/workflows/typos.toml
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     needs: lint
