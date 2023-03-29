@@ -11,27 +11,21 @@
 
 import numpy as np
 
-class CyIpoptCallback(object):
 
-    def __init__(
-        self,
-        primal_inf_threshold=1e8,
-        dual_inf_threshold=1e8,
-        n_residuals=5,
-    ):
-        self._primal_inf_threshold = primal_inf_threshold
-        self._dual_inf_threshold = dual_inf_threshold
-        self._n_residuals = n_residuals
+class CyIpoptIntermediateCallbackBase(object):
+    """A base class for CyIpopt intermediate callbacks that are compatible
+    with CyIpoptProblemInterface
 
-        self._callback_count = 0
-        self._prev_grad_obj = None
-        self._prev_con_resids = None
-        self._prev_jac_eq = None
-        # prev_primals?
+    Implementing callbacks with callable classes has the advantages of allowing
+    easily configurable callbacks and caching computed information that may be
+    useful in multiple calls.
+
+    """
 
     def __call__(
         self,
         nlp,
+        ipopt_problem,
         alg_mod,
         iter_count,
         obj_value,
@@ -44,78 +38,152 @@ class CyIpoptCallback(object):
         alpha_pr,
         ls_trials,
     ):
-        self._callback_count += 1
-        if iter_count == 0:
-            self._prev_grad_obj = nlp.evaluate_grad_objective()
-            self._prev_con_resids = nlp.evaluate_constraints()
-            self._prev_jac_eq = nlp.evaluate_jacobian_eq()
-            return
-        tab = "    "
-        #if (
-        #    inf_pr > self._primal_inf_threshold
-        #    or inf_du > self._dual_inf_threshold
-        #):
-        #    print()
-        #else:
-        #    return
-        print(
-            "%sCallback at iter %s: inf_pr = %s, inf_du = %s"
-            % (tab, iter_count, inf_pr, inf_du)
+        raise NotImplementedError("Subclasses must define the __call__ method")
+
+
+class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
+    """An intermediate callback for displaying the constraints and variables
+    with the largest primal and dual infeasibilities at each iteration of
+    an Ipopt solve
+
+    """
+
+    def __init__(
+        self, infeasibility_threshold=1e8, n_residuals=5, scaled=False
+    ):
+        self._infeasibility_threshold = infeasibility_threshold
+        self._n_residuals = n_residuals
+        self._scaled = scaled
+        self._variable_names = None
+        self._constraint_names = None
+
+        # TODO: Allow a custom file to write callback information to, and handle
+        # output through a logger. This should probably go in the base class
+
+    def _get_header(self):
+        column_width = 8
+        infeas_label = " infeas "
+        name_label = "  name  "
+        return infeas_label + name_label
+
+    def __call__(
+        self,
+        nlp,
+        ipopt_problem,
+        alg_mod,
+        iter_count,
+        obj_value,
+        inf_pr,
+        inf_du,
+        mu,
+        d_norm,
+        regularization_size,
+        alpha_du,
+        alpha_pr,
+        ls_trials,
+    ):
+        infeas = ipopt_problem.get_current_violations(scaled=self._scaled)
+
+        x_L_viol = infeas["x_L_violation"]
+        x_U_viol = infeas["x_U_violation"]
+        compl_x_L = infeas["compl_x_L"]
+        compl_x_U = infeas["compl_x_U"]
+        dual_infeas = infeas["grad_lag_x"]
+        primal_infeas = infeas["g_violation"]
+        compl_g = infeas["compl_g"]
+
+        nx = len(x_L_viol)
+        ng = len(primal_infeas)
+        sorted_coords_x_L_viol = sorted(
+            range(nx), key=lambda i: abs(x_L_viol[i]), reverse=True
         )
-        #if inf_pr > self._primal_inf_threshold:
-        constraints = nlp.get_pyomo_constraints()
-        residuals = self._prev_con_resids
-        con_resids = list(zip(constraints, residuals))
-        sorted_resids = sorted(con_resids, key=lambda item: abs(item[1]), reverse=True)
-        top_n_resids = sorted_resids[:self._n_residuals]
-        print("%s  %s largest primal residuals:" % (tab, self._n_residuals))
-        for con, val in top_n_resids:
-            print("%s    %s: %s" % (tab, con.name, val))
-
-        #grad_lag = get_gradient_lagrangian(nlp)
-        duals_eq = nlp.get_duals_eq()
-        grad_lag = (
-            self._prev_grad_obj
-            + self._prev_jac_eq.transpose()*duals_eq
+        sorted_coords_x_U_viol = sorted(
+            range(nx), key=lambda i: abs(x_U_viol[i]), reverse=True
         )
-        #if inf_du > self._dual_inf_threshold:
-        variables = nlp.get_pyomo_variables()
-        var_resids = list(zip(variables, grad_lag))
-        sorted_resids = sorted(var_resids, key=lambda item: abs(item[1]), reverse=True)
-        top_n_resids = sorted_resids[:self._n_residuals]
-        print("%s  %s largest dual residuals:" % (tab, self._n_residuals))
-        print("   ", max(abs(nlp.get_duals_eq())))
-        for var, val in top_n_resids:
-            print("%s    %s: %s" % (tab, var.name, val))
+        sorted_coords_compl_x_L = sorted(
+            range(nx), key=lambda i: abs(compl_x_L[i]), reverse=True
+        )
+        sorted_coords_compl_x_U = sorted(
+            range(nx), key=lambda i: abs(compl_x_U[i]), reverse=True
+        )
+        sorted_coords_dual_infeas = sorted(
+            range(nx), key=lambda i: abs(dual_infeas[i]), reverse=True
+        )
+        sorted_coords_primal_infeas = sorted(
+            range(ng), key=lambda i: abs(primal_infeas[i]), reverse=True
+        )
+        sorted_coords_compl_g = sorted(
+            range(ng), key=lambda i: abs(compl_g[i]), reverse=True
+        )
 
-        #if self._prev_duals_eq is not None:
-        #    grad_lag = get_gradient_lagrangian(nlp, duals_eq=self._prev_duals_eq)
-        #    var_resids = list(zip(variables, np.abs(grad_lag)))
-        #    sorted_resids = sorted(var_resids, key=lambda item: abs(item[1]), reverse=True)
-        #    top_n_resids = sorted_resids[:self._n_residuals]
-        #    print("%s  %s largest dual residuals (with previous duals):" % (tab, self._n_residuals))
-        #    print("   ", max(abs(nlp.get_duals_eq())))
-        #    for var, val in top_n_resids:
-        #        print("%s    %s: %s" % (tab, var.name, val))
+        threshold = self._infeasibility_threshold
 
-        self._prev_grad_obj = nlp.evaluate_grad_objective()
-        self._prev_con_resids = nlp.evaluate_constraints()
-        self._prev_jac_eq = nlp.evaluate_jacobian_eq()
+        if self._variable_names is None:
+            self._variable_names = nlp.primals_names()
+        if self._constraint_names is None:
+            self._constraint_names = nlp.constraint_names()
+
+        # Print new line to clearly separate this information from the
+        # previous iteration.
         print()
 
+        # TODO: Reduce repeated code here
+        i_max_xL = sorted_coords_x_L_viol[0]
+        if abs(x_L_viol[i_max_xL]) >= threshold:
+            print("Lower bound violation")
+            print(self._get_header())
+            for i in sorted_coords_x_L_viol[:self._n_residuals]:
+                name = self._variable_names[i]
+                infeas = abs(x_L_viol[i])
+                infeas_str = f"{infeas:.2e}"
+                print(infeas_str, name)
 
-def get_gradient_lagrangian(nlp, duals_eq=None):
-    # Could primals and duals be getting out of sync here?
-    # Primals are "correct" in the sense that they produce the inf_pr that
-    # I expect. But duals are not necessarily coming from the same iteration.
-    grad_obj = nlp.evaluate_grad_objective()
-    jac_eq = nlp.evaluate_jacobian_eq()
+        i_max_xU = sorted_coords_x_U_viol[0]
+        if abs(x_U_viol[i_max_xU]) >= threshold:
+            print("Uppper bound violation")
+            print(self._get_header())
+            for i in sorted_coords_x_U_viol[:self._n_residuals]:
+                name = self._variable_names[i]
+                infeas = abs(x_U_viol[i])
+                infeas_str = f"{infeas:.2e}"
+                print(infeas_str, name)
 
-    if duals_eq is None:
-        duals_eq = nlp.get_duals_eq()
+        i_max_compl_xL = sorted_coords_compl_x_L[0]
+        if abs(x_L_viol[i_max_compl_xL]) >= threshold:
+            print("Lower bound complementarity")
+            print(self._get_header())
+            for i in sorted_coords_compl_x_L[:self._n_residuals]:
+                name = self._variable_names[i]
+                infeas = abs(compl_x_L[i])
+                infeas_str = f"{infeas:.2e}"
+                print(infeas_str, name)
 
-    grad_lag = (
-        grad_obj
-        + jac_eq.transpose()*duals_eq
-    )
-    return grad_lag
+        i_max_compl_xU = sorted_coords_compl_x_U[0]
+        if abs(x_U_viol[i_max_xU]) >= threshold:
+            print("Upper bound complementarity")
+            print(self._get_header())
+            for i in sorted_coords_compl_x_U[:self._n_residuals]:
+                name = self._variable_names[i]
+                infeas = abs(compl_x_U[i])
+                infeas_str = f"{infeas:.2e}"
+                print(infeas_str, name)
+
+        i_max_primal = sorted_coords_primal_infeas[0]
+        if abs(primal_infeas[i_max_primal]) >= threshold:
+            print("Primal infeasibility")
+            print(self._get_header())
+            for i in sorted_coords_primal_infeas[:self._n_residuals]:
+                name = self._constraint_names[i]
+                infeas = abs(primal_infeas[i])
+                infeas_str = f"{infeas:.2e}"
+                print(infeas_str, name)
+
+        i_max_dual = sorted_coords_dual_infeas[0]
+        if abs(dual_infeas[i_max_dual]) >= threshold:
+            print("Dual infeasibility")
+            print(self._get_header())
+            for i in sorted_coords_dual_infeas[:self._n_residuals]:
+                name = self._variable_names[i]
+                infeas = abs(dual_infeas[i])
+                infeas_str = f"{infeas:.2e}"
+                print(infeas_str, name)
