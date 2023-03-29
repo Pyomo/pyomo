@@ -57,6 +57,15 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         self._variable_names = None
         self._constraint_names = None
 
+        # These may be useful to access outside of a callback
+        self._x_L_viol = None
+        self._x_U_viol = None
+        self._compl_x_L = None
+        self._compl_x_U = None
+        self._dual_infeas = None
+        self._primal_infeas = None
+        self._compl_g = None
+
         # TODO: Allow a custom file to write callback information to, and handle
         # output through a logger. This should probably go in the base class
 
@@ -91,6 +100,14 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         dual_infeas = infeas["grad_lag_x"]
         primal_infeas = infeas["g_violation"]
         compl_g = infeas["compl_g"]
+
+        self._x_L_viol = x_L_viol
+        self._x_U_viol = x_U_viol
+        self._compl_x_L = compl_x_L
+        self._compl_x_U = compl_x_U
+        self._dual_infeas = dual_infeas
+        self._primal_infeas = primal_infeas
+        self._compl_g = compl_g
 
         nx = len(x_L_viol)
         ng = len(primal_infeas)
