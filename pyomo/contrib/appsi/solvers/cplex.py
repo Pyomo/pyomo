@@ -335,7 +335,7 @@ class Cplex(PersistentSolver):
         for name, val in zip(var_names, var_vals):
             if name == 'obj_const':
                 continue
-            v = symbol_map.bySymbol[name]()
+            v = symbol_map.bySymbol[name]
             if self._writer._referenced_variables[id(v)]:
                 res[v] = val
         return res
@@ -375,7 +375,7 @@ class Cplex(PersistentSolver):
             orig_name = name[:-3]
             if orig_name == 'obj_const_con':
                 continue
-            _con = symbol_map.bySymbol[orig_name]()
+            _con = symbol_map.bySymbol[orig_name]
             if _con in res:
                 if abs(val) > abs(res[_con]):
                     res[_con] = val
@@ -406,6 +406,6 @@ class Cplex(PersistentSolver):
         for name, val in zip(var_names, rc):
             if name == 'obj_const':
                 continue
-            v = symbol_map.bySymbol[name]()
+            v = symbol_map.bySymbol[name]
             res[v] = val
         return res

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 def load():
     import pyomo.mpec.plugins.mpec1
     import pyomo.mpec.plugins.mpec2
@@ -17,4 +18,3 @@ def load():
     import pyomo.mpec.plugins.solver1
     import pyomo.mpec.plugins.solver2
     import pyomo.mpec.plugins.pathampl
-

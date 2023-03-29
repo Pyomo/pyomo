@@ -17,15 +17,15 @@ import time
 from pyomo.common.collections import OrderedDict
 
 import pyomo.opt
-from pyomo.opt.parallel.manager import (ActionManagerError,
-                                        ActionStatus,
-                                        ActionHandle)
-from pyomo.opt.parallel.async_solver import AsynchronousSolverManager, SolverManagerFactory
+from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus, ActionHandle
+from pyomo.opt.parallel.async_solver import (
+    AsynchronousSolverManager,
+    SolverManagerFactory,
+)
 
 
 @SolverManagerFactory.register("serial", doc="Synchronously execute solvers locally")
 class SolverManager_Serial(AsynchronousSolverManager):
-
     def clear(self):
         """
         Clear manager state
@@ -43,7 +43,8 @@ class SolverManager_Serial(AsynchronousSolverManager):
         if opt is None:
             raise ActionManagerError(
                 "No solver passed to %s, use keyword option 'solver'"
-                % (type(self).__name__) )
+                % (type(self).__name__)
+            )
 
         time_start = time.time()
         if isinstance(opt, str):
@@ -51,7 +52,7 @@ class SolverManager_Serial(AsynchronousSolverManager):
                 results = _opt.solve(*args, **kwds)
         else:
             results = opt.solve(*args, **kwds)
-        results.pyomo_solve_time = time.time()-time_start
+        results.pyomo_solve_time = time.time() - time_start
 
         self.results[ah.id] = results
         ah.status = ActionStatus.done
@@ -71,7 +72,11 @@ class SolverManager_Serial(AsynchronousSolverManager):
             ah_id, result = self.results.popitem(last=False)
             self.results[ah_id] = result
             return self.event_handle[ah_id]
-        return ActionHandle(error=True,
-                            explanation=("No queued evaluations available in "
-                                         "the 'serial' solver manager, which "
-                                         "executes solvers synchronously"))
+        return ActionHandle(
+            error=True,
+            explanation=(
+                "No queued evaluations available in "
+                "the 'serial' solver manager, which "
+                "executes solvers synchronously"
+            ),
+        )

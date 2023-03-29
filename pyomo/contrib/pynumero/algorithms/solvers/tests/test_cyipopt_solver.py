@@ -28,12 +28,12 @@ if not AmplInterface.available():
 
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    cyipopt_available
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
+    cyipopt_available, CyIpoptNLP
 )
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver, CyIpoptNLP
+    CyIpoptSolver
 )
 
 
@@ -183,6 +183,7 @@ class TestCyIpoptSolver(unittest.TestCase):
 
         with open('_cyipopt-scaling.log', 'r') as fd:
             solver_trace = fd.read()
+        cynlp.close()
         os.remove('_cyipopt-scaling.log')
 
         # check for the following strings in the log and then delete the log

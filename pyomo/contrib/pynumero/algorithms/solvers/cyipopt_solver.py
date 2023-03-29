@@ -38,7 +38,7 @@ egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 # Defer this import so that importing this module (PyomoCyIpoptSolver in
 # particular) does not rely on an attempted cyipopt import.
 cyipopt_interface, _ = attempt_import(
-    'pyomo.contrib.pynumero.algorithms.solvers.cyipopt_interface'
+    'pyomo.contrib.pynumero.interfaces.cyipopt_interface'
 )
 
 # These attributes should no longer be imported from this module. These
@@ -47,17 +47,17 @@ cyipopt_interface, _ = attempt_import(
 # triggered when this module is imported.
 relocated_module_attribute(
     "cyipopt_available",
-    "pyomo.contrib.pynumero.algorithms.solvers.cyipopt_interface.cyipopt_available",
+    "pyomo.contrib.pynumero.interfaces.cyipopt_interface.cyipopt_available",
     "6.5.1.dev0",
 )
 relocated_module_attribute(
     "CyIpoptProblemInterface",
-    "pyomo.contrib.pynumero.algorithms.solvers.cyipopt_interface.CyIpoptProblemInterface",
+    "pyomo.contrib.pynumero.interfaces.cyipopt_interface.CyIpoptProblemInterface",
     "6.5.1.dev0",
 )
 relocated_module_attribute(
     "CyIpoptNLP",
-    "pyomo.contrib.pynumero.algorithms.solvers.cyipopt_interface.CyIpoptNLP",
+    "pyomo.contrib.pynumero.interfaces.cyipopt_interface.CyIpoptNLP",
     "6.5.1.dev0",
 )
 
@@ -264,7 +264,7 @@ class PyomoCyIpoptSolver(object):
         self._model = model
 
     def available(self, exception_flag=False):
-        return bool(numpy_available and cyipopt_available)
+        return bool(numpy_available and cyipopt_interface.cyipopt_available)
 
     def license_is_valid(self):
         return True
@@ -395,6 +395,8 @@ class PyomoCyIpoptSolver(object):
         results.solver.termination_condition = _ipopt_term_cond[status_enum]
         results.solver.status = TerminationCondition.to_solver_status(
             results.solver.termination_condition)
+
+        problem.close()
 
         if config.return_nlp:
             return results, nlp

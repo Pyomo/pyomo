@@ -31,6 +31,7 @@ from pyomo.environ import (
     ExternalFunction,
     Suffix,
     Constraint,
+    Expression,
 )
 
 
@@ -708,7 +709,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nl, ('v%s\n', (id(m.e),)))
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 3)
-        self.assertEqual(repn.linear, [(id(m.x), 1)])
+        self.assertEqual(repn.linear, {id(m.x): 1})
         self.assertEqual(repn.nonlinear, None)
         self.assertEqual(info, [None, None, False])
 
@@ -733,6 +734,36 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, ('o24\no3\nn1\nv%s\nn0\n', [id(m.x)]))
+
+    def test_duplicate_shared_linear_expressions(self):
+        # This tests an issue where AMPLRepn.duplicate() was not copying
+        # the linear dict, allowing certain operations (like finalizing
+        # a bare expression multiplied by something other than 1) to
+        # change the compiled shared expression
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.e = Expression(expr=2*m.x + 3*m.y)
+
+        expr1 = 10*m.e
+        expr2 = m.e + 100*m.x + 100*m.y
+
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn1 = info.visitor.walk_expression((expr1, None, None))
+            repn2 = info.visitor.walk_expression((expr2, None, None))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn1.nl, None)
+        self.assertEqual(repn1.mult, 1)
+        self.assertEqual(repn1.const, 0)
+        self.assertEqual(repn1.linear, {id(m.x): 20, id(m.y): 30})
+        self.assertEqual(repn1.nonlinear, None)
+
+        self.assertEqual(repn2.nl, None)
+        self.assertEqual(repn2.mult, 1)
+        self.assertEqual(repn2.const, 0)
+        self.assertEqual(repn2.linear, {id(m.x): 102, id(m.y): 103})
+        self.assertEqual(repn2.nonlinear, None)
 
 
 class Test_NLWriter(unittest.TestCase):

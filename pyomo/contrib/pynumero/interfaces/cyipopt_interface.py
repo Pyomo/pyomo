@@ -61,6 +61,17 @@ cyipopt_Problem = cyipopt.Problem if cyipopt_available else object
 
 
 class CyIpoptProblemInterface(cyipopt_Problem, metaclass=abc.ABCMeta):
+    """Abstract subclass of ``cyipopt.Problem`` defining an object that can be
+    used as an interface to CyIpopt. Subclasses must define all methods necessary
+    for the CyIpopt solve and must call this class's ``__init__`` method to
+    initialize Ipopt's data structures.
+
+    Note that, if "output_file" is provided as an Ipopt option, the log file
+    is open until this object (and thus the underlying Ipopt NLP object) is
+    deallocated. To force this deallocation, call the ``close()`` method, which
+    is defined by ``cyipopt.Problem``.
+
+    """
     def __init__(self):
         """Initialize the problem interface
 
