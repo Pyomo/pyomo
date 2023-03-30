@@ -409,17 +409,22 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         jac = nlp.evaluate_jacobian()
         # Predicted row/col indices in the "natural ordering" of the model
         pred_rc = [
+            # eq 1
             (0, 0),
             (0, 1),
-            (0, 2),  # eq 1
+            (0, 2),
+            # eq 2
             (1, 0),
             (1, 1),
-            (1, 3),  # eq 2
+            (1, 3),
+            # ineq 1
             (2, 0),
-            (2, 3),  # ineq 1
+            (2, 3),
+            # ineq 2
             (3, 1),
-            (3, 2),  # ineq 2
-            (4, 2),  # ineq 3
+            (3, 2),
+            # ineq 3
+            (4, 2),
         ]
         pred_data_dict = {
             # eq 1
@@ -458,12 +463,16 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (5, 2))
         # Predicted row/col indices. In the "natural ordering" of the model.
         pred_rc = [
+            # eq 1
             (0, 0),
-            (0, 1),  # eq 1
+            (0, 1),
+            # eq 2
             (1, 0),
-            (1, 1),  # eq 2
-            (2, 0),  # ineq 1
-            (3, 1),  # ineq 2
+            (1, 1),
+            # ineq 1
+            (2, 0),
+            # ineq 2
+            (3, 1),
         ]
         pred_data_dict = {
             # eq 1
