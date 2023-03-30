@@ -166,14 +166,14 @@ class _GDPoptAlgorithm:
 
         config.logger.info(
             """
-        If you use this software, you may cite the following:
-        - Implementation:
-        Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
-        Bates, J; Siirola, JD; Grossmann, IE.
-        Pyomo.GDP: an ecosystem for logic based modeling and optimization
-        development.
-        Optimization and Engineering, 2021.
-        """.strip()
+            If you use this software, you may cite the following:
+            - Implementation:
+            Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
+            Bates, J; Siirola, JD; Grossmann, IE.
+            Pyomo.GDP: an ecosystem for logic based modeling and optimization
+            development.
+            Optimization and Engineering, 2021.
+            """.strip()
         )
         self._log_citation(config)
 

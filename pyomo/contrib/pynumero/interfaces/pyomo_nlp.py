@@ -87,9 +87,9 @@ class PyomoNLP(AslNLP):
             # TODO: Are these names totally consistent?
             for name, obj in symbolMap.bySymbol.items():
                 if name[0] == 'v':
-                    vdidx[obj()] = int(name[1:])
+                    vdidx[obj] = int(name[1:])
                 elif name[0] == 'c':
-                    cdidx[obj()] = int(name[1:])
+                    cdidx[obj] = int(name[1:])
 
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it

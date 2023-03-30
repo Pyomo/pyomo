@@ -184,9 +184,8 @@ class BendersCutGeneratorData(_BlockData):
         self.subproblem_solvers = list()
         self.tol = None
         self.all_root_etas = list()
-        self._subproblem_ndx_map = (
-            dict()
-        )  # map from ndx in self.subproblems (local) to the global subproblem ndx
+        # map from ndx in self.subproblems (local) to the global subproblem ndx
+        self._subproblem_ndx_map = dict()
 
     def global_num_subproblems(self):
         return int(self.num_subproblems_by_rank.sum())

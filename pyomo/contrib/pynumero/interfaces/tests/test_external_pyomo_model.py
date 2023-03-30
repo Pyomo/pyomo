@@ -374,18 +374,18 @@ class TestGetHessianOfConstraint(unittest.TestCase):
         x3 = 1.3
         m.x = pyo.Var(range(1, n_x + 1), initialize={1: x1, 2: x2, 3: x3})
         m.eqn = pyo.Constraint(
-            expr=5 * (m.x[1] ** 5)
-            + 5 * (m.x[1] ** 4) * (m.x[2])  # T1
-            + 5 * (m.x[1] ** 3) * (m.x[2]) * (m.x[3])  # T2
-            + 5 * (m.x[1]) * (m.x[2] ** 2) * (m.x[3] ** 2)  # T3
-            + 4 * (m.x[1] ** 2) * (m.x[2]) * (m.x[3])  # T4
-            + 4 * (m.x[2] ** 2) * (m.x[3] ** 2)  # T5
-            + 4 * (m.x[3] ** 4)  # T6
-            + 3 * (m.x[1]) * (m.x[2]) * (m.x[3])  # T7
-            + 3 * (m.x[2] ** 3)  # T8
-            + 3 * (m.x[2] ** 2) * (m.x[3])  # T9
-            + 2 * (m.x[1]) * (m.x[2])  # T10
-            + 2 * (m.x[2]) * (m.x[3])  # T11  # T12
+            expr=5 * (m.x[1] ** 5)  # T1
+            + 5 * (m.x[1] ** 4) * (m.x[2])  # T2
+            + 5 * (m.x[1] ** 3) * (m.x[2]) * (m.x[3])  # T3
+            + 5 * (m.x[1]) * (m.x[2] ** 2) * (m.x[3] ** 2)  # T4
+            + 4 * (m.x[1] ** 2) * (m.x[2]) * (m.x[3])  # T5
+            + 4 * (m.x[2] ** 2) * (m.x[3] ** 2)  # T6
+            + 4 * (m.x[3] ** 4)  # T7
+            + 3 * (m.x[1]) * (m.x[2]) * (m.x[3])  # T8
+            + 3 * (m.x[2] ** 3)  # T9
+            + 3 * (m.x[2] ** 2) * (m.x[3])  # T10
+            + 2 * (m.x[1]) * (m.x[2])  # T11
+            + 2 * (m.x[2]) * (m.x[3])  # T12
             == 0
         )
 
@@ -396,10 +396,10 @@ class TestGetHessianOfConstraint(unittest.TestCase):
                 0,
                 (
                     # wrt x1, x1
-                    5 * 5 * 4 * x1**3
-                    + 5 * 4 * 3 * x1**2 * x2  # T1
-                    + 5 * 3 * 2 * x1 * x2 * x3  # T2
-                    + 4 * 2 * 1 * x2 * x3  # T3  # T5
+                    5 * 5 * 4 * x1**3  # T1
+                    + 5 * 4 * 3 * x1**2 * x2  # T2
+                    + 5 * 3 * 2 * x1 * x2 * x3  # T3
+                    + 4 * 2 * 1 * x2 * x3  # T5
                 ),
             )
         )
@@ -409,10 +409,10 @@ class TestGetHessianOfConstraint(unittest.TestCase):
                 1,
                 (
                     # wrt x2, x2
-                    5 * x1 * 2 * x3**2
-                    + 4 * 2 * x3**2  # T4
-                    + 3 * 3 * 2 * x2  # T6
-                    + 3 * 2 * x3  # T9  # T10
+                    5 * x1 * 2 * x3**2  # T4
+                    + 4 * 2 * x3**2  # T6
+                    + 3 * 3 * 2 * x2  # T9
+                    + 3 * 2 * x3  # T10
                 ),
             )
         )
@@ -422,9 +422,9 @@ class TestGetHessianOfConstraint(unittest.TestCase):
                 2,
                 (
                     # wrt x3, x3
-                    5 * x1 * x2**2 * 2
-                    + 4 * x2**2 * 2  # T4
-                    + 4 * 4 * 3 * x3**2  # T6  # T7
+                    5 * x1 * x2**2 * 2  # T4
+                    + 4 * x2**2 * 2  # T6
+                    + 4 * 4 * 3 * x3**2  # T7
                 ),
             )
         )
@@ -434,12 +434,12 @@ class TestGetHessianOfConstraint(unittest.TestCase):
                 0,
                 (
                     # wrt x2, x1
-                    5 * 4 * x1**3
-                    + 5 * 3 * x1**2 * x3  # T2
-                    + 5 * 2 * x2 * x3**2  # T3
-                    + 4 * 2 * x1 * x3  # T4
-                    + 3 * x3  # T5
-                    + 2  # T8  # T11
+                    5 * 4 * x1**3  # T2
+                    + 5 * 3 * x1**2 * x3  # T3
+                    + 5 * 2 * x2 * x3**2  # T4
+                    + 4 * 2 * x1 * x3  # T5
+                    + 3 * x3  # T8
+                    + 2  # T11
                 ),
             )
         )
@@ -449,10 +449,10 @@ class TestGetHessianOfConstraint(unittest.TestCase):
                 0,
                 (
                     # wrt x3, x1
-                    5 * 3 * x1**2 * x2
-                    + 5 * x2**2 * 2 * x3  # T3
-                    + 4 * 2 * x1 * x2  # T4
-                    + 3 * x2  # T5  # T8
+                    5 * 3 * x1**2 * x2  # T3
+                    + 5 * x2**2 * 2 * x3  # T4
+                    + 4 * 2 * x1 * x2  # T5
+                    + 3 * x2  # T8
                 ),
             )
         )
@@ -462,13 +462,13 @@ class TestGetHessianOfConstraint(unittest.TestCase):
                 1,
                 (
                     # wrt x3, x2
-                    5 * x1**3
-                    + 5 * x1 * 2 * x2 * 2 * x3  # T3
-                    + 4 * x1**2  # T4
-                    + 4 * 2 * x2 * 2 * x3  # T5
-                    + 3 * x1  # T6
-                    + 3 * 2 * x2  # T8
-                    + 2  # T10  # T12
+                    5 * x1**3  # T3
+                    + 5 * x1 * 2 * x2 * 2 * x3  # T4
+                    + 4 * x1**2  # T5
+                    + 4 * 2 * x2 * 2 * x3  # T6
+                    + 3 * x1  # T8
+                    + 3 * 2 * x2  # T10
+                    + 2  # T12
                 ),
             )
         )

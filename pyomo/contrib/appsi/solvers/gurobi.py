@@ -3,12 +3,13 @@ import logging
 import math
 from typing import List, Dict, Optional
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
+from pyomo.common.log import LogStream
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
-from pyomo.common.tee import capture_output
+from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.shutdown import python_is_shutting_down
-from pyomo.common.config import ConfigValue
+from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import Var, _GeneralVarData
@@ -28,6 +29,7 @@ from pyomo.contrib.appsi.base import (
 )
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +71,12 @@ class GurobiConfig(MIPSolverConfig):
         )
 
         self.declare('logfile', ConfigValue(domain=str))
+        self.declare('solver_output_logger', ConfigValue())
+        self.declare('log_level', ConfigValue(domain=NonNegativeInt))
+
         self.logfile = ''
+        self.solver_output_logger = logger
+        self.log_level = logging.INFO
 
 
 class GurobiSolutionLoader(PersistentSolutionLoader):
@@ -337,24 +344,34 @@ class Gurobi(PersistentBase, PersistentSolver):
         return self._symbol_map
 
     def _solve(self, timer: HierarchicalTimer):
-        config = self.config
-        options = self.gurobi_options
-        if config.stream_solver:
-            self._solver_model.setParam('LogToConsole', 1)
-        else:
-            self._solver_model.setParam('LogToConsole', 0)
-        self._solver_model.setParam('LogFile', config.logfile)
+        ostreams = [
+            LogStream(
+                level=self.config.log_level, logger=self.config.solver_output_logger
+            )
+        ]
+        if self.config.stream_solver:
+            ostreams.append(sys.stdout)
 
-        if config.time_limit is not None:
-            self._solver_model.setParam('TimeLimit', config.time_limit)
-        if config.mip_gap is not None:
-            self._solver_model.setParam('MIPGap', config.mip_gap)
+        with TeeStream(*ostreams) as t:
+            with capture_output(output=t.STDOUT, capture_fd=False):
+                config = self.config
+                options = self.gurobi_options
 
-        for key, option in options.items():
-            self._solver_model.setParam(key, option)
-        timer.start('optimize')
-        self._solver_model.optimize(self._callback)
-        timer.stop('optimize')
+                self._solver_model.setParam('LogToConsole', 1)
+                self._solver_model.setParam('LogFile', config.logfile)
+
+                if config.time_limit is not None:
+                    self._solver_model.setParam('TimeLimit', config.time_limit)
+                if config.mip_gap is not None:
+                    self._solver_model.setParam('MIPGap', config.mip_gap)
+
+                for key, option in options.items():
+                    self._solver_model.setParam(key, option)
+
+                timer.start('optimize')
+                self._solver_model.optimize(self._callback)
+                timer.stop('optimize')
+
         self._needs_updated = False
         return self._postsolve(timer)
 

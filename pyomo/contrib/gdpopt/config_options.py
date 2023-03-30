@@ -84,9 +84,9 @@ def _add_common_configs(CONFIG):
             domain=PositiveInt,
             description="Time limit (seconds, default=600)",
             doc="""
-        Seconds allowed until terminated. Note that the time limit can
-        currently only be enforced between subsolver invocations. You may
-        need to set subsolver time limits as well.""",
+            Seconds allowed until terminated. Note that the time limit can
+            currently only be enforced between subsolver invocations. You may
+            need to set subsolver time limits as well.""",
         ),
     )
     CONFIG.declare(
@@ -117,11 +117,11 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         ConfigValue(
             default=1e-6,
             description="""
-        Tolerance on constraint satisfaction.
-
-        Increasing this tolerance corresponds to being more conservative in
-        declaring the model or an NLP subproblem to be infeasible.
-        """,
+            Tolerance on constraint satisfaction.
+    
+            Increasing this tolerance corresponds to being more conservative in
+            declaring the model or an NLP subproblem to be infeasible.
+            """,
         ),
     )
     CONFIG.declare(
@@ -133,29 +133,29 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         ConfigValue(
             default=default_nlp_init_method,
             description=""""
-        callback to specify custom routines to initialize the
-        (MI)NLP subproblems.""",
+            callback to specify custom routines to initialize the
+            (MI)NLP subproblems.""",
             doc="""
-        Callback to specify custom routines for initializing the (MI)NLP
-        subproblems. This method is called after the discrete problem solution
-        is fixed in the subproblem and before the subproblem is solved (or
-        pre-solved).
-
-        For algorithms with a discrete problem relaxation:
-        This method accepts three arguments: the solver object, the subproblem
-        GDPopt utility block and the discrete problem GDPopt utility block. The
-        discrete problem contains the most recent discrete problem solution.
-
-        For algorithms without a discrete problem relaxation:
-        This method accepts four arguments: the list of Disjuncts that are
-        currently fixed as being active, a list of values for the non-indicator
-        BooleanVars (empty if force_nlp_subproblem=False), and a list of
-        values for the integer vars (also empty if force_nlp_subproblem=False),
-        and last the subproblem GDPopt utility block.
-
-        The return of this method will be unused: The method should directly
-        set the value of the variables on the subproblem
-        """,
+            Callback to specify custom routines for initializing the (MI)NLP
+            subproblems. This method is called after the discrete problem solution
+            is fixed in the subproblem and before the subproblem is solved (or
+            pre-solved).
+    
+            For algorithms with a discrete problem relaxation:
+            This method accepts three arguments: the solver object, the subproblem
+            GDPopt utility block and the discrete problem GDPopt utility block. The
+            discrete problem contains the most recent discrete problem solution.
+    
+            For algorithms without a discrete problem relaxation:
+            This method accepts four arguments: the list of Disjuncts that are
+            currently fixed as being active, a list of values for the non-indicator
+            BooleanVars (empty if force_nlp_subproblem=False), and a list of
+            values for the integer vars (also empty if force_nlp_subproblem=False),
+            and last the subproblem GDPopt utility block.
+    
+            The return of this method will be unused: The method should directly
+            set the value of the variables on the subproblem
+            """,
         ),
     )
     CONFIG.declare(
@@ -164,17 +164,17 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
             default=_DoNothing,
             description="callback hook before calling the subproblem solver",
             doc="""
-        Callback called right before the (MI)NLP subproblem is solved.
-        Takes three arguments: The solver object, the subproblem and the
-        GDPopt utility block on the subproblem.
-
-        Note that unless you are *very* confident in what you are doing, the
-        subproblem should not be modified in this callback: it should be used
-        to interrogate the problem only.
-
-        To initialize the problem before it is solved, please specify a method
-        in the 'subproblem_initialization_method' argument.
-        """,
+            Callback called right before the (MI)NLP subproblem is solved.
+            Takes three arguments: The solver object, the subproblem and the
+            GDPopt utility block on the subproblem.
+    
+            Note that unless you are *very* confident in what you are doing, the
+            subproblem should not be modified in this callback: it should be used
+            to interrogate the problem only.
+    
+            To initialize the problem before it is solved, please specify a method
+            in the 'subproblem_initialization_method' argument.
+            """,
         ),
     )
     CONFIG.declare(
@@ -182,17 +182,17 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         ConfigValue(
             default=_DoNothing,
             description="""
-        callback hook after a solution of the
-        "nonlinear subproblem""",
+            callback hook after a solution of the
+            "nonlinear subproblem""",
             doc="""
-        Callback called right after the (MI)NLP subproblem is solved.
-        Takes three arguments: The solver object, the subproblem, and the
-        GDPopt utility block on the subproblem.
-
-        Note that unless you are *very* confident in what you are doing, the
-        subproblem should not be modified in this callback: it should be used
-        to interrogate the problem only.
-        """,
+            Callback called right after the (MI)NLP subproblem is solved.
+            Takes three arguments: The solver object, the subproblem, and the
+            GDPopt utility block on the subproblem.
+    
+            Note that unless you are *very* confident in what you are doing, the
+            subproblem should not be modified in this callback: it should be used
+            to interrogate the problem only.
+            """,
         ),
     )
     CONFIG.declare(
@@ -200,17 +200,17 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         ConfigValue(
             default=_DoNothing,
             description="""
-        callback hook after feasible solution of
-        the nonlinear subproblem""",
+            callback hook after feasible solution of
+            the nonlinear subproblem""",
             doc="""
-        Callback called right after the (MI)NLP subproblem is solved,
-        if it was feasible. Takes three arguments: The solver object, the
-        subproblem and the GDPopt utility block on the subproblem.
-
-        Note that unless you are *very* confident in what you are doing, the
-        subproblem should not be modified in this callback: it should be used
-        to interrogate the problem only.
-        """,
+            Callback called right after the (MI)NLP subproblem is solved,
+            if it was feasible. Takes three arguments: The solver object, the
+            subproblem and the GDPopt utility block on the subproblem.
+    
+            Note that unless you are *very* confident in what you are doing, the
+            subproblem should not be modified in this callback: it should be used
+            to interrogate the problem only.
+            """,
         ),
     )
     CONFIG.declare(
@@ -218,7 +218,7 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         ConfigValue(
             default=False,
             description="""Force subproblems to be NLP, even if discrete variables
-        exist.""",
+            exist.""",
         ),
     )
     CONFIG.declare(
@@ -236,8 +236,8 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         ConfigValue(
             default=False,
             description="""
-        Whether or not to do feasibility-based bounds tightening
-        on the variables in the NLP subproblem before solving it.""",
+            Whether or not to do feasibility-based bounds tightening
+            on the variables in the NLP subproblem before solving it.""",
             domain=bool,
         ),
     )
@@ -246,7 +246,7 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         ConfigValue(
             default=True,
             description="""Flag to round subproblem discrete variable values to the
-        nearest integer. Rounding is done before fixing disjuncts.""",
+            nearest integer. Rounding is done before fixing disjuncts.""",
         ),
     )
     CONFIG.declare(
@@ -254,8 +254,8 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         ConfigValue(
             default=3,
             description="""
-        Maximum number of feasibility-based bounds tightening
-        iterations to do during NLP subproblem preprocessing.""",
+            Maximum number of feasibility-based bounds tightening
+            iterations to do during NLP subproblem preprocessing.""",
             domain=PositiveInt,
         ),
     )
@@ -281,8 +281,8 @@ def _add_oa_configs(CONFIG):
             domain=In(valid_init_strategies),
             description="Initialization algorithm to use.",
             doc="""
-        Selects the initialization algorithm to use when generating
-        the initial cuts to construct the discrete problem.""",
+            Selects the initialization algorithm to use when generating
+            the initial cuts to construct the discrete problem.""",
         ),
     )
     CONFIG.declare(
@@ -307,8 +307,8 @@ def _add_oa_configs(CONFIG):
             default=1000,
             domain=NonNegativeFloat,
             description="""
-        Penalty multiplication term for slack variables on the
-        objective value.""",
+            Penalty multiplication term for slack variables on the
+            objective value.""",
         ),
     )
     CONFIG.declare(
@@ -324,8 +324,8 @@ def _add_oa_configs(CONFIG):
         ConfigValue(
             default='gdp.bigm',
             description="""
-        Name of the transformation to use to transform the
-        discrete problem from a GDP to an algebraic model.""",
+            Name of the transformation to use to transform the
+            discrete problem from a GDP to an algebraic model.""",
         ),
     )
     CONFIG.declare(
@@ -334,14 +334,14 @@ def _add_oa_configs(CONFIG):
             default=_DoNothing,
             description="callback hook before calling the discrete problem solver",
             doc="""
-        Callback called right before the MILP discrete problem is solved.
-        Takes three arguments: The solver object, the discrete problem, and the
-        GDPopt utility block on the discrete problem.
-
-        Note that unless you are *very* confident in what you are doing, the
-        problem should not be modified in this callback: it should be used
-        to interrogate the problem only.
-        """,
+            Callback called right before the MILP discrete problem is solved.
+            Takes three arguments: The solver object, the discrete problem, and the
+            GDPopt utility block on the discrete problem.
+    
+            Note that unless you are *very* confident in what you are doing, the
+            problem should not be modified in this callback: it should be used
+            to interrogate the problem only.
+            """,
         ),
     )
     CONFIG.declare(
@@ -350,14 +350,14 @@ def _add_oa_configs(CONFIG):
             default=_DoNothing,
             description="callback hook after a solution of the discrete problem",
             doc="""
-        Callback called right after the MILP discrete problem is solved.
-        Takes three arguments: The solver object, the discrete problem, and the
-        GDPopt utility block on the discrete problem.
-
-        Note that unless you are *very* confident in what you are doing, the
-        problem should not be modified in this callback: it should be used
-        to interrogate the problem only.
-        """,
+            Callback called right after the MILP discrete problem is solved.
+            Takes three arguments: The solver object, the discrete problem, and the
+            GDPopt utility block on the discrete problem.
+    
+            Note that unless you are *very* confident in what you are doing, the
+            problem should not be modified in this callback: it should be used
+            to interrogate the problem only.
+            """,
         ),
     )
     CONFIG.declare(
@@ -400,9 +400,9 @@ def _add_oa_configs(CONFIG):
         ConfigValue(
             default=False,
             description="""
-        Use optimality-based bounds tightening rather than feasibility-based
-        bounds tightening to compute disjunctive variable bounds. False by
-        default.""",
+            Use optimality-based bounds tightening rather than feasibility-based
+            bounds tightening to compute disjunctive variable bounds. False by
+            default.""",
             domain=bool,
         ),
     )
@@ -415,8 +415,8 @@ def _add_BB_configs(CONFIG):
             default=False,
             domain=bool,
             description="""
-        When True, GDPopt-LBB will check satisfiability
-        at each node via the pyomo.contrib.satsolver interface""",
+            When True, GDPopt-LBB will check satisfiability
+            at each node via the pyomo.contrib.satsolver interface""",
         ),
     )
     CONFIG.declare(
@@ -425,7 +425,7 @@ def _add_BB_configs(CONFIG):
             default=False,
             domain=bool,
             description="""
-        When True, GDPopt-LBB will solve a local MINLP at each node.""",
+            When True, GDPopt-LBB will solve a local MINLP at each node.""",
         ),
     )
 
@@ -436,16 +436,16 @@ def _add_mip_solver_configs(CONFIG):
         ConfigValue(
             default="gurobi",
             description="""
-        Mixed-integer linear solver to use. Note that no persisent solvers
-        other than the auto-persistent solvers in the APPSI package are
-        supported.""",
+            Mixed-integer linear solver to use. Note that no persisent solvers
+            other than the auto-persistent solvers in the APPSI package are
+            supported.""",
         ),
     )
     CONFIG.declare(
         "mip_solver_args",
         ConfigBlock(
             description="""
-        Keyword arguments to send to the MILP subsolver solve() invocation""",
+            Keyword arguments to send to the MILP subsolver solve() invocation""",
             implicit=True,
         ),
     )
@@ -457,16 +457,16 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
         ConfigValue(
             default=default_solver,
             description="""
-        Nonlinear solver to use. Note that no persisent solvers
-        other than the auto-persistent solvers in the APPSI package are
-        supported.""",
+            Nonlinear solver to use. Note that no persisent solvers
+            other than the auto-persistent solvers in the APPSI package are
+            supported.""",
         ),
     )
     CONFIG.declare(
         "nlp_solver_args",
         ConfigBlock(
             description="""
-        Keyword arguments to send to the NLP subsolver solve() invocation""",
+            Keyword arguments to send to the NLP subsolver solve() invocation""",
             implicit=True,
         ),
     )
@@ -475,16 +475,16 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
         ConfigValue(
             default="baron",
             description="""
-        Mixed-integer nonlinear solver to use. Note that no persisent solvers
-        other than the auto-persistent solvers in the APPSI package are
-        supported.""",
+            Mixed-integer nonlinear solver to use. Note that no persisent solvers
+            other than the auto-persistent solvers in the APPSI package are
+            supported.""",
         ),
     )
     CONFIG.declare(
         "minlp_solver_args",
         ConfigBlock(
             description="""
-        Keyword arguments to send to the MINLP subsolver solve() invocation""",
+            Keyword arguments to send to the MINLP subsolver solve() invocation""",
             implicit=True,
         ),
     )
@@ -493,17 +493,17 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
         ConfigValue(
             default="bonmin",
             description="""
-        Mixed-integer nonlinear solver to use. Note that no persisent solvers
-        other than the auto-persistent solvers in the APPSI package are
-        supported.""",
+            Mixed-integer nonlinear solver to use. Note that no persisent solvers
+            other than the auto-persistent solvers in the APPSI package are
+            supported.""",
         ),
     )
     CONFIG.declare(
         "local_minlp_solver_args",
         ConfigBlock(
             description="""
-        Keyword arguments to send to the local MINLP subsolver solve()
-        invocation""",
+            Keyword arguments to send to the local MINLP subsolver solve()
+            invocation""",
             implicit=True,
         ),
     )
@@ -512,9 +512,9 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
         ConfigValue(
             default=1e-8,
             description="""
-        When generating cuts, small duals multiplied by expressions can
-        cause problems. Exclude all duals smaller in absolue value than the
-        following.""",
+            When generating cuts, small duals multiplied by expressions can
+            cause problems. Exclude all duals smaller in absolue value than the
+            following.""",
         ),
     )
 

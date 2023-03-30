@@ -106,6 +106,8 @@ class TestExternalInputOutputModel(unittest.TestCase):
         )
 
         # check that the dummy variable is initialized
+        # + pyo.value(m.P1) + pyo.value(m.P2)
+        # not initialized - therefore should use zero
         expected_dummy_var_value = (
             pyo.value(m.Pin)
             + pyo.value(m.c1)
@@ -114,7 +116,6 @@ class TestExternalInputOutputModel(unittest.TestCase):
             + 0
             + 0
         )
-        # + pyo.value(m.P1) + pyo.value(m.P2) # not initialized - therefore should use zero
         self.assertAlmostEqual(
             pyo.value(m._dummy_variable_CyIpoptPyomoExNLP), expected_dummy_var_value
         )

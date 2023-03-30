@@ -274,7 +274,7 @@ class Cbc(PersistentSolver):
             orig_name = name[:-3]
             if orig_name == 'obj_const_con':
                 continue
-            con = symbol_map.bySymbol[orig_name]()
+            con = symbol_map.bySymbol[orig_name]
             dual_val = float(split_line[-1])
             if con in self._dual_sol:
                 if abs(dual_val) > abs(self._dual_sol[con]):
@@ -290,7 +290,7 @@ class Cbc(PersistentSolver):
                 continue
             val = float(split_line[2])
             rc = float(split_line[3])
-            var = symbol_map.bySymbol[name]()
+            var = symbol_map.bySymbol[name]
             self._primal_sol[id(var)] = (var, val)
             self._reduced_costs[id(var)] = (var, rc)
 

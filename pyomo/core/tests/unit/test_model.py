@@ -555,7 +555,7 @@ class Test(unittest.TestCase):
         self.assertIn(id(tmodel.b.obj), tmodel.solutions[0]._entry['objective'])
         self.assertIs(
             tmodel.b.obj,
-            tmodel.solutions[0]._entry['objective'][id(tmodel.b.obj)][0]() )
+            tmodel.solutions[0]._entry['objective'][id(tmodel.b.obj)][0] )
 
         inst = tmodel.clone()
 
@@ -583,12 +583,12 @@ class Test(unittest.TestCase):
         # the ModelSOlution got updated
         self.assertIn(id(inst.b.obj), inst.solutions[0]._entry['objective'])
         _obj = inst.solutions[0]._entry['objective'][id(inst.b.obj)]
-        self.assertIs(_obj[0](), inst.b.obj)
+        self.assertIs(_obj[0], inst.b.obj)
 
         for v in [1,2,3,4]:
             self.assertIn(id(inst.b.x[v]), inst.solutions[0]._entry['variable'])
             _v = inst.solutions[0]._entry['variable'][id(inst.b.x[v])]
-            self.assertIs(_v[0](), inst.b.x[v])
+            self.assertIs(_v[0], inst.b.x[v])
 
     @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")

@@ -905,9 +905,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         invalid_shape_matrix = [[1, 0]]
         scale = 1
 
-        exc_str = (
-            r".*must be a square matrix of size 2.*" r"\(provided.*shape \(1, 2\)\)"
-        )
+        exc_str = r".*must be a square matrix of size 2.*\(provided.*shape \(1, 2\)\)"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -1419,7 +1417,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         pset = PolyhedralSet([[1, 2, 3], [4, 5, 6]], [1, 3])
 
         exc_str = (
-            r".*must have 3 columns to match set dimension " r"\(provided.*2 columns\)"
+            r".*must have 3 columns to match set dimension \(provided.*2 columns\)"
         )
 
         # assert error on update
@@ -1688,14 +1686,14 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
 
         # error on budget incidence matrix update
         exc_str = (
-            r".*must have 3 columns to match set dimension " r"\(provided.*1 columns\)"
+            r".*must have 3 columns to match set dimension \(provided.*1 columns\)"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             bu_set.budget_membership_mat = [[1], [1]]
 
         # error on origin update
         exc_str = (
-            r".*must have 3 entries to match set dimension " r"\(provided.*4 entries\)"
+            r".*must have 3 entries to match set dimension \(provided.*4 entries\)"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             bu_set.origin = [1, 2, 1, 0]
@@ -2055,7 +2053,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = [1, -2]  # invalid
         gamma = 2
 
-        exc_str = r"Entry -2 of attribute 'positive_deviation' is negative " r"value"
+        exc_str = r"Entry -2 of attribute 'positive_deviation' is negative value"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -2869,9 +2867,7 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             fset.psi_mat = [[1, 0], [1, 2]]
 
         # assert error on origin update
-        exc_str = (
-            r"Attempting.*factor model set of dimension 3 " r"to value of dimension 2"
-        )
+        exc_str = r"Attempting.*factor model set of dimension 3 to value of dimension 2"
         with self.assertRaisesRegex(ValueError, exc_str):
             fset.origin = [1, 3]
 
@@ -2881,9 +2877,7 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         is negative int, or AttributeError
         if attempting to update (should be immutable).
         """
-        exc_str = (
-            r".*'number_of_factors' must be a positive int " r"\(provided value -1\)"
-        )
+        exc_str = r".*'number_of_factors' must be a positive int \(provided value -1\)"
         with self.assertRaisesRegex(ValueError, exc_str):
             FactorModelSet(origin=[0], number_of_factors=-1, psi_mat=[[1, 1]], beta=0.1)
 
@@ -2908,11 +2902,9 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
 
         # assert error on construction
         neg_exc_str = (
-            r".*must be a real number between 0 and 1.*" r"\(provided value -0.5\)"
+            r".*must be a real number between 0 and 1.*\(provided value -0.5\)"
         )
-        big_exc_str = (
-            r".*must be a real number between 0 and 1.*" r"\(provided value 1.5\)"
-        )
+        big_exc_str = r".*must be a real number between 0 and 1.*\(provided value 1.5\)"
         with self.assertRaisesRegex(ValueError, neg_exc_str):
             FactorModelSet(origin, number_of_factors, psi_mat, neg_beta)
         with self.assertRaisesRegex(ValueError, big_exc_str):

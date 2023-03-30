@@ -14,7 +14,7 @@ from collections import OrderedDict
 
 
 class OrderedSet(MutableSet):
-    __slots__ = ('_dict')
+    __slots__ = ('_dict',)
 
     def __init__(self, iterable=None):
         # TODO: Starting in Python 3.7, dict is ordered (and is faster
@@ -31,7 +31,6 @@ class OrderedSet(MutableSet):
     def __str__(self):
         """String representation of the mapping."""
         return "OrderedSet(%s)" % (', '.join(repr(x) for x in self))
-
 
     def update(self, iterable):
         for val in iterable:

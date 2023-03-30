@@ -497,7 +497,8 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (2, 2))
         # Predicted row/col indices. In the "natural ordering" of the equality
         # constraints (eq1, eq2)
-        pred_rc = [(0, 0), (0, 1), (1, 0), (1, 1)]  # eq 1  # eq 2
+        # In list, first two are eq 1; second two are eq 2
+        pred_rc = [(0, 0), (0, 1), (1, 0), (1, 1)]
         pred_data_dict = {
             # eq 1
             (0, 0): x1**1.1 * x2**1.2,
@@ -527,7 +528,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (3, 2))
         # Predicted row/col indices. In the "natural ordering" of the inequality
         # constraints (ineq1, ineq2, ineq3)
-        pred_rc = [(0, 0), (1, 1)]  # ineq 1  # ineq 2
+        pred_rc = [(0, 0), (1, 1)]  # [(ineq 1, ineq 2)]
         pred_data_dict = {
             # ineq 1
             (0, 0): 1.0 + x3,
@@ -556,7 +557,8 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (2, 2))
         # Predicted row/col indices. In the "natural ordering" of the equality
         # constraints (eq1, eq2)
-        pred_rc = [(0, 0), (0, 1), (1, 0), (1, 1)]  # eq 1  # eq 2
+        # In list, first two are eq 1; second two are eq 2
+        pred_rc = [(0, 0), (0, 1), (1, 0), (1, 1)]
         pred_data_dict = {
             # eq 1
             (0, 0): x1**1.1 * x2**1.2,
@@ -587,7 +589,7 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         self.assertEqual(jac.shape, (3, 2))
         # Predicted row/col indices. In the "natural ordering" of the inequality
         # constraints (ineq1, ineq2, ineq3)
-        pred_rc = [(0, 0), (1, 1)]  # ineq 1  # ineq 2
+        pred_rc = [(0, 0), (1, 1)]  # [(ineq 1, ineq 2)]
         pred_data_dict = {
             # ineq 1
             (0, 0): 1.0 + x3,

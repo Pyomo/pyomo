@@ -4,7 +4,9 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.config import ConfigValue
+from pyomo.common.config import ConfigValue, NonNegativeInt
+from pyomo.common.tee import TeeStream, capture_output
+from pyomo.common.log import LogStream
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap
 from pyomo.core.base.var import _GeneralVarData
@@ -25,6 +27,7 @@ from pyomo.contrib.appsi.base import (
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +55,13 @@ class HighsConfig(MIPSolverConfig):
             visibility=visibility,
         )
 
-        self.logfile: str = self.declare('logfile', ConfigValue(domain=str, default=''))
+        self.declare('logfile', ConfigValue(domain=str))
+        self.declare('solver_output_logger', ConfigValue())
+        self.declare('log_level', ConfigValue(domain=NonNegativeInt))
+
+        self.logfile = ''
+        self.solver_output_logger = logger
+        self.log_level = logging.INFO
 
 
 class HighsResults(Results):
@@ -196,23 +205,32 @@ class Highs(PersistentBase, PersistentSolver):
     def _solve(self, timer: HierarchicalTimer):
         config = self.config
         options = self.highs_options
-        if config.stream_solver:
-            self._solver_model.setOptionValue('log_to_console', True)
-        else:
-            self._solver_model.setOptionValue('log_to_console', False)
-        if config.logfile != '':
-            self._solver_model.setOptionValue('log_file', config.logfile)
 
-        if config.time_limit is not None:
-            self._solver_model.setOptionValue('time_limit', config.time_limit)
-        if config.mip_gap is not None:
-            self._solver_model.setOptionValue('mip_rel_gap', config.mip_gap)
+        ostreams = [
+            LogStream(
+                level=self.config.log_level, logger=self.config.solver_output_logger
+            )
+        ]
+        if self.config.stream_solver:
+            ostreams.append(sys.stdout)
 
-        for key, option in options.items():
-            self._solver_model.setOptionValue(key, option)
-        timer.start('optimize')
-        self._solver_model.run()
-        timer.stop('optimize')
+        with TeeStream(*ostreams) as t:
+            with capture_output(output=t.STDOUT, capture_fd=True):
+                self._solver_model.setOptionValue('log_to_console', True)
+                if config.logfile != '':
+                    self._solver_model.setOptionValue('log_file', config.logfile)
+
+                if config.time_limit is not None:
+                    self._solver_model.setOptionValue('time_limit', config.time_limit)
+                if config.mip_gap is not None:
+                    self._solver_model.setOptionValue('mip_rel_gap', config.mip_gap)
+
+                for key, option in options.items():
+                    self._solver_model.setOptionValue(key, option)
+                timer.start('optimize')
+                self._solver_model.run()
+                timer.stop('optimize')
+
         return self._postsolve(timer)
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:

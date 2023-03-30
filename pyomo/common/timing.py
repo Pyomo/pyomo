@@ -43,6 +43,7 @@ _logger.setLevel(logging.WARNING)
 _construction_logger = logging.getLogger('pyomo.common.timing.construction')
 _transform_logger = logging.getLogger('pyomo.common.timing.transformation')
 
+
 def report_timing(stream=True, level=logging.INFO):
     """Set reporting of Pyomo timing information.
 
@@ -145,11 +146,13 @@ class ConstructionTimer(object):
         if total_time < 0:
             total_time += default_timer()
             return self.in_progress % (_type, self.name, total_time)
-        return self.msg % ( 2 if total_time >= 0.005 else 0,
-                            total_time,
-                            _type,
-                            self.name,
-                            idx_label )
+        return self.msg % (
+            2 if total_time >= 0.005 else 0,
+            total_time,
+            _type,
+            self.name,
+            idx_label,
+        )
 
 
 class TransformationTimer(object):
@@ -180,16 +183,19 @@ class TransformationTimer(object):
         if total_time < 0:
             total_time += default_timer()
             return self.in_progress % (self.name, self.mode, total_time)
-        return self.msg % ( 2 if total_time>=0.005 else 0,
-                            total_time,
-                            self.name,
-                            self.mode )
+        return self.msg % (
+            2 if total_time >= 0.005 else 0,
+            total_time,
+            self.name,
+            self.mode,
+        )
+
 
 #
 # Setup the timer
 #
 # TODO: Remove this bit for Pyomo 6.0 - we won't care about older versions
-if sys.version_info >= (3,3):
+if sys.version_info >= (3, 3):
     # perf_counter is guaranteed to be monotonic and the most accurate timer
     default_timer = time.perf_counter
 elif sys.platform.startswith('win'):
@@ -225,6 +231,7 @@ class TicTocTimer(object):
         logger (Logger): an optional output stream using the python
            logging package. Note: the timing logged using ``logger.info()``
     """
+
     def __init__(self, ostream=_NotSpecified, logger=None):
         if ostream is _NotSpecified and logger is not None:
             ostream = None
@@ -235,8 +242,14 @@ class TicTocTimer(object):
         self._start_count = 0
         self._cumul = 0
 
-    def tic(self, msg=_NotSpecified, *args,
-            ostream=_NotSpecified, logger=_NotSpecified, level=_NotSpecified):
+    def tic(
+        self,
+        msg=_NotSpecified,
+        *args,
+        ostream=_NotSpecified,
+        logger=_NotSpecified,
+        level=_NotSpecified,
+    ):
         """Reset the tic/toc delta timer.
 
         This resets the reference time from which the next delta time is
@@ -266,17 +279,26 @@ class TicTocTimer(object):
                 # pyomo.common.timing logger.
                 deprecation_warning(
                     "tic(): 'ostream' and 'logger' should be "
-                    "specified as keyword arguments", version='6.4.2',
-                    logger=__package__)
+                    "specified as keyword arguments",
+                    version='6.4.2',
+                    logger=__package__,
+                )
                 ostream, *args = args
                 if args:
                     logger, *args = args
-            self.toc(msg, *args, delta=False,
-                     ostream=ostream, logger=logger, level=level)
+            self.toc(
+                msg, *args, delta=False, ostream=ostream, logger=logger, level=level
+            )
 
-
-    def toc(self, msg=_NotSpecified, *args, delta=True,
-            ostream=_NotSpecified, logger=_NotSpecified, level=_NotSpecified):
+    def toc(
+        self,
+        msg=_NotSpecified,
+        *args,
+        delta=True,
+        ostream=_NotSpecified,
+        logger=_NotSpecified,
+        level=_NotSpecified,
+    ):
         """Print out the elapsed time.
 
         This resets the reference time from which the next delta time is
@@ -302,16 +324,17 @@ class TicTocTimer(object):
         """
 
         if msg is _NotSpecified:
-            msg = 'File "%s", line %s in %s' % \
-                  traceback.extract_stack(limit=2)[0][:3]
+            msg = 'File "%s", line %s in %s' % traceback.extract_stack(limit=2)[0][:3]
         if args and msg is not None and '%' not in msg:
             # Note: specify the parent module scope for the logger
             # so this does not hit (and get handled by) the local
             # pyomo.common.timing logger.
             deprecation_warning(
                 "toc(): 'delta', 'ostream', and 'logger' should be "
-                "specified as keyword arguments", version='6.4.2',
-                logger=__package__)
+                "specified as keyword arguments",
+                version='6.4.2',
+                logger=__package__,
+            )
             delta, *args = args
             if args:
                 ostream, *args = args
@@ -367,8 +390,7 @@ class TicTocTimer(object):
     def stop(self):
         delta, self._lastTime = self._lastTime, None
         if delta is None:
-            raise RuntimeError(
-                "Stopping a TicTocTimer that was already stopped")
+            raise RuntimeError("Stopping a TicTocTimer that was already stopped")
         delta = default_timer() - delta
         self._cumul += delta
         return delta
@@ -428,11 +450,11 @@ def _move_grandchildren_to_root(root, child):
             root.timers[gchild_key].n_calls += gchild_n_calls
         else:
             root.timers[gchild_key] = gchild_timer
-    
+
         # Subtract the grandchild's total time from the child (which
         # will no longer be a parent of the grandchild)
         child.total_time -= gchild_timer.total_time
-    
+
     # Clear the child timer's dict to make it a leaf node
     child.timers.clear()
 
@@ -484,16 +506,20 @@ class _HierarchicalHelper(object):
                 else:
                     _percent = float('nan')
                 s += indent
-                s += ( name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
-                       '{percall:>9.3f} {percent:>6.1f}\n' ).format(
-                           name=name,
-                           ncalls=timer.n_calls,
-                           cumtime=timer.total_time,
-                           percall=timer.total_time/timer.n_calls,
-                           percent=_percent )
+                s += (
+                    name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
+                    '{percall:>9.3f} {percent:>6.1f}\n'
+                ).format(
+                    name=name,
+                    ncalls=timer.n_calls,
+                    cumtime=timer.total_time,
+                    percall=timer.total_time / timer.n_calls,
+                    percent=_percent,
+                )
                 s += timer.to_str(
-                    indent=indent + ' '*stage_identifier_lengths[0],
-                    stage_identifier_lengths=sub_stage_identifier_lengths)
+                    indent=indent + ' ' * stage_identifier_lengths[0],
+                    stage_identifier_lengths=sub_stage_identifier_lengths,
+                )
                 other_time -= timer.total_time
 
             if self.total_time > 0:
@@ -501,13 +527,16 @@ class _HierarchicalHelper(object):
             else:
                 _percent = float('nan')
             s += indent
-            s += ( name_formatter + '{ncalls:>9} {cumtime:>9.3f} '
-                   '{percall:>9} {percent:>6.1f}\n' ).format(
-                       name='other',
-                       ncalls='n/a',
-                       cumtime=other_time,
-                       percall='n/a',
-                       percent=_percent )
+            s += (
+                name_formatter + '{ncalls:>9} {cumtime:>9.3f} '
+                '{percall:>9} {percent:>6.1f}\n'
+            ).format(
+                name='other',
+                ncalls='n/a',
+                cumtime=other_time,
+                percall='n/a',
+                percent=_percent,
+            )
             s += underline.replace('-', '=')
         return s
 
@@ -732,6 +761,7 @@ class HierarchicalTimer(object):
     code is not).
 
     """
+
     def __init__(self):
         self.stack = list()
         self.timers = dict()
@@ -762,7 +792,9 @@ class HierarchicalTimer(object):
             if should_exist:
                 raise RuntimeError(
                     'Could not find timer {0}'.format(
-                        '.'.join(self.stack + [identifier])))
+                        '.'.join(self.stack + [identifier])
+                    )
+                )
             parent.timers[identifier] = _HierarchicalHelper()
             return parent.timers[identifier]
 
@@ -790,7 +822,8 @@ class HierarchicalTimer(object):
             raise ValueError(
                 str(identifier) + ' is not the currently active timer.  '
                 'The only timer that can currently be stopped is '
-                + '.'.join(self.stack))
+                + '.'.join(self.stack)
+            )
         self.stack.pop()
         timer = self._get_timer(identifier, should_exist=True)
         timer.stop()
@@ -820,36 +853,41 @@ class HierarchicalTimer(object):
             # switch to a constant indentation of const_indent spaces
             # (to hopefully shorten the line lengths
             name_field_width = max(
-                const_indent*i + l
-                for i, l in enumerate(stage_identifier_lengths)
+                const_indent * i + l for i, l in enumerate(stage_identifier_lengths)
             )
             for i in range(len(stage_identifier_lengths) - 1):
                 stage_identifier_lengths[i] = const_indent
-            stage_identifier_lengths[-1] = (
-                name_field_width -
-                const_indent*(len(stage_identifier_lengths) - 1) )
+            stage_identifier_lengths[-1] = name_field_width - const_indent * (
+                len(stage_identifier_lengths) - 1
+            )
         name_formatter = '{name:<' + str(name_field_width) + '}'
-        s = ( name_formatter + '{ncalls:>9} {cumtime:>9} '
-              '{percall:>9} {percent:>6}\n').format(
-                  name='Identifier',
-                  ncalls='ncalls',
-                  cumtime='cumtime',
-                  percall='percall',
-                  percent='%')
+        s = (
+            name_formatter + '{ncalls:>9} {cumtime:>9} {percall:>9} {percent:>6}\n'
+        ).format(
+            name='Identifier',
+            ncalls='ncalls',
+            cumtime='cumtime',
+            percall='percall',
+            percent='%',
+        )
         underline = '-' * (name_field_width + 36) + '\n'
         s += underline
         sub_stage_identifier_lengths = stage_identifier_lengths[1:]
         for name, timer in sorted(self.timers.items()):
-            s += ( name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
-                   '{percall:>9.3f} {percent:>6.1f}\n').format(
-                       name=name,
-                       ncalls=timer.n_calls,
-                       cumtime=timer.total_time,
-                       percall=timer.total_time/timer.n_calls,
-                       percent=self.get_total_percent_time(name))
+            s += (
+                name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
+                '{percall:>9.3f} {percent:>6.1f}\n'
+            ).format(
+                name=name,
+                ncalls=timer.n_calls,
+                cumtime=timer.total_time,
+                percall=timer.total_time / timer.n_calls,
+                percent=self.get_total_percent_time(name),
+            )
             s += timer.to_str(
-                indent=' '*stage_identifier_lengths[0],
-                stage_identifier_lengths=sub_stage_identifier_lengths)
+                indent=' ' * stage_identifier_lengths[0],
+                stage_identifier_lengths=sub_stage_identifier_lengths,
+            )
         s += underline.replace('-', '=')
         return s
 
@@ -1009,8 +1047,7 @@ class HierarchicalTimer(object):
             raise RuntimeError(
                 "Cannot clear a HierarchicalTimer while any timers are"
                 " active. Current active timer is %s. clear_except should"
-                " only be called as a post-processing step."
-                % self.stack[-1]
+                " only be called as a post-processing step." % self.stack[-1]
             )
         to_retain = set(args)
         _clear_timers_except(self, to_retain)

@@ -20,15 +20,20 @@ import time
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.timing import (
-    ConstructionTimer, TransformationTimer, report_timing,
-    TicTocTimer, HierarchicalTimer,
+    ConstructionTimer,
+    TransformationTimer,
+    report_timing,
+    TicTocTimer,
+    HierarchicalTimer,
 )
 from pyomo.environ import ConcreteModel, RangeSet, Var, Any, TransformationFactory
 from pyomo.core.base.var import _VarData
 
+
 class _pseudo_component(Var):
     def getname(*args, **kwds):
         raise RuntimeError("fail")
+
 
 class TestTiming(unittest.TestCase):
     def setUp(self):
@@ -45,38 +50,34 @@ class TestTiming(unittest.TestCase):
         self.assertRegex(
             str(a),
             r"ConstructionTimer object for NoneType \(unknown\); "
-            r"[0-9\.]+ elapsed seconds")
+            r"[0-9\.]+ elapsed seconds",
+        )
         v = Var()
         v.construct()
         a = ConstructionTimer(_VarData(v))
         self.assertRegex(
             str(a),
             r"ConstructionTimer object for Var ScalarVar\[NOTSET\]; "
-            r"[0-9\.]+ elapsed seconds")
+            r"[0-9\.]+ elapsed seconds",
+        )
 
     def test_raw_transformation_timer(self):
         a = TransformationTimer(None)
         self.assertRegex(
             str(a),
-            r"TransformationTimer object for NoneType; "
-            r"[0-9\.]+ elapsed seconds")
+            r"TransformationTimer object for NoneType; [0-9\.]+ elapsed seconds",
+        )
 
         v = _pseudo_component()
         a = ConstructionTimer(v)
-        self.assertIn(
-            "ConstructionTimer object for Var (unknown); ",
-            str(a))
+        self.assertIn("ConstructionTimer object for Var (unknown); ", str(a))
 
     def test_raw_transformation_timer(self):
         a = TransformationTimer(None, 'fwd')
-        self.assertIn(
-            "TransformationTimer object for NoneType (fwd); ",
-            str(a))
+        self.assertIn("TransformationTimer object for NoneType (fwd); ", str(a))
 
         a = TransformationTimer(None)
-        self.assertIn(
-            "TransformationTimer object for NoneType; ",
-            str(a))
+        self.assertIn("TransformationTimer object for NoneType; ", str(a))
 
     def test_report_timing(self):
         ref = r"""
@@ -134,7 +135,7 @@ class TestTiming(unittest.TestCase):
 
     def test_TicTocTimer_tictoc(self):
         SLEEP = 0.1
-        RES = 0.02 # resolution (seconds): 1/5 the sleep
+        RES = 0.02  # resolution (seconds): 1/5 the sleep
 
         # Note: pypy on GHA occasionally has timing
         # differences of >0.04s
@@ -158,8 +159,7 @@ class TestTiming(unittest.TestCase):
             start_time = time.perf_counter()
             timer.tic()
         self.assertRegex(
-            out.getvalue(),
-            r'\[    [.0-9]+\] Resetting the tic/toc delta timer'
+            out.getvalue(), r'\[    [.0-9]+\] Resetting the tic/toc delta timer'
         )
 
         time.sleep(SLEEP)
@@ -169,14 +169,14 @@ class TestTiming(unittest.TestCase):
             delta = timer.toc()
         self.assertAlmostEqual(ref - start_time, delta, delta=RES)
         self.assertRegex(
-            out.getvalue(),
-            r'\[\+   [.0-9]+\] .* in test_TicTocTimer_tictoc'
+            out.getvalue(), r'\[\+   [.0-9]+\] .* in test_TicTocTimer_tictoc'
         )
         with capture_output() as out:
             # entering / leaving the context manager can take non-trivial
             # time on some platforms (up to 0.03 on Windows / Python 3.10)
             self.assertAlmostEqual(
-                time.perf_counter() - ref, timer.toc(None), delta=RES)
+                time.perf_counter() - ref, timer.toc(None), delta=RES
+            )
         self.assertEqual(out.getvalue(), '')
 
         with capture_output() as out:
@@ -184,8 +184,7 @@ class TestTiming(unittest.TestCase):
             total = timer.toc(delta=False)
         self.assertAlmostEqual(ref - start_time, total, delta=RES)
         self.assertRegex(
-            out.getvalue(),
-            r'\[    [.0-9]+\] .* in test_TicTocTimer_tictoc'
+            out.getvalue(), r'\[    [.0-9]+\] .* in test_TicTocTimer_tictoc'
         )
 
         ref *= -1
@@ -196,8 +195,8 @@ class TestTiming(unittest.TestCase):
         cumul_stop1 = timer.toc(None)
         self.assertAlmostEqual(ref, cumul_stop1, delta=RES)
         with self.assertRaisesRegex(
-                RuntimeError,
-                'Stopping a TicTocTimer that was already stopped'):
+            RuntimeError, 'Stopping a TicTocTimer that was already stopped'
+        ):
             timer.stop()
         time.sleep(SLEEP)
         cumul_stop2 = timer.toc(None)
@@ -213,21 +212,19 @@ class TestTiming(unittest.TestCase):
             delta = timer.toc()
         self.assertAlmostEqual(ref, delta, delta=RES)
         self.assertRegex(
-            out.getvalue(),
-            r'\[    [.0-9]+\|   1\] .* in test_TicTocTimer_tictoc'
+            out.getvalue(), r'\[    [.0-9]+\|   1\] .* in test_TicTocTimer_tictoc'
         )
         with capture_output() as out:
             # Note that delta is ignored if the timer is a cumulative timer
             total = timer.toc(delta=False)
         self.assertAlmostEqual(delta, total, delta=RES)
         self.assertRegex(
-            out.getvalue(),
-            r'\[    [.0-9]+\|   1\] .* in test_TicTocTimer_tictoc'
+            out.getvalue(), r'\[    [.0-9]+\|   1\] .* in test_TicTocTimer_tictoc'
         )
 
     def test_TicTocTimer_context_manager(self):
         SLEEP = 0.1
-        RES = 0.05 # resolution (seconds): 1/2 the sleep
+        RES = 0.05  # resolution (seconds): 1/2 the sleep
 
         abs_time = time.perf_counter()
         with TicTocTimer() as timer:
@@ -238,7 +235,7 @@ class TestTiming(unittest.TestCase):
         with timer:
             time.sleep(SLEEP)
         abs_time = time.perf_counter() - abs_time
-        self.assertGreater(abs_time, SLEEP*3 - RES/10)
+        self.assertGreater(abs_time, SLEEP * 3 - RES / 10)
         self.assertAlmostEqual(timer.toc(None), abs_time - exclude, delta=RES)
 
     def test_TicTocTimer_logger(self):
@@ -278,7 +275,8 @@ class TestTiming(unittest.TestCase):
         self.assertRegex(
             LOG.getvalue().replace('\n', ' ').strip(),
             r"DEPRECATED: tic\(\): 'ostream' and 'logger' should be specified "
-            r"as keyword arguments( +\([^\)]+\)){2}")
+            r"as keyword arguments( +\([^\)]+\)){2}",
+        )
 
         with LoggingIntercept() as LOG, capture_output() as out:
             timer.toc("msg", True, None, None)
@@ -286,7 +284,8 @@ class TestTiming(unittest.TestCase):
         self.assertRegex(
             LOG.getvalue().replace('\n', ' ').strip(),
             r"DEPRECATED: toc\(\): 'delta', 'ostream', and 'logger' should be "
-            r"specified as keyword arguments( +\([^\)]+\)){2}")
+            r"specified as keyword arguments( +\([^\)]+\)){2}",
+        )
 
         timer = TicTocTimer()
         with LoggingIntercept() as LOG, capture_output() as out:
@@ -299,9 +298,8 @@ class TestTiming(unittest.TestCase):
         self.assertIn('msg True, None, None', out.getvalue())
         self.assertEqual(LOG.getvalue(), "")
 
-
     def test_HierarchicalTimer(self):
-        RES = 0.01 # resolution (seconds)
+        RES = 0.01  # resolution (seconds)
 
         timer = HierarchicalTimer()
         start_time = time.perf_counter()
@@ -319,8 +317,7 @@ class TestTiming(unittest.TestCase):
             timer.stop('a')
         end_time = time.perf_counter()
         timer.stop('all')
-        ref = \
-"""Identifier        ncalls   cumtime   percall      %
+        ref = """Identifier        ncalls   cumtime   percall      %
 ---------------------------------------------------
 all                    1     [0-9.]+ +[0-9.]+ +100.0
      ----------------------------------------------
@@ -339,32 +336,33 @@ all                    1     [0-9.]+ +[0-9.]+ +100.0
 
         self.assertEqual(1, timer.get_num_calls('all'))
         self.assertAlmostEqual(
-            end_time - start_time, timer.get_total_time('all'), delta=RES)
-        self.assertEqual(100., timer.get_relative_percent_time('all'))
-        self.assertTrue(100. > timer.get_relative_percent_time('all.a'))
-        self.assertTrue(50. < timer.get_relative_percent_time('all.a'))
+            end_time - start_time, timer.get_total_time('all'), delta=RES
+        )
+        self.assertEqual(100.0, timer.get_relative_percent_time('all'))
+        self.assertTrue(100.0 > timer.get_relative_percent_time('all.a'))
+        self.assertTrue(50.0 < timer.get_relative_percent_time('all.a'))
 
     def test_HierarchicalTimer_longNames(self):
-        RES = 0.01 # resolution (seconds)
+        RES = 0.01  # resolution (seconds)
 
         timer = HierarchicalTimer()
         start_time = time.perf_counter()
-        timer.start('all'*25)
+        timer.start('all' * 25)
         time.sleep(0.02)
         for i in range(10):
-            timer.start('a'*75)
+            timer.start('a' * 75)
             time.sleep(0.01)
             for j in range(5):
-                timer.start('aa'*20)
+                timer.start('aa' * 20)
                 time.sleep(0.001)
-                timer.stop('aa'*20)
-            timer.start('ab'*20)
-            timer.stop('ab'*20)
-            timer.stop('a'*75)
+                timer.stop('aa' * 20)
+            timer.start('ab' * 20)
+            timer.stop('ab' * 20)
+            timer.stop('a' * 75)
         end_time = time.perf_counter()
-        timer.stop('all'*25)
+        timer.stop('all' * 25)
         ref = (
-"""Identifier%s   ncalls   cumtime   percall      %%
+            """Identifier%s   ncalls   cumtime   percall      %%
 %s------------------------------------
 %s%s        1     [0-9.]+ +[0-9.]+ +100.0
     %s------------------------------------
@@ -377,20 +375,27 @@ all                    1     [0-9.]+ +[0-9.]+ +100.0
     other%s      n/a     [0-9.]+ +n/a +[0-9.]+
     %s====================================
 %s====================================
-""" % (
-    ' '*69,
-    '-'*79,
-    'all'*25, ' '*4,
-    '-'*75,
-    'a'*75, '',
-    '-'*71,
-    'aa'*20, ' '*31,
-    'ab'*20, ' '*31,
-    ' '*66,
-    '='*71,
-    ' '*70,
-    '='*75,
-    '='*79)).splitlines()
+"""
+            % (
+                ' ' * 69,
+                '-' * 79,
+                'all' * 25,
+                ' ' * 4,
+                '-' * 75,
+                'a' * 75,
+                '',
+                '-' * 71,
+                'aa' * 20,
+                ' ' * 31,
+                'ab' * 20,
+                ' ' * 31,
+                ' ' * 66,
+                '=' * 71,
+                ' ' * 70,
+                '=' * 75,
+                '=' * 79,
+            )
+        ).splitlines()
         for l, r in zip(str(timer).splitlines(), ref):
             self.assertRegex(l, r)
 
@@ -545,13 +550,15 @@ class TestFlattenHierarchicalTimer(unittest.TestCase):
         timer.timers["root"].timers["a"].timers["b"].total_time = 1.1
         timer.timers["root"].timers["a"].timers["c"].total_time = 2.2
         timer.timers["root"].timers["a"].timers["c"].timers["d"].total_time = 0.9
-        timer.timers["root"].timers["a"].timers["c"].timers["d"].timers["e"].total_time = 0.6
+        timer.timers["root"].timers["a"].timers["c"].timers["d"].timers[
+            "e"
+        ].total_time = 0.6
         timer.timers["root"].timers["b"].total_time = 0.88
         timer.timers["root"].timers["b"].timers["c"].total_time = 0.07
         timer.timers["root"].timers["b"].timers["c"].timers["e"].total_time = 0.04
         timer.timers["root"].timers["b"].timers["d"].total_time = 0.05
         return timer
-    
+
     def make_timer_depth_4_same_name(self):
         timer = HierarchicalTimer()
         timer.start("root")
@@ -568,7 +575,9 @@ class TestFlattenHierarchicalTimer(unittest.TestCase):
         timer.timers["root"].timers["a"].total_time = 1.0
         timer.timers["root"].timers["a"].timers["a"].total_time = 0.1
         timer.timers["root"].timers["a"].timers["a"].timers["a"].total_time = 0.01
-        timer.timers["root"].timers["a"].timers["a"].timers["a"].timers["a"].total_time = 0.001
+        timer.timers["root"].timers["a"].timers["a"].timers["a"].timers[
+            "a"
+        ].total_time = 0.001
         return timer
 
     def test_singleton(self):
