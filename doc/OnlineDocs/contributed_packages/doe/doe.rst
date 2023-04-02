@@ -217,7 +217,8 @@ Step 0: Import Pyomo and the Pyomo.DoE module
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import ContinuousSet, DerivativeVar
-    >>> from pyomo.contrib.doe import DesignOfExperiments, Measurements, mode_lib, DesignVariables, formula_lib
+    >>> from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables
+    >>> from pyomo.contrib.doe import objective_lib, finite_difference_lib, calculation_mode
     >>> import numpy as np
 
 Step 1: Define the Pyomo process model
@@ -345,8 +346,8 @@ Step 2: Define the inputs for Pyomo.DoE
     >>> lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
     >>> design_gen = DesignVariables() # create object
-    >>> design_gen.add_elements(total_name, time_index = dtime_index, values=exp1)
-    >>> design_gen.add_bounds(upper_bound=upper_bound, lower_bound=lower_bound)
+    >>> design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, 
+    ... upper_bound=upper_bound, lower_bound=lower_bound)
 
     >>> # === Define prior information ==
     >>> prior_pass = np.zeros((4,4))
@@ -363,7 +364,7 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
 .. doctest::
 
     >>> # === Decide mode ===
-    >>> sensi_opt = mode_lib.sequential_finite
+    >>> sensi_opt = calculation_mode.sequential_finite
     >>> # === Specify an experiment ===
     >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
     >>> design_gen.update_values(exp1) # update values for design object
@@ -372,8 +373,8 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
     ...                          measure_class, create_model,
     ...                         prior_FIM=prior_pass, discretize_model=disc_for_measure)
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
-    >>> result = doe_object.compute_FIM(design_gen, mode=sensi_opt,  scale_nominal_param_value=True,
-    ...                            formula = formula_lib.central) # doctest: +SKIP
+    >>> result = doe_object.compute_FIM(mode=sensi_opt,  scale_nominal_param_value=True,
+    ...                            formula = finite_difference_lib.central) # doctest: +SKIP
     >>> # === Use ``calculate_FIM`` method of the result object to evaluate the FIM ===
     >>> result.calculate_FIM(doe_object.design_values) # doctest: +SKIP
     >>> # === Print FIM and its trace, determinant, condition number and minimal eigen value ===
@@ -402,13 +403,13 @@ Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` an
     >>> # === Specify inputs===
     >>> design_ranges = [list(np.linspace(1,5,3)), list(np.linspace(300,700,3))] # CA0, T
     >>> dv_apply_name = ['CA0[0]',['T[0]','T[0.125]','T[0.25]','T[0.375]','T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]']]
-    >>> sensi_opt = mode_lib.direct_kaug
+    >>> sensi_opt = calculation_mode.direct_kaug
     >>> prior_pass = np.zeros((4,4))
 
     >>> # === Run enumeration ===
     >>> doe_object = DesignOfExperiments(parameter_dict, design_gen,measure_class, create_model,
     ...                            prior_FIM=prior_pass, discretize_model=disc_for_measure) # doctest: +SKIP
-    >>> all_fim = doe_object.run_grid_search(design_gen, design_ranges, dv_apply_name, mode=sensi_opt) # doctest: +SKIP
+    >>> all_fim = doe_object.run_grid_search(design_ranges, dv_apply_name, mode=sensi_opt) # doctest: +SKIP
 
     >>> # === Analyze results ===
     >>> all_fim.extract_criteria() # doctest: +SKIP
@@ -443,8 +444,8 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     >>> doe_object = DesignOfExperiments(parameter_dict, design_gen,measure_class, create_model,
     ...                            prior_FIM=prior, discretize_model=disc_for_measure) # doctest: +SKIP
     >>> # === Optimize ===
-    >>> square_result, optimize_result= doe_object2.stochastic_program(design_gen, if_optimize=True, if_Cholesky=True,
-    ...                                                         scale_nominal_param_value=True, objective_option='det', 
+    >>> square_result, optimize_result= doe_object2.stochastic_program(if_optimize=True, if_Cholesky=True,
+    ...                                                         scale_nominal_param_value=True, objective_option=objective_lib.det, 
     ...                                                          L_initial=np.linalg.cholesky(prior)) # doctest: +SKIP
 
 

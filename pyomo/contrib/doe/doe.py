@@ -40,8 +40,6 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_lib
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-#from scenario import ScenarioGenerator,finite_difference_lib
-#from result import FisherResults, GridSearchResult
 
 
 class calculation_mode(Enum):
@@ -79,7 +77,7 @@ class DesignOfExperiments:
             A DesignVariable ``object`` which contains the Pyomo variable names and their corresponding indices
             and bounds for experiment design of freedom 
         measurement_vars:
-            A measurement ``object`` which contains the Pyomo variable names and their corresponding indices and 
+            A Measurement ``object`` which contains the Pyomo variable names and their corresponding indices and 
             bounds for experimental measurements
         create_model:
             A Python ``function`` that returns a Concrete Pyomo model, similar to the interface for ``parmest``
@@ -175,7 +173,7 @@ class DesignOfExperiments:
         fim_initial:
             a matrix used to initialize FIM matrix
         formula:
-            choose from 'central', 'forward', 'backward', None in the finite_difference_lib class
+            choose from finite_difference_lib.central, .forward, or .backward
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
@@ -274,17 +272,17 @@ class DesignOfExperiments:
     def compute_FIM(self, mode=calculation_mode.direct_kaug, FIM_store_name=None, specified_prior=None,
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
                     store_output = None, read_output=None, extract_single_model=None,
-                    formula='central', step=0.001):
+                    formula=finite_difference_lib.central, step=0.001):
         """
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
         It calculates FIM with sensitivity information from two modes:
-            1.  sequential_finite: use finite difference scheme to evaluate sensitivity
-            2.  direct_kaug: use k_aug to evaluate sensitivity
+            1.  sequential_finite: sequentially solve square problems and use finite difference approximation
+            2.  direct_kaug: solve a single square problem then extract derivatives using NLP sensitivity theory
 
         Parameters
         -----------
         mode:
-            use sequential_finite, direct_kaug in calculation_mode.
+            use calculation_mode.sequential_finite or calculation_mode.direct_kaug
         FIM_store_name:
             if storing the FIM in a .csv or .txt, give the file name here as a string.
         specified_prior:
@@ -304,7 +302,8 @@ class DesignOfExperiments:
             The output file uses the name AB.csv, where string A is store_output input, B is the index of scenario.  
             scenario index is the number of the scenario outputs which is stored.
         formula:
-            choose from 'central', 'forward', 'backward' in finite_difference_lib, None. This option is only used for sequential_finite mode.
+            choose from finite_difference_lib.central, .forward, or .backward. 
+            This option is only used for calculation_mode.sequential_finite mode.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
@@ -608,9 +607,9 @@ class DesignOfExperiments:
         return jac
 
     def run_grid_search(self, design_ranges, design_dimension_names, 
-                     mode='sequential_finite', tee_option=False, 
+                     mode=calculation_mode.sequential_finite, tee_option=False, 
                     scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
-                        filename=None, formula='central', step=0.001):
+                        filename=None, formula=finite_difference_lib.central, step=0.001):
         """
         Enumerate through full grid search for any number of design variables;
         solve square problems sequentially to compute FIMs.
@@ -626,7 +625,7 @@ class DesignOfExperiments:
         design_dimension_names:
             a ``list`` of design variable names of each design range
         mode:
-            use mode='sequential_finite', 'direct_kaug'
+            choose from calculation_mode.sequential_finite, .direct_kaug.
         tee_option:
             if solver console output is made
         scale_nominal_param_value:
@@ -644,7 +643,8 @@ class DesignOfExperiments:
         filename:
             if True, grid search results stored with this file name
         formula:
-            choose from 'central', 'forward', 'backward', None. This option is only used for 'sequential_finite' mode.
+            choose from finite_difference_lib.central, .forward, or .backward.
+            This option is only used for calculation_mode.sequential_finite.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
