@@ -76,7 +76,7 @@ def _get_data_slice(xvar,yvar,columns,data,theta_star):
                 temp[col] = temp[col] + data[col].mean()/10
             else:
                 temp[col] = temp[col] + data[col].std()
-            data = data.concat(temp, ignore_index=True)
+            data = pd.concat([data, temp], ignore_index=True)
     
     data_slice['obj'] = scipy.interpolate.griddata(
         np.array(data[columns]),
@@ -169,7 +169,7 @@ def _add_obj_contour(x,y,color,columns,data,theta_star,label=None):
 def _set_axis_limits(g, axis_limits, theta_vals, theta_star):
 
     if theta_star is not None:
-        theta_vals = theta_vals.concat(theta_star, ignore_index=True)
+        theta_vals = pd.concat([theta_vals, theta_star], ignore_index=True)
         
     if axis_limits is None:
         axis_limits = {}
