@@ -185,10 +185,10 @@ def pyros_config():
             domain=NonNegativeFloat,
             doc=(
                 """
-            Wall time limit for the execution of the PyROS solver
-            in seconds (including time spent by subsolvers).
-            If `None` is provided, then no time limit is enforced.
-            """
+                Wall time limit for the execution of the PyROS solver
+                in seconds (including time spent by subsolvers).
+                If `None` is provided, then no time limit is enforced.
+                """
             ),
             is_optional=True,
             document_default=False,
@@ -202,11 +202,11 @@ def pyros_config():
             domain=bool,
             description=(
                 """
-            Export subproblems with a non-acceptable termination status
-            for debugging purposes.
-            If True is provided, then the argument `subproblem_file_directory`
-            must also be specified.
-            """
+                Export subproblems with a non-acceptable termination status
+                for debugging purposes.
+                If True is provided, then the argument `subproblem_file_directory`
+                must also be specified.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -231,9 +231,9 @@ def pyros_config():
             domain=bool,
             description=(
                 """
-            Load final solution(s) found by PyROS to the deterministic model
-            provided.
-            """
+                Load final solution(s) found by PyROS to the deterministic model
+                provided.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -271,10 +271,10 @@ def pyros_config():
             domain=InputDataStandardizer(Param, _ParamData),
             description=(
                 """
-            Uncertain model parameters.
-            The `mutable` attribute for all uncertain parameter
-            objects should be set to True.
-            """
+                Uncertain model parameters.
+                The `mutable` attribute for all uncertain parameter
+                objects should be set to True.
+                """
             ),
             is_optional=False,
             dtype_spec_str="list of Param",
@@ -287,10 +287,10 @@ def pyros_config():
             domain=uncertainty_sets,
             description=(
                 """
-            Uncertainty set against which the
-            final solution(s) returned by PyROS should be certified
-            to be robust.
-            """
+                Uncertainty set against which the
+                final solution(s) returned by PyROS should be certified
+                to be robust.
+                """
             ),
             is_optional=False,
             dtype_spec_str="UncertaintySet",
@@ -326,30 +326,30 @@ def pyros_config():
             domain=ValidEnum(ObjectiveType),
             description=(
                 """
-            Choice of objective focus to optimize in the master problems.
-            Choices are: `ObjectiveType.worst_case`,
-            `ObjectiveType.nominal`.
-            """
+                Choice of objective focus to optimize in the master problems.
+                Choices are: `ObjectiveType.worst_case`,
+                `ObjectiveType.nominal`.
+                """
             ),
             doc=(
                 """
-            Objective focus for the master problems:
-
-            - `ObjectiveType.nominal`:
-              Optimize the objective function subject to the nominal
-              uncertain parameter realization.
-            - `ObjectiveType.worst_case`:
-              Optimize the objective function subject to the worst-case
-              uncertain parameter realization.
-
-            By default, `ObjectiveType.nominal` is chosen.
-
-            A worst-case objective focus is required for certification
-            of robust optimality of the final solution(s) returned
-            by PyROS.
-            If a nominal objective focus is chosen, then only robust
-            feasibility is guaranteed.
-            """
+                Objective focus for the master problems:
+    
+                - `ObjectiveType.nominal`:
+                  Optimize the objective function subject to the nominal
+                  uncertain parameter realization.
+                - `ObjectiveType.worst_case`:
+                  Optimize the objective function subject to the worst-case
+                  uncertain parameter realization.
+    
+                By default, `ObjectiveType.nominal` is chosen.
+    
+                A worst-case objective focus is required for certification
+                of robust optimality of the final solution(s) returned
+                by PyROS.
+                If a nominal objective focus is chosen, then only robust
+                feasibility is guaranteed.
+                """
             ),
             is_optional=True,
             document_default=False,
@@ -363,12 +363,12 @@ def pyros_config():
             domain=list,
             doc=(
                 """
-            Nominal uncertain parameter realization.
-            Entries should be provided in an order consistent with the
-            entries of the argument `uncertain_params`.
-            If an empty list is provided, then the values of the `Param`
-            objects specified through `uncertain_params` are chosen.
-            """
+                Nominal uncertain parameter realization.
+                Entries should be provided in an order consistent with the
+                entries of the argument `uncertain_params`.
+                If an empty list is provided, then the values of the `Param`
+                objects specified through `uncertain_params` are chosen.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -382,23 +382,23 @@ def pyros_config():
             domain=In([0, 1, 2]),
             description=(
                 """
-            Order (or degree) of the polynomial decision rule functions used
-            for approximating the adjustability of the second stage
-            variables with respect to the uncertain parameters.
-            """
+                Order (or degree) of the polynomial decision rule functions used
+                for approximating the adjustability of the second stage
+                variables with respect to the uncertain parameters.
+                """
             ),
             doc=(
                 """
-            Order (or degree) of the polynomial decision rule functions used
-            for approximating the adjustability of the second stage
-            variables with respect to the uncertain parameters.
-
-            Choices are:
-
-            - 0: static recourse
-            - 1: affine recourse
-            - 2: quadratic recourse
-            """
+                Order (or degree) of the polynomial decision rule functions used
+                for approximating the adjustability of the second stage
+                variables with respect to the uncertain parameters.
+    
+                Choices are:
+    
+                - 0: static recourse
+                - 1: affine recourse
+                - 2: quadratic recourse
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -412,16 +412,16 @@ def pyros_config():
             domain=bool,
             doc=(
                 """
-            True to solve all master problems with the subordinate
-            global solver, False to solve all master problems with
-            the subordinate local solver.
-            Along with a worst-case objective focus
-            (see argument `objective_focus`),
-            solving the master problems to global optimality is required
-            for certification
-            of robust optimality of the final solution(s) returned
-            by PyROS. Otherwise, only robust feasibility is guaranteed.
-            """
+                True to solve all master problems with the subordinate
+                global solver, False to solve all master problems with
+                the subordinate local solver.
+                Along with a worst-case objective focus
+                (see argument `objective_focus`),
+                solving the master problems to global optimality is required
+                for certification
+                of robust optimality of the final solution(s) returned
+                by PyROS. Otherwise, only robust feasibility is guaranteed.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -435,9 +435,9 @@ def pyros_config():
             domain=PositiveIntOrMinusOne,
             description=(
                 """
-            Iteration limit. If -1 is provided, then no iteration
-            limit is enforced.
-            """
+                Iteration limit. If -1 is provided, then no iteration
+                limit is enforced.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -451,9 +451,9 @@ def pyros_config():
             domain=NonNegativeFloat,
             description=(
                 """
-            Relative tolerance for assessing maximal inequality
-            constraint violations during the GRCS separation step.
-            """
+                Relative tolerance for assessing maximal inequality
+                constraint violations during the GRCS separation step.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -467,15 +467,15 @@ def pyros_config():
             domain=dict,
             doc=(
                 """
-            Mapping from model inequality constraint names
-            to positive integers specifying the priorities
-            of their corresponding separation subproblems.
-            A higher integer value indicates a higher priority.
-            Constraints not referenced in the `dict` assume
-            a priority of 0.
-            Separation subproblems are solved in order of decreasing
-            priority.
-            """
+                Mapping from model inequality constraint names
+                to positive integers specifying the priorities
+                of their corresponding separation subproblems.
+                A higher integer value indicates a higher priority.
+                Constraints not referenced in the `dict` assume
+                a priority of 0.
+                Separation subproblems are solved in order of decreasing
+                priority.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -489,10 +489,10 @@ def pyros_config():
             domain=a_logger,
             doc=(
                 """
-            Logger (or name thereof) used for reporting PyROS solver
-            progress. If a `str` is specified, then
-            ``logging.getLogger(progress_logger)`` is used.
-            """
+                Logger (or name thereof) used for reporting PyROS solver
+                progress. If a `str` is specified, then
+                ``logging.getLogger(progress_logger)`` is used.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -506,10 +506,10 @@ def pyros_config():
             domain=SolverResolvable(),
             doc=(
                 """
-            Additional subordinate local NLP optimizers to invoke
-            in the event the primary local NLP optimizer fails
-            to solve a subproblem to an acceptable termination condition.
-            """
+                Additional subordinate local NLP optimizers to invoke
+                in the event the primary local NLP optimizer fails
+                to solve a subproblem to an acceptable termination condition.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -523,10 +523,10 @@ def pyros_config():
             domain=SolverResolvable(),
             doc=(
                 """
-            Additional subordinate global NLP optimizers to invoke
-            in the event the primary global NLP optimizer fails
-            to solve a subproblem to an acceptable termination condition.
-            """
+                Additional subordinate global NLP optimizers to invoke
+                in the event the primary global NLP optimizer fails
+                to solve a subproblem to an acceptable termination condition.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -540,12 +540,12 @@ def pyros_config():
             domain=str,
             description=(
                 """
-            Directory to which to export subproblems not successfully
-            solved to an acceptable termination condition.
-            In the event ``keepfiles=True`` is specified, a str or
-            path-like referring to an existing directory must be
-            provided.
-            """
+                Directory to which to export subproblems not successfully
+                solved to an acceptable termination condition.
+                In the event ``keepfiles=True`` is specified, a str or
+                path-like referring to an existing directory must be
+                provided.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -563,13 +563,13 @@ def pyros_config():
             domain=bool,
             description=(
                 """
-            This is an advanced option.
-            Solve all separation subproblems with the subordinate global
-            solver(s) only.
-            This option is useful for expediting PyROS
-            in the event that the subordinate global optimizer(s) provided
-            can quickly solve separation subproblems to global optimality.
-            """
+                This is an advanced option.
+                Solve all separation subproblems with the subordinate global
+                solver(s) only.
+                This option is useful for expediting PyROS
+                in the event that the subordinate global optimizer(s) provided
+                can quickly solve separation subproblems to global optimality.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -583,17 +583,17 @@ def pyros_config():
             domain=bool,
             doc=(
                 """
-            This is an advanced option.
-            Solve all separation subproblems with the subordinate local
-            solver(s) only.
-            If `True` is chosen, then robustness of the final solution(s)
-            returned by PyROS is not guaranteed, and a warning will
-            be issued at termination.
-            This option is useful for expediting PyROS
-            in the event that the subordinate global optimizer provided
-            cannot tractably solve separation subproblems to global
-            optimality.
-            """
+                This is an advanced option.
+                Solve all separation subproblems with the subordinate local
+                solver(s) only.
+                If `True` is chosen, then robustness of the final solution(s)
+                returned by PyROS is not guaranteed, and a warning will
+                be issued at termination.
+                This option is useful for expediting PyROS
+                in the event that the subordinate global optimizer provided
+                cannot tractably solve separation subproblems to global
+                optimality.
+                """
             ),
             is_optional=True,
             document_default=True,
@@ -607,18 +607,18 @@ def pyros_config():
             domain=dict,
             doc=(
                 """
-            This is an advanced option.
-            Add p-robustness constraints to all master subproblems.
-            If an empty dict is provided, then p-robustness constraints
-            are not added.
-            Otherwise, the dict must map a `str` of value ``'rho'``
-            to a non-negative `float`. PyROS automatically
-            specifies ``1 + p_robustness['rho']``
-            as an upper bound for the ratio of the
-            objective function value under any PyROS-sampled uncertain
-            parameter realization to the objective function under
-            the nominal parameter realization.
-            """
+                This is an advanced option.
+                Add p-robustness constraints to all master subproblems.
+                If an empty dict is provided, then p-robustness constraints
+                are not added.
+                Otherwise, the dict must map a `str` of value ``'rho'``
+                to a non-negative `float`. PyROS automatically
+                specifies ``1 + p_robustness['rho']``
+                as an upper bound for the ratio of the
+                objective function value under any PyROS-sampled uncertain
+                parameter realization to the objective function under
+                the nominal parameter realization.
+                """
             ),
             is_optional=True,
             document_default=True,
