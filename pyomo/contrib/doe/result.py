@@ -31,6 +31,7 @@ from pyomo.common.dependencies import (
     pandas as pd, pandas_available,
     matplotlib as plt, matplotlib_available,
 )
+from pyomo.core.expr.numvalue import value
 
 from itertools import product
 import logging
