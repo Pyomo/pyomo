@@ -14,12 +14,16 @@ from copy import deepcopy
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
-                                       get_main_elapsed_time)
+from pyomo.contrib.gdpopt.util import (
+    SuppressInfeasibleWarning,
+    _DoNothing,
+    get_main_elapsed_time,
+)
 from pyomo.core import Objective, Constraint
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+
 
 def solve_MILP_discrete_problem(util_block, solver, config):
     """Solves the linear GDP model and attempts to resolve solution issues.
@@ -37,15 +41,19 @@ def solve_MILP_discrete_problem(util_block, solver, config):
             # implicitly fixed by these bounds. We can fix this by calling some
             # contrib.preprocessing transformations, but for now I'm just
             # leaving the constraints in.
-            fbbt(m, integer_tol=config.integer_tolerance,
-                 deactivate_satisfied_constraints=False)
+            fbbt(
+                m,
+                integer_tol=config.integer_tolerance,
+                deactivate_satisfied_constraints=False,
+            )
             # [ESJ 1/28/22]: Despite being a little scary, the tightened bounds
             # are okay to leave in because if you tighten the bounds now, they
             # could only get tighter in later iterations, since you are
             # tightening this relaxation
         except InfeasibleConstraintException as e:
             config.logger.debug(
-                "MIP preprocessing detected infeasibility:\n\t%s" % str(e))
+                "MIP preprocessing detected infeasibility:\n\t%s" % str(e)
+            )
             return tc.infeasible
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
@@ -54,8 +62,7 @@ def solve_MILP_discrete_problem(util_block, solver, config):
 
     # Create solver, check availability
     if not SolverFactory(config.mip_solver).available():
-        raise RuntimeError(
-            "MIP solver %s is not available." % config.mip_solver)
+        raise RuntimeError("MIP solver %s is not available." % config.mip_solver)
 
     # Callback immediately before solving MIP discrete problem
     config.call_before_discrete_problem_solve(solver, m, util_block)
@@ -63,7 +70,9 @@ def solve_MILP_discrete_problem(util_block, solver, config):
         deprecation_warning(
             "The 'call_before_master_solve' argument is deprecated. "
             "Please use the 'call_before_discrete_problem_solve' option "
-            "to specify the callback.", version="6.4.2")
+            "to specify the callback.",
+            version="6.4.2",
+        )
 
     with SuppressInfeasibleWarning():
         mip_args = dict(config.mip_solver_args)
@@ -74,9 +83,9 @@ def solve_MILP_discrete_problem(util_block, solver, config):
                 mip_args['add_options'] = mip_args.get('add_options', [])
                 mip_args['add_options'].append('option reslim=%s;' % remaining)
             elif config.mip_solver == 'multisolve':
-                mip_args['time_limit'] = min(mip_args.get('time_limit',
-                                                          float('inf')),
-                                             remaining)
+                mip_args['time_limit'] = min(
+                    mip_args.get('time_limit', float('inf')), remaining
+                )
         results = SolverFactory(config.mip_solver).solve(m, **mip_args)
 
     config.call_after_discrete_problem_solve(solver, m, util_block)
@@ -84,15 +93,16 @@ def solve_MILP_discrete_problem(util_block, solver, config):
         deprecation_warning(
             "The 'call_after_master_solve' argument is deprecated. "
             "Please use the 'call_after_discrete_problem_solve' option to "
-            "specify the callback.", version="6.4.2")
+            "specify the callback.",
+            version="6.4.2",
+        )
 
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
-        results, terminate_cond = distinguish_mip_infeasible_or_unbounded(
-            m, config)
+        results, terminate_cond = distinguish_mip_infeasible_or_unbounded(m, config)
     if terminate_cond is tc.unbounded:
         # Solution is unbounded. This occurs when the objective is
         # nonlinear. The nonlinear objective is moved to the constraints, and
@@ -100,33 +110,40 @@ def solve_MILP_discrete_problem(util_block, solver, config):
         # arbitrary discrete solution by bounding the objective and re-solving,
         # in hopes that the cuts we generate later bound this problem.
 
-        obj_bound = 1E15
+        obj_bound = 1e15
         config.logger.warning(
             'Discrete problem was unbounded. '
             'Re-solving with arbitrary bound values of (-{0:.10g}, {0:.10g}) '
             'on the objective, in order to get a discrete solution. '
-            'Check your initialization routine.'.format(obj_bound))
-        discrete_objective = next(m.component_data_objects(Objective,
-                                                           active=True))
+            'Check your initialization routine.'.format(obj_bound)
+        )
+        discrete_objective = next(m.component_data_objects(Objective, active=True))
         util_block.objective_bound = Constraint(
-            expr=(-obj_bound, discrete_objective.expr, obj_bound))
+            expr=(-obj_bound, discrete_objective.expr, obj_bound)
+        )
         with SuppressInfeasibleWarning():
             results = SolverFactory(config.mip_solver).solve(
-                m, **config.mip_solver_args)
+                m, **config.mip_solver_args
+            )
         # get rid of the made-up constraint
         del util_block.objective_bound
-        if results.solver.termination_condition in {tc.optimal, tc.feasible,
-                                                    tc.locallyOptimal,
-                                                    tc.globallyOptimal}:
+        if results.solver.termination_condition in {
+            tc.optimal,
+            tc.feasible,
+            tc.locallyOptimal,
+            tc.globallyOptimal,
+        }:
             # we found a solution, that's all we need to keep going.
             return tc.unbounded
         else:
-            raise RuntimeError("Unable to find a feasible solution for the "
-                               "unbounded MILP discrete problem by bounding "
-                               "the objective. Either check your "
-                               "discrete problem initialization, or add a "
-                               "bound on the discrete problem objective value "
-                               "that admits a feasible solution.")
+            raise RuntimeError(
+                "Unable to find a feasible solution for the "
+                "unbounded MILP discrete problem by bounding "
+                "the objective. Either check your "
+                "discrete problem initialization, or add a "
+                "bound on the discrete problem objective value "
+                "that admits a feasible solution."
+            )
 
     if terminate_cond is tc.optimal:
         return tc.optimal
@@ -135,34 +152,41 @@ def solve_MILP_discrete_problem(util_block, solver, config):
     elif terminate_cond is tc.infeasible:
         config.logger.info(
             'MILP discrete problem is now infeasible. GDPopt has explored or '
-            'cut off all feasible discrete configurations.')
+            'cut off all feasible discrete configurations.'
+        )
         return tc.infeasible
     elif terminate_cond is tc.maxTimeLimit:
         if len(results.solution) > 0:
             config.logger.info(
                 'Unable to optimize MILP discrete problem within time limit. '
-                'Using current solver feasible solution.')
+                'Using current solver feasible solution.'
+            )
             return tc.feasible
         else:
             config.logger.info(
                 'Unable to optimize MILP discrete problem within time limit. '
                 'No solution found. Treating as infeasible, but there are no '
-                'guarantees.')
+                'guarantees.'
+            )
             return tc.infeasible
-    elif (terminate_cond is tc.other and
-          results.solution.status is SolutionStatus.feasible):
+    elif (
+        terminate_cond is tc.other
+        and results.solution.status is SolutionStatus.feasible
+    ):
         # load the solution and suppress the warning message by setting
         # solver status to ok.
         config.logger.info(
             'MIP solver reported feasible solution to MILP discrete problem, '
-            'but it is not guaranteed to be optimal.')
+            'but it is not guaranteed to be optimal.'
+        )
         return tc.feasible
     else:
         raise ValueError(
             'GDPopt unable to handle MILP discrete problem '
             'termination condition '
-            'of %s. Solver message: %s' %
-            (terminate_cond, results.solver.message))
+            'of %s. Solver message: %s' % (terminate_cond, results.solver.message)
+        )
+
 
 def distinguish_mip_infeasible_or_unbounded(m, config):
     """Distinguish between an infeasible or unbounded solution.

@@ -27,16 +27,15 @@ def _to_iterable(item):
 
 
 def copy_values_at_time(
-        source_vars,
-        target_vars,
-        source_time_points,
-        target_time_points,
-    ):
+    source_vars, target_vars, source_time_points, target_time_points
+):
     # Process input arguments to wrap scalars in a list
     source_time_points = list(_to_iterable(source_time_points))
     target_time_points = list(_to_iterable(target_time_points))
-    if (len(source_time_points) != len(target_time_points)
-            and len(source_time_points) != 1):
+    if (
+        len(source_time_points) != len(target_time_points)
+        and len(source_time_points) != 1
+    ):
         raise ValueError(
             "copy_values_at_time can only copy values when lists of time\n"
             "points have the same length or the source list has length one."
@@ -49,5 +48,5 @@ def copy_values_at_time(
             # Using the value function allows expressions to substitute
             # for variables. However, it raises an error if the expression
             # cannot be evaluated (e.g. has value None).
-            #t_var[t_t].set_value(pyo_value(s_var[s_t]))
+            # t_var[t_t].set_value(pyo_value(s_var[s_t]))
             t_var[t_t].set_value(s_var[s_t].value)

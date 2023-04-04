@@ -15,7 +15,6 @@ from pyomo.contrib.mpc.interfaces.var_linker import DynamicVarLinker
 
 
 class TestVarLinker(unittest.TestCase):
-
     def _make_models(self, n_time_points_1=3, n_time_points_2=3):
         m1 = pyo.ConcreteModel()
         m1.time = pyo.Set(initialize=range(n_time_points_1))
@@ -23,12 +22,9 @@ class TestVarLinker(unittest.TestCase):
         m1.var = pyo.Var(
             m1.time,
             m1.comp,
-            initialize={(i, j): 1.0 + i*0.1 for i, j in m1.time*m1.comp},
+            initialize={(i, j): 1.0 + i * 0.1 for i, j in m1.time * m1.comp},
         )
-        m1.input = pyo.Var(
-            m1.time,
-            initialize={i: 1.0 - i*0.1 for i in m1.time},
-        )
+        m1.input = pyo.Var(m1.time, initialize={i: 1.0 - i * 0.1 for i in m1.time})
 
         m2 = pyo.ConcreteModel()
         m2.time = pyo.Set(initialize=range(n_time_points_2))
@@ -41,11 +37,7 @@ class TestVarLinker(unittest.TestCase):
 
     def test_transfer_one_to_one(self):
         m1, m2 = self._make_models()
-        vars1 = [
-            pyo.Reference(m1.var[:, "A"]),
-            pyo.Reference(m1.var[:, "B"]),
-            m1.input,
-        ]
+        vars1 = [pyo.Reference(m1.var[:, "A"]), pyo.Reference(m1.var[:, "B"]), m1.input]
         vars2 = [m2.x1, m2.x2, m2.x3]
 
         linker = DynamicVarLinker(vars1, vars2)
@@ -53,8 +45,8 @@ class TestVarLinker(unittest.TestCase):
         t_target = 2
         linker.transfer(t_source=0, t_target=2)
 
-        pred_AB = lambda t: 1.0 + t*0.1
-        pred_input = lambda t: 1.0 - t*0.1
+        pred_AB = lambda t: 1.0 + t * 0.1
+        pred_input = lambda t: 1.0 - t * 0.1
         for t in m1.time:
             # Both models have same time set
 
@@ -76,11 +68,7 @@ class TestVarLinker(unittest.TestCase):
 
     def test_transfer_one_to_all(self):
         m1, m2 = self._make_models()
-        vars1 = [
-            pyo.Reference(m1.var[:, "A"]),
-            pyo.Reference(m1.var[:, "B"]),
-            m1.input,
-        ]
+        vars1 = [pyo.Reference(m1.var[:, "A"]), pyo.Reference(m1.var[:, "B"]), m1.input]
         vars2 = [m2.x1, m2.x2, m2.x3]
 
         linker = DynamicVarLinker(vars1, vars2)
@@ -88,8 +76,8 @@ class TestVarLinker(unittest.TestCase):
         t_target = 2
         linker.transfer(t_source=0, t_target=m2.time)
 
-        pred_AB = lambda t: 1.0 + t*0.1
-        pred_input = lambda t: 1.0 - t*0.1
+        pred_AB = lambda t: 1.0 + t * 0.1
+        pred_input = lambda t: 1.0 - t * 0.1
         for t in m1.time:
             # Both models have same time set
 
@@ -106,11 +94,7 @@ class TestVarLinker(unittest.TestCase):
 
     def test_transfer_all_to_all(self):
         m1, m2 = self._make_models()
-        vars1 = [
-            pyo.Reference(m1.var[:, "A"]),
-            pyo.Reference(m1.var[:, "B"]),
-            m1.input,
-        ]
+        vars1 = [pyo.Reference(m1.var[:, "A"]), pyo.Reference(m1.var[:, "B"]), m1.input]
         vars2 = [m2.x1, m2.x2, m2.x3]
 
         linker = DynamicVarLinker(vars1, vars2)
@@ -118,8 +102,8 @@ class TestVarLinker(unittest.TestCase):
         t_target = 2
         linker.transfer(t_source=m1.time, t_target=m2.time)
 
-        pred_AB = lambda t: 1.0 + t*0.1
-        pred_input = lambda t: 1.0 - t*0.1
+        pred_AB = lambda t: 1.0 + t * 0.1
+        pred_input = lambda t: 1.0 - t * 0.1
         for t in m1.time:
             # Both models have same time set
 
@@ -136,21 +120,14 @@ class TestVarLinker(unittest.TestCase):
 
     def test_transfer_exceptions(self):
         m1, m2 = self._make_models()
-        vars1 = [
-            pyo.Reference(m1.var[:, "A"]),
-            pyo.Reference(m1.var[:, "B"]),
-        ]
+        vars1 = [pyo.Reference(m1.var[:, "A"]), pyo.Reference(m1.var[:, "B"])]
         vars2 = [m2.x1, m2.x2, m2.x3]
 
         msg = "must be provided two lists.*of equal length"
         with self.assertRaisesRegex(ValueError, msg):
             linker = DynamicVarLinker(vars1, vars2)
 
-        vars1 = [
-            pyo.Reference(m1.var[:, "A"]),
-            pyo.Reference(m1.var[:, "B"]),
-            m1.input,
-        ]
+        vars1 = [pyo.Reference(m1.var[:, "A"]), pyo.Reference(m1.var[:, "B"]), m1.input]
         vars2 = [m2.x1, m2.x2, m2.x3]
         linker = DynamicVarLinker(vars1, vars2)
         msg = "Source time points were not provided"

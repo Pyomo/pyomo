@@ -21,8 +21,7 @@ from "common" and implements an interface for coo_matrix-like objects.
 """
 
 RowPartition = namedtuple(
-    "RowPartition",
-    ["unmatched", "overconstrained", "underconstrained", "square"],
+    "RowPartition", ["unmatched", "overconstrained", "underconstrained", "square"]
 )
 """Named tuple containing the subsets of the Dulmage-Mendelsohn partition
 when applied to matrix rows (constraints).
@@ -30,8 +29,7 @@ when applied to matrix rows (constraints).
 """
 
 ColPartition = namedtuple(
-    "ColPartition",
-    ["unmatched", "underconstrained", "overconstrained", "square"],
+    "ColPartition", ["unmatched", "underconstrained", "overconstrained", "square"]
 )
 """Named tuple containing the subsets of the Dulmage-Mendelsohn partition
 when applied to matrix columns (variables).
@@ -130,9 +128,7 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
         # Matrix rows have bipartite=0, columns have bipartite=1
         bg = from_biadjacency_matrix(matrix)
         row_partition, col_partition = dm_nx(
-            bg,
-            top_nodes=list(range(M)),
-            matching=matching,
+            bg, top_nodes=list(range(M)), matching=matching
         )
 
         partition = (

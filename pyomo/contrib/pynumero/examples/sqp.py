@@ -98,7 +98,10 @@ def build_burgers_model(nfe_x=100, nfe_t=200, start_t=0, end_t=1):
         else:
             # print(foo.last_t, t-dt, abs(foo.last_t - (t-dt)))
             # assert math.isclose(foo.last_t, t - dt, abs_tol=1e-6)
-            e = m.dydt[x, t] - m.v * m.dydx2[x, t] + m.dydx[x, t] * m.y[x, t] == m.r + m.u[x, t]
+            e = (
+                m.dydt[x, t] - m.v * m.dydx2[x, t] + m.dydx[x, t] * m.y[x, t]
+                == m.r + m.u[x, t]
+            )
         return e
 
     m.pde = pe.Constraint(m.x, m.t, rule=_pde)
@@ -133,10 +136,11 @@ def build_burgers_model(nfe_x=100, nfe_t=200, start_t=0, end_t=1):
     return m
 
 
-def sqp(nlp: NLP, linear_solver: LinearSolverInterface,
-        max_iter=100, tol=1e-8, output=True):
+def sqp(
+    nlp: NLP, linear_solver: LinearSolverInterface, max_iter=100, tol=1e-8, output=True
+):
     """
-    An example of a simple SQP algoritm for 
+    An example of a simple SQP algoritm for
     equality-constrained NLPs.
 
     Parameters
@@ -149,7 +153,7 @@ def sqp(nlp: NLP, linear_solver: LinearSolverInterface,
         The convergence tolerance
     """
     t0 = time.time()
-    
+
     # setup KKT matrix
     kkt = BlockMatrix(2, 2)
     rhs = BlockVector(2)
@@ -160,22 +164,27 @@ def sqp(nlp: NLP, linear_solver: LinearSolverInterface,
     z.set_block(1, nlp.get_duals())
 
     if output:
-        print(f"{'Iter':<12}{'Objective':<12}{'Primal Infeasibility':<25}{'Dual Infeasibility':<25}{'Elapsed Time':<15}")
+        print(
+            f"{'Iter':<12}{'Objective':<12}{'Primal Infeasibility':<25}{'Dual Infeasibility':<25}{'Elapsed Time':<15}"
+        )
 
     # main iteration loop
     for _iter in range(max_iter):
         nlp.set_primals(z.get_block(0))
         nlp.set_duals(z.get_block(1))
 
-        grad_lag = (nlp.evaluate_grad_objective() +
-                    nlp.evaluate_jacobian_eq().transpose() * z.get_block(1))
+        grad_lag = (
+            nlp.evaluate_grad_objective()
+            + nlp.evaluate_jacobian_eq().transpose() * z.get_block(1)
+        )
         residuals = nlp.evaluate_eq_constraints()
 
         if output:
-            print(f"{_iter:<12}{nlp.evaluate_objective():<12.2e}{np.abs(residuals).max():<25.2e}{np.abs(grad_lag).max():<25.2e}{time.time()-t0:<15.2e}")
+            print(
+                f"{_iter:<12}{nlp.evaluate_objective():<12.2e}{np.abs(residuals).max():<25.2e}{np.abs(grad_lag).max():<25.2e}{time.time()-t0:<15.2e}"
+            )
 
-        if (np.abs(grad_lag).max() <= tol and
-            np.abs(residuals).max() <= tol):
+        if np.abs(grad_lag).max() <= tol and np.abs(residuals).max() <= tol:
             break
 
         kkt.set_block(0, 0, nlp.evaluate_hessian_lag())
@@ -189,7 +198,7 @@ def sqp(nlp: NLP, linear_solver: LinearSolverInterface,
         assert res.status == LinearSolverStatus.successful
         z += delta
 
-    
+
 def load_solution(m: pe.ConcreteModel(), nlp: PyomoNLP):
     primals = nlp.get_primals()
     pyomo_vars = nlp.get_pyomo_variables()
@@ -208,7 +217,7 @@ def main(linear_solver, nfe_x=100, nfe_t=200):
 if __name__ == '__main__':
     # create the linear solver
     linear_solver = MA27()
-    linear_solver.set_cntl(1, 1e-6) # pivot tolerance
+    linear_solver.set_cntl(1, 1e-6)  # pivot tolerance
 
     optimal_obj = main(linear_solver)
     print(f'Optimal Objective: {optimal_obj}')

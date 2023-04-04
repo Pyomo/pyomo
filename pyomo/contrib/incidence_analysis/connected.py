@@ -29,7 +29,7 @@ def get_independent_submatrices(matrix):
         Partition of row coordinates into diagonal blocks
     col_blocks: list of lists
         Partition of column coordinates into diagonal blocks
-        
+
     """
     nxc = nx.algorithms.components
     nxb = nx.algorithms.bipartite

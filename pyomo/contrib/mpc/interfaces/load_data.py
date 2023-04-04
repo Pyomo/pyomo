@@ -17,9 +17,7 @@ from pyomo.contrib.mpc.data.find_nearest_index import (
 
 
 def _raise_invalid_cuid(cuid, model):
-    raise RuntimeError(
-        "Cannot find a component %s on block %s" % (cuid, model)
-    )
+    raise RuntimeError("Cannot find a component %s on block %s" % (cuid, model))
 
 
 def load_data_from_scalar(data, model, time):
@@ -110,20 +108,12 @@ def load_data_from_interval(
     exclude_right_endpoint: Bool
 
     """
-    if (
-        prefer_left
-        and exclude_right_endpoint
-        and not exclude_left_endpoint
-    ):
+    if prefer_left and exclude_right_endpoint and not exclude_left_endpoint:
         raise RuntimeError(
             "Cannot use prefer_left=True with exclude_left_endpoint=False"
             " and exclude_right_endpoint=True."
         )
-    elif (
-        not prefer_left
-        and exclude_left_endpoint
-        and not exclude_right_endpoint
-    ):
+    elif not prefer_left and exclude_left_endpoint and not exclude_right_endpoint:
         raise RuntimeError(
             "Cannot use prefer_left=False with exclude_left_endpoint=True"
             " and exclude_right_endpoint=False."
@@ -135,7 +125,8 @@ def load_data_from_interval(
     idx_list = [
         find_nearest_interval_index(
             intervals, t, tolerance=tolerance, prefer_left=prefer_left
-        ) for t in time
+        )
+        for t in time
     ]
     left_endpoint_indices = [
         # index of interval which t is the left endpoint of
@@ -167,7 +158,8 @@ def load_data_from_interval(
             # do not load a value at t.
             idx_list[i] = None
         elif (
-            exclude_left_endpoint and exclude_right_endpoint
+            exclude_left_endpoint
+            and exclude_right_endpoint
             and right_endpoint_indices[i] is not None
             and left_endpoint_indices[i] is not None
         ):

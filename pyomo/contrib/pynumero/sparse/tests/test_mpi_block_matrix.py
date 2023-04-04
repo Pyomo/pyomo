@@ -13,19 +13,20 @@ import warnings
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy_available, scipy_available, numpy as np
+    numpy_available,
+    scipy_available,
+    numpy as np,
 )
 
-SKIPTESTS=[]
+SKIPTESTS = []
 if numpy_available and scipy_available:
     from scipy.sparse import coo_matrix, bmat, rand
 else:
-    SKIPTESTS.append(
-        "Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests"
-    )
+    SKIPTESTS.append("Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests")
 
 try:
     from mpi4py import MPI
+
     comm = MPI.COMM_WORLD
     if comm.Get_size() < 3:
         SKIPTESTS.append(
@@ -38,7 +39,8 @@ if not SKIPTESTS:
     from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
     from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (
-        MPIBlockMatrix, NotFullyDefinedBlockMatrixError
+        MPIBlockMatrix,
+        NotFullyDefinedBlockMatrixError,
     )
 
 
@@ -56,7 +58,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
 
         rank = comm.Get_rank()
@@ -106,7 +108,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         row = np.array([0, 1, 2, 3])
         col = np.array([0, 1, 0, 1])
-        data = np.array([1., 1., 1., 1.])
+        data = np.array([1.0, 1.0, 1.0, 1.0])
         m2 = coo_matrix((data, (row, col)), shape=(4, 2))
 
         rank_ownership = [[0, -1, 0], [-1, 1, -1]]
@@ -164,16 +166,20 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             if rank == 0:
-                self.assertTrue((m == self.square_mpi_mat.get_block(0, 0)).toarray().all())
+                self.assertTrue(
+                    (m == self.square_mpi_mat.get_block(0, 0)).toarray().all()
+                )
             if rank == 1:
-                self.assertTrue((m == self.square_mpi_mat.get_block(1, 1)).toarray().all())
+                self.assertTrue(
+                    (m == self.square_mpi_mat.get_block(1, 1)).toarray().all()
+                )
 
             self.assertTrue((m == self.square_mpi_mat2.get_block(0, 1)).toarray().all())
 
@@ -181,7 +187,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -213,7 +219,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -229,23 +235,20 @@ class TestMPIBlockMatrix(unittest.TestCase):
         serial_bm.set_block(0, 0, m)
         serial_bm.set_block(1, 1, m)
 
-        self.assertTrue(np.allclose(serial_bm.row_block_sizes(),
-                                    bm.row_block_sizes()))
+        self.assertTrue(np.allclose(serial_bm.row_block_sizes(), bm.row_block_sizes()))
         bm.reset_brow(0)
         serial_bm.reset_brow(0)
-        self.assertTrue(np.allclose(serial_bm.row_block_sizes(),
-                                    bm.row_block_sizes()))
+        self.assertTrue(np.allclose(serial_bm.row_block_sizes(), bm.row_block_sizes()))
 
         bm.reset_brow(1)
         serial_bm.reset_brow(1)
-        self.assertTrue(np.allclose(serial_bm.row_block_sizes(),
-                                    bm.row_block_sizes()))
+        self.assertTrue(np.allclose(serial_bm.row_block_sizes(), bm.row_block_sizes()))
 
     def test_reset_bcol(self):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -261,17 +264,14 @@ class TestMPIBlockMatrix(unittest.TestCase):
         serial_bm.set_block(0, 0, m)
         serial_bm.set_block(1, 1, m)
 
-        self.assertTrue(np.allclose(serial_bm.row_block_sizes(),
-                                    bm.row_block_sizes()))
+        self.assertTrue(np.allclose(serial_bm.row_block_sizes(), bm.row_block_sizes()))
         bm.reset_bcol(0)
         serial_bm.reset_bcol(0)
-        self.assertTrue(np.allclose(serial_bm.col_block_sizes(),
-                                    bm.col_block_sizes()))
+        self.assertTrue(np.allclose(serial_bm.col_block_sizes(), bm.col_block_sizes()))
 
         bm.reset_bcol(1)
         serial_bm.reset_bcol(1)
-        self.assertTrue(np.allclose(serial_bm.col_block_sizes(),
-                                    bm.col_block_sizes()))
+        self.assertTrue(np.allclose(serial_bm.col_block_sizes(), bm.col_block_sizes()))
 
     def test_has_empty_rows(self):
         with self.assertRaises(Exception) as context:
@@ -294,8 +294,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(res.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray().T,
-                                            mat1.get_block(j, i).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray().T, mat1.get_block(j, i).toarray()
+                    )
+                )
 
         res = mat2.transpose()
         self.assertIsInstance(res, MPIBlockMatrix)
@@ -305,8 +308,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(res.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray().T,
-                                            mat2.get_block(j, i).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray().T, mat2.get_block(j, i).toarray()
+                    )
+                )
 
         res = mat1.transpose(copy=True)
         self.assertIsInstance(res, MPIBlockMatrix)
@@ -316,8 +322,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(res.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray().T,
-                                            mat1.get_block(j, i).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray().T, mat1.get_block(j, i).toarray()
+                    )
+                )
 
         res = mat2.transpose(copy=True)
         self.assertIsInstance(res, MPIBlockMatrix)
@@ -327,8 +336,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(res.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray().T,
-                                            mat2.get_block(j, i).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray().T, mat2.get_block(j, i).toarray()
+                    )
+                )
 
         res = mat1.T
         self.assertIsInstance(res, MPIBlockMatrix)
@@ -338,8 +350,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(res.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray().T,
-                                            mat1.get_block(j, i).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray().T, mat1.get_block(j, i).toarray()
+                    )
+                )
 
         res = mat2.T
         self.assertIsInstance(res, MPIBlockMatrix)
@@ -349,8 +364,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(res.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray().T,
-                                            mat2.get_block(j, i).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray().T, mat2.get_block(j, i).toarray()
+                    )
+                )
 
     def _compare_mpi_and_serial_block_matrices(self, mpi_mat, serial_mat):
         self.assertTrue(np.allclose(mpi_mat.to_local_array(), serial_mat.toarray()))
@@ -358,8 +376,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(mpi_mat.ownership_mask)
         for i, j in zip(rows, columns):
             if mpi_mat.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(mpi_mat.get_block(i, j).toarray(),
-                                            serial_mat.get_block(i, j).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        mpi_mat.get_block(i, j).toarray(),
+                        serial_mat.get_block(i, j).toarray(),
+                    )
+                )
             else:
                 self.assertIsNone(serial_mat.get_block(i, j))
 
@@ -422,15 +444,19 @@ class TestMPIBlockMatrix(unittest.TestCase):
         mat1 = self.square_mpi_mat
         serial_mat1 = self.square_serial_mat
 
-        res =  mat1 / 3.0
+        res = mat1 / 3.0
         serial_res = serial_mat1 / 3.0
 
         self.assertIsInstance(res, MPIBlockMatrix)
         rows, columns = np.nonzero(res.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                            serial_res.get_block(i, j).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray(),
+                        serial_res.get_block(i, j).toarray(),
+                    )
+                )
             else:
                 self.assertIsNone(serial_res.get_block(i, j))
 
@@ -438,7 +464,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -460,8 +486,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(bm.ownership_mask)
         for i, j in zip(rows, columns):
             if bm.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(bm.get_block(i, j).toarray(),
-                                            serial_bm.get_block(i, j).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        bm.get_block(i, j).toarray(),
+                        serial_bm.get_block(i, j).toarray(),
+                    )
+                )
 
         bm += serial_bm
         serial_bm += serial_bm
@@ -471,7 +501,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -493,8 +523,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(bm.ownership_mask)
         for i, j in zip(rows, columns):
             if bm.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(bm.get_block(i, j).toarray(),
-                                            serial_bm.get_block(i, j).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        bm.get_block(i, j).toarray(),
+                        serial_bm.get_block(i, j).toarray(),
+                    )
+                )
 
         bm -= serial_bm
         serial_bm -= serial_bm
@@ -504,7 +538,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -526,14 +560,18 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(bm.ownership_mask)
         for i, j in zip(rows, columns):
             if bm.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(bm.get_block(i, j).toarray(),
-                                            serial_bm.get_block(i, j).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        bm.get_block(i, j).toarray(),
+                        serial_bm.get_block(i, j).toarray(),
+                    )
+                )
 
     def test_idiv(self):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -555,14 +593,18 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(bm.ownership_mask)
         for i, j in zip(rows, columns):
             if bm.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(bm.get_block(i, j).toarray(),
-                                            serial_bm.get_block(i, j).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        bm.get_block(i, j).toarray(),
+                        serial_bm.get_block(i, j).toarray(),
+                    )
+                )
 
     def test_neg(self):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -584,14 +626,18 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(bm.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                            serial_res.get_block(i, j).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray(),
+                        serial_res.get_block(i, j).toarray(),
+                    )
+                )
 
     def test_abs(self):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
+        data = np.array([2.0, 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
         rank = comm.Get_rank()
 
@@ -613,8 +659,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
         rows, columns = np.nonzero(bm.ownership_mask)
         for i, j in zip(rows, columns):
             if res.get_block(i, j) is not None:
-                self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                            serial_res.get_block(i, j).toarray()))
+                self.assertTrue(
+                    np.allclose(
+                        res.get_block(i, j).toarray(),
+                        serial_res.get_block(i, j).toarray(),
+                    )
+                )
 
     def test_eq(self):
 
@@ -634,8 +684,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -655,8 +709,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -681,8 +739,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -702,8 +764,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -723,8 +789,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -746,8 +816,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -760,8 +834,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -778,8 +856,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -799,8 +881,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -822,8 +908,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -843,8 +933,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -872,8 +966,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -893,8 +991,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -922,8 +1024,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -943,8 +1049,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             rows, columns = np.nonzero(res.ownership_mask)
             for i, j in zip(rows, columns):
                 if res.get_block(i, j) is not None:
-                    self.assertTrue(np.allclose(res.get_block(i, j).toarray(),
-                                                serial_res.get_block(i, j).toarray()))
+                    self.assertTrue(
+                        np.allclose(
+                            res.get_block(i, j).toarray(),
+                            serial_res.get_block(i, j).toarray(),
+                        )
+                    )
                 else:
                     self.assertIsNone(serial_res.get_block(i, j))
 
@@ -1012,7 +1122,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
             m.set_block(1, 1, m1)
 
         res = m.shape
-        self.assertEqual(res, (4,4))
+        self.assertEqual(res, (4, 4))
 
     def test_is_row_size_defined(self):
         m = MPIBlockMatrix(2, 2, [[0, 1], [-1, -1]], comm)
@@ -1088,7 +1198,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
 @unittest.pytest.mark.mpi
 class TestMPIMatVec(unittest.TestCase):
-
     @classmethod
     @unittest.skipIf(SKIPTESTS, SKIPTESTS)
     def setUpClass(cls):
@@ -1097,13 +1206,9 @@ class TestMPIMatVec(unittest.TestCase):
     def test_get_block_vector_for_dot_product_1(self):
         rank = comm.Get_rank()
 
-        rank_ownership = np.array([[0, 1, 2],
-                                   [1, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2]])
+        rank_ownership = np.array([[0, 1, 2], [1, 1, 2], [0, 1, 2], [0, 1, 2]])
         m = MPIBlockMatrix(4, 3, rank_ownership, comm)
-        sub_m = np.array([[1, 0],
-                          [0, 1]])
+        sub_m = np.array([[1, 0], [0, 1]])
         sub_m = coo_matrix(sub_m)
         m.set_block(rank, rank, sub_m.copy())
         m.set_block(3, rank, sub_m.copy())
@@ -1120,13 +1225,9 @@ class TestMPIMatVec(unittest.TestCase):
     def test_get_block_vector_for_dot_product_2(self):
         rank = comm.Get_rank()
 
-        rank_ownership = np.array([[1, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2]])
+        rank_ownership = np.array([[1, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]])
         m = MPIBlockMatrix(4, 3, rank_ownership, comm)
-        sub_m = np.array([[1, 0],
-                          [0, 1]])
+        sub_m = np.array([[1, 0], [0, 1]])
         sub_m = coo_matrix(sub_m)
         if rank == 0:
             m.set_block(3, rank, sub_m.copy())
@@ -1152,13 +1253,9 @@ class TestMPIMatVec(unittest.TestCase):
     def test_get_block_vector_for_dot_product_3(self):
         rank = comm.Get_rank()
 
-        rank_ownership = np.array([[1, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2]])
+        rank_ownership = np.array([[1, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]])
         m = MPIBlockMatrix(4, 3, rank_ownership, comm)
-        sub_m = np.array([[1, 0],
-                          [0, 1]])
+        sub_m = np.array([[1, 0], [0, 1]])
         sub_m = coo_matrix(sub_m)
         if rank == 0:
             m.set_block(3, rank, sub_m.copy())
@@ -1192,13 +1289,9 @@ class TestMPIMatVec(unittest.TestCase):
     def test_get_block_vector_for_dot_product_4(self):
         rank = comm.Get_rank()
 
-        rank_ownership = np.array([[-1, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2]])
+        rank_ownership = np.array([[-1, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]])
         m = MPIBlockMatrix(4, 3, rank_ownership, comm)
-        sub_m = np.array([[1, 0],
-                          [0, 1]])
+        sub_m = np.array([[1, 0], [0, 1]])
         sub_m = coo_matrix(sub_m)
         m.set_block(0, 0, sub_m.copy())
         if rank == 0:
@@ -1219,13 +1312,9 @@ class TestMPIMatVec(unittest.TestCase):
     def test_get_block_vector_for_dot_product_5(self):
         rank = comm.Get_rank()
 
-        rank_ownership = np.array([[1, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2],
-                                   [0, 1, 2]])
+        rank_ownership = np.array([[1, 1, 2], [0, 1, 2], [0, 1, 2], [0, 1, 2]])
         m = MPIBlockMatrix(4, 3, rank_ownership, comm)
-        sub_m = np.array([[1, 0],
-                          [0, 1]])
+        sub_m = np.array([[1, 0], [0, 1]])
         sub_m = coo_matrix(sub_m)
         if rank == 0:
             m.set_block(3, rank, sub_m.copy())
@@ -1256,9 +1345,9 @@ class TestMPIMatVec(unittest.TestCase):
     def test_matvec_1(self):
         rank = comm.Get_rank()
         np.random.seed(0)
-        orig_m = np.zeros((8,8))
+        orig_m = np.zeros((8, 8))
         for ndx in range(4):
-            start = ndx*2
+            start = ndx * 2
             stop = (ndx + 1) * 2
             orig_m[start:stop, start:stop] = np.random.uniform(-10, 10, size=(2, 2))
             orig_m[start:stop, 6:8] = np.random.uniform(-10, 10, size=(2, 2))
@@ -1266,15 +1355,14 @@ class TestMPIMatVec(unittest.TestCase):
         orig_m[6:8, 6:8] = np.random.uniform(-10, 10, size=(2, 2))
 
         orig_v = np.random.uniform(-10, 10, size=8)
-        correct_res = coo_matrix(orig_m)*orig_v
+        correct_res = coo_matrix(orig_m) * orig_v
 
-        rank_ownership = np.array([[0, -1, -1, 0],
-                                   [-1, 1, -1, 1],
-                                   [-1, -1, 2, 2],
-                                   [0, 1, 2, -1]])
+        rank_ownership = np.array(
+            [[0, -1, -1, 0], [-1, 1, -1, 1], [-1, -1, 2, 2], [0, 1, 2, -1]]
+        )
         m = MPIBlockMatrix(4, 4, rank_ownership, comm)
-        start = rank*2
-        stop = (rank+1)*2
+        start = rank * 2
+        stop = (rank + 1) * 2
         m.set_block(rank, rank, coo_matrix(orig_m[start:stop, start:stop]))
         m.set_block(rank, 3, coo_matrix(orig_m[start:stop, 6:8]))
         m.set_block(3, rank, coo_matrix(orig_m[6:8, start:stop]))
@@ -1296,9 +1384,9 @@ class TestMPIMatVec(unittest.TestCase):
     def test_matvec_with_block_vector(self):
         rank = comm.Get_rank()
         np.random.seed(0)
-        orig_m = np.zeros((8,8))
+        orig_m = np.zeros((8, 8))
         for ndx in range(4):
-            start = ndx*2
+            start = ndx * 2
             stop = (ndx + 1) * 2
             orig_m[start:stop, start:stop] = np.random.uniform(-10, 10, size=(2, 2))
             orig_m[start:stop, 6:8] = np.random.uniform(-10, 10, size=(2, 2))
@@ -1306,15 +1394,14 @@ class TestMPIMatVec(unittest.TestCase):
         orig_m[6:8, 6:8] = np.random.uniform(-10, 10, size=(2, 2))
 
         orig_v = np.random.uniform(-10, 10, size=8)
-        correct_res = coo_matrix(orig_m)*orig_v
+        correct_res = coo_matrix(orig_m) * orig_v
 
-        rank_ownership = np.array([[0, -1, -1, 0],
-                                   [-1, 1, -1, 1],
-                                   [-1, -1, 2, 2],
-                                   [0, 1, 2, -1]])
+        rank_ownership = np.array(
+            [[0, -1, -1, 0], [-1, 1, -1, 1], [-1, -1, 2, 2], [0, 1, 2, -1]]
+        )
         m = MPIBlockMatrix(4, 4, rank_ownership, comm)
-        start = rank*2
-        stop = (rank+1)*2
+        start = rank * 2
+        stop = (rank + 1) * 2
         m.set_block(rank, rank, coo_matrix(orig_m[start:stop, start:stop]))
         m.set_block(rank, 3, coo_matrix(orig_m[start:stop, 6:8]))
         m.set_block(3, rank, coo_matrix(orig_m[6:8, start:stop]))
@@ -1336,13 +1423,11 @@ class TestMPIMatVec(unittest.TestCase):
     def test_matvect_with_empty_rows(self):
         rank = comm.Get_rank()
 
-        rank_ownership = np.array([[ 0, -1, -1,  0],
-                                   [-1,  1, -1,  1],
-                                   [-1, -1,  2,  2],
-                                   [ 0,  1,  2, -1]])
+        rank_ownership = np.array(
+            [[0, -1, -1, 0], [-1, 1, -1, 1], [-1, -1, 2, 2], [0, 1, 2, -1]]
+        )
         m = MPIBlockMatrix(4, 4, rank_ownership, comm)
-        sub_m = np.array([[1, 0],
-                          [0, 1]])
+        sub_m = np.array([[1, 0], [0, 1]])
         sub_m = coo_matrix(sub_m)
         m.set_block(rank, rank, sub_m.copy())
         m.set_block(rank, 3, sub_m.copy())
@@ -1356,18 +1441,16 @@ class TestMPIMatVec(unittest.TestCase):
 
         res = m.dot(v)
         self.assertIsInstance(res, MPIBlockVector)
-        self.assertTrue(np.allclose(res.get_block(rank), sub_v*2))
+        self.assertTrue(np.allclose(res.get_block(rank), sub_v * 2))
         self.assertTrue(np.allclose(res.get_block(3), np.zeros(2)))
         self.assertTrue(np.allclose(res.rank_ownership, np.array([0, 1, 2, -1])))
         self.assertFalse(res.has_none)
 
-        rank_ownership = np.array([[ 0, -1, -1,  0],
-                                   [-1,  1, -1,  1],
-                                   [-1, -1,  2,  2],
-                                   [ 0,  -1, -1, -1]])
+        rank_ownership = np.array(
+            [[0, -1, -1, 0], [-1, 1, -1, 1], [-1, -1, 2, 2], [0, -1, -1, -1]]
+        )
         m = MPIBlockMatrix(4, 4, rank_ownership, comm)
-        sub_m = np.array([[1, 0],
-                          [0, 1]])
+        sub_m = np.array([[1, 0], [0, 1]])
         sub_m = coo_matrix(sub_m)
         m.set_block(rank, rank, sub_m.copy())
         m.set_block(rank, 3, sub_m.copy())
@@ -1375,19 +1458,17 @@ class TestMPIMatVec(unittest.TestCase):
 
         res = m.dot(v)
         self.assertIsInstance(res, MPIBlockVector)
-        self.assertTrue(np.allclose(res.get_block(rank), sub_v*2))
+        self.assertTrue(np.allclose(res.get_block(rank), sub_v * 2))
         if rank == 0:
             self.assertTrue(np.allclose(res.get_block(3), np.zeros(2)))
         self.assertTrue(np.allclose(res.rank_ownership, np.array([0, 1, 2, 0])))
         self.assertFalse(res.has_none)
 
-        rank_ownership = np.array([[ 0, -1, -1,  0],
-                                   [-1,  1, -1,  1],
-                                   [-1, -1,  2,  2],
-                                   [-1, -1, -1,  0]])
+        rank_ownership = np.array(
+            [[0, -1, -1, 0], [-1, 1, -1, 1], [-1, -1, 2, 2], [-1, -1, -1, 0]]
+        )
         m = MPIBlockMatrix(4, 4, rank_ownership, comm)
-        sub_m = np.array([[1, 0],
-                          [0, 1]])
+        sub_m = np.array([[1, 0], [0, 1]])
         sub_m = coo_matrix(sub_m)
         m.set_block(rank, rank, sub_m.copy())
         m.set_block(rank, 3, sub_m.copy())
@@ -1395,7 +1476,7 @@ class TestMPIMatVec(unittest.TestCase):
 
         res = m.dot(v)
         self.assertIsInstance(res, MPIBlockVector)
-        self.assertTrue(np.allclose(res.get_block(rank), sub_v*2))
+        self.assertTrue(np.allclose(res.get_block(rank), sub_v * 2))
         if rank == 0:
             self.assertTrue(np.allclose(res.get_block(3), np.zeros(2)))
         self.assertTrue(np.allclose(res.rank_ownership, np.array([0, 1, 2, 0])))

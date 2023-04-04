@@ -1,8 +1,16 @@
 """Tests stripping of variable bounds."""
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (Binary, ConcreteModel, Integers, NonNegativeReals,
-                           PositiveReals, Reals, TransformationFactory, Var)
+from pyomo.environ import (
+    Binary,
+    ConcreteModel,
+    Integers,
+    NonNegativeReals,
+    PositiveReals,
+    Reals,
+    TransformationFactory,
+    Var,
+)
 
 
 class TestStripBounds(unittest.TestCase):

@@ -22,16 +22,22 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.trustregion.util import minIgnoreNone, maxIgnoreNone
 from pyomo.core import (
-    Block, Param, VarList, Constraint,
-    Objective, value, Set, ExternalFunction, maximize,
-    minimize
-    )
+    Block,
+    Param,
+    VarList,
+    Constraint,
+    Objective,
+    value,
+    Set,
+    ExternalFunction,
+    maximize,
+    minimize,
+)
 from pyomo.core.expr.calculus.derivatives import differentiate
-from pyomo.core.expr.visitor import (identify_variables,
-                                     ExpressionReplacementVisitor)
+from pyomo.core.expr.visitor import identify_variables, ExpressionReplacementVisitor
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.numvalue import native_types
-from pyomo.opt import (SolverFactory, check_optimal_termination)
+from pyomo.opt import SolverFactory, check_optimal_termination
 
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
@@ -47,9 +53,11 @@ class EFReplacement(ExpressionReplacementVisitor):
     NOTE: We use an empty substitution map. The EFs to be substituted are
           identified as part of exitNode.
     """
+
     def __init__(self, trfData, efSet):
-        super().__init__(descend_into_named_expressions=True,
-                         remove_named_expressions=False)
+        super().__init__(
+            descend_into_named_expressions=True, remove_named_expressions=False
+        )
         self.trfData = trfData
         self.efSet = efSet
 
@@ -57,7 +65,11 @@ class EFReplacement(ExpressionReplacementVisitor):
         # We want to capture all of the variables on the model.
         # If we reject a step, we need to know all the vars to reset.
         descend, result = super().beforeChild(node, child, child_idx)
-        if not descend and result.__class__ not in native_types and result.is_variable_type():
+        if (
+            not descend
+            and result.__class__ not in native_types
+            and result.is_variable_type()
+        ):
             self.trfData.all_variables.add(result)
         return descend, result
 
@@ -88,8 +100,7 @@ class TRFInterface(object):
     Pyomo interface for Trust Region algorithm.
     """
 
-    def __init__(self, model, decision_variables,
-                 ext_fcn_surrogate_map_rule, config):
+    def __init__(self, model, decision_variables, ext_fcn_surrogate_map_rule, config):
         self.original_model = model
         tmp_name = unique_component_name(self.original_model, 'tmp')
         setattr(self.original_model, tmp_name, decision_variables)
@@ -98,8 +109,9 @@ class TRFInterface(object):
         self.decision_variables = getattr(self.model, tmp_name)
         delattr(self.original_model, tmp_name)
         self.data = Block()
-        self.model.add_component(unique_component_name(self.model, 'trf_data'),
-                                 self.data)
+        self.model.add_component(
+            unique_component_name(self.model, 'trf_data'), self.data
+        )
         self.basis_expression_rule = ext_fcn_surrogate_map_rule
         self.efSet = None
         self.solver = SolverFactory(self.config.solver)
@@ -137,14 +149,13 @@ class TRFInterface(object):
         if new_expr is not expr:
             component.set_value(new_expr)
             new_output_vars = list(
-                self.data.ef_outputs[i+1] for i in range(
-                    next_ef_id, len(self.data.ef_outputs)
-                    )
-                )
+                self.data.ef_outputs[i + 1]
+                for i in range(next_ef_id, len(self.data.ef_outputs))
+            )
             for v in new_output_vars:
-                self.data.basis_expressions[v] = \
-                    self.basis_expression_rule(
-                        component, self.data.truth_models[v])
+                self.data.basis_expressions[v] = self.basis_expression_rule(
+                    component, self.data.truth_models[v]
+                )
 
     def replaceExternalFunctionsWithVariables(self):
         """
@@ -175,30 +186,31 @@ class TRFInterface(object):
         self.data.ef_outputs = VarList()
 
         number_of_equality_constraints = 0
-        for con in self.model.component_data_objects(Constraint,
-                                                     active=True):
+        for con in self.model.component_data_objects(Constraint, active=True):
             if con.lb == con.ub and con.lb is not None:
                 number_of_equality_constraints += 1
             self._remove_ef_from_expr(con)
 
-        self.degrees_of_freedom = (len(list(self.data.all_variables)) 
-                                   - number_of_equality_constraints)
+        self.degrees_of_freedom = (
+            len(list(self.data.all_variables)) - number_of_equality_constraints
+        )
         if self.degrees_of_freedom != len(self.decision_variables):
             raise ValueError(
                 "replaceExternalFunctionsWithVariables: "
                 "The degrees of freedom %d do not match the number of decision "
-                "variables supplied %d." 
-                % (self.degrees_of_freedom, len(self.decision_variables)))
+                "variables supplied %d."
+                % (self.degrees_of_freedom, len(self.decision_variables))
+            )
 
         for var in self.decision_variables:
             if var not in self.data.all_variables:
                 raise ValueError(
                     "replaceExternalFunctionsWithVariables: "
                     f"The supplied decision variable {var.name} cannot "
-                    "be found in the model variables.")
+                    "be found in the model variables."
+                )
 
-        self.data.objs = list(self.model.component_data_objects(Objective,
-                                                      active=True))
+        self.data.objs = list(self.model.component_data_objects(Objective, active=True))
         # HACK: This is a hack that we will want to remove once the NL writer
         # has been corrected to not send unused EFs to the solver
         for ef in self.model.component_objects(ExternalFunction):
@@ -207,18 +219,19 @@ class TRFInterface(object):
         if len(self.data.objs) != 1:
             raise ValueError(
                 "replaceExternalFunctionsWithVariables: "
-                "TrustRegion only supports models with a single active Objective.")
+                "TrustRegion only supports models with a single active Objective."
+            )
         if self.data.objs[0].sense == maximize:
-            self.data.objs[0].expr = -1* self.data.objs[0].expr
+            self.data.objs[0].expr = -1 * self.data.objs[0].expr
             self.data.objs[0].sense = minimize
         self._remove_ef_from_expr(self.data.objs[0])
 
         for i in self.data.ef_outputs:
-            self.data.ef_inputs[i] = \
-                list(identify_variables(
-                    self.data.truth_models[self.data.ef_outputs[i]],
-                    include_fixed=False)
+            self.data.ef_inputs[i] = list(
+                identify_variables(
+                    self.data.truth_models[self.data.ef_outputs[i]], include_fixed=False
                 )
+            )
         self.data.all_variables.update(self.data.ef_outputs.values())
         self.data.all_variables = list(self.data.all_variables)
 
@@ -236,12 +249,16 @@ class TRFInterface(object):
         def basis_constraint(b, i):
             ef_output_var = b.ef_outputs[i]
             return ef_output_var == b.basis_expressions[ef_output_var]
+
         b.basis_constraint.deactivate()
 
-        b.INPUT_OUTPUT = Set(initialize=(
-            (i, j) for i in b.ef_outputs.index_set()
-            for j in range(len(b.ef_inputs[i]))
-        ))
+        b.INPUT_OUTPUT = Set(
+            initialize=(
+                (i, j)
+                for i in b.ef_outputs.index_set()
+                for j in range(len(b.ef_inputs[i]))
+            )
+        )
         b.basis_model_output = Param(b.ef_outputs.index_set(), mutable=True)
         b.grad_basis_model_output = Param(b.INPUT_OUTPUT, mutable=True)
         b.truth_model_output = Param(b.ef_outputs.index_set(), mutable=True)
@@ -251,12 +268,14 @@ class TRFInterface(object):
         @b.Constraint(b.ef_outputs.index_set())
         def sm_constraint_basis(b, i):
             ef_output_var = b.ef_outputs[i]
-            return ef_output_var == b.basis_expressions[ef_output_var] + \
-                b.truth_model_output[i] - b.basis_model_output[i] + \
-                sum((b.grad_truth_model_output[i, j]
-                      - b.grad_basis_model_output[i, j])
-                    * (w - b.value_of_ef_inputs[i, j])
-                    for j, w in enumerate(b.ef_inputs[i]))
+            return ef_output_var == b.basis_expressions[
+                ef_output_var
+            ] + b.truth_model_output[i] - b.basis_model_output[i] + sum(
+                (b.grad_truth_model_output[i, j] - b.grad_basis_model_output[i, j])
+                * (w - b.value_of_ef_inputs[i, j])
+                for j, w in enumerate(b.ef_inputs[i])
+            )
+
         b.sm_constraint_basis.deactivate()
 
     def getCurrentDecisionVariableValues(self):
@@ -279,11 +298,15 @@ class TRFInterface(object):
         """
         for var in self.decision_variables:
             var.setlb(
-                maxIgnoreNone(value(var) - radius,
-                              self.initial_decision_bounds[var.name][0]))
+                maxIgnoreNone(
+                    value(var) - radius, self.initial_decision_bounds[var.name][0]
+                )
+            )
             var.setub(
-                minIgnoreNone(value(var) + radius,
-                              self.initial_decision_bounds[var.name][1]))
+                minIgnoreNone(
+                    value(var) + radius, self.initial_decision_bounds[var.name][1]
+                )
+            )
 
     def updateSurrogateModel(self):
         """
@@ -298,11 +321,9 @@ class TRFInterface(object):
             b.basis_model_output[i] = value(b.basis_expressions[y])
             b.truth_model_output[i] = value(b.truth_models[y])
             # Basis functions are Pyomo expressions (in theory)
-            gradBasis = differentiate(b.basis_expressions[y],
-                                      wrt_list=b.ef_inputs[i])
+            gradBasis = differentiate(b.basis_expressions[y], wrt_list=b.ef_inputs[i])
             # These, however, are external functions
-            gradTruth = differentiate(b.truth_models[y],
-                                      wrt_list=b.ef_inputs[i])
+            gradTruth = differentiate(b.truth_models[y], wrt_list=b.ef_inputs[i])
             for j, w in enumerate(b.ef_inputs[i]):
                 b.grad_basis_model_output[i, j] = gradBasis[j]
                 b.grad_truth_model_output[i, j] = gradTruth[j]
@@ -313,8 +334,7 @@ class TRFInterface(object):
         Return current state of all model variables.
         This is necessary if we need to reject a step and move backwards.
         """
-        return list(value(v, exception=False)
-                    for v in self.data.all_variables)
+        return list(value(v, exception=False) for v in self.data.all_variables)
 
     def calculateFeasibility(self):
         """
@@ -322,8 +342,9 @@ class TRFInterface(object):
             || y - d(w) ||_1
         """
         b = self.data
-        return sum(abs(value(y) - value(b.truth_models[y]))
-                   for i, y in b.ef_outputs.items())
+        return sum(
+            abs(value(y) - value(b.truth_models[y])) for i, y in b.ef_outputs.items()
+        )
 
     def calculateStepSizeInfNorm(self, original_values, new_values):
         """
@@ -337,8 +358,7 @@ class TRFInterface(object):
         for var, val in original_values.items():
             original_vals.append(val)
             new_vals.append(new_values[var])
-        return max([abs(new - old) for new, old in
-                    zip(new_vals, original_vals)])
+        return max([abs(new - old) for new, old in zip(new_vals, original_vals)])
 
     def initializeProblem(self):
         """
@@ -384,22 +404,24 @@ class TRFInterface(object):
         """
         current_decision_values = self.getCurrentDecisionVariableValues()
         self.data.previous_model_state = self.getCurrentModelState()
-        results = self.solver.solve(self.model,
-                                    keepfiles=self.config.keepfiles,
-                                    tee=self.config.tee)
-                                                    
+        results = self.solver.solve(
+            self.model, keepfiles=self.config.keepfiles, tee=self.config.tee
+        )
+
         if not check_optimal_termination(results):
             raise ArithmeticError(
                 'EXIT: Model solve failed with status {} and termination'
                 ' condition(s) {}.'.format(
                     str(results.solver.status),
-                    str(results.solver.termination_condition))
+                    str(results.solver.termination_condition),
                 )
+            )
 
         self.model.solutions.load_from(results)
         new_decision_values = self.getCurrentDecisionVariableValues()
-        step_norm = self.calculateStepSizeInfNorm(current_decision_values,
-                                                  new_decision_values)
+        step_norm = self.calculateStepSizeInfNorm(
+            current_decision_values, new_decision_values
+        )
         feasibility = self.calculateFeasibility()
         return self.data.objs[0](), step_norm, feasibility
 
@@ -408,6 +430,5 @@ class TRFInterface(object):
         If a step is rejected, we reset the model variables values back
         to their cached state - which we set in solveModel
         """
-        for var, val in zip(self.data.all_variables,
-                            self.data.previous_model_state):
+        for var, val in zip(self.data.all_variables, self.data.previous_model_state):
             var.set_value(val, skip_validation=True)

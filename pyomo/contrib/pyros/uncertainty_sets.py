@@ -65,13 +65,13 @@ valid_num_types = tuple(native_numeric_types)
 
 
 def validate_arg_type(
-        arg_name,
-        arg_val,
-        valid_types,
-        valid_type_desc=None,
-        is_entry_of_arg=False,
-        check_numeric_type_finite=True,
-        ):
+    arg_name,
+    arg_val,
+    valid_types,
+    valid_type_desc=None,
+    is_entry_of_arg=False,
+    check_numeric_type_finite=True,
+):
     """
     Perform type validation of an argument to a function/method.
     If type is not valid, raise a TypeError with an appropriate
@@ -176,9 +176,7 @@ def is_ragged(arr, arr_types=None):
     if any(entries_ragged):
         return True
     else:
-        return any(
-            np.array(arr[0]).shape != np.array(entry).shape for entry in arr
-        )
+        return any(np.array(arr[0]).shape != np.array(entry).shape for entry in arr)
 
 
 def validate_dimensions(arr_name, arr, dim, display_value=False):
@@ -209,13 +207,8 @@ def validate_dimensions(arr_name, arr, dim, display_value=False):
 
 
 def validate_array(
-        arr,
-        arr_name,
-        dim,
-        valid_types,
-        valid_type_desc=None,
-        required_shape=None,
-        ):
+    arr, arr_name, dim, valid_types, valid_type_desc=None, required_shape=None
+):
     """
     Validate shape and entry types of an array-like object.
 
@@ -262,14 +255,8 @@ def validate_array(
         assert len(required_shape) == dim
         for idx, size in enumerate(required_shape):
             if size is not None and size != np_arr.shape[idx]:
-                req_shape_str = generate_shape_str(
-                    required_shape,
-                    required_shape,
-                )
-                actual_shape_str = generate_shape_str(
-                    np_arr.shape,
-                    required_shape,
-                )
+                req_shape_str = generate_shape_str(required_shape, required_shape)
+                actual_shape_str = generate_shape_str(np_arr.shape, required_shape)
                 raise ValueError(
                     f"Attribute '{arr_name}' should be of shape "
                     f"{req_shape_str}, but detected shape "
@@ -288,7 +275,9 @@ def validate_array(
 
 def uncertainty_sets(obj):
     if not isinstance(obj, UncertaintySet):
-        raise ValueError("Expected an UncertaintySet object, instead recieved %s" % (obj,))
+        raise ValueError(
+            "Expected an UncertaintySet object, instead recieved %s" % (obj,)
+        )
     return obj
 
 
@@ -301,6 +290,7 @@ class Geometry(Enum):
     """
     Geometry classifications for PyROS uncertainty set objects.
     """
+
     LINEAR = 1
     CONVEX_NONLINEAR = 2
     GENERAL_NONLINEAR = 3
@@ -370,9 +360,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         # add constraints
         model.cons = self.set_as_constraint(
-            uncertain_params=model.param_vars,
-            model=model,
-            config=config,
+            uncertain_params=model.param_vars, model=model, config=config
         )
 
         @model.Objective(range(self.dim))
@@ -415,9 +403,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         # initialize uncertain parameter variables
         for param, param_var in zip(
-                config.uncertain_params,
-                bounding_model.param_vars.values(),
-                ):
+            config.uncertain_params, bounding_model.param_vars.values()
+        ):
             param_var.set_value(param.value, skip_validation=True)
 
         for idx, obj in bounding_model.param_var_objectives.items():
@@ -427,11 +414,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             # solve for lower bound, then upper bound
             for sense in (minimize, maximize):
                 obj.sense = sense
-                res = solver.solve(
-                    bounding_model,
-                    load_solutions=False,
-                    tee=False,
-                )
+                res = solver.solve(bounding_model, load_solutions=False, tee=False)
 
                 if not check_optimal_termination(res):
                     return False
@@ -498,7 +481,9 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         # === Ensure point is of correct dimensionality as the uncertain parameters
         if len(point) != self.dim:
-            raise AttributeError("Point must have same dimensions as uncertain parameters.")
+            raise AttributeError(
+                "Point must have same dimensions as uncertain parameters."
+            )
 
         m = ConcreteModel()
         the_params = []
@@ -561,9 +546,7 @@ class UncertaintySetList(MutableSequence):
     """
 
     def __init__(self, uncertainty_sets=[], name=None, min_length=None):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self._name = name
         self._min_length = 0 if min_length is None else min_length
 
@@ -774,9 +757,7 @@ class BoxSet(UncertaintySet):
     """
 
     def __init__(self, bounds):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self.bounds = bounds
 
     @property
@@ -812,9 +793,7 @@ class BoxSet(UncertaintySet):
 
         for lb, ub in bounds_arr:
             if lb > ub:
-                raise ValueError(
-                    f"Lower bound {lb} exceeds upper bound {ub}"
-                )
+                raise ValueError(f"Lower bound {lb} exceeds upper bound {ub}")
 
         # box set dimension is immutable
         if hasattr(self, "_bounds") and bounds_arr.shape[0] != self.dim:
@@ -920,9 +899,7 @@ class CardinalitySet(UncertaintySet):
     """
 
     def __init__(self, origin, positive_deviation, gamma):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self.origin = origin
         self.positive_deviation = positive_deviation
         self.gamma = gamma
@@ -1020,10 +997,7 @@ class CardinalitySet(UncertaintySet):
 
     @gamma.setter
     def gamma(self, val):
-        validate_arg_type(
-            "gamma", val, valid_num_types,
-            "a valid numeric type", False,
-        )
+        validate_arg_type("gamma", val, valid_num_types, "a valid numeric type", False)
         if val < 0 or val > self.dim:
             raise ValueError(
                 "Cardinality set attribute "
@@ -1064,7 +1038,10 @@ class CardinalitySet(UncertaintySet):
         nom_val = self.origin
         deviation = self.positive_deviation
         gamma = self.gamma
-        parameter_bounds = [(nom_val[i], nom_val[i] + min(gamma, 1) * deviation[i]) for i in range(len(nom_val))]
+        parameter_bounds = [
+            (nom_val[i], nom_val[i] + min(gamma, 1) * deviation[i])
+            for i in range(len(nom_val))
+        ]
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):
@@ -1090,7 +1067,9 @@ class CardinalitySet(UncertaintySet):
         """
         # === Ensure dimensions
         if len(uncertain_params) != len(self.origin):
-               raise AttributeError("Dimensions of origin and uncertain_param lists must be equal.")
+            raise AttributeError(
+                "Dimensions of origin and uncertain_param lists must be equal."
+            )
 
         model = kwargs['model']
         set_i = list(range(len(uncertain_params)))
@@ -1100,7 +1079,10 @@ class CardinalitySet(UncertaintySet):
         conlist = ConstraintList()
         conlist.construct()
         for i in set_i:
-            conlist.add(self.origin[i] + self.positive_deviation[i] * model.util.cassi[i] == uncertain_params[i])
+            conlist.add(
+                self.origin[i] + self.positive_deviation[i] * model.util.cassi[i]
+                == uncertain_params[i]
+            )
 
         conlist.add(sum(model.util.cassi[i] for i in set_i) <= self.gamma)
 
@@ -1123,10 +1105,11 @@ class CardinalitySet(UncertaintySet):
         cassis = []
         for i in range(self.dim):
             if self.positive_deviation[i] > 0:
-                cassis.append((point[i] - self.origin[i])/self.positive_deviation[i])
+                cassis.append((point[i] - self.origin[i]) / self.positive_deviation[i])
 
-        if sum(cassi for cassi in cassis) <= self.gamma and \
-            all(cassi >= 0 and cassi <= 1 for cassi in cassis):
+        if sum(cassi for cassi in cassis) <= self.gamma and all(
+            cassi >= 0 and cassi <= 1 for cassi in cassis
+        ):
             return True
         else:
             return False
@@ -1167,9 +1150,7 @@ class PolyhedralSet(UncertaintySet):
     """
 
     def __init__(self, lhs_coefficients_mat, rhs_vec):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         # set attributes to copies of the originals
         self.coefficients_mat = lhs_coefficients_mat
         self.rhs_vec = rhs_vec
@@ -1357,8 +1338,10 @@ class PolyhedralSet(UncertaintySet):
 
         # === Ensure valid dimensions of lhs and rhs w.r.t uncertain_params
         if np.asarray(self.coefficients_mat).shape[1] != len(uncertain_params):
-            raise AttributeError("Columns of coefficients_mat matrix "
-                                 "must equal length of uncertain parameters list.")
+            raise AttributeError(
+                "Columns of coefficients_mat matrix "
+                "must equal length of uncertain parameters list."
+            )
 
         set_i = list(range(len(self.coefficients_mat)))
 
@@ -1449,9 +1432,7 @@ class BudgetSet(UncertaintySet):
     """
 
     def __init__(self, budget_membership_mat, rhs_vec, origin=None):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self.budget_membership_mat = budget_membership_mat
         self.budget_rhs_vec = rhs_vec
         self.origin = np.zeros(self.dim) if origin is None else origin
@@ -1476,11 +1457,7 @@ class BudgetSet(UncertaintySet):
         incidence matrix may be altered through the
         `budget_membership_mat` attribute.
         """
-        return np.append(
-            self.budget_membership_mat,
-            -np.identity(self.dim),
-            axis=0,
-        )
+        return np.append(self.budget_membership_mat, -np.identity(self.dim), axis=0)
 
     @property
     def rhs_vec(self):
@@ -1493,8 +1470,7 @@ class BudgetSet(UncertaintySet):
         given other attributes.
         """
         return np.append(
-            self.budget_rhs_vec + self.budget_membership_mat @ self.origin,
-            -self.origin,
+            self.budget_rhs_vec + self.budget_membership_mat @ self.origin, -self.origin
         )
 
     @property
@@ -1542,9 +1518,7 @@ class BudgetSet(UncertaintySet):
 
         # ensure all entries are 0-1 values
         uniq_entries = np.unique(lhs_coeffs_arr)
-        non_bool_entries = uniq_entries[
-            (uniq_entries != 0) & (uniq_entries != 1)
-        ]
+        non_bool_entries = uniq_entries[(uniq_entries != 0) & (uniq_entries != 1)]
         if non_bool_entries.size > 0:
             raise ValueError(
                 "Attempting to set attribute `budget_membership_mat` to value "
@@ -1789,9 +1763,7 @@ class FactorModelSet(UncertaintySet):
     """
 
     def __init__(self, origin, number_of_factors, psi_mat, beta):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self.origin = origin
         self.number_of_factors = number_of_factors
         self.beta = beta
@@ -1982,23 +1954,20 @@ class FactorModelSet(UncertaintySet):
                 max_deviation = (
                     sorted_psi_row[:crit_pt_type].sum()
                     + beta_F_fill_in * sorted_psi_row[crit_pt_type]
-                    - sorted_psi_row[crit_pt_type + 1:].sum()
+                    - sorted_psi_row[crit_pt_type + 1 :].sum()
                 )
             elif M < F - crit_pt_type:
                 max_deviation = (
-                    sorted_psi_row[:F - crit_pt_type - 1].sum()
+                    sorted_psi_row[: F - crit_pt_type - 1].sum()
                     - beta_F_fill_in * sorted_psi_row[F - crit_pt_type - 1]
-                    - sorted_psi_row[F - crit_pt_type:].sum()
+                    - sorted_psi_row[F - crit_pt_type :].sum()
                 )
             else:
-                max_deviation = (
-                    sorted_psi_row[:M].sum()
-                    - sorted_psi_row[M:].sum()
-                )
+                max_deviation = sorted_psi_row[:M].sum() - sorted_psi_row[M:].sum()
 
             # finally, evaluate the bounds for this dimension
             parameter_bounds.append(
-                (orig_val - max_deviation, orig_val + max_deviation),
+                (orig_val - max_deviation, orig_val + max_deviation)
             )
 
         return parameter_bounds
@@ -2028,7 +1997,9 @@ class FactorModelSet(UncertaintySet):
 
         # === Ensure dimensions
         if len(uncertain_params) != len(self.origin):
-                raise AttributeError("Dimensions of origin and uncertain_param lists must be equal.")
+            raise AttributeError(
+                "Dimensions of origin and uncertain_param lists must be equal."
+            )
 
         # Make F-dim cassi variable
         n = list(range(self.number_of_factors))
@@ -2037,16 +2008,21 @@ class FactorModelSet(UncertaintySet):
         conlist = ConstraintList()
         conlist.construct()
 
-        disturbances = [sum(self.psi_mat[i][j] * model.util.cassi[j] for j in n)
-                        for i in range(len(uncertain_params))]
+        disturbances = [
+            sum(self.psi_mat[i][j] * model.util.cassi[j] for j in n)
+            for i in range(len(uncertain_params))
+        ]
 
         # Make n equality constraints
         for i in range(len(uncertain_params)):
             conlist.add(self.origin[i] + disturbances[i] == uncertain_params[i])
-        conlist.add(sum(model.util.cassi[i] for i in n) <= +self.beta * self.number_of_factors)
-        conlist.add(sum(model.util.cassi[i] for i in n) >= -self.beta * self.number_of_factors)
+        conlist.add(
+            sum(model.util.cassi[i] for i in n) <= +self.beta * self.number_of_factors
+        )
+        conlist.add(
+            sum(model.util.cassi[i] for i in n) >= -self.beta * self.number_of_factors
+        )
         return conlist
-
 
     def point_in_set(self, point):
         """
@@ -2066,8 +2042,11 @@ class FactorModelSet(UncertaintySet):
         diff = np.asarray(list(point[i] - self.origin[i] for i in range(len(point))))
         cassis = np.dot(inv_psi, np.transpose(diff))
 
-        if abs(sum(cassi for cassi in cassis)) <= self.beta * self.number_of_factors and \
-            all(cassi >= -1 and cassi <= 1 for cassi in cassis):
+        if abs(
+            sum(cassi for cassi in cassis)
+        ) <= self.beta * self.number_of_factors and all(
+            cassi >= -1 and cassi <= 1 for cassi in cassis
+        ):
             return True
         else:
             return False
@@ -2101,9 +2080,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     """
 
     def __init__(self, center, half_lengths):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self.center = center
         self.half_lengths = half_lengths
 
@@ -2212,8 +2189,11 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             dimension.
         """
         nom_value = self.center
-        half_length =self.half_lengths
-        parameter_bounds = [(nom_value[i] - half_length[i], nom_value[i] + half_length[i]) for i in range(len(nom_value))]
+        half_length = self.half_lengths
+        parameter_bounds = [
+            (nom_value[i] - half_length[i], nom_value[i] + half_length[i])
+            for i in range(len(nom_value))
+        ]
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, model=None, config=None):
@@ -2329,9 +2309,7 @@ class EllipsoidalSet(UncertaintySet):
     """
 
     def __init__(self, center, shape_matrix, scale=1):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self.center = center
         self.shape_matrix = shape_matrix
         self.scale = scale
@@ -2467,10 +2445,7 @@ class EllipsoidalSet(UncertaintySet):
 
     @scale.setter
     def scale(self, val):
-        validate_arg_type(
-            "scale", val, valid_num_types,
-            "a valid numeric type", False,
-        )
+        validate_arg_type("scale", val, valid_num_types, "a valid numeric type", False)
         if val < 0:
             raise ValueError(
                 "EllipsoidalSet attribute "
@@ -2510,8 +2485,13 @@ class EllipsoidalSet(UncertaintySet):
         scale = self.scale
         nom_value = self.center
         P = self.shape_matrix
-        parameter_bounds = [(nom_value[i] - np.power(P[i][i] * scale, 0.5),
-                             nom_value[i] + np.power(P[i][i] * scale, 0.5)) for i in range(self.dim)]
+        parameter_bounds = [
+            (
+                nom_value[i] - np.power(P[i][i] * scale, 0.5),
+                nom_value[i] + np.power(P[i][i] * scale, 0.5),
+            )
+            for i in range(self.dim)
+        ]
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):
@@ -2537,7 +2517,9 @@ class EllipsoidalSet(UncertaintySet):
         inv_covar = np.linalg.inv(self.shape_matrix)
 
         if len(uncertain_params) != len(self.center):
-               raise AttributeError("Center of ellipsoid must be same dimensions as vector of uncertain parameters.")
+            raise AttributeError(
+                "Center of ellipsoid must be same dimensions as vector of uncertain parameters."
+            )
 
         # Calculate row vector of differences
         diff = []
@@ -2550,7 +2532,10 @@ class EllipsoidalSet(UncertaintySet):
                 diff.append(uncertain_params[idx] - self.center[idx])
 
         # Calculate inner product of difference vector and covar matrix
-        product1 = [sum([x * y for x, y in zip(diff, column(inv_covar, i))]) for i in range(len(inv_covar))]
+        product1 = [
+            sum([x * y for x, y in zip(diff, column(inv_covar, i))])
+            for i in range(len(inv_covar))
+        ]
         constraint = sum([x * y for x, y in zip(product1, diff)])
 
         conlist = ConstraintList()
@@ -2583,9 +2568,7 @@ class DiscreteScenarioSet(UncertaintySet):
     """
 
     def __init__(self, scenarios):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         # Standardize to list of tuples
         self.scenarios = scenarios
 
@@ -2657,8 +2640,10 @@ class DiscreteScenarioSet(UncertaintySet):
             specifies the bounds in its corresponding
             dimension.
         """
-        parameter_bounds = [(min(s[i] for s in self.scenarios),
-                             max(s[i] for s in self.scenarios)) for i in range(self.dim)]
+        parameter_bounds = [
+            (min(s[i] for s in self.scenarios), max(s[i] for s in self.scenarios))
+            for i in range(self.dim)
+        ]
         return parameter_bounds
 
     def is_bounded(self, config):
@@ -2694,7 +2679,9 @@ class DiscreteScenarioSet(UncertaintySet):
         # === Ensure point is of correct dimensionality as the uncertain parameters
         dim = len(uncertain_params)
         if any(len(d) != dim for d in self.scenarios):
-                raise AttributeError("All scenarios must have same dimensions as uncertain parameters.")
+            raise AttributeError(
+                "All scenarios must have same dimensions as uncertain parameters."
+            )
 
         conlist = ConstraintList()
         conlist.construct()
@@ -2723,10 +2710,12 @@ class DiscreteScenarioSet(UncertaintySet):
         """
         # Round all double precision to a tolerance
         num_decimals = 8
-        rounded_scenarios = list(list(round(num, num_decimals) for num in d) for d in self.scenarios)
+        rounded_scenarios = list(
+            list(round(num, num_decimals) for num in d) for d in self.scenarios
+        )
         rounded_point = list(round(num, num_decimals) for num in point)
 
-        return any(rounded_point==rounded_d for rounded_d in rounded_scenarios)
+        return any(rounded_point == rounded_d for rounded_d in rounded_scenarios)
 
 
 class IntersectionSet(UncertaintySet):
@@ -2762,9 +2751,7 @@ class IntersectionSet(UncertaintySet):
     """
 
     def __init__(self, **unc_sets):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self.all_sets = unc_sets
 
     @property
@@ -2874,7 +2861,9 @@ class IntersectionSet(UncertaintySet):
         is_empty_intersection = True
         if any(a_set.type == "discrete" for a_set in self.all_sets):
             disc_sets = (a_set for a_set in self.all_sets if a_set.type == "discrete")
-            disc_set = min(disc_sets, key=lambda x: len(x.scenarios))  # minimum set of scenarios
+            disc_set = min(
+                disc_sets, key=lambda x: len(x.scenarios)
+            )  # minimum set of scenarios
             # === Ensure there is at least one scenario from this discrete set which is a member of all other sets
             for scenario in disc_set.scenarios:
                 if all(a_set.point_in_set(point=scenario) for a_set in self.all_sets):
@@ -2883,14 +2872,19 @@ class IntersectionSet(UncertaintySet):
         else:
             # === Compile constraints and solve NLP
             m = ConcreteModel()
-            m.obj = Objective(expr=0) # dummy objective required if using baron
+            m.obj = Objective(expr=0)  # dummy objective required if using baron
             m.param_vars = Var(uncertain_params.index_set())
             for a_set in self.all_sets:
-                m.add_component(a_set.type + "_constraints", a_set.set_as_constraint(uncertain_params=m.param_vars))
+                m.add_component(
+                    a_set.type + "_constraints",
+                    a_set.set_as_constraint(uncertain_params=m.param_vars),
+                )
             try:
                 res = nlp_solver.solve(m)
             except:
-                raise ValueError("Solver terminated with an error while checking set intersection non-emptiness.")
+                raise ValueError(
+                    "Solver terminated with an error while checking set intersection non-emptiness."
+                )
             if check_optimal_termination(res):
                 is_empty_intersection = False
         return is_empty_intersection
@@ -2962,9 +2956,13 @@ class IntersectionSet(UncertaintySet):
         try:
             nlp_solver = kwargs["config"].global_solver
         except:
-            raise AttributeError("set_as_constraint for SetIntersection requires access to an NLP solver via"
-                                 "the PyROS Solver config.")
-        is_empty_intersection = self.is_empty_intersection(uncertain_params=uncertain_params, nlp_solver=nlp_solver)
+            raise AttributeError(
+                "set_as_constraint for SetIntersection requires access to an NLP solver via"
+                "the PyROS Solver config."
+            )
+        is_empty_intersection = self.is_empty_intersection(
+            uncertain_params=uncertain_params, nlp_solver=nlp_solver
+        )
 
         def _intersect(Q1, Q2):
             return self.intersect(Q1, Q2)
@@ -2978,11 +2976,17 @@ class IntersectionSet(UncertaintySet):
                 conlist = ConstraintList()
                 conlist.construct()
                 for set in Qint.all_sets:
-                    for con in list(set.set_as_constraint(uncertain_params=uncertain_params).values()):
+                    for con in list(
+                        set.set_as_constraint(
+                            uncertain_params=uncertain_params
+                        ).values()
+                    ):
                         conlist.add(con.expr)
                 return conlist
         else:
-            raise AttributeError("Set intersection is empty, cannot proceed with PyROS robust optimization.")
+            raise AttributeError(
+                "Set intersection is empty, cannot proceed with PyROS robust optimization."
+            )
 
     @staticmethod
     def add_bounds_on_uncertain_parameters(model, config):

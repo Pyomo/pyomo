@@ -20,28 +20,21 @@ from .algorithms.solvers.scipy_solvers import (
     PyomoSecantNewtonSolver,
 )
 
+
 def load():
     ExtensionBuilderFactory.register('pynumero')(PyNumeroBuilder)
     SolverFactory.register(
-        'cyipopt',
-        doc='Cyipopt: direct python bindings to the Ipopt NLP solver'
+        'cyipopt', doc='Cyipopt: direct python bindings to the Ipopt NLP solver'
     )(PyomoCyIpoptSolver)
     SolverFactory.register(
         "scipy.fsolve",
-        doc=(
-            "fsolve: A SciPy wrapper around MINPACK's hybrd and"
-            " hybrj algorithms"
-        ),
+        doc=("fsolve: A SciPy wrapper around MINPACK's hybrd and hybrj algorithms"),
     )(PyomoFsolveSolver)
     SolverFactory.register(
-        "scipy.root",
-        doc=(
-            "root: Find the root of a vector function"
-        ),
+        "scipy.root", doc=("root: Find the root of a vector function")
     )(PyomoRootSolver)
     SolverFactory.register(
-        "scipy.newton",
-        doc="newton: Find a zero of a scalar-valued function",
+        "scipy.newton", doc="newton: Find a zero of a scalar-valued function"
     )(PyomoNewtonSolver)
     SolverFactory.register(
         "scipy.secant-newton",
