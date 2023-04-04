@@ -105,7 +105,7 @@ def build_model():
     # Price for quantities below min amount
     # pb1(j,t) in GAMS
     model.RegPrice_Bulk = Param(model.Streams, model.TimePeriods)
-    # Price for quantities aboce min amount
+    # Price for quantities above min amount
     # pb2(j, t) in GAMS
     model.DiscountPrice_Bulk = Param(model.Streams, model.TimePeriods)
 
@@ -117,14 +117,14 @@ def build_model():
 
     # sigmad_jt
     # sigmad(j, t) in GAMS
-    # Minimum quantity of chemical j that must be bought before recieving a Discount under discount contract
+    # Minimum quantity of chemical j that must be bought before receiving a Discount under discount contract
     model.MinAmount_Discount = Param(model.Streams, model.TimePeriods, default=0)
 
-    # min quantity to recieve discount under bulk contract
+    # min quantity to receive discount under bulk contract
     # sigmab(j, t) in GAMS
     model.MinAmount_Bulk = Param(model.Streams, model.TimePeriods, default=0)
 
-    # min quantity to recieve discount under length contract
+    # min quantity to receive discount under length contract
     # sigmal(j, p) in GAMS
     model.MinAmount_Length = Param(model.Streams, model.Contracts_Length, default=0)
 
@@ -368,7 +368,7 @@ def build_model():
 
     model.profit = Objective(rule=profit_rule, sense=maximize)
 
-    # flow of raw materials is the total amount purchased (accross all contracts)
+    # flow of raw materials is the total amount purchased (across all contracts)
     def raw_material_flow_rule(model, j, t):
         return (
             model.FlowRate[j, t]
@@ -445,7 +445,7 @@ def build_model():
 
     model.process_balance4 = Constraint(model.TimePeriods, rule=process_balance_rule4)
 
-    # process capacity contraints
+    # process capacity constraints
     # these are hardcoded based on the three processes and the process flow structure
     def process_capacity_rule1(model, t):
         return model.FlowRate[9, t] <= model.Capacity[1]
@@ -525,7 +525,7 @@ def build_model():
         model.Products, model.TimePeriods, rule=shortfall_max_rule
     )
 
-    # maxiumum capacities of suppliers
+    # maximum capacities of suppliers
     def supplier_capacity_rule(model, j, t):
         return model.FlowRate[j, t] <= model.SupplyAndDemandUBs[j, t]
 
@@ -571,7 +571,7 @@ def build_model():
         model.RawMaterials, model.TimePeriods, rule=FP_contract_rule
     )
 
-    # cost constraint for fixed price contract (independent contraint)
+    # cost constraint for fixed price contract (independent constraint)
     def FP_contract_cost_rule(model, j, t):
         return (
             model.Cost_FP[j, t] == model.AmountPurchased_FP[j, t] * model.Prices[j, t]

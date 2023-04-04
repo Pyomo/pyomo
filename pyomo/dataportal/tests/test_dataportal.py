@@ -899,7 +899,7 @@ class TestOnlyTextPortal(unittest.TestCase):
         self.assertEqual(dp.data('W'), {'A1': 4.3, 'A2': 4.4, 'A3': 4.5})
 
     def test_tableXW_3(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         self.check_skiplist('tableXW_3')
         dp = DataPortal()
         dp.load(index='A', param=('X', 'W'), **self.create_options('XW'))
@@ -908,7 +908,7 @@ class TestOnlyTextPortal(unittest.TestCase):
         self.assertEqual(dp.data('W'), {'A1': 4.3, 'A2': 4.4, 'A3': 4.5})
 
     def test_tableXW_4(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
+        # Like test_tableXW_1, except that set A is defined in the load statement and all values are mapped.
         self.check_skiplist('tableXW_4')
         dp = DataPortal()
         dp.load(
@@ -1314,7 +1314,7 @@ class TestTextPortal(unittest.TestCase):
         self.assertEqual(instance.W.extract_values(), {'A1': 4.3, 'A2': 4.4, 'A3': 4.5})
 
     def test_tableXW_3(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         self.check_skiplist('tableXW_3')
         model = AbstractModel()
         model.A = Set()
@@ -1328,7 +1328,7 @@ class TestTextPortal(unittest.TestCase):
         self.assertEqual(instance.W.extract_values(), {'A1': 4.3, 'A2': 4.4, 'A3': 4.5})
 
     def test_tableXW_4(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
+        # Like test_tableXW_1, except that set A is defined in the load statement and all values are mapped.
         self.check_skiplist('tableXW_4')
         model = AbstractModel()
         model.B = Set()
@@ -1718,7 +1718,7 @@ class LoadTests(object):
         os.remove(currdir + 'loadXW.dat')
 
     def test_tableXW_3(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         self.check_skiplist('tableXW_3')
         with capture_output(currdir + 'loadXW.dat'):
             print("load " + self.filename('XW') + " : A=[A] X W;")
@@ -1733,7 +1733,7 @@ class LoadTests(object):
         os.remove(currdir + 'loadXW.dat')
 
     def test_tableXW_4(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
+        # Like test_tableXW_1, except that set A is defined in the load statement and all values are mapped.
         self.check_skiplist('tableXW_4')
         with capture_output(currdir + 'loadXW.dat'):
             print("load " + self.filename('XW') + " : B=[A] R=X S=W;")
@@ -2110,7 +2110,7 @@ class TestTableCmd(unittest.TestCase):
         os.remove(currdir + 'loadXW.dat')
 
     def test_tableXW_3_1(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         with capture_output(currdir + 'loadXW.dat'):
             print(
                 "table columns=3 A={1} X(A)={2} W(A)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;"
@@ -2126,7 +2126,7 @@ class TestTableCmd(unittest.TestCase):
         os.remove(currdir + 'loadXW.dat')
 
     def test_tableXW_3_2(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         with capture_output(currdir + 'loadXW.dat'):
             print("table A={A} X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model = AbstractModel()

@@ -45,7 +45,7 @@ def complements(a, b):
 
 class _ComplementarityData(_BlockData):
     def _canonical_expression(self, e):
-        # Note: as the complimentarity component maintains references to
+        # Note: as the complimentary component maintains references to
         # the original expression (e), it is NOT safe or valid to bypass
         # the clone checks: bypassing the check can result in corrupting
         # the original expressions and will result in mind-boggling
@@ -74,7 +74,7 @@ class _ComplementarityData(_BlockData):
 
     def to_standard_form(self):
         #
-        # Add auxilliary variables and constraints that ensure
+        # Add auxiliary variables and constraints that ensure
         # a monotone transformation of general complementary constraints to
         # the form:
         #       l1 <= v1 <= u1   OR   l2 <= v2 <= u2

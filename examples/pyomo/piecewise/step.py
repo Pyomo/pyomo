@@ -40,7 +40,7 @@ model.con = Piecewise(
     pw_constr_type='EQ',
     f_rule=RANGE_PTS,
     pw_repn='INC',
-)  # **NOTE**: The not all piecewise represenations
+)  # **NOTE**: The not all piecewise representations
 #           handle step functions. Those which do
 #           not work with step functions are:
 #           BIGM_SOS1, BIGM_BIN, and MC

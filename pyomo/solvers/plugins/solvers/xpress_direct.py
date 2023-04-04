@@ -44,7 +44,7 @@ class DegreeError(ValueError):
     pass
 
 
-def _is_convertable(conv_type, x):
+def _is_convertible(conv_type, x):
     try:
         conv_type(x)
     except ValueError:
@@ -148,7 +148,7 @@ class XpressDirect(DirectSolver):
         # ourselves
         self._opt_time = None
 
-        # Note: Undefined capabilites default to None
+        # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -206,7 +206,7 @@ class XpressDirect(DirectSolver):
                 # we'll wrap this in a function to raise the
                 # xpress error
                 contr_type = type(getattr(xp_controls, key))
-                if not _is_convertable(contr_type, option):
+                if not _is_convertible(contr_type, option):
                     raise
                 self._solver_model.setControl(key, contr_type(option))
 
@@ -561,7 +561,7 @@ class XpressDirect(DirectSolver):
                 )
             )
 
-        # NOTE: xpress's python interface only allows for expresions
+        # NOTE: xpress's python interface only allows for expressions
         #       with native numeric types. Others, like numpy.float64,
         #       will cause an exception when constructing expressions
         if len(repn.linear_vars) > 0:
@@ -897,7 +897,7 @@ class XpressDirect(DirectSolver):
         # be the case, both in LP and MIP contexts.
         if self._save_results:
             """
-            This code in this if statement is only needed for backwards compatability. It is more efficient to set
+            This code in this if statement is only needed for backwards compatibility. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
             if have_soln:

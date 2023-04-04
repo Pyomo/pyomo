@@ -58,7 +58,7 @@ class DualTransformation(IsomorphicTransformation):
 
     def _create_using(self, model, **kwds):
         """
-        Tranform a model to its Lagrangian dual.
+        Transform a model to its Lagrangian dual.
         """
 
         # Optional naming schemes for dual variables and constraints
@@ -97,7 +97,7 @@ class DualTransformation(IsomorphicTransformation):
         # {variable_name: coefficient}
         c = _sparse(0)
 
-        # Walk constaints
+        # Walk constraints
         for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
             for con in (con_array[ndx] for ndx in con_array.index_set()):
                 # The qualified constraint name

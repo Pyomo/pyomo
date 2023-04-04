@@ -94,7 +94,7 @@ class _robust_sort_keyfcn(object):
             # value type is convertible to string
             return _typename, str(val)
         else:
-            # everything else (incuding i==3), fall back on id()
+            # everything else (including i==3), fall back on id()
             return _typename, id(val)
 
 
@@ -112,7 +112,7 @@ def sorted_robust(iterable, key=None, reverse=False):
         the source of items to sort
     key: function
         a function of one argument that is used to extract the
-        comparison ket from each element in `iterable`
+        comparison key from each element in `iterable`
     reverse: bool
         if True, the iterable is sorted as if each comparison was reversed.
 

@@ -153,10 +153,10 @@ def create_cuts_fme(
 
     Parameters
     -----------
-    transBlock_rHull: transformation blcok on relaxed hull instance
+    transBlock_rHull: transformation block on relaxed hull instance
     var_info: List of tuples (rBigM_var, rHull_var, xstar_param)
-    hull_to_bigm_map: For expression substition, maps id(hull_var) to
-                      coresponding bigm var
+    hull_to_bigm_map: For expression substitution, maps id(hull_var) to
+                      corresponding bigm var
     rBigM_linear_constraints: list of linear constraints in relaxed bigM
     rHull_vars: list of all variables in relaxed hull
     disaggregated_vars: ComponentSet of disaggregated variables in hull
@@ -295,11 +295,11 @@ def create_cuts_normal_vector(
 
     Parameters
     -----------
-    transBlock_rHull: transformation blcok on relaxed hull instance. Ignored by
+    transBlock_rHull: transformation block on relaxed hull instance. Ignored by
                       this callback.
     var_info: List of tuples (rBigM_var, rHull_var, xstar_param)
-    hull_to_bigm_map: For expression substition, maps id(hull_var) to
-                      coresponding bigm var. Ignored by this callback
+    hull_to_bigm_map: For expression substitution, maps id(hull_var) to
+                      corresponding bigm var. Ignored by this callback
     rBigM_linear_constraints: list of linear constraints in relaxed bigM.
                               Ignored by this callback.
     rHull_vars: list of all variables in relaxed hull. Ignored by this callback.
@@ -647,10 +647,10 @@ class CuttingPlane_Transformation(Transformation):
         Arguments
         ---------
         transBlock_rBigm: transformation block on relaxed bigM instance
-        transBlock_rHull: transformation blcok on relaxed hull instance
+        transBlock_rHull: transformation block on relaxed hull instance
         var_info: List of tuples (rBigM_var, rHull_var, xstar_param)
-        hull_to_bigm_map: For expression substition, maps id(hull_var) to 
-                          coresponding bigm var
+        hull_to_bigm_map: For expression substitution, maps id(hull_var) to 
+                          corresponding bigm var
         rBigM_linear_constraints: list of linear constraints in relaxed bigM
         rHull_vars: list of all variables in relaxed hull
         disaggregated_vars: ComponentSet of disaggregated variables in hull 
@@ -929,7 +929,7 @@ class CuttingPlane_Transformation(Transformation):
         return dict((id(var_info[i][1]), var_info[i][0]) for i in range(len(var_info)))
 
     # this map is needed to solve the back-off problem for post-processing
-    def _create_bigm_to_hull_substition_map(self, var_info):
+    def _create_bigm_to_hull_substitution_map(self, var_info):
         return dict((id(var_info[i][0]), var_info[i][1]) for i in range(len(var_info)))
 
     def _get_disaggregated_vars(self, hull):
@@ -1021,7 +1021,7 @@ class CuttingPlane_Transformation(Transformation):
         disaggregated_vars = self._get_disaggregated_vars(instance_rHull)
 
         hull_to_bigm_map = self._create_hull_to_bigm_substitution_map(var_info)
-        bigm_to_hull_map = self._create_bigm_to_hull_substition_map(var_info)
+        bigm_to_hull_map = self._create_bigm_to_hull_substitution_map(var_info)
         xhat = ComponentMap()
 
         while improving:
@@ -1180,7 +1180,7 @@ class CuttingPlane_Transformation(Transformation):
 
     def _add_separation_objective(self, var_info, transBlock_rHull):
         # creates the separation objective. That is just adding an objective for
-        # Euclidean norm, it means adding an auxilary variable to linearize the
+        # Euclidean norm, it means adding an auxiliary variable to linearize the
         # L-infinity norm. We do this assuming that rBigM has been solved, and
         # if any variables come back stale, we leave them out of the separation
         # problem, as they aren't doing anything and they could cause numerical

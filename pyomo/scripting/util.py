@@ -376,7 +376,7 @@ def create_model(data):
                 suffix = (file).split(".")[-1]
                 if suffix != "dat":
                     msg = (
-                        'When specifiying multiple data files, they must all '
+                        'When specifying multiple data files, they must all '
                         'be *.dat files.  File specified: %s'
                     )
                     raise SystemExit(msg % str(file))

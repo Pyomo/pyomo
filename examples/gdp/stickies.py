@@ -38,7 +38,7 @@ def build_model():
     model.BadComponents = Set()
     # N: total nodes in the system
     model.Nodes = Set()
-    # S: possibe screens
+    # S: possible screens
     model.Screens = Set()
 
     def screen_node_filter(model, s, n):

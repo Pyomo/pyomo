@@ -20,7 +20,7 @@ Pyomo 6.5.0    (16 Feb 2023)
   - Require `version=` for all deprecation utilities (#2744)
   - Fix `pyomo --version` version string (#2743)
 - Core
-  - Fix minor typo: taht -> that in set.py (#2679)
+  - Fix minor typo: that -> that in set.py (#2679)
   - Fix bugs in scaling transformation (#2678)
   - Rework handling of 'dimensionless' units in Pyomo (#2691)
 - Solver Interfaces
@@ -303,7 +303,7 @@ Pyomo 6.4.0    (16 Mar 2022)
     constant expressions (#2324)
   - PyNumero: Improve coverage of mpi block matrix tests (#2318)
   - PyNumero: Skip bound/domain validation in ExternalPyomoModel (#2323)
-  - PyNumero: Remove deprecated useage of numpy.bool (#2339)
+  - PyNumero: Remove deprecated usage of numpy.bool (#2339)
   - PyROS: Fix variable default initialization (#2331)
 
 -------------------------------------------------------------------------------
@@ -978,7 +978,7 @@ Pyomo 5.6.9   (18 Mar 2020)
 - General
   - Fix bug and improve output formatting in pyomo.util.infeasible (#1226, #1234)
   - Add 'version' and 'remove_in' arguments to deprecation_warning (#1231)
-  - Change NoArgumentGiven to a class and standardize useage (#1236)
+  - Change NoArgumentGiven to a class and standardize usage (#1236)
   - Update GSL URL to track change in AMPL SSL certificate (#1245)
   - Clean up setup.py (#1227)
   - Remove legacy build/test/distribution scripts (#1263)
@@ -998,7 +998,7 @@ Pyomo 5.6.9   (18 Mar 2020)
   - Raise error on failed Param validation (#1272)
   - Fix return value for component decorator (#1296)
   - Change mult. order in taylor_series_expansion for numpy compatibility (#1329)
-  - Deprecate 'Any' being the defalt Param domain (#1266)
+  - Deprecate 'Any' being the default Param domain (#1266)
 - Solver Interfaces
   - Update CPLEX direct interface to support CPLEX 12.10 (#1276)
   - Shorten GAMS ShortNameLabeler symbols (#1338)
@@ -1241,7 +1241,7 @@ Pyomo 5.6.2   (1 May 2019)
 - Network updates
   - Fix sequential decomposition when ports contain References (#975)
 - Contributed Packages
-  - ParmEst updates to make API more flexible, updated examples, documentation
+  - Parmest updates to make API more flexible, updated examples, documentation
     and tests (#814)
   - GDPopt algorithm enhancements, cut generation bug fix, add example
     to tests, time limit option support (#805, #826, #852, #970)
@@ -1368,7 +1368,7 @@ Pyomo 5.6     (19 Dec 2018)
 - PySP updates
   - Python 3.7 support (#463)
   - Fix bugs in finance example (#564, #578)
-  - Added a wrapper for PySP to create a scripting interace (#689, #727, #737)
+  - Added a wrapper for PySP to create a scripting interface (#689, #727, #737)
   - Bug fixes (#736, #788)
 - New packages:
   - DataPortal:
@@ -1385,7 +1385,7 @@ Pyomo 5.6     (19 Dec 2018)
   - New packages:
     - Preprocessing transformation for variable aggregation (#533, #617)
     - Compute disjunctive variable bounds (#481)
-    - ParmEst package for parameter estimation (#706, #733, #769, #781)
+    - Parmest package for parameter estimation (#706, #733, #769, #781)
     - PyNumero package for numerical optimization (#725, #775)
     - sensitivity_toolbox for interfacing with sIPOPT (#766)
     - PETSc AMPL wrapper (#774)
@@ -2286,7 +2286,7 @@ Pyomo 2.4.3199
   - ASL solver interface can now be specified with the form
         --solver=asl:PICO
 
-- Usability enchancements
+- Usability enhancements
   - Numerous bug fixes.
   - Updated messages to provide clearer indication of modeling errors
 
@@ -2509,7 +2509,7 @@ Pyomo 1.1
     indexed by one or more sets.
 
   - A revision to Pyomo semantics. Now, expressions are not evaluated
-    when performing arithemetic operations (plus, times, etc).
+    when performing arithmetic operations (plus, times, etc).
 
   - A major rework of how component attributes are managed for
     NumericValue  objects and subclasses of this class. This was driven
@@ -2569,11 +2569,11 @@ Pyomo 1.1
     the validation function: we want to allow the validation function to
     refer to the value as if it were set.
 
-  - Depricating the use of the expression factory for algebraic expression
+  - Deprecating the use of the expression factory for algebraic expression
     types. These are now launched directly from the generate_expression()
     function.
 
-  - Adding support for specifing options when launching solvers. For example:
+  - Adding support for specifying options when launching solvers. For example:
 
     results = self.pico.solve(currdir+"bell3a.mps", options="maxCPUMinutes=0.1")
 

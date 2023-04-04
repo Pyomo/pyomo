@@ -182,7 +182,7 @@ class GDPTree:
 
     def _reverse_topological_iterator(self):
         # this returns nodes of the tree ordered so that no node is before any
-        # of its decendents.
+        # of its descendents.
         leaf_to_root = OrderedSet()
         for u in self.vertices:
             if u not in leaf_to_root:

@@ -14,5 +14,13 @@ nd = "nd"
 # Ignore INOUT
 inout = "inout"
 INOUT= "INOUT"
+# Ignore MAYBEE from examples
+MAYBEE = "MAYBEE"
+# Ignore conext for constraint-external
+conext = "conext"
+# Ignore AFE (affine expression) from MOSEK vernacular
+afe = "afe"
+# Ignore Fo from PyNumero tests
+Fo = "Fo"
 # Add More Words Here
 

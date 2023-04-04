@@ -80,7 +80,7 @@ model.J.construct()
 model.J.add(1, 4, 9)
 #
 # The _initialize_ option can also be used to specify the values in
-# a set.  These default values may be overriden by later construction
+# a set.  These default values may be overridden by later construction
 # steps, or by data in an input file:
 #
 model.K = Set(initialize=[1, 4, 9])

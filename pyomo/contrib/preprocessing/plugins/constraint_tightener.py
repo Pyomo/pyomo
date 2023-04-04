@@ -16,7 +16,7 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
     "Its functionality may be partially replicated using "
     "`pyomo.contrib.fbbt.compute_bounds_on_expr(constraint.body)`.",
     version='5.7')
-class TightenContraintFromVars(IsomorphicTransformation):
+class TightenConstraintFromVars(IsomorphicTransformation):
     """Tightens upper and lower bound on constraints based on variable bounds.
 
     Iterates through each variable and tightens the constraint bounds using
@@ -27,7 +27,7 @@ class TightenContraintFromVars(IsomorphicTransformation):
     """
 
     def __init__(self):
-        super(TightenContraintFromVars, self).__init__()
+        super(TightenConstraintFromVars, self).__init__()
 
     def _apply_to(self, model):
         """Apply the transformation."""

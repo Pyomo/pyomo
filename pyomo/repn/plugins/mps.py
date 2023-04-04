@@ -243,7 +243,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
             if vardata.fixed:
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
-                    "currently not supported. Deactive this constraint in order to "
+                    "currently not supported. Deactivate this constraint in order to "
                     "proceed." % (soscondata.name, vardata.name)
                 )
             self._referenced_variable_ids[id(vardata)] = vardata

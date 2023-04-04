@@ -360,11 +360,11 @@ model.pressact_end = Constraint(
 )
 
 # fix pressure at supply nodes
-def suppres_rule(m, k, j, t):
+def suppress_rule(m, k, j, t):
     return m.p[k, m.sloc[j], t] == m.pmin[m.sloc[j]]
 
 
-model.suppres = Constraint(model.SCEN, model.SUP, model.TIME, rule=suppres_rule)
+model.suppress = Constraint(model.SCEN, model.SUP, model.TIME, rule=suppress_rule)
 
 # discharge pressure for compressors
 def dispress_rule(m, j, i, t):

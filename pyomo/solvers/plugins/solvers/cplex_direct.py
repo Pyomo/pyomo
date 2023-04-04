@@ -151,7 +151,7 @@ class CPLEXDirect(DirectSolver):
         self._max_constraint_degree = 2
         self._max_obj_degree = 2
 
-        # Note: Undefined capabilites default to None
+        # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -796,7 +796,7 @@ class CPLEXDirect(DirectSolver):
         # only try to get objective and variable values if a solution exists
         if self._save_results:
             """
-            This code in this if statement is only needed for backwards compatability. It is more efficient to set
+            This code in this if statement is only needed for backwards compatibility. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
             if cpxprob.solution.get_solution_type() > 0:

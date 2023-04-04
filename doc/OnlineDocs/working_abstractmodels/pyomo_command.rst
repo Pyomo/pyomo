@@ -18,7 +18,7 @@ Passing Options to a Solver
 ---------------------------
 
 To pass arguments to a solver when using the ``pyomo solve`` command,
-appned the Pyomo command line with the argument ``--solver-options=``
+append the Pyomo command line with the argument ``--solver-options=``
 followed by an argument that is a string to be sent to the solver
 (perhaps with dashes added by Pyomo).  So for most MIP solvers, the mip
 gap can be set using

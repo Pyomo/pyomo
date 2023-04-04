@@ -64,14 +64,14 @@ def set_pyomo_amplfunc_env(external_libs):
     # sometime between 2010 and 2012, the ASL added support for
     # simple quoted strings: the first non-whitespace character
     # can be either " or '.  When that is detected, the ASL
-    # parser will continue to the next occurance of that
+    # parser will continue to the next occurrence of that
     # character (i.e., no escaping is allowed).  We will use
     # that same logic here to quote any strings with spaces
     # ... bearing in mind that this will only work with solvers
     # compiled against versions of the ASL more recent than
     # ~2012.
     #
-    # We are (arbitrarily) chosing to use newline as the field
+    # We are (arbitrarily) choosing to use newline as the field
     # separator.
     env_str = ''
     for _lib in external_libs:
@@ -288,7 +288,7 @@ class ModelSOS(object):
             sign_tag = -1
         else:
             raise ValueError(
-                "SOSContraint '%s' has sos type='%s', "
+                "SOSConstraint '%s' has sos type='%s', "
                 "which is not supported by the NL file interface"
                 % (soscondata.name, level)
             )
@@ -920,7 +920,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         # Note that this is fragile:
                         # generate_standard_repn can leave nonlinear
                         # terms in both quadratic and nonlinear fields.
-                        # However, when this was writen the assumption
+                        # However, when this was written the assumption
                         # is that generate_standard_repn is only called
                         # with quadratic=True for QCQPs (by the LP
                         # writer).  So, quadratic and nonlinear_expr
@@ -1046,7 +1046,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         # Note that this is fragile:
                         # generate_standard_repn can leave nonlinear
                         # terms in both quadratic and nonlinear fields.
-                        # However, when this was writen the assumption
+                        # However, when this was written the assumption
                         # is that generate_standard_repn is only called
                         # with quadratic=True for QCQPs (by the LP
                         # writer).  So, quadratic and nonlinear_expr
@@ -1480,7 +1480,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "S" lines
         #
 
-        # Tranlate the SOSConstraint component into ampl suffixes
+        # Translate the SOSConstraint component into ampl suffixes
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         modelSOS = ModelSOS(self_ampl_var_id, self_varID_map)

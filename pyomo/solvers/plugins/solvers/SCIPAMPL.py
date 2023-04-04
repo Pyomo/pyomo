@@ -292,7 +292,7 @@ class SCIPAMPL(SystemCallSolver):
         # **********************************************************************
         # **********************************************************************
 
-        # UNKNOWN # unknown='unknown' # An unitialized value
+        # UNKNOWN # unknown='unknown' # An uninitialized value
 
         if results.solver.message == "unknown":
             results.solver.status = SolverStatus.unknown
@@ -411,7 +411,7 @@ class SCIPAMPL(SystemCallSolver):
             if len(results.solution) > 0:
                 results.solution(0).status = SolutionStatus.unsure
 
-        # UNKNOWN # unknown='unknown' # An unitialized value
+        # UNKNOWN # unknown='unknown' # An uninitialized value
 
         else:
             logger.warning(

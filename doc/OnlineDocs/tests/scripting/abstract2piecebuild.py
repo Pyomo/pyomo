@@ -31,7 +31,7 @@ def bpts_build(model, j):
         model.bpts[j].append(float((i * model.Topx) / model.PieceCnt))
 
 
-# The object model.BuildBpts is not refered to again;
+# The object model.BuildBpts is not referred to again;
 # the only goal is to trigger the action at build time
 # @BuildAction_example
 model.BuildBpts = BuildAction(model.J, rule=bpts_build)

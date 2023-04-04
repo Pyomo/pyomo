@@ -425,7 +425,7 @@ class Disjunct(Block):
     # def _deactivate_without_fixing_indicator(self):
     #    # Ideally, this would be a super call from this class.  However,
     #    # doing that would trigger a call to deactivate() on all the
-    #    # _DisjunctData objects (exactly what we want to aviod!)
+    #    # _DisjunctData objects (exactly what we want to avoid!)
     #    #
     #    # For the time being, we will do something bad and directly call
     #    # the base class method from where we would otherwise want to
@@ -434,7 +434,7 @@ class Disjunct(Block):
     def _activate_without_unfixing_indicator(self):
         # Ideally, this would be a super call from this class.  However,
         # doing that would trigger a call to deactivate() on all the
-        # _DisjunctData objects (exactly what we want to aviod!)
+        # _DisjunctData objects (exactly what we want to avoid!)
         #
         # For the time being, we will do something bad and directly call
         # the base class method from where we would otherwise want to

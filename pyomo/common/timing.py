@@ -101,7 +101,7 @@ class ConstructionTimer(object):
 
     def report(self):
         # Record the elapsed time, as some log handlers may not
-        # immediately generate the messge string
+        # immediately generate the message string
         self.timer += default_timer()
         _construction_logger.info(self)
 
@@ -943,7 +943,7 @@ class HierarchicalTimer(object):
 
         Returns
         -------
-        num_calss: int
+        n_calls: int
             The number of times start was called for the specified timer.
         """
         stack = identifier.split('.')

@@ -96,7 +96,7 @@ def create_method(test_name, model, solver, io, test_case, symbolic_labels):
             if rc[0]:
                 self.fail(
                     "\nTest model '%s' was marked as an expected "
-                    "failure but no failure occured. The "
+                    "failure but no failure occurred. The "
                     "reason given for the expected failure "
                     "is:\n\n****\n%s\n****\n\n"
                     "Please remove this case as an expected "

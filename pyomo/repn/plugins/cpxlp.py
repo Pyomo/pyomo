@@ -353,7 +353,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 output.append("\n")
 
         if constant and not is_objective:
-            # If we made it to here we are outputing
+            # If we made it to here we are outputting
             # trivial constraints place 0 *
             # ONE_VAR_CONSTANT on this side of the
             # constraint for the benefit of solvers like
@@ -406,7 +406,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             if vardata.fixed:
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
-                    "currently not supported. Deactive this constraint in order to "
+                    "currently not supported. Deactivate this constraint in order to "
                     "proceed." % (soscondata.name, vardata.name)
                 )
             self._referenced_variable_ids[id(vardata)] = vardata

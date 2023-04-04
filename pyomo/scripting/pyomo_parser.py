@@ -107,7 +107,7 @@ def add_subparser(name, **args):
 
 def get_parser():
     """
-    Return the parser used by the 'pyomo' commmand.
+    Return the parser used by the 'pyomo' command.
     """
     global _pyomo_parser
     if _pyomo_parser is None:

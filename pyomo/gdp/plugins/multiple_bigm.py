@@ -166,7 +166,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         hand side matrix for disjunctive constraints that bound a single
         variable.
 
-        Note that we do not use user-specified M values for these contraints
+        Note that we do not use user-specified M values for these constraints
         when this flag is set to True: If tighter bounds exist then they
         they should be put in the constraints.
 
@@ -537,7 +537,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     relaxationBlock._constraintMap['srcConstraints'][
                         transformed[idx, 'ub']
                     ].append(c)
-                    # might alredy be here if it had an upper bound
+                    # might already be here if it had an upper bound
                     if (
                         c
                         in disj.transformation_block._constraintMap[

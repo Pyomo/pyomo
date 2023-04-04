@@ -66,7 +66,7 @@ model.W = Param(model.A, model.B, initialize=W_init)
 # problem instance.
 #
 # The _initialize_ option can also be used to specify the values in
-# a parameter.  These default values may be overriden by later construction
+# a parameter.  These default values may be overridden by later construction
 # steps, or by data in an input file:
 #
 V_init = {}
@@ -107,7 +107,7 @@ model.S = Param(validate=S_validate)
 # example, the instance Param(model.A,model.B) declares a parameter indexed
 # over sets A and B.  However, not all of these values are necessarily
 # declared in a model.  The default value for all parameters not declared
-# is zero. This default can be overriden with the _default_ option.
+# is zero. This default can be overridden with the _default_ option.
 #
 # The following example illustrates how a parameter can be declared where
 # every parameter value is nonzero, but the parameter is stored with a sparse
