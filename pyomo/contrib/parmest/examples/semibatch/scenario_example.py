@@ -42,7 +42,7 @@ def main():
 
     # Use the bootstrap to make 3 scenarios and print
     bootscens = sc.ScenarioSet("Bootstrap")
-    scenmaker.ScenariosFromBoostrap(bootscens, 3)
+    scenmaker.ScenariosFromBootstrap(bootscens, 3)
     for s in bootscens.ScensIterator():
         print("{}, {}".format(s.name, s.probability))
         for n, v in s.ThetaVals.items():

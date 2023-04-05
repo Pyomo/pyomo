@@ -497,7 +497,7 @@ class BlockMatrix(BaseBlockMatrix):
             assert other.bshape[0] == self.bshape[1], "Dimension mismatch"
             result = BlockMatrix(self.bshape[0], other.bshape[1])
 
-            # get dimenions from the other matrix
+            # get dimensions from the other matrix
             other_col_sizes = other.col_block_sizes(copy=False)
 
             # compute result
@@ -1153,8 +1153,8 @@ class BlockMatrix(BaseBlockMatrix):
                     else:
                         nrows = self._brow_lengths[i]
                         ncols = self._bcol_lengths[j]
-                        matc = coo_matrix((nrows, ncols))
-                        result.set_block(i, j, operation(matc, other))
+                        match = coo_matrix((nrows, ncols))
+                        result.set_block(i, j, operation(match, other))
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockMatrix':
@@ -1209,7 +1209,7 @@ class BlockMatrix(BaseBlockMatrix):
         assert not self.has_undefined_col_sizes(), msgc
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self._bcol_lengths.cumsum()
         assert index >= 0, 'index out of bounds'
         assert index < cum[bn - 1], 'index out of bounds'
@@ -1247,7 +1247,7 @@ class BlockMatrix(BaseBlockMatrix):
         assert not self.has_undefined_row_sizes(), msgr
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self._brow_lengths.cumsum()
         assert index >= 0, 'index out of bounds'
         assert index < cum[bm - 1], 'index out of bounds'

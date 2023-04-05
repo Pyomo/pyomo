@@ -111,7 +111,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         del theta_est['samples']
 
-        # apply cofidence region test
+        # apply confidence region test
         CR = self.pest.confidence_region_test(theta_est, 'MVN', [0.5, 0.75, 1.0])
 
         self.assertTrue(set(CR.columns) >= set([0.5, 0.75, 1.0]))
@@ -860,7 +860,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         # Number of datapoints.
         # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
         # In this example, this is the number of data points in data_df, but that's
-        # only because the data is indexed by time and contains no additional inforamtion.
+        # only because the data is indexed by time and contains no additional information.
         n = 60
 
         # Compute covariance using parmest

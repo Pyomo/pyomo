@@ -513,7 +513,7 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
             default=1e-8,
             description="""
             When generating cuts, small duals multiplied by expressions can
-            cause problems. Exclude all duals smaller in absolue value than the
+            cause problems. Exclude all duals smaller in absolute value than the
             following.""",
         ),
     )

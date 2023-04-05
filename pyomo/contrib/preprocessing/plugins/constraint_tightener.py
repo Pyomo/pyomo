@@ -44,7 +44,7 @@ class TightenConstraintFromVars(IsomorphicTransformation):
             if repn.constant:
                 LB = UB = repn.constant
 
-            # loop through each coefficent and variable pair
+            # loop through each coefficient and variable pair
             for var, coef in zip(repn.linear_vars, repn.linear_coefs):
                 # Calculate bounds using interval arithmetic
                 if coef >= 0:

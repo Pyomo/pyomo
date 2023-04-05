@@ -1321,7 +1321,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         Parameters
         ----------
         param: str
-            The gurobi parameter to get info for. See Gurobi documenation for possible options.
+            The gurobi parameter to get info for. See Gurobi documentation for possible options.
 
         Returns
         -------
@@ -1418,7 +1418,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             raise ValueError('cbCut expected an active constraint.')
 
         if is_fixed(con.body):
-            raise ValueError('cbCut expected a non-trival constraint')
+            raise ValueError('cbCut expected a non-trivial constraint')
 
         (
             gurobi_expr,
@@ -1503,7 +1503,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             raise ValueError('cbLazy expected an active constraint.')
 
         if is_fixed(con.body):
-            raise ValueError('cbLazy expected a non-trival constraint')
+            raise ValueError('cbLazy expected a non-trivial constraint')
 
         (
             gurobi_expr,

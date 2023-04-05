@@ -505,7 +505,7 @@ class CyIpoptSolver(object):
         # We preemptively set up the TeeStream, even if we aren't
         # going to use it: the implementation is such that the
         # context manager does nothing (i.e., doesn't start up any
-        # processing threads) until afer a client accesses
+        # processing threads) until after a client accesses
         # STDOUT/STDERR
         with TeeStream(sys.stdout) as _teeStream:
             if tee:
@@ -527,7 +527,7 @@ def _numpy_vector(val):
     ans = np.array(val, np.float64)
     if len(ans.shape) != 1:
         raise ValueError(
-            "expected a vector, but recieved a matrix with shape %s" % (ans.shape,)
+            "expected a vector, but received a matrix with shape %s" % (ans.shape,)
         )
     return ans
 
@@ -653,7 +653,7 @@ class PyomoCyIpoptSolver(object):
             # We preemptively set up the TeeStream, even if we aren't
             # going to use it: the implementation is such that the
             # context manager does nothing (i.e., doesn't start up any
-            # processing threads) until afer a client accesses
+            # processing threads) until after a client accesses
             # STDOUT/STDERR
             with TeeStream(sys.stdout) as _teeStream:
                 if config.tee:

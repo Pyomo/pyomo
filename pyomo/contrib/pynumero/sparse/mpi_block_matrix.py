@@ -401,12 +401,12 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 row_sizes, col_sizes = np.split(proc_dims[k], [self.bshape[0]])
                 rows_length.add(row_sizes[i])
             if len(rows_length) > 2:
-                msg = 'Row {} has more than one dimension accross processors'.format(i)
+                msg = 'Row {} has more than one dimension across processors'.format(i)
                 raise RuntimeError(msg)
             elif len(rows_length) == 2:
                 if -1 not in rows_length:
                     msg = (
-                        'Row {} has more than one dimension accross processors'.format(
+                        'Row {} has more than one dimension across processors'.format(
                             i
                         )
                     )
@@ -428,13 +428,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 rows_sizes, col_sizes = np.split(proc_dims[k], [self.bshape[0]])
                 cols_length.add(col_sizes[i])
             if len(cols_length) > 2:
-                msg = 'Column {} has more than one dimension accross processors'.format(
+                msg = 'Column {} has more than one dimension across processors'.format(
                     i
                 )
                 raise RuntimeError(msg)
             elif len(cols_length) == 2:
                 if -1 not in cols_length:
-                    msg = 'Column {} has more than one dimension accross processors'.format(
+                    msg = 'Column {} has more than one dimension across processors'.format(
                         i
                     )
                     raise RuntimeError(msg)
@@ -1084,7 +1084,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         assert_block_structure(self)
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self.col_block_sizes(copy=False).cumsum()
         assert index >= 0, 'index out of bounds'
         assert index < cum[bn - 1], 'index out of bounds'
@@ -1118,7 +1118,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         assert_block_structure(self)
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self.row_block_sizes(copy=False).cumsum()
         assert index >= 0, 'index out of bounds'
         assert index < cum[bm - 1], 'index out of bounds'

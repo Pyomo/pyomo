@@ -22,5 +22,9 @@ conext = "conext"
 afe = "afe"
 # Ignore Fo from PyNumero tests
 Fo = "Fo"
+# Ignore ba from contrib
+ba = "ba"
+# Ignore complimentarity from interior_point
+complimentarity = "complimentarity"
 # Add More Words Here
 

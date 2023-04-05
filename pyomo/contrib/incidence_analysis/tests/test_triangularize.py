@@ -160,7 +160,7 @@ class TestTriangularize(unittest.TestCase):
         col_values = set(row_block_map.values())
 
         # For a (block) diagonal matrix, the order of diagonal
-        # blocks is arbitary, so we can't perform any strong
+        # blocks is arbitrary, so we can't perform any strong
         # checks here.
         #
         # Perfect matching is unique, but order of strongly

@@ -176,7 +176,7 @@ class testSelectiveClone(unittest.TestCase):
         self.assertNotEqual(
             id(m.first_stage_vars),
             id(cloned_model.first_stage_vars),
-            msg="First stage variables shouldnot be equal.",
+            msg="First stage variables shouldnt be equal.",
         )
 
     def test_cloning_positive_case(self):
@@ -193,7 +193,7 @@ class testSelectiveClone(unittest.TestCase):
         cloned_model = selective_clone(block=m, first_stage_vars=m.first_stage_vars)
 
         self.assertEqual(
-            id(m.x), id(cloned_model.x), msg="First stage variables shouldbe equal."
+            id(m.x), id(cloned_model.x), msg="First stage variables should equal."
         )
         self.assertNotEqual(
             id(m.y),
@@ -4088,7 +4088,7 @@ class RegressionTest(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         # two GAMS solvers, one of which has reslim set
-        # (overriden when invoked in PyROS)
+        # (overridden when invoked in PyROS)
         local_subsolvers = [
             SolverFactory("gams:conopt"),
             SolverFactory("gams:conopt"),

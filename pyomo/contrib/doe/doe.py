@@ -137,7 +137,7 @@ class DesignOfExperiments:
 
         if self.formula not in ['central', 'forward', 'backward', None]:
             raise ValueError(
-                'Finite difference scheme should be chosen from "central", "forward", "backward" and None while receiving {}.'.formate(
+                'Finite difference scheme should be chosen from "central", "forward", "backward" and None while receiving {}.'.format(
                     self.formula
                 )
             )

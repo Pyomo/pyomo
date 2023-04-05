@@ -62,7 +62,7 @@ To use this interface:
      ExternalGreyBoxModel, it will automatically create pyomo variables to
      represent the inputs and the outputs from the external model. You
      can implement a callback to modify the Pyomo block after it is
-     constructed. This also provides a mechanism to initalize variables,
+     constructed. This also provides a mechanism to initialize variables,
      etc.
 
    * Create a PyomoGreyBoxNLP and provide it with the Pyomo model
@@ -193,7 +193,7 @@ class ExternalGreyBoxModel(object):
         """
         This method is called by the solver to set the current values
         for the input variables. The derived class must cache these if
-        necessary for any subsequent calls to evalute_outputs or
+        necessary for any subsequent calls to evaluate_outputs or
         evaluate_derivatives.
         """
         raise NotImplementedError(
@@ -218,7 +218,7 @@ class ExternalGreyBoxModel(object):
 
         raise NotImplementedError(
             'Derived ExternalGreyBoxModel classes need to implement'
-            ' set_equality_constraint_multlipliers when they'
+            ' set_equality_constraint_multipliers when they'
             ' support Hessian computations.'
         )
 
@@ -239,7 +239,7 @@ class ExternalGreyBoxModel(object):
 
         raise NotImplementedError(
             'Derived ExternalGreyBoxModel classes need to implement'
-            ' set_output_constraint_multlipliers when they'
+            ' set_output_constraint_multipliers when they'
             ' support Hessian computations.'
         )
 

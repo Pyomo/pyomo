@@ -164,7 +164,7 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None, nonant_for_fixed_vars=Tru
 
     Returns:
         EF_instance (ConcreteModel): ConcreteModel of extensive form with
-            explicity non-anticipativity constraints.
+            explicitly non-anticipativity constraints.
 
     Notes:
         The non-anticipativity constraints are enforced by creating
@@ -223,7 +223,7 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None, nonant_for_fixed_vars=Tru
                 " _mpisppy_probability and try again."
             ) from e
     # Normalization does nothing when solving the full EF, but is required for
-    # appropraite scaling of EFs used as bundles.
+    # appropriate scaling of EFs used as bundles.
     EF_instance.EF_Obj.expr /= EF_instance._mpisppy_probability
 
     # For each node in the scenario tree, we need to collect the

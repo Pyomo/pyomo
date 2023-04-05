@@ -48,7 +48,7 @@ get_duals                                  x
 get_reduced_costs                          x
 range constraints                          x
 MILP
-Model updates - added constriants          x
+Model updates - added constraints          x
 Model updates - removed constraints        x
 Model updates - added vars
 Model updates - removed vars

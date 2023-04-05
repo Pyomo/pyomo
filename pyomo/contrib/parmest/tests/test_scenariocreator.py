@@ -138,7 +138,7 @@ class TestScenarioSemibatch(unittest.TestCase):
         scenmaker = sc.ScenarioCreator(self.pest, "ipopt")
         bootscens = sc.ScenarioSet("Bootstrap")
         numtomake = 2
-        scenmaker.ScenariosFromBoostrap(bootscens, numtomake, seed=1134)
+        scenmaker.ScenariosFromBootstrap(bootscens, numtomake, seed=1134)
         tval = bootscens.ScenarioNumber(0).ThetaVals["k1"]
         self.assertAlmostEqual(tval, 20.64, places=1)
 

@@ -194,7 +194,7 @@ class MA57Interface(object):
         elif len(shape) == 2:
             # FIXME
             raise NotImplementedError(
-                'Funcionality for solving a matrix of right hand '
+                'Functionality for solving a matrix of right hand '
                 'is buggy and needs fixing.'
             )
             rhs_dim = rhs.shape[0]

@@ -237,7 +237,7 @@ def _treemaker(scenlist):
     """
 
     num_scenarios = len(scenlist)
-    m = scenariotree.tree_structure_model.CreateAbstractScenarioTreeModel()
+    m = scenario_tree.tree_structure_model.CreateAbstractScenarioTreeModel()
     m = m.create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
@@ -708,12 +708,12 @@ class Estimator(object):
 
         WorstStatus = pyo.TerminationCondition.optimal
         totobj = 0
-        senario_numbers = list(range(len(self.callback_data)))
+        scenario_numbers = list(range(len(self.callback_data)))
         if initialize_parmest_model:
             # create dictionary to store pyomo model instances (scenarios)
             scen_dict = dict()
 
-        for snum in senario_numbers:
+        for snum in scenario_numbers:
             sname = "scenario_NODE" + str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
 
@@ -812,7 +812,7 @@ class Estimator(object):
             objval = pyo.value(objobject)
             totobj += objval
 
-        retval = totobj / len(senario_numbers)  # -1??
+        retval = totobj / len(scenario_numbers)  # -1??
         if initialize_parmest_model and not hasattr(self, 'ef_instance'):
             # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
@@ -848,11 +848,11 @@ class Estimator(object):
 
         samplelist = list()
 
-        senario_numbers = list(range(len(self.callback_data)))
+        scenario_numbers = list(range(len(self.callback_data)))
 
         if num_samples is None:
             # This could get very large
-            for i, l in enumerate(combinations(senario_numbers, samplesize)):
+            for i, l in enumerate(combinations(scenario_numbers, samplesize)):
                 samplelist.append((i, np.sort(l)))
         else:
             for i in range(num_samples):
@@ -863,7 +863,7 @@ class Estimator(object):
                     not duplicate
                 ):
                     sample = np.random.choice(
-                        senario_numbers, samplesize, replace=replacement
+                        scenario_numbers, samplesize, replace=replacement
                     )
                     sample = np.sort(sample).tolist()
                     unique_samples = len(np.unique(sample))
@@ -1195,8 +1195,8 @@ class Estimator(object):
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
             # # check if theta_names are in model
-            for thta in list(theta_names):
-                theta_temp = thta.replace("'", "")  # cleaning quotes from theta_names
+            for theta in list(theta_names):
+                theta_temp = theta.replace("'", "")  # cleaning quotes from theta_names
 
                 assert theta_temp in [
                     t.replace("'", "") for t in model_theta_list

@@ -3,7 +3,7 @@ from pyomo.contrib.pynumero.examples.callback.reactor_design import model as m
 import pandas as pd
 
 """
-This example uses an interation callback with a functor to store
+This example uses an iteration callback with a functor to store
 values from each iteration in a class
 """
 

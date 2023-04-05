@@ -36,7 +36,7 @@ from pyomo.opt import SolverFactory, SolverResults, SolverStatus
 def solve_subproblem(solve_data, config):
     """Solves the Fixed-NLP (with fixed integers).
 
-    This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their intial var values,
+    This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their initial var values,
     precomputes dual values, deactivates trivial constraints, and then solves NLP model.
 
     Parameters
@@ -63,7 +63,7 @@ def solve_subproblem(solve_data, config):
     MindtPy.cuts.deactivate()
     if config.calculate_dual_at_solution:
         fixed_nlp.tmp_duals = ComponentMap()
-        # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
+        # tmp_duals are the value of the dual variables stored before using deactivate trivial constraints
         # The values of the duals are computed as follows: (Complementary Slackness)
         #
         # | constraint | c_geq | status at x1 | tmp_dual (violation) |

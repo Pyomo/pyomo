@@ -224,7 +224,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             assert (
                 x1.nblocks == x2.nblocks
             ), 'Operation on BlockVectors need the same number of blocks on each operand'
-            assert x1.size == x2.size, 'Dimension missmatch {}!={}'.format(
+            assert x1.size == x2.size, 'Dimension mismatch {}!={}'.format(
                 x1.size, x2.size
             )
             res = BlockVector(x1.nblocks)
@@ -241,7 +241,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             return res
         elif type(x1) == np.ndarray and isinstance(x2, BlockVector):
             assert_block_structure(x2)
-            assert x1.size == x2.size, 'Dimension missmatch {}!={}'.format(
+            assert x1.size == x2.size, 'Dimension mismatch {}!={}'.format(
                 x1.size, x2.size
             )
             res = BlockVector(x2.nblocks)
@@ -260,7 +260,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             return res
         elif type(x2) == np.ndarray and isinstance(x1, BlockVector):
             assert_block_structure(x1)
-            assert x1.size == x2.size, 'Dimension missmatch {}!={}'.format(
+            assert x1.size == x2.size, 'Dimension mismatch {}!={}'.format(
                 x1.size, x2.size
             )
             res = BlockVector(x1.nblocks)
@@ -821,7 +821,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                         raise RuntimeError('Input not recognized')
                 elif self.get_block(idx) is None:
                     if isinstance(other.get_block(idx), np.ndarray):
-                        # this inlcude block vectors too
+                        # this include block vectors too
                         self.set_block(idx, other.get_block(idx).copy())
                     else:
                         raise RuntimeError('Input not recognized')
@@ -980,8 +980,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return self.__add__(other)
 
     def __sub__(self, other):
-        # substract this BlockVector with other vector
-        # supports substraction with scalar, numpy.ndarray and BlockVectors
+        # subtract this BlockVector with other vector
+        # supports subtraction with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
         result = BlockVector(self.nblocks)
         assert_block_structure(self)
