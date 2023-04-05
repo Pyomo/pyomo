@@ -67,10 +67,18 @@ class LPWriter(PersistentBase):
             self.set_objective(None)
 
     def _add_variables(self, variables: List[_GeneralVarData]):
-        cmodel.process_pyomo_vars(self._expr_types, variables, self._pyomo_var_to_solver_var_map,
-                                  self._pyomo_param_to_solver_param_map, self._vars,
-                                  self._solver_var_to_pyomo_var_map, True, self._symbol_map,
-                                  self._var_labeler, False)
+        cmodel.process_pyomo_vars(
+            self._expr_types,
+            variables,
+            self._pyomo_var_to_solver_var_map,
+            self._pyomo_param_to_solver_param_map,
+            self._vars,
+            self._solver_var_to_pyomo_var_map,
+            True,
+            self._symbol_map,
+            self._var_labeler,
+            False,
+        )
 
     def _add_params(self, params: List[_ParamData]):
         cparams = cmodel.create_params(len(params))
@@ -110,10 +118,18 @@ class LPWriter(PersistentBase):
             self._symbol_map.removeSymbol(p)
 
     def _update_variables(self, variables: List[_GeneralVarData]):
-        cmodel.process_pyomo_vars(self._expr_types, variables, self._pyomo_var_to_solver_var_map,
-                                  self._pyomo_param_to_solver_param_map, self._vars,
-                                  self._solver_var_to_pyomo_var_map, False, None,
-                                  None, True)
+        cmodel.process_pyomo_vars(
+            self._expr_types,
+            variables,
+            self._pyomo_var_to_solver_var_map,
+            self._pyomo_param_to_solver_param_map,
+            self._vars,
+            self._solver_var_to_pyomo_var_map,
+            False,
+            None,
+            None,
+            True,
+        )
 
     def update_params(self):
         for p_id, p in self._params.items():
@@ -121,8 +137,12 @@ class LPWriter(PersistentBase):
             cp.value = p.value
 
     def _set_objective(self, obj: _GeneralObjectiveData):
-        cobj = cmodel.process_lp_objective(self._expr_types, obj, self._pyomo_var_to_solver_var_map,
-                                           self._pyomo_param_to_solver_param_map)
+        cobj = cmodel.process_lp_objective(
+            self._expr_types,
+            obj,
+            self._pyomo_var_to_solver_var_map,
+            self._pyomo_param_to_solver_param_map,
+        )
         if obj is None:
             sense = 0
             cname = 'objective'
@@ -152,10 +172,14 @@ class LPWriter(PersistentBase):
         timer.stop('write file')
 
     def get_vars(self):
-        return [self._solver_var_to_pyomo_var_map[i] for i in self._writer.get_solve_vars()]
+        return [
+            self._solver_var_to_pyomo_var_map[i] for i in self._writer.get_solve_vars()
+        ]
 
     def get_ordered_cons(self):
-        return [self._solver_con_to_pyomo_con_map[i] for i in self._writer.get_solve_cons()]
+        return [
+            self._solver_con_to_pyomo_con_map[i] for i in self._writer.get_solve_cons()
+        ]
 
     def get_active_objective(self):
         return self._objective

@@ -12,6 +12,7 @@
 import sys
 from pyomo.common.cmake_builder import build_cmake_project
 
+
 def build_pynumero(user_args=[], parallel=None):
     return build_cmake_project(
         targets=['src'],
@@ -21,9 +22,11 @@ def build_pynumero(user_args=[], parallel=None):
         parallel=parallel,
     )
 
+
 class PyNumeroBuilder(object):
     def __call__(self, parallel):
         return build_pynumero(parallel=parallel)
+
 
 if __name__ == "__main__":
     build_pynumero(sys.argv[1:])

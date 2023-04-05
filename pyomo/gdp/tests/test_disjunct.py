@@ -515,7 +515,7 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant Pyomo " r"numeric value \(biv\) to bool",
+                r"Cannot convert non-constant Pyomo numeric value \(biv\) to bool",
             ):
                 bool(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
@@ -524,7 +524,7 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
                 TypeError,
-                r"Implicit conversion of Pyomo numeric " r"value \(biv\) to float",
+                r"Implicit conversion of Pyomo numeric value \(biv\) to float",
             ):
                 float(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
@@ -533,7 +533,7 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
                 TypeError,
-                r"Implicit conversion of Pyomo numeric " r"value \(biv\) to int",
+                r"Implicit conversion of Pyomo numeric value \(biv\) to int",
             ):
                 int(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())

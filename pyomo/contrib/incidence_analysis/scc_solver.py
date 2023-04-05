@@ -27,9 +27,7 @@ _log = logging.getLogger(__name__)
 
 
 def generate_strongly_connected_components(
-    constraints,
-    variables=None,
-    include_fixed=False,
+    constraints, variables=None, include_fixed=False
 ):
     """Yield in order ``_BlockData`` that each contain the variables and
     constraints of a single diagonal block in a block lower triangularization
@@ -62,10 +60,7 @@ def generate_strongly_connected_components(
         var_set = ComponentSet()
         variables = []
         for con in constraints:
-            for var in identify_variables(
-                con.expr,
-                include_fixed=include_fixed,
-            ):
+            for var in identify_variables(con.expr, include_fixed=include_fixed):
                 if var not in var_set:
                     variables.append(var)
                     var_set.add(var)
@@ -75,12 +70,9 @@ def generate_strongly_connected_components(
     var_blocks, con_blocks = igraph.block_triangularize(
         variables=variables, constraints=constraints
     )
-    subsets = [
-        (cblock, vblock) for vblock, cblock in zip(var_blocks, con_blocks)
-    ]
+    subsets = [(cblock, vblock) for vblock, cblock in zip(var_blocks, con_blocks)]
     for block, inputs in generate_subsystem_blocks(
-        subsets,
-        include_fixed=include_fixed,
+        subsets, include_fixed=include_fixed
     ):
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
@@ -88,10 +80,7 @@ def generate_strongly_connected_components(
 
 
 def solve_strongly_connected_components(
-    block,
-    solver=None,
-    solve_kwds=None,
-    calc_var_kwds=None,
+    block, solver=None, solve_kwds=None, calc_var_kwds=None
 ):
     """Solve a square system of variables and equality constraints by
     solving strongly connected components individually.
@@ -141,10 +130,7 @@ def solve_strongly_connected_components(
 
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
-    for scc, inputs in generate_strongly_connected_components(
-        constraints,
-        variables,
-    ):
+    for scc, inputs in generate_strongly_connected_components(constraints, variables):
         with TemporarySubsystemManager(to_fix=inputs):
             N = len(scc.vars)
             if N == 1:

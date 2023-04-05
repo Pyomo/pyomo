@@ -15,13 +15,9 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.util.subsystems import (
-    create_subsystem_block,
-)
+from pyomo.util.subsystems import create_subsystem_block
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-    ExternalGreyBoxModel,
-)
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
     SccImplicitFunctionSolver,
 )
@@ -53,7 +49,7 @@ def _dense_to_full_sparse(matrix):
     for i, j in itertools.product(range(nrow), range(ncol)):
         row.append(i)
         col.append(j)
-        data.append(matrix[i,j])
+        data.append(matrix[i, j])
     row = np.array(row)
     col = np.array(col)
     data = np.array(data)
@@ -68,7 +64,7 @@ def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None, nlp=None):
         wrt2 = variables
     elif wrt1 is not None and wrt2 is not None:
         variables = wrt1 + wrt2
-    elif wrt1 is not None: # but wrt2 is None
+    elif wrt1 is not None:  # but wrt2 is None
         wrt2 = wrt1
         variables = wrt1
     else:
@@ -180,8 +176,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         # We only need this block to construct the NLP, which wouldn't
         # be necessary if we could compute Hessians of Pyomo constraints.
         self._block = create_subsystem_block(
-            residual_cons+external_cons,
-            input_vars+external_vars,
+            residual_cons + external_cons, input_vars + external_vars
         )
         self._block._obj = Objective(expr=0.0)
         self._timer.start("PyomoNLP")
@@ -222,6 +217,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
     # I would like to try to get by without using the following "name" methods.
     def input_names(self):
         return ["input_%i" % i for i in range(self.n_inputs())]
+
     def equality_constraint_names(self):
         return ["residual_%i" % i for i in range(self.n_equality_constraints())]
 
@@ -259,7 +255,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
     def set_external_constraint_multipliers(self, eq_con_multipliers):
         eq_con_multipliers = np.array(eq_con_multipliers)
         external_multipliers = self.calculate_external_constraint_multipliers(
-            eq_con_multipliers,
+            eq_con_multipliers
         )
         multipliers = np.concatenate((eq_con_multipliers, external_multipliers))
         cons = self.residual_cons + self.external_cons
@@ -292,7 +288,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         jgy_t = jgy.transpose()
         jfy_t = jfy.transpose()
-        dfdg = - sps.linalg.splu(jgy_t.tocsc()).solve(jfy_t.toarray())
+        dfdg = -sps.linalg.splu(jgy_t.tocsc()).solve(jfy_t.toarray())
         resid_multipliers = np.array(resid_multipliers)
         external_multipliers = dfdg.dot(resid_multipliers)
         return external_multipliers
@@ -352,7 +348,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         nf = len(f)
         nx = len(x)
-        n_entries = nf*nx
+        n_entries = nf * nx
 
         # TODO: Does it make sense to cast dydx to a sparse matrix?
         # My intuition is that it does only if jgy is "decomposable"
@@ -394,15 +390,15 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         ny = len(y)
         nx = len(x)
 
-        hgxx = np.array([
-            get_hessian_of_constraint(con, x, nlp=nlp).toarray() for con in g
-            ])
-        hgxy = np.array([
-            get_hessian_of_constraint(con, x, y, nlp=nlp).toarray() for con in g
-            ])
-        hgyy = np.array([
-            get_hessian_of_constraint(con, y, nlp=nlp).toarray() for con in g
-            ])
+        hgxx = np.array(
+            [get_hessian_of_constraint(con, x, nlp=nlp).toarray() for con in g]
+        )
+        hgxy = np.array(
+            [get_hessian_of_constraint(con, x, y, nlp=nlp).toarray() for con in g]
+        )
+        hgyy = np.array(
+            [get_hessian_of_constraint(con, y, nlp=nlp).toarray() for con in g]
+        )
 
         # This term is sparse, but we do not exploit it.
         term1 = hgxx
@@ -420,7 +416,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         rhs = term1 + term2 + term3
 
-        rhs.shape = (ny, nx*nx)
+        rhs.shape = (ny, nx * nx)
         sol = jgy_fact.solve(rhs)
         sol.shape = (ny, nx, nx)
         d2ydx2 = -sol
@@ -447,15 +443,15 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         nf = len(f)
         nx = len(x)
 
-        hfxx = np.array([
-            get_hessian_of_constraint(con, x, nlp=nlp).toarray() for con in f
-            ])
-        hfxy = np.array([
-            get_hessian_of_constraint(con, x, y, nlp=nlp).toarray() for con in f
-            ])
-        hfyy = np.array([
-            get_hessian_of_constraint(con, y, nlp=nlp).toarray() for con in f
-            ])
+        hfxx = np.array(
+            [get_hessian_of_constraint(con, x, nlp=nlp).toarray() for con in f]
+        )
+        hfxy = np.array(
+            [get_hessian_of_constraint(con, x, y, nlp=nlp).toarray() for con in f]
+        )
+        hfyy = np.array(
+            [get_hessian_of_constraint(con, y, nlp=nlp).toarray() for con in f]
+        )
 
         d2ydx2 = self.evaluate_hessian_external_variables()
 
@@ -464,7 +460,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         term2 = prod + prod.transpose((0, 2, 1))
         term3 = hfyy.dot(dydx).transpose((0, 2, 1)).dot(dydx)
 
-        d2ydx2.shape = (ny, nx*nx)
+        d2ydx2.shape = (ny, nx * nx)
         term4 = jfy.dot(d2ydx2)
         term4.shape = (nf, nx, nx)
 
