@@ -473,14 +473,14 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 processor_sizes = proc_dims[k]
                 block_length.add(processor_sizes[i])
             if len(block_length) > 2:
-                msg = 'Block {} has more than one dimension across processors'.format(
-                    i
-                )
+                msg = 'Block {} has more than one dimension across processors'.format(i)
                 raise RuntimeError(msg)
             elif len(block_length) == 2:
                 if -1 not in block_length:
-                    msg = 'Block {} has more than one dimension across processors'.format(
-                        i
+                    msg = (
+                        'Block {} has more than one dimension across processors'.format(
+                            i
+                        )
                     )
                     raise RuntimeError(msg)
                 block_length.remove(-1)

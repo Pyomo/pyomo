@@ -405,10 +405,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 raise RuntimeError(msg)
             elif len(rows_length) == 2:
                 if -1 not in rows_length:
-                    msg = (
-                        'Row {} has more than one dimension across processors'.format(
-                            i
-                        )
+                    msg = 'Row {} has more than one dimension across processors'.format(
+                        i
                     )
                     raise RuntimeError(msg)
                 rows_length.remove(-1)

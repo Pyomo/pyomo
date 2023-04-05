@@ -16,7 +16,8 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
     "Use of the constraint tightener transformation is deprecated. "
     "Its functionality may be partially replicated using "
     "`pyomo.contrib.fbbt.compute_bounds_on_expr(constraint.body)`.",
-    version='5.7')
+    version='5.7',
+)
 class TightenConstraintFromVars(IsomorphicTransformation):
     """Tightens upper and lower bound on constraints based on variable bounds.
 
