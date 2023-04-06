@@ -929,7 +929,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '
                         'results.termination_condition and '
-                        'resutls.found_feasible_solution() before loading a solution.'
+                        'results.found_feasible_solution() before loading a solution.'
                     )
                 self.load_vars()
             else:
@@ -937,7 +937,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'resutls.best_feasible_objective before loading a solution.'
+                    'results.best_feasible_objective before loading a solution.'
                 )
         timer.stop('load solution')
 
