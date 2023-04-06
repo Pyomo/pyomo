@@ -21,7 +21,7 @@ from pyomo.core import (
     ExternalFunction, maximize, minimize, NonNegativeIntegers, Objective,
     Param, RangeSet, Set, SetOf, SortComponents, Suffix, value, Var
 )
-from pyomo.core.base import Reference, Transformation, TransformationFactory
+from pyomo.core.base import Reference, TransformationFactory
 import pyomo.core.expr.current as EXPR
 from pyomo.core.util import target_list
 
