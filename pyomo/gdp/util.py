@@ -95,6 +95,13 @@ def _raise_disjunct_in_multiple_disjunctions_error(disjunct, disjunction):
                                                      disjunction.name))
 
 class GDPTree:
+    """
+    Stores a forest representing the hierarchy between GDP components on a
+    model: for single-level GDPs, each tree is rooted at a Disjunction and
+    each of the Disjuncts in the Disjunction is a leaf. For nested GDPs, the
+    Disjuncts may not be leaves, and could have child Disjunctions of their
+    own.
+    """
     def __init__(self):
         self._adjacency_list = {}
         self._in_degrees = {}
