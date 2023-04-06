@@ -90,10 +90,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
             default=None,
             domain=target_list,
             description="target or list of targets to which slacks will be added",
-            doc="""
-
-        This specifies the list of Constraints to add slack variables to.
-        """,
+            doc="This specifies the list of Constraints to add slack variables to.",
         ),
     )
 

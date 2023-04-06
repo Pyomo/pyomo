@@ -215,7 +215,6 @@ class ExternalFunction(Component):
         return EXPR.NPV_ExternalFunctionExpression(args_, self)
 
     def evaluate(self, args):
-
         """Return the value of the function given the specified arguments
 
         Parameters
@@ -335,7 +334,6 @@ class ExternalFunction(Component):
 
 
 class AMPLExternalFunction(ExternalFunction):
-
     __autoslot_mappers__ = {
         # Remove reference to loaded library (they are not copyable or
         # picklable)
@@ -638,29 +636,25 @@ class _ARGLIST(Structure):
         ('sa', POINTER(c_char_p)),  # symbolic IN args
         ('derivs', POINTER(c_double)),  # for partial derivatives (if nonzero)
         ('hes', POINTER(c_double)),  # for second partials (if nonzero)
-        ('dig', POINTER(c_byte)),  # if (dig && dig[i]) { partials w.r.t.
-        # 	ra[i] will not be used }
+        # if (dig && dig[i]) { partials w.r.t. ra[i] will not be used }
+        ('dig', POINTER(c_byte)),
         ('funcinfo', c_char_p),  # for use by the function (if desired)
         ('AE', c_void_p),  # functions made visible (via #defines below)
         ('f', c_void_p),  # for internal use by AMPL
         ('tva', c_void_p),  # for internal use by AMPL
         ('Errmsg', c_char_p),  # To indicate an error, set this to a
-        # description of the error.  When derivs
-        # is nonzero and the error is that first
-        # derivatives cannot or are not computed,
-        # a single quote character (') should be
-        # the first character in the text assigned
-        # to Errmsg, followed by the actual error
-        # message.  Similarly, if hes is nonzero
-        # and the error is that second derivatives
-        # are not or cannot be computed, a double
-        # quote character (") should be the first
-        # character in Errmsg, followed by the
-        # actual error message text.
+        # description of the error.  When derivs is nonzero and the
+        # error is that first derivatives cannot or are not computed, a
+        # single quote character (') should be the first character in
+        # the text assigned to Errmsg, followed by the actual error
+        # message.  Similarly, if hes is nonzero and the error is that
+        # second derivatives are not or cannot be computed, a double
+        # quote character (") should be the first character in Errmsg,
+        # followed by the actual error message text.
         ('TMI', c_void_p),  # used in Tempmem calls
-        ('Private', c_char_p),  # The following fields are relevant
-        # only when imported functions are called
-        # by AMPL commands (not declarations).
+        ('Private', c_char_p),
+        # The following fields are relevant only when imported functions
+        # are called by AMPL commands (not declarations).
         ('nin', c_int),  # number of input (IN and INOUT) args
         ('nout', c_int),  # number of output (OUT and INOUT) args
         ('nsin', c_int),  # number of symbolic input arguments

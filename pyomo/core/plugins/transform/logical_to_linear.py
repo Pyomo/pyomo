@@ -54,13 +54,13 @@ class LogicalToLinear(IsomorphicTransformation):
             domain=target_list,
             description="target or list of targets that will be relaxed",
             doc="""
-        This specifies the list of LogicalConstraints to transform, or the 
-        list of Blocks or Disjuncts on which to transform all of the 
-        LogicalConstraints. Note that if the transformation is done out
-        of place, the list of targets should be attached to the model before it
-        is cloned, and the list will specify the targets on the cloned
-        instance.
-        """,
+            This specifies the list of LogicalConstraints to transform, or the
+            list of Blocks or Disjuncts on which to transform all of the
+            LogicalConstraints. Note that if the transformation is done out
+            of place, the list of targets should be attached to the model before it
+            is cloned, and the list will specify the targets on the cloned
+            instance.
+            """,
         ),
     )
 

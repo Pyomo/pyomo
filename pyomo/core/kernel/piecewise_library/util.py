@@ -100,7 +100,7 @@ def characterize_function(breakpoints, values):
             function corresponding to the breakpoints.
 
     Returns:
-        (int, list): a function characterization code and \
+        (int, list): a function characterization code and
             the list of slopes.
 
     .. note::

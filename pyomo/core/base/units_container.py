@@ -128,8 +128,10 @@ from pyomo.core.expr import current as EXPR
 pint_module, pint_available = attempt_import(
     'pint',
     defer_check=True,
-    error_message='The "pint" package failed '
-    'to import. This package is necessary to use Pyomo units.',
+    error_message=(
+        'The "pint" package failed to import. '
+        'This package is necessary to use Pyomo units.'
+    ),
 )
 
 logger = logging.getLogger(__name__)
@@ -631,7 +633,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             for i, a in enumerate(arg_units):
                 arg_units[i] = self._pyomo_units_container._get_pint_units(a)
 
-        for (arg_unit, pint_unit) in zip(arg_units, child_units):
+        for arg_unit, pint_unit in zip(arg_units, child_units):
             assert arg_unit is not None
             if not self._equivalent_pint_units(arg_unit, pint_unit):
                 raise InconsistentUnitsError(
@@ -1055,20 +1057,19 @@ class PyomoUnitsContainer(object):
         self._pint_registry.load_definitions(definition_string_list)
 
     def __getattr__(self, item):
-        """
-                Here, __getattr__ is implemented to automatically create the necessary unit if
-                the attribute does not already exist.
+        """Here, __getattr__ is implemented to automatically create the
+        necessary unit if the attribute does not already exist.
 
-                Parameters
-                ----------
-                item : str
-                    the name of the new field requested
-        external
-                Returns
-                -------
-                : PyomoUnit
-                   returns a PyomoUnit corresponding to the requested attribute,
-                   or None if it cannot be created.
+        Parameters
+        ----------
+        item : str
+            the name of the new field requested external
+
+        Returns
+        -------
+        PyomoUnit
+            returns a PyomoUnit corresponding to the requested attribute,
+            or None if it cannot be created.
 
         """
         # since __getattr__ was called, we must not have this field yet
@@ -1083,7 +1084,7 @@ class PyomoUnitsContainer(object):
                 pint_unit_container = pint_module.util.to_units_container(
                     pint_unit, pint_registry
                 )
-                for (u, e) in pint_unit_container.items():
+                for u, e in pint_unit_container.items():
                     if not pint_registry._units[u].is_multiplicative:
                         raise UnitsError(
                             'Pyomo units system does not support the offset '
@@ -1200,9 +1201,9 @@ class PyomoUnitsContainer(object):
         return self._pintUnitExtractionVisitor.walk_expression(expr=expr)
 
     def get_units(self, expr):
-        """
-        Return the Pyomo units corresponding to this expression (also performs validation
-        and will raise an exception if units are not consistent).
+        """Return the Pyomo units corresponding to this expression (also
+        performs validation and will raise an exception if units are not
+        consistent).
 
         Parameters
         ----------
@@ -1226,9 +1227,10 @@ class PyomoUnitsContainer(object):
     ):
         if type(numerical_value) not in native_numeric_types:
             raise UnitsError(
-                'Conversion routines for absolute and relative temperatures require a numerical value only.'
-                ' Pyomo objects (Var, Param, expressions) are not supported. Please use value(x) to'
-                ' extract the numerical value if necessary.'
+                'Conversion routines for absolute and relative temperatures '
+                'require a numerical value only. Pyomo objects (Var, Param, '
+                'expressions) are not supported. Please use value(x) to '
+                'extract the numerical value if necessary.'
             )
 
         src_quantity = self._pint_registry.Quantity(numerical_value, pint_from_units)

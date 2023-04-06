@@ -14,8 +14,8 @@ This module contains transformations for representing a
 single-variate piecewise linear function using a
 mixed-interger problem formulation. Reference::
 
-  Mixed-Integer Models for Non-separable Piecewise Linear \
-Optimization: Unifying framework and Extensions (Vielma, \
+  Mixed-Integer Models for Non-separable Piecewise Linear
+Optimization: Unifying framework and Extensions (Vielma,
 Nemhauser 2008)
 """
 
@@ -56,6 +56,7 @@ from pyomo.core.kernel.piecewise_library.util import (
 logger = logging.getLogger('pyomo.core')
 
 registered_transforms = {}
+
 
 # wrapper that allows a list containing parameters to be
 # used with the bisect module
@@ -170,8 +171,8 @@ def piecewise(
             :attr:`False`.
 
     Returns:
-        TransformedPiecewiseLinearFunction: a block that \
-            stores any new variables, constraints, and other \
+        TransformedPiecewiseLinearFunction: a block that
+            stores any new variables, constraints, and other
             modeling objects used by the piecewise representation
     """
     transform = None
@@ -287,7 +288,7 @@ class PiecewiseLinearFunction(object):
 
         Returns:
             int:
-                a function characterization code (see \
+                a function characterization code (see
                 :func:`util.characterize_function`)
 
         Raises:
@@ -459,7 +460,7 @@ class TransformedPiecewiseLinearFunction(block):
 
         Returns:
             int:
-                a function characterization code (see \
+                a function characterization code (see
                 :func:`util.characterize_function`)
 
         Raises:

@@ -950,13 +950,13 @@ value() function."""
                         textwrap.wrap(
                             textwrap.dedent(
                                 """
-                        Slicing components relies on knowing the
-                        underlying set dimensionality (even if the
-                        dimensionality is None).  The underlying
-                        component set ('%s') dimensionality has not been
-                        determined (likely because it is an empty Set).
-                        You can avoid this error by specifying the Set
-                        dimensionality (with the 'dimen=' keyword)."""
+                                Slicing components relies on knowing the
+                                underlying set dimensionality (even if the
+                                dimensionality is None).  The underlying
+                                component set ('%s') dimensionality has not been
+                                determined (likely because it is an empty Set).
+                                You can avoid this error by specifying the Set
+                                dimensionality (with the 'dimen=' keyword)."""
                                 % (self.index_set(),)
                             ).strip()
                         )

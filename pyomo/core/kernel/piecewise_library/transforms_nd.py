@@ -14,8 +14,8 @@ This module contains transformations for representing a
 multi-variate piecewise linear function using a
 mixed-interger problem formulation. Reference::
 
-  Mixed-Integer Models for Non-separable Piecewise Linear \
-Optimization: Unifying framework and Extensions (Vielma, \
+  Mixed-Integer Models for Non-separable Piecewise Linear
+Optimization: Unifying framework and Extensions (Vielma,
 Nemhauser 2008)
 """
 
@@ -84,9 +84,9 @@ def piecewise_nd(tri, values, input=None, output=None, bound='eq', repn='cc'):
                 - 'cc': convex combination
 
     Returns:
-        TransformedPiecewiseLinearFunctionND: a block \
-            containing any new variables, constraints, and \
-            other components used by the piecewise \
+        TransformedPiecewiseLinearFunctionND: a block
+            containing any new variables, constraints, and
+            other components used by the piecewise
             representation
     """
     transform = None

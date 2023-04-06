@@ -137,9 +137,9 @@ def default_pyomo_config():
             int,
             'Pyomo paranoia and error checking level',
             """Higher levels of paranoia enable additional error checking and
-        warning messages that may assist users in identifying likely
-        modeling problems.
-        Default=0""",
+            warning messages that may assist users in identifying likely
+            modeling problems.
+            Default=0""",
             visibility=ADVANCED_OPTION,
         ),
     )

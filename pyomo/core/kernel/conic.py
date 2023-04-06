@@ -758,8 +758,9 @@ class dual_exponential(_ConicBase):
 class dual_power(_ConicBase):
     """A dual power conic constraint of the form:
 
-        sqrt(x[0]^2 + ... + x[n-1]^2) <= ((r1/alpha)^alpha) * \
-                                         ((r2/(1-alpha))^(1-alpha))
+        sqrt(x[0]^2 + ... + x[n-1]^2)
+        <=
+        ((r1/alpha)^alpha) * ((r2/(1-alpha))^(1-alpha))
 
     which is recognized as convex for r1,r2 >= 0
     and 0 < alpha < 1.
