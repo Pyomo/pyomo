@@ -66,7 +66,8 @@ def _lagrange_radau_transform_order2(v, s):
     def _fun(i):
         tmp = list(s)
         idx = s.ord(i) - 1
-        if idx == 0:  # Don't apply this equation at initial point
+        if idx == 0:
+            # Don't apply this equation at initial point
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
         lowidx = s.ord(low) - 1
@@ -87,10 +88,11 @@ def _lagrange_legendre_transform(v, s):
     def _fun(i):
         tmp = list(s)
         idx = s.ord(i) - 1
-        if idx == 0:  # Don't apply this equation at initial point
+        if idx == 0:
+            # Don't apply this equation at initial point
             raise IndexError("list index out of range")
-        elif i in s.get_finite_elements():  # Don't apply at finite element
-            # points continuity equations
+        elif i in s.get_finite_elements():
+            # Don't apply at finite element points continuity equations
             # added later
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
@@ -112,10 +114,11 @@ def _lagrange_legendre_transform_order2(v, s):
     def _fun(i):
         tmp = list(s)
         idx = s.ord(i) - 1
-        if idx == 0:  # Don't apply this equation at initial point
+        if idx == 0:
+            # Don't apply this equation at initial point
             raise IndexError("list index out of range")
-        elif i in s.get_finite_elements():  # Don't apply at finite element
-            # points continuity equations
+        elif i in s.get_finite_elements():
+            # Don't apply at finite element points continuity equations
             # added later
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
@@ -257,7 +260,6 @@ def calc_afinal(cp):
     " finite elements transforming the model into an NLP.",
 )
 class Collocation_Discretization_Transformation(Transformation):
-
     CONFIG = ConfigBlock("dae.collocation")
     CONFIG.declare(
         'nfe',
@@ -463,7 +465,6 @@ class Collocation_Discretization_Transformation(Transformation):
         return instance
 
     def _transformBlock(self, block, currentds):
-
         self._fe = {}
         for ds in block.component_objects(ContinuousSet, descend_into=True):
             if currentds is None or currentds == ds.name:
@@ -548,7 +549,6 @@ class Collocation_Discretization_Transformation(Transformation):
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
-
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
                     i.parent_block().reclassify_component_type(i, Expression)
@@ -717,7 +717,6 @@ class Collocation_Discretization_Transformation(Transformation):
         return instance
 
     def _interpolation_coeffs(self, ti, tfit):
-
         for i in tfit:
             l = 1
             for j in tfit:
