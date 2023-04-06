@@ -13,7 +13,7 @@ import itertools
 import logging
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.core import (
@@ -55,7 +55,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         Chemical Engineering, vol. 76, 2015, pp. 98-103.
     """
 
-    CONFIG = ConfigBlock('gdp.mbigm')
+    CONFIG = ConfigDict('gdp.mbigm')
     CONFIG.declare('targets', ConfigValue(
         default=None,
         domain=target_list,
