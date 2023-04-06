@@ -17,6 +17,7 @@ import pyomo.common.unittest as unittest
 
 import pyomo.dataportal.parse_datacmds as parser
 
+
 class TestDatParser(unittest.TestCase):
     def test_update_parsetable(self):
         parser.parse_data_commands('')

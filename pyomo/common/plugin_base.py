@@ -24,32 +24,39 @@ from weakref import ref as weakref_ref
 from pyomo.common.errors import PyomoException
 from pyomo.common.deprecation import deprecated, deprecation_warning
 
-if sys.version_info[:2] >= (3,7):
+if sys.version_info[:2] >= (3, 7):
     _deterministic_dict = dict
 else:
     from pyomo.common.collections import OrderedDict
+
     _deterministic_dict = OrderedDict
 
 
 class PluginGlobals(object):
     @staticmethod
-    @deprecated("The PluginGlobals environment manager is deprecated: "
-                "Pyomo only supports a single global environment",
-                version='6.0')
+    @deprecated(
+        "The PluginGlobals environment manager is deprecated: "
+        "Pyomo only supports a single global environment",
+        version='6.0',
+    )
     def add_env(name):
         pass
 
     @staticmethod
-    @deprecated("The PluginGlobals environment manager is deprecated: "
-                "Pyomo only supports a single global environment",
-                version='6.0')
+    @deprecated(
+        "The PluginGlobals environment manager is deprecated: "
+        "Pyomo only supports a single global environment",
+        version='6.0',
+    )
     def pop_env():
         pass
 
     @staticmethod
-    @deprecated("The PluginGlobals environment manager is deprecated: "
-                "Pyomo only supports a single global environment",
-                version='6.0')
+    @deprecated(
+        "The PluginGlobals environment manager is deprecated: "
+        "Pyomo only supports a single global environment",
+        version='6.0',
+    )
     def clear():
         pass
 
@@ -62,14 +69,17 @@ def alias(name, doc=None, subclass=None):
     if subclass is not None:
         deprecation_warning(
             "The Pyomo plugin infrastructure alias() function does "
-            "not support the subclass flag.", version='6.0')
+            "not support the subclass flag.",
+            version='6.0',
+        )
     calling_frame = inspect.currentframe().f_back
     locals_ = calling_frame.f_locals
     #
     # Some sanity checks
     #
-    assert locals_ is not calling_frame.f_globals and '__module__' in locals_, \
-        'implements() can only be used in a class definition'
+    assert (
+        locals_ is not calling_frame.f_globals and '__module__' in locals_
+    ), 'implements() can only be used in a class definition'
     #
     locals_.setdefault('__plugin_aliases__', []).append((name, doc))
 
@@ -78,19 +88,20 @@ def implements(interface, inherit=None, namespace=None, service=False):
     if namespace is not None:
         deprecation_warning(
             "The Pyomo plugin infrastructure only supports a "
-            "single global namespace.", version='6.0')
+            "single global namespace.",
+            version='6.0',
+        )
     calling_frame = inspect.currentframe().f_back
     locals_ = calling_frame.f_locals
     #
     # Some sanity checks
     #
-    assert locals_ is not calling_frame.f_globals and '__module__' in locals_, \
-        'implements() can only be used in a class definition'
+    assert (
+        locals_ is not calling_frame.f_globals and '__module__' in locals_
+    ), 'implements() can only be used in a class definition'
     assert issubclass(interface, Interface)
     #
-    locals_.setdefault('__implements__', []).append(
-        (interface, inherit, service)
-    )
+    locals_.setdefault('__implements__', []).append((interface, inherit, service))
 
 
 class InterfaceMeta(type):
@@ -116,7 +127,9 @@ class _deprecated_plugin_dict(dict):
         version = classdict.pop('__deprecated_version__', None)
         remove_in = classdict.pop('__deprecated_remove_in__', None)
         self._deprecation_info = {
-            'msg': msg, 'version': version, 'remove_in': remove_in
+            'msg': msg,
+            'version': version,
+            'remove_in': remove_in,
         }
 
     def __setitem__(self, key, val):
@@ -130,9 +143,7 @@ class _deprecated_plugin_dict(dict):
 
 class DeprecatedInterfaceMeta(InterfaceMeta):
     def __new__(cls, name, bases, classdict, *args, **kwargs):
-        classdict.setdefault(
-            '_plugins', _deprecated_plugin_dict(name, classdict)
-        )
+        classdict.setdefault('_plugins', _deprecated_plugin_dict(name, classdict))
         return super().__new__(cls, name, bases, classdict, *args, **kwargs)
 
 
@@ -141,15 +152,13 @@ class DeprecatedInterface(Interface, metaclass=DeprecatedInterfaceMeta):
 
 
 class PluginMeta(type):
-
     def __new__(cls, name, bases, classdict, *args, **kwargs):
         # This plugin is a singleton plugin based on the __singleton__
         # class attribute, OR if not specified, if any base class is a
         # singleton plugin
         _singleton = classdict.pop(
             '__singleton__',
-            any(getattr(base, '__singleton__', None) is not None
-                for base in bases)
+            any(getattr(base, '__singleton__', None) is not None for base in bases),
         )
         # This prevents base class __singleton__, __plugin_aliases__,
         # and __implements__ from implicitly bleeding through and being
@@ -164,7 +173,8 @@ class PluginMeta(type):
         interfaces = set(impl[0] for impl in implements)
         for base in bases:
             implements.extend(
-                ep for ep in getattr(base, '__implements__', [])
+                ep
+                for ep in getattr(base, '__implements__', [])
                 if ep[0] not in interfaces
             )
             interfaces.update(impl[0] for impl in implements)
@@ -178,27 +188,26 @@ class PluginMeta(type):
                 # base classes.  Check, and declare a new metaclass if
                 # necessary.
                 if not issubclass(cls, type(interface)):
+
                     class tmp_meta(cls, type(interface)):
-                        def __new__(cls, name, bases, classdict,
-                                    *args, **kwargs):
+                        def __new__(cls, name, bases, classdict, *args, **kwargs):
                             # This is a plugin and not an Interface.  Do
                             # not set up dicts for the interface
                             # definition.
                             classdict.setdefault('_plugins', None)
                             classdict.setdefault('_aliases', None)
                             return super().__new__(
-                                cls, name, bases, classdict, *args, **kwargs)
+                                cls, name, bases, classdict, *args, **kwargs
+                            )
+
                     cls = tmp_meta
 
-        new_class = super().__new__(
-            cls, name, bases, classdict, *args, **kwargs)
+        new_class = super().__new__(cls, name, bases, classdict, *args, **kwargs)
 
         # Register the new class with the interfaces
         for interface, inherit, service in implements:
             interface._plugins[new_class] = _deterministic_dict()
-            interface._aliases.update(
-                {name: (new_class, doc) for name, doc in aliases}
-            )
+            interface._aliases.update({name: (new_class, doc) for name, doc in aliases})
 
         if _singleton:
             new_class.__singleton__ = new_class()
@@ -210,8 +219,8 @@ class Plugin(object, metaclass=PluginMeta):
     def __new__(cls):
         if cls.__singleton__ is not None:
             raise RuntimeError(
-                "Cannot create multiple singleton plugin instances of type %s"
-                % (cls,))
+                "Cannot create multiple singleton plugin instances of type %s" % (cls,)
+            )
         obj = super().__new__(cls)
         obj._plugin_ids = {}
         # Record this instance (service) with all Interfaces
@@ -229,6 +238,7 @@ class Plugin(object, metaclass=PluginMeta):
             obj, service = interface._plugins[cls][_id]
             if not service:
                 interface._plugins[cls][_id] = obj, True
+
     enable = activate
 
     def deactivate(self):
@@ -238,12 +248,15 @@ class Plugin(object, metaclass=PluginMeta):
             obj, service = interface._plugins[cls][_id]
             if service:
                 interface._plugins[cls][_id] = obj, False
+
     disable = deactivate
 
     def enabled(self):
         cls = self.__class__
-        return any(interface._plugins[cls][self._plugin_ids[interface]][1]
-                   for interface, inherit, service in cls.__implements__)
+        return any(
+            interface._plugins[cls][self._plugin_ids[interface]][1]
+            for interface, inherit, service in cls.__implements__
+        )
 
 
 class SingletonPlugin(Plugin):
@@ -261,8 +274,9 @@ class ExtensionPoint(object):
             for i, (obj, service) in plugins.items():
                 if not obj():
                     remove.append(i)
-                elif ((all or service) and
-                      (key is None or key is cls or key == cls.__name__)):
+                elif (all or service) and (
+                    key is None or key is cls or key == cls.__name__
+                ):
                     yield obj()
             for i in remove:
                 del plugins[i]
@@ -290,14 +304,14 @@ class ExtensionPoint(object):
         elif not ans:
             return None
         else:
-            raise PluginError("The ExtensionPoint does not have a unique "
-                              "service!  %d services are defined for interface"
-                              " '%s' (key=%s)." %
-                              (len(ans), self._interface.__name__, str(key)))
+            raise PluginError(
+                "The ExtensionPoint does not have a unique "
+                "service!  %d services are defined for interface"
+                " '%s' (key=%s)." % (len(ans), self._interface.__name__, str(key))
+            )
 
 
 class PluginFactory(object):
-
     def __init__(self, interface):
         self.interface = interface
 
@@ -336,6 +350,7 @@ class PluginFactory(object):
             return
         for service in ExtensionPoint(self.interface)(all=True, key=cls):
             service.activate()
+
 
 # Old name for creating plugin factories
 CreatePluginFactory = PluginFactory

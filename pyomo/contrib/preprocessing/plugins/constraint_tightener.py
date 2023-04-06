@@ -10,12 +10,14 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 @TransformationFactory.register(
     'core.tighten_constraints_from_vars',
-    doc="[DEPRECATED] Tightens upper and lower bound on linear constraints.")
+    doc="[DEPRECATED] Tightens upper and lower bound on linear constraints.",
+)
 @deprecated(
     "Use of the constraint tightener transformation is deprecated. "
     "Its functionality may be partially replicated using "
     "`pyomo.contrib.fbbt.compute_bounds_on_expr(constraint.body)`.",
-    version='5.7')
+    version='5.7',
+)
 class TightenContraintFromVars(IsomorphicTransformation):
     """Tightens upper and lower bound on constraints based on variable bounds.
 
@@ -32,7 +34,8 @@ class TightenContraintFromVars(IsomorphicTransformation):
     def _apply_to(self, model):
         """Apply the transformation."""
         for constr in model.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True):
+            ctype=Constraint, active=True, descend_into=True
+        ):
             repn = generate_standard_repn(constr.body)
             if not repn.is_linear():
                 continue
@@ -74,5 +77,6 @@ class TightenContraintFromVars(IsomorphicTransformation):
             if UB < LB:
                 logger.error(
                     "Infeasible variable bounds: "
-                    "Constraint %s has inferred LB %s > UB %s" %
-                    (constr.name, new_lb, new_ub))
+                    "Constraint %s has inferred LB %s > UB %s"
+                    % (constr.name, new_lb, new_ub)
+                )

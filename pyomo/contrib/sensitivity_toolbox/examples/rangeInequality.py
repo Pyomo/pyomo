@@ -22,22 +22,21 @@ def create_model():
     m.a = Param(initialize=0, mutable=True)
     m.b = Param(initialize=1, mutable=True)
 
-
-    m.x = Var(initialize = 1.0)        
+    m.x = Var(initialize=1.0)
     m.y = Var()
-    m.C_rangedIn = Constraint(expr=inequality(m.a,m.x,m.b))
-    m.C_equal = Constraint(expr=m.y==m.b)
-    m.C_singleBnd = Constraint(expr=m.x<=m.b)
-
+    m.C_rangedIn = Constraint(expr=inequality(m.a, m.x, m.b))
+    m.C_equal = Constraint(expr=m.y == m.b)
+    m.C_singleBnd = Constraint(expr=m.x <= m.b)
 
     return m
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     m = create_model()
 
     m.pert_a = Param(initialize=0.01)
     m.pert_b = Param(initialize=1.01)
 
-
-    m_sipopt = sensitivity_calculation('sipopt', m,[m.a,m.b],[m.pert_a,m.pert_b],
-                      tee=True)
+    m_sipopt = sensitivity_calculation(
+        'sipopt', m, [m.a, m.b], [m.pert_a, m.pert_b], tee=True
+    )

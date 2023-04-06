@@ -182,14 +182,7 @@ class TestReportFunctions(unittest.TestCase):
     def test_active_equality_set(self):
         self.m.c4.deactivate()
         assert rpt.active_equality_set(self.m) == ComponentSet(
-            [
-                self.m.c1,
-                self.m.c2,
-                self.m.c3,
-                self.m.c5,
-                self.m.c6,
-                self.m.c7,
-            ]
+            [self.m.c1, self.m.c2, self.m.c3, self.m.c5, self.m.c6, self.m.c7]
         )
         self.m.c4.activate()
         assert rpt.active_equality_set(self.m) == ComponentSet(

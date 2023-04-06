@@ -19,9 +19,11 @@
 import gc
 from pyomo.common.multithread import MultiThreadWrapper
 
+
 class __PauseGCCompanion(object):
     def __init__(self):
         self._stack_depth = 0
+
 
 PauseGCCompanion: __PauseGCCompanion = MultiThreadWrapper(__PauseGCCompanion)
 
@@ -40,6 +42,7 @@ PauseGCCompanion: __PauseGCCompanion = MultiThreadWrapper(__PauseGCCompanion)
 # if an outer function/method has its own instance of PauseGC.
 class PauseGC(object):
     __slots__ = ("reenable_gc", "stack_pointer")
+
     def __init__(self):
         self.stack_pointer = None
         self.reenable_gc = None
@@ -47,7 +50,8 @@ class PauseGC(object):
     def __enter__(self):
         if self.stack_pointer:
             raise RuntimeError(
-                "Entering PauseGC context manager that was already entered.")
+                "Entering PauseGC context manager that was already entered."
+            )
         PauseGCCompanion._stack_depth += 1
         self.stack_pointer = PauseGCCompanion._stack_depth
         self.reenable_gc = gc.isenabled()
@@ -67,7 +71,8 @@ class PauseGC(object):
                     "Exiting PauseGC context manager out of order: there "
                     "are other active PauseGC context managers that were "
                     "entered after this context manager and have not yet "
-                    "been exited.")
+                    "been exited."
+                )
             PauseGCCompanion._stack_depth -= 1
             self.stack_pointer = None
         if self.reenable_gc:

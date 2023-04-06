@@ -12,23 +12,26 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_available
+    numpy as np,
+    numpy_available,
+    scipy_available,
 )
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest(
-        "Pynumero needs scipy and numpy to run Sparse intrinsict tests")
+        "Pynumero needs scipy and numpy to run Sparse intrinsict tests"
+    )
 
 from pyomo.contrib.pynumero.sparse import BlockVector
 import pyomo.contrib.pynumero as pn
 
 
 class TestSparseIntrinsics(unittest.TestCase):
-
     def setUp(self):
         self.v1 = np.array([1.1, 2.2, 3.3])
         self.v2 = np.array([4.4, 5.5, 6.6, 7.7])
-        self.v3 = np.array([1.1, 2.2, 3.3])*2
-        self.v4 = np.array([4.4, 5.5, 6.6, 7.7])*2
+        self.v3 = np.array([1.1, 2.2, 3.3]) * 2
+        self.v4 = np.array([4.4, 5.5, 6.6, 7.7]) * 2
         self.bv = BlockVector(2)
         self.bv2 = BlockVector(2)
         self.bv.set_blocks([self.v1, self.v2])

@@ -15,6 +15,7 @@ from pyomo.core.base import TransformationFactory
 from pyomo.environ import value
 from pyomo.gdp import Disjunct, Disjunction
 
+
 def check_trans_block_structure(test, block):
     # One (indexed) disjunct
     test.assertEqual(len(block.component_map(Disjunct)), 1)
@@ -25,11 +26,13 @@ def check_trans_block_structure(test, block):
     test.assertEqual(len(block.component_map(Var)), 1)
     test.assertIsInstance(block.substitute_var, Var)
 
+
 def check_log_x_model_soln(test, m):
     test.assertAlmostEqual(value(m.x), 4)
     test.assertAlmostEqual(value(m.x1), 1)
     test.assertAlmostEqual(value(m.x2), 1)
     test.assertAlmostEqual(value(m.obj), m.f2(4))
+
 
 def check_transformation_do_not_descend(test, transformation):
     m = models.make_log_x_model()
@@ -39,6 +42,7 @@ def check_transformation_do_not_descend(test, transformation):
     test.check_pw_log(m)
     test.check_pw_paraboloid(m)
 
+
 def check_transformation_PiecewiseLinearFunction_targets(test, transformation):
     m = models.make_log_x_model()
     transform = TransformationFactory(transformation)
@@ -47,8 +51,8 @@ def check_transformation_PiecewiseLinearFunction_targets(test, transformation):
     test.check_pw_log(m)
 
     # And check that the paraboloid was *not* transformed.
-    test.assertIsNone(
-        m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
+    test.assertIsNone(m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
+
 
 def check_descend_into_expressions(test, transformation):
     m = models.make_log_x_model()
@@ -59,6 +63,7 @@ def check_descend_into_expressions(test, transformation):
     test.check_pw_log(m)
     test.check_pw_paraboloid(m)
 
+
 def check_descend_into_expressions_constraint_target(test, transformation):
     m = models.make_log_x_model()
     transform = TransformationFactory(transformation)
@@ -68,6 +73,7 @@ def check_descend_into_expressions_constraint_target(test, transformation):
     # And check that the log was *not* transformed.
     test.assertIsNone(m.pw_log.get_transformation_var(m.log_expr))
 
+
 def check_descend_into_expressions_objective_target(test, transformation):
     m = models.make_log_x_model()
     transform = TransformationFactory(transformation)
@@ -75,5 +81,4 @@ def check_descend_into_expressions_objective_target(test, transformation):
 
     test.check_pw_log(m)
     # And check that the paraboloid was *not* transformed.
-    test.assertIsNone(
-        m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
+    test.assertIsNone(m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))

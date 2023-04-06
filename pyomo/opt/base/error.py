@@ -9,10 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 class ConverterError(Exception):
     """
     An exception used when there is an error converting a problem.
     """
 
-    def __init__(self,*args,**kargs):
-        Exception.__init__(self,*args,**kargs)      #pragma:nocover
+    def __init__(self, *args, **kargs):
+        Exception.__init__(self, *args, **kargs)  # pragma:nocover

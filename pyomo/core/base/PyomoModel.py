@@ -95,7 +95,7 @@ class ModelSolution(object):
         self._metadata['gap'] = None
         self._entry = {}
         #
-        # entry[name]: id -> (object weakref, entry)
+        # entry[name]: id -> (object, entry)
         #
         for name in ['objective', 'variable', 'constraint', 'problem']:
             self._entry[name] = {}
@@ -128,13 +128,13 @@ class ModelSolution(object):
             # so things like CUID.find_component will fail (return
             # None).
             for obj, entry in data.values():
-                if obj is None or obj() is None:
+                if obj is None or obj is None:
                     logger.warning(
                         "Solution component in '%s' no longer "
                         "accessible: %s!" % (name, entry)
                     )
                 else:
-                    tmp.append((obj(), entry))
+                    tmp.append((obj, entry))
         return state
 
     def __setstate__(self, state):
@@ -143,7 +143,7 @@ class ModelSolution(object):
         for name, data in state['_entry'].items():
             tmp = self._entry[name] = {}
             for obj, entry in data:
-                tmp[id(obj)] = (weakref_ref(obj), entry)
+                tmp[id(obj)] = (obj, entry)
 
 
 class ModelSolutions(object):
@@ -383,7 +383,7 @@ class ModelSolutions(object):
                                 "CUID %s is missing from model %s"
                                 % (str(cuid), instance.name)
                             )
-                        tmp[id(obj)] = (weakref_ref(obj), val)
+                        tmp[id(obj)] = (obj, val)
             else:
                 #
                 # Loading a solution with string keys
@@ -407,7 +407,7 @@ class ModelSolutions(object):
                                 "Symbol %s is missing from model %s"
                                 % (symb, instance.name)
                             )
-                        tmp[id(obj)] = (weakref_ref(obj), val)
+                        tmp[id(obj)] = (obj, val)
         else:
             #
             # Map solution
@@ -432,7 +432,7 @@ class ModelSolutions(object):
                             % (symb, instance.name)
                         )
 
-                    tmp[id(obj())] = (obj, val)
+                    tmp[id(obj)] = (obj, val)
             #
             # Wrap up
             #
@@ -446,14 +446,14 @@ class ModelSolutions(object):
         for vdata in instance.component_data_objects(Var):
             id_ = id(vdata)
             if vdata.fixed:
-                tmp[id_] = (weakref_ref(vdata), {'Value': vdata.value})
+                tmp[id_] = (vdata, {'Value': vdata.value})
             elif (
                 (default_variable_value is not None)
                 and (smap_id is not None)
                 and (id_ in smap.byObject)
                 and (id_ not in tmp)
             ):
-                tmp[id_] = (weakref_ref(vdata), {'Value': default_variable_value})
+                tmp[id_] = (vdata, {'Value': default_variable_value})
 
         self.solutions.append(soln)
         return len(self.solutions) - 1
@@ -516,7 +516,6 @@ class ModelSolutions(object):
         # Load objective data (suffixes)
         #
         for id_, (odata, entry) in soln._entry['objective'].items():
-            odata = odata()
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
@@ -525,7 +524,6 @@ class ModelSolutions(object):
         # Load variable data (suffixes and values)
         #
         for id_, (vdata, entry) in soln._entry['variable'].items():
-            vdata = vdata()
             val = entry['Value']
             if vdata.fixed is True:
                 if ignore_fixed_vars:
@@ -563,7 +561,6 @@ class ModelSolutions(object):
         # Load constraint data (suffixes)
         #
         for id_, (cdata, entry) in soln._entry['constraint'].items():
-            cdata = cdata()
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:

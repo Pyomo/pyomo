@@ -9,7 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
+from pyomo.contrib.pynumero.interfaces.utils import (
+    build_bounds_mask,
+    build_compression_matrix,
+)
 import numpy as np
 import logging
 import time
@@ -37,11 +40,13 @@ class InteriorPointStatus(enum.Enum):
 
 
 class LinearSolveContext(object):
-    def __init__(self, 
-            interior_point_logger, 
-            linear_solver_logger,
-            filename=None,
-            level=logging.INFO):
+    def __init__(
+        self,
+        interior_point_logger,
+        linear_solver_logger,
+        filename=None,
+        level=logging.INFO,
+    ):
 
         self.interior_point_logger = interior_point_logger
         self.linear_solver_logger = linear_solver_logger
@@ -58,7 +63,6 @@ class LinearSolveContext(object):
             self.linear_solver_logger.addHandler(self.handler)
             self.interior_point_logger.addHandler(self.handler)
 
-
     def __exit__(self, et, ev, tb):
         self.linear_solver_logger.propagate = True
         self.interior_point_logger.propagate = True
@@ -70,7 +74,7 @@ class LinearSolveContext(object):
 # How should the RegContext work?
 # TODO: in this class, use the linear_solver_context to ...
 #       Use linear_solver_logger to write iter_no and reg_coef
-#       
+#
 #       Define a method for logging IP_reg_info to the linear solver log
 #       Method can be called within linear_solve_context
 class FactorizationContext(object):
@@ -89,45 +93,54 @@ class FactorizationContext(object):
         # Will this swallow exceptions in this context?
 
     def log_header(self):
-        self.logger.debug('{_iter:<10}'
-                          '{reg_iter:<10}'
-                          '{num_realloc:<10}'
-                          '{reg_coef:<10}'
-                          '{neg_eig:<10}'
-                          '{status:<10}'.format(
-            _iter='Iter',
-            reg_iter='reg_iter',
-            num_realloc='# realloc',
-            reg_coef='reg_coef',
-            neg_eig='neg_eig',
-            status='status'))
+        self.logger.debug(
+            '{_iter:<10}'
+            '{reg_iter:<10}'
+            '{num_realloc:<10}'
+            '{reg_coef:<10}'
+            '{neg_eig:<10}'
+            '{status:<10}'.format(
+                _iter='Iter',
+                reg_iter='reg_iter',
+                num_realloc='# realloc',
+                reg_coef='reg_coef',
+                neg_eig='neg_eig',
+                status='status',
+            )
+        )
 
     def log_info(self, _iter, reg_iter, num_realloc, coef, neg_eig, status):
-        self.logger.debug('{_iter:<10}'
-                          '{reg_iter:<10}'
-                          '{num_realloc:<10}'
-                          '{reg_coef:<10.2e}'
-                          '{neg_eig:<10}'
-                          '{status:<10}'.format(
-            _iter=_iter,
-            reg_iter=reg_iter,
-            num_realloc=num_realloc,
-            reg_coef=coef,
-            neg_eig=str(neg_eig),
-            status=status.name))
+        self.logger.debug(
+            '{_iter:<10}'
+            '{reg_iter:<10}'
+            '{num_realloc:<10}'
+            '{reg_coef:<10.2e}'
+            '{neg_eig:<10}'
+            '{status:<10}'.format(
+                _iter=_iter,
+                reg_iter=reg_iter,
+                num_realloc=num_realloc,
+                reg_coef=coef,
+                neg_eig=str(neg_eig),
+                status=status.name,
+            )
+        )
 
 
 class InteriorPointSolver(object):
     """
     Class for creating interior point solvers with different options
     """
-    def __init__(self,
-                 linear_solver,
-                 max_iter=100,
-                 tol=1e-8,
-                 linear_solver_log_filename=None,
-                 max_reallocation_iterations=5,
-                 reallocation_factor=2):
+
+    def __init__(
+        self,
+        linear_solver,
+        max_iter=100,
+        tol=1e-8,
+        linear_solver_log_filename=None,
+        max_reallocation_iterations=5,
+        reallocation_factor=2,
+    ):
         self.linear_solver = linear_solver
         self.max_iter = max_iter
         self.tol = tol
@@ -150,14 +163,15 @@ class InteriorPointSolver(object):
                 pass
 
         self.linear_solver_logger = self.linear_solver.getLogger()
-        self.linear_solve_context = LinearSolveContext(self.logger,
-                                        self.linear_solver_logger,
-                                        self.linear_solver_log_filename)
+        self.linear_solve_context = LinearSolveContext(
+            self.logger, self.linear_solver_logger, self.linear_solver_log_filename
+        )
 
     def update_barrier_parameter(self):
-        self._barrier_parameter = max(self._minimum_barrier_parameter, 
-                                    min(0.5 * self._barrier_parameter, 
-                                        self._barrier_parameter ** 1.5))
+        self._barrier_parameter = max(
+            self._minimum_barrier_parameter,
+            min(0.5 * self._barrier_parameter, self._barrier_parameter**1.5),
+        )
 
     def set_linear_solver(self, linear_solver):
         """This method exists to hopefully make it easy to try the same IP
@@ -178,7 +192,7 @@ class InteriorPointSolver(object):
         Parameters
         ----------
         interface: pyomo.contrib.interior_point.interface.BaseInteriorPointInterface
-            The interior point interface. This object handles the function evaluation, 
+            The interior point interface. This object handles the function evaluation,
             building the KKT matrix, and building the KKT right hand side.
         timer: HierarchicalTimer
         report_timing: bool
@@ -212,31 +226,35 @@ class InteriorPointSolver(object):
         self.process_init_duals_ub(duals_primals_ub, self.interface.primals_ub())
         self.process_init_duals_lb(duals_slacks_lb, self.interface.ineq_lb())
         self.process_init_duals_ub(duals_slacks_ub, self.interface.ineq_ub())
-        
+
         interface.set_barrier_parameter(self._barrier_parameter)
 
         alpha_primal_max = 1
         alpha_dual_max = 1
 
-        self.logger.info('{_iter:<6}'
-                         '{objective:<11}'
-                         '{primal_inf:<11}'
-                         '{dual_inf:<11}'
-                         '{compl_inf:<11}'
-                         '{barrier:<11}'
-                         '{alpha_p:<11}'
-                         '{alpha_d:<11}'
-                         '{reg:<11}'
-                         '{time:<7}'.format(_iter='Iter',
-                                            objective='Objective',
-                                            primal_inf='Prim Inf',
-                                            dual_inf='Dual Inf',
-                                            compl_inf='Comp Inf',
-                                            barrier='Barrier',
-                                            alpha_p='Prim Step',
-                                            alpha_d='Dual Step',
-                                            reg='Reg',
-                                            time='Time'))
+        self.logger.info(
+            '{_iter:<6}'
+            '{objective:<11}'
+            '{primal_inf:<11}'
+            '{dual_inf:<11}'
+            '{compl_inf:<11}'
+            '{barrier:<11}'
+            '{alpha_p:<11}'
+            '{alpha_d:<11}'
+            '{reg:<11}'
+            '{time:<7}'.format(
+                _iter='Iter',
+                objective='Objective',
+                primal_inf='Prim Inf',
+                dual_inf='Dual Inf',
+                compl_inf='Comp Inf',
+                barrier='Barrier',
+                alpha_p='Prim Step',
+                alpha_d='Dual Step',
+                reg='Reg',
+                time='Time',
+            )
+        )
 
         reg_coef = 0
 
@@ -256,41 +274,47 @@ class InteriorPointSolver(object):
             interface.set_duals_slacks_ub(duals_slacks_ub)
 
             timer.start('convergence check')
-            primal_inf, dual_inf, complimentarity_inf = \
-                    self.check_convergence(barrier=0, timer=timer)
+            primal_inf, dual_inf, complimentarity_inf = self.check_convergence(
+                barrier=0, timer=timer
+            )
             timer.stop('convergence check')
             objective = interface.evaluate_objective()
-            self.logger.info('{_iter:<6}'
-                             '{objective:<11.2e}'
-                             '{primal_inf:<11.2e}'
-                             '{dual_inf:<11.2e}'
-                             '{compl_inf:<11.2e}'
-                             '{barrier:<11.2e}'
-                             '{alpha_p:<11.2e}'
-                             '{alpha_d:<11.2e}'
-                             '{reg:<11.2e}'
-                             '{time:<7.3f}'.format(_iter=_iter,
-                                                   objective=objective,
-                                                   primal_inf=primal_inf,
-                                                   dual_inf=dual_inf,
-                                                   compl_inf=complimentarity_inf,
-                                                   barrier=self._barrier_parameter,
-                                                   alpha_p=alpha_primal_max,
-                                                   alpha_d=alpha_dual_max,
-                                                   reg=reg_coef,
-                                                   time=time.time() - t0))
+            self.logger.info(
+                '{_iter:<6}'
+                '{objective:<11.2e}'
+                '{primal_inf:<11.2e}'
+                '{dual_inf:<11.2e}'
+                '{compl_inf:<11.2e}'
+                '{barrier:<11.2e}'
+                '{alpha_p:<11.2e}'
+                '{alpha_d:<11.2e}'
+                '{reg:<11.2e}'
+                '{time:<7.3f}'.format(
+                    _iter=_iter,
+                    objective=objective,
+                    primal_inf=primal_inf,
+                    dual_inf=dual_inf,
+                    compl_inf=complimentarity_inf,
+                    barrier=self._barrier_parameter,
+                    alpha_p=alpha_primal_max,
+                    alpha_d=alpha_dual_max,
+                    reg=reg_coef,
+                    time=time.time() - t0,
+                )
+            )
 
             if max(primal_inf, dual_inf, complimentarity_inf) <= tol:
                 status = InteriorPointStatus.optimal
                 break
             timer.start('convergence check')
-            primal_inf, dual_inf, complimentarity_inf = \
-                    self.check_convergence(
-                            barrier=self._barrier_parameter, 
-                            timer=timer)
+            primal_inf, dual_inf, complimentarity_inf = self.check_convergence(
+                barrier=self._barrier_parameter, timer=timer
+            )
             timer.stop('convergence check')
-            if max(primal_inf, dual_inf, complimentarity_inf) \
-                    <= 0.1 * self._barrier_parameter:
+            if (
+                max(primal_inf, dual_inf, complimentarity_inf)
+                <= 0.1 * self._barrier_parameter
+            ):
                 # This comparison is made with barrier problem infeasibility.
                 # Sometimes have trouble getting dual infeasibility low enough
                 self.update_barrier_parameter()
@@ -320,8 +344,7 @@ class InteriorPointSolver(object):
 
             interface.set_primal_dual_kkt_solution(delta)
             timer.start('frac boundary')
-            alpha_primal_max, alpha_dual_max = \
-                    self.fraction_to_the_boundary()
+            alpha_primal_max, alpha_dual_max = self.fraction_to_the_boundary()
             timer.stop('frac boundary')
             delta_primals = interface.get_delta_primals()
             delta_slacks = interface.get_delta_slacks()
@@ -347,74 +370,86 @@ class InteriorPointSolver(object):
         return status
 
     def factorize(self, kkt, timer=None):
-        desired_n_neg_evals = (self.interface.n_eq_constraints() +
-                               self.interface.n_ineq_constraints())
+        desired_n_neg_evals = (
+            self.interface.n_eq_constraints() + self.interface.n_ineq_constraints()
+        )
         reg_iter = 0
         with self.factorization_context as fact_con:
             status, num_realloc = try_factorization_and_reallocation(
-                    kkt=kkt,
-                    linear_solver=self.linear_solver,
-                    reallocation_factor=self.reallocation_factor,
-                    max_iter=self.max_reallocation_iterations,
-                    timer=timer)
-            if status not in {LinearSolverStatus.successful, 
-                              LinearSolverStatus.singular}:
+                kkt=kkt,
+                linear_solver=self.linear_solver,
+                reallocation_factor=self.reallocation_factor,
+                max_iter=self.max_reallocation_iterations,
+                timer=timer,
+            )
+            if status not in {
+                LinearSolverStatus.successful,
+                LinearSolverStatus.singular,
+            }:
                 raise RuntimeError(
-                    'Could not factorize KKT system; linear solver status: ' 
-                    + str(status))
+                    'Could not factorize KKT system; linear solver status: '
+                    + str(status)
+                )
 
             if status == LinearSolverStatus.successful:
                 neg_eig = self.linear_solver.get_inertia()[1]
             else:
                 neg_eig = None
             fact_con.log_info(
-                    _iter=self._iter, 
-                    reg_iter=reg_iter, 
-                    num_realloc=num_realloc,
-                    coef=0, 
-                    neg_eig=neg_eig, 
-                    status=status)
+                _iter=self._iter,
+                reg_iter=reg_iter,
+                num_realloc=num_realloc,
+                coef=0,
+                neg_eig=neg_eig,
+                status=status,
+            )
             reg_iter += 1
 
             if status == LinearSolverStatus.singular:
-                constraint_reg_coef = (self.base_eq_reg_coef * 
-                                       self._barrier_parameter**0.25)
+                constraint_reg_coef = (
+                    self.base_eq_reg_coef * self._barrier_parameter**0.25
+                )
                 kkt = self.interface.regularize_equality_gradient(
-                        kkt=kkt,
-                        coef=constraint_reg_coef,
-                        copy_kkt=False)
+                    kkt=kkt, coef=constraint_reg_coef, copy_kkt=False
+                )
 
             total_hess_reg_coef = self.hess_reg_coef
             last_hess_reg_coef = 0
 
-            while (neg_eig != desired_n_neg_evals or 
-                    status == LinearSolverStatus.singular):
+            while (
+                neg_eig != desired_n_neg_evals or status == LinearSolverStatus.singular
+            ):
                 kkt = self.interface.regularize_hessian(
-                        kkt=kkt,
-                        coef=total_hess_reg_coef - last_hess_reg_coef,
-                        copy_kkt=False)
+                    kkt=kkt,
+                    coef=total_hess_reg_coef - last_hess_reg_coef,
+                    copy_kkt=False,
+                )
                 status, num_realloc = try_factorization_and_reallocation(
-                        kkt=kkt,
-                        linear_solver=self.linear_solver,
-                        reallocation_factor=self.reallocation_factor,
-                        max_iter=self.max_reallocation_iterations,
-                        timer=timer)
+                    kkt=kkt,
+                    linear_solver=self.linear_solver,
+                    reallocation_factor=self.reallocation_factor,
+                    max_iter=self.max_reallocation_iterations,
+                    timer=timer,
+                )
                 if status != LinearSolverStatus.successful:
                     raise RuntimeError(
-                    'Could not factorize KKT system; linear solver status: ' 
-                    + str(status))
+                        'Could not factorize KKT system; linear solver status: '
+                        + str(status)
+                    )
                 neg_eig = self.linear_solver.get_inertia()[1]
                 fact_con.log_info(
-                        _iter=self._iter, 
-                        reg_iter=reg_iter, 
-                        num_realloc=num_realloc,
-                        coef=total_hess_reg_coef, 
-                        neg_eig=neg_eig, 
-                        status=status)
+                    _iter=self._iter,
+                    reg_iter=reg_iter,
+                    num_realloc=num_realloc,
+                    coef=total_hess_reg_coef,
+                    neg_eig=neg_eig,
+                    status=status,
+                )
                 reg_iter += 1
                 if reg_iter > self.max_reg_iter:
                     raise RuntimeError(
-                    'Exceeded maximum number of regularization iterations.')
+                        'Exceeded maximum number of regularization iterations.'
+                    )
                 last_hess_reg_coef = total_hess_reg_coef
                 total_hess_reg_coef *= self.reg_factor_increase
 
@@ -435,7 +470,7 @@ class InteriorPointSolver(object):
         ----------
         barrier: float
         timer: HierarchicalTimer
-    
+
         Returns
         -------
         primal_inf: float
@@ -448,8 +483,7 @@ class InteriorPointSolver(object):
         interface = self.interface
         slacks = interface.get_slacks()
         timer.start('grad obj')
-        grad_obj = interface.get_obj_factor() * \
-                interface.evaluate_grad_objective()
+        grad_obj = interface.get_obj_factor() * interface.evaluate_grad_objective()
         timer.stop('grad obj')
         timer.start('jac eq')
         jac_eq = interface.evaluate_jacobian_eq()
@@ -492,9 +526,7 @@ class InteriorPointSolver(object):
         grad_lag_primals += duals_primals_ub
         timer.stop('grad_lag_primals')
         timer.start('grad_lag_slacks')
-        grad_lag_slacks = (-duals_ineq -
-                           duals_slacks_lb +
-                           duals_slacks_ub)
+        grad_lag_slacks = -duals_ineq - duals_slacks_lb + duals_slacks_ub
         timer.stop('grad_lag_slacks')
         timer.start('bound resids')
         primals_lb_resid = (primals - primals_lb_mod) * duals_primals_lb - barrier
@@ -516,14 +548,14 @@ class InteriorPointSolver(object):
         else:
             max_ineq_resid = np.max(np.abs(ineq_resid))
         primal_inf = max(max_eq_resid, max_ineq_resid)
-    
+
         max_grad_lag_primals = np.max(np.abs(grad_lag_primals))
         if grad_lag_slacks.size == 0:
             max_grad_lag_slacks = 0
         else:
             max_grad_lag_slacks = np.max(np.abs(grad_lag_slacks))
         dual_inf = max(max_grad_lag_primals, max_grad_lag_slacks)
-    
+
         if primals_lb_resid.size == 0:
             max_primals_lb_resid = 0
         else:
@@ -540,18 +572,22 @@ class InteriorPointSolver(object):
             max_slacks_ub_resid = 0
         else:
             max_slacks_ub_resid = np.max(np.abs(slacks_ub_resid))
-        complimentarity_inf = max(max_primals_lb_resid, max_primals_ub_resid,
-                                  max_slacks_lb_resid, max_slacks_ub_resid)
-    
+        complimentarity_inf = max(
+            max_primals_lb_resid,
+            max_primals_ub_resid,
+            max_slacks_lb_resid,
+            max_slacks_ub_resid,
+        )
+
         return primal_inf, dual_inf, complimentarity_inf
 
     def fraction_to_the_boundary(self):
-        return fraction_to_the_boundary(self.interface, 
-                                        1 - self._barrier_parameter)
+        return fraction_to_the_boundary(self.interface, 1 - self._barrier_parameter)
 
 
-def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor,
-        max_iter, timer=None):
+def try_factorization_and_reallocation(
+    kkt, linear_solver, reallocation_factor, max_iter, timer=None
+):
     if timer is None:
         timer = HierarchicalTimer()
 
@@ -566,15 +602,13 @@ def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor,
         (and ordering of row and column arrays) of the KKT matrix never 
         changes. We have not had time to test this thoroughly, yet. 
         """
-        res = linear_solver.do_symbolic_factorization(
-                matrix=kkt, 
-                raise_on_error=False)
+        res = linear_solver.do_symbolic_factorization(matrix=kkt, raise_on_error=False)
         timer.stop('symbolic')
         if res.status == LinearSolverStatus.successful:
             timer.start('numeric')
             res = linear_solver.do_numeric_factorization(
-                    matrix=kkt, 
-                    raise_on_error=False)
+                matrix=kkt, raise_on_error=False
+            )
             timer.stop('numeric')
         status = res.status
         if status == LinearSolverStatus.not_enough_memory:
@@ -638,50 +672,48 @@ def fraction_to_the_boundary(interface, tau):
     ineq_ub = interface.ineq_ub()
 
     alpha_primal_max_a = _fraction_to_the_boundary_helper_lb(
-        tau=tau,
-        x=primals,
-        delta_x=delta_primals,
-        xl=primals_lb)
+        tau=tau, x=primals, delta_x=delta_primals, xl=primals_lb
+    )
     alpha_primal_max_b = _fraction_to_the_boundary_helper_ub(
-        tau=tau,
-        x=primals,
-        delta_x=delta_primals,
-        xu=primals_ub)
+        tau=tau, x=primals, delta_x=delta_primals, xu=primals_ub
+    )
     alpha_primal_max_c = _fraction_to_the_boundary_helper_lb(
-        tau=tau,
-        x=slacks,
-        delta_x=delta_slacks,
-        xl=ineq_lb)
+        tau=tau, x=slacks, delta_x=delta_slacks, xl=ineq_lb
+    )
     alpha_primal_max_d = _fraction_to_the_boundary_helper_ub(
-        tau=tau,
-        x=slacks,
-        delta_x=delta_slacks,
-        xu=ineq_ub)
-    alpha_primal_max = min(alpha_primal_max_a, alpha_primal_max_b,
-                           alpha_primal_max_c, alpha_primal_max_d)
+        tau=tau, x=slacks, delta_x=delta_slacks, xu=ineq_ub
+    )
+    alpha_primal_max = min(
+        alpha_primal_max_a, alpha_primal_max_b, alpha_primal_max_c, alpha_primal_max_d
+    )
 
     alpha_dual_max_a = _fraction_to_the_boundary_helper_lb(
         tau=tau,
         x=duals_primals_lb,
         delta_x=delta_duals_primals_lb,
-        xl=np.zeros(duals_primals_lb.size))
+        xl=np.zeros(duals_primals_lb.size),
+    )
     alpha_dual_max_b = _fraction_to_the_boundary_helper_lb(
         tau=tau,
         x=duals_primals_ub,
         delta_x=delta_duals_primals_ub,
-        xl=np.zeros(duals_primals_ub.size))
+        xl=np.zeros(duals_primals_ub.size),
+    )
     alpha_dual_max_c = _fraction_to_the_boundary_helper_lb(
         tau=tau,
         x=duals_slacks_lb,
         delta_x=delta_duals_slacks_lb,
-        xl=np.zeros(duals_slacks_lb.size))
+        xl=np.zeros(duals_slacks_lb.size),
+    )
     alpha_dual_max_d = _fraction_to_the_boundary_helper_lb(
         tau=tau,
         x=duals_slacks_ub,
         delta_x=delta_duals_slacks_ub,
-        xl=np.zeros(duals_slacks_ub.size))
-    alpha_dual_max = min(alpha_dual_max_a, alpha_dual_max_b,
-                         alpha_dual_max_c, alpha_dual_max_d)
+        xl=np.zeros(duals_slacks_ub.size),
+    )
+    alpha_dual_max = min(
+        alpha_dual_max_a, alpha_dual_max_b, alpha_dual_max_c, alpha_dual_max_d
+    )
 
     return alpha_primal_max, alpha_dual_max
 
@@ -690,11 +722,13 @@ def process_init(x, lb, ub):
     if np.any((ub - lb) < 0):
         raise ValueError(
             'Lower bounds for variables/inequalities should not be larger '
-            'than upper bounds.')
+            'than upper bounds.'
+        )
     if np.any((ub - lb) == 0):
         raise ValueError(
             'Variables and inequalities should not have equal lower and upper '
-            'bounds.')
+            'bounds.'
+        )
 
     lb_mask = build_bounds_mask(lb)
     ub_mask = build_bounds_mask(ub)
@@ -702,7 +736,7 @@ def process_init(x, lb, ub):
     lb_only = np.logical_and(lb_mask, np.logical_not(ub_mask))
     ub_only = np.logical_and(ub_mask, np.logical_not(lb_mask))
     lb_and_ub = np.logical_and(lb_mask, ub_mask)
-    out_of_bounds = ((x >= ub) + (x <= lb))
+    out_of_bounds = (x >= ub) + (x <= lb)
     out_of_bounds_lb_only = np.logical_and(out_of_bounds, lb_only)
     out_of_bounds_ub_only = np.logical_and(out_of_bounds, ub_only)
     out_of_bounds_lb_and_ub = np.logical_and(out_of_bounds, lb_and_ub)

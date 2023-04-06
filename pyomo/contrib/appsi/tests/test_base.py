@@ -9,15 +9,25 @@ class TestResults(unittest.TestCase):
         res = appsi.base.Results()
         self.assertIsNone(res.best_feasible_objective)
         self.assertIsNone(res.best_objective_bound)
-        self.assertEqual(res.termination_condition, appsi.base.TerminationCondition.unknown)
+        self.assertEqual(
+            res.termination_condition, appsi.base.TerminationCondition.unknown
+        )
 
-        with self.assertRaisesRegex(RuntimeError, '.*does not currently have a valid solution.*'):
+        with self.assertRaisesRegex(
+            RuntimeError, '.*does not currently have a valid solution.*'
+        ):
             res.solution_loader.load_vars()
-        with self.assertRaisesRegex(RuntimeError, '.*does not currently have valid duals.*'):
+        with self.assertRaisesRegex(
+            RuntimeError, '.*does not currently have valid duals.*'
+        ):
             res.solution_loader.get_duals()
-        with self.assertRaisesRegex(RuntimeError, '.*does not currently have valid reduced costs.*'):
+        with self.assertRaisesRegex(
+            RuntimeError, '.*does not currently have valid reduced costs.*'
+        ):
             res.solution_loader.get_reduced_costs()
-        with self.assertRaisesRegex(RuntimeError, '.*does not currently have valid slacks.*'):
+        with self.assertRaisesRegex(
+            RuntimeError, '.*does not currently have valid slacks.*'
+        ):
             res.solution_loader.get_slacks()
 
     def test_results(self):

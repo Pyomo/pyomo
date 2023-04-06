@@ -13,6 +13,7 @@ However, it seems likely that problem-specific routines might be better, in
 which case you can write your own, and specify it in the
 'subproblem_initialization_method' argument."""
 
+
 def _restore_vars_from_nlp_block_saved_values(nlp_util_block):
     for var, old_value in nlp_util_block.initial_var_values.items():
         if not var.fixed and var.is_continuous():
@@ -24,6 +25,7 @@ def _restore_vars_from_nlp_block_saved_values(nlp_util_block):
                     old_value = var.ub
                 # Set the value
                 var.set_value(old_value)
+
 
 # This is the original GDPopt behavior:
 def restore_vars_to_original_values(solver, nlp_util_block, mip_util_block):
@@ -38,10 +40,9 @@ def restore_vars_to_original_values(solver, nlp_util_block, mip_util_block):
 
 
 # This is the default for the enumerate algorithm
-def restore_vars_to_original_values_enumerate(true_disjuncts,
-                                              boolean_var_values,
-                                              discrete_var_values,
-                                              nlp_util_block):
+def restore_vars_to_original_values_enumerate(
+    true_disjuncts, boolean_var_values, discrete_var_values, nlp_util_block
+):
     """Perform initialization of the subproblem.
 
     This just restores the continuous variables to the original

@@ -12,8 +12,18 @@
 """Utility functions and classes for the MindtPy solver."""
 import logging
 from pyomo.common.collections import ComponentMap
-from pyomo.core import (Block, Constraint, VarList,
-                        Objective, Reals, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
+from pyomo.core import (
+    Block,
+    Constraint,
+    VarList,
+    Objective,
+    Reals,
+    Var,
+    minimize,
+    RangeSet,
+    ConstraintList,
+    TransformationFactory,
+)
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
@@ -33,8 +43,8 @@ numpy = attempt_import('numpy')[0]
 
 
 class MindtPySolveData(object):
-    """Data container to hold solve-instance data.
-    """
+    """Data container to hold solve-instance data."""
+
     pass
 
 
@@ -60,11 +70,10 @@ def calc_jacobians(model, config):
         mode = differentiate.Modes.sympy
     for c in model.MindtPy_utils.nonlinear_constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
-        jac_list = differentiate(
-            c.body, wrt_list=vars_in_constr, mode=mode)
+        jac_list = differentiate(c.body, wrt_list=vars_in_constr, mode=mode)
         jacobians[c] = ComponentMap(
-            (var, jac_wrt_var)
-            for var, jac_wrt_var in zip(vars_in_constr, jac_list))
+            (var, jac_wrt_var) for var, jac_wrt_var in zip(vars_in_constr, jac_list)
+        )
     return jacobians
 
 
@@ -84,27 +93,27 @@ def add_feas_slacks(m, config):
         if constr.has_ub():
             if config.feasibility_norm in {'L1', 'L2'}:
                 MindtPy.feas_opt.feas_constraints.add(
-                    constr.body - constr.upper
-                    <= MindtPy.feas_opt.slack_var[i])
+                    constr.body - constr.upper <= MindtPy.feas_opt.slack_var[i]
+                )
             else:
                 MindtPy.feas_opt.feas_constraints.add(
-                    constr.body - constr.upper
-                    <= MindtPy.feas_opt.slack_var)
+                    constr.body - constr.upper <= MindtPy.feas_opt.slack_var
+                )
         if constr.has_lb():
             if config.feasibility_norm in {'L1', 'L2'}:
                 MindtPy.feas_opt.feas_constraints.add(
-                    constr.body - constr.lower
-                    >= -MindtPy.feas_opt.slack_var[i])
+                    constr.body - constr.lower >= -MindtPy.feas_opt.slack_var[i]
+                )
             else:
                 MindtPy.feas_opt.feas_constraints.add(
-                    constr.body - constr.lower
-                    >= -MindtPy.feas_opt.slack_var)
+                    constr.body - constr.lower >= -MindtPy.feas_opt.slack_var
+                )
 
 
 def add_var_bound(model, config):
     """This function will add bounds for variables in nonlinear constraints if they are not bounded.
 
-    This is to avoid an unbounded main problem in the LP/NLP algorithm. Thus, the model will be 
+    This is to avoid an unbounded main problem in the LP/NLP algorithm. Thus, the model will be
     updated to include bounds for the unbounded variables in nonlinear constraints.
 
     Parameters
@@ -151,20 +160,38 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
         The norm2 square objective function.
     """
     # skip objective_value variable and slack_var variables
-    var_filter = (lambda v: v[1].is_integer()) if discrete_only \
-        else (lambda v: 'MindtPy_utils.objective_value' not in v[1].name and
-              'MindtPy_utils.feas_opt.slack_var' not in v[1].name)
+    var_filter = (
+        (lambda v: v[1].is_integer())
+        if discrete_only
+        else (
+            lambda v: 'MindtPy_utils.objective_value' not in v[1].name
+            and 'MindtPy_utils.feas_opt.slack_var' not in v[1].name
+        )
+    )
 
-    model_vars, setpoint_vars = zip(*filter(var_filter,
-                                            zip(model.MindtPy_utils.variable_list,
-                                                setpoint_model.MindtPy_utils.variable_list)))
+    model_vars, setpoint_vars = zip(
+        *filter(
+            var_filter,
+            zip(
+                model.MindtPy_utils.variable_list,
+                setpoint_model.MindtPy_utils.variable_list,
+            ),
+        )
+    )
     assert len(model_vars) == len(
-        setpoint_vars), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
+        setpoint_vars
+    ), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
 
-    return Objective(expr=(
-        sum([(model_var - setpoint_var.value)**2
-             for (model_var, setpoint_var) in
-             zip(model_vars, setpoint_vars)])))
+    return Objective(
+        expr=(
+            sum(
+                [
+                    (model_var - setpoint_var.value) ** 2
+                    for (model_var, setpoint_var) in zip(model_vars, setpoint_vars)
+                ]
+            )
+        )
+    )
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
@@ -187,28 +214,37 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
         The norm1 objective function.
     """
     # skip objective_value variable and slack_var variables
-    var_filter = (lambda v: v.is_integer()) if discrete_only \
-        else (lambda v: 'MindtPy_utils.objective_value' not in v.name and
-              'MindtPy_utils.feas_opt.slack_var' not in v.name)
+    var_filter = (
+        (lambda v: v.is_integer())
+        if discrete_only
+        else (
+            lambda v: 'MindtPy_utils.objective_value' not in v.name
+            and 'MindtPy_utils.feas_opt.slack_var' not in v.name
+        )
+    )
     model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
-    setpoint_vars = list(
-        filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
+    setpoint_vars = list(filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
     assert len(model_vars) == len(
-        setpoint_vars), 'Trying to generate Norm1 objective function for models with different number of variables'
+        setpoint_vars
+    ), 'Trying to generate Norm1 objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L1_obj')
     obj_block = model.MindtPy_utils.L1_obj = Block()
     obj_block.L1_obj_idx = RangeSet(len(model_vars))
-    obj_block.L1_obj_var = Var(
-        obj_block.L1_obj_idx, domain=Reals, bounds=(0, None))
+    obj_block.L1_obj_var = Var(obj_block.L1_obj_idx, domain=Reals, bounds=(0, None))
     obj_block.abs_reform = ConstraintList()
-    for idx, v_model, v_setpoint in zip(obj_block.L1_obj_idx, model_vars,
-                                        setpoint_vars):
+    for idx, v_model, v_setpoint in zip(
+        obj_block.L1_obj_idx, model_vars, setpoint_vars
+    ):
         obj_block.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -obj_block.L1_obj_var[idx])
+            expr=v_model - v_setpoint.value >= -obj_block.L1_obj_var[idx]
+        )
         obj_block.abs_reform.add(
-            expr=v_model - v_setpoint.value <= obj_block.L1_obj_var[idx])
+            expr=v_model - v_setpoint.value <= obj_block.L1_obj_var[idx]
+        )
 
-    return Objective(expr=sum(obj_block.L1_obj_var[idx] for idx in obj_block.L1_obj_idx))
+    return Objective(
+        expr=sum(obj_block.L1_obj_var[idx] for idx in obj_block.L1_obj_idx)
+    )
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
@@ -231,29 +267,37 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
         The norm infinity objective function.
     """
     # skip objective_value variable and slack_var variables
-    var_filter = (lambda v: v.is_integer()) if discrete_only \
-        else (lambda v: 'MindtPy_utils.objective_value' not in v.name and
-              'MindtPy_utils.feas_opt.slack_var' not in v.name)
+    var_filter = (
+        (lambda v: v.is_integer())
+        if discrete_only
+        else (
+            lambda v: 'MindtPy_utils.objective_value' not in v.name
+            and 'MindtPy_utils.feas_opt.slack_var' not in v.name
+        )
+    )
     model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
-    setpoint_vars = list(
-        filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
+    setpoint_vars = list(filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
     assert len(model_vars) == len(
-        setpoint_vars), 'Trying to generate Norm Infinity objective function for models with different number of variables'
+        setpoint_vars
+    ), 'Trying to generate Norm Infinity objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L_infinity_obj')
     obj_block = model.MindtPy_utils.L_infinity_obj = Block()
     obj_block.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
     obj_block.abs_reform = ConstraintList()
-    for v_model, v_setpoint in zip(model_vars,
-                                   setpoint_vars):
+    for v_model, v_setpoint in zip(model_vars, setpoint_vars):
         obj_block.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -obj_block.L_infinity_obj_var)
+            expr=v_model - v_setpoint.value >= -obj_block.L_infinity_obj_var
+        )
         obj_block.abs_reform.add(
-            expr=v_model - v_setpoint.value <= obj_block.L_infinity_obj_var)
+            expr=v_model - v_setpoint.value <= obj_block.L_infinity_obj_var
+        )
 
     return Objective(expr=obj_block.L_infinity_obj_var)
 
 
-def generate_lag_objective_function(model, setpoint_model, config, timing, discrete_only=False):
+def generate_lag_objective_function(
+    model, setpoint_model, config, timing, discrete_only=False
+):
     """The function generates the second-order Taylor approximation of the Lagrangean.
 
     Parameters
@@ -272,7 +316,7 @@ def generate_lag_objective_function(model, setpoint_model, config, timing, discr
     Returns
     -------
     Objective
-        The taylor extension(1st order or 2nd order) of the Lagrangean function. 
+        The taylor extension(1st order or 2nd order) of the Lagrangean function.
     """
     temp_model = setpoint_model.clone()
     for var in temp_model.MindtPy_utils.variable_list:
@@ -289,8 +333,12 @@ def generate_lag_objective_function(model, setpoint_model, config, timing, discr
     # First calculate Jacobian and Hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
     with time_code(timing, 'PyomoNLP'):
         nlp = pyomo_nlp.PyomoNLP(temp_model)
-        lam = [-temp_model.dual[constr] if abs(temp_model.dual[constr]) > config.zero_tolerance else 0
-               for constr in nlp.get_pyomo_constraints()]
+        lam = [
+            -temp_model.dual[constr]
+            if abs(temp_model.dual[constr]) > config.zero_tolerance
+            else 0
+            for constr in nlp.get_pyomo_constraints()
+        ]
         nlp.set_duals(lam)
         obj_grad = nlp.evaluate_grad_objective().reshape(-1, 1)
         jac = nlp.evaluate_jacobian().toarray()
@@ -301,8 +349,15 @@ def generate_lag_objective_function(model, setpoint_model, config, timing, discr
             if 'MindtPy_utils.objective_value' not in var.name:
                 jac_lag[nlp.get_primal_indices([var])[0]] = 0
         nlp_var = set([i.name for i in nlp.get_pyomo_variables()])
-        first_order_term = sum(float(jac_lag[nlp.get_primal_indices([temp_var])[0]]) * (var - temp_var.value) for var,
-                               temp_var in zip(model.MindtPy_utils.variable_list, temp_model.MindtPy_utils.variable_list) if temp_var.name in nlp_var)
+        first_order_term = sum(
+            float(jac_lag[nlp.get_primal_indices([temp_var])[0]])
+            * (var - temp_var.value)
+            for var, temp_var in zip(
+                model.MindtPy_utils.variable_list,
+                temp_model.MindtPy_utils.variable_list,
+            )
+            if temp_var.name in nlp_var
+        )
 
         if config.add_regularization == 'grad_lag':
             return Objective(expr=first_order_term, sense=minimize)
@@ -310,35 +365,71 @@ def generate_lag_objective_function(model, setpoint_model, config, timing, discr
             # Implementation 1
             hess_lag = nlp.evaluate_hessian_lag().toarray()
             hess_lag[abs(hess_lag) < config.zero_tolerance] = 0
-            second_order_term = 0.5 * sum((var_i - temp_var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - temp_var_j.value)
-                                          for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list, temp_model.MindtPy_utils.variable_list)
-                                          for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list, temp_model.MindtPy_utils.variable_list)
-                                          if (temp_var_i.name in nlp_var and temp_var_j.name in nlp_var))
+            second_order_term = 0.5 * sum(
+                (var_i - temp_var_i.value)
+                * float(
+                    hess_lag[nlp.get_primal_indices([temp_var_i])[0]][
+                        nlp.get_primal_indices([temp_var_j])[0]
+                    ]
+                )
+                * (var_j - temp_var_j.value)
+                for var_i, temp_var_i in zip(
+                    model.MindtPy_utils.variable_list,
+                    temp_model.MindtPy_utils.variable_list,
+                )
+                for var_j, temp_var_j in zip(
+                    model.MindtPy_utils.variable_list,
+                    temp_model.MindtPy_utils.variable_list,
+                )
+                if (temp_var_i.name in nlp_var and temp_var_j.name in nlp_var)
+            )
             if config.add_regularization == 'hess_lag':
-                return Objective(expr=first_order_term + second_order_term, sense=minimize)
+                return Objective(
+                    expr=first_order_term + second_order_term, sense=minimize
+                )
             elif config.add_regularization == 'hess_only_lag':
                 return Objective(expr=second_order_term, sense=minimize)
         elif config.add_regularization == 'sqp_lag':
-            var_filter = (lambda v: v[1].is_integer()) if discrete_only \
-                else (lambda v: 'MindtPy_utils.objective_value' not in v[1].name and
-                      'MindtPy_utils.feas_opt.slack_var' not in v[1].name)
+            var_filter = (
+                (lambda v: v[1].is_integer())
+                if discrete_only
+                else (
+                    lambda v: 'MindtPy_utils.objective_value' not in v[1].name
+                    and 'MindtPy_utils.feas_opt.slack_var' not in v[1].name
+                )
+            )
 
-            model_vars, setpoint_vars = zip(*filter(var_filter,
-                                                    zip(model.MindtPy_utils.variable_list,
-                                                        setpoint_model.MindtPy_utils.variable_list)))
+            model_vars, setpoint_vars = zip(
+                *filter(
+                    var_filter,
+                    zip(
+                        model.MindtPy_utils.variable_list,
+                        setpoint_model.MindtPy_utils.variable_list,
+                    ),
+                )
+            )
             assert len(model_vars) == len(
-                setpoint_vars), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
+                setpoint_vars
+            ), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
             if config.sqp_lag_scaling_coef is None:
                 rho = 1
             elif config.sqp_lag_scaling_coef == 'fixed':
                 r = 1
-                rho = numpy.linalg.norm(jac_lag/(2*r))
+                rho = numpy.linalg.norm(jac_lag / (2 * r))
             elif config.sqp_lag_scaling_coef == 'variable_dependent':
-                r = numpy.sqrt(
-                    len(temp_model.MindtPy_utils.discrete_variable_list))
-                rho = numpy.linalg.norm(jac_lag/(2*r))
+                r = numpy.sqrt(len(temp_model.MindtPy_utils.discrete_variable_list))
+                rho = numpy.linalg.norm(jac_lag / (2 * r))
 
-            return Objective(expr=first_order_term + rho*sum([(model_var - setpoint_var.value)**2 for (model_var, setpoint_var) in zip(model_vars, setpoint_vars)]))
+            return Objective(
+                expr=first_order_term
+                + rho
+                * sum(
+                    [
+                        (model_var - setpoint_var.value) ** 2
+                        for (model_var, setpoint_var) in zip(model_vars, setpoint_vars)
+                    ]
+                )
+            )
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
@@ -359,29 +450,38 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     discrete_only : bool, optional
         Whether to only optimize on distance between the discrete variables, by default True.
     """
-    var_filter = (lambda v: v.is_integer()) if discrete_only \
-        else (lambda v: True)
+    var_filter = (lambda v: v.is_integer()) if discrete_only else (lambda v: True)
     model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
-    setpoint_vars = list(
-        filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
+    setpoint_vars = list(filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
     assert len(model_vars) == len(
-        setpoint_vars), 'Trying to generate Norm1 norm constraint for models with different number of variables'
+        setpoint_vars
+    ), 'Trying to generate Norm1 norm constraint for models with different number of variables'
     norm_constraint_block = model.MindtPy_utils.L1_norm_constraint = Block()
     norm_constraint_block.L1_slack_idx = RangeSet(len(model_vars))
     norm_constraint_block.L1_slack_var = Var(
-        norm_constraint_block.L1_slack_idx, domain=Reals, bounds=(0, None))
+        norm_constraint_block.L1_slack_idx, domain=Reals, bounds=(0, None)
+    )
     norm_constraint_block.abs_reform = ConstraintList()
-    for idx, v_model, v_setpoint in zip(norm_constraint_block.L1_slack_idx, model_vars,
-                                        setpoint_vars):
+    for idx, v_model, v_setpoint in zip(
+        norm_constraint_block.L1_slack_idx, model_vars, setpoint_vars
+    ):
         norm_constraint_block.abs_reform.add(
-            expr=v_model - v_setpoint.value >= -norm_constraint_block.L1_slack_var[idx])
+            expr=v_model - v_setpoint.value >= -norm_constraint_block.L1_slack_var[idx]
+        )
         norm_constraint_block.abs_reform.add(
-            expr=v_model - v_setpoint.value <= norm_constraint_block.L1_slack_var[idx])
-    rhs = config.fp_norm_constraint_coef * \
-        sum(abs(v_model.value-v_setpoint.value)
-            for v_model, v_setpoint in zip(model_vars, setpoint_vars))
+            expr=v_model - v_setpoint.value <= norm_constraint_block.L1_slack_var[idx]
+        )
+    rhs = config.fp_norm_constraint_coef * sum(
+        abs(v_model.value - v_setpoint.value)
+        for v_model, v_setpoint in zip(model_vars, setpoint_vars)
+    )
     norm_constraint_block.sum_slack = Constraint(
-        expr=sum(norm_constraint_block.L1_slack_var[idx] for idx in norm_constraint_block.L1_slack_idx) <= rhs)
+        expr=sum(
+            norm_constraint_block.L1_slack_var[idx]
+            for idx in norm_constraint_block.L1_slack_idx
+        )
+        <= rhs
+    )
 
 
 def set_solver_options(opt, timing, config, solver_type, regularization=False):
@@ -438,12 +538,12 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
                 opt.options['Presolve'] = 2
     elif solver_name == 'cplex_persistent':
         opt.options['timelimit'] = remaining
-        opt._solver_model.parameters.mip.tolerances.mipgap.set(
-            config.mip_solver_mipgap)
+        opt._solver_model.parameters.mip.tolerances.mipgap.set(config.mip_solver_mipgap)
         if regularization is True:
             if config.solution_limit is not None:
                 opt._solver_model.parameters.mip.limits.solutions.set(
-                    config.solution_limit)
+                    config.solution_limit
+                )
             opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
             if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                 opt._solver_model.parameters.optimalitytarget.set(3)
@@ -467,22 +567,30 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
         opt.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'gams':
         if solver_type == 'mip':
-            opt.options['add_options'] = ['option optcr=%s;' % config.mip_solver_mipgap,
-                                          'option reslim=%s;' % remaining]
+            opt.options['add_options'] = [
+                'option optcr=%s;' % config.mip_solver_mipgap,
+                'option reslim=%s;' % remaining,
+            ]
         elif solver_type == 'nlp':
             opt.options['add_options'] = ['option reslim=%s;' % remaining]
             if config.nlp_solver_args.__contains__('solver'):
-                if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth', 'msnlp', 'conopt', 'baron'}:
+                if config.nlp_solver_args['solver'] in {
+                    'ipopt',
+                    'ipopth',
+                    'msnlp',
+                    'conopt',
+                    'baron',
+                }:
                     if config.nlp_solver_args['solver'] == 'ipopt':
+                        opt.options['add_options'].append('$onecho > ipopt.opt')
                         opt.options['add_options'].append(
-                            '$onecho > ipopt.opt')
-                        opt.options['add_options'].append(
-                            'constr_viol_tol ' + str(config.zero_tolerance))
+                            'constr_viol_tol ' + str(config.zero_tolerance)
+                        )
                     elif config.nlp_solver_args['solver'] == 'ipopth':
+                        opt.options['add_options'].append('$onecho > ipopth.opt')
                         opt.options['add_options'].append(
-                            '$onecho > ipopth.opt')
-                        opt.options['add_options'].append(
-                            'constr_viol_tol ' + str(config.zero_tolerance))
+                            'constr_viol_tol ' + str(config.zero_tolerance)
+                        )
                         # TODO: Ipopt warmstart option
                         # opt.options['add_options'].append('warm_start_init_point       yes\n'
                         #                                   'warm_start_bound_push       1e-9\n'
@@ -491,20 +599,20 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
                         #                                   'warm_start_slack_bound_push 1e-9\n'
                         #                                   'warm_start_mult_bound_push  1e-9\n')
                     elif config.nlp_solver_args['solver'] == 'conopt':
+                        opt.options['add_options'].append('$onecho > conopt.opt')
                         opt.options['add_options'].append(
-                            '$onecho > conopt.opt')
-                        opt.options['add_options'].append(
-                            'RTNWMA ' + str(config.zero_tolerance))
+                            'RTNWMA ' + str(config.zero_tolerance)
+                        )
                     elif config.nlp_solver_args['solver'] == 'msnlp':
+                        opt.options['add_options'].append('$onecho > msnlp.opt')
                         opt.options['add_options'].append(
-                            '$onecho > msnlp.opt')
-                        opt.options['add_options'].append(
-                            'feasibility_tolerance ' + str(config.zero_tolerance))
+                            'feasibility_tolerance ' + str(config.zero_tolerance)
+                        )
                     elif config.nlp_solver_args['solver'] == 'baron':
+                        opt.options['add_options'].append('$onecho > baron.opt')
                         opt.options['add_options'].append(
-                            '$onecho > baron.opt')
-                        opt.options['add_options'].append(
-                            'AbsConFeasTol ' + str(config.zero_tolerance))
+                            'AbsConFeasTol ' + str(config.zero_tolerance)
+                        )
                     opt.options['add_options'].append('$offecho')
                     opt.options['add_options'].append('GAMS_MODEL.optfile=1')
 
@@ -528,7 +636,7 @@ def get_integer_solution(model, string_zero=False):
     for var in model.MindtPy_utils.discrete_variable_list:
         if string_zero:
             if var.value == 0:
-                    # In cplex, negative zero is different from zero, so we use string to denote this(Only in singletree)
+                # In cplex, negative zero is different from zero, so we use string to denote this(Only in singletree)
                 temp.append(str(var.value))
             else:
                 temp.append(int(round(var.value)))
@@ -537,8 +645,15 @@ def get_integer_solution(model, string_zero=False):
     return tuple(temp)
 
 
-def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_model, var_map, solution_name,
-                                            ignore_integrality=False):
+def copy_var_list_values_from_solution_pool(
+    from_list,
+    to_list,
+    config,
+    solver_model,
+    var_map,
+    solution_name,
+    ignore_integrality=False,
+):
     """Copy variable values from the solution pool to another list.
 
     Parameters
@@ -562,10 +677,10 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
         try:
             if config.mip_solver == 'cplex_persistent':
                 var_val = solver_model.solution.pool.get_values(
-                    solution_name, var_map[v_from])
+                    solution_name, var_map[v_from]
+                )
             elif config.mip_solver == 'gurobi_persistent':
-                solver_model.setParam(
-                    gurobipy.GRB.Param.SolutionNumber, solution_name)
+                solver_model.setParam(gurobipy.GRB.Param.SolutionNumber, solution_name)
                 var_val = var_map[v_from].Xn
             # We don't want to trigger the reset of the global stale
             # indicator, so we will set this variable to be "stale",
@@ -584,20 +699,20 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
             if ignore_integrality and v_to.is_integer():
                 v_to.set_value(var_val, skip_validation=True)
             elif v_to.is_integer() and (
-                    abs(var_val - rounded_val) <= config.integer_tolerance):
+                abs(var_val - rounded_val) <= config.integer_tolerance
+            ):
                 v_to.set_value(rounded_val, skip_validation=True)
             elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0, skip_validation=True)
             else:
                 config.logger.error(
-                    'Unknown validation domain error setting variable %s' %
-                    (v_to.name,)
+                    'Unknown validation domain error setting variable %s' % (v_to.name,)
                 )
                 raise
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
-    """ A new persistent interface to Gurobi.
+    """A new persistent interface to Gurobi.
 
     Args:
         GurobiPersistent (PersistentSolver): A class that provides a persistent interface to Gurobi.
@@ -611,8 +726,10 @@ class GurobiPersistent4MindtPy(GurobiPersistent):
                 gurobi_model (gurobi model): the gurobi model derived from pyomo model.
                 where (int): an enum member of gurobipy.GRB.Callback.
             """
-            self._callback_func(self._pyomo_model, self,
-                                where, self.solve_data, self.config)
+            self._callback_func(
+                self._pyomo_model, self, where, self.solve_data, self.config
+            )
+
         return f
 
 
@@ -628,7 +745,7 @@ def update_gap(solve_data):
         solve_data.abs_gap = solve_data.primal_bound - solve_data.dual_bound
     else:
         solve_data.abs_gap = solve_data.dual_bound - solve_data.primal_bound
-    solve_data.rel_gap = solve_data.abs_gap / (abs(solve_data.primal_bound) + 1E-10)
+    solve_data.rel_gap = solve_data.abs_gap / (abs(solve_data.primal_bound) + 1e-10)
 
 
 def update_dual_bound(solve_data, bound_value):
@@ -648,10 +765,14 @@ def update_dual_bound(solve_data, bound_value):
         return
     if solve_data.objective_sense == minimize:
         solve_data.dual_bound = max(bound_value, solve_data.dual_bound)
-        solve_data.dual_bound_improved = solve_data.dual_bound > solve_data.dual_bound_progress[-1]
+        solve_data.dual_bound_improved = (
+            solve_data.dual_bound > solve_data.dual_bound_progress[-1]
+        )
     else:
         solve_data.dual_bound = min(bound_value, solve_data.dual_bound)
-        solve_data.dual_bound_improved = solve_data.dual_bound < solve_data.dual_bound_progress[-1]
+        solve_data.dual_bound_improved = (
+            solve_data.dual_bound < solve_data.dual_bound_progress[-1]
+        )
     solve_data.dual_bound_progress.append(solve_data.dual_bound)
     solve_data.dual_bound_progress_time.append(get_main_elapsed_time(solve_data.timing))
     if solve_data.dual_bound_improved:
@@ -659,7 +780,7 @@ def update_dual_bound(solve_data, bound_value):
 
 
 def update_suboptimal_dual_bound(solve_data, results):
-    """If the relaxed problem is not solved to optimality, the dual bound is updated 
+    """If the relaxed problem is not solved to optimality, the dual bound is updated
     according to the dual bound of relaxed problem.
 
     Parameters
@@ -694,12 +815,18 @@ def update_primal_bound(solve_data, bound_value):
         return
     if solve_data.objective_sense == minimize:
         solve_data.primal_bound = min(bound_value, solve_data.primal_bound)
-        solve_data.primal_bound_improved = solve_data.primal_bound < solve_data.primal_bound_progress[-1]
+        solve_data.primal_bound_improved = (
+            solve_data.primal_bound < solve_data.primal_bound_progress[-1]
+        )
     else:
         solve_data.primal_bound = max(bound_value, solve_data.primal_bound)
-        solve_data.primal_bound_improved = solve_data.primal_bound > solve_data.primal_bound_progress[-1]
+        solve_data.primal_bound_improved = (
+            solve_data.primal_bound > solve_data.primal_bound_progress[-1]
+        )
     solve_data.primal_bound_progress.append(solve_data.primal_bound)
-    solve_data.primal_bound_progress_time.append(get_main_elapsed_time(solve_data.timing))
+    solve_data.primal_bound_progress_time.append(
+        get_main_elapsed_time(solve_data.timing)
+    )
     if solve_data.primal_bound_improved:
         update_gap(solve_data)
 
@@ -736,7 +863,7 @@ def get_dual_integral(solve_data, config):
     -------
     float
         The dual integral.
-    """    
+    """
     dual_integral = 0
     dual_bound_progress = solve_data.dual_bound_progress.copy()
     # Initial dual bound is set to inf or -inf. To calculate dual integral, we set
@@ -747,14 +874,24 @@ def get_dual_integral(solve_data, config):
             break
     for i in range(len(dual_bound_progress)):
         if dual_bound_progress[i] == solve_data.dual_bound_progress[0]:
-            dual_bound_progress[i] = dual_bound * (1 - config.initial_bound_coef * solve_data.objective_sense * math.copysign(1,dual_bound))
+            dual_bound_progress[i] = dual_bound * (
+                1
+                - config.initial_bound_coef
+                * solve_data.objective_sense
+                * math.copysign(1, dual_bound)
+            )
         else:
             break
     for i in range(len(dual_bound_progress)):
         if i == 0:
-            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (solve_data.dual_bound_progress_time[i])
+            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (
+                solve_data.dual_bound_progress_time[i]
+            )
         else:
-            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (solve_data.dual_bound_progress_time[i] - solve_data.dual_bound_progress_time[i-1])
+            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (
+                solve_data.dual_bound_progress_time[i]
+                - solve_data.dual_bound_progress_time[i - 1]
+            )
     config.logger.info(' {:<25}:   {:>7.4f} '.format('Dual integral', dual_integral))
     return dual_integral
 
@@ -772,7 +909,7 @@ def get_primal_integral(solve_data, config):
     -------
     float
         The primal integral.
-    """    
+    """
     primal_integral = 0
     primal_bound_progress = solve_data.primal_bound_progress.copy()
     # Initial primal bound is set to inf or -inf. To calculate primal integral, we set
@@ -783,17 +920,32 @@ def get_primal_integral(solve_data, config):
             break
     for i in range(len(primal_bound_progress)):
         if primal_bound_progress[i] == solve_data.primal_bound_progress[0]:
-            primal_bound_progress[i] = primal_bound * (1 + config.initial_bound_coef * solve_data.objective_sense * math.copysign(1,primal_bound))
+            primal_bound_progress[i] = primal_bound * (
+                1
+                + config.initial_bound_coef
+                * solve_data.objective_sense
+                * math.copysign(1, primal_bound)
+            )
         else:
             break
     for i in range(len(primal_bound_progress)):
         if i == 0:
-            primal_integral += abs(primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i])
+            primal_integral += abs(
+                primal_bound_progress[i] - solve_data.primal_bound
+            ) * (solve_data.primal_bound_progress_time[i])
         else:
-            primal_integral += abs(primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i] - solve_data.primal_bound_progress_time[i-1])
+            primal_integral += abs(
+                primal_bound_progress[i] - solve_data.primal_bound
+            ) * (
+                solve_data.primal_bound_progress_time[i]
+                - solve_data.primal_bound_progress_time[i - 1]
+            )
 
-    config.logger.info(' {:<25}:   {:>7.4f} '.format('Primal integral', primal_integral))
+    config.logger.info(
+        ' {:<25}:   {:>7.4f} '.format('Primal integral', primal_integral)
+    )
     return primal_integral
+
 
 def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense):
     """Epigraph reformulation.
@@ -860,32 +1012,50 @@ def setup_results_object(results, model, config):
         "Original model has %s constraints (%s nonlinear) "
         "and %s disjunctions, "
         "with %s variables, of which %s are binary, %s are integer, "
-        "and %s are continuous." %
-        (num_of.activated.constraints,
-         num_of.activated.nonlinear_constraints,
-         num_of.activated.disjunctions,
-         num_of.activated.variables,
-         num_of.activated.binary_variables,
-         num_of.activated.integer_variables,
-         num_of.activated.continuous_variables))
+        "and %s are continuous."
+        % (
+            num_of.activated.constraints,
+            num_of.activated.nonlinear_constraints,
+            num_of.activated.disjunctions,
+            num_of.activated.variables,
+            num_of.activated.binary_variables,
+            num_of.activated.integer_variables,
+            num_of.activated.continuous_variables,
+        )
+    )
     config.logger.info(
-    '{} is the initial strategy being used.'
-    '\n'.format(config.init_strategy))
+        '{} is the initial strategy being used.\n'.format(config.init_strategy)
+    )
     config.logger.info(
-        ' ===============================================================================================')
+        ' ==============================================================================================='
+    )
     config.logger.info(
-        ' {:>9} | {:>15} | {:>15} | {:>12} | {:>12} | {:^7} | {:>7}\n'.format('Iteration', 'Subproblem Type', 'Objective Value', 'Primal Bound',
-                                                                            'Dual Bound', ' Gap ', 'Time(s)'))
+        ' {:>9} | {:>15} | {:>15} | {:>12} | {:>12} | {:^7} | {:>7}\n'.format(
+            'Iteration',
+            'Subproblem Type',
+            'Objective Value',
+            'Primal Bound',
+            'Dual Bound',
+            ' Gap ',
+            'Time(s)',
+        )
+    )
 
-def process_objective(solve_data, config, move_objective=False,
-                      use_mcpp=False, update_var_con_list=True,
-                      partition_nonlinear_terms=True,
-                      obj_handleable_polynomial_degree={0, 1},
-                      constr_handleable_polynomial_degree={0, 1}):
+
+def process_objective(
+    solve_data,
+    config,
+    move_objective=False,
+    use_mcpp=False,
+    update_var_con_list=True,
+    partition_nonlinear_terms=True,
+    obj_handleable_polynomial_degree={0, 1},
+    constr_handleable_polynomial_degree={0, 1},
+):
     """Process model objective function.
     Check that the model has only 1 valid objective.
     If the objective is nonlinear, move it into the constraints.
-    If no objective function exists, emit a warning and create a dummy 
+    If no objective function exists, emit a warning and create a dummy
     objective.
     Parameters
     ----------
@@ -893,7 +1063,7 @@ def process_objective(solve_data, config, move_objective=False,
     config (ConfigBlock): solver configuration options
     move_objective (bool): if True, move even linear
         objective functions to the constraints
-    update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated. 
+    update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated.
         This arg is set to True by default. Currently, update_var_con_list will be set to False only when
         add_regularization is not None in MindtPy.
     partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
@@ -901,59 +1071,108 @@ def process_objective(solve_data, config, move_objective=False,
     m = solve_data.working_model
     util_block = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
-    active_objectives = list(m.component_data_objects(
-        ctype=Objective, active=True, descend_into=True))
+    active_objectives = list(
+        m.component_data_objects(ctype=Objective, active=True, descend_into=True)
+    )
     solve_data.results.problem.number_of_objectives = len(active_objectives)
     if len(active_objectives) == 0:
-        config.logger.warning(
-            'Model has no active objectives. Adding dummy objective.')
+        config.logger.warning('Model has no active objectives. Adding dummy objective.')
         util_block.dummy_objective = Objective(expr=1)
         main_obj = util_block.dummy_objective
     elif len(active_objectives) > 1:
         raise ValueError('Model has multiple active objectives.')
     else:
         main_obj = active_objectives[0]
-    solve_data.results.problem.sense = ProblemSense.minimize if \
-                                       main_obj.sense == 1 else \
-                                       ProblemSense.maximize
+    solve_data.results.problem.sense = (
+        ProblemSense.minimize if main_obj.sense == 1 else ProblemSense.maximize
+    )
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear or move_objective is True.
-    if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or move_objective:
+    if (
+        main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree
+        or move_objective
+    ):
         if move_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
-            config.logger.info(
-                "Objective is nonlinear. Moving it to constraint set.")
+            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
         util_block.objective_value = VarList(domain=Reals, initialize=0)
         util_block.objective_constr = ConstraintList()
-        if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
-            repn = generate_standard_repn(main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree)
+        if (
+            main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree
+            and partition_nonlinear_terms
+            and main_obj.expr.__class__ is EXPR.SumExpression
+        ):
+            repn = generate_standard_repn(
+                main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree
+            )
             # the following code will also work if linear_subexpr is a constant.
-            linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars)) \
-                + sum(coef*var1*var2 for coef, (var1, var2) in zip(repn.quadratic_coefs, repn.quadratic_vars))
+            linear_subexpr = (
+                repn.constant
+                + sum(
+                    coef * var for coef, var in zip(repn.linear_coefs, repn.linear_vars)
+                )
+                + sum(
+                    coef * var1 * var2
+                    for coef, (var1, var2) in zip(
+                        repn.quadratic_coefs, repn.quadratic_vars
+                    )
+                )
+            )
             # only need to generate one epigraph constraint for the sum of all linear terms and constant
-            epigraph_reformulation(linear_subexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
+            epigraph_reformulation(
+                linear_subexpr,
+                util_block.objective_value,
+                util_block.objective_constr,
+                use_mcpp,
+                main_obj.sense,
+            )
             nonlinear_subexpr = repn.nonlinear_expr
             if nonlinear_subexpr.__class__ is EXPR.SumExpression:
                 for subsubexpr in nonlinear_subexpr.args:
-                    epigraph_reformulation(subsubexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
+                    epigraph_reformulation(
+                        subsubexpr,
+                        util_block.objective_value,
+                        util_block.objective_constr,
+                        use_mcpp,
+                        main_obj.sense,
+                    )
             else:
-                epigraph_reformulation(nonlinear_subexpr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
+                epigraph_reformulation(
+                    nonlinear_subexpr,
+                    util_block.objective_value,
+                    util_block.objective_constr,
+                    use_mcpp,
+                    main_obj.sense,
+                )
         else:
-            epigraph_reformulation(main_obj.expr, util_block.objective_value, util_block.objective_constr, use_mcpp, main_obj.sense)
+            epigraph_reformulation(
+                main_obj.expr,
+                util_block.objective_value,
+                util_block.objective_constr,
+                use_mcpp,
+                main_obj.sense,
+            )
 
         main_obj.deactivate()
-        util_block.objective = Objective(expr=sum(util_block.objective_value[:]), sense=main_obj.sense)
+        util_block.objective = Objective(
+            expr=sum(util_block.objective_value[:]), sense=main_obj.sense
+        )
 
-        if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or \
-           (move_objective and update_var_con_list):
+        if (
+            main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree
+            or (move_objective and update_var_con_list)
+        ):
             util_block.variable_list.extend(util_block.objective_value[:])
             util_block.continuous_variable_list.extend(util_block.objective_value[:])
             util_block.constraint_list.extend(util_block.objective_constr[:])
             util_block.objective_list.append(util_block.objective)
             for constr in util_block.objective_constr[:]:
-                if constr.body.polynomial_degree() in constr_handleable_polynomial_degree:
+                if (
+                    constr.body.polynomial_degree()
+                    in constr_handleable_polynomial_degree
+                ):
                     util_block.linear_constraint_list.append(constr)
                 else:
                     util_block.nonlinear_constraint_list.append(constr)
@@ -978,11 +1197,14 @@ def fp_converged(working_model, mip_model, config, discrete_only=True):
     distance : float
         The euclidean norm between the discrete variables in the MIP and NLP models.
     """
-    distance = (max((nlp_var.value - milp_var.value)**2
-                    for (nlp_var, milp_var) in
-                    zip(working_model.MindtPy_utils.variable_list,
-                        mip_model.MindtPy_utils.variable_list)
-                    if (not discrete_only) or milp_var.is_integer()))
+    distance = max(
+        (nlp_var.value - milp_var.value) ** 2
+        for (nlp_var, milp_var) in zip(
+            working_model.MindtPy_utils.variable_list,
+            mip_model.MindtPy_utils.variable_list,
+        )
+        if (not discrete_only) or milp_var.is_integer()
+    )
     return distance <= config.fp_projzerotol
 
 
@@ -1002,15 +1224,23 @@ def add_orthogonality_cuts(working_model, mip_model, config):
     """
     mip_integer_vars = mip_model.MindtPy_utils.discrete_variable_list
     nlp_integer_vars = working_model.MindtPy_utils.discrete_variable_list
-    orthogonality_cut = sum((nlp_v.value-mip_v.value)*(mip_v-nlp_v.value)
-                            for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
-    mip_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
-        orthogonality_cut)
+    orthogonality_cut = (
+        sum(
+            (nlp_v.value - mip_v.value) * (mip_v - nlp_v.value)
+            for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)
+        )
+        >= 0
+    )
+    mip_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(orthogonality_cut)
     if config.fp_projcuts:
-        orthogonality_cut = sum((nlp_v.value-mip_v.value)*(nlp_v-nlp_v.value)
-                                for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
-        working_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
-            orthogonality_cut)
+        orthogonality_cut = (
+            sum(
+                (nlp_v.value - mip_v.value) * (nlp_v - nlp_v.value)
+                for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)
+            )
+            >= 0
+        )
+        working_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(orthogonality_cut)
 
 
 def generate_norm_constraint(fp_nlp_model, mip_model, config):
@@ -1028,13 +1258,31 @@ def generate_norm_constraint(fp_nlp_model, mip_model, config):
     if config.fp_main_norm == 'L1':
         # TODO: check if we can access the block defined in FP-main problem
         generate_norm1_norm_constraint(
-            fp_nlp_model, mip_model, config, discrete_only=True)
+            fp_nlp_model, mip_model, config, discrete_only=True
+        )
     elif config.fp_main_norm == 'L2':
-        fp_nlp_model.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
-                                                     for nlp_var, mip_var in zip(fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list)) <= 0)
+        fp_nlp_model.norm_constraint = Constraint(
+            expr=sum(
+                (nlp_var - mip_var.value) ** 2
+                - config.fp_norm_constraint_coef * (nlp_var.value - mip_var.value) ** 2
+                for nlp_var, mip_var in zip(
+                    fp_nlp_model.MindtPy_utils.discrete_variable_list,
+                    mip_model.MindtPy_utils.discrete_variable_list,
+                )
+            )
+            <= 0
+        )
     elif config.fp_main_norm == 'L_infinity':
         fp_nlp_model.norm_constraint = ConstraintList()
-        rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
-            fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list))
-        for nlp_var, mip_var in zip(fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list):
+        rhs = config.fp_norm_constraint_coef * max(
+            nlp_var.value - mip_var.value
+            for nlp_var, mip_var in zip(
+                fp_nlp_model.MindtPy_utils.discrete_variable_list,
+                mip_model.MindtPy_utils.discrete_variable_list,
+            )
+        )
+        for nlp_var, mip_var in zip(
+            fp_nlp_model.MindtPy_utils.discrete_variable_list,
+            mip_model.MindtPy_utils.discrete_variable_list,
+        ):
             fp_nlp_model.norm_constraint.add(nlp_var - mip_var.value <= rhs)

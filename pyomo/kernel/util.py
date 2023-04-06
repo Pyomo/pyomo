@@ -14,18 +14,16 @@ import pprint as _pprint_
 
 from pyomo.common.collections import ComponentMap
 import pyomo.core
-from pyomo.core.expr.numvalue import \
-    NumericValue
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _no_ctype,
-     _convert_ctype,
-     _convert_descend_into)
+from pyomo.core.expr.numvalue import NumericValue
+from pyomo.core.kernel.base import (
+    ICategorizedObject,
+    _no_ctype,
+    _convert_ctype,
+    _convert_descend_into,
+)
 
-def preorder_traversal(node,
-                       ctype=_no_ctype,
-                       active=True,
-                       descend=True):
+
+def preorder_traversal(node, ctype=_no_ctype, active=True, descend=True):
     """
     A generator that yields each object in the storage tree
     (including the root object) using a preorder traversal.
@@ -57,8 +55,7 @@ def preorder_traversal(node,
     assert active in (None, True)
 
     # if not active, then nothing below is active
-    if (active is not None) and \
-       (not node.active):
+    if (active is not None) and (not node.active):
         return
 
     # convert AML types into Kernel types (hack for the
@@ -68,32 +65,29 @@ def preorder_traversal(node,
     # convert descend to a function
     descend = _convert_descend_into(descend)
 
-    if (ctype is _no_ctype) or \
-       (node.ctype is ctype) or \
-       (node.ctype._is_heterogeneous_container):
+    if (
+        (ctype is _no_ctype)
+        or (node.ctype is ctype)
+        or (node.ctype._is_heterogeneous_container)
+    ):
         yield node
 
-    if (not node._is_container) or \
-        (not descend(node)):
+    if (not node._is_container) or (not descend(node)):
         return
 
     for child in node.children():
         child_ctype = child.ctype
         if not child._is_container:
             # not a container
-            if (active is None) or \
-               child.active:
-                if (ctype is _no_ctype) or \
-                   (child_ctype is ctype):
+            if (active is None) or child.active:
+                if (ctype is _no_ctype) or (child_ctype is ctype):
                     yield child
         elif child._is_heterogeneous_container:
             # a heterogeneous container, so use
             # its traversal method
             for obj in preorder_traversal(
-                    child,
-                    ctype=ctype,
-                    active=active,
-                    descend=descend):
+                child, ctype=ctype, active=active, descend=descend
+            ):
                 yield obj
         else:
             # a homogeneous container
@@ -106,10 +100,8 @@ def preorder_traversal(node,
                         return False
                     else:
                         return descend(obj_)
-                for obj in preorder_traversal(
-                        child,
-                        active=active,
-                        descend=descend_):
+
+                for obj in preorder_traversal(child, active=active, descend=descend_):
                     if not obj._is_heterogeneous_container:
                         yield obj
                     else:
@@ -117,23 +109,15 @@ def preorder_traversal(node,
                         # its traversal method and reapply the
                         # ctype filter
                         for item in preorder_traversal(
-                                obj,
-                                ctype=ctype,
-                                active=active,
-                                descend=descend):
+                            obj, ctype=ctype, active=active, descend=descend
+                        ):
                             yield item
-            elif (ctype is _no_ctype) or \
-                 (child_ctype is ctype):
-                for obj in preorder_traversal(
-                        child,
-                        active=active,
-                        descend=descend):
+            elif (ctype is _no_ctype) or (child_ctype is ctype):
+                for obj in preorder_traversal(child, active=active, descend=descend):
                     yield obj
 
-def generate_names(node,
-                   convert=str,
-                   prefix="",
-                   **kwds):
+
+def generate_names(node, convert=str, prefix="", **kwds):
     """
     Generate names relative to this object for all
     objects stored under it.
@@ -168,16 +152,14 @@ def generate_names(node,
 
     for obj in traversal:
         parent = obj.parent
-        name = (parent._child_storage_entry_string
-                % convert(obj.storage_key))
+        name = parent._child_storage_entry_string % convert(obj.storage_key)
         if parent is not node:
-            names[obj] = (names[parent] +
-                          parent._child_storage_delimiter_string +
-                          name)
+            names[obj] = names[parent] + parent._child_storage_delimiter_string + name
         else:
             names[obj] = prefix + name
 
     return names
+
 
 def pprint(obj, indent=0, stream=sys.stdout):
     """pprint a kernel modeling object"""
@@ -185,65 +167,90 @@ def pprint(obj, indent=0, stream=sys.stdout):
         if isinstance(obj, NumericValue):
             prefix = ""
             if indent > 0:
-                prefix = (" "*indent)+" - "
-            stream.write(prefix+str(obj)+"\n")
+                prefix = (" " * indent) + " - "
+            stream.write(prefix + str(obj) + "\n")
         else:
             assert indent == 0
-            _pprint_.pprint(obj, indent=indent+1, stream=stream)
+            _pprint_.pprint(obj, indent=indent + 1, stream=stream)
         return
     if not obj._is_container:
         prefix = ""
         if indent > 0:
-            prefix = (" "*indent)+" - "
+            prefix = (" " * indent) + " - "
         # not a block
         clsname = obj.__class__.__name__
         if obj.ctype is pyomo.core.kernel.variable.IVariable:
-            stream.write(prefix+"%s: %s(active=%s, value=%s, bounds=(%s,%s), domain_type=%s, fixed=%s, stale=%s)\n"
-                  % (str(obj),
-                     clsname,
-                     obj.active,
-                     obj.value,
-                     obj.lb,
-                     obj.ub,
-                     obj.domain_type.__name__,
-                     obj.fixed,
-                     obj.stale))
+            stream.write(
+                prefix
+                + "%s: %s(active=%s, value=%s, bounds=(%s,%s), domain_type=%s, fixed=%s, stale=%s)\n"
+                % (
+                    str(obj),
+                    clsname,
+                    obj.active,
+                    obj.value,
+                    obj.lb,
+                    obj.ub,
+                    obj.domain_type.__name__,
+                    obj.fixed,
+                    obj.stale,
+                )
+            )
         elif obj.ctype is pyomo.core.kernel.constraint.IConstraint:
-              stream.write(prefix+"%s: %s(active=%s, expr=%s)\n"
-                  % (str(obj),
-                     clsname,
-                     obj.active,
-                     str(obj.expr)))
+            stream.write(
+                prefix
+                + "%s: %s(active=%s, expr=%s)\n"
+                % (str(obj), clsname, obj.active, str(obj.expr))
+            )
         elif obj.ctype is pyomo.core.kernel.objective.IObjective:
-            stream.write(prefix+"%s: %s(active=%s, expr=%s)\n"
-                  % (str(obj), clsname, obj.active, str(obj.expr)))
+            stream.write(
+                prefix
+                + "%s: %s(active=%s, expr=%s)\n"
+                % (str(obj), clsname, obj.active, str(obj.expr))
+            )
         elif obj.ctype is pyomo.core.kernel.expression.IExpression:
-            stream.write(prefix+"%s: %s(active=%s, expr=%s)\n"
-                  % (str(obj), clsname, obj.active, str(obj.expr)))
+            stream.write(
+                prefix
+                + "%s: %s(active=%s, expr=%s)\n"
+                % (str(obj), clsname, obj.active, str(obj.expr))
+            )
         elif obj.ctype is pyomo.core.kernel.parameter.IParameter:
-            stream.write(prefix+"%s: %s(active=%s, value=%s)\n"
-                  % (str(obj), clsname, obj.active, str(obj())))
+            stream.write(
+                prefix
+                + "%s: %s(active=%s, value=%s)\n"
+                % (str(obj), clsname, obj.active, str(obj()))
+            )
         elif obj.ctype is pyomo.core.kernel.sos.ISOS:
-            stream.write(prefix+"%s: %s(active=%s, level=%s, entries=%s)\n"
-                  % (str(obj),
-                     clsname,
-                     obj.active,
-                     obj.level,
-                     str(["(%s,%s)" % (str(v), w)
-                          for v,w in zip(obj.variables,
-                                         obj.weights)])))
+            stream.write(
+                prefix
+                + "%s: %s(active=%s, level=%s, entries=%s)\n"
+                % (
+                    str(obj),
+                    clsname,
+                    obj.active,
+                    obj.level,
+                    str(
+                        [
+                            "(%s,%s)" % (str(v), w)
+                            for v, w in zip(obj.variables, obj.weights)
+                        ]
+                    ),
+                )
+            )
         else:
             assert obj.ctype is pyomo.core.kernel.suffix.ISuffix
-            stream.write(prefix+"%s: %s(active=%s, size=%s)\n"
-                  % (str(obj.name), clsname, obj.active, str(len(obj))))
+            stream.write(
+                prefix
+                + "%s: %s(active=%s, size=%s)\n"
+                % (str(obj.name), clsname, obj.active, str(len(obj)))
+            )
     else:
         prefix = ""
         if indent > 0:
-            prefix = (" "*indent)+" - "
-        stream.write(prefix+"%s: %s(active=%s, ctype=%s)\n"
-                     % (str(obj),
-                        obj.__class__.__name__,
-                        obj.active,
-                        obj.ctype.__name__))
+            prefix = (" " * indent) + " - "
+        stream.write(
+            prefix
+            + "%s: %s(active=%s, ctype=%s)\n"
+            % (str(obj), obj.__class__.__name__, obj.active, obj.ctype.__name__)
+        )
         for c in obj.children():
-            pprint(c, indent=indent+1, stream=stream)
+            pprint(c, indent=indent + 1, stream=stream)

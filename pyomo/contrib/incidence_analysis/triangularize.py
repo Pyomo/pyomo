@@ -102,11 +102,11 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
         # This matching maps top nodes to "other nodes" *and* other nodes
         # back to top nodes.
         matching = nxb.maximum_matching(graph, top_nodes=top_nodes)
-    if len(matching) != 2*M:
+    if len(matching) != 2 * M:
         raise RuntimeError(
             "get_scc_of_projection does not support bipartite graphs without"
             " a perfect matching. Got a graph with %s nodes per bipartite set"
-            " and a matching of cardinality %s." % (M, (len(matching)/2))
+            " and a matching of cardinality %s." % (M, (len(matching) / 2))
         )
 
     scc_list, dag = _get_scc_dag_of_projection(graph, top_nodes, matching)
@@ -116,8 +116,7 @@ def get_scc_of_projection(graph, top_nodes, matching=None):
     # is an SCC, and contains tuples of nodes. The "top node", and its matched
     # "bottom node".
     ordered_node_subsets = [
-        sorted([(i, matching[i]) for i in scc_list[scc_idx]])
-        for scc_idx in scc_order
+        sorted([(i, matching[i]) for i in scc_list[scc_idx]]) for scc_idx in scc_order
     ]
     return ordered_node_subsets
 
@@ -180,18 +179,14 @@ def block_triangularize(matrix, matching=None):
     row_nodes = list(range(M))
     sccs = get_scc_of_projection(graph, row_nodes, matching=matching)
     row_partition = [[i for i, j in scc] for scc in sccs]
-    col_partition = [[j-M for i, j in scc] for scc in sccs]
+    col_partition = [[j - M for i, j in scc] for scc in sccs]
     return row_partition, col_partition
 
 
 def map_coords_to_block_triangular_indices(matrix, matching=None):
     row_blocks, col_blocks = block_triangularize(matrix, matching=matching)
-    row_idx_map = {
-        r: idx for idx, rblock in enumerate(row_blocks) for r in rblock
-    }
-    col_idx_map = {
-        c: idx for idx, cblock in enumerate(col_blocks) for c in cblock
-    }
+    row_idx_map = {r: idx for idx, rblock in enumerate(row_blocks) for r in rblock}
+    col_idx_map = {c: idx for idx, cblock in enumerate(col_blocks) for c in cblock}
     return row_idx_map, col_idx_map
 
 
