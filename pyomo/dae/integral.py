@@ -12,14 +12,16 @@
 from pyomo.common.deprecation import RenamedClass
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.indexed_component import rule_wrapper
-from pyomo.core.base.expression import (Expression,
-                                        _GeneralExpressionData,
-                                        ScalarExpression,
-                                        IndexedExpression)
+from pyomo.core.base.expression import (
+    Expression,
+    _GeneralExpressionData,
+    ScalarExpression,
+    IndexedExpression,
+)
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 
-__all__ = ('Integral', )
+__all__ = ('Integral',)
 
 
 @ModelComponentFactory.register("Integral Expression in a DAE model.")
@@ -60,8 +62,7 @@ class Integral(Expression):
     def __init__(self, *args, **kwds):
 
         if "wrt" in kwds and "withrespectto" in kwds:
-            raise TypeError(
-                "Cannot specify both 'wrt' and 'withrespectto keywords")
+            raise TypeError("Cannot specify both 'wrt' and 'withrespectto keywords")
 
         wrt = kwds.pop('wrt', None)
         wrt = kwds.pop('withrespectto', wrt)
@@ -74,13 +75,15 @@ class Integral(Expression):
                 raise ValueError(
                     "Integral indexed by multiple ContinuousSets. "
                     "The desired ContinuousSet must be specified using the "
-                    "keyword argument 'wrt'")
+                    "keyword argument 'wrt'"
+                )
             wrt = args[0]
 
         if type(wrt) is not ContinuousSet:
             raise ValueError(
                 "Cannot take the integral with respect to '%s'. Must take an "
-                "integral with respect to a ContinuousSet" % wrt)
+                "integral with respect to a ContinuousSet" % wrt
+            )
         self._wrt = wrt
 
         loc = None
@@ -92,44 +95,53 @@ class Integral(Expression):
         if loc is None:
             raise ValueError(
                 "The ContinuousSet '%s' was not found in the indexing sets "
-                "of the Integral" % wrt.name)
+                "of the Integral" % wrt.name
+            )
         self.loc = loc
 
         # Remove the index that the integral is being expanded over
-        arg = args[0:loc] + args[loc + 1:]
+        arg = args[0:loc] + args[loc + 1 :]
 
         # Check that if bounds are given
         bounds = kwds.pop('bounds', None)
         if bounds is not None:
             raise DAE_Error(
                 "Setting bounds on integrals has not yet been implemented. "
-                "Integrals may only be taken over an entire ContinuousSet")
+                "Integrals may only be taken over an entire ContinuousSet"
+            )
 
         # Create integral expression and pass to the expression initialization
         intexp = kwds.pop('expr', None)
         intexp = kwds.pop('rule', intexp)
         if intexp is None:
-            raise ValueError(
-                "Must specify an integral expression")
+            raise ValueError("Must specify an integral expression")
 
         _is_indexed = bool(len(arg))
 
         def _trap_rule(rule, m, *a):
             ds = sorted(m.find_component(wrt.local_name))
-            return sum(0.5 * (ds[i + 1] - ds[i]) *
-                       (rule(m, * (a[0:loc] + (ds[i + 1],) + a[loc:])) +
-                        rule(m, * (a[0:loc] + (ds[i],) + a[loc:])))
-                       for i in range(len(ds) - 1))
+            return sum(
+                0.5
+                * (ds[i + 1] - ds[i])
+                * (
+                    rule(m, *(a[0:loc] + (ds[i + 1],) + a[loc:]))
+                    + rule(m, *(a[0:loc] + (ds[i],) + a[loc:]))
+                )
+                for i in range(len(ds) - 1)
+            )
 
         # Note that position_map is mapping arguments (block, *args), so
         # must be 1 more than len(args), and loc has to be offset by one
-        kwds['rule'] = rule_wrapper(intexp, _trap_rule, positional_arg_map=(
-            i for i in range(len(args)+1) if i != loc+1))
+        kwds['rule'] = rule_wrapper(
+            intexp,
+            _trap_rule,
+            positional_arg_map=(i for i in range(len(args) + 1) if i != loc + 1),
+        )
         kwds.setdefault('ctype', Integral)
         Expression.__init__(self, *arg, **kwds)
 
     def get_continuousset(self):
-        """ Return the :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`
+        """Return the :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`
         the integral is being taken over
         """
         return self._wrt
@@ -137,8 +149,8 @@ class Integral(Expression):
 
 class ScalarIntegral(ScalarExpression, Integral):
     """
-        An integral that will have no indexing sets after applying a numerical
-        integration transformation
+    An integral that will have no indexing sets after applying a numerical
+    integration transformation
     """
 
     def __init__(self, *args, **kwds):
@@ -180,7 +192,7 @@ class IndexedIntegral(IndexedExpression, Integral):
 
         setlist = []
         if self.dim() == 1:
-            setlist = [self.index_set(), ]
+            setlist = [self.index_set()]
         else:
             setlist = self.index_set().set_tuple
 
@@ -189,5 +201,3 @@ class IndexedIntegral(IndexedExpression, Integral):
                 if 'scheme' not in i.get_discretization_info():
                     return False
         return True
-
-

@@ -15,29 +15,35 @@ import pyomo.common.unittest as unittest
 
 from pyomo.core.expr import current as EXPR
 from pyomo.environ import (
-    ConcreteModel, Param, Var, Set, Constraint, 
-    sin, log, sqrt, TransformationFactory)
+    ConcreteModel,
+    Param,
+    Var,
+    Set,
+    Constraint,
+    sin,
+    log,
+    sqrt,
+    TransformationFactory,
+)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.dae.simulator import (
     scipy_available,
     casadi,
     casadi_available,
-    Simulator, 
-    _check_getitemexpression, 
+    Simulator,
+    _check_getitemexpression,
     _check_productexpression,
     _check_negationexpression,
-    _check_viewsumexpression, 
+    _check_viewsumexpression,
     substitute_pyomo2casadi,
 )
-from pyomo.core.expr.template_expr import (
-    IndexTemplate, 
-    _GetItemIndexer,
-)
+from pyomo.core.expr.template_expr import IndexTemplate, _GetItemIndexer
 from pyomo.common.fileutils import import_file
 
 import os
 from os.path import abspath, dirname, normpath, join
+
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
 
@@ -68,7 +74,8 @@ class TestSimulator(unittest.TestCase):
             Simulator(m, package='foo')
 
         def _con(m, i):
-            return m.v[i] == m.w[i]**2 + m.y
+            return m.v[i] == m.w[i] ** 2 + m.y
+
         m.con = Constraint(m.t, rule=_con)
 
         with self.assertRaises(DAE_Error):
@@ -86,7 +93,8 @@ class TestSimulator(unittest.TestCase):
         m = self.m
 
         def _deq(m, i):
-            return m.dv[i] >= m.v[i]**2 + m.v[i]
+            return m.dv[i] >= m.v[i] ** 2 + m.v[i]
+
         m.deq = Constraint(m.t, rule=_deq)
 
         mysim = Simulator(m)
@@ -106,11 +114,13 @@ class TestSimulator(unittest.TestCase):
         t = IndexTemplate(m.t)
 
         def _deqv(m, i):
-            return m.v[i]**2 + m.v[i] == m.dv[i]
+            return m.v[i] ** 2 + m.v[i] == m.dv[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.w[i, j]**2 + m.w[i, j] == m.dw[i, j]
+            return m.w[i, j] ** 2 + m.w[i, j] == m.dw[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -142,15 +152,17 @@ class TestSimulator(unittest.TestCase):
         m.p = Param(initialize=5)
         m.mp = Param(initialize=5, mutable=True)
         m.y = Var()
-        
+
         t = IndexTemplate(m.t)
 
         def _deqv(m, i):
-            return m.p * m.dv[i] == m.v[i]**2 + m.v[i]
+            return m.p * m.dv[i] == m.v[i] ** 2 + m.v[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.p * m.dw[i, j] == m.w[i, j]**2 + m.w[i, j]
+            return m.p * m.dw[i, j] == m.w[i, j] ** 2 + m.w[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -170,11 +182,13 @@ class TestSimulator(unittest.TestCase):
         m.del_component('deqw_index')
 
         def _deqv(m, i):
-            return m.mp * m.dv[i] == m.v[i]**2 + m.v[i]
+            return m.mp * m.dv[i] == m.v[i] ** 2 + m.v[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.y * m.dw[i, j] == m.w[i, j]**2 + m.w[i, j]
+            return m.y * m.dw[i, j] == m.w[i, j] ** 2 + m.w[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -209,15 +223,17 @@ class TestSimulator(unittest.TestCase):
         m.p = Param(initialize=5)
         m.mp = Param(initialize=5, mutable=True)
         m.y = Var()
-        
+
         t = IndexTemplate(m.t)
 
         def _deqv(m, i):
-            return m.v[i]**2 + m.v[i] == m.p * m.dv[i]
+            return m.v[i] ** 2 + m.v[i] == m.p * m.dv[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.w[i, j]**2 + m.w[i, j] == m.p * m.dw[i, j]
+            return m.w[i, j] ** 2 + m.w[i, j] == m.p * m.dw[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -237,11 +253,13 @@ class TestSimulator(unittest.TestCase):
         m.del_component('deqw_index')
 
         def _deqv(m, i):
-            return m.v[i]**2 + m.v[i] == m.mp * m.dv[i]
+            return m.v[i] ** 2 + m.v[i] == m.mp * m.dv[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.w[i, j]**2 + m.w[i, j] == m.y * m.dw[i, j]
+            return m.w[i, j] ** 2 + m.w[i, j] == m.y * m.dw[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -276,15 +294,17 @@ class TestSimulator(unittest.TestCase):
         m.p = Param(initialize=5)
         m.mp = Param(initialize=5, mutable=True)
         m.y = Var()
-        
+
         t = IndexTemplate(m.t)
 
         def _deqv(m, i):
-            return m.dv[i] + m.y == m.v[i]**2 + m.v[i]
+            return m.dv[i] + m.y == m.v[i] ** 2 + m.v[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.y + m.dw[i, j] == m.w[i, j]**2 + m.w[i, j]
+            return m.y + m.dw[i, j] == m.w[i, j] ** 2 + m.w[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -304,11 +324,13 @@ class TestSimulator(unittest.TestCase):
         m.del_component('deqw_index')
 
         def _deqv(m, i):
-            return m.mp + m.dv[i] == m.v[i]**2 + m.v[i]
+            return m.mp + m.dv[i] == m.v[i] ** 2 + m.v[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.dw[i, j] + m.p == m.w[i, j]**2 + m.w[i, j]
+            return m.dw[i, j] + m.p == m.w[i, j] ** 2 + m.w[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -343,15 +365,17 @@ class TestSimulator(unittest.TestCase):
         m.p = Param(initialize=5)
         m.mp = Param(initialize=5, mutable=True)
         m.y = Var()
-        
+
         t = IndexTemplate(m.t)
 
         def _deqv(m, i):
-            return m.v[i]**2 + m.v[i] == m.dv[i] + m.y
+            return m.v[i] ** 2 + m.v[i] == m.dv[i] + m.y
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.w[i, j]**2 + m.w[i, j] == m.y + m.dw[i, j]
+            return m.w[i, j] ** 2 + m.w[i, j] == m.y + m.dw[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -371,11 +395,13 @@ class TestSimulator(unittest.TestCase):
         m.del_component('deqw_index')
 
         def _deqv(m, i):
-            return m.v[i]**2 + m.v[i] == m.mp + m.dv[i]
+            return m.v[i] ** 2 + m.v[i] == m.mp + m.dv[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.w[i, j]**2 + m.w[i, j] == m.dw[i, j] + m.p
+            return m.w[i, j] ** 2 + m.w[i, j] == m.dw[i, j] + m.p
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -410,15 +436,17 @@ class TestSimulator(unittest.TestCase):
         m.p = Param(initialize=5)
         m.mp = Param(initialize=5, mutable=True)
         m.y = Var()
-        
+
         t = IndexTemplate(m.t)
 
         def _deqv(m, i):
-            return -m.dv[i] == m.v[i]**2 + m.v[i]
+            return -m.dv[i] == m.v[i] ** 2 + m.v[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return -m.dw[i, j] == m.w[i, j]**2 + m.w[i, j]
+            return -m.dw[i, j] == m.w[i, j] ** 2 + m.w[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -448,15 +476,17 @@ class TestSimulator(unittest.TestCase):
         m.p = Param(initialize=5)
         m.mp = Param(initialize=5, mutable=True)
         m.y = Var()
-        
+
         t = IndexTemplate(m.t)
 
         def _deqv(m, i):
-            return m.v[i]**2 + m.v[i] == -m.dv[i]
+            return m.v[i] ** 2 + m.v[i] == -m.dv[i]
+
         m.deqv = Constraint(m.t, rule=_deqv)
 
         def _deqw(m, i, j):
-            return m.w[i, j]**2 + m.w[i, j] == -m.dw[i, j]
+            return m.w[i, j] ** 2 + m.w[i, j] == -m.dw[i, j]
+
         m.deqw = Constraint(m.t, m.s, rule=_deqw)
 
         mysim = Simulator(m)
@@ -485,13 +515,15 @@ class TestSimulator(unittest.TestCase):
         m.dw = DerivativeVar(m.w)
 
         t = IndexTemplate(m.t)
-        
+
         def _deq1(m, i):
             return m.dv[i] == m.v[i]
+
         m.deq1 = Constraint(m.t, rule=_deq1)
 
         def _deq2(m, i):
             return m.dw[i] == m.v[i]
+
         m.deq2 = Constraint(m.t, rule=_deq2)
 
         mysim = Simulator(m)
@@ -507,14 +539,10 @@ class TestSimulator(unittest.TestCase):
         self.assertTrue(_GetItemIndexer(m.v[t]) in mysim._templatemap)
         self.assertFalse(_GetItemIndexer(m.w[t]) in mysim._templatemap)
         self.assertEqual(len(mysim._rhsdict), 2)
-        self.assertTrue(
-            isinstance(mysim._rhsdict[_GetItemIndexer(m.dv[t])], Param))
-        self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dv[t])].name, "'v[{t}]'")
-        self.assertTrue(
-            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw[t])], Param))
-        self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw[t])].name, "'v[{t}]'")
+        self.assertTrue(isinstance(mysim._rhsdict[_GetItemIndexer(m.dv[t])], Param))
+        self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dv[t])].name, "'v[{t}]'")
+        self.assertTrue(isinstance(mysim._rhsdict[_GetItemIndexer(m.dw[t])], Param))
+        self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw[t])].name, "'v[{t}]'")
         self.assertEqual(len(mysim._rhsfun(0, [0, 0])), 2)
         self.assertIsNone(mysim._tsim)
         self.assertIsNone(mysim._simsolution)
@@ -539,17 +567,20 @@ class TestSimulator(unittest.TestCase):
         m.dw3 = DerivativeVar(m.w3)
 
         t = IndexTemplate(m.t)
-        
+
         def _deq1(m, t, s):
             return m.dw1[t, s] == m.w1[t, s]
+
         m.deq1 = Constraint(m.t, m.s, rule=_deq1)
 
         def _deq2(m, s, t):
             return m.dw2[s, t] == m.w2[s, t]
+
         m.deq2 = Constraint(m.s, m.t, rule=_deq2)
 
         def _deq3(m, i, t, s):
             return m.dw3[i, t, s] == m.w1[t, s] + m.w2[i + 1, t]
+
         m.deq3 = Constraint([0, 1], m.t, m.s, rule=_deq3)
 
         mysim = Simulator(m)
@@ -580,28 +611,32 @@ class TestSimulator(unittest.TestCase):
         self.assertFalse(_GetItemIndexer(m.w3[1, t, 3]) in mysim._templatemap)
 
         self.assertEqual(len(mysim._rhsdict), 12)
+        self.assertTrue(isinstance(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1])], Param))
+        self.assertTrue(isinstance(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 3])], Param))
+        self.assertTrue(isinstance(mysim._rhsdict[_GetItemIndexer(m.dw2[1, t])], Param))
+        self.assertTrue(isinstance(mysim._rhsdict[_GetItemIndexer(m.dw2[3, t])], Param))
         self.assertTrue(
-            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1])], Param))
+            isinstance(
+                mysim._rhsdict[_GetItemIndexer(m.dw3[0, t, 1])], EXPR.SumExpression
+            )
+        )
         self.assertTrue(
-            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 3])], Param))
-        self.assertTrue(
-            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw2[1, t])], Param))
-        self.assertTrue(
-            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw2[3, t])], Param))
-        self.assertTrue(
-            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw3[0, t, 1])],
-                       EXPR.SumExpression))
-        self.assertTrue(
-            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 3])],
-                       EXPR.SumExpression))
+            isinstance(
+                mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 3])], EXPR.SumExpression
+            )
+        )
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1])].name, "'w1[{t},1]'")
+            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1])].name, "'w1[{t},1]'"
+        )
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 3])].name, "'w1[{t},3]'")
+            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 3])].name, "'w1[{t},3]'"
+        )
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw2[1, t])].name, "'w2[1,{t}]'")
+            mysim._rhsdict[_GetItemIndexer(m.dw2[1, t])].name, "'w2[1,{t}]'"
+        )
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw2[3, t])].name, "'w2[3,{t}]'")
+            mysim._rhsdict[_GetItemIndexer(m.dw2[3, t])].name, "'w2[3,{t}]'"
+        )
 
         self.assertEqual(len(mysim._rhsfun(0, [0] * 12)), 12)
         self.assertIsNone(mysim._tsim)
@@ -631,17 +666,20 @@ class TestSimulator(unittest.TestCase):
         m.dw3 = DerivativeVar(m.w3)
 
         t = IndexTemplate(m.t)
-        
+
         def _deq1(m, t, i, j):
             return m.dw1[t, i, j] == m.w1[t, i, j]
+
         m.deq1 = Constraint(m.t, m.s2, rule=_deq1)
 
         def _deq2(m, *idx):
             return m.dw2[idx] == m.w2[idx]
+
         m.deq2 = Constraint(m.s2, m.t, rule=_deq2)
 
         def _deq3(m, i, t, j, k):
             return m.dw3[i, t, j, k] == m.w1[t, j, k] + m.w2[j, k, t]
+
         m.deq3 = Constraint([0, 1], m.t, m.s2, rule=_deq3)
 
         mysim = Simulator(m)
@@ -668,34 +706,44 @@ class TestSimulator(unittest.TestCase):
         self.assertTrue(_GetItemIndexer(m.w1[t, 2, 2]) in mysim._templatemap)
         self.assertTrue(_GetItemIndexer(m.w2[1, 1, t]) in mysim._templatemap)
         self.assertTrue(_GetItemIndexer(m.w2[2, 2, t]) in mysim._templatemap)
-        self.assertFalse(_GetItemIndexer(m.w3[0, t, 1, 1]) in
-                         mysim._templatemap)
-        self.assertFalse(_GetItemIndexer(m.w3[1, t, 2, 2]) in
-                         mysim._templatemap)
+        self.assertFalse(_GetItemIndexer(m.w3[0, t, 1, 1]) in mysim._templatemap)
+        self.assertFalse(_GetItemIndexer(m.w3[1, t, 2, 2]) in mysim._templatemap)
 
         self.assertEqual(len(mysim._rhsdict), 8)
-        self.assertTrue(isinstance(
-            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1, 1])], Param))
-        self.assertTrue(isinstance(
-            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 2, 2])], Param))
-        self.assertTrue(isinstance(
-            mysim._rhsdict[_GetItemIndexer(m.dw2[1, 1, t])], Param))
-        self.assertTrue(isinstance(
-            mysim._rhsdict[_GetItemIndexer(m.dw2[2, 2, t])], Param))
-        self.assertTrue(isinstance(
-            mysim._rhsdict[_GetItemIndexer(m.dw3[0, t, 1, 1])],
-            EXPR.SumExpression))
-        self.assertTrue(isinstance(
-            mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 2, 2])],
-            EXPR.SumExpression))
-        self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1, 1])].name,
-                         "'w1[{t},1,1]'")
-        self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 2, 2])].name,
-                         "'w1[{t},2,2]'")
-        self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw2[1, 1, t])].name,
-                         "'w2[1,1,{t}]'")
-        self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw2[2, 2, t])].name,
-                         "'w2[2,2,{t}]'")
+        self.assertTrue(
+            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1, 1])], Param)
+        )
+        self.assertTrue(
+            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 2, 2])], Param)
+        )
+        self.assertTrue(
+            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw2[1, 1, t])], Param)
+        )
+        self.assertTrue(
+            isinstance(mysim._rhsdict[_GetItemIndexer(m.dw2[2, 2, t])], Param)
+        )
+        self.assertTrue(
+            isinstance(
+                mysim._rhsdict[_GetItemIndexer(m.dw3[0, t, 1, 1])], EXPR.SumExpression
+            )
+        )
+        self.assertTrue(
+            isinstance(
+                mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 2, 2])], EXPR.SumExpression
+            )
+        )
+        self.assertEqual(
+            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1, 1])].name, "'w1[{t},1,1]'"
+        )
+        self.assertEqual(
+            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 2, 2])].name, "'w1[{t},2,2]'"
+        )
+        self.assertEqual(
+            mysim._rhsdict[_GetItemIndexer(m.dw2[1, 1, t])].name, "'w2[1,1,{t}]'"
+        )
+        self.assertEqual(
+            mysim._rhsdict[_GetItemIndexer(m.dw2[2, 2, t])].name, "'w2[2,2,{t}]'"
+        )
 
         self.assertEqual(len(mysim._rhsfun(0, [0] * 8)), 8)
         self.assertIsNone(mysim._tsim)
@@ -712,7 +760,7 @@ class TestSimulator(unittest.TestCase):
     # components with a single indexing set
     def test_non_supported_single_index(self):
 
-        # Can't simulate a model with no ContinuousSet 
+        # Can't simulate a model with no ContinuousSet
         m = ConcreteModel()
         with self.assertRaises(DAE_Error):
             Simulator(m)
@@ -723,31 +771,33 @@ class TestSimulator(unittest.TestCase):
         m.t = ContinuousSet(bounds=(0, 5))
         with self.assertRaises(DAE_Error):
             Simulator(m)
-        
+
         # Can't simulate a model with no Derivatives
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0, 10))
         with self.assertRaises(DAE_Error):
             Simulator(m)
 
-        # Can't simulate a model with multiple RHS for a derivative 
+        # Can't simulate a model with multiple RHS for a derivative
         m = self.m
 
         def _diffeq(m, t):
-            return m.dv[t] == m.v[t]**2 + m.v[t]
+            return m.dv[t] == m.v[t] ** 2 + m.v[t]
+
         m.con1 = Constraint(m.t, rule=_diffeq)
         m.con2 = Constraint(m.t, rule=_diffeq)
         with self.assertRaises(DAE_Error):
             Simulator(m)
         m.del_component('con1')
         m.del_component('con2')
-        
+
         # Can't simulate a model with multiple derivatives in an
         # equation
         m = self.m
 
         def _diffeq(m, t):
-            return m.dv[t] == m.dv[t] + m.v[t]**2
+            return m.dv[t] == m.dv[t] + m.v[t] ** 2
+
         m.con1 = Constraint(m.t, rule=_diffeq)
         with self.assertRaises(DAE_Error):
             Simulator(m)
@@ -764,9 +814,10 @@ class TestSimulator(unittest.TestCase):
         m.dv2 = DerivativeVar(m.v2)
         m.dv3 = DerivativeVar(m.v3)
 
-        # Can't simulate a model with multiple RHS for a derivative 
+        # Can't simulate a model with multiple RHS for a derivative
         def _diffeq(m, t, s):
-            return m.dv2[t, s] == m.v2[t, s]**2 + m.v2[t, s]
+            return m.dv2[t, s] == m.v2[t, s] ** 2 + m.v2[t, s]
+
         m.con1 = Constraint(m.t, m.s, rule=_diffeq)
         m.con2 = Constraint(m.t, m.s, rule=_diffeq)
         with self.assertRaises(DAE_Error):
@@ -777,7 +828,8 @@ class TestSimulator(unittest.TestCase):
         m.del_component('con2_index')
 
         def _diffeq(m, s, t):
-            return m.dv3[s, t] == m.v3[s, t]**2 + m.v3[s, t]
+            return m.dv3[s, t] == m.v3[s, t] ** 2 + m.v3[s, t]
+
         m.con1 = Constraint(m.s, m.t, rule=_diffeq)
         m.con2 = Constraint(m.s, m.t, rule=_diffeq)
         with self.assertRaises(DAE_Error):
@@ -790,7 +842,8 @@ class TestSimulator(unittest.TestCase):
         # Can't simulate a model with multiple derivatives in an
         # equation
         def _diffeq(m, t, s):
-            return m.dv2[t, s] == m.dv2[t, s] + m.v2[t, s]**2
+            return m.dv2[t, s] == m.dv2[t, s] + m.v2[t, s] ** 2
+
         m.con1 = Constraint(m.t, m.s, rule=_diffeq)
         with self.assertRaises(DAE_Error):
             Simulator(m)
@@ -798,7 +851,8 @@ class TestSimulator(unittest.TestCase):
         m.del_component('con1_index')
 
         def _diffeq(m, s, t):
-            return m.dv3[s, t] == m.dv3[s, t] + m.v3[s, t]**2
+            return m.dv3[s, t] == m.dv3[s, t] + m.v3[s, t] ** 2
+
         m.con1 = Constraint(m.s, m.t, rule=_diffeq)
         with self.assertRaises(DAE_Error):
             Simulator(m)
@@ -812,7 +866,8 @@ class TestSimulator(unittest.TestCase):
         m.a = Var(m.t)
 
         def _diffeq(m, t):
-            return 0 == m.v[t]**2 + m.a[t]
+            return 0 == m.v[t] ** 2 + m.a[t]
+
         m.con = Constraint(m.t, rule=_diffeq)
 
         # Can't simulate a model with algebraic equations using scipy
@@ -829,7 +884,8 @@ class TestSimulator(unittest.TestCase):
         m.a = Var(m.t)
 
         def _diffeq(m, t):
-            return m.dv[t] == m.v[t]**2 + m.a[t]
+            return m.dv[t] == m.v[t] ** 2 + m.a[t]
+
         m.con = Constraint(m.t, rule=_diffeq)
         mysim = Simulator(m)
 
@@ -854,13 +910,15 @@ class TestSimulator(unittest.TestCase):
         m.a2 = Var(m.t, m.s)
 
         def _diffeq(m, t, s):
-            return m.dv2[t, s] == m.v2[t, s]**2 + m.a2[t, s]
+            return m.dv2[t, s] == m.v2[t, s] ** 2 + m.a2[t, s]
+
         m.con = Constraint(m.t, m.s, rule=_diffeq)
 
         m.a3 = Var(m.s, m.t)
 
         def _diffeq2(m, s, t):
-            return m.dv3[s, t] == m.v3[s, t]**2 + m.a3[s, t]
+            return m.dv3[s, t] == m.v3[s, t] ** 2 + m.a3[s, t]
+
         m.con2 = Constraint(m.s, m.t, rule=_diffeq2)
         mysim = Simulator(m)
         t = IndexTemplate(m.t)
@@ -888,17 +946,20 @@ class TestSimulator(unittest.TestCase):
 
         def _con(m, t):
             return m.dv2[t] == 10 + m.p
+
         m.con = Constraint(m.t, rule=_con)
 
-        mysim = Simulator(m,package='casadi')
+        mysim = Simulator(m, package='casadi')
         self.assertEqual(len(mysim._templatemap), 1)
         self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v2[t]))
         m.del_component('con')
+
 
 class TestExpressionCheckers(unittest.TestCase):
     """
     Class for testing the pyomo.DAE simulator expression checkers.
     """
+
     def setUp(self):
         """
         Setting up testing model
@@ -974,14 +1035,14 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
-        self.assertIs(m.mp, temp[1].arg(1))      # Reciprocal
+        self.assertIs(m.mp, temp[1].arg(1))  # Reciprocal
         self.assertIs(e.arg(1), temp[1].arg(0))
 
         e = m.v[t] == m.mp * m.dv[t]
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
-        self.assertIs(m.mp, temp[1].arg(1))      # Reciprocal
+        self.assertIs(m.mp, temp[1].arg(1))  # Reciprocal
         self.assertIs(e.arg(0), temp[1].arg(0))
 
         # Check multiplication by var
@@ -990,7 +1051,7 @@ class TestExpressionCheckers(unittest.TestCase):
         self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(e.arg(1), temp[1].arg(0).arg(0))
-        self.assertIs(m.z,        temp[1].arg(0).arg(1))
+        self.assertIs(m.z, temp[1].arg(0).arg(1))
 
         e = m.v[t] == m.y * m.dv[t] / m.z
         temp = _check_productexpression(e, 1)
@@ -1004,16 +1065,16 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
-        self.assertIs(m.y,        temp[1].arg(0))
+        self.assertIs(m.y, temp[1].arg(0))
         self.assertIs(e.arg(1), temp[1].arg(1).arg(0))
 
         e = m.mp == m.y / (m.dv[t] * m.z)
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
-        self.assertIs(m.y,        temp[1].arg(0))
+        self.assertIs(m.y, temp[1].arg(0))
         self.assertIs(e.arg(0), temp[1].arg(1).arg(0))
-        
+
         # Check expression with no DerivativeVar
         e = m.v[t] * m.y / m.z == m.v[t] * m.y / m.z
         temp = _check_productexpression(e, 0)
@@ -1051,11 +1112,10 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_negationexpression(e, 1)
         self.assertIsNone(temp)
 
-
     # Testing the checker for SumExpressions
     def test_check_viewsumexpression(self):
 
-        m = self.m 
+        m = self.m
         m.p = Param(initialize=5)
         m.mp = Param(initialize=5, mutable=True)
         m.y = Var()
@@ -1096,6 +1156,7 @@ class TestExpressionCheckers(unittest.TestCase):
         e = 2 + 5 * m.y - m.z == m.v[t]
         temp = _check_viewsumexpression(e, 0)
         self.assertIs(temp, None)
+
 
 @unittest.skipIf(not casadi_available, "Casadi is not available")
 class TestCasadiSubstituters(unittest.TestCase):
@@ -1141,12 +1202,12 @@ class TestCasadiSubstituters(unittest.TestCase):
         m.y = Var()
         t = IndexTemplate(m.t)
 
-        e = m.v[t] 
+        e = m.v[t]
         templatemap = {}
 
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(type(e3), casadi.SX)
-        
+
         m.del_component('y')
 
     # Testing substituter for replacing Pyomo intrinsic functions with
@@ -1175,7 +1236,7 @@ class TestCasadiSubstituters(unittest.TestCase):
         m.y = Var()
         t = IndexTemplate(m.t)
 
-        e = sin(m.dv[t] + m.v[t]) + log(m.v[t] * m.y + m.dv[t]**2)
+        e = sin(m.dv[t] + m.v[t]) + log(m.v[t] * m.y + m.dv[t] ** 2)
         templatemap = {}
 
         e3 = substitute_pyomo2casadi(e, templatemap)
@@ -1203,7 +1264,7 @@ class TestCasadiSubstituters(unittest.TestCase):
         m.del_component('y')
 
 
-class TestSimulationInterface():
+class TestSimulationInterface:
     """
     Class to test running a simulation
     """
@@ -1231,8 +1292,7 @@ class TestSimulationInterface():
         sim = Simulator(m, package=self.sim_mod)
 
         if hasattr(m, 'var_input'):
-            tsim, profiles = sim.simulate(numpoints=100,
-                                              varying_inputs=m.var_input)
+            tsim, profiles = sim.simulate(numpoints=100, varying_inputs=m.var_input)
         else:
             tsim, profiles = sim.simulate(numpoints=100)
 
@@ -1271,8 +1331,7 @@ class TestSimulationInterface():
         sim = Simulator(m, package=self.sim_mod)
 
         if hasattr(m, 'var_input'):
-            tsim, profiles = sim.simulate(numpoints=100,
-                                              varying_inputs=m.var_input)
+            tsim, profiles = sim.simulate(numpoints=100, varying_inputs=m.var_input)
         else:
             tsim, profiles = sim.simulate(numpoints=100)
 
