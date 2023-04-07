@@ -10,22 +10,31 @@
 #  ___________________________________________________________________________
 
 import logging
+
 logger = logging.getLogger('pyomo.core')
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.log import is_debug_set
 from pyomo.core.expr import current as EXPR
-from pyomo.core.base import Transformation, TransformationFactory, Connector, Constraint, \
-    ConstraintList, Var, SortComponents
+from pyomo.core.base import (
+    Transformation,
+    TransformationFactory,
+    Connector,
+    Constraint,
+    ConstraintList,
+    Var,
+    SortComponents,
+)
 from pyomo.core.base.connector import _ConnectorData, ScalarConnector
 
 
-@TransformationFactory.register('core.expand_connectors', 
-          doc="Expand all connectors in the model to simple constraints")
+@TransformationFactory.register(
+    'core.expand_connectors',
+    doc="Expand all connectors in the model to simple constraints",
+)
 class ExpandConnectors(Transformation):
-
     def _apply_to(self, instance, **kwds):
-        if is_debug_set(logger):   #pragma:nocover
+        if is_debug_set(logger):  # pragma:nocover
             logger.debug("Calling ConnectorExpander")
 
         connectorsFound = False
@@ -35,7 +44,7 @@ class ExpandConnectors(Transformation):
         if not connectorsFound:
             return
 
-        if is_debug_set(logger):   #pragma:nocover
+        if is_debug_set(logger):  # pragma:nocover
             logger.debug("   Connectors found!")
 
         #
@@ -62,7 +71,8 @@ class ExpandConnectors(Transformation):
 
         connector_types = set([ScalarConnector, _ConnectorData])
         for constraint in instance.component_data_objects(
-                Constraint, sort=SortComponents.deterministic):
+            Constraint, sort=SortComponents.deterministic
+        ):
             ref = None
             for c in EXPR.identify_components(constraint.body, connector_types):
                 found.add(c)
@@ -109,19 +119,19 @@ class ExpandConnectors(Transformation):
         # Validate all connector sets and expand the empty ones
         known_conn_sets = {}
         for groupID, conn_set in sorted(connector_groups.values()):
-            known_conn_sets[id(conn_set)] \
-                = self._validate_and_expand_connector_set(conn_set)
+            known_conn_sets[id(conn_set)] = self._validate_and_expand_connector_set(
+                conn_set
+            )
 
         # Expand each constraint
         for constraint, conn_set in constraint_list:
             cList = ConstraintList()
             constraint.parent_block().add_component(
-                '%s.expanded' % ( constraint.getname(
-                    fully_qualified=False), ),
-                cList )
+                '%s.expanded' % (constraint.getname(fully_qualified=False),), cList
+            )
             connId = next(iter(conn_set))
             ref = known_conn_sets[id(matched_connectors[connId])]
-            for k,v in sorted(ref.items()):
+            for k, v in sorted(ref.items()):
                 if v[1] >= 0:
                     _iter = v[0]
                 else:
@@ -136,10 +146,13 @@ class ExpandConnectors(Transformation):
                         else:
                             new_v = c.vars[k]
                         substitution[id(c)] = new_v
-                    cList.add((
-                        constraint.lower,
-                        EXPR.clone_expression( constraint.body, substitution ),
-                        constraint.upper ))
+                    cList.add(
+                        (
+                            constraint.lower,
+                            EXPR.clone_expression(constraint.body, substitution),
+                            constraint.upper,
+                        )
+                    )
             constraint.deactivate()
 
         # Now, go back and implement VarList aggregators
@@ -148,17 +161,14 @@ class ExpandConnectors(Transformation):
             for var, aggregator in conn.aggregators.items():
                 c = Constraint(expr=aggregator(block, conn.vars[var]))
                 block.add_component(
-                    '%s.%s.aggregate' % (
-                        conn.getname(
-                            fully_qualified=True),
-                        var), c )
-
+                    '%s.%s.aggregate' % (conn.getname(fully_qualified=True), var), c
+                )
 
     def _validate_and_expand_connector_set(self, connectors):
         ref = {}
         # First, go through the connectors and get the superset of all fields
         for c in connectors:
-            for k,v in c.vars.items():
+            for k, v in c.vars.items():
                 if k in ref:
                     # We have already seen this var
                     continue
@@ -167,17 +177,21 @@ class ExpandConnectors(Transformation):
                     continue
                 # OK: New var, so add it to the reference list
                 _len = (
-                    #-3 if v is None else
-                    -2 if k in c.aggregators else
-                    -1 if not hasattr(v, 'is_indexed') or not v.is_indexed()
-                    else len(v) )
-                ref[k] = ( v, _len, c )
+                    # -3 if v is None else
+                    -2
+                    if k in c.aggregators
+                    else -1
+                    if not hasattr(v, 'is_indexed') or not v.is_indexed()
+                    else len(v)
+                )
+                ref[k] = (v, _len, c)
 
         if not ref:
             logger.warning(
                 "Cannot identify a reference connector: no connectors "
                 "in the connector set have assigned variables:\n\t(%s)"
-                % ( ', '.join(sorted(c.name for c in connectors)), ))
+                % (', '.join(sorted(c.name for c in connectors)),)
+            )
             return ref
 
         # Now make sure that connectors match
@@ -190,12 +204,13 @@ class ExpandConnectors(Transformation):
                 empty_or_partial.append(c)
                 continue
 
-            for k,v in ref.items():
+            for k, v in ref.items():
                 if k not in c.vars:
                     raise ValueError(
                         "Connector mismatch: Connector '%s' missing variable "
-                        "'%s' (appearing in reference connector '%s')" %
-                        ( c.name, k, v[2].name ) )
+                        "'%s' (appearing in reference connector '%s')"
+                        % (c.name, k, v[2].name)
+                    )
                 _v = c.vars[k]
                 if _v is None:
                     if not c_is_partial:
@@ -203,28 +218,33 @@ class ExpandConnectors(Transformation):
                         c_is_partial = True
                     continue
                 _len = (
-                    -3 if _v is None else
-                    -2 if k in c.aggregators else
-                    -1 if not hasattr(_v, 'is_indexed') or not _v.is_indexed()
-                    else len(_v) )
+                    -3
+                    if _v is None
+                    else -2
+                    if k in c.aggregators
+                    else -1
+                    if not hasattr(_v, 'is_indexed') or not _v.is_indexed()
+                    else len(_v)
+                )
                 if (_len >= 0) ^ (v[1] >= 0):
                     raise ValueError(
                         "Connector mismatch: Connector variable '%s' mixing "
                         "indexed and non-indexed targets on connectors '%s' "
-                        "and '%s'" %
-                        ( k, v[2].name, c.name ))
+                        "and '%s'" % (k, v[2].name, c.name)
+                    )
                 if _len >= 0 and _len != v[1]:
                     raise ValueError(
                         "Connector mismatch: Connector variable '%s' index "
                         "mismatch (%s elements in reference connector '%s', "
-                        "but %s elements in connector '%s')" %
-                        ( k, v[1], v[2].name, _len, c.name ))
+                        "but %s elements in connector '%s')"
+                        % (k, v[1], v[2].name, _len, c.name)
+                    )
                 if v[1] >= 0 and len(v[0].index_set() ^ _v.index_set()):
                     raise ValueError(
                         "Connector mismatch: Connector variable '%s' has "
-                        "mismatched indices on connectors '%s' and '%s'" %
-                        ( k, v[2].name, c.name ))
-
+                        "mismatched indices on connectors '%s' and '%s'"
+                        % (k, v[2].name, c.name)
+                    )
 
         # as we are adding things to the model, sort by key so that
         # the order things are added is deterministic
@@ -232,8 +252,7 @@ class ExpandConnectors(Transformation):
         if len(empty_or_partial) > 1:
             # This is expensive (names aren't cheap), but does result in
             # a deterministic ordering
-            empty_or_partial.sort(key=lambda x: x.getname(
-                fully_qualified=True))
+            empty_or_partial.sort(key=lambda x: x.getname(fully_qualified=True))
 
         # Fill in any empty connectors
         for c in empty_or_partial:
@@ -243,7 +262,7 @@ class ExpandConnectors(Transformation):
                     continue
 
                 if v[1] >= 0:
-                    idx = ( v[0].index_set(), )
+                    idx = (v[0].index_set(),)
                 else:
                     idx = ()
                 var_args = {}
@@ -255,16 +274,15 @@ class ExpandConnectors(Transformation):
                     var_args['bounds'] = v[0].bounds
                 except AttributeError:
                     pass
-                new_var = Var( *idx, **var_args )
+                new_var = Var(*idx, **var_args)
                 block.add_component(
-                    '%s.auto.%s' % (
-                        c.getname(fully_qualified=True), k ),
-                    new_var)
+                    '%s.auto.%s' % (c.getname(fully_qualified=True), k), new_var
+                )
                 if idx:
                     for i in idx[0]:
                         new_var[i].domain = v[0][i].domain
-                        new_var[i].setlb( v[0][i].lb )
-                        new_var[i].setub( v[0][i].ub )
+                        new_var[i].setlb(v[0][i].lb)
+                        new_var[i].setub(v[0][i].ub)
                 c.vars[k] = new_var
 
         return ref

@@ -47,7 +47,7 @@ class IsomorphicTransformation(Transformation):
 
 
 class LinearTransformation(Transformation):
-    """ Base class for all linear model transformations. """
+    """Base class for all linear model transformations."""
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.get("name", "linear_transform")
@@ -67,9 +67,8 @@ class NonIsomorphicTransformation(Transformation):
 
 
 class NonlinearTransformation(Transformation):
-    """ Base class for all nonlinear model transformations. """
+    """Base class for all nonlinear model transformations."""
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.get("name", "nonlinear_transform")
         super(NonlinearTransformation, self).__init__(**kwds)
-

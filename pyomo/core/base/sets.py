@@ -16,12 +16,20 @@
 __all__ = ['Set', 'set_options', 'simple_set_rule', 'SetOf']
 
 from .set import (
-    process_setarg, set_options, simple_set_rule,
-    _SetDataBase, _SetData, Set, SetOf, IndexedSet,
+    process_setarg,
+    set_options,
+    simple_set_rule,
+    _SetDataBase,
+    _SetData,
+    Set,
+    SetOf,
+    IndexedSet,
 )
 
 from pyomo.common.deprecation import deprecation_warning
+
 deprecation_warning(
     'The pyomo.core.base.sets module is deprecated.  '
     'Import Set objects from pyomo.core.base.set or pyomo.core.',
-    version='5.7')
+    version='5.7',
+)

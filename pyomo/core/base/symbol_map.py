@@ -12,6 +12,8 @@
 from pyomo.core.expr.symbol_map import SymbolMap
 
 from pyomo.core.base.label import TextLabeler
+
+
 def symbol_map_from_instance(instance):
     """
     Create a symbol map from an instance using name-based labelers.
@@ -24,7 +26,7 @@ def symbol_map_from_instance(instance):
     # Recursively iterate over all variables
     #
     for varvalue in instance.component_data_objects(Var, active=True):
-       symbol_map.getSymbol(varvalue, labeler)
+        symbol_map.getSymbol(varvalue, labeler)
     #
     # Recursively iterate over all constraints
     #

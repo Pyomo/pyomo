@@ -11,7 +11,9 @@
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.deprecation import deprecation_warning
+
 deprecation_warning(
     'The pyomo.core.kernel.component_map module is deprecated.  '
     'Import ComponentMap from pyomo.common.collections.',
-    version='5.7.1')
+    version='5.7.1',
+)

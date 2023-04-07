@@ -14,8 +14,8 @@ from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.variable import variable
 from pyomo.environ import ConcreteModel, Var
 
-class TestSymbolMap(unittest.TestCase):
 
+class TestSymbolMap(unittest.TestCase):
     def test_no_labeler(self):
         s = SymbolMap()
         v = variable()
@@ -133,6 +133,7 @@ class TestSymbolMap(unittest.TestCase):
                 RuntimeError, r'SymbolMap.addSymbols\(\): duplicate object.'
         ):
             s.addSymbols([(m.y[2], 'x')])
+
 
 if __name__ == "__main__":
     unittest.main()

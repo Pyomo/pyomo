@@ -9,16 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.base import \
-    (_no_ctype,
-     _convert_ctype,
-     _convert_descend_into,
-     ICategorizedObjectContainer)
+from pyomo.core.kernel.base import (
+    _no_ctype,
+    _convert_ctype,
+    _convert_descend_into,
+    ICategorizedObjectContainer,
+)
 
-def heterogeneous_containers(node,
-                             ctype=_no_ctype,
-                             active=True,
-                             descend_into=True):
+
+def heterogeneous_containers(node, ctype=_no_ctype, active=True, descend_into=True):
     """
     A generator that yields all heterogeneous containers
     included in an object storage tree, including the root
@@ -49,8 +48,7 @@ def heterogeneous_containers(node,
     assert active in (None, True)
 
     # if not active, then nothing below is active
-    if (active is not None) and \
-       (not node.active):
+    if (active is not None) and (not node.active):
         return
 
     if not node.ctype._is_heterogeneous_container:
@@ -63,25 +61,21 @@ def heterogeneous_containers(node,
         for obj in node.components(active=active):
             assert obj._is_heterogeneous_container
             yield from heterogeneous_containers(
-                obj,
-                ctype=ctype,
-                active=active,
-                descend_into=descend_into)
+                obj, ctype=ctype, active=active, descend_into=descend_into
+            )
         return
 
     # convert AML types into Kernel types (hack for the
     # solver interfaces)
     ctype = _convert_ctype.get(ctype, ctype)
-    assert (ctype is _no_ctype) or \
-        ctype._is_heterogeneous_container
+    assert (ctype is _no_ctype) or ctype._is_heterogeneous_container
 
     # convert descend_into to a function if
     # it is not already one
     descend_into = _convert_descend_into(descend_into)
 
     # a heterogeneous container
-    if (ctype is _no_ctype) or \
-       (node.ctype is ctype):
+    if (ctype is _no_ctype) or (node.ctype is ctype):
         yield node
 
     if not descend_into(node):
@@ -95,15 +89,12 @@ def heterogeneous_containers(node,
         for child in node.children(ctype=child_ctype):
             assert child._is_container
 
-            if (active is not None) and \
-               (not child.active):
+            if (active is not None) and (not child.active):
                 continue
 
             yield from heterogeneous_containers(
-                child,
-                ctype=ctype,
-                active=active,
-                descend_into=descend_into)
+                child, ctype=ctype, active=active, descend_into=descend_into
+            )
 
 
 class IHeterogeneousContainer(ICategorizedObjectContainer):
@@ -117,6 +108,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
     properties of the ICategorizedObjectContainer base
     class.
     """
+
     __slots__ = ()
     _is_heterogeneous_container = True
 
@@ -124,9 +116,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
     # Interface
     #
 
-    def collect_ctypes(self,
-                       active=True,
-                       descend_into=True):
+    def collect_ctypes(self, active=True, descend_into=True):
         """Returns the set of object category types that can
         be found under this container.
 
@@ -151,8 +141,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
 
         ctypes = set()
         # if not active, then nothing below is active
-        if (active is not None) and \
-           (not self.active):
+        if (active is not None) and (not self.active):
             return ctypes
 
         # convert descend_into to a function if
@@ -161,9 +150,10 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
 
         for child_ctype in self.child_ctypes():
             for obj in self.components(
-                    ctype=child_ctype,
-                    active=active,
-                    descend_into=_convert_descend_into._false):
+                ctype=child_ctype,
+                active=active,
+                descend_into=_convert_descend_into._false,
+            ):
                 ctypes.add(child_ctype)
                 # just need 1 to appear in order to
                 # count the child_ctype
@@ -177,36 +167,34 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
         for child_ctype in tuple(ctypes):
             if child_ctype._is_heterogeneous_container:
                 for obj in self.components(
-                        ctype=child_ctype,
-                        active=active,
-                        descend_into=_convert_descend_into._false):
+                    ctype=child_ctype,
+                    active=active,
+                    descend_into=_convert_descend_into._false,
+                ):
                     assert obj._is_heterogeneous_container
                     if descend_into(obj):
-                        ctypes.update(obj.collect_ctypes(
-                            active=active,
-                            descend_into=descend_into))
+                        ctypes.update(
+                            obj.collect_ctypes(active=active, descend_into=descend_into)
+                        )
 
         return ctypes
 
     def child_ctypes(self, *args, **kwds):
         """Returns the set of child object category types
         stored in this container."""
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     #
     # Define the ICategorizedObjectContainer abstract methods
     #
 
-    #def child(self, *args, **kwds):
+    # def child(self, *args, **kwds):
     # ... not defined here
 
-    #def children(self, *args, **kwds):
+    # def children(self, *args, **kwds):
     # ... not defined here
 
-    def components(self,
-                   ctype=_no_ctype,
-                   active=True,
-                   descend_into=True):
+    def components(self, ctype=_no_ctype, active=True, descend_into=True):
         """
         Generates an efficient traversal of all components
         stored under this container. Components are
@@ -236,8 +224,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
         assert active in (None, True)
 
         # if not active, then nothing below is active
-        if (active is not None) and \
-           (not self.active):
+        if (active is not None) and (not self.active):
             return
 
         # convert AML types into Kernel types (hack for the
@@ -252,8 +239,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
 
             for child in self.children():
 
-                if (active is not None) and \
-                   (not child.active):
+                if (active is not None) and (not child.active):
                     continue
 
                 if not child._is_container:
@@ -262,10 +248,11 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                     yield child
                     if descend_into(child):
                         yield from child.components(
-                            active=active,
-                            descend_into=descend_into)
-                elif (descend_into is _convert_descend_into._false) or \
-                     (not child.ctype._is_heterogeneous_container):
+                            active=active, descend_into=descend_into
+                        )
+                elif (descend_into is _convert_descend_into._false) or (
+                    not child.ctype._is_heterogeneous_container
+                ):
                     assert child._is_container
                     yield from child.components(active=active)
                 else:
@@ -275,19 +262,17 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                         yield obj
                         if descend_into(obj):
                             yield from obj.components(
-                                active=active,
-                                descend_into=descend_into)
+                                active=active, descend_into=descend_into
+                            )
 
         else:
 
-            for item in heterogeneous_containers(self,
-                                                 active=active,
-                                                 descend_into=descend_into):
+            for item in heterogeneous_containers(
+                self, active=active, descend_into=descend_into
+            ):
                 for child in item.children(ctype=ctype):
-                    if (not child._is_container) or \
-                       child._is_heterogeneous_container:
-                        if (active is None) or \
-                           child.active:
+                    if (not child._is_container) or child._is_heterogeneous_container:
+                        if (active is None) or child.active:
                             yield child
                     else:
                         assert child._is_container
