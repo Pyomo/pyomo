@@ -11,11 +11,25 @@
 
 
 import pyomo.common.unittest as unittest
-from pyomo.environ import ConcreteModel, Var, RangeSet, Block, Constraint, CounterLabeler, NumericLabeler, TextLabeler, ComponentUID, ShortNameLabeler, CNameLabeler, CuidLabeler, AlphaNumericTextLabeler, NameLabeler
+from pyomo.environ import (
+    ConcreteModel,
+    Var,
+    RangeSet,
+    Block,
+    Constraint,
+    CounterLabeler,
+    NumericLabeler,
+    TextLabeler,
+    ComponentUID,
+    ShortNameLabeler,
+    CNameLabeler,
+    CuidLabeler,
+    AlphaNumericTextLabeler,
+    NameLabeler,
+)
 
 
 class LabelerTests(unittest.TestCase):
-
     def setUp(self):
         m = ConcreteModel()
         m.mycomp = Var()
@@ -211,14 +225,13 @@ class LabelerTests(unittest.TestCase):
         m = self.m
         lbl = ShortNameLabeler(4, '_', caseInsensitive=True)
         for i in range(9):
-            self.assertEqual(lbl(m.mycomp), 'p_%d_' % (i+1))
+            self.assertEqual(lbl(m.mycomp), 'p_%d_' % (i + 1))
         with self.assertRaisesRegex(RuntimeError, "Too many identifiers"):
             lbl(m.mycomp)
 
     def test_shortnamelabeler_legal_regex(self):
         m = ConcreteModel()
-        lbl = ShortNameLabeler(
-            60, suffix='_', prefix='s_', legalRegex='^[a-zA-Z]')
+        lbl = ShortNameLabeler(60, suffix='_', prefix='s_', legalRegex='^[a-zA-Z]')
 
         m.legal_var = Var()
         self.assertEqual(lbl(m.legal_var), 'legal_var')

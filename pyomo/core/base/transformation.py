@@ -14,7 +14,10 @@ from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import TransformationTimer
 
-class TransformationInfo(object): pass
+
+class TransformationInfo(object):
+    pass
+
 
 class TransformationData(object):
     """
@@ -34,9 +37,10 @@ class Transformation(object):
     """
     Base class for all model transformations.
     """
+
     def __init__(self, **kwds):
         kwds["name"] = kwds.get("name", "transformation")
-        #super(Transformation, self).__init__(**kwds)
+        # super(Transformation, self).__init__(**kwds)
 
     #
     # Support "with" statements.
@@ -52,7 +56,8 @@ class Transformation(object):
         "Transformation.apply_to() for in-place transformations or "
         "Transformation.create_using() for transformations that create a "
         "new, independent transformed model instance.",
-        version='4.3.11323')
+        version='4.3.11323',
+    )
     def apply(self, model, **kwds):
         inplace = kwds.pop('inplace', True)
         if inplace:
@@ -82,8 +87,7 @@ class Transformation(object):
         return new_model
 
     def _apply_to(self, model, **kwds):
-        raise RuntimeError(
-            "The Transformation.apply_to method is not implemented.")
+        raise RuntimeError("The Transformation.apply_to method is not implemented.")
 
     def _create_using(self, model, **kwds):
         # Put all the kwds onto the model so that when we clone the
@@ -103,6 +107,7 @@ class Transformation(object):
 
 TransformationFactory = Factory('transformation type')
 
+
 @deprecated(version='4.3.11323')
 def apply_transformation(*args, **kwds):
     if len(args) == 0:
@@ -110,5 +115,5 @@ def apply_transformation(*args, **kwds):
     xfrm = TransformationFactory(args[0])
     if len(args) == 1 or xfrm is None:
         return xfrm
-    tmp=(args[1],)
+    tmp = (args[1],)
     return xfrm.apply(*tmp, **kwds)

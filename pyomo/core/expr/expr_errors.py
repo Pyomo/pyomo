@@ -9,8 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-class TemplateExpressionError(ValueError):
 
+class TemplateExpressionError(ValueError):
     def __init__(self, template, *args, **kwds):
         self.template = template
         super(TemplateExpressionError, self).__init__(*args, **kwds)
