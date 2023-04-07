@@ -347,8 +347,6 @@ define_homogeneous_container_type(
     "suffix_dict",
     DictContainer,
     ISuffix,
-    doc=(
-        "A dict-style container for objects with category type " + ISuffix.__name__
-    ),
+    doc=("A dict-style container for objects with category type " + ISuffix.__name__),
     use_slots=True,
 )

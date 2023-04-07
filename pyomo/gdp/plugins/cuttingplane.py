@@ -1131,9 +1131,7 @@ class CuttingPlane_Transformation(Transformation):
 
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None:
-                logger.warning(
-                    "Did not generate a valid cut, stopping cut generation."
-                )
+                logger.warning("Did not generate a valid cut, stopping cut generation.")
                 break
             if not improving:
                 logger.warning(

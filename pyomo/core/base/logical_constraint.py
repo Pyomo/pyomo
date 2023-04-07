@@ -107,7 +107,7 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
     This class defines the data for a single general logical constraint.
 
     Constructor arguments:
-        component       The LogicalStatment object that owns this data.
+        component       The LogicalStatement object that owns this data.
         expr            The Pyomo expression stored in this logical constraint.
 
     Public class attributes:
@@ -161,7 +161,7 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
         expr_type = type(expr)
         if expr_type in native_types and expr_type not in native_logical_types:
             msg = (
-                "LogicalStatment '%s' does not have a proper value. "
+                "LogicalStatement '%s' does not have a proper value. "
                 "Found '%s'.\n"
                 "Expecting a logical expression or Boolean value. Examples:"
                 "\n   (m.Y1 & m.Y2).implies(m.Y3)"

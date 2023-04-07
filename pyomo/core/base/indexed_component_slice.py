@@ -361,7 +361,7 @@ def _freeze(info):
             id(info[1][0]),  # id of the Component
             tuple(info[1][1].items()),  # {idx: value} for fixed
             tuple(info[1][2].keys()),  # {idx: slice} for slices
-            info[1][3],  # elipsis index
+            info[1][3],  # ellipsis index
         )
     elif info[0] & IndexedComponent_slice.ITEM_MASK:
         if type(info[1]) is not tuple:
@@ -690,7 +690,7 @@ class _IndexedComponent_slice_iter(object):
                         try:
                             # Advance to get the first component defined
                             # by this slice (so that we have a concrete
-                            # context that we can use to decend further
+                            # context that we can use to descend further
                             # down the model hierarchy):
                             _comp = self.advance_iter(self._iter_stack[idx])
                             # Note that the iterator will remained

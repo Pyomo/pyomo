@@ -52,7 +52,7 @@ def to_standard_form(self):
     # First we go through the constraints and introduce slack and excess
     # variables to eliminate inequality constraints
     #
-    # N.B. Structure heirarchy:
+    # N.B. Structure hierarchy:
     #
     # active_components: {class: {attr_name: object}}
     # object -> Constraint: ._data: {ndx: _ConstraintData}

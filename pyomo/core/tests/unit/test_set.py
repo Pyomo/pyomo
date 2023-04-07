@@ -917,8 +917,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             RangeSet(1, 2, 3, 4)
 
         with self.assertRaisesRegex(
-            TypeError,
-            "'ranges' argument must be an iterable of NumericRange objects",
+            TypeError, "'ranges' argument must be an iterable of NumericRange objects"
         ):
             RangeSet(ranges=(NR(1, 5, 1), NNR('a')))
 
@@ -976,9 +975,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertEqual(output.getvalue(), "")
             i.construct()
-            ref = (
-                'Constructing RangeSet, name=FiniteScalarRangeSet, from data=None\n'
-            )
+            ref = 'Constructing RangeSet, name=FiniteScalarRangeSet, from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             self.assertTrue(i.is_constructed())
             self.assertIs(type(i), FiniteScalarRangeSet)
@@ -2545,8 +2542,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x.ord(3), 1)
         self.assertEqual(x.ord(5), 3)
         with self.assertRaisesRegex(
-            IndexError,
-            "Cannot identify position of 6 in Set SetDifference_OrderedSet",
+            IndexError, "Cannot identify position of 6 in Set SetDifference_OrderedSet"
         ):
             x.ord(6)
 
@@ -3889,7 +3885,7 @@ class TestSet(unittest.TestCase):
 
             self.assertEqual(output.getvalue(), "")
 
-            # Assing unsorted data should generate warnings
+            # Assign unsorted data should generate warnings
             m.I.update({3, 4})
             self.assertIn(
                 "Calling update() on an insertion order Set with a "
@@ -3971,7 +3967,7 @@ class TestSet(unittest.TestCase):
 
             self.assertEqual(output.getvalue(), "")
 
-            # Assing unsorted data should not generate warnings (since
+            # Assign unsorted data should not generate warnings (since
             # we are sorting the Set!)
             m.I.update({3, 4})
             self.assertEqual(output.getvalue(), "")
@@ -4745,7 +4741,7 @@ I : Size=1, Index=None, Ordered=Insertion
         m.J = Set(initialize=_j_init)
         self.assertEqual(list(m.J), [1, 2, 3])
 
-        # Backwards compatability: Test rule for indexed component that
+        # Backwards compatibility: Test rule for indexed component that
         # does not take the index
         @simple_set_rule
         def _k_init(m):

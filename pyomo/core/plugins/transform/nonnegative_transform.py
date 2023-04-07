@@ -154,7 +154,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
 
         # Map from fully qualified variable names to replacement expressions.
         # For now, it is actually a map from a variable name to a closure that
-        # must later be evaulated with a model containing the replacement
+        # must later be evaluated with a model containing the replacement
         # variables.
         var_map = {}
 

@@ -294,7 +294,8 @@ Step 1 (recommended): Create a new ``conda`` environment.
 
    conda create --name pyomodev
 
-You may change the environment name from ``pyomodev`` as you see fit. Then activate the environment:
+You may change the environment name from ``pyomodev`` as you see fit.
+Then activate the environment:
 
 ::
    
@@ -326,7 +327,10 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
   python setup.py develop
 
-These commands register the cloned code with the active python environment (``pyomodev``). This way, your changes to the source code for ``pyomo`` are automatically used by the active environment. You can create another conda environment to switch to alternate versions of pyomo (e.g., stable).
+These commands register the cloned code with the active python environment
+(``pyomodev``). This way, your changes to the source code for ``pyomo`` are
+automatically used by the active environment. You can create another conda
+environment to switch to alternate versions of pyomo (e.g., stable).
 
 Review Process
 --------------
@@ -370,9 +374,11 @@ of third-party contributions that enhance Pyomo's core functionality.
 The are two ways that ``pyomo.contrib`` can be used to integrate
 third-party packages:
 
-* ``pyomo.contrib`` can provide wrappers for separate Python packages, thereby allowing these packages to be imported as subpackages of pyomo.
+* ``pyomo.contrib`` can provide wrappers for separate Python packages, thereby
+   allowing these packages to be imported as subpackages of pyomo.
 
-* ``pyomo.contrib`` can include contributed packages that are developed and maintained outside of the Pyomo developer team.  
+* ``pyomo.contrib`` can include contributed packages that are developed and
+   maintained outside of the Pyomo developer team.  
 
 Including contrib packages in the Pyomo source tree provides a
 convenient mechanism for defining new functionality that can be

@@ -158,7 +158,9 @@ class LP_unused_vars_kernel(LP_unused_vars):
         model.x_initially_stale.stale = True
 
         model.X = pmo.variable_dict((i, pmo.variable()) for i in model.s)
-        model.X_initially_stale = pmo.variable_dict((i, pmo.variable()) for i in model.s)
+        model.X_initially_stale = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s
+        )
         for i in model.X:
             model.X[i].stale = False
             model.X_initially_stale[i].stale = True

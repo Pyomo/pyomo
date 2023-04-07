@@ -64,8 +64,7 @@ class TestTiming(unittest.TestCase):
     def test_raw_transformation_timer(self):
         a = TransformationTimer(None)
         self.assertRegex(
-            str(a),
-            r"TransformationTimer object for NoneType; [0-9\.]+ elapsed seconds",
+            str(a), r"TransformationTimer object for NoneType; [0-9\.]+ elapsed seconds"
         )
 
         v = _pseudo_component()

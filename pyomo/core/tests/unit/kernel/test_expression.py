@@ -262,7 +262,7 @@ class Test_noclone(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertTrue(e.arg(0) is e.expr)
 
-    def test_aruments(self):
+    def test_arguments(self):
         e = noclone(parameter() + 1)
         self.assertEqual(len(tuple(e.args)), 1)
         self.assertTrue(tuple(e.args)[0] is e.expr)
@@ -405,7 +405,7 @@ class _Test_expression_base(object):
         self.assertEqual(e.nargs(), 1)
         self.assertTrue(e.arg(0) is e.expr)
 
-    def test_aruments(self):
+    def test_arguments(self):
         e = self._ctype_factory()
         p = parameter()
         e.expr = p + 1

@@ -429,13 +429,13 @@ class TestComponentUID(unittest.TestCase):
         self.assertTrue(cuid.matches(self.m.b[1, 1].c))
         self.assertTrue(cuid.matches(self.m.b[1, '2'].c))
 
-    def test_list_components_dne_1(self):
+    def test_list_components_done_1(self):
         cuid = ComponentUID('b:*,*,*.c.a:*')
         ref = []
         cList = [str(ComponentUID(x)) for x in cuid.list_components(self.m)]
         self.assertEqual(sorted(cList), sorted(ref))
 
-    def test_list_components_dne_2(self):
+    def test_list_components_done_2(self):
         cuid = ComponentUID('b:*,*.c:#1.a:*')
         ref = []
         cList = [str(ComponentUID(x)) for x in cuid.list_components(self.m)]
@@ -570,8 +570,7 @@ class TestComponentUID(unittest.TestCase):
         self.assertFalse(xy < x)
 
         with self.assertRaisesRegex(
-            TypeError,
-            "'<' not supported between instances of 'ComponentUID' and 'int'",
+            TypeError, "'<' not supported between instances of 'ComponentUID' and 'int'"
         ):
             a < 5
 

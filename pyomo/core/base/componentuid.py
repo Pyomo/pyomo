@@ -611,7 +611,7 @@ class ComponentUID(object):
                             continue
                         elif s_idx[_k] != idx[_k]:
                             return False
-                    # Everything after the elipsis matched, so we can
+                    # Everything after the ellipsis matched, so we can
                     # move on to the next level.
                     break
                 if s_idx_val != idx[j]:

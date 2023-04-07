@@ -1353,7 +1353,7 @@ class MiscParamTests(unittest.TestCase):
         model.c = Param(model.b, initialize=2, within=Reals, mutable=True)
         # try:
         # model.a.value = 3
-        # self.fail("can't set the value of an unitialized parameter")
+        # self.fail("can't set the value of an uninitialized parameter")
         # except AttributeError:
         # pass
         instance = model.create_instance()
@@ -1593,7 +1593,7 @@ def assignTestsIndexedParamTests(cls, problem_list):
         setattr(cls, attrName, createIndexedParamMethod(eval(val[0]), val[1], val[2]))
 
 
-instrinsic_test_list = [
+intrinsic_test_list = [
     ('sin', (0.0, 0.0), (math.pi / 2.0, 1.0)),
     ('cos', (0.0, 1.0), (math.pi / 2.0, 0.0)),
     ('log', (1.0, 0.0), (math.e, 1.0)),
@@ -1732,7 +1732,7 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
 
 
 # Add test methods for all intrinsic functions
-assignTestsNonIndexedParamTests(MiscNonIndexedParamBehaviorTests, instrinsic_test_list)
+assignTestsNonIndexedParamTests(MiscNonIndexedParamBehaviorTests, intrinsic_test_list)
 
 
 class MiscIndexedParamBehaviorTests(unittest.TestCase):
@@ -2179,7 +2179,7 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
 
 # Add test methods for all intrinsic functions
-assignTestsIndexedParamTests(MiscIndexedParamBehaviorTests, instrinsic_test_list)
+assignTestsIndexedParamTests(MiscIndexedParamBehaviorTests, intrinsic_test_list)
 
 
 if __name__ == "__main__":

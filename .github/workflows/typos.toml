@@ -26,5 +26,6 @@ Fo = "Fo"
 ba = "ba"
 # Ignore complimentarity from interior_point
 complimentarity = "complimentarity"
-# Add More Words Here
-
+# Ignore from "number of inputs" from core
+nin = "nin"
+# AS NEEDED: Add More Words Below

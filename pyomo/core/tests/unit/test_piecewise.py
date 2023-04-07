@@ -346,18 +346,14 @@ class TestInvalidPiecewise(unittest.TestCase):
         except Exception:
             pass
         else:
-            self.fail(
-                "Piecewise should fail when initialized with invalid bound type."
-            )
+            self.fail("Piecewise should fail when initialized with invalid bound type.")
         try:
             del keywords['pw_constr_type']
             model.con1 = Piecewise(*args, **keywords)
         except Exception:
             pass
         else:
-            self.fail(
-                "Piecewise should fail when initialized with invalid bound type."
-            )
+            self.fail("Piecewise should fail when initialized with invalid bound type.")
 
     # test the that Piecewise component raises
     # an exception if the piecewise representation

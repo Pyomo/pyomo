@@ -888,7 +888,7 @@ class ExpressionValueVisitor(object):
             #
             # Get the top of the stack
             #   _obj        Current expression object
-            #   _argList    The arguments for this expression objet
+            #   _argList    The arguments for this expression object
             #   _idx        The current argument being considered
             #   _len        The number of arguments
             #   _result     The return values

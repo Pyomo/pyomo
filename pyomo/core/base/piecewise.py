@@ -79,7 +79,7 @@ class Bound(str, enum.Enum):
     Equal = 'Equal'
 
 
-# BE SURE TO CHANGE THE PIECWISE DOCSTRING
+# BE SURE TO CHANGE THE PIECEWISE DOCSTRING
 # IF THIS GETS CHANGED
 _WARNING_TOLERANCE = 1e-8
 
@@ -313,7 +313,7 @@ class _SimpleSinglePiecewise(object):
         # In order to enforce the same behavior as actual piecewise
         # constraints, we constrain the domain variable between the
         # outer domain pts. But in order to prevent filling the model
-        # with unecessary constraints, we only do this when absolutely
+        # with unnecessary constraints, we only do this when absolutely
         # necessary.
         if not x_var.lb is None and x_var.lb < x_pts[0]:
             pblock.simplified_piecewise_domain_constraint_lower = Constraint(
@@ -356,7 +356,7 @@ class _SimplifiedPiecewise(object):
         # In order to enforce the same behavior as actual piecewise
         # constraints, we constrain the domain variable between the
         # outer domain pts. But in order to prevent filling the model
-        # with unecessary constraints, we only do this when absolutely
+        # with unnecessary constraints, we only do this when absolutely
         # necessary.
         if not x_var.lb is None and x_var.lb < x_pts[0]:
             pblock.simplified_piecewise_domain_constraint_lower = Constraint(
@@ -582,9 +582,7 @@ class _CCPiecewise(object):
         y_pts = pblock._range_pts
         bound_type = pblock._bound_type
         if None in [x_pts, y_pts, bound_type]:
-            raise RuntimeError(
-                "_CCPiecewise: construct() called during invalid state."
-            )
+            raise RuntimeError("_CCPiecewise: construct() called during invalid state.")
         len_x_pts = len(x_pts)
 
         # create indexers
@@ -733,9 +731,7 @@ class _MCPiecewise(object):
         y_pts = pblock._range_pts
         bound_type = pblock._bound_type
         if None in [x_pts, y_pts, bound_type]:
-            raise RuntimeError(
-                "_MCPiecewise: construct() called during invalid state."
-            )
+            raise RuntimeError("_MCPiecewise: construct() called during invalid state.")
         len_x_pts = len(x_pts)
 
         # create indexers
@@ -968,7 +964,7 @@ class _BIGMPiecewise(object):
         # In order to enforce the same behavior as actual piecewise
         # constraints, we constrain the domain variable between the
         # outer domain pts. But in order to prevent filling the model
-        # with unecessary constraints, we only do this when absolutely
+        # with unnecessary constraints, we only do this when absolutely
         # necessary.
         if not x_var.lb is None and x_var.lb < x_pts[0]:
             pblock.bigm_domain_constraint_lower = Constraint(expr=x_pts[0] <= x_var)
@@ -1136,7 +1132,7 @@ class Piecewise(Block):
               Allow an unbounded or partially bounded Pyomo Var to be used
               as the domain variable.
               **NOTE: This does not imply unbounded piecewise segments
-                      will be constructed. The outermost piecwise
+                      will be constructed. The outermost piecewise
                       breakpoints will bound the domain variable at each
                       index. However, the Var attributes .lb and .ub will
                       not be modified.
@@ -1283,9 +1279,7 @@ class Piecewise(Block):
             try:
                 bound_type = Bound[bound_type]
             except KeyError:
-                msg = (
-                    "Invalid value for Piecewise component keyword 'pw_constr_type'"
-                )
+                msg = "Invalid value for Piecewise component keyword 'pw_constr_type'"
                 raise ValueError(msg)
         if warning_tol.__class__ is not float:
             msg = (
@@ -1404,7 +1398,7 @@ class Piecewise(Block):
                 _self_domain_pts_index = self._domain_points[None]
 
         if self._unbounded_domain_var is False:
-            # We add the requirment that the domain variable used by Piecewise is
+            # We add the requirement that the domain variable used by Piecewise is
             # always bounded from above and below.
             if (_self_xvar.lb is None) or (_self_xvar.ub is None):
                 msg = (

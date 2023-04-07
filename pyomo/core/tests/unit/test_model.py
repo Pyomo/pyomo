@@ -440,7 +440,7 @@ class Test(unittest.TestCase):
     @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_solve7(self):
         #
-        # Test that solution values are writen with appropriate
+        # Test that solution values are written with appropriate
         # quotations in results
         #
         model = ConcreteModel()

@@ -74,7 +74,7 @@ class TestSymbolMap(unittest.TestCase):
         )
         self.assertEqual(
             s.byObject,
-            {id(m.y[1]): '^y[1]~', id(m.y[2]): '^y[2]~', id(m.y[3]): '^y[3]~'}
+            {id(m.y[1]): '^y[1]~', id(m.y[2]): '^y[2]~', id(m.y[3]): '^y[3]~'},
         )
 
     def test_existing_alias(self):
@@ -96,18 +96,18 @@ class TestSymbolMap(unittest.TestCase):
         s = SymbolMap()
         m = ConcreteModel()
         m.x = Var()
-        m.y = Var([1,2,3])
+        m.y = Var([1, 2, 3])
         s.addSymbol(m.x, 'x')
         self.assertEqual(s.bySymbol, {'x': m.x})
         self.assertEqual(s.byObject, {id(m.x): 'x'})
         with self.assertRaisesRegex(
-                RuntimeError, r'SymbolMap.addSymbol\(\): duplicate symbol.'
+            RuntimeError, r'SymbolMap.addSymbol\(\): duplicate symbol.'
         ):
             s.addSymbol(m.y, 'x')
         s = SymbolMap()
         s.addSymbol(m.x, 'x')
         with self.assertRaisesRegex(
-                RuntimeError, r'SymbolMap.addSymbol\(\): duplicate object.'
+            RuntimeError, r'SymbolMap.addSymbol\(\): duplicate object.'
         ):
             s.addSymbol(m.x, 'y')
 
@@ -117,20 +117,20 @@ class TestSymbolMap(unittest.TestCase):
         m.y = Var([1, 2, 3])
 
         s = SymbolMap()
-        s.addSymbols((m.y[i], str(i)) for i in (1,2,3))
+        s.addSymbols((m.y[i], str(i)) for i in (1, 2, 3))
         self.assertEqual(s.bySymbol, {'1': m.y[1], '2': m.y[2], '3': m.y[3]})
         self.assertEqual(
             s.byObject, {id(m.y[1]): '1', id(m.y[2]): '2', id(m.y[3]): '3'}
         )
         with self.assertRaisesRegex(
-                RuntimeError, r'SymbolMap.addSymbols\(\): duplicate symbol.'
+            RuntimeError, r'SymbolMap.addSymbols\(\): duplicate symbol.'
         ):
             s.addSymbols([(m.y, '1')])
 
         s = SymbolMap()
-        s.addSymbols((m.y[i], str(i)) for i in (1,2,3))
+        s.addSymbols((m.y[i], str(i)) for i in (1, 2, 3))
         with self.assertRaisesRegex(
-                RuntimeError, r'SymbolMap.addSymbols\(\): duplicate object.'
+            RuntimeError, r'SymbolMap.addSymbols\(\): duplicate object.'
         ):
             s.addSymbols([(m.y[2], 'x')])
 

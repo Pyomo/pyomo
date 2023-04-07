@@ -578,7 +578,7 @@ class TestRangeSet(SimpleSetA):
             self.instance.A.discard(self.e3)
         self.assertEqual(len(self.instance.A), 5)
         self.assertTrue(
-            self.e3 in self.instance.A, "Found element in A that attemped to discard"
+            self.e3 in self.instance.A, "Found element in A that attempted to discard"
         )
 
     def test_discardInvalid(self):
@@ -1380,9 +1380,7 @@ class ArraySet2(PyomoModel):
         try:
             tmp = self.instance.A['A', 2]
         except:
-            self.fail(
-                "Problems getting a valid uninitialized subset from a set array"
-            )
+            self.fail("Problems getting a valid uninitialized subset from a set array")
 
         try:
             tmp = self.instance.A['A', 3]

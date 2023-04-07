@@ -2827,7 +2827,7 @@ class TestBlock(unittest.TestCase):
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve7(self):
         #
-        # Test that solution values are writen with appropriate
+        # Test that solution values are written with appropriate
         # quotations in results
         #
         model = Block(concrete=True)
