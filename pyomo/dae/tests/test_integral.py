@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# 
+#
 # Unit Tests for Integral Objects
 #
 
@@ -18,8 +18,7 @@ from os.path import abspath, dirname
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (ConcreteModel, Var, Set, TransformationFactory,
-                           Expression)
+from pyomo.environ import ConcreteModel, Var, Set, TransformationFactory, Expression
 from pyomo.dae import ContinuousSet, Integral
 from pyomo.dae.diffvar import DAE_Error
 
@@ -112,7 +111,7 @@ class TestIntegral(unittest.TestCase):
             return m.v3[x, t]
 
         def _int3(m, s, t):
-            return m.v2[s,t]
+            return m.v2[s, t]
 
         # Integrals must be indexed by a ContinuousSet
         with self.assertRaises(ValueError):
@@ -124,7 +123,7 @@ class TestIntegral(unittest.TestCase):
 
         # No ContinuousSet specified
         with self.assertRaises(ValueError):
-            m.int2 = Integral(m.x, m.t, rule= _int2)
+            m.int2 = Integral(m.x, m.t, rule=_int2)
 
         # 'wrt' is not a ContinuousSet
         with self.assertRaises(ValueError):
@@ -136,7 +135,7 @@ class TestIntegral(unittest.TestCase):
 
         # 'bounds' not supported
         with self.assertRaises(DAE_Error):
-            m.int = Integral(m.t, wrt=m.t, rule=_int, bounds=(0,0.5))
+            m.int = Integral(m.t, wrt=m.t, rule=_int, bounds=(0, 0.5))
 
         # No rule specified
         with self.assertRaises(ValueError):

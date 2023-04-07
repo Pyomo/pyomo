@@ -9,25 +9,36 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [ 'SequentialDecomposition' ]
+__all__ = ['SequentialDecomposition']
 
 from pyomo.network import Port, Arc
 from pyomo.network.foqus_graph import FOQUSGraph
-from pyomo.core import Constraint, value, Objective, Var, ConcreteModel, \
-    Binary, minimize, Expression
+from pyomo.core import (
+    Constraint,
+    value,
+    Objective,
+    Var,
+    ConcreteModel,
+    Binary,
+    minimize,
+    Expression,
+)
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
 import logging, time
 
 from pyomo.common.dependencies import (
-    networkx as nx, networkx_available,
-    numpy, numpy_available,
+    networkx as nx,
+    networkx_available,
+    numpy,
+    numpy_available,
 )
 
 imports_available = networkx_available & numpy_available
 
 logger = logging.getLogger('pyomo.network')
+
 
 class SequentialDecomposition(FOQUSGraph):
     """
@@ -155,11 +166,11 @@ class SequentialDecomposition(FOQUSGraph):
         options["solve_tears"] = True
         options["guesses"] = ComponentMap()
         options["default_guess"] = None
-        options["almost_equal_tol"] = 1.0E-8
+        options["almost_equal_tol"] = 1.0e-8
         options["log_info"] = False
         options["tear_method"] = "Direct"
         options["iterLim"] = 40
-        options["tol"] = 1.0E-5
+        options["tol"] = 1.0e-5
         options["tol_type"] = "abs"
         options["report_diffs"] = False
         options["accel_min"] = -5
@@ -292,7 +303,6 @@ class SequentialDecomposition(FOQUSGraph):
             if self.options["log_info"]:
                 logger.setLevel(old_log_level)
 
-
     def _run_impl(self, model, function):
         start = time.time()
         logger.info("Starting Sequential Decomposition")
@@ -311,8 +321,9 @@ class SequentialDecomposition(FOQUSGraph):
         if not self.options["solve_tears"] or not len(tset):
             # Not solving tears, we're done
             end = time.time()
-            logger.info("Finished Sequential Decomposition in %.2f seconds" %
-                (end - start))
+            logger.info(
+                "Finished Sequential Decomposition in %.2f seconds" % (end - start)
+            )
             return
 
         logger.info("Starting tear convergence procedure")
@@ -329,11 +340,17 @@ class SequentialDecomposition(FOQUSGraph):
                     if ei in sccEdges[sccIndex]:
                         tears.append(ei)
 
-                kwds = dict(G=G, order=order, function=function, tears=tears,
-                    iterLim=self.options["iterLim"], tol=self.options["tol"],
+                kwds = dict(
+                    G=G,
+                    order=order,
+                    function=function,
+                    tears=tears,
+                    iterLim=self.options["iterLim"],
+                    tol=self.options["tol"],
                     tol_type=self.options["tol_type"],
                     report_diffs=self.options["report_diffs"],
-                    outEdges=outEdges[sccIndex])
+                    outEdges=outEdges[sccIndex],
+                )
 
                 tear_method = self.options["tear_method"]
 
@@ -346,12 +363,10 @@ class SequentialDecomposition(FOQUSGraph):
                     self.solve_tear_wegstein(**kwds)
 
                 else:
-                    raise ValueError(
-                        "Invalid tear_method '%s'" % (tear_method,))
+                    raise ValueError("Invalid tear_method '%s'" % (tear_method,))
 
         end = time.time()
-        logger.info("Finished Sequential Decomposition in %.2f seconds" %
-            (end - start))
+        logger.info("Finished Sequential Decomposition in %.2f seconds" % (end - start))
 
     def run_order(self, G, order, function, ignore=None, use_guesses=False):
         """
@@ -439,7 +454,8 @@ class SequentialDecomposition(FOQUSGraph):
                     "Found free splitfrac for arc '%s' with no current value. "
                     "Please use the set_split_fraction method on its source "
                     "port to set this value before expansion, or set its value "
-                    "manually if expansion has already occured." % arc.name)
+                    "manually if expansion has already occured." % arc.name
+                )
         elif sf is None:
             # if there is no splitfrac, but we have extensive members, then we
             # need to manually set the evar values because there will be no
@@ -465,8 +481,8 @@ class SequentialDecomposition(FOQUSGraph):
                     continue
                 if len(src.dests()) > 1:
                     raise Exception(
-                        "This still needs to be figured out (arc '%s')" %
-                        arc.name)
+                        "This still needs to be figured out (arc '%s')" % arc.name
+                    )
                 # TODO: for now we know it's obvious what to do if there is
                 # only 1 destination
                 if mem.is_indexed():
@@ -487,21 +503,24 @@ class SequentialDecomposition(FOQUSGraph):
                 # or if the user puts something unexpected on the eblock.
                 raise RuntimeError(
                     "Found inequality constraint '%s'. Please do not modify "
-                    "the expanded block." % con.name)
+                    "the expanded block." % con.name
+                )
             repn = generate_standard_repn(con.body)
             if repn.is_fixed():
                 # the port member's peer was already fixed
                 if abs(value(con.lower) - repn.constant) > eq_tol:
                     raise RuntimeError(
                         "Found connected ports '%s' and '%s' both with fixed "
-                        "but different values (by > %s) for constraint '%s'" %
-                        (src, dest, eq_tol, con.name))
+                        "but different values (by > %s) for constraint '%s'"
+                        % (src, dest, eq_tol, con.name)
+                    )
                 continue
             if not (repn.is_linear() and len(repn.linear_vars) == 1):
                 raise RuntimeError(
                     "Constraint '%s' had more than one free variable when "
                     "trying to pass a value to its destination. Please fix "
-                    "more variables before passing across this arc." % con.name)
+                    "more variables before passing across this arc." % con.name
+                )
             # fix the value of the single variable to satisfy the constraint
             # con.lower is usually a NumericConstant but call value on it
             # just in case it is something else
@@ -525,7 +544,8 @@ class SequentialDecomposition(FOQUSGraph):
                 raise RuntimeError(
                     "Member '%s' of port '%s' is already fixed but has a "
                     "different value (by > %s) than what is being passed to it"
-                    % (name, port.name, eq_tol))
+                    % (name, port.name, eq_tol)
+                )
         elif member.is_expression_type():
             repn = generate_standard_repn(member - val)
             if repn.is_linear() and len(repn.linear_vars) == 1:
@@ -540,7 +560,8 @@ class SequentialDecomposition(FOQUSGraph):
                     "Member '%s' of port '%s' had more than "
                     "one free variable when trying to pass a value "
                     "to it. Please fix more variables before passing "
-                    "to this port." % (name, port.name))
+                    "to this port." % (name, port.name)
+                )
         else:
             fixed.add(member)
             # val are numpy.float64; coerce val back to float
@@ -559,7 +580,8 @@ class SequentialDecomposition(FOQUSGraph):
             elif mem.is_indexed():
                 raise TypeError(
                     "Guess for indexed member '%s' in port '%s' must map to a "
-                    "dict of indexes" % (name, port.name))
+                    "dict of indexes" % (name, port.name)
+                )
             else:
                 itr = [(mem, entry, None)]
 
@@ -574,7 +596,8 @@ class SequentialDecomposition(FOQUSGraph):
                             raise ValueError(
                                 "Found a guess for extensive member '%s' on "
                                 "port '%s' using arc '%s' that is not a source "
-                                "of this port" % (name, port.name, arc.name))
+                                "of this port" % (name, port.name, arc.name)
+                            )
                         evar = arc.expanded_block.component(name)
                         if evar is None:
                             # no evars, 1-to-1 arc
@@ -595,10 +618,13 @@ class SequentialDecomposition(FOQUSGraph):
                         raise ValueError(
                             "Cannot provide guess for expression type member "
                             "'%s%s' of port '%s', must set current value of "
-                            "variables within expression" % (
+                            "variables within expression"
+                            % (
                                 name,
                                 ("[%s]" % str(idx)) if mem.is_indexed() else "",
-                                port.name))
+                                port.name,
+                            )
+                        )
                     else:
                         fixed.add(var)
                         var.fix(float(entry))
@@ -625,22 +651,20 @@ class SequentialDecomposition(FOQUSGraph):
                 for evar in evars:
                     if evar.is_fixed():
                         continue
-                    self.check_value_fix(port, evar, default, fixed,
-                        use_guesses, extensive=True)
+                    self.check_value_fix(
+                        port, evar, default, fixed, use_guesses, extensive=True
+                    )
                 # now all evars should be fixed so combine them
                 # and fix the value of the extensive port member
                 self.combine_and_fix(port, name, obj, evars, fixed)
             else:
                 if obj.is_expression_type():
                     for var in identify_variables(obj, include_fixed=False):
-                        self.check_value_fix(port, var, default, fixed,
-                            use_guesses)
+                        self.check_value_fix(port, var, default, fixed, use_guesses)
                 else:
-                    self.check_value_fix(port, obj, default, fixed,
-                        use_guesses)
+                    self.check_value_fix(port, obj, default, fixed, use_guesses)
 
-    def check_value_fix(self, port, var, default, fixed, use_guesses,
-            extensive=False):
+    def check_value_fix(self, port, var, default, fixed, use_guesses, extensive=False):
         """
         Try to fix the var at its current value or the default, else error
         """
@@ -654,12 +678,15 @@ class SequentialDecomposition(FOQUSGraph):
             raise RuntimeError(
                 "Encountered a free inlet %svariable '%s' %s port '%s' with no "
                 "%scurrent value, or default_guess option, while attempting "
-                "to compute the unit." % (
+                "to compute the unit."
+                % (
                     "extensive " if extensive else "",
                     var.name,
                     ("on", "to")[int(extensive)],
                     port.name,
-                    "guess, " if use_guesses else ""))
+                    "guess, " if use_guesses else "",
+                )
+            )
 
         fixed.add(var)
         var.fix(float(val))
@@ -710,13 +737,17 @@ class SequentialDecomposition(FOQUSGraph):
         for blk in model.block_data_objects(descend_into=True, active=True):
             for arc in blk.component_data_objects(Arc, descend_into=False):
                 if not arc.directed:
-                    raise ValueError("All Arcs must be directed when creating "
-                                     "a graph for a model. Found undirected "
-                                     "Arc: '%s'" % arc.name)
+                    raise ValueError(
+                        "All Arcs must be directed when creating "
+                        "a graph for a model. Found undirected "
+                        "Arc: '%s'" % arc.name
+                    )
                 if arc.expanded_block is None:
-                    raise ValueError("All Arcs must be expanded when creating "
-                                     "a graph for a model. Found unexpanded "
-                                     "Arc: '%s'" % arc.name)
+                    raise ValueError(
+                        "All Arcs must be expanded when creating "
+                        "a graph for a model. Found unexpanded "
+                        "Arc: '%s'" % arc.name
+                    )
                 src, dest = arc.src.parent_block(), arc.dest.parent_block()
                 G.add_edge(src, dest, arc=arc)
 
@@ -785,10 +816,13 @@ class SequentialDecomposition(FOQUSGraph):
         model, bin_list = self.select_tear_mip_model(G)
 
         from pyomo.environ import SolverFactory
+
         opt = SolverFactory(solver, solver_io=solver_io)
         if not opt.available(exception_flag=False):
-            raise ValueError("Solver '%s' (solver_io=%r) is not available, please pass a "
-                             "different solver" % (solver, solver_io))
+            raise ValueError(
+                "Solver '%s' (solver_io=%r) is not available, please pass a "
+                "different solver" % (solver, solver_io)
+            )
         opt.solve(model, **solver_options)
 
         # collect final list by adding every edge with a "True" binary var
@@ -859,7 +893,6 @@ class SequentialDecomposition(FOQUSGraph):
                 var.free()
             fixed_outputs.clear()
 
-
     def pass_tear_direct(self, G, tears):
         """Pass values across all tears in the given tear set"""
         fixed_outputs = ComponentSet()
@@ -894,8 +927,7 @@ class SequentialDecomposition(FOQUSGraph):
 
             for name, index, mem in src.iter_vars(names=True):
                 peer = self.source_dest_peer(arc, name, index)
-                self.pass_single_value(dest, name, peer, x[i],
-                    fixed_inputs[dest_unit])
+                self.pass_single_value(dest, name, peer, x[i], fixed_inputs[dest_unit])
                 i += 1
 
     def generate_gofx(self, G, tears):
@@ -934,6 +966,7 @@ class SequentialDecomposition(FOQUSGraph):
 
     def tear_set(self, G):
         key = "tear_set"
+
         def fcn(G):
             tset = self.options[key]
             if tset is not None:
@@ -943,32 +976,38 @@ class SequentialDecomposition(FOQUSGraph):
                 for arc in tset:
                     res.append(edge_map[arc_map[arc]])
                 if not self.check_tear_set(G, res):
-                    raise ValueError("Tear set found in options is "
-                                     "insufficient to solve network")
+                    raise ValueError(
+                        "Tear set found in options is insufficient to solve network"
+                    )
                 self.cache[key] = res
                 return res
 
             method = self.options["select_tear_method"]
             if method == "mip":
-                return self.select_tear_mip(G,
-                                            self.options["tear_solver"],
-                                            self.options["tear_solver_io"],
-                                            self.options["tear_solver_options"])
+                return self.select_tear_mip(
+                    G,
+                    self.options["tear_solver"],
+                    self.options["tear_solver_io"],
+                    self.options["tear_solver_options"],
+                )
             elif method == "heuristic":
                 # tset is the first list in the first return value
                 return self.select_tear_heuristic(G)[0][0]
             else:
                 raise ValueError("Invalid select_tear_method '%s'" % (method,))
+
         return self.cacher(key, fcn, G)
 
     def arc_to_edge(self, G):
         """Returns a mapping from arcs to edges for a graph"""
+
         def fcn(G):
             res = ComponentMap()
             for edge in G.edges:
                 arc = G.edges[edge]["arc"]
                 res[arc] = edge
             return res
+
         return self.cacher("arc_to_edge", fcn, G)
 
     def fixed_inputs(self):
@@ -980,6 +1019,7 @@ class SequentialDecomposition(FOQUSGraph):
 
     def node_to_idx(self, G):
         """Returns a mapping from nodes to indexes for a graph"""
+
         def fcn(G):
             res = dict()
             i = -1
@@ -987,6 +1027,7 @@ class SequentialDecomposition(FOQUSGraph):
                 i += 1
                 res[node] = i
             return res
+
         return self.cacher("node_to_idx", fcn, G)
 
     def idx_to_edge(self, G):
@@ -995,6 +1036,7 @@ class SequentialDecomposition(FOQUSGraph):
 
     def edge_to_idx(self, G):
         """Returns a mapping from edges to indexes for a graph"""
+
         def fcn(G):
             res = dict()
             i = -1
@@ -1002,4 +1044,5 @@ class SequentialDecomposition(FOQUSGraph):
                 i += 1
                 res[edge] = i
             return res
+
         return self.cacher("edge_to_idx", fcn, G)
