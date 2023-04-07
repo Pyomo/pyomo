@@ -36,6 +36,8 @@ jobs:
       uses: actions/checkout@v3
     - name: Black Formatting Check
       uses: rickstaa/action-black@v1
+      with:
+          black_args: ". -C -S --check --diff"
     - name: Spell Check
       uses: crate-ci/typos@master
       with: 
