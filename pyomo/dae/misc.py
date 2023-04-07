@@ -57,7 +57,7 @@ def generate_finite_elements(ds, nfe):
         # is placed at the midpoint of the largest step. This
         # process is repeated until we have achieved the desired
         # number of finite elements. If there are multiple "largest steps"
-        # the point will be placed at the first occurance of the
+        # the point will be placed at the first occurrence of the
         # largest step
 
         addpts = nfe - (len(ds) - 1)
@@ -183,7 +183,7 @@ def update_contset_indexed_component(comp, expansion_map):
     has changed
     """
 
-    # This implemenation will *NOT* check for or update
+    # This implementation will *NOT* check for or update
     # components which use a ContinuousSet implicitly. ex) an
     # objective function which iterates through a ContinuousSet and
     # sums the squared error.  If you use a ContinuousSet implicitly
