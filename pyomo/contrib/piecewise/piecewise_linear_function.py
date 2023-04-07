@@ -288,7 +288,7 @@ class PiecewiseLinearFunction(Block):
             raise
 
         # Get the points for the triangulation because they might not all be
-        # there if any where coplanar.
+        # there if any were coplanar.
         obj._points = [pt for pt in map(tuple, triangulation.points)]
         obj._simplices = []
         for simplex in triangulation.simplices:
