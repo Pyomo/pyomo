@@ -35,9 +35,9 @@ jobs:
     - name: Checkout Pyomo source
       uses: actions/checkout@v3
     - name: Black Formatting Check
-      uses: rickstaa/action-black@v1
-      with:
-          black_args: ". -C -S --check --diff"
+      run: |
+        pip install black
+        black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
     - name: Spell Check
       uses: crate-ci/typos@master
       with: 
