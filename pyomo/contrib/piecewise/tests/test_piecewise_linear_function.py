@@ -10,9 +10,11 @@
 #  ___________________________________________________________________________
 
 from io import StringIO
+import logging
 import pickle
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
 from pyomo.core.expr.compare import (
@@ -20,6 +22,7 @@ from pyomo.core.expr.compare import (
     assertExpressionsStructurallyEqual,
 )
 from pyomo.environ import ConcreteModel, Constraint, log, Var
+
 
 np, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import('scipy')
@@ -314,7 +317,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertEqual(str(m.c.body.expr), "pw(x1, x2)")
         self.assertIs(m.c.body.expr.pw_linear_function, m.pw)
 
-    @unittest.skipUnless(numpy_available, "numpy are not available")
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_evaluate_pw_linear_function(self):
         # NOTE: This test requires numpy because it is used to check which
         # simplex a point is in
@@ -337,3 +340,140 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertAlmostEqual(m.pw(1, 3), g1(1, 3))
         self.assertAlmostEqual(m.pw(2.5, 6), g2(2.5, 6))
         self.assertAlmostEqual(m.pw(0.2, 4.3), g2(0.2, 4.3))
+
+
+class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
+    simplices = [
+        # right bottom back cube with vertices (10, 11, 13, 14, 19, 20, 22, 23)
+        (11, 22, 14, 13),
+        (11, 10, 22, 13),
+        (11, 23, 22, 20),
+        (11, 23, 22, 14),
+        (11, 19, 10, 22),
+        (11, 19, 22, 20),
+        # right bottom front cube with vertices (9, 10, 12, 13, 18, 19, 21, 22)
+        (21, 10, 22, 13),
+        (21, 12, 10, 13),
+        (21, 19, 10, 22),
+        (21, 19, 10, 18),
+        (21, 9, 12, 10),
+        (21, 9, 10, 18),
+        # left bottom front cube with vertices (0, 1, 3, 4, 9, 10, 12, 13)
+        (1, 12, 10, 13),
+        (1, 4, 12, 13),
+        (1, 9, 12, 10),
+        (1, 9, 12, 0),
+        (1, 3, 4, 12),
+        (1, 3, 12, 0),
+        # left bottom back cube with vertices (1, 2, 4, 5, 10, 11, 13, 14)
+        (1, 10, 14, 13),
+        (1, 11, 10, 14),
+        (1, 4, 14, 13),
+        (1, 11, 14, 2),
+        (1, 5, 4, 14),
+        (1, 5, 14, 2),
+        # left top front cube with vertices (3, 4, 6, 7, 12, 13, 15, 16)
+        (7, 4, 12, 13),
+        (7, 16, 12, 13),
+        (7, 3, 4, 12),
+        (7, 3, 12, 6),
+        (7, 15, 16, 12),
+        (7, 15, 12, 6),
+        # left top back cube with vertices (4, 5, 7, 8, 13, 14, 16, 17)
+        (17, 4, 14, 13),
+        (17, 16, 4, 13),
+        (17, 7, 16, 4),
+        (17, 5, 4, 14),
+        (17, 5, 4, 8),
+        (17, 7, 4, 8),
+        # right top front cube with vertices (12, 13, 15, 16, 21, 22, 24, 25)
+        (25, 12, 22, 13),
+        (25, 16, 12, 13),
+        (25, 15, 16, 12),
+        (25, 21, 12, 22),
+        (25, 21, 12, 24),
+        (25, 15, 12, 24),
+        # right top back cube with vertices (13, 14, 16, 17, 22, 23, 25, 26)
+        (25, 22, 14, 13),
+        (25, 16, 14, 13),
+        (25, 17, 16, 14),
+        (25, 23, 22, 14),
+        (25, 23, 14, 26),
+        (25, 17, 14, 26),
+    ]
+
+    def make_model(self):
+        m = ConcreteModel()
+
+        m.f = lambda x1, x2, y: x1 * x2 + y
+        # This is a 2x2 stack of cubes, so there are 8 total cubes, each of which
+        # will get divided into 6 simplices.
+        m.points = [
+            (-2.0, 0.0, 1.0),
+            (-2.0, 0.0, 4.0),
+            (-2.0, 0.0, 7.0),
+            (-2.0, 1.5, 1.0),
+            (-2.0, 1.5, 4.0),
+            (-2.0, 1.5, 7.0),
+            (-2.0, 3.0, 1.0),
+            (-2.0, 3.0, 4.0),
+            (-2.0, 3.0, 7.0),
+            (-1.5, 0.0, 1.0),
+            (-1.5, 0.0, 4.0),
+            (-1.5, 0.0, 7.0),
+            (-1.5, 1.5, 1.0),
+            (-1.5, 1.5, 4.0),
+            (-1.5, 1.5, 7.0),
+            (-1.5, 3.0, 1.0),
+            (-1.5, 3.0, 4.0),
+            (-1.5, 3.0, 7.0),
+            (-1.0, 0.0, 1.0),
+            (-1.0, 0.0, 4.0),
+            (-1.0, 0.0, 7.0),
+            (-1.0, 1.5, 1.0),
+            (-1.0, 1.5, 4.0),
+            (-1.0, 1.5, 7.0),
+            (-1.0, 3.0, 1.0),
+            (-1.0, 3.0, 4.0),
+            (-1.0, 3.0, 7.0),
+        ]
+        return m
+
+    @unittest.skipUnless(
+        scipy_available and numpy_available, "scipy and/or numpy are not available"
+    )
+    def test_degenerate_simplices_filtered(self):
+        m = self.make_model()
+        pw = m.approx = PiecewiseLinearFunction(points=m.points, function=m.f)
+
+        # check that all the points got used
+        self.assertEqual(len(pw._points), 27)
+        for p_model, p_pw in zip(m.points, pw._points):
+            self.assertEqual(p_model, p_pw)
+
+        # Started with a 2x2 grid of cubes, and each is divided into 6
+        # simplices. It's crazy degenerate in terms of *how* this is done, but
+        # that's the point of this test.
+        self.assertEqual(len(pw._simplices), 48)
+        for simplex, baseline in zip(self.simplices, pw._simplices):
+            self.assertEqual(simplex, baseline)
+
+        # We're not checking 48 linear functions...
+
+    @unittest.skipUnless(
+        scipy_available and numpy_available, "scipy and/or numpy are not available"
+    )
+    def test_redundant_points_logged(self):
+        m = self.make_model()
+        # add a redundant point
+        m.points.append((-2, 0, 1))
+
+        out = StringIO()
+        with LoggingIntercept(out, 'contrib.piecewise', level=logging.INFO):
+            m.approx = PiecewiseLinearFunction(points=m.points, function=m.f)
+
+        self.assertIn(
+            "The Delaunay triangulation dropped the point with index 27 "
+            "from the triangulation",
+            out.getvalue(),
+        )

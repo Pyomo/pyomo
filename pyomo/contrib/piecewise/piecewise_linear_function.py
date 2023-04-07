@@ -302,14 +302,14 @@ class PiecewiseLinearFunction(Block):
                 )
                 != 0
             ):
-                obj._simplices.append(simplex)
+                obj._simplices.append(tuple(simplex))
 
         # It's possible that qhull dropped some points if there were numerical
         # issues with them (e.g., if they were redundant). We'll be polite and
         # tell the user:
         for pt in triangulation.coplanar:
             logger.info(
-                "The Delaunary triangulation dropped the point with index "
+                "The Delaunay triangulation dropped the point with index "
                 "%s from the triangulation." % pt[0]
             )
 
