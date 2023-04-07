@@ -37,6 +37,7 @@ jobs:
     - name: Black Formatting Check
       run: |
         pip install black
+        echo `ls -la`
         black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
     - name: Spell Check
       uses: crate-ci/typos@master
