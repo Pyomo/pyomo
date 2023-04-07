@@ -9,6 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
+from pyomo.common import DeveloperError
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import numpy as np
@@ -29,6 +32,8 @@ import pyomo.core.expr.current as EXPR
 # enough, but we need to make sure that 'barely negative' values are assumed to
 # be zero.
 ZERO_TOLERANCE = 1e-8
+
+logger = logging.getLogger('contrib.piecewise')
 
 
 class PiecewiseLinearFunctionData(_BlockData):
@@ -282,8 +287,31 @@ class PiecewiseLinearFunction(Block):
             logger.error("Unable to triangulate the set of input points.")
             raise
 
-        obj._points = [pt for pt in points]
-        obj._simplices = [simplex for simplex in map(tuple, triangulation.simplices)]
+        # Get the points for the triangulation because they might not all be
+        # there if any where coplanar.
+        obj._points = [pt for pt in map(tuple, triangulation.points)]
+        obj._simplices = []
+        for simplex in triangulation.simplices:
+            # Check whether or not the simplex is degenerate. If it is, we will
+            # just drop it.
+            points = triangulation.points[simplex].transpose()
+            if (
+                np.linalg.det(
+                    points[:, 1:]
+                    - np.append(points[:, : dimension - 1], points[:, [0]], axis=1)
+                )
+                != 0
+            ):
+                obj._simplices.append(simplex)
+
+        # It's possible that qhull dropped some points if there were numerical
+        # issues with them (e.g., if they were redundant). We'll be polite and
+        # tell the user:
+        for pt in triangulation.coplanar:
+            logger.info(
+                "The Delaunary triangulation dropped the point with index "
+                "%s from the triangulation." % pt[0]
+            )
 
         return self._construct_from_function_and_simplices(
             obj, parent, nonlinear_function
@@ -335,12 +363,23 @@ class PiecewiseLinearFunction(Block):
                 A[i, j + 1] = nonlinear_function(*pt)
             A[i + 1, :] = 0
             A[i + 1, dimension] = -1
-            # This system has a solution unless there's a bug--we know there is
-            # a hyperplane that passes through dimension + 1 points (and the
-            # last equation scales it so that the coefficient for the output
-            # of the nonlinear function dimension is -1, so we can just read
-            # off the linear equation in the x space).
-            normal = np.linalg.solve(A, b)
+            # This system has a solution unless there's a bug--we filtered the
+            # simplices to make sure they are full-dimensional, so we know there
+            # is a hyperplane that passes through these dimension + 1 points (and the
+            # last equation scales it so that the coefficient for the output of
+            # the nonlinear function dimension is -1, so we can just read off
+            # the linear equation in the x space).
+            try:
+                normal = np.linalg.solve(A, b)
+            except np.linalg.LinAlgError as e:
+                logger.warning('LinAlgError: %s' % e)
+                raise DeveloperError(
+                    "When calculating the hyperplane approximation over the simplex "
+                    "with index %s, the matrix was unexpectedly singular. This "
+                    "likely means that this simplex is degenerate and "
+                    "that it should have been filtered out of the Delaunay "
+                    "triangulation" % num_piece
+                )
             obj._linear_functions.append(_multivariate_linear_functor(normal))
 
         return obj
