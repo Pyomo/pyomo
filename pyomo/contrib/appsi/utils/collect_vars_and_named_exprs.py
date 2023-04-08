@@ -42,7 +42,9 @@ _visitor = _VarAndNamedExprCollector()
 def collect_vars_and_named_exprs(expr):
     _visitor.__init__()
     _visitor.dfs_postorder_stack(expr)
-    return (list(_visitor.named_expressions.values()),
-            list(_visitor.variables.values()),
-            list(_visitor.fixed_vars.values()),
-            list(_visitor._external_functions.values()))
+    return (
+        list(_visitor.named_expressions.values()),
+        list(_visitor.variables.values()),
+        list(_visitor.fixed_vars.values()),
+        list(_visitor._external_functions.values()),
+    )

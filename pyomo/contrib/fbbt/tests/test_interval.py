@@ -111,11 +111,13 @@ class IntervalTestBase(object):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available.')
         x_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5))]
-        y_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5)),
-                    (0, np.random.uniform(2, 5)),
-                    (np.random.uniform(0, 2), np.random.uniform(2, 5)),
-                    (np.random.uniform(-5, -2), 0),
-                    (np.random.uniform(-5, -2), np.random.uniform(-2, 0))]
+        y_bounds = [
+            (np.random.uniform(-5, -2), np.random.uniform(2, 5)),
+            (0, np.random.uniform(2, 5)),
+            (np.random.uniform(0, 2), np.random.uniform(2, 5)),
+            (np.random.uniform(-5, -2), 0),
+            (np.random.uniform(-5, -2), np.random.uniform(-2, 0)),
+        ]
         for xl, xu in x_bounds:
             for yl, yu in y_bounds:
                 zl, zu = self.div(xl, xu, yl, yu, 1e-8)
@@ -146,14 +148,18 @@ class IntervalTestBase(object):
     def test_pow(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available.')
-        x_bounds = [(np.random.uniform(0, 2), np.random.uniform(2, 5)),
-                    (0, np.random.uniform(2, 5)),
-                    (0, 0)]
-        y_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5)),
-                    (0, np.random.uniform(2, 5)),
-                    (np.random.uniform(0, 2), np.random.uniform(2, 5)),
-                    (np.random.uniform(-5, -2), 0),
-                    (np.random.uniform(-5, -2), np.random.uniform(-2, 0))]
+        x_bounds = [
+            (np.random.uniform(0, 2), np.random.uniform(2, 5)),
+            (0, np.random.uniform(2, 5)),
+            (0, 0),
+        ]
+        y_bounds = [
+            (np.random.uniform(-5, -2), np.random.uniform(2, 5)),
+            (0, np.random.uniform(2, 5)),
+            (np.random.uniform(0, 2), np.random.uniform(2, 5)),
+            (np.random.uniform(-5, -2), 0),
+            (np.random.uniform(-5, -2), np.random.uniform(-2, 0)),
+        ]
         for xl, xu in x_bounds:
             for yl, yu in y_bounds:
                 zl, zu = self.power(xl, xu, yl, yu, 1e-8)
@@ -163,13 +169,15 @@ class IntervalTestBase(object):
                 x = np.linspace(xl, xu, 100)
                 y = np.linspace(yl, yu, 100)
                 for _x in x:
-                    _z = _x ** y
+                    _z = _x**y
                     self.assertTrue(np.all(zl - 1e-14 <= _z))
                     self.assertTrue(np.all(zu + 1e-14 >= _z))
 
-        x_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5)),
-                    (np.random.uniform(-5, -2), np.random.uniform(-2, 0)),
-                    (np.random.uniform(-5, -2), 0)]
+        x_bounds = [
+            (np.random.uniform(-5, -2), np.random.uniform(2, 5)),
+            (np.random.uniform(-5, -2), np.random.uniform(-2, 0)),
+            (np.random.uniform(-5, -2), 0),
+        ]
         y_bounds = list(range(-4, 4))
         for xl, xu in x_bounds:
             for yl in y_bounds:
@@ -177,7 +185,7 @@ class IntervalTestBase(object):
                 zl, zu = self.power(xl, xu, yl, yu, 1e-8)
                 x = np.linspace(xl, xu, 100, endpoint=False)
                 y = yl
-                _z = x ** y
+                _z = x**y
                 self.assertTrue(np.all(zl <= _z))
                 self.assertTrue(np.all(zu >= _z))
 
@@ -200,13 +208,22 @@ class IntervalTestBase(object):
                             lb, ub = self.power(_xl, _xu, _yl, _yu, 1e-8)
                             self.assertEqual(lb, -interval.inf)
                             self.assertEqual(ub, interval.inf)
-                        elif _yl == _yu and _yl != round(_yl) and (_xu < 0 or (_xu < 0 and _yu < 0)):
-                            with self.assertRaises((InfeasibleConstraintException, interval.IntervalException)):
+                        elif (
+                            _yl == _yu
+                            and _yl != round(_yl)
+                            and (_xu < 0 or (_xu < 0 and _yu < 0))
+                        ):
+                            with self.assertRaises(
+                                (
+                                    InfeasibleConstraintException,
+                                    interval.IntervalException,
+                                )
+                            ):
                                 lb, ub = self.power(_xl, _xu, _yl, _yu, 1e-8)
                         else:
                             lb, ub = self.power(_xl, _xu, _yl, _yu, 1e-8)
                             if isfinite(lb) and isfinite(ub):
-                                nan_fill = 0.5*(lb + ub)
+                                nan_fill = 0.5 * (lb + ub)
                             elif isfinite(lb):
                                 nan_fill = lb + 1
                             elif isfinite(ub):
@@ -215,7 +232,7 @@ class IntervalTestBase(object):
                                 nan_fill = 0
                             x = np.linspace(_xl, _xu, 30)
                             y = np.linspace(_yl, _yu, 30)
-                            z = x**np.split(y, len(y))
+                            z = x ** np.split(y, len(y))
                             z[np.isnan(z)] = nan_fill
                             all_values = z
                             estimated_lb = all_values.min()
@@ -237,9 +254,11 @@ class IntervalTestBase(object):
     def test_log(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available.')
-        x_bounds = [(np.random.uniform(0, 2), np.random.uniform(2, 5)),
-                    (0, np.random.uniform(2, 5)),
-                    (0, 0)]
+        x_bounds = [
+            (np.random.uniform(0, 2), np.random.uniform(2, 5)),
+            (0, np.random.uniform(2, 5)),
+            (0, 0),
+        ]
         for xl, xu in x_bounds:
             zl, zu = self.log(xl, xu)
             x = np.linspace(xl, xu, 100)
@@ -250,8 +269,8 @@ class IntervalTestBase(object):
     def test_cos(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available.')
-        lbs = np.linspace(-2*math.pi, 2*math.pi, 10)
-        ubs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        lbs = np.linspace(-2 * math.pi, 2 * math.pi, 10)
+        ubs = np.linspace(-2 * math.pi, 2 * math.pi, 10)
         for xl in lbs:
             for xu in ubs:
                 if xu >= xl:
@@ -264,8 +283,8 @@ class IntervalTestBase(object):
     def test_sin(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available.')
-        lbs = np.linspace(-2*math.pi, 2*math.pi, 10)
-        ubs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        lbs = np.linspace(-2 * math.pi, 2 * math.pi, 10)
+        ubs = np.linspace(-2 * math.pi, 2 * math.pi, 10)
         for xl in lbs:
             for xu in ubs:
                 if xu >= xl:
@@ -278,8 +297,8 @@ class IntervalTestBase(object):
     def test_tan(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available.')
-        lbs = np.linspace(-2*math.pi, 2*math.pi, 10)
-        ubs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        lbs = np.linspace(-2 * math.pi, 2 * math.pi, 10)
+        ubs = np.linspace(-2 * math.pi, 2 * math.pi, 10)
         for xl in lbs:
             for xu in ubs:
                 if xu >= xl:
@@ -298,22 +317,22 @@ class IntervalTestBase(object):
         yl, yu = self.asin(-0.5, 0.5, -math.pi, math.pi, 1e-8)
         self.assertAlmostEqual(yl, -math.pi, 12)
         self.assertAlmostEqual(yu, math.pi, 12)
-        yl, yu = self.asin(-0.5, 0.5, -math.pi/2, math.pi/2, 1e-8)
+        yl, yu = self.asin(-0.5, 0.5, -math.pi / 2, math.pi / 2, 1e-8)
         self.assertAlmostEqual(yl, math.asin(-0.5))
         self.assertAlmostEqual(yu, math.asin(0.5))
-        yl, yu = self.asin(-0.5, 0.5, -math.pi/2-0.1, math.pi/2+0.1, 1e-8)
+        yl, yu = self.asin(-0.5, 0.5, -math.pi / 2 - 0.1, math.pi / 2 + 0.1, 1e-8)
         self.assertAlmostEqual(yl, math.asin(-0.5))
         self.assertAlmostEqual(yu, math.asin(0.5))
-        yl, yu = self.asin(-0.5, 0.5, -math.pi/2+0.1, math.pi/2-0.1, 1e-8)
+        yl, yu = self.asin(-0.5, 0.5, -math.pi / 2 + 0.1, math.pi / 2 - 0.1, 1e-8)
         self.assertAlmostEqual(yl, math.asin(-0.5))
         self.assertAlmostEqual(yu, math.asin(0.5))
-        yl, yu = self.asin(-0.5, 0.5, -1.5*math.pi, 1.5*math.pi, 1e-8)
+        yl, yu = self.asin(-0.5, 0.5, -1.5 * math.pi, 1.5 * math.pi, 1e-8)
         self.assertAlmostEqual(yl, -3.6651914291880920, 12)
         self.assertAlmostEqual(yu, 3.6651914291880920, 12)
-        yl, yu = self.asin(-0.5, 0.5, -1.5*math.pi-0.1, 1.5*math.pi+0.1, 1e-8)
+        yl, yu = self.asin(-0.5, 0.5, -1.5 * math.pi - 0.1, 1.5 * math.pi + 0.1, 1e-8)
         self.assertAlmostEqual(yl, -3.6651914291880920, 12)
         self.assertAlmostEqual(yu, 3.6651914291880920, 12)
-        yl, yu = self.asin(-0.5, 0.5, -1.5*math.pi+0.1, 1.5*math.pi-0.1, 1e-8)
+        yl, yu = self.asin(-0.5, 0.5, -1.5 * math.pi + 0.1, 1.5 * math.pi - 0.1, 1e-8)
         self.assertAlmostEqual(yl, -3.6651914291880920, 12)
         self.assertAlmostEqual(yu, 3.6651914291880920, 12)
 
@@ -323,25 +342,25 @@ class IntervalTestBase(object):
         yl, yu = self.acos(-0.5, 0.5, -interval.inf, interval.inf, 1e-8)
         self.assertEqual(yl, -interval.inf)
         self.assertEqual(yu, interval.inf)
-        yl, yu = self.acos(-0.5, 0.5, -0.5*math.pi, 0.5*math.pi, 1e-8)
-        self.assertAlmostEqual(yl, -0.5*math.pi, 12)
-        self.assertAlmostEqual(yu, 0.5*math.pi, 12)
+        yl, yu = self.acos(-0.5, 0.5, -0.5 * math.pi, 0.5 * math.pi, 1e-8)
+        self.assertAlmostEqual(yl, -0.5 * math.pi, 12)
+        self.assertAlmostEqual(yu, 0.5 * math.pi, 12)
         yl, yu = self.acos(-0.5, 0.5, 0, math.pi, 1e-8)
         self.assertAlmostEqual(yl, math.acos(0.5))
         self.assertAlmostEqual(yu, math.acos(-0.5))
-        yl, yu = self.acos(-0.5, 0.5, 0-0.1, math.pi+0.1, 1e-8)
+        yl, yu = self.acos(-0.5, 0.5, 0 - 0.1, math.pi + 0.1, 1e-8)
         self.assertAlmostEqual(yl, math.acos(0.5))
         self.assertAlmostEqual(yu, math.acos(-0.5))
-        yl, yu = self.acos(-0.5, 0.5, 0+0.1, math.pi-0.1, 1e-8)
+        yl, yu = self.acos(-0.5, 0.5, 0 + 0.1, math.pi - 0.1, 1e-8)
         self.assertAlmostEqual(yl, math.acos(0.5))
         self.assertAlmostEqual(yu, math.acos(-0.5))
         yl, yu = self.acos(-0.5, 0.5, -math.pi, 0, 1e-8)
         self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
         self.assertAlmostEqual(yu, -math.acos(0.5), 12)
-        yl, yu = self.acos(-0.5, 0.5, -math.pi-0.1, 0+0.1, 1e-8)
+        yl, yu = self.acos(-0.5, 0.5, -math.pi - 0.1, 0 + 0.1, 1e-8)
         self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
         self.assertAlmostEqual(yu, -math.acos(0.5), 12)
-        yl, yu = self.acos(-0.5, 0.5, -math.pi+0.1, 0-0.1, 1e-8)
+        yl, yu = self.acos(-0.5, 0.5, -math.pi + 0.1, 0 - 0.1, 1e-8)
         self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
         self.assertAlmostEqual(yu, -math.acos(0.5), 12)
 
@@ -354,15 +373,17 @@ class IntervalTestBase(object):
         yl, yu = self.atan(-0.5, 0.5, -0.1, 0.1)
         self.assertAlmostEqual(yl, -0.1, 12)
         self.assertAlmostEqual(yu, 0.1, 12)
-        yl, yu = self.atan(-0.5, 0.5, -0.5*math.pi+0.1, math.pi/2-0.1)
+        yl, yu = self.atan(-0.5, 0.5, -0.5 * math.pi + 0.1, math.pi / 2 - 0.1)
         self.assertAlmostEqual(yl, math.atan(-0.5), 12)
         self.assertAlmostEqual(yu, math.atan(0.5), 12)
-        yl, yu = self.atan(-0.5, 0.5, -1.5*math.pi+0.1, 1.5*math.pi-0.1)
-        self.assertAlmostEqual(yl, math.atan(-0.5)-math.pi, 12)
-        self.assertAlmostEqual(yu, math.atan(0.5)+math.pi, 12)
+        yl, yu = self.atan(-0.5, 0.5, -1.5 * math.pi + 0.1, 1.5 * math.pi - 0.1)
+        self.assertAlmostEqual(yl, math.atan(-0.5) - math.pi, 12)
+        self.assertAlmostEqual(yu, math.atan(0.5) + math.pi, 12)
 
     def test_encountered_bugs(self):
-        lb, ub = self._inverse_power1(88893.4225, 88893.4225, 2, 2, 298.15, 298.15, 1e-8)
+        lb, ub = self._inverse_power1(
+            88893.4225, 88893.4225, 2, 2, 298.15, 298.15, 1e-8
+        )
         self.assertAlmostEqual(lb, 298.15)
         self.assertAlmostEqual(ub, 298.15)
 
@@ -370,7 +391,9 @@ class IntervalTestBase(object):
         self.assertAlmostEqual(lb, -0.0016)
         self.assertAlmostEqual(ub, -0.0016)
 
-        lb, ub = self._inverse_power1(-1, -1e-12, 2, 2, -interval.inf, interval.inf, 1e-8)
+        lb, ub = self._inverse_power1(
+            -1, -1e-12, 2, 2, -interval.inf, interval.inf, 1e-8
+        )
         self.assertAlmostEqual(lb, 0)
         self.assertAlmostEqual(ub, 0)
 

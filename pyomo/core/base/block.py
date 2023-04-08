@@ -9,9 +9,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Block', 'TraversalStrategy', 'SortComponents',
-           'active_components', 'components', 'active_components_data',
-           'components_data', 'SimpleBlock', 'ScalarBlock']
+__all__ = [
+    'Block',
+    'TraversalStrategy',
+    'SortComponents',
+    'active_components',
+    'components',
+    'active_components_data',
+    'components_data',
+    'SimpleBlock',
+    'ScalarBlock',
+]
 
 import copy
 import logging
@@ -28,16 +36,16 @@ from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import Mapping
-from pyomo.common.deprecation import (
-    deprecated, deprecation_warning, RenamedClass,
-)
+from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
 from pyomo.common.formatting import StreamIndenter
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
-    Component, ActiveComponentData, ModelComponentFactory
+    Component,
+    ActiveComponentData,
+    ModelComponentFactory,
 )
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
@@ -45,7 +53,8 @@ from pyomo.core.base.set import Any, GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
-    ActiveIndexedComponent, UnindexedComponent_set,
+    ActiveIndexedComponent,
+    UnindexedComponent_set,
 )
 
 from pyomo.opt.base import ProblemFormat, guess_format
@@ -65,6 +74,7 @@ class _generic_component_decorator(object):
                (*excluding* the block argument)
         **kwds: keyword arguments to the Component constructor
     """
+
     def __init__(self, component, block, *args, **kwds):
         self._component = component
         self._block = block
@@ -75,7 +85,7 @@ class _generic_component_decorator(object):
         setattr(
             self._block,
             rule.__name__,
-            self._component(*self._args, rule=rule, **(self._kwds))
+            self._component(*self._args, rule=rule, **(self._kwds)),
         )
         return rule
 
@@ -90,13 +100,13 @@ class _component_decorator(object):
         block: the block onto which to add the new component
 
     """
+
     def __init__(self, block, component):
         self._block = block
         self._component = component
 
     def __call__(self, *args, **kwds):
-        return _generic_component_decorator(
-            self._component, self._block, *args, **kwds)
+        return _generic_component_decorator(self._component, self._block, *args, **kwds)
 
 
 class SubclassOf(object):
@@ -112,10 +122,10 @@ class SubclassOf(object):
 
         model.component_data_objects(Var, descend_into=SubclassOf(Block))
     """
+
     def __init__(self, *ctype):
         self.ctype = ctype
-        self.__name__ = 'SubclassOf(%s)' % (
-            ','.join(x.__name__ for x in ctype),)
+        self.__name__ = 'SubclassOf(%s)' % (','.join(x.__name__ for x in ctype),)
 
     def __contains__(self, item):
         return issubclass(item, self.ctype)
@@ -149,6 +159,7 @@ class _DeduplicateInfo(object):
     of every data object.
 
     """
+
     __slots__ = ('seen_components', 'seen_comp_thru_reference', 'seen_data')
 
     def __init__(self):
@@ -176,8 +187,9 @@ class _DeduplicateInfo(object):
         """
         if comp.is_reference():
             seen_components_contains = self.seen_components.__contains__
-            seen_comp_thru_reference_contains \
-                = self.seen_comp_thru_reference.__contains__
+            seen_comp_thru_reference_contains = (
+                self.seen_comp_thru_reference.__contains__
+            )
             seen_comp_thru_reference_add = self.seen_comp_thru_reference.add
             seen_data_contains = self.seen_data.__contains__
             seen_data_add = self.seen_data.add
@@ -201,7 +213,7 @@ class _DeduplicateInfo(object):
                 if not seen_data_contains(_id):
                     seen_data_add(_id)
                     yield _item
-        else: # this is a "natural" component
+        else:  # this is a "natural" component
             # Remember that we have completely processed this component
             _id = id(comp)
             self.seen_components.add(_id)
@@ -219,8 +231,7 @@ class _DeduplicateInfo(object):
                 # check for duplicates and not remember them.
                 seen_data_contains = self.seen_data.__contains__
                 for _item in items:
-                    if not seen_data_contains(id(
-                            _item if are_values else _item[0])):
+                    if not seen_data_contains(id(_item if are_values else _item[0])):
                         yield _item
 
 
@@ -234,6 +245,7 @@ class SortComponents(object):
     "sort=SortComponents.deterministic" is more descriptive than
     "sort=True".
     """
+
     unsorted = set()
     indices = set([1])
     declOrder = set([2])
@@ -243,7 +255,7 @@ class SortComponents(object):
     alphabetical = alphaOrder
     # both alpha and decl orders are deterministic, so only must sort indices
     deterministic = indices
-    sortBoth = indices | alphabeticalOrder         # Same as True
+    sortBoth = indices | alphabeticalOrder  # Same as True
     alphabetizeComponentAndIndex = sortBoth
 
     @staticmethod
@@ -331,6 +343,7 @@ class _BlockConstruction(object):
     This class holds a "global" dict used when constructing
     (hierarchical) models.
     """
+
     data = {}
 
 
@@ -353,7 +366,7 @@ class PseudoMap(AutoSlots.Mixin):
         """
         self._block = block
         if isclass(ctype):
-            self._ctypes = {ctype,}
+            self._ctypes = {ctype}
         elif ctype is None:
             self._ctypes = Any
         elif ctype.__class__ is SubclassOf:
@@ -383,12 +396,13 @@ class PseudoMap(AutoSlots.Mixin):
             msg += self._active and "active " or "inactive "
         if self._ctypes is not Any:
             if len(self._ctypes) == 1:
-                msg += next(iter(self._ctypes)).__name__ + " "
+                msg += next(iter(self._ctypes)).__name__ + ' '
             else:
                 types = sorted(x.__name__ for x in self._ctypes)
                 msg += '%s or %s ' % (', '.join(types[:-1]), types[-1])
-        raise KeyError("%scomponent '%s' not found in block %s"
-                       % (msg, key, self._block.name))
+        raise KeyError(
+            "%scomponent '%s' not found in block %s" % (msg, key, self._block.name)
+        )
 
     def __nonzero__(self):
         """
@@ -425,9 +439,11 @@ class PseudoMap(AutoSlots.Mixin):
             else:
                 # Note that because of SubclassOf, we cannot iterate
                 # over self._ctypes.
-                return sum(self._block._ctypes[x][2]
-                           for x in self._block._ctypes
-                           if x in self._ctypes)
+                return sum(
+                    self._block._ctypes[x][2]
+                    for x in self._block._ctypes
+                    if x in self._ctypes
+                )
         #
         # If _active is True or False, then we have to count by brute force.
         #
@@ -464,12 +480,14 @@ class PseudoMap(AutoSlots.Mixin):
         if self._ctypes.__class__ is set:
             _idx_list = [
                 self._block._ctypes[x][0]
-                for x in self._ctypes if x in self._block._ctypes
+                for x in self._ctypes
+                if x in self._block._ctypes
             ]
         else:
             _idx_list = [
                 self._block._ctypes[x][0]
-                for x in self._block._ctypes if x in self._ctypes
+                for x in self._block._ctypes
+                if x in self._ctypes
             ]
         _idx_list.sort(reverse=True)
         while _idx_list:
@@ -507,8 +525,7 @@ class PseudoMap(AutoSlots.Mixin):
         if self._ctypes is Any:
             # If there is no ctype, then we will just iterate over
             # all components and return them all
-            walker = filter(
-                _isNotNone, map(itemgetter(0), self._block._decl_order))
+            walker = filter(_isNotNone, map(itemgetter(0), self._block._decl_order))
         else:
             # The user specified a desired ctype; we will leverage
             # the _ctypewalker generator to walk the underlying linked
@@ -541,24 +558,23 @@ class PseudoMap(AutoSlots.Mixin):
         for obj in self.values():
             yield (obj._name, obj)
 
-    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='6.0')
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
     def iterkeys(self):
         """
         Generator returning the component names defined on the Block
         """
         return self.keys()
 
-    @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='6.0')
+    @deprecated(
+        'The itervalues method is deprecated. Use dict.values().', version='6.0'
+    )
     def itervalues(self):
         """
         Generator returning the components defined on the Block
         """
         return self.values()
 
-    @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='6.0')
+    @deprecated('The iteritems method is deprecated. Use dict.items().', version='6.0')
     def iteritems(self):
         """
         Generator returning (name, component) tuples for components
@@ -571,6 +587,7 @@ class _BlockData(ActiveComponentData):
     """
     This class holds the fundamental block data.
     """
+
     _Block_reserved_words = set()
 
     # If a writer cached a repn on this block, remove it when cloning
@@ -622,12 +639,12 @@ class _BlockData(ActiveComponentData):
 
     def __getattr__(self, val):
         if val in ModelComponentFactory:
-            return _component_decorator(
-                self, ModelComponentFactory.get_class(val))
+            return _component_decorator(self, ModelComponentFactory.get_class(val))
         # Since the base classes don't support getattr, we can just
         # throw the "normal" AttributeError
-        raise AttributeError("'%s' object has no attribute '%s'"
-                             % (self.__class__.__name__, val))
+        raise AttributeError(
+            "'%s' object has no attribute '%s'" % (self.__class__.__name__, val)
+        )
 
     def __setattr__(self, name, val):
         """
@@ -673,8 +690,8 @@ class _BlockData(ActiveComponentData):
                     "\nThis is usually indicative of a modelling error.\n"
                     "To avoid this warning, use block.del_component() and "
                     "block.add_component()."
-                    % (name, type(self.component(name)), self.name,
-                       type(val)))
+                    % (name, type(self.component(name)), self.name, type(val))
+                )
                 self.del_component(name)
                 self.add_component(name, val)
             else:
@@ -693,9 +710,9 @@ class _BlockData(ActiveComponentData):
                 except AttributeError:
                     logger.error(
                         "Expected component %s (type=%s) on block %s to have a "
-                        "'set_value' method, but none was found." %
-                        (name, type(self.component(name)),
-                         self.name))
+                        "'set_value' method, but none was found."
+                        % (name, type(self.component(name)), self.name)
+                    )
                     raise
                 #
                 # Call the set_value method.
@@ -730,7 +747,8 @@ class _BlockData(ActiveComponentData):
                         "Cannot set the '_parent' attribute of Block '%s' "
                         "to a non-Block object (with type=%s); Did you "
                         "try to create a model component named '_parent'?"
-                        % (self.name, type(val)))
+                        % (self.name, type(val))
+                    )
                 super(_BlockData, self).__setattr__(name, val)
             elif name == '_component':
                 if val is not None and not isinstance(val(), _BlockData):
@@ -738,7 +756,8 @@ class _BlockData(ActiveComponentData):
                         "Cannot set the '_component' attribute of Block '%s' "
                         "to a non-Block object (with type=%s); Did you "
                         "try to create a model component named '_component'?"
-                        % (self.name, type(val)))
+                        % (self.name, type(val))
+                    )
                 super(_BlockData, self).__setattr__(name, val)
             #
             # At this point, we should only be seeing non-component data
@@ -751,8 +770,8 @@ class _BlockData(ActiveComponentData):
                     "on block (model).%s with a new Component\nwith type %s.\n"
                     "This is usually indicative of a modelling error.\n"
                     "To avoid this warning, explicitly delete the attribute:\n"
-                    "    del %s.%s" % (
-                        name, self.name, type(val), self.name, name))
+                    "    del %s.%s" % (name, self.name, type(val), self.name, name)
+                )
                 delattr(self, name)
                 self.add_component(name, val)
             else:
@@ -792,7 +811,7 @@ class _BlockData(ActiveComponentData):
                 j += 1
                 _new_decl_order.append(entry)
         # Update the _decl map
-        self._decl = {k:idxMap[idx] for k,idx in self._decl.items()}
+        self._decl = {k: idxMap[idx] for k, idx in self._decl.items()}
         # Update the ctypes, _decl_order linked lists
         for ctype, info in self._ctypes.items():
             idx = info[0]
@@ -813,13 +832,16 @@ class _BlockData(ActiveComponentData):
         self._decl_order = _new_decl_order
 
     def set_value(self, val):
-        raise RuntimeError(textwrap.dedent(
-            """\
-            Block components do not support assignment or set_value().
-            Use the transfer_attributes_from() method to transfer the
-            components and public attributes from one block to another:
-                model.b[1].transfer_attributes_from(other_block)
-            """))
+        raise RuntimeError(
+            textwrap.dedent(
+                """
+                Block components do not support assignment or set_value().
+                Use the transfer_attributes_from() method to transfer the
+                components and public attributes from one block to another:
+                    model.b[1].transfer_attributes_from(other_block)
+                """
+            ).strip()
+        )
 
     def clear(self):
         for name in self.component_map().keys():
@@ -863,7 +885,8 @@ class _BlockData(ActiveComponentData):
                     raise ValueError(
                         "_BlockData.transfer_attributes_from(): Cannot set a "
                         "sub-block (%s) to a parent block (%s): creates a "
-                        "circular hierarchy" % (self, src))
+                        "circular hierarchy" % (self, src)
+                    )
                 p_block = p_block.parent_block()
             # record the components and the non-component objects added
             # to the block
@@ -871,39 +894,41 @@ class _BlockData(ActiveComponentData):
             src_raw_dict = src.__dict__
             del_src_comp = src.del_component
         elif isinstance(src, Mapping):
-            src_comp_map = {k: v for k, v in src.items()
-                            if isinstance(v, Component)}
+            src_comp_map = {k: v for k, v in src.items() if isinstance(v, Component)}
             src_raw_dict = src
             del_src_comp = lambda x: None
         else:
             raise ValueError(
                 "_BlockData.transfer_attributes_from(): expected a "
-                "Block or dict; received %s" % (type(src).__name__,))
+                "Block or dict; received %s" % (type(src).__name__,)
+            )
 
         if src_comp_map:
             # Filter out any components from src
-            src_raw_dict = {k: v for k, v in src_raw_dict.items()
-                            if k not in src_comp_map}
+            src_raw_dict = {
+                k: v for k, v in src_raw_dict.items() if k not in src_comp_map
+            }
 
         # Use component_map for the components to preserve decl_order
         # Note that we will move any reserved components over as well as
         # any user-defined components.  There is a bit of trust here
         # that the user knows what they are doing.
         with self._declare_reserved_components():
-            for k,v in src_comp_map.items():
+            for k, v in src_comp_map.items():
                 if k in self._decl:
                     self.del_component(k)
                 del_src_comp(k)
-                self.add_component(k,v)
+                self.add_component(k, v)
         # Because Blocks are not slotized and we allow the
         # assignment of arbitrary data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
         for k, v in src_raw_dict.items():
-            if ( k not in self._Block_reserved_words # user-defined
-                 or not hasattr(self, k) # reserved, but not present
-                 or k in self._decl # reserved, but a component and the
-                                    # incoming thing is data (attempt to
-                                    # set the value)
+            if (
+                k not in self._Block_reserved_words  # user-defined
+                or not hasattr(self, k)  # reserved, but not present
+                or k in self._decl  # reserved, but a component and the
+                # incoming thing is data (attempt to
+                # set the value)
             ):
                 setattr(self, k, v)
 
@@ -918,28 +943,37 @@ class _BlockData(ActiveComponentData):
         #
         if _component_sets is not None:
             for ctr, tset in enumerate(_component_sets):
-                if tset.parent_component().parent_block() is None \
-                        and not isinstance(tset.parent_component(), GlobalSetBase):
+                if tset.parent_component().parent_block() is None and not isinstance(
+                    tset.parent_component(), GlobalSetBase
+                ):
                     self.add_component("%s_index_%d" % (val.local_name, ctr), tset)
-        if getattr(val, '_index_set', None) is not None \
-                and isinstance(val._index_set, _SetDataBase) \
-                and val._index_set.parent_component().parent_block() is None \
-                and not isinstance(val._index_set.parent_component(), GlobalSetBase):
-            self.add_component("%s_index" % (val.local_name,), val._index_set.parent_component())
-        if getattr(val, 'initialize', None) is not None \
-                and isinstance(val.initialize, _SetDataBase) \
-                and val.initialize.parent_component().parent_block() is None \
-                and not isinstance(val.initialize.parent_component(), GlobalSetBase):
-            self.add_component("%s_index_init" % (val.local_name,), val.initialize.parent_component())
-        if getattr(val, 'domain', None) is not None \
-                and isinstance(val.domain, _SetDataBase) \
-                and val.domain.parent_block() is None \
-                and not isinstance(val.domain, GlobalSetBase):
+        if (
+            getattr(val, '_index_set', None) is not None
+            and isinstance(val._index_set, _SetDataBase)
+            and val._index_set.parent_component().parent_block() is None
+            and not isinstance(val._index_set.parent_component(), GlobalSetBase)
+        ):
+            self.add_component(
+                "%s_index" % (val.local_name,), val._index_set.parent_component()
+            )
+        if (
+            getattr(val, 'initialize', None) is not None
+            and isinstance(val.initialize, _SetDataBase)
+            and val.initialize.parent_component().parent_block() is None
+            and not isinstance(val.initialize.parent_component(), GlobalSetBase)
+        ):
+            self.add_component(
+                "%s_index_init" % (val.local_name,), val.initialize.parent_component()
+            )
+        if (
+            getattr(val, 'domain', None) is not None
+            and isinstance(val.domain, _SetDataBase)
+            and val.domain.parent_block() is None
+            and not isinstance(val.domain, GlobalSetBase)
+        ):
             self.add_component("%s_domain" % (val.local_name,), val.domain)
 
-    def collect_ctypes(self,
-                       active=None,
-                       descend_into=True):
+    def collect_ctypes(self, active=None, descend_into=True):
         """
         Count all component types stored on or under this
         block.
@@ -958,19 +992,20 @@ class _BlockData(ActiveComponentData):
         """
         assert active in (True, None)
         ctypes = set()
-        for block in self.block_data_objects(active=active,
-                                             descend_into=descend_into,
-                                             sort=SortComponents.unsorted):
+        for block in self.block_data_objects(
+            active=active, descend_into=descend_into, sort=SortComponents.unsorted
+        ):
             if active is None:
                 ctypes.update(block._ctypes)
             else:
                 assert active is True
                 for ctype in block._ctypes:
                     for component in block.component_data_objects(
-                            ctype=ctype,
-                            active=True,
-                            descend_into=False,
-                            sort=SortComponents.unsorted):
+                        ctype=ctype,
+                        active=True,
+                        descend_into=False,
+                        sort=SortComponents.unsorted,
+                    ):
                         # We only need to verify that there is at least
                         # one active data member
                         ctypes.add(ctype)
@@ -1047,16 +1082,19 @@ class _BlockData(ActiveComponentData):
         #
         if not val.valid_model_component():
             raise RuntimeError(
-                "Cannot add '%s' as a component to a block" % str(type(val)))
+                "Cannot add '%s' as a component to a block" % str(type(val))
+            )
         if name in self._Block_reserved_words:
-            raise ValueError("Attempting to declare a block component using "
-                             "the name of a reserved attribute:\n\t%s"
-                             % (name,))
+            raise ValueError(
+                "Attempting to declare a block component using "
+                "the name of a reserved attribute:\n\t%s" % (name,)
+            )
         if name in self.__dict__:
             raise RuntimeError(
                 "Cannot add component '%s' (type %s) to block '%s': a "
                 "component by that name (type %s) is already defined."
-                % (name, type(val), self.name, type(getattr(self, name))))
+                % (name, type(val), self.name, type(getattr(self, name)))
+            )
         #
         # Skip the add_component() logic if this is a
         # component type that is suppressed.
@@ -1072,20 +1110,30 @@ class _BlockData(ActiveComponentData):
             if val._parent() is self:
                 msg = """
 Attempting to re-assign the component '%s' to the same
-block under a different name (%s).""" % (val.name, name)
+block under a different name (%s).""" % (
+                    val.name,
+                    name,
+                )
             else:
                 msg = """
 Re-assigning the component '%s' from block '%s' to
-block '%s' as '%s'.""" % (val._name, val._parent().name,
-                          self.name, name)
+block '%s' as '%s'.""" % (
+                    val._name,
+                    val._parent().name,
+                    self.name,
+                    name,
+                )
 
-            raise RuntimeError("""%s
+            raise RuntimeError(
+                """%s
 
 This behavior is not supported by Pyomo; components must have a
 single owning block (or model), and a component may not appear
 multiple times in a block.  If you want to re-name or move this
 component, use the block del_component() and add_component() methods.
-""" % (msg.strip(),))
+"""
+                % (msg.strip(),)
+            )
         #
         # If the new component is a Block, then there is the chance that
         # it is the model(), and assigning it would create a circular
@@ -1096,8 +1144,8 @@ component, use the block del_component() and add_component() methods.
         if isinstance(val, Block) and val is self.model():
             raise ValueError(
                 "Cannot assign the top-level block as a subblock of one of "
-                "its children (%s): creates a circular hierarchy"
-                % (self,))
+                "its children (%s): creates a circular hierarchy" % (self,)
+            )
         #
         # Set the name and parent pointer of this component.
         #
@@ -1167,8 +1215,9 @@ component, use the block del_component() and add_component() methods.
                     """As of Pyomo 4.0, Pyomo components no longer support implicit rules.
 You defined a component (%s) that appears
 to rely on an implicit rule (%s).
-Components must now specify their rules explicitly using 'rule=' keywords.""" %
-                    (val.name, _test))
+Components must now specify their rules explicitly using 'rule=' keywords."""
+                    % (val.name, _test)
+                )
         #
         # Don't reconstruct if this component has already been constructed.
         # This allows a user to move a component from one block to
@@ -1210,19 +1259,25 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     try:
                         _blockName = "Block '%s'" % self.name
                     except:
-                        _blockName = "Block '%s[...]'" \
-                            % self.parent_component().name
-                logger.debug("Constructing %s '%s' on %s from data=%s",
-                             val.__class__.__name__, name,
-                             _blockName, str(data))
+                        _blockName = "Block '%s[...]'" % self.parent_component().name
+                logger.debug(
+                    "Constructing %s '%s' on %s from data=%s",
+                    val.__class__.__name__,
+                    name,
+                    _blockName,
+                    str(data),
+                )
             try:
                 val.construct(data)
             except:
                 err = sys.exc_info()[1]
                 logger.error(
                     "Constructing component '%s' from data=%s failed:\n%s: %s",
-                    str(val.name), str(data).strip(),
-                    type(err).__name__, err)
+                    str(val.name),
+                    str(data).strip(),
+                    type(err).__name__,
+                    err,
+                )
                 raise
             if generate_debug_messages:
                 if _blockName[-1] == "'":
@@ -1231,8 +1286,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     _blockName = "'" + _blockName + '.' + name + "'"
                 _out = StringIO()
                 val.pprint(ostream=_out)
-                logger.debug("Constructed component '%s':\n%s"
-                             % (_blockName, _out.getvalue()))
+                logger.debug(
+                    "Constructed component '%s':\n%s" % (_blockName, _out.getvalue())
+                )
 
     def del_component(self, name_or_object):
         """
@@ -1250,8 +1306,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         name = obj.local_name
         if name in self._Block_reserved_words:
             raise ValueError(
-                "Attempting to delete a reserved block component:\n\t%s"
-                % (obj.name,))
+                "Attempting to delete a reserved block component:\n\t%s" % (obj.name,)
+            )
 
         # Replace the component in the master list with a None placeholder
         idx = self._decl[name]
@@ -1270,15 +1326,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # Now that this component is not in the _decl map, we can call
         # delattr as usual.
         #
-        #del self.__dict__[name]
+        # del self.__dict__[name]
         #
         # Note: 'del self.__dict__[name]' is inappropriate here.  The
         # correct way to add the attribute is to delegate the work to
         # the next class up the MRO.
         super(_BlockData, self).__delattr__(name)
 
-    def reclassify_component_type(self, name_or_object, new_ctype,
-                                  preserve_declaration_order=True):
+    def reclassify_component_type(
+        self, name_or_object, new_ctype, preserve_declaration_order=True
+    ):
         """
         TODO
         """
@@ -1316,8 +1373,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 prev = tmp
                 tmp = self._decl_order[tmp][1]
 
-            self._decl_order[prev] = (self._decl_order[prev][0],
-                                      self._decl_order[idx][1])
+            self._decl_order[prev] = (
+                self._decl_order[prev][0],
+                self._decl_order[idx][1],
+            )
             if ctype_info[1] == idx:
                 ctype_info[1] = prev
 
@@ -1524,8 +1583,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             if active is None or not isinstance(comp, ActiveIndexedComponent):
                 _items = (((name, idx), compData) for idx, compData in _items)
             else:
-                _items = (((name, idx), compData) for idx, compData in _items
-                          if compData.active == active)
+                _items = (
+                    ((name, idx), compData)
+                    for idx, compData in _items
+                    if compData.active == active
+                )
 
             yield from dedup.unique(comp, _items, False)
 
@@ -1552,7 +1614,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # back on _component_data_iteritems.
             yield from map(
                 itemgetter(1),
-                self._component_data_iteritems(ctype, active, sort, dedup)
+                self._component_data_iteritems(ctype, active, sort, dedup),
             )
             return
 
@@ -1581,49 +1643,56 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
             yield from dedup.unique(comp, _values, True)
 
-    @deprecated("The all_components method is deprecated.  "
-                "Use the Block.component_objects() method.",
-                version="4.1.10486")
+    @deprecated(
+        "The all_components method is deprecated.  "
+        "Use the Block.component_objects() method.",
+        version="4.1.10486",
+    )
     def all_components(self, *args, **kwargs):
         return self.component_objects(*args, **kwargs)
 
-    @deprecated("The active_components method is deprecated.  "
-                "Use the Block.component_objects() method.",
-                version="4.1.10486")
+    @deprecated(
+        "The active_components method is deprecated.  "
+        "Use the Block.component_objects() method.",
+        version="4.1.10486",
+    )
     def active_components(self, *args, **kwargs):
         kwargs['active'] = True
         return self.component_objects(*args, **kwargs)
 
-    @deprecated("The all_component_data method is deprecated.  "
-                "Use the Block.component_data_objects() method.",
-                version="4.1.10486")
+    @deprecated(
+        "The all_component_data method is deprecated.  "
+        "Use the Block.component_data_objects() method.",
+        version="4.1.10486",
+    )
     def all_component_data(self, *args, **kwargs):
         return self.component_data_objects(*args, **kwargs)
 
-    @deprecated("The active_component_data method is deprecated.  "
-                "Use the Block.component_data_objects() method.",
-                version="4.1.10486")
+    @deprecated(
+        "The active_component_data method is deprecated.  "
+        "Use the Block.component_data_objects() method.",
+        version="4.1.10486",
+    )
     def active_component_data(self, *args, **kwargs):
         kwargs['active'] = True
         return self.component_data_objects(*args, **kwargs)
 
-    def component_objects(self, ctype=None, active=None, sort=False,
-                          descend_into=True, descent_order=None):
+    def component_objects(
+        self, ctype=None, active=None, sort=False, descend_into=True, descent_order=None
+    ):
         """
         Return a generator that iterates through the
         component objects in a block.  By default, the
         generator recursively descends into sub-blocks.
         """
         for _block in self.block_data_objects(
-                active, sort, descend_into, descent_order):
+            active, sort, descend_into, descent_order
+        ):
             yield from _block.component_map(ctype, active, sort).values()
 
-    def component_data_objects(self,
-                               ctype=None,
-                               active=None,
-                               sort=False,
-                               descend_into=True,
-                               descent_order=None):
+    def component_data_objects(
+        self, ctype=None, active=None, sort=False, descend_into=True, descent_order=None
+    ):
         """
         Return a generator that iterates through the
         component data objects for all components in a
@@ -1632,16 +1701,13 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """
         dedup = _DeduplicateInfo()
         for _block in self.block_data_objects(
-                active, sort, descend_into, descent_order):
-            yield from _block._component_data_itervalues(
-                ctype, active, sort, dedup)
+            active, sort, descend_into, descent_order
+        ):
+            yield from _block._component_data_itervalues(ctype, active, sort, dedup)
 
-    def component_data_iterindex(self,
-                                 ctype=None,
-                                 active=None,
-                                 sort=False,
-                                 descend_into=True,
-                                 descent_order=None):
+    def component_data_iterindex(
+        self, ctype=None, active=None, sort=False, descend_into=True, descent_order=None
+    ):
         """
         Return a generator that returns a tuple for each
         component data object in a block.  By default, this
@@ -1653,28 +1719,30 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """
         dedup = _DeduplicateInfo()
         for _block in self.block_data_objects(
-                active, sort, descend_into, descent_order):
-            yield from _block._component_data_iteritems(
-                ctype, active, sort, dedup)
+            active, sort, descend_into, descent_order
+        ):
+            yield from _block._component_data_iteritems(ctype, active, sort, dedup)
 
-    @deprecated("The all_blocks method is deprecated.  "
-                "Use the Block.block_data_objects() method.",
-                version="4.1.10486")
+    @deprecated(
+        "The all_blocks method is deprecated.  "
+        "Use the Block.block_data_objects() method.",
+        version="4.1.10486",
+    )
     def all_blocks(self, *args, **kwargs):
         return self.block_data_objects(*args, **kwargs)
 
-    @deprecated("The active_blocks method is deprecated.  "
-                "Use the Block.block_data_objects() method.",
-                version="4.1.10486")
+    @deprecated(
+        "The active_blocks method is deprecated.  "
+        "Use the Block.block_data_objects() method.",
+        version="4.1.10486",
+    )
     def active_blocks(self, *args, **kwargs):
         kwargs['active'] = True
         return self.block_data_objects(*args, **kwargs)
 
-    def block_data_objects(self,
-                           active=None,
-                           sort=False,
-                           descend_into=True,
-                           descent_order=None):
+    def block_data_objects(
+        self, active=None, sort=False, descend_into=True, descent_order=None
+    ):
         """Generator returning this block and any matching sub-blocks.
 
         This is roughly equivalent to
@@ -1729,18 +1797,18 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             ctype = descend_into
         dedup = _DeduplicateInfo()
 
-        if descent_order is None or \
-                descent_order == TraversalStrategy.PrefixDepthFirstSearch:
+        if (
+            descent_order is None
+            or descent_order == TraversalStrategy.PrefixDepthFirstSearch
+        ):
             walker = self._prefix_dfs_iterator(ctype, active, sort, dedup)
         elif descent_order == TraversalStrategy.BreadthFirstSearch:
             walker = self._bfs_iterator(ctype, active, sort, dedup)
         elif descent_order == TraversalStrategy.PostfixDepthFirstSearch:
             walker = self._postfix_dfs_iterator(ctype, active, sort, dedup)
         else:
-            raise RuntimeError("unrecognized traversal strategy: %s"
-                               % (descent_order, ))
+            raise RuntimeError("unrecognized traversal strategy: %s" % (descent_order,))
         yield from walker
-
 
     def _prefix_dfs_iterator(self, ctype, active, sort, dedup):
         """Helper function implementing a non-recursive prefix order
@@ -1756,15 +1824,15 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         dedup.seen_data.add(id(self))
 
         PM = PseudoMap(self, ctype, active, sort)
-        _stack = [(self,).__iter__(), ]
+        _stack = [(self,).__iter__()]
         while _stack:
             try:
                 PM._block = _block = next(_stack[-1])
                 yield _block
                 if not PM:
                     continue
-                _stack.append(_block._component_data_itervalues(
-                    ctype, active, sort, dedup)
+                _stack.append(
+                    _block._component_data_itervalues(ctype, active, sort, dedup)
                 )
             except StopIteration:
                 _stack.pop()
@@ -1783,16 +1851,13 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # the list of "seen" IDs
         dedup.seen_data.add(id(self))
 
-        _stack = [
-            (self, self._component_data_itervalues(ctype, active, sort, dedup))
-        ]
+        _stack = [(self, self._component_data_itervalues(ctype, active, sort, dedup))]
         while _stack:
             try:
                 _sub = next(_stack[-1][1])
-                _stack.append((
-                    _sub,
-                    _sub._component_data_itervalues(ctype, active, sort, dedup)
-                 ))
+                _stack.append(
+                    (_sub, _sub._component_data_itervalues(ctype, active, sort, dedup))
+                )
             except StopIteration:
                 yield _stack.pop()[0]
 
@@ -1820,7 +1885,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         else:
             sorter = None
 
-        _levelQueue = {0: (((None, None, self,),),)}
+        _levelQueue = {0: (((None, None, self),),)}
         while _levelQueue:
             _level = min(_levelQueue)
             _queue = _levelQueue.pop(_level)
@@ -1839,9 +1904,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             for _items in _queue:
                 yield _items[-1]  # _block
                 _levelQueue[_level].append(
-                    tmp[0] + (tmp[1],) for tmp in
-                    _items[-1]._component_data_iteritems(
-                        ctype, active, sort, dedup)
+                    tmp[0] + (tmp[1],)
+                    for tmp in _items[-1]._component_data_iteritems(
+                        ctype, active, sort, dedup
+                    )
                 )
 
     def fix_all_vars(self):
@@ -1877,6 +1943,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # that expected by a user.
         #
         import pyomo.core.base.component_order
+
         items = list(pyomo.core.base.component_order.items)
         items_set = set(items)
         items_set.add(Block)
@@ -1901,8 +1968,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #
             # NOTE: these conditional checks should not be hard-coded.
             #
-            ostream.write("%d %s Declarations\n"
-                          % (len(keys), item.__name__))
+            ostream.write("%d %s Declarations\n" % (len(keys), item.__name__))
             for key in keys:
                 self.component(key).pprint(ostream=indented_ostream)
             ostream.write("\n")
@@ -1910,9 +1976,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # Model Order
         #
         decl_order_keys = list(self.component_map().keys())
-        ostream.write("%d Declarations: %s\n"
-                      % (len(decl_order_keys),
-                          ' '.join(str(x) for x in decl_order_keys)))
+        ostream.write(
+            "%d Declarations: %s\n"
+            % (len(decl_order_keys), ' '.join(str(x) for x in decl_order_keys))
+        )
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
@@ -1936,10 +2003,13 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # case for blocks below.  I am not implementing this now as it
         # would break tests just before a release.  [JDS 1/7/15]
         import pyomo.core.base.component_order
+
         for item in pyomo.core.base.component_order.display_items:
             #
             ostream.write(prefix + "\n")
-            ostream.write(prefix + "  %s:\n" % pyomo.core.base.component_order.display_name[item])
+            ostream.write(
+                prefix + "  %s:\n" % pyomo.core.base.component_order.display_name[item]
+            )
             ACTIVE = self.component_map(item, active=True)
             if not ACTIVE:
                 ostream.write(prefix + "    None\n")
@@ -1952,8 +2022,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if ACTIVE:
             ostream.write(prefix + "\n")
             ostream.write(
-                prefix + "  %s:\n" %
-                pyomo.core.base.component_order.display_name[item])
+                prefix + "  %s:\n" % pyomo.core.base.component_order.display_name[item]
+            )
             for obj in ACTIVE.values():
                 obj.display(prefix=prefix + "    ", ostream=ostream)
 
@@ -1967,11 +2037,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         Model object."""
         return [ProblemFormat.pyomo]
 
-    def write(self,
-              filename=None,
-              format=None,
-              solver_capability=None,
-              io_options={}):
+    def write(self, filename=None, format=None, solver_capability=None, io_options={}):
         """
         Write the model to a file, with a given format.
         """
@@ -1996,27 +2062,28 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     raise ValueError(
                         "Could not infer file format from file name '%s'.\n"
                         "Either provide a name with a recognized extension "
-                        "or specify the format using the 'format' argument."
-                        % filename)
+                        "or specify the format using the 'format' argument." % filename
+                    )
                 else:
                     format = _format
             elif format != _format and _format is not None:
                 logger.warning(
                     "Filename '%s' likely does not match specified "
-                    "file format (%s)" % (filename, format))
+                    "file format (%s)" % (filename, format)
+                )
         problem_writer = WriterFactory(format)
         if problem_writer is None:
             raise ValueError(
                 "Cannot write model in format '%s': no model "
-                "writer registered for that format"
-                % str(format))
+                "writer registered for that format" % str(format)
+            )
 
         if solver_capability is None:
-            def solver_capability(x): return True
-        (filename, smap) = problem_writer(self,
-                                          filename,
-                                          solver_capability,
-                                          io_options)
+
+            def solver_capability(x):
+                return True
+
+        (filename, smap) = problem_writer(self, filename, solver_capability, io_options)
         smap_id = id(smap)
         if not hasattr(self, 'solutions'):
             # This is a bit of a hack.  The write() method was moved
@@ -2028,6 +2095,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # dependency (we only need it here because we store the
             # SymbolMap returned by the writer in the solutions).
             from pyomo.core.base.PyomoModel import ModelSolutions
+
             self.solutions = ModelSolutions(self)
         self.solutions.add_symbol_map(smap)
 
@@ -2036,7 +2104,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 "Writing model '%s' to file '%s' with format %s",
                 self.name,
                 str(filename),
-                str(format))
+                str(format),
+            )
         return filename, smap_id
 
     def _create_objects_for_deepcopy(self, memo, component_list):
@@ -2054,7 +2123,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return _ans
 
 
-@ModelComponentFactory.register("A component that contains one or more model components.")
+@ModelComponentFactory.register(
+    "A component that contains one or more model components."
+)
 class Block(ActiveIndexedComponent):
     """
     Blocks are indexed components that contain other components
@@ -2077,8 +2148,10 @@ class Block(ActiveIndexedComponent):
 
     # `options` is ignored since it is deprecated
     @overload
-    def __init__(self, *indexes, rule=None, concrete=False, dense=True,
-                 name=None, doc=None): ...
+    def __init__(
+        self, *indexes, rule=None, concrete=False, dense=True, name=None, doc=None
+    ):
+        ...
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
@@ -2098,13 +2171,19 @@ class Block(ActiveIndexedComponent):
                 "The Block 'options=' keyword is deprecated.  "
                 "Equivalent functionality can be obtained by wrapping "
                 "the rule function to add the options dictionary to "
-                "the function arguments", version='5.7.2')
+                "the function arguments",
+                version='5.7.2',
+            )
             if self.is_indexed():
+
                 def rule_wrapper(model, *_idx):
                     return _rule(model, *_idx, **_options)
+
             else:
+
                 def rule_wrapper(model):
                     return _rule(model, **_options)
+
             self._rule = Initializer(rule_wrapper)
         else:
             self._rule = Initializer(_rule)
@@ -2155,8 +2234,12 @@ class Block(ActiveIndexedComponent):
         Initialize the block
         """
         if is_debug_set(logger):
-            logger.debug("Constructing %s '%s', from data=%s",
-                         self.__class__.__name__, self.name, str(data))
+            logger.debug(
+                "Constructing %s '%s', from data=%s",
+                self.__class__.__name__,
+                self.name,
+                str(data),
+            )
         if self._constructed:
             return
         timer = ConstructionTimer(self)
@@ -2180,7 +2263,8 @@ class Block(ActiveIndexedComponent):
             if self.is_indexed():
                 # We can only populate Blocks with finite indexing sets
                 if self.index_set().isfinite() and (
-                        self._dense or self._rule is not None):
+                    self._dense or self._rule is not None
+                ):
                     for _idx in self.index_set():
                         # Trigger population & call the rule
                         self._getitem_when_not_present(_idx)
@@ -2254,7 +2338,6 @@ class Block(ActiveIndexedComponent):
 
 
 class ScalarBlock(_BlockData, Block):
-
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
@@ -2275,7 +2358,6 @@ class SimpleBlock(metaclass=RenamedClass):
 
 
 class IndexedBlock(Block):
-
     def __init__(self, *args, **kwds):
         Block.__init__(self, *args, **kwds)
 
@@ -2283,39 +2365,50 @@ class IndexedBlock(Block):
 #
 # Deprecated functions.
 #
-@deprecated("generate_cuid_names() is deprecated. "
-            "Use the ComponentUID.generate_cuid_string_map() static method",
-            version="5.7.2")
+@deprecated(
+    "generate_cuid_names() is deprecated. "
+    "Use the ComponentUID.generate_cuid_string_map() static method",
+    version="5.7.2",
+)
 def generate_cuid_names(block, ctype=None, descend_into=True):
     return ComponentUID.generate_cuid_string_map(block, ctype, descend_into)
 
-@deprecated("The active_components function is deprecated.  "
-            "Use the Block.component_objects() method.",
-            version="4.1.10486")
+
+@deprecated(
+    "The active_components function is deprecated.  "
+    "Use the Block.component_objects() method.",
+    version="4.1.10486",
+)
 def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
     return block.component_objects(ctype, active=True, sort=sort_by_names)
 
 
-@deprecated("The components function is deprecated.  "
-            "Use the Block.component_objects() method.",
-            version="4.1.10486")
+@deprecated(
+    "The components function is deprecated.  "
+    "Use the Block.component_objects() method.",
+    version="4.1.10486",
+)
 def components(block, ctype, sort_by_names=False, sort_by_keys=False):
     return block.component_objects(ctype, active=False, sort=sort_by_names)
 
 
-@deprecated("The active_components_data function is deprecated.  "
-            "Use the Block.component_data_objects() method.",
-            version="4.1.10486")
-def active_components_data(block, ctype,
-                           sort=None, sort_by_keys=False, sort_by_names=False):
+@deprecated(
+    "The active_components_data function is deprecated.  "
+    "Use the Block.component_data_objects() method.",
+    version="4.1.10486",
+)
+def active_components_data(
+    block, ctype, sort=None, sort_by_keys=False, sort_by_names=False
+):
     return block.component_data_objects(ctype=ctype, active=True, sort=sort)
 
 
-@deprecated("The components_data function is deprecated.  "
-            "Use the Block.component_data_objects() method.",
-            version="4.1.10486")
-def components_data(block, ctype,
-                    sort=None, sort_by_keys=False, sort_by_names=False):
+@deprecated(
+    "The components_data function is deprecated.  "
+    "Use the Block.component_data_objects() method.",
+    version="4.1.10486",
+)
+def components_data(block, ctype, sort=None, sort_by_keys=False, sort_by_names=False):
     return block.component_data_objects(ctype=ctype, active=False, sort=sort)
 
 
@@ -2327,15 +2420,13 @@ _BlockData._Block_reserved_words = set(dir(Block()))
 
 
 class _IndexedCustomBlockMeta(type):
-    """Metaclass for creating an indexed custom block.
-    """
+    """Metaclass for creating an indexed custom block."""
 
     pass
 
 
 class _ScalarCustomBlockMeta(type):
-    """Metaclass for creating a scalar custom block.
-    """
+    """Metaclass for creating a scalar custom block."""
 
     def __new__(meta, name, bases, dct):
         def __init__(self, *args, **kwargs):
@@ -2350,39 +2441,30 @@ class _ScalarCustomBlockMeta(type):
 
 
 class CustomBlock(Block):
-    """ The base class used by instances of custom block components
-    """
+    """The base class used by instances of custom block components"""
 
     def __init__(self, *args, **kwds):
         if self._default_ctype is not None:
             kwds.setdefault('ctype', self._default_ctype)
         Block.__init__(self, *args, **kwds)
 
-
     def __new__(cls, *args, **kwds):
-        if cls.__name__.startswith('_Indexed') or \
-                cls.__name__.startswith('_Scalar'):
+        if cls.__name__.startswith('_Indexed') or cls.__name__.startswith('_Scalar'):
             # we are entering here the second time (recursive)
             # therefore, we need to create what we have
             return super(CustomBlock, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             n = _ScalarCustomBlockMeta(
-                "_Scalar%s" % (cls.__name__,),
-                (cls._ComponentDataClass, cls),
-                {}
+                "_Scalar%s" % (cls.__name__,), (cls._ComponentDataClass, cls), {}
             )
             return n.__new__(n)
         else:
-            n = _IndexedCustomBlockMeta(
-                "_Indexed%s" % (cls.__name__,),
-                (cls,),
-                {}
-            )
+            n = _IndexedCustomBlockMeta("_Indexed%s" % (cls.__name__,), (cls,), {})
             return n.__new__(n)
 
 
 def declare_custom_block(name, new_ctype=None):
-    """ Decorator to declare components for a custom block data class
+    """Decorator to declare components for a custom block data class
 
     >>> @declare_custom_block(name=FooBlock)
     ... class FooBlockData(_BlockData):
@@ -2415,8 +2497,10 @@ def declare_custom_block(name, new_ctype=None):
             elif type(new_ctype) is type:
                 c._default_ctype = new_ctype
             else:
-                raise ValueError("Expected new_ctype to be either type "
-                                 "or 'True'; received: %s" % (new_ctype,))
+                raise ValueError(
+                    "Expected new_ctype to be either type "
+                    "or 'True'; received: %s" % (new_ctype,)
+                )
 
         # Register the new Block type in the same module as the BlockData
         setattr(sys.modules[cls.__module__], name, c)
@@ -2430,4 +2514,3 @@ def declare_custom_block(name, new_ctype=None):
         return cls
 
     return proc_dec
-

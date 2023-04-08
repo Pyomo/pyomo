@@ -27,7 +27,15 @@ from .expr_common import (
     OperatorAssociativity,
     ExpressionType,
     clone_counter,
-    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary
+    _add,
+    _sub,
+    _mul,
+    _div,
+    _pow,
+    _neg,
+    _abs,
+    _inplace,
+    _unary,
 )
 from .base import ExpressionBase, NPV_Mixin
 from .numvalue import (
@@ -42,11 +50,16 @@ from .numvalue import (
 )
 
 from .visitor import (
-    evaluate_expression, expression_to_string, polynomial_degree,
-    clone_expression, sizeof_expression, _expression_is_fixed
+    evaluate_expression,
+    expression_to_string,
+    polynomial_degree,
+    clone_expression,
+    sizeof_expression,
+    _expression_is_fixed,
 )
 
-_zero_one_optimizations = {1,}
+_zero_one_optimizations = {1}
+
 
 def enable_expression_optimizations(zero=None, one=None):
     """Enable(disable) expression generation optimizations
@@ -97,6 +110,7 @@ def enable_expression_optimizations(zero=None, one=None):
         else:
             _zero_one_optimizations.discard(key)
 
+
 class mutable_expression(object):
     """Context manager for mutable sums.
 
@@ -130,9 +144,11 @@ class nonlinear_expression(mutable_expression):
     return a :py:class:`SumExpression`.
 
     """
+
     def __enter__(self):
         self.e = _MutableSumExpression([])
         return self.e
+
 
 class linear_expression(mutable_expression):
     """Context manager for mutable linear sums.
@@ -150,11 +166,11 @@ class linear_expression(mutable_expression):
     """
 
 
-#-------------------------------------------------------
+# -------------------------------------------------------
 #
 # Expression classes
 #
-#-------------------------------------------------------
+# -------------------------------------------------------
 
 
 class NumericExpression(ExpressionBase, NumericValue):
@@ -172,7 +188,7 @@ class NumericExpression(ExpressionBase, NumericValue):
     # Here, we use _args_ to force errors for code that was referencing this
     # data.  There are now accessor methods, so in most cases users
     # and developers should not directly access the _args_ data values.
-    __slots__ =  ('_args_',)
+    __slots__ = ('_args_',)
     EXPRESSION_SYSTEM = ExpressionType.NUMERIC
     PRECEDENCE = 0
 
@@ -199,10 +215,13 @@ class NumericExpression(ExpressionBase, NumericValue):
         """
         return self._args_
 
-    @deprecated('The implicit recasting of a "not potentially variable" '
-                'expression node to a potentially variable one is no '
-                'longer supported (this violates that immutability '
-                'promise for Pyomo5 expression trees).', version='6.4.3')
+    @deprecated(
+        'The implicit recasting of a "not potentially variable" '
+        'expression node to a potentially variable one is no '
+        'longer supported (this violates that immutability '
+        'promise for Pyomo5 expression trees).',
+        version='6.4.3',
+    )
     def create_potentially_variable_object(self):
         """
         Create a potentially variable version of this object.
@@ -224,7 +243,8 @@ class NumericExpression(ExpressionBase, NumericValue):
             logger.error(
                 'recasting a non-potentially variable expression to a '
                 'potentially variable one violates the immutability '
-                'promise for Pyomo expression trees.')
+                'promise for Pyomo expression trees.'
+            )
             self.__class__ = self.potentially_variable_base_class()
         return self
 
@@ -340,6 +360,7 @@ class ExternalFunctionExpression(NumericExpression):
         args (tuple): children of this node
         fcn: a class that defines this external function
     """
+
     __slots__ = ('_fcn',)
 
     # This operator does not have an infix representation
@@ -361,18 +382,19 @@ class ExternalFunctionExpression(NumericExpression):
         return self._fcn.getname(*args, **kwds)
 
     def _apply_operation(self, result):
-        return self._fcn.evaluate( result )
+        return self._fcn.evaluate(result)
 
     def _to_string(self, values, verbose, smap):
         return f"{self.getname()}({', '.join(values)})"
 
     def get_arg_units(self):
-        """ Return the units for this external functions arguments """
+        """Return the units for this external functions arguments"""
         return self._fcn.get_arg_units()
 
     def get_units(self):
-        """ Get the units of the return value for this external function """
+        """Get the units of the return value for this external function"""
         return self._fcn.get_units()
+
 
 class NPV_ExternalFunctionExpression(Numeric_NPV_Mixin, ExternalFunctionExpression):
     __slots__ = ()
@@ -401,7 +423,7 @@ class PowExpression(NumericExpression):
         # integer, it is also polynomial.  While we would like to just
         # call this a non-polynomial expression, these exceptions occur
         # too frequently (and in particular, a**2)
-        l,r = result
+        l, r = result
         if r == 0:
             if l == 0:
                 return 0
@@ -425,7 +447,7 @@ class PowExpression(NumericExpression):
 
     def _apply_operation(self, result):
         _l, _r = result
-        return _l ** _r
+        return _l**_r
 
     def getname(self, *args, **kwds):
         return 'pow'
@@ -579,6 +601,7 @@ class DivisionExpression(NumericExpression):
 
         x/y
     """
+
     __slots__ = ()
     PRECEDENCE = 4
 
@@ -632,7 +655,7 @@ class SumExpression(NumericExpression):
     @property
     def args(self):
         if len(self._args_) != self._nargs:
-            self._args_ = self._args_[:self._nargs]
+            self._args_ = self._args_[: self._nargs]
         return self._args_
 
     def getname(self, *args, **kwds):
@@ -700,13 +723,13 @@ class LinearExpression(SumExpression):
         args (tuple): Children nodes
 
     """
+
     __slots__ = ()
 
     _allowable_linear_expr_arg_types = set([MonomialTermExpression])
     _cache = (None, None, None, None)
 
-    def __init__(self, args=None, constant=None, linear_coefs=None,
-                 linear_vars=None):
+    def __init__(self, args=None, constant=None, linear_coefs=None, linear_vars=None):
         """A linear expression of the form `const + sum_i(c_i*x_i)`.
 
         You can specify `args` OR (`constant`, `linear_coefs`, and
@@ -723,8 +746,10 @@ class LinearExpression(SumExpression):
         # constant followed by MonomialTermExpressions.
         if args is not None:
             if not (constant is None and linear_coefs is None and linear_vars is None):
-                raise ValueError("Cannot specify both args and any of "
-                                 "{constant, linear_coefs, or linear_vars}")
+                raise ValueError(
+                    "Cannot specify both args and any of "
+                    "{constant, linear_coefs, or linear_vars}"
+                )
             # unlike other expressions, we expect (require) args to be a list
             if args.__class__ is not list:
                 args = list(args)
@@ -736,13 +761,14 @@ class LinearExpression(SumExpression):
                 if constant.__class__ not in native_types or constant:
                     self._args_.append(constant)
             if linear_vars is not None:
-                if (linear_coefs is None
-                    or len(linear_vars) != len(linear_coefs)):
+                if linear_coefs is None or len(linear_vars) != len(linear_coefs):
                     raise ValueError(
                         f"linear_vars ({tostr(linear_vars)}) is not compatible "
-                        f"with linear_coefs ({tostr(linear_coefs)})")
-                self._args_.extend(map(
-                    MonomialTermExpression, zip(linear_coefs, linear_vars)))
+                        f"with linear_coefs ({tostr(linear_coefs)})"
+                    )
+                self._args_.extend(
+                    map(MonomialTermExpression, zip(linear_coefs, linear_vars))
+                )
         self._nargs = len(self._args_)
 
     def _build_cache(self):
@@ -846,7 +872,6 @@ class _MutableNPVSumExpression(_MutableLinearExpression):
         return _iadd_mutablenpvsum_dispatcher[other.__class__](self, other)
 
 
-
 class Expr_ifExpression(NumericExpression):
     """A numeric ternary (if-then-else) expression::
 
@@ -856,6 +881,7 @@ class Expr_ifExpression(NumericExpression):
     `THEN` and `ELSE` are numeric, and the result is a numeric expression.
 
     """
+
     __slots__ = ()
 
     # This operator does not have an infix representation
@@ -872,11 +898,11 @@ class Expr_ifExpression(NumericExpression):
         return "Expr_if"
 
     def _is_fixed(self, args):
-        if args[0]: # if.is_fixed():
+        if args[0]:  # if.is_fixed():
             if value(self._args_[0]):
-                return args[1] # then.is_fixed()
+                return args[1]  # then.is_fixed()
             else:
-                return args[2] # else.is_fixed()
+                return args[2]  # else.is_fixed()
         else:
             return False
 
@@ -892,8 +918,10 @@ class Expr_ifExpression(NumericExpression):
         return None
 
     def _to_string(self, values, verbose, smap):
-        return f'{self.getname()}( ( {values[0]} ), then=( {values[1]} ), ' \
+        return (
+            f'{self.getname()}( ( {values[0]} ), then=( {values[1]} ), '
             f'else=( {values[2]} ) )'
+        )
 
     def _apply_operation(self, result):
         _if, _then, _else = result
@@ -913,6 +941,7 @@ class UnaryFunctionExpression(NumericExpression):
         name (string): The function name
         fcn: The function that is used to evaluate this expression
     """
+
     __slots__ = ('_fcn', '_name')
 
     # This operator does not have an infix representation
@@ -954,6 +983,7 @@ class AbsExpression(UnaryFunctionExpression):
     Args:
         args (tuple): Children nodes
     """
+
     __slots__ = ()
 
     def __init__(self, arg):
@@ -972,11 +1002,11 @@ class NPV_AbsExpression(Numeric_NPV_Mixin, AbsExpression):
     __slots__ = ()
 
 
-#-----------------------------------------------------------------
+# -----------------------------------------------------------------
 #
 # Functions for decomposing a linear expression into linear terms
 #
-#-----------------------------------------------------------------
+# -----------------------------------------------------------------
 
 
 def decompose_term(expr):
@@ -1031,37 +1061,41 @@ def _decompose_linear_terms(expr, multiplier=1):
     Raises:
         :class:`LinearDecompositionError` if a nonlinear term is encountered.
     """
-    if (expr.__class__ in native_numeric_types
-        or not expr.is_potentially_variable()
-    ):
-        yield (multiplier*expr, None)
+    if expr.__class__ in native_numeric_types or not expr.is_potentially_variable():
+        yield (multiplier * expr, None)
     elif expr.is_variable_type():
         yield (multiplier, expr)
     elif expr.__class__ is MonomialTermExpression:
-        yield (multiplier*expr._args_[0], expr._args_[1])
+        yield (multiplier * expr._args_[0], expr._args_[1])
     elif expr.__class__ is ProductExpression:
-        if (expr._args_[0].__class__ in native_numeric_types
+        if (
+            expr._args_[0].__class__ in native_numeric_types
             or not expr._args_[0].is_potentially_variable()
         ):
             yield from _decompose_linear_terms(
-                expr._args_[1], multiplier*expr._args_[0])
-        elif (expr._args_[1].__class__ in native_numeric_types
-              or not expr._args_[1].is_potentially_variable()
-        ):
-            yield from _decompose_linear_terms(
-                expr._args_[0], multiplier*expr._args_[1])
-        else:
-            raise LinearDecompositionError(
-                "Quadratic terms exist in a product expression.")
-    elif expr.__class__ is DivisionExpression:
-        if (expr._args_[1].__class__ in native_numeric_types
+                expr._args_[1], multiplier * expr._args_[0]
+            )
+        elif (
+            expr._args_[1].__class__ in native_numeric_types
             or not expr._args_[1].is_potentially_variable()
         ):
             yield from _decompose_linear_terms(
-                expr._args_[0], multiplier/expr._args_[1])
+                expr._args_[0], multiplier * expr._args_[1]
+            )
         else:
             raise LinearDecompositionError(
-                "Unexpected nonlinear term (division)")
+                "Quadratic terms exist in a product expression."
+            )
+    elif expr.__class__ is DivisionExpression:
+        if (
+            expr._args_[1].__class__ in native_numeric_types
+            or not expr._args_[1].is_potentially_variable()
+        ):
+            yield from _decompose_linear_terms(
+                expr._args_[0], multiplier / expr._args_[1]
+            )
+        else:
+            raise LinearDecompositionError("Unexpected nonlinear term (division)")
     elif isinstance(expr, SumExpression):
         for arg in expr.args:
             yield from _decompose_linear_terms(arg, multiplier)
@@ -1071,11 +1105,11 @@ def _decompose_linear_terms(expr, multiplier=1):
         raise LinearDecompositionError("Unexpected nonlinear term")
 
 
-#-------------------------------------------------------
+# -------------------------------------------------------
 #
 # Functions used to generate expressions
 #
-#-------------------------------------------------------
+# -------------------------------------------------------
 
 
 class ARG_TYPE(enum.Enum):
@@ -1090,6 +1124,7 @@ class ARG_TYPE(enum.Enum):
     LINEAR = 6
     SUM = 7
     OTHER = 8
+
 
 _known_arg_types = {}
 
@@ -1157,6 +1192,7 @@ def _categorize_arg_types(*args):
 def _invalid(*args):
     return NotImplemented
 
+
 def _recast_mutable(expr):
     expr.make_immutable()
     if expr._nargs > 1:
@@ -1165,6 +1201,7 @@ def _recast_mutable(expr):
         return 0
     else:
         return expr._args_[0]
+
 
 def _unary_op_dispatcher_type_mapping(dispatcher, updates):
     #
@@ -1186,6 +1223,7 @@ def _unary_op_dispatcher_type_mapping(dispatcher, updates):
 
     mapping.update(updates)
     return mapping
+
 
 def _binary_op_dispatcher_type_mapping(dispatcher, updates):
     #
@@ -1235,18 +1273,22 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates):
     mapping.update(updates)
     return mapping
 
+
 #
 # ADD: NATIVE handlers
 #
+
 
 def _add_native_native(a, b):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return a + b
 
+
 def _add_native_npv(a, b):
     if not a:
         return b
     return NPV_SumExpression([a, b])
+
 
 def _add_native_param(a, b):
     if b.is_constant():
@@ -1255,15 +1297,18 @@ def _add_native_param(a, b):
         return b
     return NPV_SumExpression([a, b])
 
+
 def _add_native_var(a, b):
     if not a:
         return b
     return LinearExpression([a, MonomialTermExpression((1, b))])
 
+
 def _add_native_monomial(a, b):
     if not a:
         return b
     return LinearExpression([a, b])
+
 
 def _add_native_linear(a, b):
     if not a:
@@ -1272,6 +1317,7 @@ def _add_native_linear(a, b):
     args.append(a)
     return b.__class__(args)
 
+
 def _add_native_sum(a, b):
     if not a:
         return b
@@ -1279,22 +1325,27 @@ def _add_native_sum(a, b):
     args.append(a)
     return b.__class__(args)
 
+
 def _add_native_other(a, b):
     if not a:
         return b
     return SumExpression([a, b])
 
+
 #
 # ADD: NPV handlers
 #
+
 
 def _add_npv_native(a, b):
     if not b:
         return a
     return NPV_SumExpression([a, b])
 
+
 def _add_npv_npv(a, b):
     return NPV_SumExpression([a, b])
+
 
 def _add_npv_param(a, b):
     if b.is_constant():
@@ -1303,28 +1354,35 @@ def _add_npv_param(a, b):
             return a
     return NPV_SumExpression([a, b])
 
+
 def _add_npv_var(a, b):
     return LinearExpression([a, MonomialTermExpression((1, b))])
 
+
 def _add_npv_monomial(a, b):
     return LinearExpression([a, b])
+
 
 def _add_npv_linear(a, b):
     args = b.args
     args.append(a)
     return b.__class__(args)
 
+
 def _add_npv_sum(a, b):
     args = b.args
     args.append(a)
     return b.__class__(args)
 
+
 def _add_npv_other(a, b):
     return SumExpression([a, b])
+
 
 #
 # ADD: PARAM handlers
 #
+
 
 def _add_param_native(a, b):
     if a.is_constant():
@@ -1333,11 +1391,13 @@ def _add_param_native(a, b):
         return a
     return NPV_SumExpression([a, b])
 
+
 def _add_param_npv(a, b):
     if a.is_constant():
         a = a.value
         return a + b
     return NPV_SumExpression([a, b])
+
 
 def _add_param_param(a, b):
     if a.is_constant():
@@ -1352,6 +1412,7 @@ def _add_param_param(a, b):
             return a
     return NPV_SumExpression([a, b])
 
+
 def _add_param_var(a, b):
     if a.is_constant():
         a = a.value
@@ -1359,12 +1420,14 @@ def _add_param_var(a, b):
             return b
     return LinearExpression([a, MonomialTermExpression((1, b))])
 
+
 def _add_param_monomial(a, b):
     if a.is_constant():
         a = a.value
         if not a:
             return b
     return LinearExpression([a, b])
+
 
 def _add_param_linear(a, b):
     if a.is_constant():
@@ -1375,6 +1438,7 @@ def _add_param_linear(a, b):
     args.append(a)
     return b.__class__(args)
 
+
 def _add_param_sum(a, b):
     if a.is_constant():
         a = value(a)
@@ -1384,6 +1448,7 @@ def _add_param_sum(a, b):
     args.append(a)
     return b.__class__(args)
 
+
 def _add_param_other(a, b):
     if a.is_constant():
         a = a.value
@@ -1391,17 +1456,21 @@ def _add_param_other(a, b):
             return b
     return SumExpression([a, b])
 
+
 #
 # ADD: VAR handlers
 #
+
 
 def _add_var_native(a, b):
     if not b:
         return a
     return LinearExpression([MonomialTermExpression((1, a)), b])
 
+
 def _add_var_npv(a, b):
     return LinearExpression([MonomialTermExpression((1, a)), b])
+
 
 def _add_var_param(a, b):
     if b.is_constant():
@@ -1410,37 +1479,47 @@ def _add_var_param(a, b):
             return a
     return LinearExpression([MonomialTermExpression((1, a)), b])
 
+
 def _add_var_var(a, b):
-    return LinearExpression([
-        MonomialTermExpression((1, a)), MonomialTermExpression((1, b))])
+    return LinearExpression(
+        [MonomialTermExpression((1, a)), MonomialTermExpression((1, b))]
+    )
+
 
 def _add_var_monomial(a, b):
     return LinearExpression([MonomialTermExpression((1, a)), b])
+
 
 def _add_var_linear(a, b):
     args = b.args
     args.append(MonomialTermExpression((1, a)))
     return b.__class__(args)
 
+
 def _add_var_sum(a, b):
     args = b.args
     args.append(a)
     return b.__class__(args)
 
+
 def _add_var_other(a, b):
     return SumExpression([a, b])
+
 
 #
 # ADD: MONOMIAL handlers
 #
+
 
 def _add_monomial_native(a, b):
     if not b:
         return a
     return LinearExpression([a, b])
 
+
 def _add_monomial_npv(a, b):
     return LinearExpression([a, b])
+
 
 def _add_monomial_param(a, b):
     if b.is_constant():
@@ -1449,28 +1528,35 @@ def _add_monomial_param(a, b):
             return a
     return LinearExpression([a, b])
 
+
 def _add_monomial_var(a, b):
     return LinearExpression([a, MonomialTermExpression((1, b))])
 
+
 def _add_monomial_monomial(a, b):
     return LinearExpression([a, b])
+
 
 def _add_monomial_linear(a, b):
     args = b.args
     args.append(a)
     return b.__class__(args)
 
+
 def _add_monomial_sum(a, b):
     args = b.args
     args.append(a)
     return b.__class__(args)
 
+
 def _add_monomial_other(a, b):
     return SumExpression([a, b])
+
 
 #
 # ADD: LINEAR handlers
 #
+
 
 def _add_linear_native(a, b):
     if not b:
@@ -1479,10 +1565,12 @@ def _add_linear_native(a, b):
     args.append(b)
     return a.__class__(args)
 
+
 def _add_linear_npv(a, b):
     args = a.args
     args.append(b)
     return a.__class__(args)
+
 
 def _add_linear_param(a, b):
     if b.is_constant():
@@ -1493,32 +1581,39 @@ def _add_linear_param(a, b):
     args.append(b)
     return a.__class__(args)
 
+
 def _add_linear_var(a, b):
     args = a.args
     args.append(MonomialTermExpression((1, b)))
     return a.__class__(args)
+
 
 def _add_linear_monomial(a, b):
     args = a.args
     args.append(b)
     return a.__class__(args)
 
+
 def _add_linear_linear(a, b):
     args = a.args
     args.extend(b.args)
     return a.__class__(args)
+
 
 def _add_linear_sum(a, b):
     args = b.args
     args.append(a)
     return b.__class__(args)
 
+
 def _add_linear_other(a, b):
     return SumExpression([a, b])
+
 
 #
 # ADD: SUM handlers
 #
+
 
 def _add_sum_native(a, b):
     if not b:
@@ -1527,10 +1622,12 @@ def _add_sum_native(a, b):
     args.append(b)
     return a.__class__(args)
 
+
 def _add_sum_npv(a, b):
     args = a.args
     args.append(b)
     return a.__class__(args)
+
 
 def _add_sum_param(a, b):
     if b.is_constant():
@@ -1541,42 +1638,51 @@ def _add_sum_param(a, b):
     args.append(b)
     return a.__class__(args)
 
+
 def _add_sum_var(a, b):
     args = a.args
     args.append(b)
     return a.__class__(args)
+
 
 def _add_sum_monomial(a, b):
     args = a.args
     args.append(b)
     return a.__class__(args)
 
+
 def _add_sum_linear(a, b):
     args = a.args
     args.append(b)
     return a.__class__(args)
+
 
 def _add_sum_sum(a, b):
     args = a.args
     args.extend(b.args)
     return a.__class__(args)
 
+
 def _add_sum_other(a, b):
     args = a.args
     args.append(b)
     return a.__class__(args)
 
+
 #
 # ADD: OTHER handlers
 #
+
 
 def _add_other_native(a, b):
     if not b:
         return a
     return SumExpression([a, b])
 
+
 def _add_other_npv(a, b):
     return SumExpression([a, b])
+
 
 def _add_other_param(a, b):
     if b.is_constant():
@@ -1585,37 +1691,46 @@ def _add_other_param(a, b):
             return a
     return SumExpression([a, b])
 
+
 def _add_other_var(a, b):
     return SumExpression([a, b])
+
 
 def _add_other_monomial(a, b):
     return SumExpression([a, b])
 
+
 def _add_other_linear(a, b):
     return SumExpression([a, b])
+
 
 def _add_other_sum(a, b):
     args = b.args
     args.append(a)
     return b.__class__(args)
 
+
 def _add_other_other(a, b):
     return SumExpression([a, b])
+
 
 def _register_new_add_handler(a, b):
     types = _categorize_arg_types(a, b)
     # Retrieve the appropriate handler, record it in the main
     # _add_dispatcher dict (so this method is not called a second time for
     # these types)
-    _add_dispatcher[a.__class__, b.__class__] \
-        = handler = _add_type_handler_mapping[types]
+    _add_dispatcher[a.__class__, b.__class__] = handler = _add_type_handler_mapping[
+        types
+    ]
     # Call the appropriate handler
     return handler(a, b)
+
 
 _add_dispatcher = collections.defaultdict(lambda: _register_new_add_handler)
 
 _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
-    _add_dispatcher, {
+    _add_dispatcher,
+    {
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _add_native_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _add_native_npv,
         (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _add_native_param,
@@ -1624,7 +1739,6 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.LINEAR): _add_native_linear,
         (ARG_TYPE.NATIVE, ARG_TYPE.SUM): _add_native_sum,
         (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _add_native_other,
-
         (ARG_TYPE.NPV, ARG_TYPE.NATIVE): _add_npv_native,
         (ARG_TYPE.NPV, ARG_TYPE.NPV): _add_npv_npv,
         (ARG_TYPE.NPV, ARG_TYPE.PARAM): _add_npv_param,
@@ -1633,7 +1747,6 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NPV, ARG_TYPE.LINEAR): _add_npv_linear,
         (ARG_TYPE.NPV, ARG_TYPE.SUM): _add_npv_sum,
         (ARG_TYPE.NPV, ARG_TYPE.OTHER): _add_npv_other,
-
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _add_param_native,
         (ARG_TYPE.PARAM, ARG_TYPE.NPV): _add_param_npv,
         (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _add_param_param,
@@ -1642,7 +1755,6 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _add_param_linear,
         (ARG_TYPE.PARAM, ARG_TYPE.SUM): _add_param_sum,
         (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _add_param_other,
-
         (ARG_TYPE.VAR, ARG_TYPE.NATIVE): _add_var_native,
         (ARG_TYPE.VAR, ARG_TYPE.NPV): _add_var_npv,
         (ARG_TYPE.VAR, ARG_TYPE.PARAM): _add_var_param,
@@ -1651,7 +1763,6 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.VAR, ARG_TYPE.LINEAR): _add_var_linear,
         (ARG_TYPE.VAR, ARG_TYPE.SUM): _add_var_sum,
         (ARG_TYPE.VAR, ARG_TYPE.OTHER): _add_var_other,
-
         (ARG_TYPE.MONOMIAL, ARG_TYPE.NATIVE): _add_monomial_native,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.NPV): _add_monomial_npv,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _add_monomial_param,
@@ -1660,7 +1771,6 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.MONOMIAL, ARG_TYPE.LINEAR): _add_monomial_linear,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.SUM): _add_monomial_sum,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.OTHER): _add_monomial_other,
-
         (ARG_TYPE.LINEAR, ARG_TYPE.NATIVE): _add_linear_native,
         (ARG_TYPE.LINEAR, ARG_TYPE.NPV): _add_linear_npv,
         (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _add_linear_param,
@@ -1669,7 +1779,6 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.LINEAR, ARG_TYPE.LINEAR): _add_linear_linear,
         (ARG_TYPE.LINEAR, ARG_TYPE.SUM): _add_linear_sum,
         (ARG_TYPE.LINEAR, ARG_TYPE.OTHER): _add_linear_other,
-
         (ARG_TYPE.SUM, ARG_TYPE.NATIVE): _add_sum_native,
         (ARG_TYPE.SUM, ARG_TYPE.NPV): _add_sum_npv,
         (ARG_TYPE.SUM, ARG_TYPE.PARAM): _add_sum_param,
@@ -1678,7 +1787,6 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.SUM, ARG_TYPE.LINEAR): _add_sum_linear,
         (ARG_TYPE.SUM, ARG_TYPE.SUM): _add_sum_sum,
         (ARG_TYPE.SUM, ARG_TYPE.OTHER): _add_sum_other,
-
         (ARG_TYPE.OTHER, ARG_TYPE.NATIVE): _add_other_native,
         (ARG_TYPE.OTHER, ARG_TYPE.NPV): _add_other_npv,
         (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _add_other_param,
@@ -1687,19 +1795,23 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _add_other_linear,
         (ARG_TYPE.OTHER, ARG_TYPE.SUM): _add_other_sum,
         (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _add_other_other,
-})
+    },
+)
 
 #
 # MUTABLENPVSUM __iadd__ handlers
 #
 
+
 def _iadd_mutablenpvsum_asnumeric(a, b):
     b = b.as_numeric()
     return _iadd_mutablenpvsum_dispatcher[b.__class__](a, b)
 
+
 def _iadd_mutablenpvsum_mutable(a, b):
     b = _recast_mutable(b)
     return _iadd_mutablenpvsum_dispatcher[b.__class__](a, b)
+
 
 def _iadd_mutablenpvsum_native(a, b):
     if not b:
@@ -1708,10 +1820,12 @@ def _iadd_mutablenpvsum_native(a, b):
     a._nargs += 1
     return a
 
+
 def _iadd_mutablenpvsum_npv(a, b):
     a._args_.append(b)
     a._nargs += 1
     return a
+
 
 def _iadd_mutablenpvsum_param(a, b):
     if b.is_constant():
@@ -1722,25 +1836,31 @@ def _iadd_mutablenpvsum_param(a, b):
     a._nargs += 1
     return a
 
+
 def _iadd_mutablenpvsum_var(a, b):
     a.__class__ = _MutableLinearExpression
     return _iadd_mutablelinear_var(a, b)
+
 
 def _iadd_mutablenpvsum_monomial(a, b):
     a.__class__ = _MutableLinearExpression
     return _iadd_mutablelinear_monomial(a, b)
 
+
 def _iadd_mutablenpvsum_linear(a, b):
     a.__class__ = _MutableLinearExpression
     return _iadd_mutablelinear_linear(a, b)
+
 
 def _iadd_mutablenpvsum_sum(a, b):
     a.__class__ = _MutableSumExpression
     return _iadd_mutablesum_sum(a, b)
 
+
 def _iadd_mutablenpvsum_other(a, b):
     a.__class__ = _MutableSumExpression
     return _iadd_mutablesum_other(a, b)
+
 
 _iadd_mutablenpvsum_type_handler_mapping = {
     ARG_TYPE.INVALID: _invalid,
@@ -1756,31 +1876,38 @@ _iadd_mutablenpvsum_type_handler_mapping = {
     ARG_TYPE.OTHER: _iadd_mutablenpvsum_other,
 }
 
+
 def _register_new_iadd_mutablenpvsum_handler(a, b):
     types = _categorize_arg_types(b)
     # Retrieve the appropriate handler, record it in the main
     # _iadd_mutablenpvsum_dispatcher dict (so this method is not called a second time for
     # these types)
-    _iadd_mutablenpvsum_dispatcher[b.__class__] \
-        = handler = _iadd_mutablenpvsum_type_handler_mapping[types[0]]
+    _iadd_mutablenpvsum_dispatcher[
+        b.__class__
+    ] = handler = _iadd_mutablenpvsum_type_handler_mapping[types[0]]
     # Call the appropriate handler
     return handler(a, b)
 
+
 _iadd_mutablenpvsum_dispatcher = collections.defaultdict(
-    lambda: _register_new_iadd_mutablenpvsum_handler)
+    lambda: _register_new_iadd_mutablenpvsum_handler
+)
 
 
 #
 # MUTABLELINEAR __iadd__ handlers
 #
 
+
 def _iadd_mutablelinear_asnumeric(a, b):
     b = b.as_numeric()
     return _iadd_mutablelinear_dispatcher[b.__class__](a, b)
 
+
 def _iadd_mutablelinear_mutable(a, b):
     b = _recast_mutable(b)
     return _iadd_mutablelinear_dispatcher[b.__class__](a, b)
+
 
 def _iadd_mutablelinear_native(a, b):
     if not b:
@@ -1789,10 +1916,12 @@ def _iadd_mutablelinear_native(a, b):
     a._nargs += 1
     return a
 
+
 def _iadd_mutablelinear_npv(a, b):
     a._args_.append(b)
     a._nargs += 1
     return a
+
 
 def _iadd_mutablelinear_param(a, b):
     if b.is_constant():
@@ -1803,28 +1932,34 @@ def _iadd_mutablelinear_param(a, b):
     a._nargs += 1
     return a
 
+
 def _iadd_mutablelinear_var(a, b):
     a._args_.append(MonomialTermExpression((1, b)))
     a._nargs += 1
     return a
+
 
 def _iadd_mutablelinear_monomial(a, b):
     a._args_.append(b)
     a._nargs += 1
     return a
 
+
 def _iadd_mutablelinear_linear(a, b):
     a._args_.extend(b.args)
     a._nargs += b.nargs()
     return a
 
+
 def _iadd_mutablelinear_sum(a, b):
     a.__class__ = _MutableSumExpression
     return _iadd_mutablesum_sum(a, b)
 
+
 def _iadd_mutablelinear_other(a, b):
     a.__class__ = _MutableSumExpression
     return _iadd_mutablesum_other(a, b)
+
 
 _iadd_mutablelinear_type_handler_mapping = {
     ARG_TYPE.INVALID: _invalid,
@@ -1840,31 +1975,38 @@ _iadd_mutablelinear_type_handler_mapping = {
     ARG_TYPE.OTHER: _iadd_mutablelinear_other,
 }
 
+
 def _register_new_iadd_mutablelinear_handler(a, b):
     types = _categorize_arg_types(b)
     # Retrieve the appropriate handler, record it in the main
     # _iadd_mutablelinear_dispatcher dict (so this method is not called a second time for
     # these types)
-    _iadd_mutablelinear_dispatcher[b.__class__] \
-        = handler = _iadd_mutablelinear_type_handler_mapping[types[0]]
+    _iadd_mutablelinear_dispatcher[
+        b.__class__
+    ] = handler = _iadd_mutablelinear_type_handler_mapping[types[0]]
     # Call the appropriate handler
     return handler(a, b)
 
+
 _iadd_mutablelinear_dispatcher = collections.defaultdict(
-    lambda: _register_new_iadd_mutablelinear_handler)
+    lambda: _register_new_iadd_mutablelinear_handler
+)
 
 
 #
 # MUTABLESUM __iadd__ handlers
 #
 
+
 def _iadd_mutablesum_asnumeric(a, b):
     b = b.as_numeric()
     return _iadd_mutablesum_dispatcher[b.__class__](a, b)
 
+
 def _iadd_mutablesum_mutable(a, b):
     b = _recast_mutable(b)
     return _iadd_mutablesum_dispatcher[b.__class__](a, b)
+
 
 def _iadd_mutablesum_native(a, b):
     if not b:
@@ -1873,10 +2015,12 @@ def _iadd_mutablesum_native(a, b):
     a._nargs += 1
     return a
 
+
 def _iadd_mutablesum_npv(a, b):
     a._args_.append(b)
     a._nargs += 1
     return a
+
 
 def _iadd_mutablesum_param(a, b):
     if b.is_constant():
@@ -1887,30 +2031,36 @@ def _iadd_mutablesum_param(a, b):
     a._nargs += 1
     return a
 
+
 def _iadd_mutablesum_var(a, b):
     a._args_.append(b)
     a._nargs += 1
     return a
+
 
 def _iadd_mutablesum_monomial(a, b):
     a._args_.append(b)
     a._nargs += 1
     return a
 
+
 def _iadd_mutablesum_linear(a, b):
     a._args_.append(b)
     a._nargs += 1
     return a
+
 
 def _iadd_mutablesum_sum(a, b):
     a._args_.extend(b.args)
     a._nargs += b.nargs()
     return a
 
+
 def _iadd_mutablesum_other(a, b):
     a._args_.append(b)
     a._nargs += 1
     return a
+
 
 _iadd_mutablesum_type_handler_mapping = {
     ARG_TYPE.INVALID: _invalid,
@@ -1926,49 +2076,60 @@ _iadd_mutablesum_type_handler_mapping = {
     ARG_TYPE.OTHER: _iadd_mutablesum_other,
 }
 
+
 def _register_new_iadd_mutablesum_handler(a, b):
     types = _categorize_arg_types(b)
     # Retrieve the appropriate handler, record it in the main
     # _iadd_mutablesum_dispatcher dict (so this method is not called a
     # second time for these types)
-    _iadd_mutablesum_dispatcher[b.__class__] \
-        = handler = _iadd_mutablesum_type_handler_mapping[types[0]]
+    _iadd_mutablesum_dispatcher[
+        b.__class__
+    ] = handler = _iadd_mutablesum_type_handler_mapping[types[0]]
     # Call the appropriate handler
     return handler(a, b)
 
+
 _iadd_mutablesum_dispatcher = collections.defaultdict(
-    lambda: _register_new_iadd_mutablesum_handler)
+    lambda: _register_new_iadd_mutablesum_handler
+)
 
 
 #
 # NEGATION handlers
 #
 
+
 def _neg_native(a):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return -a
 
+
 def _neg_npv(a):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return NPV_NegationExpression((a,))
+
 
 def _neg_param(a):
     if a.is_constant():
         return -(a.value)
     return NPV_NegationExpression((a,))
 
+
 def _neg_var(a):
     return MonomialTermExpression((-1, a))
+
 
 def _neg_monomial(a):
     args = a.args
     return MonomialTermExpression((-args[0], args[1]))
 
+
 def _neg_sum(a):
     if not a.nargs():
         return 0
-    #return LinearExpression([-arg for arg in a.args])
+    # return LinearExpression([-arg for arg in a.args])
     return NegationExpression((a,))
+
 
 def _neg_other(a):
     return NegationExpression((a,))
@@ -1979,15 +2140,16 @@ def _register_new_neg_handler(a):
     # Retrieve the appropriate handler, record it in the main
     # _neg_dispatcher dict (so this method is not called a second time for
     # these types)
-    _neg_dispatcher[a.__class__] \
-        = handler = _neg_type_handler_mapping[types[0]]
+    _neg_dispatcher[a.__class__] = handler = _neg_type_handler_mapping[types[0]]
     # Call the appropriate handler
     return handler(a)
+
 
 _neg_dispatcher = collections.defaultdict(lambda: _register_new_neg_handler)
 
 _neg_type_handler_mapping = _unary_op_dispatcher_type_mapping(
-    _neg_dispatcher, {
+    _neg_dispatcher,
+    {
         ARG_TYPE.NATIVE: _neg_native,
         ARG_TYPE.NPV: _neg_npv,
         ARG_TYPE.PARAM: _neg_param,
@@ -1996,21 +2158,25 @@ _neg_type_handler_mapping = _unary_op_dispatcher_type_mapping(
         ARG_TYPE.LINEAR: _neg_sum,
         ARG_TYPE.SUM: _neg_sum,
         ARG_TYPE.OTHER: _neg_other,
-})
+    },
+)
 
 
 #
 # MUL: NATIVE handlers
 #
 
+
 def _mul_native_native(a, b):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return a * b
+
 
 def _mul_native_npv(a, b):
     if a in _zero_one_optimizations:
         return b if a else 0
     return NPV_ProductExpression((a, b))
+
 
 def _mul_native_param(a, b):
     if a in _zero_one_optimizations:
@@ -2019,42 +2185,51 @@ def _mul_native_param(a, b):
         return a * b.value
     return NPV_ProductExpression((a, b))
 
+
 def _mul_native_var(a, b):
     if a in _zero_one_optimizations:
         return b if a else 0
     return MonomialTermExpression((a, b))
+
 
 def _mul_native_monomial(a, b):
     if a in _zero_one_optimizations:
         return b if a else 0
     return MonomialTermExpression((a * b._args_[0], b._args_[1]))
 
+
 def _mul_native_linear(a, b):
     if a in _zero_one_optimizations:
         return b if a else 0
     return ProductExpression((a, b))
+
 
 def _mul_native_sum(a, b):
     if a in _zero_one_optimizations:
         return b if a else 0
     return ProductExpression((a, b))
 
+
 def _mul_native_other(a, b):
     if a in _zero_one_optimizations:
         return b if a else 0
     return ProductExpression((a, b))
 
+
 #
 # MUL: NPV handlers
 #
+
 
 def _mul_npv_native(a, b):
     if b in _zero_one_optimizations:
         return a if b else 0
     return NPV_ProductExpression((a, b))
 
+
 def _mul_npv_npv(a, b):
     return NPV_ProductExpression((a, b))
+
 
 def _mul_npv_param(a, b):
     if b.is_constant():
@@ -2063,25 +2238,33 @@ def _mul_npv_param(a, b):
             return a if b else 0
     return NPV_ProductExpression((a, b))
 
+
 def _mul_npv_var(a, b):
     return MonomialTermExpression((a, b))
 
+
 def _mul_npv_monomial(a, b):
-    return MonomialTermExpression((
-        NPV_ProductExpression((a, b._args_[0])), b._args_[1]))
+    return MonomialTermExpression(
+        (NPV_ProductExpression((a, b._args_[0])), b._args_[1])
+    )
+
 
 def _mul_npv_linear(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_npv_sum(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_npv_other(a, b):
     return ProductExpression((a, b))
 
+
 #
 # MUL: PARAM handlers
 #
+
 
 def _mul_param_native(a, b):
     if a.is_constant():
@@ -2090,12 +2273,14 @@ def _mul_param_native(a, b):
         return a if b else 0
     return NPV_ProductExpression((a, b))
 
+
 def _mul_param_npv(a, b):
     if a.is_constant():
         a = a.value
         if a in _zero_one_optimizations:
             return b if a else 0
     return NPV_ProductExpression((a, b))
+
 
 def _mul_param_param(a, b):
     if a.is_constant():
@@ -2110,12 +2295,14 @@ def _mul_param_param(a, b):
             return a if b else 0
     return NPV_ProductExpression((a, b))
 
+
 def _mul_param_var(a, b):
     if a.is_constant():
         a = a.value
         if a in _zero_one_optimizations:
             return b if a else 0
     return MonomialTermExpression((a, b))
+
 
 def _mul_param_monomial(a, b):
     if a.is_constant():
@@ -2124,12 +2311,14 @@ def _mul_param_monomial(a, b):
             return b if a else 0
     return MonomialTermExpression((a * b._args_[0], b._args_[1]))
 
+
 def _mul_param_linear(a, b):
     if a.is_constant():
         a = a.value
         if a in _zero_one_optimizations:
             return b if a else 0
     return ProductExpression((a, b))
+
 
 def _mul_param_sum(a, b):
     if a.is_constant():
@@ -2138,6 +2327,7 @@ def _mul_param_sum(a, b):
             return b if a else 0
     return ProductExpression((a, b))
 
+
 def _mul_param_other(a, b):
     if a.is_constant():
         a = a.value
@@ -2145,17 +2335,21 @@ def _mul_param_other(a, b):
             return b if a else 0
     return ProductExpression((a, b))
 
+
 #
 # MUL: VAR handlers
 #
+
 
 def _mul_var_native(a, b):
     if b in _zero_one_optimizations:
         return a if b else 0
     return MonomialTermExpression((b, a))
 
+
 def _mul_var_npv(a, b):
     return MonomialTermExpression((b, a))
+
 
 def _mul_var_param(a, b):
     if b.is_constant():
@@ -2164,33 +2358,43 @@ def _mul_var_param(a, b):
             return a if b else 0
     return MonomialTermExpression((b, a))
 
+
 def _mul_var_var(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_var_monomial(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_var_linear(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_var_sum(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_var_other(a, b):
     return ProductExpression((a, b))
+
 
 #
 # MUL: MONOMIAL handlers
 #
+
 
 def _mul_monomial_native(a, b):
     if b in _zero_one_optimizations:
         return a if b else 0
     return MonomialTermExpression((a._args_[0] * b, a._args_[1]))
 
+
 def _mul_monomial_npv(a, b):
-    return MonomialTermExpression((
-        NPV_ProductExpression((a._args_[0], b)), a._args_[1]))
+    return MonomialTermExpression(
+        (NPV_ProductExpression((a._args_[0], b)), a._args_[1])
+    )
+
 
 def _mul_monomial_param(a, b):
     if b.is_constant():
@@ -2199,32 +2403,41 @@ def _mul_monomial_param(a, b):
             return a if b else 0
     return MonomialTermExpression((a._args_[0] * b, a._args_[1]))
 
+
 def _mul_monomial_var(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_monomial_monomial(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_monomial_linear(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_monomial_sum(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_monomial_other(a, b):
     return ProductExpression((a, b))
+
 
 #
 # MUL: LINEAR handlers
 #
+
 
 def _mul_linear_native(a, b):
     if b in _zero_one_optimizations:
         return a if b else 0
     return ProductExpression((a, b))
 
+
 def _mul_linear_npv(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_linear_param(a, b):
     if b.is_constant():
@@ -2233,32 +2446,41 @@ def _mul_linear_param(a, b):
             return a if b else 0
     return ProductExpression((a, b))
 
+
 def _mul_linear_var(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_linear_monomial(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_linear_linear(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_linear_sum(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_linear_other(a, b):
     return ProductExpression((a, b))
+
 
 #
 # MUL: SUM handlers
 #
+
 
 def _mul_sum_native(a, b):
     if b in _zero_one_optimizations:
         return a if b else 0
     return ProductExpression((a, b))
 
+
 def _mul_sum_npv(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_sum_param(a, b):
     if b.is_constant():
@@ -2267,32 +2489,41 @@ def _mul_sum_param(a, b):
             return a if b else 0
     return ProductExpression((a, b))
 
+
 def _mul_sum_var(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_sum_monomial(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_sum_linear(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_sum_sum(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_sum_other(a, b):
     return ProductExpression((a, b))
+
 
 #
 # MUL: OTHER handlers
 #
+
 
 def _mul_other_native(a, b):
     if b in _zero_one_optimizations:
         return a if b else 0
     return ProductExpression((a, b))
 
+
 def _mul_other_npv(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_other_param(a, b):
     if b.is_constant():
@@ -2301,17 +2532,22 @@ def _mul_other_param(a, b):
             return a if b else 0
     return ProductExpression((a, b))
 
+
 def _mul_other_var(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_other_monomial(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_other_linear(a, b):
     return ProductExpression((a, b))
 
+
 def _mul_other_sum(a, b):
     return ProductExpression((a, b))
+
 
 def _mul_other_other(a, b):
     return ProductExpression((a, b))
@@ -2322,15 +2558,18 @@ def _register_new_mul_handler(a, b):
     # Retrieve the appropriate handler, record it in the main
     # _mul_dispatcher dict (so this method is not called a second time for
     # these types)
-    _mul_dispatcher[a.__class__, b.__class__] \
-        = handler = _mul_type_handler_mapping[types]
+    _mul_dispatcher[a.__class__, b.__class__] = handler = _mul_type_handler_mapping[
+        types
+    ]
     # Call the appropriate handler
     return handler(a, b)
+
 
 _mul_dispatcher = collections.defaultdict(lambda: _register_new_mul_handler)
 
 _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
-    _mul_dispatcher, {
+    _mul_dispatcher,
+    {
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _mul_native_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _mul_native_npv,
         (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _mul_native_param,
@@ -2339,7 +2578,6 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.LINEAR): _mul_native_linear,
         (ARG_TYPE.NATIVE, ARG_TYPE.SUM): _mul_native_sum,
         (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _mul_native_other,
-
         (ARG_TYPE.NPV, ARG_TYPE.NATIVE): _mul_npv_native,
         (ARG_TYPE.NPV, ARG_TYPE.NPV): _mul_npv_npv,
         (ARG_TYPE.NPV, ARG_TYPE.PARAM): _mul_npv_param,
@@ -2348,7 +2586,6 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NPV, ARG_TYPE.LINEAR): _mul_npv_linear,
         (ARG_TYPE.NPV, ARG_TYPE.SUM): _mul_npv_sum,
         (ARG_TYPE.NPV, ARG_TYPE.OTHER): _mul_npv_other,
-
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _mul_param_native,
         (ARG_TYPE.PARAM, ARG_TYPE.NPV): _mul_param_npv,
         (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _mul_param_param,
@@ -2357,7 +2594,6 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _mul_param_linear,
         (ARG_TYPE.PARAM, ARG_TYPE.SUM): _mul_param_sum,
         (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _mul_param_other,
-
         (ARG_TYPE.VAR, ARG_TYPE.NATIVE): _mul_var_native,
         (ARG_TYPE.VAR, ARG_TYPE.NPV): _mul_var_npv,
         (ARG_TYPE.VAR, ARG_TYPE.PARAM): _mul_var_param,
@@ -2366,7 +2602,6 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.VAR, ARG_TYPE.LINEAR): _mul_var_linear,
         (ARG_TYPE.VAR, ARG_TYPE.SUM): _mul_var_sum,
         (ARG_TYPE.VAR, ARG_TYPE.OTHER): _mul_var_other,
-
         (ARG_TYPE.MONOMIAL, ARG_TYPE.NATIVE): _mul_monomial_native,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.NPV): _mul_monomial_npv,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _mul_monomial_param,
@@ -2375,7 +2610,6 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.MONOMIAL, ARG_TYPE.LINEAR): _mul_monomial_linear,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.SUM): _mul_monomial_sum,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.OTHER): _mul_monomial_other,
-
         (ARG_TYPE.LINEAR, ARG_TYPE.NATIVE): _mul_linear_native,
         (ARG_TYPE.LINEAR, ARG_TYPE.NPV): _mul_linear_npv,
         (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _mul_linear_param,
@@ -2384,7 +2618,6 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.LINEAR, ARG_TYPE.LINEAR): _mul_linear_linear,
         (ARG_TYPE.LINEAR, ARG_TYPE.SUM): _mul_linear_sum,
         (ARG_TYPE.LINEAR, ARG_TYPE.OTHER): _mul_linear_other,
-
         (ARG_TYPE.SUM, ARG_TYPE.NATIVE): _mul_sum_native,
         (ARG_TYPE.SUM, ARG_TYPE.NPV): _mul_sum_npv,
         (ARG_TYPE.SUM, ARG_TYPE.PARAM): _mul_sum_param,
@@ -2393,7 +2626,6 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.SUM, ARG_TYPE.LINEAR): _mul_sum_linear,
         (ARG_TYPE.SUM, ARG_TYPE.SUM): _mul_sum_sum,
         (ARG_TYPE.SUM, ARG_TYPE.OTHER): _mul_sum_other,
-
         (ARG_TYPE.OTHER, ARG_TYPE.NATIVE): _mul_other_native,
         (ARG_TYPE.OTHER, ARG_TYPE.NPV): _mul_other_npv,
         (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _mul_other_param,
@@ -2402,21 +2634,25 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _mul_other_linear,
         (ARG_TYPE.OTHER, ARG_TYPE.SUM): _mul_other_sum,
         (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _mul_other_other,
-})
+    },
+)
 
 
 #
 # DIV: NATIVE handlers
 #
 
+
 def _div_native_native(a, b):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return a / b
+
 
 def _div_native_npv(a, b):
     if not a and a in _zero_one_optimizations:
         return 0
     return NPV_DivisionExpression((a, b))
+
 
 def _div_native_param(a, b):
     if b.is_constant():
@@ -2425,34 +2661,41 @@ def _div_native_param(a, b):
         return 0
     return NPV_DivisionExpression((a, b))
 
+
 def _div_native_var(a, b):
     if not a and a in _zero_one_optimizations:
         return 0
     return DivisionExpression((a, b))
+
 
 def _div_native_monomial(a, b):
     if not a and a in _zero_one_optimizations:
         return 0
     return DivisionExpression((a, b))
 
+
 def _div_native_linear(a, b):
     if not a and a in _zero_one_optimizations:
         return 0
     return DivisionExpression((a, b))
+
 
 def _div_native_sum(a, b):
     if not a and a in _zero_one_optimizations:
         return 0
     return DivisionExpression((a, b))
 
+
 def _div_native_other(a, b):
     if not a and a in _zero_one_optimizations:
         return 0
     return DivisionExpression((a, b))
 
+
 #
 # DIV: NPV handlers
 #
+
 
 def _div_npv_native(a, b):
     if b in _zero_one_optimizations and b:
@@ -2461,8 +2704,10 @@ def _div_npv_native(a, b):
         raise ZeroDivisionError()
     return NPV_DivisionExpression((a, b))
 
+
 def _div_npv_npv(a, b):
     return NPV_DivisionExpression((a, b))
+
 
 def _div_npv_param(a, b):
     if b.is_constant():
@@ -2473,24 +2718,31 @@ def _div_npv_param(a, b):
             raise ZeroDivisionError()
     return NPV_DivisionExpression((a, b))
 
+
 def _div_npv_var(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_npv_monomial(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_npv_linear(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_npv_sum(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_npv_other(a, b):
     return DivisionExpression((a, b))
+
 
 #
 # DIV: PARAM handlers
 #
+
 
 def _div_param_native(a, b):
     if a.is_constant():
@@ -2501,12 +2753,14 @@ def _div_param_native(a, b):
         raise ZeroDivisionError()
     return NPV_DivisionExpression((a, b))
 
+
 def _div_param_npv(a, b):
     if a.is_constant():
         a = a.value
         if not a and a in _zero_one_optimizations:
             return 0
     return NPV_DivisionExpression((a, b))
+
 
 def _div_param_param(a, b):
     if a.is_constant():
@@ -2523,12 +2777,14 @@ def _div_param_param(a, b):
             raise ZeroDivisionError()
     return NPV_DivisionExpression((a, b))
 
+
 def _div_param_var(a, b):
     if a.is_constant():
         a = a.value
         if not a and a in _zero_one_optimizations:
             return 0
     return DivisionExpression((a, b))
+
 
 def _div_param_monomial(a, b):
     if a.is_constant():
@@ -2537,12 +2793,14 @@ def _div_param_monomial(a, b):
             return 0
     return DivisionExpression((a, b))
 
+
 def _div_param_linear(a, b):
     if a.is_constant():
         a = a.value
         if not a and a in _zero_one_optimizations:
             return 0
     return DivisionExpression((a, b))
+
 
 def _div_param_sum(a, b):
     if a.is_constant():
@@ -2551,6 +2809,7 @@ def _div_param_sum(a, b):
             return 0
     return DivisionExpression((a, b))
 
+
 def _div_param_other(a, b):
     if a.is_constant():
         a = a.value
@@ -2558,81 +2817,103 @@ def _div_param_other(a, b):
             return 0
     return DivisionExpression((a, b))
 
+
 #
 # DIV: VAR handlers
 #
 
+
 def _div_var_native(a, b):
     if b in _zero_one_optimizations and b:
         return a
-    return MonomialTermExpression((1/b, a))
+    return MonomialTermExpression((1 / b, a))
+
 
 def _div_var_npv(a, b):
     return MonomialTermExpression((NPV_DivisionExpression((1, b)), a))
+
 
 def _div_var_param(a, b):
     if b.is_constant():
         b = b.value
         if b in _zero_one_optimizations and b:
             return a
-        return MonomialTermExpression((1/b, a))
+        return MonomialTermExpression((1 / b, a))
     return MonomialTermExpression((NPV_DivisionExpression((1, b)), a))
+
 
 def _div_var_var(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_var_monomial(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_var_linear(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_var_sum(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_var_other(a, b):
     return DivisionExpression((a, b))
+
 
 #
 # DIV: MONOMIAL handlers
 #
 
+
 def _div_monomial_native(a, b):
     if b in _zero_one_optimizations and b:
         return a
-    return MonomialTermExpression((a._args_[0]/b, a._args_[1]))
+    return MonomialTermExpression((a._args_[0] / b, a._args_[1]))
+
 
 def _div_monomial_npv(a, b):
-    return MonomialTermExpression((
-        NPV_DivisionExpression((a._args_[0], b)), a._args_[1]))
+    return MonomialTermExpression(
+        (NPV_DivisionExpression((a._args_[0], b)), a._args_[1])
+    )
+
 
 def _div_monomial_param(a, b):
     if b.is_constant():
         b = b.value
         if b in _zero_one_optimizations and b:
             return a
-        return MonomialTermExpression((a._args_[0]/b, a._args_[1]))
-    return MonomialTermExpression((
-        NPV_DivisionExpression((a._args_[0], b)), a._args_[1]))
+        return MonomialTermExpression((a._args_[0] / b, a._args_[1]))
+    return MonomialTermExpression(
+        (NPV_DivisionExpression((a._args_[0], b)), a._args_[1])
+    )
+
 
 def _div_monomial_var(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_monomial_monomial(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_monomial_linear(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_monomial_sum(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_monomial_other(a, b):
     return DivisionExpression((a, b))
 
+
 #
 # DIV: LINEAR handlers
 #
+
 
 def _div_linear_native(a, b):
     if b in _zero_one_optimizations and b:
@@ -2641,8 +2922,10 @@ def _div_linear_native(a, b):
         raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
+
 def _div_linear_npv(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_linear_param(a, b):
     if b.is_constant():
@@ -2653,24 +2936,31 @@ def _div_linear_param(a, b):
             raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
+
 def _div_linear_var(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_linear_monomial(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_linear_linear(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_linear_sum(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_linear_other(a, b):
     return DivisionExpression((a, b))
+
 
 #
 # DIV: SUM handlers
 #
+
 
 def _div_sum_native(a, b):
     if b in _zero_one_optimizations and b:
@@ -2679,8 +2969,10 @@ def _div_sum_native(a, b):
         raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
+
 def _div_sum_npv(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_sum_param(a, b):
     if b.is_constant():
@@ -2691,24 +2983,31 @@ def _div_sum_param(a, b):
             raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
+
 def _div_sum_var(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_sum_monomial(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_sum_linear(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_sum_sum(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_sum_other(a, b):
     return DivisionExpression((a, b))
+
 
 #
 # DIV: OTHER handlers
 #
+
 
 def _div_other_native(a, b):
     if b in _zero_one_optimizations and b:
@@ -2717,8 +3016,10 @@ def _div_other_native(a, b):
         raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
+
 def _div_other_npv(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_other_param(a, b):
     if b.is_constant():
@@ -2729,17 +3030,22 @@ def _div_other_param(a, b):
             raise ZeroDivisionError()
     return DivisionExpression((a, b))
 
+
 def _div_other_var(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_other_monomial(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_other_linear(a, b):
     return DivisionExpression((a, b))
 
+
 def _div_other_sum(a, b):
     return DivisionExpression((a, b))
+
 
 def _div_other_other(a, b):
     return DivisionExpression((a, b))
@@ -2750,15 +3056,18 @@ def _register_new_div_handler(a, b):
     # Retrieve the appropriate handler, record it in the main
     # _div_dispatcher dict (so this method is not called a second time for
     # these types)
-    _div_dispatcher[a.__class__, b.__class__] \
-        = handler = _div_type_handler_mapping[types]
+    _div_dispatcher[a.__class__, b.__class__] = handler = _div_type_handler_mapping[
+        types
+    ]
     # Call the appropriate handler
     return handler(a, b)
+
 
 _div_dispatcher = collections.defaultdict(lambda: _register_new_div_handler)
 
 _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
-    _div_dispatcher, {
+    _div_dispatcher,
+    {
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _div_native_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _div_native_npv,
         (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _div_native_param,
@@ -2767,7 +3076,6 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.LINEAR): _div_native_linear,
         (ARG_TYPE.NATIVE, ARG_TYPE.SUM): _div_native_sum,
         (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _div_native_other,
-
         (ARG_TYPE.NPV, ARG_TYPE.NATIVE): _div_npv_native,
         (ARG_TYPE.NPV, ARG_TYPE.NPV): _div_npv_npv,
         (ARG_TYPE.NPV, ARG_TYPE.PARAM): _div_npv_param,
@@ -2776,7 +3084,6 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NPV, ARG_TYPE.LINEAR): _div_npv_linear,
         (ARG_TYPE.NPV, ARG_TYPE.SUM): _div_npv_sum,
         (ARG_TYPE.NPV, ARG_TYPE.OTHER): _div_npv_other,
-
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _div_param_native,
         (ARG_TYPE.PARAM, ARG_TYPE.NPV): _div_param_npv,
         (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _div_param_param,
@@ -2785,7 +3092,6 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _div_param_linear,
         (ARG_TYPE.PARAM, ARG_TYPE.SUM): _div_param_sum,
         (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _div_param_other,
-
         (ARG_TYPE.VAR, ARG_TYPE.NATIVE): _div_var_native,
         (ARG_TYPE.VAR, ARG_TYPE.NPV): _div_var_npv,
         (ARG_TYPE.VAR, ARG_TYPE.PARAM): _div_var_param,
@@ -2794,7 +3100,6 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.VAR, ARG_TYPE.LINEAR): _div_var_linear,
         (ARG_TYPE.VAR, ARG_TYPE.SUM): _div_var_sum,
         (ARG_TYPE.VAR, ARG_TYPE.OTHER): _div_var_other,
-
         (ARG_TYPE.MONOMIAL, ARG_TYPE.NATIVE): _div_monomial_native,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.NPV): _div_monomial_npv,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _div_monomial_param,
@@ -2803,7 +3108,6 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.MONOMIAL, ARG_TYPE.LINEAR): _div_monomial_linear,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.SUM): _div_monomial_sum,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.OTHER): _div_monomial_other,
-
         (ARG_TYPE.LINEAR, ARG_TYPE.NATIVE): _div_linear_native,
         (ARG_TYPE.LINEAR, ARG_TYPE.NPV): _div_linear_npv,
         (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _div_linear_param,
@@ -2812,7 +3116,6 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.LINEAR, ARG_TYPE.LINEAR): _div_linear_linear,
         (ARG_TYPE.LINEAR, ARG_TYPE.SUM): _div_linear_sum,
         (ARG_TYPE.LINEAR, ARG_TYPE.OTHER): _div_linear_other,
-
         (ARG_TYPE.SUM, ARG_TYPE.NATIVE): _div_sum_native,
         (ARG_TYPE.SUM, ARG_TYPE.NPV): _div_sum_npv,
         (ARG_TYPE.SUM, ARG_TYPE.PARAM): _div_sum_param,
@@ -2821,7 +3124,6 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.SUM, ARG_TYPE.LINEAR): _div_sum_linear,
         (ARG_TYPE.SUM, ARG_TYPE.SUM): _div_sum_sum,
         (ARG_TYPE.SUM, ARG_TYPE.OTHER): _div_sum_other,
-
         (ARG_TYPE.OTHER, ARG_TYPE.NATIVE): _div_other_native,
         (ARG_TYPE.OTHER, ARG_TYPE.NPV): _div_other_npv,
         (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _div_other_param,
@@ -2830,24 +3132,29 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _div_other_linear,
         (ARG_TYPE.OTHER, ARG_TYPE.SUM): _div_other_sum,
         (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _div_other_other,
-})
+    },
+)
 
 
 #
 # POW handlers
 #
 
+
 def _pow_native_native(a, b):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return a**b
 
+
 def _pow_native_npv(a, b):
     return NPV_PowExpression((a, b))
 
+
 def _pow_native_param(a, b):
     if b.is_constant():
-        return a**(b.value)
+        return a ** (b.value)
     return NPV_PowExpression((a, b))
+
 
 def _pow_native_other(a, b):
     return PowExpression((a, b))
@@ -2858,8 +3165,10 @@ def _pow_npv_native(a, b):
         return a if b else 1
     return NPV_PowExpression((a, b))
 
+
 def _pow_npv_npv(a, b):
     return NPV_PowExpression((a, b))
+
 
 def _pow_npv_param(a, b):
     if b.is_constant():
@@ -2868,32 +3177,36 @@ def _pow_npv_param(a, b):
             return a if b else 1
     return NPV_PowExpression((a, b))
 
+
 def _pow_npv_other(a, b):
     return PowExpression((a, b))
 
 
 def _pow_param_native(a, b):
     if a.is_constant():
-        return a.value ** b
+        return a.value**b
     if b in _zero_one_optimizations:
         return a if b else 1
     return NPV_PowExpression((a, b))
+
 
 def _pow_param_npv(a, b):
     if a.is_constant():
         a = a.value
     return NPV_PowExpression((a, b))
 
+
 def _pow_param_param(a, b):
     if a.is_constant():
         a = a.value
         if b.is_constant():
-            return a ** b.value
+            return a**b.value
     elif b.is_constant():
         b = b.value
         if b in _zero_one_optimizations:
             return a if b else 1
     return NPV_PowExpression((a, b))
+
 
 def _pow_param_other(a, b):
     if a.is_constant():
@@ -2906,8 +3219,10 @@ def _pow_other_native(a, b):
         return a if b else 1
     return PowExpression((a, b))
 
+
 def _pow_other_npv(a, b):
     return PowExpression((a, b))
+
 
 def _pow_other_param(a, b):
     if b.is_constant():
@@ -2915,6 +3230,7 @@ def _pow_other_param(a, b):
         if b in _zero_one_optimizations:
             return a if b else 1
     return PowExpression((a, b))
+
 
 def _pow_other_other(a, b):
     return PowExpression((a, b))
@@ -2925,15 +3241,18 @@ def _register_new_pow_handler(a, b):
     # Retrieve the appropriate handler, record it in the main
     # _pow_dispatcher dict (so this method is not called a second time for
     # these types)
-    _pow_dispatcher[a.__class__, b.__class__] \
-        = handler = _pow_type_handler_mapping[types]
+    _pow_dispatcher[a.__class__, b.__class__] = handler = _pow_type_handler_mapping[
+        types
+    ]
     # Call the appropriate handler
     return handler(a, b)
+
 
 _pow_dispatcher = collections.defaultdict(lambda: _register_new_pow_handler)
 
 _pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
-    _pow_dispatcher, {
+    _pow_dispatcher,
+    {
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _pow_native_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _pow_native_npv,
         (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _pow_native_param,
@@ -2942,7 +3261,6 @@ _pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.LINEAR): _pow_native_other,
         (ARG_TYPE.NATIVE, ARG_TYPE.SUM): _pow_native_other,
         (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _pow_native_other,
-
         (ARG_TYPE.NPV, ARG_TYPE.NATIVE): _pow_npv_native,
         (ARG_TYPE.NPV, ARG_TYPE.NPV): _pow_npv_npv,
         (ARG_TYPE.NPV, ARG_TYPE.PARAM): _pow_npv_param,
@@ -2951,7 +3269,6 @@ _pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NPV, ARG_TYPE.LINEAR): _pow_npv_other,
         (ARG_TYPE.NPV, ARG_TYPE.SUM): _pow_npv_other,
         (ARG_TYPE.NPV, ARG_TYPE.OTHER): _pow_npv_other,
-
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _pow_param_native,
         (ARG_TYPE.PARAM, ARG_TYPE.NPV): _pow_param_npv,
         (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _pow_param_param,
@@ -2960,50 +3277,53 @@ _pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _pow_param_other,
         (ARG_TYPE.PARAM, ARG_TYPE.SUM): _pow_param_other,
         (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _pow_param_other,
-
         (ARG_TYPE.VAR, ARG_TYPE.NATIVE): _pow_other_native,
         (ARG_TYPE.VAR, ARG_TYPE.NPV): _pow_other_npv,
         (ARG_TYPE.VAR, ARG_TYPE.PARAM): _pow_other_param,
-
         (ARG_TYPE.MONOMIAL, ARG_TYPE.NATIVE): _pow_other_native,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.NPV): _pow_other_npv,
         (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _pow_other_param,
-
         (ARG_TYPE.LINEAR, ARG_TYPE.NATIVE): _pow_other_native,
         (ARG_TYPE.LINEAR, ARG_TYPE.NPV): _pow_other_npv,
         (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _pow_other_param,
-
         (ARG_TYPE.SUM, ARG_TYPE.NATIVE): _pow_other_native,
         (ARG_TYPE.SUM, ARG_TYPE.NPV): _pow_other_npv,
         (ARG_TYPE.SUM, ARG_TYPE.PARAM): _pow_other_param,
-
         (ARG_TYPE.OTHER, ARG_TYPE.NATIVE): _pow_other_native,
         (ARG_TYPE.OTHER, ARG_TYPE.NPV): _pow_other_npv,
         (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _pow_other_param,
-})
-_pow_type_handler_mapping.update({
-    (i, j): _pow_other_other
-    for i in ARG_TYPE for j in ARG_TYPE
-    if (i,j) not in _pow_type_handler_mapping
-})
+    },
+)
+_pow_type_handler_mapping.update(
+    {
+        (i, j): _pow_other_other
+        for i in ARG_TYPE
+        for j in ARG_TYPE
+        if (i, j) not in _pow_type_handler_mapping
+    }
+)
 
 
 #
 # ABS handlers
 #
 
+
 def _abs_native(a):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return abs(a)
+
 
 def _abs_npv(a):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return NPV_AbsExpression((a,))
 
+
 def _abs_param(a):
     if a.is_constant():
         return abs(a.value)
     return NPV_AbsExpression((a,))
+
 
 def _abs_other(a):
     return AbsExpression((a,))
@@ -3014,15 +3334,16 @@ def _register_new_abs_handler(a):
     # Retrieve the appropriate handler, record it in the main
     # _abs_dispatcher dict (so this method is not called a second time for
     # these types)
-    _abs_dispatcher[a.__class__] \
-        = handler = _abs_type_handler_mapping[types[0]]
+    _abs_dispatcher[a.__class__] = handler = _abs_type_handler_mapping[types[0]]
     # Call the appropriate handler
     return handler(a)
+
 
 _abs_dispatcher = collections.defaultdict(lambda: _register_new_abs_handler)
 
 _abs_type_handler_mapping = _unary_op_dispatcher_type_mapping(
-    _abs_dispatcher, {
+    _abs_dispatcher,
+    {
         ARG_TYPE.NATIVE: _abs_native,
         ARG_TYPE.NPV: _abs_npv,
         ARG_TYPE.PARAM: _abs_param,
@@ -3031,36 +3352,44 @@ _abs_type_handler_mapping = _unary_op_dispatcher_type_mapping(
         ARG_TYPE.LINEAR: _abs_other,
         ARG_TYPE.SUM: _abs_other,
         ARG_TYPE.OTHER: _abs_other,
-    })
+    },
+)
 
 
 #
 # INTRINSIC FUNCTION handlers
 #
 
+
 def _fcn_asnumeric(a, name, fcn):
     a = a.as_numeric()
     return _fcn_dispatcher[a.__class__](a, name, fcn)
+
 
 def _fcn_mutable(a, name, fcn):
     a = _recast_mutable(a)
     return _fcn_dispatcher[a.__class__](a, name, fcn)
 
+
 def _fcn_invalid(a, name, fcn):
     fcn(a)
+
 
 def _fcn_native(a, name, fcn):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return fcn(a)
 
+
 def _fcn_npv(a, name, fcn):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return NPV_UnaryFunctionExpression((a,), name, fcn)
+
 
 def _fcn_param(a, name, fcn):
     if a.is_constant():
         return fcn(a.value)
     return NPV_UnaryFunctionExpression((a,), name, fcn)
+
 
 def _fcn_other(a, name, fcn):
     return UnaryFunctionExpression((a,), name, fcn)
@@ -3071,10 +3400,10 @@ def _register_new_fcn_dispatcher(a, name, fcn):
     # Retrieve the appropriate handler, record it in the main
     # _fcn_dispatcher dict (so this method is not called a second time for
     # these types)
-    _fcn_dispatcher[a.__class__] \
-        = handler = _fcn_type_handler_mapping[types[0]]
+    _fcn_dispatcher[a.__class__] = handler = _fcn_type_handler_mapping[types[0]]
     # Call the appropriate handler
     return handler(a, name, fcn)
+
 
 _fcn_dispatcher = collections.defaultdict(lambda: _register_new_fcn_dispatcher)
 
@@ -3091,9 +3420,6 @@ _fcn_type_handler_mapping = {
     ARG_TYPE.SUM: _fcn_other,
     ARG_TYPE.OTHER: _fcn_other,
 }
-
-
-
 
 
 def _balanced_parens(arg):
@@ -3125,16 +3451,17 @@ def _balanced_parens(arg):
 
 # TODO: this is fragile (and not currently used anywhere).  It should be
 # deprecated / removed.
-NPV_expression_types = set([
-    NPV_NegationExpression,
-    NPV_ExternalFunctionExpression,
-    NPV_PowExpression,
-    NPV_MinExpression,
-    NPV_MaxExpression,
-    NPV_ProductExpression,
-    NPV_DivisionExpression,
-    NPV_SumExpression,
-    NPV_UnaryFunctionExpression,
-    NPV_AbsExpression
-])
-
+NPV_expression_types = set(
+    [
+        NPV_NegationExpression,
+        NPV_ExternalFunctionExpression,
+        NPV_PowExpression,
+        NPV_MinExpression,
+        NPV_MaxExpression,
+        NPV_ProductExpression,
+        NPV_DivisionExpression,
+        NPV_SumExpression,
+        NPV_UnaryFunctionExpression,
+        NPV_AbsExpression,
+    ]
+)

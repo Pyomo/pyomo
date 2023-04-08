@@ -14,15 +14,17 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=m.y >= pe.exp(m.x))
-        m.c2 = pe.Constraint(expr=m.y >= (m.x - 1)**2)
+        m.c2 = pe.Constraint(expr=m.y >= (m.x - 1) ** 2)
         m.x.fix(1)
         m.y.fix(2)
         writer = appsi.writers.NLWriter()
         with TempfileManager:
             fname = TempfileManager.create_tempfile(suffix='.appsi.nl')
-            with self.assertRaisesRegex(ValueError, 'there are not any unfixed variables in the problem'):
+            with self.assertRaisesRegex(
+                ValueError, 'there are not any unfixed variables in the problem'
+            ):
                 writer.write(m, fname)
-    
+
     def _write_and_check_header(self, m, correct_lines):
         writer = appsi.writers.NLWriter()
         with TempfileManager:
@@ -38,16 +40,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x + m.y)
         m.c = pe.Constraint(expr=m.x + m.y == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '0 0',
-                         '0 0',
-                         '0 0 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '0 0',
+            '0 0',
+            '0 0 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_2(self):
@@ -56,16 +60,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y)
         m.c = pe.Constraint(expr=m.x + m.y == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '0 1',
-                         '0 0',
-                         '0 1 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '0 1',
+            '0 0',
+            '0 1 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_3(self):
@@ -74,16 +80,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x + m.y)
         m.c = pe.Constraint(expr=m.x**2 + m.y == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 0',
-                         '0 0',
-                         '1 0 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 0',
+            '0 0',
+            '1 0 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_4(self):
@@ -92,16 +100,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y)
         m.c = pe.Constraint(expr=m.x**2 + m.y == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '1 1 1',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '1 1 1',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_5(self):
@@ -110,16 +120,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c = pe.Constraint(expr=m.x**2 + m.y == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '1 2 1',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '1 2 1',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_6(self):
@@ -128,16 +140,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y)
         m.c = pe.Constraint(expr=m.x**2 + m.y**2 == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '2 1 1',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '2 1 1',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_7(self):
@@ -146,16 +160,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x + m.y)
         m.c = pe.Constraint(expr=m.x + m.y**2 == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 0',
-                         '0 0',
-                         '1 0 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 0',
+            '0 0',
+            '1 0 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_8(self):
@@ -164,16 +180,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x + m.y)
         m.c = pe.Constraint(expr=m.x**2 + m.y**2 == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 0',
-                         '0 0',
-                         '2 0 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 0',
+            '0 0',
+            '2 0 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_9(self):
@@ -182,16 +200,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x + m.y**2)
         m.c = pe.Constraint(expr=m.x + m.y == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '0 1',
-                         '0 0',
-                         '0 1 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '0 1',
+            '0 0',
+            '0 1 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_10(self):
@@ -200,16 +220,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x + m.y**2)
         m.c = pe.Constraint(expr=m.x + m.y**2 == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '1 1 1',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '1 1 1',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_11(self):
@@ -218,16 +240,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x + m.y**2)
         m.c = pe.Constraint(expr=m.x**2 + m.y == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '1 2 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '1 2 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_12(self):
@@ -236,16 +260,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x + m.y**2)
         m.c = pe.Constraint(expr=m.x**2 + m.y**2 == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '2 1 1',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '2 1 1',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_13(self):
@@ -254,16 +280,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y)
         m.c = pe.Constraint(expr=m.x + m.y**2 == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '1 2 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '1 2 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_14(self):
@@ -272,16 +300,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c = pe.Constraint(expr=m.x + m.y == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '0 1',
-                         '0 0',
-                         '0 2 0',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '0 1',
+            '0 0',
+            '0 2 0',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_15(self):
@@ -290,16 +320,18 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c = pe.Constraint(expr=m.x + m.y**2 == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '1 2 1',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '1 2 1',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)
 
     def test_header_16(self):
@@ -308,14 +340,16 @@ class TestNLWriter(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c = pe.Constraint(expr=m.x**2 + m.y**2 == 1)
-        correct_lines = ['g3 1 1 0',
-                         '2 1 1 0 1',
-                         '1 1',
-                         '0 0',
-                         '2 2 2',
-                         '0 0 0 1',
-                         '0 0 0 0 0',
-                         '2 2',
-                         '0 0',
-                         '0 0 0 0 0']
+        correct_lines = [
+            'g3 1 1 0',
+            '2 1 1 0 1',
+            '1 1',
+            '0 0',
+            '2 2 2',
+            '0 0 0 1',
+            '0 0 0 0 0',
+            '2 2',
+            '0 0',
+            '0 0 0 0 0',
+        ]
         self._write_and_check_header(m, correct_lines)

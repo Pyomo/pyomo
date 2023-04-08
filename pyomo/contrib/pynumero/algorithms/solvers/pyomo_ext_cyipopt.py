@@ -10,7 +10,9 @@
 #  ___________________________________________________________________________
 import numpy as np
 import abc
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptProblemInterface
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+    CyIpoptProblemInterface,
+)
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from pyomo.environ import Var, Constraint, value
@@ -42,11 +44,13 @@ Todo:
      variables
 """
 
+
 class ExternalInputOutputModel(object, metaclass=abc.ABCMeta):
     """
     This is the base class for building external input output models
     for use with Pyomo and CyIpopt
     """
+
     def __init__(self):
         pass
 
@@ -81,9 +85,17 @@ class ExternalInputOutputModel(object, metaclass=abc.ABCMeta):
 
     # ToDo: Hessians not yet handled
 
+
 class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
-    def __init__(self, pyomo_model, ex_input_output_model, inputs, outputs,
-                 outputs_eqn_scaling=None, nl_file_options=None):
+    def __init__(
+        self,
+        pyomo_model,
+        ex_input_output_model,
+        inputs,
+        outputs,
+        outputs_eqn_scaling=None,
+        nl_file_options=None,
+    ):
         """
         Create an instance of this class to pass as a problem to CyIpopt.
 
@@ -98,8 +110,8 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
            the methods to compute the outputs and the derivatives.
 
         inputs : list of Pyomo variables (_VarData)
-           The Pyomo model needs to have variables to represent the inputs to the 
-           external model. This is the list of those input variables in the order 
+           The Pyomo model needs to have variables to represent the inputs to the
+           external model. This is the list of those input variables in the order
            that corresponds to the input_values vector provided in the set_inputs call.
 
         outputs : list of Pyomo variables (_VarData)
@@ -119,30 +131,38 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         self._inputs = [v for v in inputs]
         for v in self._inputs:
             if not isinstance(v, _VarData):
-                raise RuntimeError('Argument inputs passed to PyomoExternalCyIpoptProblem must be'
-                                   ' a list of VarData objects. Note: if you have an indexed variable, pass'
-                                   ' each index as a separate entry in the list (e.g., inputs=[m.x[1], m.x[2]]).')
+                raise RuntimeError(
+                    'Argument inputs passed to PyomoExternalCyIpoptProblem must be'
+                    ' a list of VarData objects. Note: if you have an indexed variable, pass'
+                    ' each index as a separate entry in the list (e.g., inputs=[m.x[1], m.x[2]]).'
+                )
 
         self._outputs = [v for v in outputs]
         for v in self._outputs:
             if not isinstance(v, _VarData):
-                raise RuntimeError('Argument outputs passed to PyomoExternalCyIpoptProblem must be'
-                                   ' a list of VarData objects. Note: if you have an indexed variable, pass'
-                                   ' each index as a separate entry in the list (e.g., inputs=[m.x[1], m.x[2]]).')
+                raise RuntimeError(
+                    'Argument outputs passed to PyomoExternalCyIpoptProblem must be'
+                    ' a list of VarData objects. Note: if you have an indexed variable, pass'
+                    ' each index as a separate entry in the list (e.g., inputs=[m.x[1], m.x[2]]).'
+                )
 
         # we need to add a dummy variable and constraint to the pyomo_nlp
         # to make sure it does not remove variables that do not
         # appear in the pyomo part of the model - also ensure unique name in case model
         # is used in more than one instance of this class
         # ToDo: Improve this by convincing Pyomo not to remove the inputs and outputs
-        dummy_var_name = unique_component_name(self._pyomo_model, '_dummy_variable_CyIpoptPyomoExNLP')
+        dummy_var_name = unique_component_name(
+            self._pyomo_model, '_dummy_variable_CyIpoptPyomoExNLP'
+        )
         dummy_var = Var()
         setattr(self._pyomo_model, dummy_var_name, dummy_var)
-        dummy_con_name = unique_component_name(self._pyomo_model, '_dummy_constraint_CyIpoptPyomoExNLP')
+        dummy_con_name = unique_component_name(
+            self._pyomo_model, '_dummy_constraint_CyIpoptPyomoExNLP'
+        )
         dummy_con = Constraint(
-            expr = getattr(self._pyomo_model, dummy_var_name) == \
-               sum(v for v in self._inputs) + sum(v for v in self._outputs)
-            )
+            expr=getattr(self._pyomo_model, dummy_var_name)
+            == sum(v for v in self._inputs) + sum(v for v in self._outputs)
+        )
         setattr(self._pyomo_model, dummy_con_name, dummy_con)
 
         # initialize the dummy var to the right hand side
@@ -157,7 +177,7 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
         # make an nlp interface from the pyomo model
         self._pyomo_nlp = PyomoNLP(self._pyomo_model, nl_file_options)
-        
+
         # create initial value vectors for primals and duals
         init_primals = self._pyomo_nlp.init_primals()
         init_duals_pyomo = self._pyomo_nlp.init_duals()
@@ -172,12 +192,12 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
         # build the map from inputs and outputs to the full x vector
         self._input_columns = self._pyomo_nlp.get_primal_indices(self._inputs)
-        #self._input_x_mask = np.zeros(self._pyomo_nlp.n_primals(), dtype=np.float64)
-        #self._input_x_mask[self._input_columns] = 1.0
+        # self._input_x_mask = np.zeros(self._pyomo_nlp.n_primals(), dtype=np.float64)
+        # self._input_x_mask[self._input_columns] = 1.0
         self._output_columns = self._pyomo_nlp.get_primal_indices(self._outputs)
-        #self._output_x_mask = np.zeros(self._pyomo_nlp.n_primals(), dtype=np.float64)
-        #self._output_x_mask[self._output_columns] = 1.0
-        
+        # self._output_x_mask = np.zeros(self._pyomo_nlp.n_primals(), dtype=np.float64)
+        # self._output_x_mask[self._output_columns] = 1.0
+
         # create caches for primals and duals
         self._cached_primals = init_primals.copy()
         self._cached_duals = init_duals.clone(copy=True)
@@ -207,13 +227,16 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         # outputs_eqn_scaling
         if pyomo_constraints_scaling is not None or outputs_eqn_scaling is not None:
             if pyomo_constraints_scaling is None:
-                pyomo_constraints_scaling = np.ones(self._pyomo_nlp.n_primals(), dtype=np.float64)
+                pyomo_constraints_scaling = np.ones(
+                    self._pyomo_nlp.n_primals(), dtype=np.float64
+                )
             if outputs_eqn_scaling is None:
                 outputs_eqn_scaling = np.ones(len(self._outputs), dtype=np.float64)
             if type(outputs_eqn_scaling) is list:
                 outputs_eqn_scaling = np.asarray(outputs_eqn_scaling, dtype=np.float64)
-            self._constraints_scaling = np.concatenate((pyomo_constraints_scaling,
-                                                       outputs_eqn_scaling))
+            self._constraints_scaling = np.concatenate(
+                (pyomo_constraints_scaling, outputs_eqn_scaling)
+            )
 
         ### setup the jacobian structures
         self._jac_pyomo = self._pyomo_nlp.evaluate_jacobian()
@@ -230,7 +253,7 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         jac_ex_irows = np.copy(jac_ex.row)
         jac_ex_irows += ex_start_row
         jac_ex_jcols = np.copy(jac_ex.col)
-        for z,col in enumerate(jac_ex_jcols):
+        for z, col in enumerate(jac_ex_jcols):
             jac_ex_jcols[z] = self._input_columns[col]
         jac_ex_data = np.copy(jac_ex.data)
 
@@ -247,13 +270,19 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
         # add the jac for output variables from the extra equations
         for i in range(len(self._outputs)):
-           jac_ex_output_irows.append(ex_start_row + i)
-           jac_ex_output_jcols.append(self._output_columns[i])
-           jac_ex_output_data.append(-1.0)
+            jac_ex_output_irows.append(ex_start_row + i)
+            jac_ex_output_jcols.append(self._output_columns[i])
+            jac_ex_output_data.append(-1.0)
 
-        self._full_jac_irows = np.concatenate((self._jac_pyomo.row, jac_ex_irows, jac_ex_output_irows))
-        self._full_jac_jcols = np.concatenate((self._jac_pyomo.col, jac_ex_jcols, jac_ex_output_jcols))
-        self._full_jac_data = np.concatenate((self._jac_pyomo.data, jac_ex_data, jac_ex_output_data))
+        self._full_jac_irows = np.concatenate(
+            (self._jac_pyomo.row, jac_ex_irows, jac_ex_output_irows)
+        )
+        self._full_jac_jcols = np.concatenate(
+            (self._jac_pyomo.col, jac_ex_jcols, jac_ex_output_jcols)
+        )
+        self._full_jac_data = np.concatenate(
+            (self._jac_pyomo.data, jac_ex_data, jac_ex_output_data)
+        )
 
         # currently, this interface does not do anything with Hessians
 
@@ -270,7 +299,7 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
            internally.
         """
         pyomo_variables = self._pyomo_nlp.get_pyomo_variables()
-        for i,v in enumerate(primals):
+        for i, v in enumerate(primals):
             pyomo_variables[i].set_value(v)
 
     def _set_primals_if_necessary(self, primals):
@@ -295,7 +324,7 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
     def x_lb(self):
         return self._pyomo_nlp.primals_lb()
-    
+
     def x_ub(self):
         return self._pyomo_nlp.primals_ub()
 
@@ -320,7 +349,9 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         self._set_primals_if_necessary(primals)
         pyomo_constraints = self._pyomo_nlp.evaluate_constraints()
         ex_io_outputs = self._ex_io_model.evaluate_outputs()
-        ex_io_constraints = ex_io_outputs - self._ex_io_outputs_from_full_primals(primals)
+        ex_io_constraints = ex_io_outputs - self._ex_io_outputs_from_full_primals(
+            primals
+        )
         constraints = BlockVector(2)
         constraints.set_block(0, pyomo_constraints)
         constraints.set_block(1, ex_io_constraints)
@@ -328,15 +359,17 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
     def jacobianstructure(self):
         return self._full_jac_irows, self._full_jac_jcols
-        
+
     def jacobian(self, primals):
         self._set_primals_if_necessary(primals)
         self._pyomo_nlp.evaluate_jacobian(out=self._jac_pyomo)
         pyomo_data = self._jac_pyomo.data
         ex_io_deriv = self._ex_io_model.evaluate_derivatives()
         # CDL: dense version: ex_io_deriv = self._ex_io_model.evaluate_derivatives().flatten('C')
-        self._full_jac_data[0:len(pyomo_data)] = pyomo_data
-        self._full_jac_data[len(pyomo_data):len(pyomo_data)+len(ex_io_deriv.data)] = ex_io_deriv.data
+        self._full_jac_data[0 : len(pyomo_data)] = pyomo_data
+        self._full_jac_data[
+            len(pyomo_data) : len(pyomo_data) + len(ex_io_deriv.data)
+        ] = ex_io_deriv.data
         # CDL: dense version: self._full_jac_data[len(pyomo_data):len(pyomo_data)+len(ex_io_deriv)] = ex_io_deriv
 
         # the -1s for the output variables should still be  here
@@ -344,19 +377,15 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
     def hessianstructure(self):
         return np.zeros(0), np.zeros(0)
-        #raise NotImplementedError('No Hessians for now')
+        # raise NotImplementedError('No Hessians for now')
 
     def hessian(self, x, y, obj_factor):
         raise NotImplementedError('No Hessians for now')
 
     def _ex_io_inputs_from_full_primals(self, primals):
         return primals[self._input_columns]
-        #return np.compress(self._input_x_mask, primals)
+        # return np.compress(self._input_x_mask, primals)
 
     def _ex_io_outputs_from_full_primals(self, primals):
         return primals[self._output_columns]
-        #return  np.compress(self._output_x_mask, primals)
-
-    
-        
-            
+        # return  np.compress(self._output_x_mask, primals)

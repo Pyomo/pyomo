@@ -12,10 +12,16 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp import IntervalVar, Step, Pulse
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
-    AlwaysIn, CumulativeFunction, NegatedStepFunction, StepAtStart,
-    StepAtEnd, StepAt)
+    AlwaysIn,
+    CumulativeFunction,
+    NegatedStepFunction,
+    StepAtStart,
+    StepAtEnd,
+    StepAt,
+)
 
 from pyomo.environ import ConcreteModel, LogicalConstraint
+
 
 class CommonTests(unittest.TestCase):
     def get_model(self):
@@ -26,13 +32,15 @@ class CommonTests(unittest.TestCase):
 
         return m
 
+
 class TestPulse(CommonTests):
     def test_bad_interval_var(self):
         with self.assertRaisesRegex(
-                TypeError,
-                "The 'interval_var' argument for a 'Pulse' must "
-                "be an 'IntervalVar'.\n"
-                "Received: <class 'float'>"):
+            TypeError,
+            "The 'interval_var' argument for a 'Pulse' must "
+            "be an 'IntervalVar'.\n"
+            "Received: <class 'float'>",
+        ):
             thing = Pulse(interval_var=1.2, height=4)
 
     def test_create_pulse_with_scalar_interval_var(self):
@@ -48,18 +56,21 @@ class TestPulse(CommonTests):
         self.assertIsInstance(p, Pulse)
         self.assertEqual(str(p), "Pulse(c[2], height=2)")
 
+
 class TestStep(CommonTests):
     def test_bad_time_point(self):
         m = self.get_model()
         with self.assertRaisesRegex(
-                TypeError,
-                "The 'time' argument for a 'Step' must be either "
-                r"an 'IntervalVarTimePoint' \(for example, the "
-                r"'start_time' or 'end_time' of an IntervalVar\) or "
-                "an integer time point in the time horizon.\n"
-                "Received: "
-                "<class 'pyomo.contrib.cp.interval_var.ScalarIntervalVar'>"):
+            TypeError,
+            "The 'time' argument for a 'Step' must be either "
+            r"an 'IntervalVarTimePoint' \(for example, the "
+            r"'start_time' or 'end_time' of an IntervalVar\) or "
+            "an integer time point in the time horizon.\n"
+            "Received: "
+            "<class 'pyomo.contrib.cp.interval_var.ScalarIntervalVar'>",
+        ):
             thing = Step(m.a, height=2)
+
 
 class TestSumStepFunctions(CommonTests):
     def test_sum_step_and_pulse(self):
@@ -72,8 +83,9 @@ class TestSumStepFunctions(CommonTests):
         self.assertIsInstance(expr.args[0], StepAtStart)
         self.assertIsInstance(expr.args[1], Pulse)
 
-        self.assertEqual(str(expr), "Step(a.start_time, height=4) + "
-                         "Pulse(b, height=-1)")
+        self.assertEqual(
+            str(expr), "Step(a.start_time, height=4) + Pulse(b, height=-1)"
+        )
 
     def test_args_clone_correctly(self):
         m = self.get_model()
@@ -142,8 +154,7 @@ class TestSumStepFunctions(CommonTests):
 
     def test_sum_in_place(self):
         m = self.get_model()
-        expr = Step(m.a.start_time, height=4) + Pulse(interval_var=m.b,
-                                                      height=-1)
+        expr = Step(m.a.start_time, height=4) + Pulse(interval_var=m.b, height=-1)
         expr += Step(0, 1)
 
         self.assertEqual(len(expr.args), 3)
@@ -152,8 +163,10 @@ class TestSumStepFunctions(CommonTests):
         self.assertIsInstance(expr.args[1], Pulse)
         self.assertIsInstance(expr.args[2], StepAt)
 
-        self.assertEqual(str(expr), "Step(a.start_time, height=4) + "
-                         "Pulse(b, height=-1) + Step(0, height=1)")
+        self.assertEqual(
+            str(expr),
+            "Step(a.start_time, height=4) + Pulse(b, height=-1) + Step(0, height=1)",
+        )
 
     def test_sum_steps_in_place(self):
         m = self.get_model()
@@ -308,19 +321,21 @@ class TestSumStepFunctions(CommonTests):
     def test_cannot_add_constant(self):
         m = self.get_model()
         with self.assertRaisesRegex(
-                TypeError,
-                "Cannot add object of class <class 'int'> to object of class "
-                "<class 'pyomo.contrib.cp.scheduling_expr."
-                "step_function_expressions.StepAtStart'>"):
+            TypeError,
+            "Cannot add object of class <class 'int'> to object of class "
+            "<class 'pyomo.contrib.cp.scheduling_expr."
+            "step_function_expressions.StepAtStart'>",
+        ):
             expr = Step(m.a.start_time, height=6) + 3
 
     def test_cannot_add_to_constant(self):
         m = self.get_model()
         with self.assertRaisesRegex(
-                TypeError,
-                "Cannot add object of class <class 'pyomo.contrib.cp."
-                "scheduling_expr.step_function_expressions.StepAtStart'> to "
-                "object of class <class 'int'>"):
+            TypeError,
+            "Cannot add object of class <class 'pyomo.contrib.cp."
+            "scheduling_expr.step_function_expressions.StepAtStart'> to "
+            "object of class <class 'int'>",
+        ):
             expr = 4 + Step(m.a.start_time, height=6)
 
     def test_python_sum_funct(self):
@@ -333,6 +348,7 @@ class TestSumStepFunctions(CommonTests):
         self.assertEqual(expr.nargs(), 2)
         self.assertIsInstance(expr.args[0], Pulse)
         self.assertIsInstance(expr.args[1], Pulse)
+
 
 class TestSubtractStepFunctions(CommonTests):
     def test_subtract_two_steps(self):
@@ -475,33 +491,40 @@ class TestSubtractStepFunctions(CommonTests):
         self.assertIsInstance(expr.args[2], NegatedStepFunction)
         self.assertIs(expr.args[2].args[0], m.p2)
 
-        self.assertEqual(str(expr), "Pulse(a, height=5) + "
-                         "Step(b.end_time, height=5) - Pulse(b, height=-3)")
+        self.assertEqual(
+            str(expr),
+            "Pulse(a, height=5) + Step(b.end_time, height=5) - Pulse(b, height=-3)",
+        )
 
     def test_cannot_subtract_constant(self):
         m = self.get_model()
         with self.assertRaisesRegex(
-                TypeError,
-                "Cannot subtract object of class <class 'int'> from object of "
-                "class <class 'pyomo.contrib.cp."
-                "scheduling_expr.step_function_expressions.StepAtStart'>"):
+            TypeError,
+            "Cannot subtract object of class <class 'int'> from object of "
+            "class <class 'pyomo.contrib.cp."
+            "scheduling_expr.step_function_expressions.StepAtStart'>",
+        ):
             expr = Step(m.a.start_time, height=6) - 3
 
     def test_cannot_subtract_from_constant(self):
         m = self.get_model()
         with self.assertRaisesRegex(
-                TypeError,
-                "Cannot subtract object of class <class 'pyomo.contrib.cp."
-                "scheduling_expr.step_function_expressions.StepAtStart'> from "
-                "object of class <class 'int'>"):
+            TypeError,
+            "Cannot subtract object of class <class 'pyomo.contrib.cp."
+            "scheduling_expr.step_function_expressions.StepAtStart'> from "
+            "object of class <class 'int'>",
+        ):
             expr = 3 - Step(m.a.start_time, height=6)
+
 
 class TestAlwaysIn(CommonTests):
     def test_always_in(self):
         m = self.get_model()
-        f = Pulse(interval_var=m.a, height=3) + \
-            Step(m.b.start_time, height=2) - \
-            Step(m.a.end_time, height=-1)
+        f = (
+            Pulse(interval_var=m.a, height=3)
+            + Step(m.b.start_time, height=2)
+            - Step(m.a.end_time, height=-1)
+        )
 
         m.cons = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
         self.assertIsInstance(m.cons.expr, AlwaysIn)
@@ -517,4 +540,5 @@ class TestAlwaysIn(CommonTests):
             str(m.cons.expr),
             "(Pulse(a, height=3) + Step(b.start_time, height=2) - "
             "Step(a.end_time, height=-1)).within(bounds=(0, 3), "
-            "times=(0, 10))")
+            "times=(0, 10))",
+        )

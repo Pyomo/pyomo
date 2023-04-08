@@ -19,16 +19,20 @@ from .base import ExpressionBase
 from .boolean_value import BooleanValue
 from .expr_common import _lt, _le, _eq, ExpressionType
 from .numvalue import (
-    native_numeric_types, is_potentially_variable, is_constant, value,
-    check_if_numeric_type
+    native_numeric_types,
+    is_potentially_variable,
+    is_constant,
+    value,
+    check_if_numeric_type,
 )
 from .visitor import polynomial_degree
 
-#-------------------------------------------------------
+# -------------------------------------------------------
 #
 # Expression classes
 #
-#-------------------------------------------------------
+# -------------------------------------------------------
+
 
 class RelationalExpression(ExpressionBase, BooleanValue):
     __slots__ = ('_args_',)
@@ -41,7 +45,8 @@ class RelationalExpression(ExpressionBase, BooleanValue):
     def __bool__(self):
         if self.is_constant():
             return bool(self())
-        raise PyomoException("""
+        raise PyomoException(
+            """
 Cannot convert non-constant Pyomo expression (%s) to bool.
 This error is usually caused by using a Var, unit, or mutable Param in a
 Boolean context such as an "if" statement, or when checking container
@@ -53,7 +58,9 @@ and
     >>> m.y = Var()
     >>> if m.y in [m.x, m.y]:
     ...     pass
-would both cause this exception.""".strip() % (self,))
+would both cause this exception.""".strip()
+            % (self,)
+        )
 
     @property
     def args(self):
@@ -63,11 +70,13 @@ would both cause this exception.""".strip() % (self,))
         Returns: Either a list or tuple (depending on the node storage
             model) containing only the child nodes of this node
         """
-        return self._args_[:self.nargs()]
+        return self._args_[: self.nargs()]
 
-    @deprecated("is_relational() is deprecated in favor of "
-                "is_expression_type(ExpressionType.RELATIONAL)",
-                version='6.4.3')
+    @deprecated(
+        "is_relational() is deprecated in favor of "
+        "is_expression_type(ExpressionType.RELATIONAL)",
+        version='6.4.3',
+    )
     def is_relational(self):
         return self.is_expression_type(ExpressionType.RELATIONAL)
 
@@ -201,9 +210,12 @@ class RangedExpression(RelationalExpression):
 
     def _to_string(self, values, verbose, smap):
         return "%s  %s  %s  %s  %s" % (
-            values[0], "<="[:2-self._strict[0]],
-            values[1], "<="[:2-self._strict[1]],
-            values[2])
+            values[0],
+            "<="[: 2 - self._strict[0]],
+            values[1],
+            "<="[: 2 - self._strict[1]],
+            values[2],
+        )
 
     @property
     def strict(self):
@@ -243,8 +255,7 @@ class InequalityExpression(RelationalExpression):
         return _l <= _r
 
     def _to_string(self, values, verbose, smap):
-        return "%s  %s  %s" % (
-            values[0], "<="[:2-self._strict], values[1])
+        return "%s  %s  %s" % (values[0], "<="[: 2 - self._strict], values[1])
 
     @property
     def strict(self):
@@ -344,7 +355,7 @@ class NotEqualExpression(RelationalExpression):
         if lhs is not rhs:
             return True
         return super().__bool__()
-        
+
     def _apply_operation(self, result):
         _l, _r = result
         return _l != _r
@@ -358,6 +369,7 @@ _relational_op = {
     _le: (operator.le, '<=', False),
     _lt: (operator.lt, '<', True),
 }
+
 
 def _process_nonnumeric_arg(obj):
     if hasattr(obj, 'as_numeric'):
@@ -375,12 +387,14 @@ def _process_nonnumeric_arg(obj):
             raise TypeError(
                 "Argument for expression is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?"
-                % (obj.name, ) )
+                "value defined over an index that you did not specify?" % (obj.name,)
+            )
 
         raise TypeError(
             "Attempting to use a non-numeric type (%s) in a "
-            "numeric expression context." % (obj.__class__.__name__,))
+            "numeric expression context." % (obj.__class__.__name__,)
+        )
+
 
 def _process_relational_arg(arg, n):
     try:
@@ -401,6 +415,7 @@ def _process_relational_arg(arg, n):
             if arg.__class__ not in native_numeric_types:
                 _process_relational_arg.constant = False
     return arg
+
 
 def _generate_relational_expression(etype, lhs, rhs):
     # Note that the use of "global" state flags is fast, but not
@@ -424,22 +439,23 @@ def _generate_relational_expression(etype, lhs, rhs):
             raise TypeError(
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression:\n"
-                "    %s\n    {==}\n    %s" % (lhs, rhs,)
+                "    %s\n    {==}\n    %s" % (lhs, rhs)
             )
         return EqualityExpression((lhs, rhs))
     elif _process_relational_arg.relational:
         if _process_relational_arg.relational == 1:
             return RangedExpression(
-                lhs._args_ + (rhs,), (lhs._strict, _relational_op[etype][2]))
+                lhs._args_ + (rhs,), (lhs._strict, _relational_op[etype][2])
+            )
         elif _process_relational_arg.relational == 2:
             return RangedExpression(
-                (lhs,) + rhs._args_, (_relational_op[etype][2], rhs._strict))
-        else: # _process_relational_arg.relational == 3
+                (lhs,) + rhs._args_, (_relational_op[etype][2], rhs._strict)
+            )
+        else:  # _process_relational_arg.relational == 3
             raise TypeError(
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions:\n"
-                "    %s\n    {%s}\n    %s" % (
-                    lhs, _relational_op[etype][1], rhs))
+                "    %s\n    {%s}\n    %s" % (lhs, _relational_op[etype][1], rhs)
+            )
     else:
         return InequalityExpression((lhs, rhs), _relational_op[etype][2])
-

@@ -14,9 +14,18 @@ from pyomo.common import DeveloperError
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.logical_expr import (
-    AndExpression, EquivalenceExpression, equivalent, ImplicationExpression,
-    implies, land, lnot, lor, NotExpression,
-    OrExpression, special_boolean_atom_types, XorExpression,
+    AndExpression,
+    EquivalenceExpression,
+    equivalent,
+    ImplicationExpression,
+    implies,
+    land,
+    lnot,
+    lor,
+    NotExpression,
+    OrExpression,
+    special_boolean_atom_types,
+    XorExpression,
 )
 from pyomo.core.expr.numvalue import native_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
@@ -24,26 +33,32 @@ from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 _operatorMap = {}
 _pyomo_operator_map = {}
 
+
 def _configure_sympy(sympy, available):
     if not available:
         return
 
-    _operatorMap.update({
-        sympy.Or: lor,
-        sympy.And: land,
-        sympy.Implies: implies,
-        sympy.Equivalent: equivalent,
-        sympy.Not: lnot,
-    })
+    _operatorMap.update(
+        {
+            sympy.Or: lor,
+            sympy.And: land,
+            sympy.Implies: implies,
+            sympy.Equivalent: equivalent,
+            sympy.Not: lnot,
+        }
+    )
 
-    _pyomo_operator_map.update({
-        AndExpression: sympy.And,
-        OrExpression: sympy.Or,
-        ImplicationExpression: sympy.Implies,
-        EquivalenceExpression: sympy.Equivalent,
-        XorExpression: sympy.Xor,
-        NotExpression: sympy.Not,
-    })
+    _pyomo_operator_map.update(
+        {
+            AndExpression: sympy.And,
+            OrExpression: sympy.Or,
+            ImplicationExpression: sympy.Implies,
+            EquivalenceExpression: sympy.Equivalent,
+            XorExpression: sympy.Xor,
+            NotExpression: sympy.Not,
+        }
+    )
+
 
 sympy, _sympy_available = attempt_import('sympy', callback=_configure_sympy)
 
@@ -74,7 +89,6 @@ class _PyomoSympyLogicalBimap(object):
 
 
 class _Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
-
     def __init__(self, object_map, bool_varlist):
         sympy.Add  # this ensures _configure_sympy gets run
         super(_Pyomo2SympyVisitor, self).__init__()
@@ -86,7 +100,9 @@ class _Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
         _op = _pyomo_operator_map.get(node.__class__, None)
         if _op is None:
             if node.__class__ in special_boolean_atom_types:
-                raise ValueError("Encountered special atom class '%s' in root node" % node.__class__)
+                raise ValueError(
+                    "Encountered special atom class '%s' in root node" % node.__class__
+                )
             return node._apply_operation(values)
         else:
             return _op(*tuple(values))
@@ -119,7 +135,6 @@ class _Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
 
 
 class _Sympy2PyomoVisitor(StreamBasedExpressionVisitor):
-
     def __init__(self, object_map):
         sympy.Add  # this ensures _configure_sympy gets run
         super(_Sympy2PyomoVisitor, self).__init__()
@@ -129,13 +144,14 @@ class _Sympy2PyomoVisitor(StreamBasedExpressionVisitor):
         return (node.args, [])
 
     def exitNode(self, node, values):
-        """ Visit nodes that have been expanded """
+        """Visit nodes that have been expanded"""
         _sympyOp = node
-        _op = _operatorMap.get( type(_sympyOp), None )
+        _op = _operatorMap.get(type(_sympyOp), None)
         if _op is None:
             raise DeveloperError(
                 "sympy expression type '%s' not found in the operator "
-                "map" % type(_sympyOp) )
+                "map" % type(_sympyOp)
+            )
         return _op(*tuple(values))
 
     def beforeChild(self, node, child, child_idx):
@@ -173,7 +189,9 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     if type(expr) in special_boolean_atom_types:
         # If root node is one of the special atoms, recursively convert its
         # children nodes to CNF.
-        return _convert_children_to_literals(expr, bool_varlist, bool_var_to_special_atoms)
+        return _convert_children_to_literals(
+            expr, bool_varlist, bool_var_to_special_atoms
+        )
 
     # If root node is not an expression, just return it.
     if type(expr) in native_types or not expr.is_expression_type():
@@ -182,7 +200,11 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     # While performing conversion to sympy, substitute new boolean variables for
     # non-root special atoms.
     pyomo_sympy_map = _PyomoSympyLogicalBimap()
-    bool_var_to_special_atoms = ComponentMap() if bool_var_to_special_atoms is None else bool_var_to_special_atoms
+    bool_var_to_special_atoms = (
+        ComponentMap()
+        if bool_var_to_special_atoms is None
+        else bool_var_to_special_atoms
+    )
     visitor = _Pyomo2SympyVisitor(pyomo_sympy_map, bool_varlist)
     sympy_expr = visitor.walk_expression(expr)
 
@@ -190,15 +212,20 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     # If visitor encountered any special atoms in non-root node, ensure that their children are literals:
     for indicator_var, special_atom in visitor.special_atom_map.items():
         atom_cnf = _convert_children_to_literals(
-            special_atom, bool_varlist, bool_var_to_special_atoms)
+            special_atom, bool_varlist, bool_var_to_special_atoms
+        )
         bool_var_to_special_atoms[indicator_var] = atom_cnf[0]
         new_statements.extend(atom_cnf[1:])
 
     cnf_form = sympy.to_cnf(sympy_expr)
-    return [_sympy2pyomo_expression(cnf_form, pyomo_sympy_map)] + new_statements  # additional statements
+    return [
+        _sympy2pyomo_expression(cnf_form, pyomo_sympy_map)
+    ] + new_statements  # additional statements
 
 
-def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_special_atoms):
+def _convert_children_to_literals(
+    special_atom, bool_varlist, bool_var_to_special_atoms
+):
     """If the child logical constraints are not literals, substitute augmented boolean variables.
 
     Same return types as to_cnf() function.
@@ -216,10 +243,16 @@ def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_specia
             need_new_expression = True
             new_indicator = bool_varlist.add()
             if type(child) in special_boolean_atom_types:
-                child_cnf = _convert_children_to_literals(child, bool_varlist, bool_var_to_special_atoms)
+                child_cnf = _convert_children_to_literals(
+                    child, bool_varlist, bool_var_to_special_atoms
+                )
                 bool_var_to_special_atoms[new_indicator] = child_cnf[0]
             else:
-                child_cnf = to_cnf(new_indicator.equivalent_to(child), bool_varlist, bool_var_to_special_atoms)
+                child_cnf = to_cnf(
+                    new_indicator.equivalent_to(child),
+                    bool_varlist,
+                    bool_var_to_special_atoms,
+                )
                 new_statements.append(child_cnf[0])
             new_args.append(new_indicator)
             new_statements.extend(child_cnf[1:])

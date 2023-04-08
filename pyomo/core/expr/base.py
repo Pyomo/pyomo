@@ -15,9 +15,13 @@ from pyomo.common.numeric_types import native_types
 from pyomo.core.pyomoobject import PyomoObject
 from . import expr_common as common
 from .visitor import (
-    expression_to_string, evaluate_expression, clone_expression,
-    _expression_is_fixed, sizeof_expression,
+    expression_to_string,
+    evaluate_expression,
+    clone_expression,
+    _expression_is_fixed,
+    sizeof_expression,
 )
+
 
 class ExpressionBase(PyomoObject):
     """The base class for all Pyomo expression systems.
@@ -28,7 +32,7 @@ class ExpressionBase(PyomoObject):
     BooleanValue, etc) to form the base node of that expression system.
     """
 
-    __slots__ =  ()
+    __slots__ = ()
 
     PRECEDENCE = 0
 
@@ -58,8 +62,8 @@ class ExpressionBase(PyomoObject):
 
         """
         raise NotImplementedError(
-            f"Derived expression ({self.__class__}) failed to "
-            "implement nargs()")
+            f"Derived expression ({self.__class__}) failed to implement nargs()"
+        )
 
     def arg(self, i):
         """Return the i-th child node.
@@ -75,8 +79,9 @@ class ExpressionBase(PyomoObject):
         if i < 0:
             i += self.nargs()
             if i < 0:
-                raise KeyError("Invalid index for expression argument: %d" %
-                               i - self.nargs())
+                raise KeyError(
+                    "Invalid index for expression argument: %d" % i - self.nargs()
+                )
         elif i >= self.nargs():
             raise KeyError("Invalid index for expression argument: %d" % i)
         return self._args_[i]
@@ -96,8 +101,8 @@ class ExpressionBase(PyomoObject):
 
         """
         raise NotImplementedError(
-            f"Derived expression ({self.__class__}) failed to "
-            "implement args()")
+            f"Derived expression ({self.__class__}) failed to implement args()"
+        )
 
     def __call__(self, exception=True):
         """Evaluate the value of the expression tree.
@@ -134,8 +139,7 @@ class ExpressionBase(PyomoObject):
         """
         return expression_to_string(self)
 
-    def to_string(self, verbose=None, labeler=None, smap=None,
-                  compute_values=False):
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """Return a string representation of the expression tree.
 
         Parameters
@@ -146,15 +150,15 @@ class ExpressionBase(PyomoObject):
             representation is an algebraic (infix notation) equation.
             Defaults to :const:`False`.
 
-        labeler: 
+        labeler:
             An object that generates string labels for variables in the
             expression tree.  Defaults to :const:`None`.
-        
+
         smap:
             If specified, this
             :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>`
             is used to cache labels for variables.
-        
+
         compute_values (bool):
             If :const:`True`, then parameters and fixed variables are
             evaluated before the expression string is generated.
@@ -164,8 +168,13 @@ class ExpressionBase(PyomoObject):
             A string representation for the expression tree.
 
         """
-        return expression_to_string(self, verbose=verbose, labeler=labeler,
-                                    smap=smap, compute_values=compute_values)
+        return expression_to_string(
+            self,
+            verbose=verbose,
+            labeler=labeler,
+            smap=smap,
+            compute_values=compute_values,
+        )
 
     def _to_string(self, values, verbose, smap):
         """
@@ -190,8 +199,8 @@ class ExpressionBase(PyomoObject):
             A string representation for this node.
         """
         raise NotImplementedError(
-            f"Derived expression ({self.__class__}) failed to "
-            "implement _to_string()")
+            f"Derived expression ({self.__class__}) failed to implement _to_string()"
+        )
 
     def getname(self, *args, **kwds):
         """Return the text name of a function associated with this expression
@@ -208,8 +217,8 @@ class ExpressionBase(PyomoObject):
 
         """
         raise NotImplementedError(
-            f"Derived expression ({self.__class__}) failed to "
-            "implement getname()")
+            f"Derived expression ({self.__class__}) failed to implement getname()"
+        )
 
     def clone(self, substitute=None):
         """
@@ -343,8 +352,7 @@ class ExpressionBase(PyomoObject):
         Returns:
             A boolean.
         """
-        return expression_system is None \
-            or expression_system == self.EXPRESSION_SYSTEM
+        return expression_system is None or expression_system == self.EXPRESSION_SYSTEM
 
     def size(self):
         """
@@ -356,7 +364,7 @@ class ExpressionBase(PyomoObject):
         """
         return sizeof_expression(self)
 
-    def _apply_operation(self, result):     #pragma: no cover
+    def _apply_operation(self, result):  # pragma: no cover
         """
         Compute the values of this node given the values of its children.
 
@@ -386,7 +394,8 @@ class ExpressionBase(PyomoObject):
         """
         raise NotImplementedError(
             f"Derived expression ({self.__class__}) failed to "
-            "implement _apply_operation()")
+            "implement _apply_operation()"
+        )
 
 
 class NPV_Mixin(object):
@@ -411,7 +420,8 @@ class NPV_Mixin(object):
             return super().create_node_with_local_data(args, None)
         else:
             return super().create_node_with_local_data(
-                args, self.potentially_variable_base_class())
+                args, self.potentially_variable_base_class()
+            )
 
     def potentially_variable_base_class(self):
         cls = list(self.__class__.__bases__)
@@ -421,7 +431,7 @@ class NPV_Mixin(object):
 
 
 class ExpressionArgs_Mixin(object):
-    __slots__ =  ('_args_',)
+    __slots__ = ('_args_',)
 
     def __init__(self, args):
         self._args_ = args

@@ -17,7 +17,8 @@ numpy, numpy_available = attempt_import(
     'numpy',
     'Pynumero requires the optional Pyomo dependency "numpy"',
     minimum_version='1.13.0',
-    defer_check=False)
+    defer_check=False,
+)
 
 if not numpy_available:
     numpy.log_import_warning('pyomo.contrib.pynumero')

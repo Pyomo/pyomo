@@ -12,7 +12,8 @@
 from pyomo.common.collections import ComponentSet
 from pyomo.common.pyomo_typing import overload
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
-    BeforeExpression, AtExpression
+    BeforeExpression,
+    AtExpression,
 )
 
 from pyomo.core import Integers, value
@@ -20,10 +21,10 @@ from pyomo.core.base import Any, ScalarVar, ScalarBooleanVar
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.indexed_component import (
-    IndexedComponent, UnindexedComponent_set)
+from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.initializer import BoundInitializer, Initializer
 from pyomo.core.expr.current import GetItemExpression
+
 
 class IntervalVarTimePoint(ScalarVar):
     """This class defines the abstract interface for a single variable
@@ -47,6 +48,7 @@ class IntervalVarTimePoint(ScalarVar):
 class IntervalVarStartTime(IntervalVarTimePoint):
     """This class defines a single variable denoting a start time point
     of an IntervalVar"""
+
     def __init__(self):
         super().__init__(domain=Integers, ctype=IntervalVarStartTime)
 
@@ -54,6 +56,7 @@ class IntervalVarStartTime(IntervalVarTimePoint):
 class IntervalVarEndTime(IntervalVarTimePoint):
     """This class defines a single variable denoting an end time point
     of an IntervalVar"""
+
     def __init__(self):
         super().__init__(domain=Integers, ctype=IntervalVarEndTime)
 
@@ -78,15 +81,15 @@ class IntervalVarPresence(ScalarBooleanVar):
     __slots__ = ()
 
     def __init__(self):
-        super().__init__(ctype = IntervalVarPresence)
+        super().__init__(ctype=IntervalVarPresence)
 
     def get_associated_interval_var(self):
         return self.parent_block()
 
 
 class IntervalVarData(_BlockData):
-    """This class defines the abstract interface for a single interval variable.
-    """
+    """This class defines the abstract interface for a single interval variable."""
+
     # We will put our four variables on this, and everything else is off limits.
     _Block_reserved_words = Any
 
@@ -104,14 +107,16 @@ class IntervalVarData(_BlockData):
         # We only store this information in one place, but it's kind of annoying
         # to have to check if the BooleanVar is fixed, so this way you can ask
         # the IntervalVar directly.
-        return (not self.is_present.fixed or (self.is_present.fixed and not
-                                              value(self.is_present)))
+        return not self.is_present.fixed or (
+            self.is_present.fixed and not value(self.is_present)
+        )
 
     @optional.setter
     def optional(self, val):
         if type(val) is not bool:
             raise ValueError(
-                "Cannot set 'optional' to %s: Must be True or False." % val)
+                "Cannot set 'optional' to %s: Must be True or False." % val
+            )
         if val:
             self.is_present.unfix()
         else:
@@ -141,14 +146,23 @@ class IntervalVar(Block):
     def __new__(cls, *args, **kwds):
         if cls != IntervalVar:
             return super(IntervalVar, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             return ScalarIntervalVar.__new__(ScalarIntervalVar)
         else:
             return IndexedIntervalVar.__new__(IndexedIntervalVar)
 
     @overload
-    def __init__(self, *indices, start=None, end=None, length=None,
-                 optional=False, name=None, doc=None): ...
+    def __init__(
+        self,
+        *indices,
+        start=None,
+        end=None,
+        length=None,
+        optional=False,
+        name=None,
+        doc=None
+    ):
+        ...
 
     def __init__(self, *args, **kwargs):
         _start_arg = kwargs.pop('start', None)
@@ -198,9 +212,9 @@ class IndexedIntervalVar(IntervalVar):
     # We allow indexing IntervalVars by expressions (including Vars).
     def __getitem__(self, args):
         tmp = args if args.__class__ is tuple else (args,)
-        if any(hasattr(arg, 'is_potentially_variable')
-               and arg.is_potentially_variable()
-               for arg in tmp
+        if any(
+            hasattr(arg, 'is_potentially_variable') and arg.is_potentially_variable()
+            for arg in tmp
         ):
             return GetItemExpression((self,) + tmp)
         return super().__getitem__(args)

@@ -22,7 +22,9 @@ native_logical_values = {True, False, 1, 0}
 
 
 def _generate_logical_proposition(etype, _self, _other):
-    raise RuntimeError("Incomplete import of Pyomo expression system")  #pragma: no cover
+    raise RuntimeError(
+        "Incomplete import of Pyomo expression system"
+    )  # pragma: no cover
 
 
 def as_boolean(obj):
@@ -33,7 +35,7 @@ def as_boolean(obj):
     Args:
         obj: The logical value that may be wrapped.
 
-    Raises: TypeError if the object is in native_types and not in 
+    Raises: TypeError if the object is in native_types and not in
         native_logical_types
 
     Returns: A true or false BooleanConstant or the original object
@@ -52,17 +54,18 @@ def as_boolean(obj):
     # Generate errors
     #
     if obj.__class__ in native_types:
-        raise TypeError(
-            f"Cannot treat the value '{obj}' as a logical constant")
+        raise TypeError(f"Cannot treat the value '{obj}' as a logical constant")
     raise TypeError(
         "Cannot treat the value '%s' as a logical constant because it has "
-        "unknown type '%s'" % (str(obj), type(obj).__name__))
+        "unknown type '%s'" % (str(obj), type(obj).__name__)
+    )
 
 
 class BooleanValue(PyomoObject):
     """
     This is the base class for Boolean values used in Pyomo.
     """
+
     __slots__ = ()
     __hash__ = None
 
@@ -93,9 +96,11 @@ class BooleanValue(PyomoObject):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
-    @deprecated("is_relational() is deprecated in favor of "
-                "is_expression_type(ExpressionType.RELATIONAL)",
-                version='6.4.3')
+    @deprecated(
+        "is_relational() is deprecated in favor of "
+        "is_expression_type(ExpressionType.RELATIONAL)",
+        version='6.4.3',
+    )
     def is_relational(self):
         """
         Return True if this Logical value represents a relational expression.
@@ -149,17 +154,16 @@ class BooleanValue(PyomoObject):
         """
         return _generate_logical_proposition(_impl, self, other)
 
-    def to_string(self, verbose=None, labeler=None, smap=None,
-                  compute_values=False):
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
         Return a string representation of the expression tree.
 
         Args:
-            verbose (bool): If :const:`True`, then the the string 
+            verbose (bool): If :const:`True`, then the the string
                 representation consists of nested functions.  Otherwise,
                 the string representation is an algebraic equation.
                 Defaults to :const:`False`.
-            labeler: An object that generates string labels for 
+            labeler: An object that generates string labels for
                 variables in the expression tree.  Defaults to :const:`None`.
 
         Returns:
@@ -169,13 +173,14 @@ class BooleanValue(PyomoObject):
             try:
                 return str(self())
             except:
-                pass # return str(self)
+                pass  # return str(self)
         if smap:
             return smap.getSymbol(self, labeler)
         elif labeler is not None:
             return labeler(self)
         else:
             return str(self)
+
 
 class BooleanConstant(BooleanValue):
     """An object that contains a constant Logical value.
@@ -188,7 +193,9 @@ class BooleanConstant(BooleanValue):
 
     def __init__(self, value):
         if value not in native_logical_values:
-            raise TypeError('Not a valid BooleanValue. Unable to create a logical constant')
+            raise TypeError(
+                'Not a valid BooleanValue. Unable to create a logical constant'
+            )
         self.value = value
 
     def is_constant(self):
@@ -214,6 +221,6 @@ class BooleanConstant(BooleanValue):
         return self.value
 
     def pprint(self, ostream=None, verbose=False):
-        if ostream is None:         #pragma:nocover
+        if ostream is None:  # pragma:nocover
             ostream = sys.stdout
         ostream.write(str(self))

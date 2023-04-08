@@ -16,9 +16,12 @@ from pyomo.contrib.piecewise.tests import models
 import pyomo.contrib.piecewise.tests.common_tests as ct
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import (
-    assertExpressionsEqual, assertExpressionsStructurallyEqual)
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual,
+)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import Constraint, SolverFactory, Var
+
 
 class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
     def check_log_disjunct(self, d, pts, f, substitute_var, x):
@@ -33,22 +36,24 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
         self.assertIs(d.simplex_halfspaces.body, x)
 
         self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(self, d.set_substitute.expr,
-                               substitute_var == f(x), places=7)
+        assertExpressionsEqual(
+            self, d.set_substitute.expr, substitute_var == f(x), places=7
+        )
 
-    def check_paraboloid_disjunct(self, d, constraint_coefs, f,
-                                  substitute_var, x1, x2):
+    def check_paraboloid_disjunct(self, d, constraint_coefs, f, substitute_var, x1, x2):
         self.assertEqual(len(d.component_map(Constraint)), 2)
         # just indicator_var
         self.assertEqual(len(d.component_map(Var)), 1)
         for i, cons in d.simplex_halfspaces.items():
             coefs = constraint_coefs[i]
-            assertExpressionsEqual(self, cons.expr, coefs[0]*x1 + coefs[1]*x2 +
-                                   coefs[2] <= 0, places=6)
-        
+            assertExpressionsEqual(
+                self, cons.expr, coefs[0] * x1 + coefs[1] * x2 + coefs[2] <= 0, places=6
+            )
+
         self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(self, d.set_substitute.expr,
-                               substitute_var == f(x1, x2), places=7)
+        assertExpressionsEqual(
+            self, d.set_substitute.expr, substitute_var == f(x1, x2), places=7
+        )
 
     def check_pw_log(self, m):
         ##
@@ -74,8 +79,7 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
         self.assertIsInstance(log_block.pick_a_piece, Disjunction)
         self.assertEqual(len(log_block.pick_a_piece.disjuncts), 3)
         for i in range(2):
-            self.assertIs(log_block.pick_a_piece.disjuncts[i],
-                          log_block.disjuncts[i])
+            self.assertIs(log_block.pick_a_piece.disjuncts[i], log_block.disjuncts[i])
 
         # And check the substitute Var is in the objective now.
         self.assertIs(m.obj.expr.expr, log_block.substitute_var)
@@ -93,67 +97,84 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
         disjuncts_dict = {
             # the normal vectors of the faces are normalized when we get
             # them from scipy:
-            paraboloid_block.disjuncts[0]: ([[sqrt(2)/2, -sqrt(2)/2, sqrt(2)/2],
-                                             [-1.0, 0.0, 0.0],
-                                             [0.0, 1.0, -4.0]], m.g1),
-            paraboloid_block.disjuncts[1]: ([[-sqrt(2)/2, sqrt(2)/2,
-                                              -sqrt(2)/2],
-                                             [0.0, -1.0, 1.0],
-                                             [1.0, 0.0, -3.0],
-                                             ], m.g1),
-            paraboloid_block.disjuncts[2]: ([[-sqrt(2)/2, -sqrt(2)/2,
-                                              7*sqrt(2)/2],
-                                             [0.0, 1.0, -7.0],
-                                             [1.0, 0.0, -3.0],
-                                         ], m.g2),
-            paraboloid_block.disjuncts[3]: ([[sqrt(2)/2, sqrt(2)/2,
-                                              -7*sqrt(2)/2],
-                                             [-1.0, 0.0, 0.0],
-                                             [0.0, -1.0, 4.0]], m.g2),
+            paraboloid_block.disjuncts[0]: (
+                [
+                    [sqrt(2) / 2, -sqrt(2) / 2, sqrt(2) / 2],
+                    [-1.0, 0.0, 0.0],
+                    [0.0, 1.0, -4.0],
+                ],
+                m.g1,
+            ),
+            paraboloid_block.disjuncts[1]: (
+                [
+                    [-sqrt(2) / 2, sqrt(2) / 2, -sqrt(2) / 2],
+                    [0.0, -1.0, 1.0],
+                    [1.0, 0.0, -3.0],
+                ],
+                m.g1,
+            ),
+            paraboloid_block.disjuncts[2]: (
+                [
+                    [-sqrt(2) / 2, -sqrt(2) / 2, 7 * sqrt(2) / 2],
+                    [0.0, 1.0, -7.0],
+                    [1.0, 0.0, -3.0],
+                ],
+                m.g2,
+            ),
+            paraboloid_block.disjuncts[3]: (
+                [
+                    [sqrt(2) / 2, sqrt(2) / 2, -7 * sqrt(2) / 2],
+                    [-1.0, 0.0, 0.0],
+                    [0.0, -1.0, 4.0],
+                ],
+                m.g2,
+            ),
         }
         for d, (constraint_coefs, f) in disjuncts_dict.items():
-            self.check_paraboloid_disjunct(d, constraint_coefs, f,
-                                           paraboloid_block.substitute_var,
-                                           m.x1, m.x2)
+            self.check_paraboloid_disjunct(
+                d, constraint_coefs, f, paraboloid_block.substitute_var, m.x1, m.x2
+            )
 
         # Check the Disjunction
         self.assertIsInstance(paraboloid_block.pick_a_piece, Disjunction)
         self.assertEqual(len(paraboloid_block.pick_a_piece.disjuncts), 4)
         for i in range(3):
-            self.assertIs(paraboloid_block.pick_a_piece.disjuncts[i],
-                          paraboloid_block.disjuncts[i])
+            self.assertIs(
+                paraboloid_block.pick_a_piece.disjuncts[i],
+                paraboloid_block.disjuncts[i],
+            )
 
         # And check the substitute Var is in the objective now.
-        self.assertIs(m.indexed_c[0].body.args[0].expr,
-                      paraboloid_block.substitute_var)
+        self.assertIs(m.indexed_c[0].body.args[0].expr, paraboloid_block.substitute_var)
 
     @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_transformation_do_not_descend(self):
-        ct.check_transformation_do_not_descend(
-            self,
-            'contrib.piecewise.outer_repn_gdp')
+        ct.check_transformation_do_not_descend(self, 'contrib.piecewise.outer_repn_gdp')
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
         ct.check_transformation_PiecewiseLinearFunction_targets(
-            self, 'contrib.piecewise.outer_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp'
+        )
 
     @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_descend_into_expressions(self):
-        ct.check_descend_into_expressions(self,
-                                          'contrib.piecewise.outer_repn_gdp')
+        ct.check_descend_into_expressions(self, 'contrib.piecewise.outer_repn_gdp')
 
     @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_descend_into_expressions_constraint_target(self):
         ct.check_descend_into_expressions_constraint_target(
-            self, 'contrib.piecewise.outer_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp'
+        )
 
     def test_descend_into_expressions_objective_target(self):
         ct.check_descend_into_expressions_objective_target(
-            self, 'contrib.piecewise.outer_repn_gdp')
+            self, 'contrib.piecewise.outer_repn_gdp'
+        )
 
-    @unittest.skipUnless(SolverFactory('gurobi').available() and 
-                         scipy_available,
-                         'Gurobi and/or scipy is not available')
+    @unittest.skipUnless(
+        SolverFactory('gurobi').available() and scipy_available,
+        'Gurobi and/or scipy is not available',
+    )
     def test_solve_multiple_choice_model(self):
         m = models.make_log_x_model()
         TransformationFactory('contrib.piecewise.multiple_choice').apply_to(m)

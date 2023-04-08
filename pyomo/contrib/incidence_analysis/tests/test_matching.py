@@ -10,11 +10,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.common.dependencies import (
-        scipy,
-        scipy_available,
-        networkx_available,
-        )
+from pyomo.common.dependencies import scipy, scipy_available, networkx_available
+
 if scipy_available:
     sps = scipy.sparse
 
@@ -49,14 +46,14 @@ class TestMatching(unittest.TestCase):
 
     def test_low_rank_diagonal(self):
         N = 5
-        omit = N//2
+        omit = N // 2
         row = [i for i in range(N) if i != omit]
         col = [j for j in range(N) if j != omit]
-        data = [1 for _ in range(N-1)]
+        data = [1 for _ in range(N - 1)]
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
         matching = maximum_matching(matrix)
 
-        self.assertEqual(len(matching), N-1)
+        self.assertEqual(len(matching), N - 1)
         for i in range(N):
             if i != omit:
                 self.assertIn(i, matching)
@@ -67,15 +64,15 @@ class TestMatching(unittest.TestCase):
         row = []
         col = []
         data = []
-        for i in range(N-1):
+        for i in range(N - 1):
             # Bottom row
-            row.append(N-1)
+            row.append(N - 1)
             col.append(i)
             data.append(1)
 
             # Right column
             row.append(i)
-            col.append(N-1)
+            col.append(N - 1)
             data.append(1)
 
             # Diagonal
@@ -106,7 +103,7 @@ class TestMatching(unittest.TestCase):
         data = []
         for i in range(N):
             # Bottom row
-            row.append(N-1)
+            row.append(N - 1)
             col.append(i)
             data.append(1)
 
@@ -117,7 +114,7 @@ class TestMatching(unittest.TestCase):
                 data.append(1)
             else:
                 # One-off diagonal
-                row.append(i-1)
+                row.append(i - 1)
                 col.append(i)
                 data.append(1)
 
@@ -141,13 +138,13 @@ class TestMatching(unittest.TestCase):
         the imperfect matching.
         """
         N = 5
-        omit = N//2
+        omit = N // 2
         row = []
         col = []
         data = []
         for i in range(N):
             # Bottom row
-            row.append(N-1)
+            row.append(N - 1)
             col.append(i)
             data.append(1)
 
@@ -159,7 +156,7 @@ class TestMatching(unittest.TestCase):
             else:
                 # One-off diagonal
                 if i != omit:
-                    row.append(i-1)
+                    row.append(i - 1)
                     col.append(i)
                     data.append(1)
 
@@ -167,11 +164,11 @@ class TestMatching(unittest.TestCase):
         matching = maximum_matching(matrix)
         values = set(matching.values())
 
-        self.assertEqual(len(matching), N-1)
+        self.assertEqual(len(matching), N - 1)
         self.assertIn(0, matching)
-        self.assertIn(N-1, matching)
+        self.assertIn(N - 1, matching)
         self.assertIn(0, values)
-        self.assertIn(N-1, values)
+        self.assertIn(N - 1, values)
 
     def test_nondecomposable_hessenberg(self):
         """
@@ -187,7 +184,7 @@ class TestMatching(unittest.TestCase):
         data = []
         for i in range(N):
             # Bottom row
-            row.append(N-1)
+            row.append(N - 1)
             col.append(i)
             data.append(1)
 
@@ -200,7 +197,7 @@ class TestMatching(unittest.TestCase):
 
             if i != 0:
                 # One-off diagonal
-                row.append(i-1)
+                row.append(i - 1)
                 col.append(i)
                 data.append(1)
 
@@ -227,23 +224,23 @@ class TestMatching(unittest.TestCase):
         row = []
         col = []
         data = []
-        for i in range(N-1):
+        for i in range(N - 1):
             # Below diagonal
-            row.append(i+1)
+            row.append(i + 1)
             col.append(i)
             data.append(1)
 
             # Above diagonal
             row.append(i)
-            col.append(i+1)
+            col.append(i + 1)
             data.append(1)
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
         matching = maximum_matching(matrix)
         values = set(matching.values())
 
-        self.assertEqual(len(matching), N-1)
-        self.assertEqual(len(values), N-1)
+        self.assertEqual(len(matching), N - 1)
+        self.assertEqual(len(values), N - 1)
 
 
 if __name__ == "__main__":

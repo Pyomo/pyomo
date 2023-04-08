@@ -885,7 +885,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             )
         self.assertRegex(
             log.getvalue(),
-            r".*Constraint 'b.simpledisj1.c\[1\]' has not " r"been transformed.",
+            r".*Constraint 'b.simpledisj1.c\[1\]' has not been transformed.",
         )
 
         # this fixes a[2] to 0, so we should get the disggregated var

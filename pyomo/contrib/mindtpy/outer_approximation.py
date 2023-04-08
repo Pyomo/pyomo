@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 #  ___________________________________________________________________________
@@ -21,15 +20,15 @@ from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
 
 
 @SolverFactory.register(
-    'mindtpy.oa',
-    doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
+    'mindtpy.oa', doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo'
+)
 class MindtPy_OA_Solver(_MindtPyAlgorithm):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
-    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver 
-    applies a variety of decomposition-based approaches to solve Mixed-Integer 
-    Nonlinear Programming (MINLP) problems. 
+    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver
+    applies a variety of decomposition-based approaches to solve Mixed-Integer
+    Nonlinear Programming (MINLP) problems.
     These approaches include:
 
     - Outer approximation (OA)
@@ -42,21 +41,25 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
     This solver implementation has been developed by David Bernal <https://github.com/bernalde>
     and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann
-    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at 
+    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at
     Carnegie Mellon University.
     """
-    CONFIG = _get_MindtPy_OA_config()
 
+    CONFIG = _get_MindtPy_OA_config()
 
     def check_config(self):
         config = self.config
         if config.add_regularization is not None:
-            if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
+            if config.add_regularization in {
+                'grad_lag',
+                'hess_lag',
+                'hess_only_lag',
+                'sqp_lag',
+            }:
                 config.calculate_dual_at_solution = True
             if config.regularization_mip_threads == 0 and config.threads > 0:
                 config.regularization_mip_threads = config.threads
-                config.logger.info(
-                    'Set regularization_mip_threads equal to threads')
+                config.logger.info('Set regularization_mip_threads equal to threads')
             if config.single_tree:
                 config.add_cuts_at_incumbent = True
                 # if no method is activated by users, we will use use_bb_tree_incumbent by default
@@ -69,12 +72,15 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             config.iteration_limit = 1
             config.add_slack = False
             if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
-                raise ValueError("Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method."
-                                "Please refer to https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html#lp-nlp-based-branch-and-bound.")
+                raise ValueError(
+                    "Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method."
+                    "Please refer to https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html#lp-nlp-based-branch-and-bound."
+                )
             if config.threads > 1:
                 config.threads = 1
                 config.logger.info(
-                    'The threads parameter is corrected to 1 since lazy constraint callback conflicts with multi-threads mode.')
+                    'The threads parameter is corrected to 1 since lazy constraint callback conflicts with multi-threads mode.'
+                )
         if config.heuristic_nonconvex:
             config.equality_relaxation = True
             config.add_slack = True
@@ -83,37 +89,45 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         if config.init_strategy == 'FP' or config.add_regularization is not None:
             config.move_objective = True
         if config.add_regularization is not None:
-            if config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
+            if config.add_regularization in {
+                'level_L1',
+                'level_L_infinity',
+                'grad_lag',
+            }:
                 self.regularization_mip_type = 'MILP'
-            elif config.add_regularization in {'level_L2', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
+            elif config.add_regularization in {
+                'level_L2',
+                'hess_lag',
+                'hess_only_lag',
+                'sqp_lag',
+            }:
                 self.regularization_mip_type = 'MIQP'
         _MindtPyAlgorithm.check_config(self)
 
-
     def initialize_mip_problem(self):
-        ''' Deactivate the nonlinear constraints to create the MIP problem.
-        '''
+        '''Deactivate the nonlinear constraints to create the MIP problem.'''
         super().initialize_mip_problem()
         self.jacobians = calc_jacobians(self.mip, self.config)  # preload jacobians
-        self.mip.MindtPy_utils.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
+        self.mip.MindtPy_utils.cuts.oa_cuts = ConstraintList(
+            doc='Outer approximation cuts'
+        )
 
-    def add_cuts(self,
-                 dual_values,
-                 linearize_active=True,
-                 linearize_violated=True,
-                 cb_opt=None):
-        add_oa_cuts(self.mip, 
-                    dual_values,
-                    self.jacobians,
-                    self.objective_sense,
-                    self.mip_constraint_polynomial_degree,
-                    self.mip_iter,
-                    self.config,
-                    self.timing,
-                    cb_opt,
-                    linearize_active,
-                    linearize_violated)
-
+    def add_cuts(
+        self, dual_values, linearize_active=True, linearize_violated=True, cb_opt=None
+    ):
+        add_oa_cuts(
+            self.mip,
+            dual_values,
+            self.jacobians,
+            self.objective_sense,
+            self.mip_constraint_polynomial_degree,
+            self.mip_iter,
+            self.config,
+            self.timing,
+            cb_opt,
+            linearize_active,
+            linearize_violated,
+        )
 
     def deactivate_no_good_cuts_when_fixing_bound(self, no_good_cuts):
         # Only deactive the last OA cuts may not be correct.
@@ -122,7 +136,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             no_good_cuts[len(no_good_cuts)].deactivate()
         if self.config.use_tabu_list:
             self.integer_list = self.integer_list[:-1]
-
 
     def objective_reformulation(self):
         # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated.
@@ -136,16 +149,22 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         # TODO: The logic here is too complicated, can we simplify it?
         MindtPy = self.working_model.MindtPy_utils
         config = self.config
-        self.process_objective(self.config,
-                               move_objective=config.move_objective,
-                               use_mcpp=config.use_mcpp,
-                               update_var_con_list=config.add_regularization is None,
-                               partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
-                               obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
-                               constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree)
+        self.process_objective(
+            self.config,
+            move_objective=config.move_objective,
+            use_mcpp=config.use_mcpp,
+            update_var_con_list=config.add_regularization is None,
+            partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
+            obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
+            constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree,
+        )
         # The epigraph constraint is very "flat" for branching rules.
         # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
-        if MindtPy.objective_list[0].expr.polynomial_degree() in self.mip_objective_polynomial_degree and config.add_regularization is not None:
+        if (
+            MindtPy.objective_list[0].expr.polynomial_degree()
+            in self.mip_objective_polynomial_degree
+            and config.add_regularization is not None
+        ):
             MindtPy.objective_list[0].activate()
             MindtPy.objective_constr.deactivate()
             MindtPy.objective.deactivate()

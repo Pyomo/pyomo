@@ -30,6 +30,7 @@ def is_symmetric_dense(mat):
 
 def is_symmetric_sparse(mat):
     from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
+
     # Note: this check is expensive
     flag = False
     if isinstance(mat, np.ndarray):
@@ -51,5 +52,3 @@ def is_symmetric_sparse(mat):
     else:
         raise RuntimeError("Format not recognized {}".format(type(mat)))
     return flag
-
-

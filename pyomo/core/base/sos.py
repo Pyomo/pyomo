@@ -22,7 +22,8 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
-    ActiveIndexedComponent, UnindexedComponent_set
+    ActiveIndexedComponent,
+    UnindexedComponent_set,
 )
 from pyomo.core.base.set_types import PositiveIntegers
 
@@ -49,7 +50,7 @@ class _SOSConstraintData(ActiveComponentData):
     __slots__ = ('_variables', '_weights', '_level')
 
     def __init__(self, owner):
-        """ Constructor """
+        """Constructor"""
         self._level = None
         self._variables = []
         self._weights = []
@@ -71,8 +72,7 @@ class _SOSConstraintData(ActiveComponentData):
     @level.setter
     def level(self, level):
         if level not in PositiveIntegers:
-            raise ValueError("SOS Constraint level must "
-                             "be a positive integer")
+            raise ValueError("SOS Constraint level must be a positive integer")
         self._level = level
 
     @property
@@ -97,8 +97,9 @@ class _SOSConstraintData(ActiveComponentData):
         for v, w in zip(variables, weights):
             self._variables.append(v)
             if w < 0.0:
-                raise ValueError("Cannot set negative weight %f "
-                                 "for variable %s" % (w, v.name))
+                raise ValueError(
+                    "Cannot set negative weight %f for variable %s" % (w, v.name)
+                )
             self._weights.append(w)
 
 
@@ -149,12 +150,12 @@ class SOSConstraint(ActiveIndexedComponent):
     in model.X.
     """
 
-    Skip            = (1000,)
+    Skip = (1000,)
 
     def __new__(cls, *args, **kwds):
         if cls != SOSConstraint:
             return super(SOSConstraint, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             return ScalarSOSConstraint.__new__(ScalarSOSConstraint)
         else:
             return IndexedSOSConstraint.__new__(IndexedSOSConstraint)
@@ -170,17 +171,25 @@ class SOSConstraint(ActiveIndexedComponent):
         initialize = kwargs.pop('rule', initialize)
         if not initialize is None:
             if 'var' in kwargs:
-                raise TypeError("Cannot specify the 'var' argument with the 'rule' or 'initialize' argument")
+                raise TypeError(
+                    "Cannot specify the 'var' argument with the 'rule' or 'initialize' argument"
+                )
             if 'index' in kwargs:
-                raise TypeError("Cannot specify the 'index' argument with the 'rule' or 'initialize' argument")
+                raise TypeError(
+                    "Cannot specify the 'index' argument with the 'rule' or 'initialize' argument"
+                )
             if 'weights' in kwargs:
-                raise TypeError("Cannot specify the 'weights' argument with the 'rule' or 'initialize' argument")
+                raise TypeError(
+                    "Cannot specify the 'weights' argument with the 'rule' or 'initialize' argument"
+                )
         #
         # The 'var' argument
         #
         sosVars = kwargs.pop('var', None)
         if sosVars is None and initialize is None:
-            raise TypeError("SOSConstraint() requires either the 'var' or 'initialize' arguments")
+            raise TypeError(
+                "SOSConstraint() requires either the 'var' or 'initialize' arguments"
+            )
         #
         # The 'weights' argument
         #
@@ -193,14 +202,18 @@ class SOSConstraint(ActiveIndexedComponent):
         # The 'sos' or 'level' argument
         #
         if 'sos' in kwargs and 'level' in kwargs:
-            raise TypeError("Specify only one of 'sos' and 'level' -- " \
-                  "they are equivalent keyword arguments")
+            raise TypeError(
+                "Specify only one of 'sos' and 'level' -- "
+                "they are equivalent keyword arguments"
+            )
         sosLevel = kwargs.pop('sos', None)
         sosLevel = kwargs.pop('level', sosLevel)
         if sosLevel is None:
-            raise TypeError("SOSConstraint() requires that either the " \
-                  "'sos' or 'level' keyword arguments be set to indicate " \
-                  "the type of SOS.")
+            raise TypeError(
+                "SOSConstraint() requires that either the "
+                "'sos' or 'level' keyword arguments be set to indicate "
+                "the type of SOS."
+            )
         #
         # Set attributes
         #
@@ -219,24 +232,30 @@ class SOSConstraint(ActiveIndexedComponent):
         """
         Construct this component
         """
-        assert data is None # because I don't know why it's an argument
+        assert data is None  # because I don't know why it's an argument
         generate_debug_messages = is_debug_set(logger)
-        if self._constructed is True:   #pragma:nocover
+        if self._constructed is True:  # pragma:nocover
             return
 
-        if generate_debug_messages:     #pragma:nocover
-            logger.debug("Constructing SOSConstraint %s",self.name)
+        if generate_debug_messages:  # pragma:nocover
+            logger.debug("Constructing SOSConstraint %s", self.name)
         timer = ConstructionTimer(self)
         self._constructed = True
 
         if self._rule is None:
             if self._sosSet is None and self.is_indexed():
-                if generate_debug_messages:     #pragma:nocover
-                    logger.debug("  Cannot construct "+self.name+".  No rule is defined and no SOS sets are defined.")
+                if generate_debug_messages:  # pragma:nocover
+                    logger.debug(
+                        "  Cannot construct "
+                        + self.name
+                        + ".  No rule is defined and no SOS sets are defined."
+                    )
             else:
                 if not self.is_indexed():
                     if self._sosSet is None:
-                        if getattr(self._sosVars.index_set(), 'isordered', lambda *x: False)():
+                        if getattr(
+                            self._sosVars.index_set(), 'isordered', lambda *x: False
+                        )():
                             _sosSet = {None: list(self._sosVars.index_set())}
                         else:
                             _sosSet = {None: set(self._sosVars.index_set())}
@@ -246,20 +265,28 @@ class SOSConstraint(ActiveIndexedComponent):
                     _sosSet = self._sosSet
 
                 for index, sosSet in _sosSet.items():
-                    if generate_debug_messages:     #pragma:nocover
-                        logger.debug("  Constructing "+self.name+" index "+str(index))
+                    if generate_debug_messages:  # pragma:nocover
+                        logger.debug(
+                            "  Constructing " + self.name + " index " + str(index)
+                        )
 
                     if self._sosLevel == 2:
                         #
                         # Check that the sets are ordered.
                         #
-                        ordered=False
-                        if type(sosSet) is list or sosSet is UnindexedComponent_set or len(sosSet) == 1:
-                            ordered=True
+                        ordered = False
+                        if (
+                            type(sosSet) is list
+                            or sosSet is UnindexedComponent_set
+                            or len(sosSet) == 1
+                        ):
+                            ordered = True
                         if hasattr(sosSet, 'isordered') and sosSet.isordered():
-                            ordered=True
+                            ordered = True
                         if not ordered:
-                            raise ValueError("Cannot define a SOS over an unordered index.")
+                            raise ValueError(
+                                "Cannot define a SOS over an unordered index."
+                            )
 
                     variables = [self._sosVars[idx] for idx in sosSet]
                     if self._sosWeights is not None:
@@ -279,10 +306,14 @@ class SOSConstraint(ActiveIndexedComponent):
                     logger.error(
                         "Rule failed when generating expression for "
                         "sos constraint %s with index %s:\n%s: %s"
-                        % ( self.name, str(index), type(err).__name__, err ) )
+                        % (self.name, str(index), type(err).__name__, err)
+                    )
                     raise
                 if tmp is None:
-                    raise ValueError("SOSConstraint rule returned None instead of SOSConstraint.Skip for index %s" % str(index))
+                    raise ValueError(
+                        "SOSConstraint rule returned None instead of SOSConstraint.Skip for index %s"
+                        % str(index)
+                    )
                 if type(tmp) is tuple:
                     if tmp is SOSConstraint.Skip:
                         continue
@@ -308,7 +339,7 @@ class SOSConstraint(ActiveIndexedComponent):
         soscondata.level = self._sosLevel
 
         if weights is None:
-            soscondata.set_items(variables, list(range(1, len(variables)+1)))
+            soscondata.set_items(variables, list(range(1, len(variables) + 1)))
         else:
             soscondata.set_items(variables, weights)
 
@@ -317,26 +348,25 @@ class SOSConstraint(ActiveIndexedComponent):
         """TODO"""
         if ostream is None:
             ostream = sys.stdout
-        ostream.write("   "+self.local_name+" : ")
+        ostream.write("   " + self.local_name + " : ")
         if not self.doc is None:
-            ostream.write(self.doc+'\n')
+            ostream.write(self.doc + '\n')
             ostream.write("  ")
-        ostream.write("\tSize="+str(len(self._data.keys()))+' ')
+        ostream.write("\tSize=" + str(len(self._data.keys())) + ' ')
         if self.is_indexed():
-            ostream.write("\tIndex= "+self._index_set.name+'\n')
+            ostream.write("\tIndex= " + self._index_set.name + '\n')
         else:
             ostream.write("\n")
         for val in self._data:
             if not val is None:
-                ostream.write("\t"+str(val)+'\n')
-            ostream.write("\t\tType="+str(self._data[val].level)+'\n')
+                ostream.write("\t" + str(val) + '\n')
+            ostream.write("\t\tType=" + str(self._data[val].level) + '\n')
             ostream.write("\t\tWeight : Variable\n")
             for var, weight in self._data[val].get_items():
-                ostream.write("\t\t"+str(weight)+' : '+var.name+'\n')
+                ostream.write("\t\t" + str(weight) + ' : ' + var.name + '\n')
 
 
 class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
-
     def __init__(self, *args, **kwd):
         _SOSConstraintData.__init__(self, self)
         SOSConstraint.__init__(self, *args, **kwd)
@@ -349,7 +379,5 @@ class SimpleSOSConstraint(metaclass=RenamedClass):
 
 
 class IndexedSOSConstraint(SOSConstraint):
-
     def __init__(self, *args, **kwds):
-        super(IndexedSOSConstraint,self).__init__(*args, **kwds)
-
+        super(IndexedSOSConstraint, self).__init__(*args, **kwds)

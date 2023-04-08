@@ -33,9 +33,9 @@ def make_simple_model():
     m = pyo.ConcreteModel()
     m.I = pyo.Set(initialize=[1, 2, 3])
     m.x = pyo.Var(m.I, initialize=1.0)
-    m.con1 = pyo.Constraint(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**2 == 1)
-    m.con2 = pyo.Constraint(expr=2*m.x[1] + 3*m.x[2] - 4*m.x[3] == 0)
-    m.con3 = pyo.Constraint(expr=m.x[1] == 2*pyo.exp(m.x[2]/m.x[3]))
+    m.con1 = pyo.Constraint(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 == 1)
+    m.con2 = pyo.Constraint(expr=2 * m.x[1] + 3 * m.x[2] - 4 * m.x[3] == 0)
+    m.con3 = pyo.Constraint(expr=m.x[1] == 2 * pyo.exp(m.x[2] / m.x[3]))
     m.obj = pyo.Objective(expr=0.0)
     nlp = PyomoNLP(m)
     return m, nlp
@@ -44,7 +44,7 @@ def make_simple_model():
 def make_scalar_model():
     m = pyo.ConcreteModel()
     m.x = pyo.Var(initialize=1.0, bounds=(0.0, None))
-    m.con = pyo.Constraint(expr=(m.x-2)**3 - 5*m.x == 0)
+    m.con = pyo.Constraint(expr=(m.x - 2) ** 3 - 5 * m.x == 0)
     m.obj = pyo.Objective(expr=0.0)
     nlp = PyomoNLP(m)
     return m, nlp
@@ -53,7 +53,7 @@ def make_scalar_model():
 def make_linear_scalar_model():
     m = pyo.ConcreteModel()
     m.x = pyo.Var(initialize=1.0, bounds=(0.0, None))
-    m.con = pyo.Constraint(expr=-12.5*m.x + 30.1 == 0)
+    m.con = pyo.Constraint(expr=-12.5 * m.x + 30.1 == 0)
     m.obj = pyo.Objective(expr=0.0)
     nlp = PyomoNLP(m)
     return m, nlp
@@ -61,7 +61,6 @@ def make_linear_scalar_model():
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestSquareSolverBase(unittest.TestCase):
-
     def test_not_implemented_solve(self):
         m, nlp = make_simple_model()
         solver = SquareNlpSolverBase(nlp)
@@ -89,46 +88,31 @@ class TestSquareSolverBase(unittest.TestCase):
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestFsolveNLP(unittest.TestCase):
-
     def test_solve_simple_nlp(self):
         m, nlp = make_simple_model()
-        solver = FsolveNlpSolver(nlp, options=dict(
-            xtol=1e-9,
-            maxfev=20,
-            tol=1e-8,
-        ))
+        solver = FsolveNlpSolver(nlp, options=dict(xtol=1e-9, maxfev=20, tol=1e-8))
         x, info, ier, msg = solver.solve()
         self.assertEqual(ier, 1)
 
         variables = [m.x[1], m.x[2], m.x[3]]
         predicted_xorder = [0.92846891, -0.22610731, 0.29465397]
         indices = nlp.get_primal_indices(variables)
-        nlp_to_x_indices = [None]*len(variables)
+        nlp_to_x_indices = [None] * len(variables)
         for i, j in enumerate(indices):
             nlp_to_x_indices[j] = i
         predicted_nlporder = [predicted_xorder[i] for i in nlp_to_x_indices]
-        self.assertStructuredAlmostEqual(
-            nlp.get_primals().tolist(),
-            predicted_nlporder,
-        )
+        self.assertStructuredAlmostEqual(nlp.get_primals().tolist(), predicted_nlporder)
 
     def test_solve_max_iter(self):
         m, nlp = make_simple_model()
-        solver = FsolveNlpSolver(nlp, options=dict(
-            xtol=1e-9,
-            maxfev=10,
-        ))
+        solver = FsolveNlpSolver(nlp, options=dict(xtol=1e-9, maxfev=10))
         x, info, ier, msg = solver.solve()
         self.assertNotEqual(ier, 1)
         self.assertIn("has reached maxfev", msg)
 
     def test_solve_too_tight_tol(self):
         m, nlp = make_simple_model()
-        solver = FsolveNlpSolver(nlp, options=dict(
-            xtol=1e-3,
-            maxfev=20,
-            tol=1e-8,
-        ))
+        solver = FsolveNlpSolver(nlp, options=dict(xtol=1e-3, maxfev=20, tol=1e-8))
         msg = "does not satisfy the function tolerance"
         with self.assertRaisesRegex(RuntimeError, msg):
             x, info, ier, msg = solver.solve()
@@ -136,29 +120,23 @@ class TestFsolveNLP(unittest.TestCase):
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestPyomoScipySolver(unittest.TestCase):
-
     def test_available_and_version(self):
         solver = PyomoScipySolver()
         self.assertTrue(solver.available())
         self.assertTrue(solver.license_is_valid())
 
-        sp_version = tuple(
-            int(num) for num in scipy.__version__.split('.')
-        )
+        sp_version = tuple(int(num) for num in scipy.__version__.split('.'))
         self.assertEqual(sp_version, solver.version())
 
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestFsolvePyomo(unittest.TestCase):
-
     def test_available_and_version(self):
         solver = pyo.SolverFactory("scipy.fsolve")
         self.assertTrue(solver.available())
         self.assertTrue(solver.license_is_valid())
 
-        sp_version = tuple(
-            int(num) for num in scipy.__version__.split('.')
-        )
+        sp_version = tuple(int(num) for num in scipy.__version__.split('.'))
         self.assertEqual(sp_version, solver.version())
 
     def test_solve_simple_nlp(self):
@@ -187,15 +165,12 @@ class TestFsolvePyomo(unittest.TestCase):
         # Note that the solver returns termination condition feasible
         # rather than optimal...
         self.assertEqual(
-            results.solver.termination_condition,
-            pyo.TerminationCondition.feasible,
+            results.solver.termination_condition, pyo.TerminationCondition.feasible
         )
         msg = "Solver failed to return an optimal solution"
         with self.assertRaisesRegex(RuntimeError, msg):
             pyo.assert_optimal_termination(results)
-        self.assertEqual(
-            results.solver.status, pyo.SolverStatus.ok
-        )
+        self.assertEqual(results.solver.status, pyo.SolverStatus.ok)
 
     def test_solve_max_iter(self):
         m, _ = make_simple_model()
@@ -207,11 +182,9 @@ class TestFsolvePyomo(unittest.TestCase):
 
     def test_solve_too_tight_tol(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("scipy.fsolve", options=dict(
-            xtol=1e-3,
-            maxfev=20,
-            tol=1e-8,
-        ))
+        solver = pyo.SolverFactory(
+            "scipy.fsolve", options=dict(xtol=1e-3, maxfev=20, tol=1e-8)
+        )
         msg = "does not satisfy the function tolerance"
         with self.assertRaisesRegex(RuntimeError, msg):
             res = solver.solve(m)
@@ -238,7 +211,6 @@ class TestFsolvePyomo(unittest.TestCase):
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestRootNLP(unittest.TestCase):
-
     def test_solve_simple_nlp(self):
         m, nlp = make_simple_model()
         solver = RootNlpSolver(nlp)
@@ -248,14 +220,11 @@ class TestRootNLP(unittest.TestCase):
         variables = [m.x[1], m.x[2], m.x[3]]
         predicted_xorder = [0.92846891, -0.22610731, 0.29465397]
         indices = nlp.get_primal_indices(variables)
-        nlp_to_x_indices = [None]*len(variables)
+        nlp_to_x_indices = [None] * len(variables)
         for i, j in enumerate(indices):
             nlp_to_x_indices[j] = i
         predicted_nlporder = [predicted_xorder[i] for i in nlp_to_x_indices]
-        self.assertStructuredAlmostEqual(
-            results.x.tolist(),
-            predicted_nlporder,
-        )
+        self.assertStructuredAlmostEqual(results.x.tolist(), predicted_nlporder)
 
     def test_solve_simple_nlp_levenberg_marquardt(self):
         m, nlp = make_simple_model()
@@ -266,27 +235,21 @@ class TestRootNLP(unittest.TestCase):
         variables = [m.x[1], m.x[2], m.x[3]]
         predicted_xorder = [0.92846891, -0.22610731, 0.29465397]
         indices = nlp.get_primal_indices(variables)
-        nlp_to_x_indices = [None]*len(variables)
+        nlp_to_x_indices = [None] * len(variables)
         for i, j in enumerate(indices):
             nlp_to_x_indices[j] = i
         predicted_nlporder = [predicted_xorder[i] for i in nlp_to_x_indices]
-        self.assertStructuredAlmostEqual(
-            results.x.tolist(),
-            predicted_nlporder,
-        )
+        self.assertStructuredAlmostEqual(results.x.tolist(), predicted_nlporder)
 
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestRootPyomo(unittest.TestCase):
-
     def test_available_and_version(self):
         solver = pyo.SolverFactory("scipy.root")
         self.assertTrue(solver.available())
         self.assertTrue(solver.license_is_valid())
 
-        sp_version = tuple(
-            int(num) for num in scipy.__version__.split('.')
-        )
+        sp_version = tuple(int(num) for num in scipy.__version__.split('.'))
         self.assertEqual(sp_version, solver.version())
 
     def test_solve_simple_nlp(self):
@@ -334,8 +297,7 @@ class TestRootPyomo(unittest.TestCase):
         self.assertEqual(results.problem.number_of_variables, 3)
         self.assertEqual(results.solver.return_code, 1)
         self.assertEqual(
-            results.solver.termination_condition,
-            pyo.TerminationCondition.feasible
+            results.solver.termination_condition, pyo.TerminationCondition.feasible
         )
         self.assertEqual(results.solver.message, "The solution converged.")
 
@@ -355,11 +317,10 @@ class TestRootPyomo(unittest.TestCase):
 
         # NOTE: Return code (the scipy OptimizeResult.status field) is not
         # documented in SciPy 1.9.3, so we cannot assert anything about it.
-        #self.assertEqual(results.solver.return_code, 1)
+        # self.assertEqual(results.solver.return_code, 1)
 
         self.assertEqual(
-            results.solver.termination_condition,
-            pyo.TerminationCondition.feasible
+            results.solver.termination_condition, pyo.TerminationCondition.feasible
         )
         self.assertIn(
             "The relative error between two consecutive iterates",
@@ -369,15 +330,12 @@ class TestRootPyomo(unittest.TestCase):
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestNewtonPyomo(unittest.TestCase):
-
     def test_available(self):
         solver = pyo.SolverFactory("scipy.newton")
         self.assertTrue(solver.available())
         self.assertTrue(solver.license_is_valid())
 
-        sp_version = tuple(
-            int(num) for num in scipy.__version__.split('.')
-        )
+        sp_version = tuple(int(num) for num in scipy.__version__.split('.'))
         self.assertEqual(sp_version, solver.version())
 
     def test_solve(self):
@@ -425,13 +383,9 @@ class TestNewtonPyomo(unittest.TestCase):
         # Assert some reasonable things about the returned results
         self.assertGreater(results.solver.wallclock_time, 0.0)
         self.assertEqual(
-            results.solver.termination_condition,
-            pyo.TerminationCondition.feasible,
+            results.solver.termination_condition, pyo.TerminationCondition.feasible
         )
-        self.assertEqual(
-            results.solver.status,
-            pyo.SolverStatus.ok,
-        )
+        self.assertEqual(results.solver.status, pyo.SolverStatus.ok)
         self.assertGreater(results.solver.number_of_function_evaluations, 0)
 
     def test_results_object_without_full_output(self):
@@ -458,11 +412,10 @@ class TestNewtonPyomo(unittest.TestCase):
         #
         # This will break if Pyomo changes its default behavior.
         self.assertIs(
-            results.solver.termination_condition,
-            pyo.TerminationCondition.unknown,
+            results.solver.termination_condition, pyo.TerminationCondition.unknown
         )
         # The default SolverStatus appears to be ok...
-        #self.assertIsNot(results.solver.status, pyo.SolverStatus.ok)
+        # self.assertIsNot(results.solver.status, pyo.SolverStatus.ok)
 
         with self.assertRaises(AttributeError):
             # This attribute has no default, I guess.
@@ -472,7 +425,6 @@ class TestNewtonPyomo(unittest.TestCase):
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestSecantNewton(unittest.TestCase):
-
     def test_inherited_options_skipped(self):
         m, nlp = make_scalar_model()
         options = SecantNewtonNlpSolver.OPTIONS
@@ -481,24 +433,18 @@ class TestSecantNewton(unittest.TestCase):
         self.assertIn("secant_iter", options)
         self.assertIn("newton_iter", options)
 
-        with self.assertRaisesRegex(
-                ValueError,
-                "implicit.*keys are not allowed",
-            ):
+        with self.assertRaisesRegex(ValueError, "implicit.*keys are not allowed"):
             solver = SecantNewtonNlpSolver(nlp, options={"maxiter": 10})
 
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestSecantNewtonPyomo(unittest.TestCase):
-
     def test_available(self):
         solver = pyo.SolverFactory("scipy.secant-newton")
         self.assertTrue(solver.available())
         self.assertTrue(solver.license_is_valid())
 
-        sp_version = tuple(
-            int(num) for num in scipy.__version__.split('.')
-        )
+        sp_version = tuple(int(num) for num in scipy.__version__.split('.'))
         self.assertEqual(sp_version, solver.version())
 
     def test_solve(self):
@@ -554,13 +500,9 @@ class TestSecantNewtonPyomo(unittest.TestCase):
         # Assert some reasonable things about the returned results
         self.assertGreater(results.solver.wallclock_time, 0.0)
         self.assertEqual(
-            results.solver.termination_condition,
-            pyo.TerminationCondition.feasible,
+            results.solver.termination_condition, pyo.TerminationCondition.feasible
         )
-        self.assertEqual(
-            results.solver.status,
-            pyo.SolverStatus.ok,
-        )
+        self.assertEqual(results.solver.status, pyo.SolverStatus.ok)
         self.assertGreater(results.solver.number_of_function_evaluations, 0)
 
     def test_results_object_without_full_output(self):
@@ -587,11 +529,10 @@ class TestSecantNewtonPyomo(unittest.TestCase):
         #
         # This will break if Pyomo changes its default behavior.
         self.assertIs(
-            results.solver.termination_condition,
-            pyo.TerminationCondition.unknown,
+            results.solver.termination_condition, pyo.TerminationCondition.unknown
         )
         # The default SolverStatus appears to be ok...
-        #self.assertIsNot(results.solver.status, pyo.SolverStatus.ok)
+        # self.assertIsNot(results.solver.status, pyo.SolverStatus.ok)
 
         with self.assertRaises(AttributeError):
             # This attribute has no default, I guess.
@@ -602,7 +543,7 @@ class TestSecantNewtonPyomo(unittest.TestCase):
         m, _ = make_linear_scalar_model()
         solver = pyo.SolverFactory("scipy.secant-newton")
         results = solver.solve(m)
-        self.assertAlmostEqual(m.x.value, 30.1/12.5)
+        self.assertAlmostEqual(m.x.value, 30.1 / 12.5)
         # This linear equation converges with the secant subsolver.
         self.assertTrue(solver.converged_with_secant())
 

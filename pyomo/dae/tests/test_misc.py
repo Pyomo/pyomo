@@ -20,16 +20,28 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
-    ConcreteModel, Set, Param, Var, Constraint, Expression, Block,
-    TransformationFactory, Piecewise, Objective, ExternalFunction,
-    Suffix, value,
+    ConcreteModel,
+    Set,
+    Param,
+    Var,
+    Constraint,
+    Expression,
+    Block,
+    TransformationFactory,
+    Piecewise,
+    Objective,
+    ExternalFunction,
+    Suffix,
+    value,
 )
 from pyomo.common.collections import ComponentMap
 from pyomo.common.log import LoggingIntercept
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.misc import (
-    generate_finite_elements, generate_colloc_points,
-    update_contset_indexed_component, expand_components,
+    generate_finite_elements,
+    generate_colloc_points,
+    update_contset_indexed_component,
+    expand_components,
     get_index_information,
 )
 
@@ -37,7 +49,7 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 
 class TestDaeMisc(unittest.TestCase):
-    
+
     # test generate_finite_elements method
     def test_generate_finite_elements(self):
         m = ConcreteModel()
@@ -67,13 +79,13 @@ class TestDaeMisc(unittest.TestCase):
         t = sorted(m.t3)
         print(t[1])
         self.assertTrue(t[1] == 0.142857)
-      
+
     # test generate_collocation_points method
     def test_generate_collocation_points(self):
         m = ConcreteModel()
         m.t = ContinuousSet(initialize=[0, 1])
         m.t2 = ContinuousSet(initialize=[0, 2, 4, 6])
-        
+
         tau1 = [1]
         oldt = sorted(m.t)
         generate_colloc_points(m.t, tau1)
@@ -91,8 +103,8 @@ class TestDaeMisc(unittest.TestCase):
         generate_colloc_points(m.t, tau2)
         self.assertTrue(len(m.t) == 11)
         self.assertTrue(
-            [0, 0.1, 0.15, 0.35, 0.4, 0.5, 0.6, 0.65, 0.85, 0.9, 1] == 
-            sorted(m.t))
+            [0, 0.1, 0.15, 0.35, 0.4, 0.5, 0.6, 0.65, 0.85, 0.9, 1] == sorted(m.t)
+        )
 
         generate_colloc_points(m.t2, tau2)
         self.assertTrue(len(m.t2) == 16)
@@ -110,12 +122,13 @@ class TestDaeMisc(unittest.TestCase):
         m.p1 = Param(m.t, initialize=1)
         m.p2 = Param(m.t, default=2)
         m.p3 = Param(m.t, initialize=1, default=2)
-        
+
         def _rule1(m, i):
             return i**2
-        
+
         def _rule2(m, i):
             return 2 * i
+
         m.p4 = Param(m.t, initialize={0: 5, 10: 5}, default=_rule1)
         m.p5 = Param(m.t, initialize=_rule1, default=_rule2)
 
@@ -146,15 +159,18 @@ class TestDaeMisc(unittest.TestCase):
 
         def _rule1(m, i):
             return i**2
+
         m.p1 = Param(m.s1, m.t, initialize=2, default=_rule1)
         m.p2 = Param(m.t, m.s1, default=5)
 
         def _rule2(m, i, j):
             return i + j
+
         m.p3 = Param(m.s1, m.t, initialize=2, default=_rule2)
 
         def _rule3(m, i, j, k):
             return i + j + k
+
         m.p4 = Param(m.s2, m.t, default=_rule3)
 
         generate_finite_elements(m.t, 5)
@@ -180,7 +196,7 @@ class TestDaeMisc(unittest.TestCase):
             for j in m.s2:
                 self.assertEqual(m.p4[j, i], sum(j, i))
 
-    # test update_contset_indexed_component method for Vars with 
+    # test update_contset_indexed_component method for Vars with
     # single index of the ContinuousSet
     def test_update_contset_indexed_component_vars_single(self):
         m = ConcreteModel()
@@ -192,6 +208,7 @@ class TestDaeMisc(unittest.TestCase):
 
         def _init(m, i):
             return i
+
         m.v3 = Var(m.t, bounds=(-5, 5), initialize=_init)
         m.v4 = Var(m.s, initialize=7, dense=True)
         m.v5 = Var(m.t2, dense=True)
@@ -214,7 +231,7 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(value(m.v1[2]) == 3)
         self.assertTrue(m.v1[4].ub is None)
         self.assertTrue(m.v1[6].lb is None)
-        
+
         self.assertTrue(m.v2[2].value is None)
         self.assertTrue(m.v2[4].lb == 4)
         self.assertTrue(m.v2[8].ub == 10)
@@ -225,7 +242,7 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(m.v3[6].ub == 5)
         self.assertTrue(value(m.v3[8]) == 8)
 
-    # test update_contset_indexed_component method for Vars with 
+    # test update_contset_indexed_component method for Vars with
     # multiple indices
     def test_update_contset_indexed_component_vars_multiple(self):
         m = ConcreteModel()
@@ -234,11 +251,13 @@ class TestDaeMisc(unittest.TestCase):
         m.s = Set(initialize=[1, 2, 3])
         m.s2 = Set(initialize=[(1, 1), (2, 2)])
         m.v1 = Var(m.s, m.t, initialize=3)
-        m.v2 = Var(m.s, m.t, m.t2, bounds=(4, 10),
-                   initialize={(1, 0, 1): 22, (2, 10, 2): 22})
+        m.v2 = Var(
+            m.s, m.t, m.t2, bounds=(4, 10), initialize={(1, 0, 1): 22, (2, 10, 2): 22}
+        )
 
         def _init(m, i, j, k):
             return i
+
         m.v3 = Var(m.t, m.s2, bounds=(-5, 5), initialize=_init)
         m.v4 = Var(m.s, m.t2, initialize=7, dense=True)
         m.v5 = Var(m.s2)
@@ -260,7 +279,7 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(value(m.v1[1, 4]) == 3)
         self.assertTrue(m.v1[2, 2].ub is None)
         self.assertTrue(m.v1[3, 8].lb is None)
-        
+
         self.assertTrue(value(m.v2[1, 0, 1]) == 22)
         self.assertTrue(m.v2[1, 2, 1].value is None)
         self.assertTrue(m.v2[2, 4, 3].lb == 4)
@@ -278,15 +297,17 @@ class TestDaeMisc(unittest.TestCase):
         m.t = ContinuousSet(bounds=(0, 10))
         m.p = Param(m.t, default=3)
         m.v = Var(m.t, initialize=5)
-        
+
         def _con1(m, i):
             return m.p[i] * m.v[i] <= 20
+
         m.con1 = Constraint(m.t, rule=_con1)
-        
+
         # Rules that iterate over a ContinuouSet implicitly are not updated
         # after the discretization
         def _con2(m):
             return sum(m.v[i] for i in m.t) >= 0
+
         m.con2 = Constraint(rule=_con2)
 
         expansion_map = ComponentMap()
@@ -313,6 +334,7 @@ class TestDaeMisc(unittest.TestCase):
 
         def _init(m, i, j):
             return j + i
+
         m.p1 = Param(m.s1, m.t, default=_init)
         m.v1 = Var(m.s1, m.t, initialize=5)
         m.v2 = Var(m.s2, m.t, initialize=2)
@@ -320,14 +342,17 @@ class TestDaeMisc(unittest.TestCase):
 
         def _con1(m, si, ti):
             return m.v1[si, ti] * m.p1[si, ti] >= 0
+
         m.con1 = Constraint(m.s1, m.t, rule=_con1)
 
         def _con2(m, i, j, ti):
             return m.v2[i, j, ti] + m.p1[1, ti] == 10
+
         m.con2 = Constraint(m.s2, m.t, rule=_con2)
 
         def _con3(m, i, ti, ti2, j, k):
             return m.v1[i, ti] - m.v3[ti2, j, k] * m.p1[i, ti] <= 20
+
         m.con3 = Constraint(m.s1, m.t, m.t2, m.s2, rule=_con3)
 
         expansion_map = ComponentMap()
@@ -340,7 +365,7 @@ class TestDaeMisc(unittest.TestCase):
         update_contset_indexed_component(m.con1, expansion_map)
         update_contset_indexed_component(m.con2, expansion_map)
         update_contset_indexed_component(m.con3, expansion_map)
-        
+
         self.assertTrue(len(m.con1) == 18)
         self.assertTrue(len(m.con2) == 12)
         self.assertTrue(len(m.con3) == 108)
@@ -356,7 +381,7 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(m.con2[1, 1, 8](), 11)
         self.assertTrue(value(m.con2[2, 2, 6].lower) == 10)
         self.assertTrue(value(m.con2[1, 1, 10].upper) == 10)
-        
+
         self.assertEqual(m.con3[1, 2, 1, 1, 1](), 2)
         self.assertEqual(m.con3[1, 4, 1, 2, 2](), 0)
         self.assertEqual(m.con3[2, 6, 3, 1, 1](), -3)
@@ -374,12 +399,14 @@ class TestDaeMisc(unittest.TestCase):
 
         def _con1(m, i):
             return m.p[i] * m.v[i]
+
         m.con1 = Expression(m.t, rule=_con1)
 
         # Rules that iterate over a ContinuousSet implicitly are not updated
         # after the discretization
         def _con2(m):
             return sum(m.v[i] for i in m.t)
+
         m.con2 = Expression(rule=_con2)
 
         expansion_map = ComponentMap()
@@ -406,6 +433,7 @@ class TestDaeMisc(unittest.TestCase):
 
         def _init(m, i, j):
             return j + i
+
         m.p1 = Param(m.s1, m.t, default=_init)
         m.v1 = Var(m.s1, m.t, initialize=5)
         m.v2 = Var(m.s2, m.t, initialize=2)
@@ -413,14 +441,17 @@ class TestDaeMisc(unittest.TestCase):
 
         def _con1(m, si, ti):
             return m.v1[si, ti] * m.p1[si, ti]
+
         m.con1 = Expression(m.s1, m.t, rule=_con1)
 
         def _con2(m, i, j, ti):
             return m.v2[i, j, ti] + m.p1[1, ti]
+
         m.con2 = Expression(m.s2, m.t, rule=_con2)
 
         def _con3(m, i, ti, ti2, j, k):
             return m.v1[i, ti] - m.v3[ti2, j, k] * m.p1[i, ti]
+
         m.con3 = Expression(m.s1, m.t, m.t2, m.s2, rule=_con3)
 
         expansion_map = ComponentMap()
@@ -451,7 +482,7 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(m.con3[2, 6, 3, 1, 1](), -3)
         self.assertEqual(m.con3[3, 8, 2, 2, 2](), -6)
 
-    # test update_contset_indexed_component method for Blocks 
+    # test update_contset_indexed_component method for Blocks
     # indexed by a ContinuousSet
     def test_update_contset_indexed_component_block_single(self):
         model = ConcreteModel()
@@ -459,26 +490,29 @@ class TestDaeMisc(unittest.TestCase):
 
         def _block_rule(b, t):
             m = b.model()
-    
+
             b.s1 = Set(initialize=['A1', 'A2', 'A3'])
 
             def _init(m, j):
                 return j * 2
+
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
             b.v2 = Var(m.t, initialize=2)
             b.v3 = Var(m.t, b.s1, initialize=1)
 
             def _con1(_b, ti):
-                return _b.v1[ti] * _b.p1[ti] == _b.v1[t]**2
+                return _b.v1[ti] * _b.p1[ti] == _b.v1[t] ** 2
+
             b.con1 = Constraint(m.t, rule=_con1)
 
             def _con2(_b, i, ti):
                 return _b.v2[ti] - _b.v3[ti, i] + _b.p1[ti]
+
             b.con2 = Expression(b.s1, m.t, rule=_con2)
-    
+
         model.blk = Block(model.t, rule=_block_rule)
-     
+
         self.assertTrue(len(model.blk), 2)
 
         expansion_map = ComponentMap()
@@ -497,7 +531,7 @@ class TestDaeMisc(unittest.TestCase):
 
         self.assertEqual(model.blk[2].p1[2], 4)
         self.assertEqual(model.blk[8].p1[6], 12)
-        
+
         self.assertEqual(model.blk[4].con1[4](), 15)
         self.assertEqual(model.blk[6].con1[8](), 55)
 
@@ -514,22 +548,25 @@ class TestDaeMisc(unittest.TestCase):
 
         def _block_rule(b, t, s1):
             m = b.model()
-            
+
             def _init(m, i, j):
                 return j * 2
+
             b.p1 = Param(m.s1, m.t, mutable=True, default=_init)
             b.v1 = Var(m.s1, m.t, initialize=5)
             b.v2 = Var(m.s2, m.t, initialize=2)
             b.v3 = Var(m.t, m.s2, initialize=1)
 
             def _con1(_b, si, ti):
-                return _b.v1[si, ti] * _b.p1[si, ti] == _b.v1[si, t]**2
+                return _b.v1[si, ti] * _b.p1[si, ti] == _b.v1[si, t] ** 2
+
             b.con1 = Constraint(m.s1, m.t, rule=_con1)
 
             def _con2(_b, i, j, ti):
                 return _b.v2[i, j, ti] - _b.v3[ti, i, j] + _b.p1['A', ti]
+
             b.con2 = Expression(m.s2, m.t, rule=_con2)
-    
+
         model.blk = Block(model.t, model.s1, rule=_block_rule)
 
         expansion_map = ComponentMap()
@@ -550,14 +587,14 @@ class TestDaeMisc(unittest.TestCase):
 
         self.assertEqual(model.blk[2, 'A'].p1['A', 2].value, 4)
         self.assertEqual(model.blk[8, 'C'].p1['B', 6].value, 12)
-        
+
         self.assertEqual(model.blk[4, 'B'].con1['B', 4](), 15)
         self.assertEqual(model.blk[6, 'A'].con1['C', 8](), 55)
 
         self.assertEqual(model.blk[0, 'A'].con2['x1', 'x1', 10](), 21)
         self.assertEqual(model.blk[4, 'C'].con2['x2', 'x2', 6](), 13)
 
-    # test update_contset_indexed_component method for Blocks 
+    # test update_contset_indexed_component method for Blocks
     # indexed by a ContinuousSet. Block rule returns new block
     def test_update_contset_indexed_component_block_single2(self):
         model = ConcreteModel()
@@ -571,24 +608,27 @@ class TestDaeMisc(unittest.TestCase):
 
             def _init(m, j):
                 return j * 2
+
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
             b.v2 = Var(m.t, initialize=2)
             b.v3 = Var(m.t, b.s1, initialize=1)
 
             def _con1(_b, ti):
-                return _b.v1[ti] * _b.p1[ti] == _b.v1[t]**2
+                return _b.v1[ti] * _b.p1[ti] == _b.v1[t] ** 2
+
             b.con1 = Constraint(m.t, rule=_con1)
 
             def _con2(_b, i, ti):
                 return _b.v2[ti] - _b.v3[ti, i] + _b.p1[ti]
+
             b.con2 = Expression(b.s1, m.t, rule=_con2)
             return b
-    
+
         model.blk = Block(model.t, rule=_block_rule)
 
         expansion_map = ComponentMap()
-     
+
         self.assertTrue(len(model.blk), 2)
 
         generate_finite_elements(model.t, 5)
@@ -605,7 +645,7 @@ class TestDaeMisc(unittest.TestCase):
 
         self.assertEqual(model.blk[2].p1[2], 4)
         self.assertEqual(model.blk[8].p1[6], 12)
-        
+
         self.assertEqual(model.blk[4].con1[4](), 15)
         self.assertEqual(model.blk[6].con1[8](), 55)
 
@@ -626,20 +666,23 @@ class TestDaeMisc(unittest.TestCase):
 
             def _init(m, i, j):
                 return j * 2
+
             b.p1 = Param(m.s1, m.t, mutable=True, default=_init)
             b.v1 = Var(m.s1, m.t, initialize=5)
             b.v2 = Var(m.s2, m.t, initialize=2)
             b.v3 = Var(m.t, m.s2, initialize=1)
 
             def _con1(_b, si, ti):
-                return _b.v1[si, ti] * _b.p1[si, ti] == _b.v1[si, t]**2
+                return _b.v1[si, ti] * _b.p1[si, ti] == _b.v1[si, t] ** 2
+
             b.con1 = Constraint(m.s1, m.t, rule=_con1)
 
             def _con2(_b, i, j, ti):
                 return _b.v2[i, j, ti] - _b.v3[ti, i, j] + _b.p1['A', ti]
+
             b.con2 = Expression(m.s2, m.t, rule=_con2)
             return b
-    
+
         model.blk = Block(model.t, model.s1, rule=_block_rule)
 
         expansion_map = ComponentMap()
@@ -660,7 +703,7 @@ class TestDaeMisc(unittest.TestCase):
 
         self.assertEqual(model.blk[2, 'A'].p1['A', 2].value, 4)
         self.assertEqual(model.blk[8, 'C'].p1['B', 6].value, 12)
-        
+
         self.assertEqual(model.blk[4, 'B'].con1['B', 4](), 15)
         self.assertEqual(model.blk[6, 'A'].con1['C', 8](), 55)
 
@@ -672,19 +715,17 @@ class TestDaeMisc(unittest.TestCase):
     def test_update_contset_indexed_component_piecewise_single(self):
         x = [0.0, 1.5, 3.0, 5.0]
         y = [1.1, -1.1, 2.0, 1.1]
-        
+
         model = ConcreteModel()
         model.t = ContinuousSet(bounds=(0, 10))
 
         model.x = Var(model.t, bounds=(min(x), max(x)))
         model.y = Var(model.t)
 
-        model.fx = Piecewise(model.t, 
-                             model.y, model.x, 
-                             pw_pts=x, 
-                             pw_constr_type='EQ', 
-                             f_rule=y)
-        
+        model.fx = Piecewise(
+            model.t, model.y, model.x, pw_pts=x, pw_constr_type='EQ', f_rule=y
+        )
+
         self.assertEqual(len(model.fx), 2)
 
         expansion_map = ComponentMap()
@@ -695,12 +736,12 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(len(model.fx), 6)
         self.assertEqual(len(model.fx[2].SOS2_constraint), 3)
 
-    # test update_contset_indexed_component method for Piecewise 
+    # test update_contset_indexed_component method for Piecewise
     # component with multiple indices
     def test_update_contset_indexed_component_piecewise_multiple(self):
         x = [0.0, 1.5, 3.0, 5.0]
         y = [1.1, -1.1, 2.0, 1.1]
-        
+
         model = ConcreteModel()
         model.t = ContinuousSet(bounds=(0, 10))
         model.s = Set(initialize=['A', 'B', 'C'])
@@ -708,12 +749,10 @@ class TestDaeMisc(unittest.TestCase):
         model.x = Var(model.s, model.t, bounds=(min(x), max(x)))
         model.y = Var(model.s, model.t)
 
-        model.fx = Piecewise(model.s, model.t, 
-                             model.y, model.x, 
-                             pw_pts=x, 
-                             pw_constr_type='EQ', 
-                             f_rule=y)
-        
+        model.fx = Piecewise(
+            model.s, model.t, model.y, model.x, pw_pts=x, pw_constr_type='EQ', f_rule=y
+        )
+
         self.assertEqual(len(model.fx), 6)
 
         expansion_map = ComponentMap()
@@ -734,6 +773,7 @@ class TestDaeMisc(unittest.TestCase):
 
         def _obj(m):
             return sum(m.v[i] for i in m.s)
+
         m.obj = Objective(rule=_obj)
 
         expansion_map = ComponentMap
@@ -782,8 +822,10 @@ class TestDaeMisc(unittest.TestCase):
 
             def _init(m, j):
                 return j * 2
+
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
+
         m.foo = Foo(m.t, rule=_block_rule)
 
         generate_finite_elements(m.t, 5)
@@ -796,7 +838,6 @@ class TestDaeMisc(unittest.TestCase):
 
     def test_update_block_derived_override_construct_nofcn(self):
         class Foo(Block):
-
             def construct(self, data=None):
                 Block.construct(self, data)
 
@@ -808,16 +849,19 @@ class TestDaeMisc(unittest.TestCase):
 
             def _init(m, j):
                 return j * 2
+
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
+
         m.foo = Foo(m.t, rule=_block_rule)
         generate_finite_elements(m.t, 5)
 
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.dae'):
             expand_components(m)
-        self.assertIn('transformation to the Block-derived component', 
-                      OUTPUT.getvalue())
+        self.assertIn(
+            'transformation to the Block-derived component', OUTPUT.getvalue()
+        )
         self.assertEqual(len(m.foo), 6)
         self.assertEqual(len(m.foo[0].p1), 6)
         self.assertEqual(len(m.foo[2].v1), 6)
@@ -829,9 +873,10 @@ class TestDaeMisc(unittest.TestCase):
 
             def construct(self, data=None):
                 Block.construct(self, data)
-            
+
             def update_after_discretization(self):
                 self.updated = True
+
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0, 10))
 
@@ -840,8 +885,10 @@ class TestDaeMisc(unittest.TestCase):
 
             def _init(m, j):
                 return j * 2
+
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
+
         m.foo = Foo(m.t, rule=_block_rule)
 
         generate_finite_elements(m.t, 5)
@@ -864,8 +911,10 @@ class TestDaeMisc(unittest.TestCase):
 
             def _init(m, j):
                 return j * 2
+
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
+
         m.foo = Foo(m.t, m.s, rule=_block_rule)
 
         generate_finite_elements(m.t, 5)
@@ -878,7 +927,6 @@ class TestDaeMisc(unittest.TestCase):
 
     def test_update_block_derived_override_construct_nofcn2(self):
         class Foo(Block):
-
             def construct(self, data=None):
                 Block.construct(self, data)
 
@@ -891,8 +939,10 @@ class TestDaeMisc(unittest.TestCase):
 
             def _init(m, j):
                 return j * 2
+
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
+
         m.foo = Foo(m.t, m.s, rule=_block_rule)
 
         generate_finite_elements(m.t, 5)
@@ -900,8 +950,9 @@ class TestDaeMisc(unittest.TestCase):
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.dae'):
             expand_components(m)
-        self.assertIn('transformation to the Block-derived component', 
-                      OUTPUT.getvalue())
+        self.assertIn(
+            'transformation to the Block-derived component', OUTPUT.getvalue()
+        )
         self.assertEqual(len(m.foo), 18)
         self.assertEqual(len(m.foo[0, 1].p1), 6)
         self.assertEqual(len(m.foo[2, 2].v1), 6)
@@ -913,9 +964,10 @@ class TestDaeMisc(unittest.TestCase):
 
             def construct(self, data=None):
                 Block.construct(self, data)
-            
+
             def update_after_discretization(self):
                 self.updated = True
+
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0, 10))
         m.s = Set(initialize=[1, 2, 3])
@@ -925,8 +977,10 @@ class TestDaeMisc(unittest.TestCase):
 
             def _init(m, j):
                 return j * 2
+
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
+
         m.foo = Foo(m.t, m.s, rule=_block_rule)
 
         generate_finite_elements(m.t, 5)
@@ -968,18 +1022,20 @@ class TestDaeMisc(unittest.TestCase):
     def test_external_function(self):
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0, 10))
-        
+
         def _fun(x):
             return x**2
+
         m.x_func = ExternalFunction(_fun)
 
         m.y = Var(m.t, initialize=3)
         m.dy = DerivativeVar(m.y, initialize=3)
-        
+
         def _con(m, t):
             return m.dy[t] == m.x_func(m.y[t])
+
         m.con = Constraint(m.t, rule=_con)
-        
+
         generate_finite_elements(m.t, 5)
         expand_components(m)
 
@@ -988,9 +1044,9 @@ class TestDaeMisc(unittest.TestCase):
 
     def test_get_index_information(self):
         m = ConcreteModel()
-        m.t = ContinuousSet(bounds=(0,10))
-        m.x = ContinuousSet(bounds=(0,10))
-        m.s = Set(initialize=['a','b','c'])
+        m.t = ContinuousSet(bounds=(0, 10))
+        m.x = ContinuousSet(bounds=(0, 10))
+        m.s = Set(initialize=['a', 'b', 'c'])
         m.v = Var(m.t, m.x, m.s, initialize=1)
         m.v2 = Var(m.t, m.s, initialize=1)
 
@@ -1001,20 +1057,19 @@ class TestDaeMisc(unittest.TestCase):
         info = get_index_information(m.v, m.t)
         nts = info['non_ds']
         index_getter = info['index function']
-        
+
         self.assertEqual(len(nts), 33)
         self.assertTrue(m.x in nts.set_tuple)
         self.assertTrue(m.s in nts.set_tuple)
-        self.assertEqual(index_getter((8.0,'a'),1,0),(2.0,8.0,'a'))
+        self.assertEqual(index_getter((8.0, 'a'), 1, 0), (2.0, 8.0, 'a'))
 
         info = get_index_information(m.v2, m.t)
         nts = info['non_ds']
         index_getter = info['index function']
-        
+
         self.assertEqual(len(nts), 3)
         self.assertTrue(m.s is nts)
-        self.assertEqual(index_getter('a',1,0),(2.0,'a'))
-
+        self.assertEqual(index_getter('a', 1, 0), (2.0, 'a'))
 
 
 if __name__ == "__main__":

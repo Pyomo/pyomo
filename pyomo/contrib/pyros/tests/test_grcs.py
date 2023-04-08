@@ -10,9 +10,17 @@ from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.environ import *
 from pyomo.core.expr.current import identify_variables, identify_mutable_parameters
-from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variables, add_decision_rule_constraints, \
-    model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, pyrosTerminationCondition, \
-    coefficient_matching
+from pyomo.contrib.pyros.util import (
+    selective_clone,
+    add_decision_rule_variables,
+    add_decision_rule_constraints,
+    model_is_valid,
+    turn_bounds_to_constraints,
+    transform_to_standard_form,
+    ObjectiveType,
+    pyrosTerminationCondition,
+    coefficient_matching,
+)
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.contrib.pyros.util import identify_objective_functions
@@ -21,8 +29,12 @@ import time
 from pyomo.contrib.pyros.util import time_code
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
-from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
-    minimize_dr_vars
+from pyomo.contrib.pyros.master_problem_methods import (
+    add_scenario_to_master,
+    initial_construct_master,
+    solve_master,
+    minimize_dr_vars,
+)
 from pyomo.contrib.pyros.solve_data import MasterProblemData
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
@@ -35,11 +47,7 @@ from pyomo.opt import (
     TerminationCondition,
     Solution,
 )
-from pyomo.environ import (
-    Objective,
-    value,
-    Var,
-)
+from pyomo.environ import Objective, value, Var
 
 
 if not (numpy_available and scipy_available):
@@ -58,7 +66,7 @@ if baron_available:
     baron_version = _baron.version()
 else:
     baron_license_is_valid = False
-    baron_version = (0,0,0)
+    baron_version = (0, 0, 0)
 
 
 # @SolverFactory.register("time_delay_solver")
@@ -68,6 +76,7 @@ class TimeDelaySolver(object):
     duration after having been invoked a specified number
     of times.
     """
+
     def __init__(self, calls_to_sleep, max_time, sub_solver):
         self.max_time = max_time
         self.calls_to_sleep = calls_to_sleep
@@ -133,9 +142,7 @@ class TimeDelaySolver(object):
 
             # set up results.solver
             results.solver.time = self.max_time
-            results.solver.termination_condition = (
-                TerminationCondition.maxTimeLimit
-            )
+            results.solver.termination_condition = TerminationCondition.maxTimeLimit
             results.solver.status = SolverStatus.warning
 
         return results
@@ -158,7 +165,7 @@ class testSelectiveClone(unittest.TestCase):
         m.x = Var(initialize=2)
         m.y = Var(initialize=2)
         m.p = Param(initialize=1)
-        m.con = Constraint(expr= m.x * m.p + m.y <= 0)
+        m.con = Constraint(expr=m.x * m.p + m.y <= 0)
 
         n = ConcreteModel()
         n.x = Var()
@@ -166,8 +173,12 @@ class testSelectiveClone(unittest.TestCase):
 
         cloned_model = selective_clone(block=m, first_stage_vars=m.first_stage_vars)
 
-        self.assertNotEqual(id(m.first_stage_vars), id(cloned_model.first_stage_vars), msg="First stage variables should"
-                                                                                           "not be equal.")
+        self.assertNotEqual(
+            id(m.first_stage_vars),
+            id(cloned_model.first_stage_vars),
+            msg="First stage variables shouldnot be equal.",
+        )
+
     def test_cloning_positive_case(self):
         '''
         Testing if selective_clone works correctly for correct first_stage_var object definition.
@@ -181,12 +192,23 @@ class testSelectiveClone(unittest.TestCase):
 
         cloned_model = selective_clone(block=m, first_stage_vars=m.first_stage_vars)
 
-        self.assertEqual(id(m.x), id(cloned_model.x),
-                            msg="First stage variables should"
-                                "be equal.")
-        self.assertNotEqual(id(m.y), id(cloned_model.y), msg="Non-first-stage variables should not be equal.")
-        self.assertNotEqual(id(m.p), id(cloned_model.p), msg="Params should not be equal.")
-        self.assertNotEqual(id(m.con), id(cloned_model.con), msg="Constraint objects should not be equal.")
+        self.assertEqual(
+            id(m.x), id(cloned_model.x), msg="First stage variables shouldbe equal."
+        )
+        self.assertNotEqual(
+            id(m.y),
+            id(cloned_model.y),
+            msg="Non-first-stage variables should not be equal.",
+        )
+        self.assertNotEqual(
+            id(m.p), id(cloned_model.p), msg="Params should not be equal."
+        )
+        self.assertNotEqual(
+            id(m.con),
+            id(cloned_model.con),
+            msg="Constraint objects should not be equal.",
+        )
+
 
 class testAddDecisionRuleVars(unittest.TestCase):
     '''
@@ -219,9 +241,12 @@ class testAddDecisionRuleVars(unittest.TestCase):
 
         add_decision_rule_variables(model_data=m, config=config)
 
-        self.assertEqual(len(m.working_model.util.first_stage_variables), len(m.working_model.util.second_stage_variables),
-                         msg="For static approximation decision rule the number of decision rule variables"
-                             "added to the list of design variables should equal the number of control variables.")
+        self.assertEqual(
+            len(m.working_model.util.first_stage_variables),
+            len(m.working_model.util.second_stage_variables),
+            msg="For static approximation decision rule the number of decision rule variables"
+            "added to the list of design variables should equal the number of control variables.",
+        )
 
         m.working_model.util.first_stage_variables = []
 
@@ -232,11 +257,14 @@ class testAddDecisionRuleVars(unittest.TestCase):
 
         add_decision_rule_variables(m, config=config)
 
-        self.assertEqual(len(m.working_model.util.first_stage_variables),
-                         len(m.working_model.util.second_stage_variables)*(1 + len(m.working_model.util.uncertain_params)),
-                         msg="For affine decision rule the number of decision rule variables add to the "
-                             "list of design variables should equal the number of control variables"
-                             "multiplied by the number of uncertain parameters plus 1.")
+        self.assertEqual(
+            len(m.working_model.util.first_stage_variables),
+            len(m.working_model.util.second_stage_variables)
+            * (1 + len(m.working_model.util.uncertain_params)),
+            msg="For affine decision rule the number of decision rule variables add to the "
+            "list of design variables should equal the number of control variables"
+            "multiplied by the number of uncertain parameters plus 1.",
+        )
 
         m.working_model.util.first_stage_variables = []
 
@@ -249,14 +277,20 @@ class testAddDecisionRuleVars(unittest.TestCase):
 
         add_decision_rule_variables(m, config=config)
 
-        self.assertEqual(len(m.working_model.util.first_stage_variables),
-                         len(m.working_model.util.second_stage_variables)*
-                         int(2 * len(m.working_model.util.uncertain_params) +
-                             sp.special.comb(N=len(m.working_model.util.uncertain_params), k=2) + 1),
-                         msg="For quadratic decision rule the number of decision rule variables add to the "
-                             "list of design variables should equal the number of control variables"
-                             "multiplied by 2 time the number of uncertain parameters plus all 2-combinations"
-                             "of uncertain parameters plus 1.")
+        self.assertEqual(
+            len(m.working_model.util.first_stage_variables),
+            len(m.working_model.util.second_stage_variables)
+            * int(
+                2 * len(m.working_model.util.uncertain_params)
+                + sp.special.comb(N=len(m.working_model.util.uncertain_params), k=2)
+                + 1
+            ),
+            msg="For quadratic decision rule the number of decision rule variables add to the "
+            "list of design variables should equal the number of control variables"
+            "multiplied by 2 time the number of uncertain parameters plus all 2-combinations"
+            "of uncertain parameters plus 1.",
+        )
+
 
 class testAddDecisionRuleConstraints(unittest.TestCase):
     '''
@@ -291,16 +325,19 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
         config = Block()
         config.decision_rule_order = 0
 
-        add_decision_rule_constraints(model_data=m,config=config)
+        add_decision_rule_constraints(model_data=m, config=config)
 
         for c in m.working_model.component_data_objects(Constraint, descend_into=True):
             if "decision_rule_eqn_" in c.name:
                 decision_rule_cons.append(c)
                 m.working_model.del_component(c)
 
-        self.assertEqual(len(decision_rule_cons), len(m.working_model.util.second_stage_variables),
-                         msg="The number of decision rule constraints added to model should equal"
-                             "the number of control variables in the model.")
+        self.assertEqual(
+            len(decision_rule_cons),
+            len(m.working_model.util.second_stage_variables),
+            msg="The number of decision rule constraints added to model should equal"
+            "the number of control variables in the model.",
+        )
 
         decision_rule_cons = []
         config.decision_rule_order = 1
@@ -319,9 +356,12 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
                 decision_rule_cons.append(c)
                 m.working_model.del_component(c)
 
-        self.assertEqual(len(decision_rule_cons), len(m.working_model.util.second_stage_variables),
-                         msg="The number of decision rule constraints added to model should equal"
-                             "the number of control variables in the model.")
+        self.assertEqual(
+            len(decision_rule_cons),
+            len(m.working_model.util.second_stage_variables),
+            msg="The number of decision rule constraints added to model should equal"
+            "the number of control variables in the model.",
+        )
 
         decision_rule_cons = []
         config.decision_rule_order = 2
@@ -342,18 +382,21 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
                 decision_rule_cons.append(c)
                 m.working_model.del_component(c)
 
-        self.assertEqual(len(decision_rule_cons), len(m.working_model.util.second_stage_variables),
-                         msg="The number of decision rule constraints added to model should equal"
-                             "the number of control variables in the model.")
+        self.assertEqual(
+            len(decision_rule_cons),
+            len(m.working_model.util.second_stage_variables),
+            msg="The number of decision rule constraints added to model should equal"
+            "the number of control variables in the model.",
+        )
+
 
 class testModelIsValid(unittest.TestCase):
-
     def test_model_is_valid_via_possible_inputs(self):
         m = ConcreteModel()
         m.x = Var()
-        m.obj1 = Objective(expr = m.x**2)
+        m.obj1 = Objective(expr=m.x**2)
         self.assertTrue(model_is_valid(m))
-        m.obj2 = Objective(expr = m.x)
+        m.obj2 = Objective(expr=m.x)
         self.assertFalse(model_is_valid(m))
         m.obj2.deactivate()
         self.assertTrue(model_is_valid(m))
@@ -361,29 +404,41 @@ class testModelIsValid(unittest.TestCase):
         m.del_component("obj2")
         self.assertFalse(model_is_valid(m))
 
-class testTurnBoundsToConstraints(unittest.TestCase):
 
+class testTurnBoundsToConstraints(unittest.TestCase):
     def test_bounds_to_constraints(self):
         m = ConcreteModel()
-        m.x = Var(initialize=1, bounds=(0,1))
-        m.y = Var(initialize=0, bounds=(None,1))
+        m.x = Var(initialize=1, bounds=(0, 1))
+        m.y = Var(initialize=0, bounds=(None, 1))
         m.w = Var(initialize=0, bounds=(1, None))
-        m.z = Var(initialize=0, bounds=(None,None))
+        m.z = Var(initialize=0, bounds=(None, None))
         turn_bounds_to_constraints(m.z, m)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0,
-                         msg="Inequality constraints were written for bounds on a variable with no bounds.")
+        self.assertEqual(
+            len(list(m.component_data_objects(Constraint))),
+            0,
+            msg="Inequality constraints were written for bounds on a variable with no bounds.",
+        )
         turn_bounds_to_constraints(m.y, m)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1,
-                         msg="Inequality constraints were not "
-                             "written correctly for a variable with an upper bound and no lower bound.")
+        self.assertEqual(
+            len(list(m.component_data_objects(Constraint))),
+            1,
+            msg="Inequality constraints were not "
+            "written correctly for a variable with an upper bound and no lower bound.",
+        )
         turn_bounds_to_constraints(m.w, m)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2,
-                         msg="Inequality constraints were not "
-                             "written correctly for a variable with a lower bound and no upper bound.")
+        self.assertEqual(
+            len(list(m.component_data_objects(Constraint))),
+            2,
+            msg="Inequality constraints were not "
+            "written correctly for a variable with a lower bound and no upper bound.",
+        )
         turn_bounds_to_constraints(m.x, m)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 4,
-                         msg="Inequality constraints were not "
-                             "written correctly for a variable with both lower and upper bound.")
+        self.assertEqual(
+            len(list(m.component_data_objects(Constraint))),
+            4,
+            msg="Inequality constraints were not "
+            "written correctly for a variable with both lower and upper bound.",
+        )
 
     def test_uncertain_bounds_to_constraints(self):
         # test model
@@ -399,10 +454,10 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         m.u = Var(initialize=0, bounds=(0, m.p))
         m.v = Var(initialize=1, bounds=(m.r, m.p))
         m.w = Var(initialize=1, bounds=(None, None))
-        m.x = Var(initialize=1, bounds=(0, exp(-1*m.p / 8) * m.q * m.s))
+        m.x = Var(initialize=1, bounds=(0, exp(-1 * m.p / 8) * m.q * m.s))
         m.y = Var(initialize=-1, bounds=(m.r * m.p, 0))
         m.z = Var(initialize=1, bounds=(0, m.s))
-        m.t = Var(initialize=1, bounds=(0, m.p ** 2))
+        m.t = Var(initialize=1, bounds=(0, m.p**2))
 
         # objective
         m.obj = Objective(sense=maximize, expr=m.x**2 - m.y + m.t**2 + m.v)
@@ -415,10 +470,12 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         # or active performance constraints
         mod.obj.deactivate()
         replace_uncertain_bounds_with_constraints(mod, uncertain_params)
-        self.assertTrue(hasattr(mod, 'uncertain_var_bound_cons'),
-                        msg='Uncertain variable bounds erroneously added. '
-                            'Check only variables participating in active '
-                            'objective and constraints are added.')
+        self.assertTrue(
+            hasattr(mod, 'uncertain_var_bound_cons'),
+            msg='Uncertain variable bounds erroneously added. '
+            'Check only variables participating in active '
+            'objective and constraints are added.',
+        )
         self.assertFalse(mod.uncertain_var_bound_cons)
         mod.obj.activate()
 
@@ -427,8 +484,8 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         m.add_component('perf_constraints', constraints_m)
         constraints_m.add(m.w == 2 * m.x + m.y)
         constraints_m.add(m.v + m.x + m.y >= 0)
-        constraints_m.add(m.y ** 2 + m.z >= 0)
-        constraints_m.add(m.x ** 2 + m.u <= 1)
+        constraints_m.add(m.y**2 + m.z >= 0)
+        constraints_m.add(m.x**2 + m.u <= 1)
         constraints_m[4].deactivate()
 
         # clone model with constraints added
@@ -454,26 +511,33 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         # active objective and activated constraints correctly determined
         svars_con = ComponentSet(get_vars_from_component(mod_2, Constraint))
         svars_obj = ComponentSet(get_vars_from_component(mod_2, Objective))
-        vars_in_active_cons = ComponentSet([mod_2.z, mod_2.w, mod_2.y,
-                                            mod_2.x, mod_2.v])
+        vars_in_active_cons = ComponentSet(
+            [mod_2.z, mod_2.w, mod_2.y, mod_2.x, mod_2.v]
+        )
         vars_in_active_obj = ComponentSet([mod_2.x, mod_2.y, mod_2.t, mod_2.v])
-        self.assertEqual(svars_con, vars_in_active_cons,
-                         msg='Mismatch of variables participating in '
-                             'activated constraints.')
-        self.assertEqual(svars_obj, vars_in_active_obj,
-                         msg='Mismatch of variables participating in '
-                             'activated objectives.')
+        self.assertEqual(
+            svars_con,
+            vars_in_active_cons,
+            msg='Mismatch of variables participating in activated constraints.',
+        )
+        self.assertEqual(
+            svars_obj,
+            vars_in_active_obj,
+            msg='Mismatch of variables participating in activated objectives.',
+        )
 
         # replace bounds in model with performance constraints
         uncertain_params = [mod_2.p, mod_2.r]
         replace_uncertain_bounds_with_constraints(mod_2, uncertain_params)
 
         # check that same number of constraints added to model
-        self.assertEqual(len(list(m.component_data_objects(Constraint))),
-                         len(list(mod_2.component_data_objects(Constraint))),
-                         msg='Mismatch between number of explicit variable '
-                             'bound inequality constraints added '
-                             'automatically and added manually.')
+        self.assertEqual(
+            len(list(m.component_data_objects(Constraint))),
+            len(list(mod_2.component_data_objects(Constraint))),
+            msg='Mismatch between number of explicit variable '
+            'bound inequality constraints added '
+            'automatically and added manually.',
+        )
 
         # check that explicit constraints contain correct vars and params
         vars_in_cons = ComponentSet()
@@ -490,19 +554,21 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         params_in_cons = params_in_cons & uncertain_params
 
         # expected participating variables
-        vars_with_bounds_removed = ComponentSet([mod_2.x, mod_2.y, mod_2.v,
-                                                 mod_2.t])
+        vars_with_bounds_removed = ComponentSet([mod_2.x, mod_2.y, mod_2.v, mod_2.t])
         # complete the check
-        self.assertEqual(params_in_cons, ComponentSet([mod_2.p, mod_2.r]),
-                         msg='Mismatch of parameters added to explicit '
-                             'inequality constraints.')
-        self.assertEqual(vars_in_cons, vars_with_bounds_removed,
-                         msg='Mismatch of variables added to explicit '
-                             'inequality constraints.')
+        self.assertEqual(
+            params_in_cons,
+            ComponentSet([mod_2.p, mod_2.r]),
+            msg='Mismatch of parameters added to explicit inequality constraints.',
+        )
+        self.assertEqual(
+            vars_in_cons,
+            vars_with_bounds_removed,
+            msg='Mismatch of variables added to explicit inequality constraints.',
+        )
 
 
 class testTransformToStandardForm(unittest.TestCase):
-
     def test_transform_to_std_form(self):
         """Check that `pyros.util.transform_to_standard_form` works
         correctly for an example model. That is:
@@ -539,56 +605,82 @@ class testTransformToStandardForm(unittest.TestCase):
         clist.add(m.x >= 1)
         clist.add((0, m.x, 1))
 
-        num_orig_cons = len([con for con in
-                             m.component_data_objects(Constraint,
-                                                      active=True,
-                                                      descend_into=True)])
+        num_orig_cons = len(
+            [
+                con
+                for con in m.component_data_objects(
+                    Constraint, active=True, descend_into=True
+                )
+            ]
+        )
         # constraints with finite, distinct lower & upper bounds
-        num_lbub_cons = len([con for con in
-                             m.component_data_objects(Constraint,
-                                                      active=True,
-                                                      descend_into=True)
-                             if con.lower is not None
-                             and con.upper is not None
-                             and con.lower is not con.upper])
+        num_lbub_cons = len(
+            [
+                con
+                for con in m.component_data_objects(
+                    Constraint, active=True, descend_into=True
+                )
+                if con.lower is not None
+                and con.upper is not None
+                and con.lower is not con.upper
+            ]
+        )
 
         # count constraints with no bounds
-        num_nobound_cons = len([con for con in
-                             m.component_data_objects(Constraint,
-                                                      active=True,
-                                                      descend_into=True)
-                             if con.lower is None
-                             and con.upper is None
-                             ])
+        num_nobound_cons = len(
+            [
+                con
+                for con in m.component_data_objects(
+                    Constraint, active=True, descend_into=True
+                )
+                if con.lower is None and con.upper is None
+            ]
+        )
 
         transform_to_standard_form(m)
-        cons = [con for con in m.component_data_objects(Constraint,
-                                                        active=True,
-                                                        descend_into=True)]
+        cons = [
+            con
+            for con in m.component_data_objects(
+                Constraint, active=True, descend_into=True
+            )
+        ]
         for con in cons:
-            has_lb_or_ub = not(con.lower is None and con.upper is None)
+            has_lb_or_ub = not (con.lower is None and con.upper is None)
             if has_lb_or_ub and not con.equality:
-                self.assertTrue(con.lower is None, msg="Constraint %s not"
-                                " in standard form" % con.name)
+                self.assertTrue(
+                    con.lower is None,
+                    msg="Constraint %s not in standard form" % con.name,
+                )
                 lb_is_ub = con.lower is con.upper
-                self.assertFalse(lb_is_ub, msg="Constraint %s should be"
-                                 " converted to equality" % con.name)
+                self.assertFalse(
+                    lb_is_ub,
+                    msg="Constraint %s should be converted to equality" % con.name,
+                )
             if con is not m.c3:
-                self.assertTrue(has_lb_or_ub, msg="Constraint %s should have"
-                                " a lower or upper bound" % con.name)
+                self.assertTrue(
+                    has_lb_or_ub,
+                    msg="Constraint %s should have"
+                    " a lower or upper bound" % con.name,
+                )
 
-        self.assertEqual(len([con for con in
-                              m.component_data_objects(Constraint,
-                                                       active=True,
-                                                       descend_into=True)]),
-                              num_orig_cons + num_lbub_cons - num_nobound_cons,
-                              msg="Expected number of constraints after\n "
-                                  "standardizing constraints not matched. "
-                                  "Number of constraints after\n "
-                                  "transformation"
-                                  " should be (number constraints in original "
-                                  "model) \n + (number of constraints with "
-                                  "distinct finite lower and upper bounds).")
+        self.assertEqual(
+            len(
+                [
+                    con
+                    for con in m.component_data_objects(
+                        Constraint, active=True, descend_into=True
+                    )
+                ]
+            ),
+            num_orig_cons + num_lbub_cons - num_nobound_cons,
+            msg="Expected number of constraints after\n "
+            "standardizing constraints not matched. "
+            "Number of constraints after\n "
+            "transformation"
+            " should be (number constraints in original "
+            "model) \n + (number of constraints with "
+            "distinct finite lower and upper bounds).",
+        )
 
     def test_transform_does_not_alter_num_of_constraints(self):
         """
@@ -603,17 +695,27 @@ class testTransformToStandardForm(unittest.TestCase):
         m.x = Var(initialize=1, bounds=(0, 1))
         m.y = Var(initialize=0, bounds=(None, 1))
         m.con1 = Constraint(expr=m.x >= 1 + m.y)
-        m.con2 = Constraint(expr=m.x**2 + m.y**2>= 9)
+        m.con2 = Constraint(expr=m.x**2 + m.y**2 >= 9)
         original_num_constraints = len(list(m.component_data_objects(Constraint)))
         transform_to_standard_form(m)
         final_num_constraints = len(list(m.component_data_objects(Constraint)))
-        self.assertEqual(original_num_constraints, final_num_constraints,
-                         msg="Transform to standard form function led to a "
-                             "different number of constraints than in the original model.")
-        number_of_non_standard_form_inequalities = \
-            len(list(c for c in list(m.component_data_objects(Constraint)) if c.lower != None))
-        self.assertEqual(number_of_non_standard_form_inequalities, 0,
-                         msg="All inequality constraints were not transformed to standard form.")
+        self.assertEqual(
+            original_num_constraints,
+            final_num_constraints,
+            msg="Transform to standard form function led to a "
+            "different number of constraints than in the original model.",
+        )
+        number_of_non_standard_form_inequalities = len(
+            list(
+                c for c in list(m.component_data_objects(Constraint)) if c.lower != None
+            )
+        )
+        self.assertEqual(
+            number_of_non_standard_form_inequalities,
+            0,
+            msg="All inequality constraints were not transformed to standard form.",
+        )
+
 
 # === UncertaintySets.py
 # Mock abstract class
@@ -625,7 +727,7 @@ class myUncertaintySet(UncertaintySet):
 
     def set_as_constraint(self, uncertain_params, **kwargs):
 
-        return Constraint(expr= sum(v for v in uncertain_params) <= 0)
+        return Constraint(expr=sum(v for v in uncertain_params) <= 0)
 
     def point_in_set(self, uncertain_params, **kwargs):
 
@@ -638,7 +740,8 @@ class myUncertaintySet(UncertaintySet):
         self.dim = 1
 
     def parameter_bounds(self):
-        return [(0,1)]
+        return [(0, 1)]
+
 
 class testAbstractUncertaintySetClass(unittest.TestCase):
     '''
@@ -660,15 +763,21 @@ class testAbstractUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = m.uncertain_params
 
         _set = myUncertaintySet()
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         uncertain_params_in_expr = list(
-            v for v in m.uncertain_param_vars if
-            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr.expr))
+            v
+            for v in m.uncertain_param_vars
+            if v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr.expr))
         )
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              "be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            "be the same uncertain param Var objects in the original model.",
+        )
 
     def test_uncertainty_set_with_incorrect_params(self):
         '''
@@ -681,15 +790,22 @@ class testAbstractUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
 
         _set = myUncertaintySet()
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_params)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_params
+        )
         variables_in_constr = list(
-            v for v in m.uncertain_params if
-            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr.expr))
+            v
+            for v in m.uncertain_params
+            if v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr.expr))
         )
 
-        self.assertEqual(len(variables_in_constr), 0,
-                         msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                             "variable expression.")
+        self.assertEqual(
+            len(variables_in_constr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            "variable expression.",
+        )
+
 
 class testEllipsoidalUncertaintySetClass(unittest.TestCase):
     """
@@ -706,9 +822,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         scale = 2
         eset = EllipsoidalSet(center, shape_matrix, scale)
         np.testing.assert_allclose(
-            center,
-            eset.center,
-            err_msg="EllipsoidalSet center not as expected",
+            center, eset.center, err_msg="EllipsoidalSet center not as expected"
         )
         np.testing.assert_allclose(
             shape_matrix,
@@ -716,9 +830,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
             err_msg="EllipsoidalSet shape matrix not as expected",
         )
         np.testing.assert_allclose(
-            scale,
-            eset.scale,
-            err_msg="EllipsoidalSet scale not as expected",
+            scale, eset.scale, err_msg="EllipsoidalSet scale not as expected"
         )
 
         # check attributes update
@@ -741,9 +853,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
             err_msg="EllipsoidalSet shape matrix update not as expected",
         )
         np.testing.assert_allclose(
-            new_scale,
-            eset.scale,
-            err_msg="EllipsoidalSet scale update not as expected",
+            new_scale, eset.scale, err_msg="EllipsoidalSet scale update not as expected"
         )
 
     def test_error_on_ellipsoidal_dim_change(self):
@@ -795,10 +905,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         invalid_shape_matrix = [[1, 0]]
         scale = 1
 
-        exc_str = (
-            r".*must be a square matrix of size 2.*"
-            r"\(provided.*shape \(1, 2\)\)"
-        )
+        exc_str = r".*must be a square matrix of size 2.*\(provided.*shape \(1, 2\)\)"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -821,21 +928,20 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
 
         # assert error on construction
         with self.assertRaisesRegex(
-                ValueError,
-                r"Shape matrix must be symmetric",
-                msg="Asymmetric shape matrix test failed",
-                ):
+            ValueError,
+            r"Shape matrix must be symmetric",
+            msg="Asymmetric shape matrix test failed",
+        ):
             EllipsoidalSet(center, [[1, 1], [0, 1]], scale)
         with self.assertRaises(
-                np.linalg.LinAlgError,
-                msg="Singular shape matrix test failed",
-                ):
+            np.linalg.LinAlgError, msg="Singular shape matrix test failed"
+        ):
             EllipsoidalSet(center, [[0, 0], [0, 0]], scale)
         with self.assertRaisesRegex(
-                ValueError,
-                r"Non positive-definite.*",
-                msg="Indefinite shape matrix test failed"
-                ):
+            ValueError,
+            r"Non positive-definite.*",
+            msg="Indefinite shape matrix test failed",
+        ):
             EllipsoidalSet(center, [[1, 0], [0, -2]], scale)
 
         # construct a valid EllipsoidalSet
@@ -843,21 +949,20 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
 
         # assert error on update
         with self.assertRaisesRegex(
-                ValueError,
-                r"Shape matrix must be symmetric",
-                msg="Asymmetric shape matrix test failed",
-                ):
+            ValueError,
+            r"Shape matrix must be symmetric",
+            msg="Asymmetric shape matrix test failed",
+        ):
             eset.shape_matrix = [[1, 1], [0, 1]]
         with self.assertRaises(
-                np.linalg.LinAlgError,
-                msg="Singular shape matrix test failed",
-                ):
+            np.linalg.LinAlgError, msg="Singular shape matrix test failed"
+        ):
             eset.shape_matrix = [[0, 0], [0, 0]]
         with self.assertRaisesRegex(
-                ValueError,
-                r"Non positive-definite.*",
-                msg="Indefinite shape matrix test failed"
-                ):
+            ValueError,
+            r"Non positive-definite.*",
+            msg="Indefinite shape matrix test failed",
+        ):
             eset.shape_matrix = [[1, 0], [0, -2]]
 
     def test_uncertainty_set_with_correct_params(self):
@@ -871,19 +976,26 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
-        cov = [[1,0], [0,1]]
+        cov = [[1, 0], [0, 1]]
         s = 1
 
         _set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         uncertain_params_in_expr = list(
-            v for v in m.uncertain_param_vars.values() if
-            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
+            v
+            for v in m.uncertain_param_vars.values()
+            if v
+            in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
         )
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars.values()],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
     def test_uncertainty_set_with_incorrect_params(self):
         '''
@@ -894,20 +1006,29 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.p1 = Param(initialize=0, mutable=True)
         m.p2 = Param(initialize=0, mutable=True)
         m.uncertain_params = [m.p1, m.p2]
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
-        cov = [[1,0],[0,1]]
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
+        cov = [[1, 0], [0, 1]]
         s = 1
 
         _set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         variables_in_constr = list(
-            v for v in m.uncertain_params if
-            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
+            v
+            for v in m.uncertain_params
+            if v
+            in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
         )
 
-        self.assertEqual(len(variables_in_constr), 0,
-                         msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                             " variable expression.")
+        self.assertEqual(
+            len(variables_in_constr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()
@@ -919,7 +1040,9 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         s = 1
 
         _set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
-        self.assertTrue(_set.point_in_set([0,0]), msg="Point is not in the EllipsoidalSet.")
+        self.assertTrue(
+            _set.point_in_set([0, 0]), msg="Point is not in the EllipsoidalSet."
+        )
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
@@ -934,19 +1057,31 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
 
         EllipsoidalSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
-        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None,
-                            "Bounds not added correctly for EllipsoidalSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None,
-                            "Bounds not added correctly for EllipsoidalSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None,
-                            "Bounds not added correctly for EllipsoidalSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None,
-                            "Bounds not added correctly for EllipsoidalSet")
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].lb,
+            None,
+            "Bounds not added correctly for EllipsoidalSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].ub,
+            None,
+            "Bounds not added correctly for EllipsoidalSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].lb,
+            None,
+            "Bounds not added correctly for EllipsoidalSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].ub,
+            None,
+            "Bounds not added correctly for EllipsoidalSet",
+        )
 
     def test_ellipsoidal_set_bounds(self):
         """Check `EllipsoidalSet` parameter bounds method correct."""
         cov = [[2, 1], [1, 2]]
-        scales=[0.5, 2]
+        scales = [0.5, 2]
         mean = [1, 1]
 
         for scale in scales:
@@ -957,10 +1092,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
                 diff = (cov[idx][idx] * scale) ** 0.5
                 actual_bounds.append((val - diff, val + diff))
             self.assertTrue(
-                np.allclose(
-                    np.array(bounds),
-                    np.array(actual_bounds),
-                ),
+                np.allclose(np.array(bounds), np.array(actual_bounds)),
                 msg=(
                     f"EllipsoidalSet bounds {bounds} do not match their actual"
                     f" values {actual_bounds} (for scale {scale}"
@@ -969,6 +1101,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
                     " method for the EllipsoidalSet."
                 ),
             )
+
 
 class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
     """
@@ -1008,10 +1141,7 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         np.testing.assert_allclose(
             new_half_lengths,
             aset.half_lengths,
-            err_msg=(
-                "AxisAlignedEllipsoidalSet half lengths update not as "
-                "expected"
-            ),
+            err_msg=("AxisAlignedEllipsoidalSet half lengths update not as expected"),
         )
 
     def test_error_on_axis_aligned_dim_change(self):
@@ -1038,9 +1168,7 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         """
         center = [1, 1]
         invalid_half_lengths = [1, -1]
-        exc_str = (
-            r"Entry -1 of.*'half_lengths' is negative.*"
-        )
+        exc_str = r"Entry -1 of.*'half_lengths' is negative.*"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -1051,7 +1179,7 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
 
         # assert error on update
         with self.assertRaisesRegex(ValueError, exc_str):
-            aset.half_lengths= invalid_half_lengths
+            aset.half_lengths = invalid_half_lengths
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -1064,16 +1192,23 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
-        _set = AxisAlignedEllipsoidalSet(center=[0,0], half_lengths=[2,1])
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         uncertain_params_in_expr = list(
-            v for v in m.uncertain_param_vars.values() if
-            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
+            v
+            for v in m.uncertain_param_vars.values()
+            if v
+            in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
         )
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars.values()],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
     def test_uncertainty_set_with_incorrect_params(self):
         '''
@@ -1084,17 +1219,26 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.p1 = Param(initialize=0, mutable=True)
         m.p2 = Param(initialize=0, mutable=True)
         m.uncertain_params = [m.p1, m.p2]
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
-        _set = AxisAlignedEllipsoidalSet(center=[0,0], half_lengths=[2,1])
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
+        _set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         variables_in_constr = list(
-            v for v in m.uncertain_params if
-            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
+            v
+            for v in m.uncertain_params
+            if v
+            in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
         )
 
-        self.assertEqual(len(variables_in_constr), 0,
-                         msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                             " variable expression.")
+        self.assertEqual(
+            len(variables_in_constr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()
@@ -1103,24 +1247,44 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         _set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
-        self.assertTrue(_set.point_in_set([0, 0]),
-                        msg="Point is not in the AxisAlignedEllipsoidalSet.")
-        
+        self.assertTrue(
+            _set.point_in_set([0, 0]),
+            msg="Point is not in the AxisAlignedEllipsoidalSet.",
+        )
+
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.util = Block()
-        m.util.uncertain_param_vars = Var([0,1], initialize=0.5)
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0.5)
 
         _set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
         config = Block()
         config.uncertainty_set = _set
 
-        AxisAlignedEllipsoidalSet.add_bounds_on_uncertain_parameters(model=m, config=config)
+        AxisAlignedEllipsoidalSet.add_bounds_on_uncertain_parameters(
+            model=m, config=config
+        )
 
-        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].lb,
+            None,
+            "Bounds not added correctly for AxisAlignedEllipsoidalSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].ub,
+            None,
+            "Bounds not added correctly for AxisAlignedEllipsoidalSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].lb,
+            None,
+            "Bounds not added correctly for AxisAlignedEllipsoidalSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].ub,
+            None,
+            "Bounds not added correctly for AxisAlignedEllipsoidalSet",
+        )
 
     def test_set_with_zero_half_lengths(self):
         # construct ellipsoid
@@ -1156,8 +1320,9 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
             ),
         )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_two_stg_mod_with_axis_aligned_set(self):
         """
         Test two-stage model with `AxisAlignedEllipsoidalSet`
@@ -1171,17 +1336,14 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.u1 = Param(initialize=1.125, mutable=True)
         m.u2 = Param(initialize=1, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
 
         # Define the uncertainty set
         # we take the parameter `u2` to be 'fixed'
-        ellipsoid = AxisAlignedEllipsoidalSet(
-            center=[1.125, 1],
-            half_lengths=[1, 0],
-        )
+        ellipsoid = AxisAlignedEllipsoidalSet(center=[1.125, 1], half_lengths=[1, 0])
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -1202,19 +1364,19 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
             options={
                 "objective_focus": ObjectiveType.worst_case,
                 "solve_master_globally": True,
-            }
+            },
         )
 
         # check successful termination
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_optimal,
-            msg="Did not identify robust optimal solution to problem instance."
+            msg="Did not identify robust optimal solution to problem instance.",
         )
         self.assertGreater(
             results.iterations,
             0,
-            msg="Robust infeasible model terminated in 0 iterations (nominal case)."
+            msg="Robust infeasible model terminated in 0 iterations (nominal case).",
         )
 
 
@@ -1239,13 +1401,10 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
 
         # update the set
         pset.coefficients_mat = [[1, 0, 1], [1, 1, 1.5]]
-        pset.rhs_vec= [3, 4]
+        pset.rhs_vec = [3, 4]
 
         # check updates work
-        np.testing.assert_allclose(
-            [[1, 0, 1], [1, 1, 1.5]],
-            pset.coefficients_mat,
-        )
+        np.testing.assert_allclose([[1, 0, 1], [1, 1, 1.5]], pset.coefficients_mat)
         np.testing.assert_allclose([3, 4], pset.rhs_vec)
 
     def test_error_on_polyhedral_set_dim_change(self):
@@ -1258,8 +1417,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         pset = PolyhedralSet([[1, 2, 3], [4, 5, 6]], [1, 3])
 
         exc_str = (
-            r".*must have 3 columns to match set dimension "
-            r"\(provided.*2 columns\)"
+            r".*must have 3 columns to match set dimension \(provided.*2 columns\)"
         )
 
         # assert error on update
@@ -1315,9 +1473,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
         rhs_vec = [1, 1, 2]
 
-        exc_str = (
-            r".*all entries zero in columns at indexes: 0, 1.*"
-        )
+        exc_str = r".*all entries zero in columns at indexes: 0, 1.*"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -1344,8 +1500,10 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         A = [[0, 1], [1, 0]]
         b = [0, 0]
 
-        _set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b, )
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         uncertain_params_in_expr = ComponentSet()
         for con in m.uncertainty_set_contr.values():
             con_vars = ComponentSet(identify_variables(expr=con.expr))
@@ -1353,10 +1511,12 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
                 if v in con_vars:
                     uncertain_params_in_expr.add(v)
 
-        self.assertEqual(uncertain_params_in_expr,
-                         ComponentSet(m.uncertain_param_vars.values()),
-                         msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            uncertain_params_in_expr,
+            ComponentSet(m.uncertain_param_vars.values()),
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
     def test_uncertainty_set_with_incorrect_params(self):
         '''
@@ -1368,22 +1528,30 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         m.p1 = Var(initialize=0)
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
         A = [[0, 1], [1, 0]]
         b = [0, 0]
 
         _set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             vars_in_expr.extend(
-                v for v in m.uncertain_param_vars if
-                v in ComponentSet(identify_variables(expr=con.expr))
+                v
+                for v in m.uncertain_param_vars
+                if v in ComponentSet(identify_variables(expr=con.expr))
             )
 
-        self.assertEqual(len(vars_in_expr), 0,
-                             msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                                 " variable expression.")
+        self.assertEqual(
+            len(vars_in_expr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_polyhedral_set_as_constraint(self):
         '''
@@ -1391,7 +1559,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         which has as many elements at their are dimensions in A.
         '''
 
-        A = [[1, 0],[0, 1]]
+        A = [[1, 0], [0, 1]]
         b = [0, 0]
 
         m = ConcreteModel()
@@ -1399,11 +1567,16 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         m.p2 = Var(initialize=0)
 
         polyhedral_set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
-        m.uncertainty_set_constr = polyhedral_set.set_as_constraint(uncertain_params=[m.p1, m.p2])
+        m.uncertainty_set_constr = polyhedral_set.set_as_constraint(
+            uncertain_params=[m.p1, m.p2]
+        )
 
-        self.assertEqual(len(A), len(m.uncertainty_set_constr.index_set()),
-                         msg="Polyhedral uncertainty set constraints must be as many as the"
-                             "number of rows in the matrix A.")
+        self.assertEqual(
+            len(A),
+            len(m.uncertainty_set_constr.index_set()),
+            msg="Polyhedral uncertainty set constraints must be as many as the"
+            "number of rows in the matrix A.",
+        )
 
     def test_point_in_set(self):
         A = [[1, 0], [0, 1]]
@@ -1415,9 +1588,11 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         polyhedral_set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
-        self.assertTrue(polyhedral_set.point_in_set([0, 0]),
-                        msg="Point is not in the PolyhedralSet.")
-    
+        self.assertTrue(
+            polyhedral_set.point_in_set([0, 0]),
+            msg="Point is not in the PolyhedralSet.",
+        )
+
     @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
@@ -1434,10 +1609,27 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
 
         PolyhedralSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
-        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for PolyhedralSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for PolyhedralSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for PolyhedralSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for PolyhedralSet")
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].lb,
+            None,
+            "Bounds not added correctly for PolyhedralSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].ub,
+            None,
+            "Bounds not added correctly for PolyhedralSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].lb,
+            None,
+            "Bounds not added correctly for PolyhedralSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].ub,
+            None,
+            "Bounds not added correctly for PolyhedralSet",
+        )
+
 
 class testBudgetUncertaintySetClass(unittest.TestCase):
     '''
@@ -1467,13 +1659,10 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
 
         # update the set
         buset.budget_membership_mat = [[1, 1, 0], [0, 0, 1]]
-        buset.budget_rhs_vec= [3, 4]
+        buset.budget_rhs_vec = [3, 4]
 
         # check updates work
-        np.testing.assert_allclose(
-            [[1, 1, 0], [0, 0, 1]],
-            buset.budget_membership_mat,
-        )
+        np.testing.assert_allclose([[1, 1, 0], [0, 0, 1]], buset.budget_membership_mat)
         np.testing.assert_allclose([3, 4], buset.budget_rhs_vec)
         np.testing.assert_allclose(
             [[1, 1, 0], [0, 0, 1], [-1, 0, 0], [0, -1, 0], [0, 0, -1]],
@@ -1497,16 +1686,14 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
 
         # error on budget incidence matrix update
         exc_str = (
-            r".*must have 3 columns to match set dimension "
-            r"\(provided.*1 columns\)"
+            r".*must have 3 columns to match set dimension \(provided.*1 columns\)"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             bu_set.budget_membership_mat = [[1], [1]]
 
         # error on origin update
         exc_str = (
-            r".*must have 3 entries to match set dimension "
-            r"\(provided.*4 entries\)"
+            r".*must have 3 entries to match set dimension \(provided.*4 entries\)"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             bu_set.origin = [1, 2, 1, 0]
@@ -1542,9 +1729,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         budget_mat = [[1, 0, 1], [1, 1, 0]]
         neg_val_rhs_vec = [1, -1]
 
-        exc_str = (
-            r"Entry -1 of.*'budget_rhs_vec' is negative*"
-        )
+        exc_str = r"Entry -1 of.*'budget_rhs_vec' is negative*"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -1565,9 +1750,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         invalid_budget_mat = [[1, 0, 1], [1, 1, 0.1]]
         budget_rhs_vec = [1, 1]
 
-        exc_str = (
-            r"Attempting.*entries.*not 0-1 values \(example: 0.1\).*"
-        )
+        exc_str = r"Attempting.*entries.*not 0-1 values \(example: 0.1\).*"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -1588,9 +1771,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         invalid_row_mat = [[0, 0, 0], [1, 1, 1], [0, 0, 0]]
         budget_rhs_vec = [1, 1, 2]
 
-        exc_str = (
-            r".*all entries zero in rows at indexes: 0, 2.*"
-        )
+        exc_str = r".*all entries zero in rows at indexes: 0, 2.*"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -1611,9 +1792,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
         budget_rhs_vec = [1, 1, 2]
 
-        exc_str = (
-            r".*all entries zero in columns at indexes: 0, 1.*"
-        )
+        exc_str = r".*all entries zero in columns at indexes: 0, 1.*"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -1640,14 +1819,10 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
 
         # construct budget set instances
         buset1 = BudgetSet(
-            budget_membership_mat=[[1, 1], [0, 1]],
-            rhs_vec=[2, 3],
-            origin=None,
+            budget_membership_mat=[[1, 1], [0, 1]], rhs_vec=[2, 3], origin=None
         )
         buset2 = BudgetSet(
-            budget_membership_mat=[[1, 0], [1, 1]],
-            rhs_vec=[3, 2],
-            origin=[1, 1],
+            budget_membership_mat=[[1, 0], [1, 1]], rhs_vec=[3, 2], origin=[1, 1]
         )
 
         # check parameter bounds matches LP results
@@ -1681,11 +1856,15 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         # Single budget
         budget_membership_mat = [[1 for i in range(len(m.uncertain_param_vars))]]
-        rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
+        rhs_vec = [
+            0.1 * len(m.uncertain_param_vars)
+            + sum(p.value for p in m.uncertain_param_vars.values())
+        ]
 
-        _set = BudgetSet(budget_membership_mat=budget_membership_mat,
-                        rhs_vec=rhs_vec)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = BudgetSet(budget_membership_mat=budget_membership_mat, rhs_vec=rhs_vec)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -1694,10 +1873,12 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
-
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars.values()],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
     def test_uncertainty_set_with_incorrect_params(self):
         '''
@@ -1709,24 +1890,34 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.p1 = Var(initialize=0)
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
         # Single budget
         budget_membership_mat = [[1 for i in range(len(m.uncertain_param_vars))]]
-        rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
+        rhs_vec = [
+            0.1 * len(m.uncertain_param_vars)
+            + sum(p.value for p in m.uncertain_param_vars.values())
+        ]
 
-        _set = BudgetSet(budget_membership_mat=budget_membership_mat,
-                        rhs_vec=rhs_vec)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = BudgetSet(budget_membership_mat=budget_membership_mat, rhs_vec=rhs_vec)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             vars_in_expr.extend(
-                v for v in m.uncertain_param_vars.values() if
-                v in ComponentSet(identify_variables(expr=con.expr))
+                v
+                for v in m.uncertain_param_vars.values()
+                if v in ComponentSet(identify_variables(expr=con.expr))
             )
 
-        self.assertEqual(len(vars_in_expr), 0,
-                             msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                                 " variable expression.")
+        self.assertEqual(
+            len(vars_in_expr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_budget_set_as_constraint(self):
         '''
@@ -1741,11 +1932,16 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
 
         # Single budget
         budget_membership_mat = [[1 for i in range(len(m.uncertain_params))]]
-        rhs_vec = [0.1 * len(m.uncertain_params) + sum(p.value for p in m.uncertain_params)]
+        rhs_vec = [
+            0.1 * len(m.uncertain_params) + sum(p.value for p in m.uncertain_params)
+        ]
 
-        budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
-                               rhs_vec=rhs_vec)
-        m.uncertainty_set_constr = budget_set.set_as_constraint(uncertain_params=m.uncertain_params)
+        budget_set = BudgetSet(
+            budget_membership_mat=budget_membership_mat, rhs_vec=rhs_vec
+        )
+        m.uncertainty_set_constr = budget_set.set_as_constraint(
+            uncertain_params=m.uncertain_params
+        )
 
         self.assertEqual(
             len(budget_set.coefficients_mat),
@@ -1764,32 +1960,56 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
 
         budget_membership_mat = [[1 for i in range(len(m.uncertain_params))]]
-        rhs_vec = [0.1 * len(m.uncertain_params) + sum(p.value for p in m.uncertain_params)]
+        rhs_vec = [
+            0.1 * len(m.uncertain_params) + sum(p.value for p in m.uncertain_params)
+        ]
 
-        budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
-                               rhs_vec=rhs_vec)
-        self.assertTrue(budget_set.point_in_set([0, 0]),
-                        msg="Point is not in the BudgetSet.")
+        budget_set = BudgetSet(
+            budget_membership_mat=budget_membership_mat, rhs_vec=rhs_vec
+        )
+        self.assertTrue(
+            budget_set.point_in_set([0, 0]), msg="Point is not in the BudgetSet."
+        )
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.util = Block()
-        m.util.uncertain_param_vars = Var([0,1], initialize=0.5)
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0.5)
 
         budget_membership_mat = [[1 for i in range(len(m.util.uncertain_param_vars))]]
-        rhs_vec = [0.1 * len(m.util.uncertain_param_vars) + sum(value(p) for p in m.util.uncertain_param_vars.values())]
+        rhs_vec = [
+            0.1 * len(m.util.uncertain_param_vars)
+            + sum(value(p) for p in m.util.uncertain_param_vars.values())
+        ]
 
-        budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
-                               rhs_vec=rhs_vec)
+        budget_set = BudgetSet(
+            budget_membership_mat=budget_membership_mat, rhs_vec=rhs_vec
+        )
         config = Block()
         config.uncertainty_set = budget_set
 
         BudgetSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
-        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for BudgetSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for BudgetSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for BudgetSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for BudgetSet")
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].lb,
+            None,
+            "Bounds not added correctly for BudgetSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].ub,
+            None,
+            "Bounds not added correctly for BudgetSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].lb,
+            None,
+            "Bounds not added correctly for BudgetSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].ub,
+            None,
+            "Bounds not added correctly for BudgetSet",
+        )
 
 
 class testCardinalityUncertaintySetClass(unittest.TestCase):
@@ -1804,11 +2024,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         when bounds are appropriate.
         """
         # valid inputs
-        cset = CardinalitySet(
-            origin=[0, 0],
-            positive_deviation=[1, 3],
-            gamma=2,
-        )
+        cset = CardinalitySet(origin=[0, 0], positive_deviation=[1, 3], gamma=2)
 
         # check attributes are as expected
         np.testing.assert_allclose(cset.origin, [0, 0])
@@ -1837,10 +2053,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = [1, -2]  # invalid
         gamma = 2
 
-        exc_str = (
-            r"Entry -2 of attribute 'positive_deviation' is negative "
-            r"value"
-        )
+        exc_str = r"Entry -2 of attribute 'positive_deviation' is negative value"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -1888,11 +2101,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         set dimension (i.e. number of entries of `origin`).
         """
         # construct a valid cardinality set
-        cset = CardinalitySet(
-            origin=[0, 0],
-            positive_deviation=[1, 1],
-            gamma=2,
-        )
+        cset = CardinalitySet(origin=[0, 0], positive_deviation=[1, 1], gamma=2)
 
         exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
 
@@ -1920,9 +2129,12 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
-        _set = CardinalitySet(origin=center,
-                        positive_deviation=positive_deviation, gamma=gamma)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
+        _set = CardinalitySet(
+            origin=center, positive_deviation=positive_deviation, gamma=gamma
+        )
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars, model=m
+        )
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -1931,11 +2143,12 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
-
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
-
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars.values()],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_incorrect_params(self):
@@ -1949,15 +2162,20 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         m.p1 = Var(initialize=0)
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
 
         center = list(p.value for p in m.uncertain_param_vars.values())
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
-        _set = CardinalitySet(origin=center,
-                             positive_deviation=positive_deviation, gamma=gamma)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
+        _set = CardinalitySet(
+            origin=center, positive_deviation=positive_deviation, gamma=gamma
+        )
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars, model=m
+        )
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -1966,10 +2184,12 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         vars_in_expr.append(v)
 
-        self.assertEqual(len(vars_in_expr), 0,
-                             msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                                 " variable expression.")
-
+        self.assertEqual(
+            len(vars_in_expr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()
@@ -1982,32 +2202,51 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
-        _set = CardinalitySet(origin=center,
-                             positive_deviation=positive_deviation, gamma=gamma)
+        _set = CardinalitySet(
+            origin=center, positive_deviation=positive_deviation, gamma=gamma
+        )
 
-        self.assertTrue(_set.point_in_set([0, 0]),
-                        msg="Point is not in the CardinalitySet.")
+        self.assertTrue(
+            _set.point_in_set([0, 0]), msg="Point is not in the CardinalitySet."
+        )
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.util = Block()
-        m.util.uncertain_param_vars = Var([0,1], initialize=0.5)
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0.5)
 
         center = list(p.value for p in m.util.uncertain_param_vars.values())
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(center) / 2)
 
-        cardinality_set = CardinalitySet(origin=center,
-                             positive_deviation=positive_deviation, gamma=gamma)
+        cardinality_set = CardinalitySet(
+            origin=center, positive_deviation=positive_deviation, gamma=gamma
+        )
         config = Block()
         config.uncertainty_set = cardinality_set
 
         CardinalitySet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
-        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for CardinalitySet")
-        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for CardinalitySet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for CardinalitySet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for CardinalitySet")
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].lb,
+            None,
+            "Bounds not added correctly for CardinalitySet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].ub,
+            None,
+            "Bounds not added correctly for CardinalitySet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].lb,
+            None,
+            "Bounds not added correctly for CardinalitySet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].ub,
+            None,
+            "Bounds not added correctly for CardinalitySet",
+        )
 
 
 def eval_parameter_bounds(uncertainty_set, solver):
@@ -2054,18 +2293,14 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         bounds = [[1, 2], [3, 4]]
         bset = BoxSet(bounds=bounds)
         np.testing.assert_allclose(
-            bounds,
-            bset.bounds,
-            err_msg="BoxSet bounds not as expected",
+            bounds, bset.bounds, err_msg="BoxSet bounds not as expected"
         )
 
         # check bounds update
         new_bounds = [[3, 4], [5, 6]]
         bset.bounds = new_bounds
         np.testing.assert_allclose(
-            new_bounds,
-            bset.bounds,
-            err_msg="BoxSet bounds not as expected",
+            new_bounds, bset.bounds, err_msg="BoxSet bounds not as expected"
         )
 
     def test_error_on_box_set_dim_change(self):
@@ -2111,9 +2346,9 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         """
         # example ragged arrays
         ragged_arrays = (
-            [[1, 2], 3],            # list and int in same sequence
+            [[1, 2], 3],  # list and int in same sequence
             [[1, 2], [3, [4, 5]]],  # 2nd row ragged (list and int)
-            [[1, 2], [3]],          # variable row lengths
+            [[1, 2], [3]],  # variable row lengths
         )
 
         # construct valid box set
@@ -2255,9 +2490,11 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
-        bounds = [(-1,1), (-1,1)]
+        bounds = [(-1, 1), (-1, 1)]
         _set = BoxSet(bounds=bounds)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -2266,9 +2503,12 @@ class testBoxUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars.values()],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
     def test_uncertainty_set_with_incorrect_params(self):
         '''
@@ -2280,10 +2520,14 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         m.p1 = Var(initialize=0)
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
         bounds = [(-1, 1), (-1, 1)]
         _set = BoxSet(bounds=bounds)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         vars_in_expr = []
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -2293,9 +2537,12 @@ class testBoxUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         vars_in_expr.append(v)
 
-        self.assertEqual(len(vars_in_expr), 0,
-                             msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                                 " variable expression.")
+        self.assertEqual(
+            len(vars_in_expr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()
@@ -2306,13 +2553,12 @@ class testBoxUncertaintySetClass(unittest.TestCase):
 
         bounds = [(-1, 1), (-1, 1)]
         _set = BoxSet(bounds=bounds)
-        self.assertTrue(_set.point_in_set([0, 0]),
-                        msg="Point is not in the BoxSet.")
+        self.assertTrue(_set.point_in_set([0, 0]), msg="Point is not in the BoxSet.")
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.util = Block()
-        m.util.uncertain_param_vars = Var([0,1], initialize=0)
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0)
 
         bounds = [(-1, 1), (-1, 1)]
         box_set = BoxSet(bounds=bounds)
@@ -2321,10 +2567,27 @@ class testBoxUncertaintySetClass(unittest.TestCase):
 
         BoxSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
-        self.assertEqual(m.util.uncertain_param_vars[0].lb, -1, "Bounds not added correctly for BoxSet")
-        self.assertEqual(m.util.uncertain_param_vars[0].ub, 1, "Bounds not added correctly for BoxSet")
-        self.assertEqual(m.util.uncertain_param_vars[1].lb, -1, "Bounds not added correctly for BoxSet")
-        self.assertEqual(m.util.uncertain_param_vars[1].ub, 1, "Bounds not added correctly for BoxSet")
+        self.assertEqual(
+            m.util.uncertain_param_vars[0].lb,
+            -1,
+            "Bounds not added correctly for BoxSet",
+        )
+        self.assertEqual(
+            m.util.uncertain_param_vars[0].ub,
+            1,
+            "Bounds not added correctly for BoxSet",
+        )
+        self.assertEqual(
+            m.util.uncertain_param_vars[1].lb,
+            -1,
+            "Bounds not added correctly for BoxSet",
+        )
+        self.assertEqual(
+            m.util.uncertain_param_vars[1].ub,
+            1,
+            "Bounds not added correctly for BoxSet",
+        )
+
 
 class testDiscreteUncertaintySetClass(unittest.TestCase):
     '''
@@ -2343,18 +2606,14 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
 
         # check scenarios added appropriately
         np.testing.assert_allclose(
-            scenarios,
-            dset.scenarios,
-            err_msg="BoxSet bounds not as expected",
+            scenarios, dset.scenarios, err_msg="BoxSet bounds not as expected"
         )
 
         # check scenarios updated appropriately
         new_scenarios = [[0, 1, 2], [1, 2, 0], [3, 5, 4]]
         dset.scenarios = new_scenarios
         np.testing.assert_allclose(
-            new_scenarios,
-            dset.scenarios,
-            err_msg="BoxSet bounds not as expected",
+            new_scenarios, dset.scenarios, err_msg="BoxSet bounds not as expected"
         )
 
     def test_error_on_discrete_set_dim_change(self):
@@ -2372,7 +2631,6 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             dset.scenarios = [[1, 2, 3], [4, 5, 6]]
 
-
     def test_uncertainty_set_with_correct_params(self):
         '''
         Case in which the UncertaintySet is constructed using the uncertain_param objects from the model to
@@ -2384,9 +2642,11 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
-        scenarios = [(0,0), (1,0), (0,1), (1,1), (2,0)]
+        scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
         _set = DiscreteScenarioSet(scenarios=scenarios)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -2395,10 +2655,12 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
-
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars.values()],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
     def test_uncertainty_set_with_incorrect_params(self):
         '''
@@ -2410,10 +2672,14 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.p1 = Var(initialize=0)
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
         scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
         _set = DiscreteScenarioSet(scenarios=scenarios)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars
+        )
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -2422,9 +2688,12 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         vars_in_expr.append(v)
 
-        self.assertEqual(len(vars_in_expr), 0,
-                             msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                                 " variable expression.")
+        self.assertEqual(
+            len(vars_in_expr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()
@@ -2435,13 +2704,14 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
 
         scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
         _set = DiscreteScenarioSet(scenarios=scenarios)
-        self.assertTrue(_set.point_in_set([0, 0]),
-                        msg="Point is not in the DiscreteScenarioSet.")
+        self.assertTrue(
+            _set.point_in_set([0, 0]), msg="Point is not in the DiscreteScenarioSet."
+        )
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.util = Block()
-        m.util.uncertain_param_vars = Var([0,1], initialize=0)
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0)
 
         scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
         _set = DiscreteScenarioSet(scenarios=scenarios)
@@ -2450,13 +2720,30 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
 
         DiscreteScenarioSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
-        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for DiscreteScenarioSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for DiscreteScenarioSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for DiscreteScenarioSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for DiscreteScenarioSet")
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].lb,
+            None,
+            "Bounds not added correctly for DiscreteScenarioSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].ub,
+            None,
+            "Bounds not added correctly for DiscreteScenarioSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].lb,
+            None,
+            "Bounds not added correctly for DiscreteScenarioSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].ub,
+            None,
+            "Bounds not added correctly for DiscreteScenarioSet",
+        )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_two_stg_model_discrete_set_single_scenario(self):
         """
         Test two-stage model under discrete uncertainty with
@@ -2474,15 +2761,13 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.x3 = Var(initialize=0, bounds=(None, None))
 
         # model constraints
-        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
 
         # uncertainty set
-        discrete_set = DiscreteScenarioSet(
-            scenarios=[(1.125, 1)],
-        )
+        discrete_set = DiscreteScenarioSet(scenarios=[(1.125, 1)])
 
         # Instantiate PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -2503,14 +2788,14 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
             options={
                 "objective_focus": ObjectiveType.worst_case,
                 "solve_master_globally": True,
-            }
+            },
         )
 
         # check successful termination
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_optimal,
-            msg="Did not identify robust optimal solution to problem instance."
+            msg="Did not identify robust optimal solution to problem instance.",
         )
 
         # only one iteration required
@@ -2520,7 +2805,7 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
             msg=(
                 "PyROS was unable to solve a singleton discrete set instance "
                 " successfully within a single iteration."
-            )
+            ),
         )
 
 
@@ -2582,10 +2867,7 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             fset.psi_mat = [[1, 0], [1, 2]]
 
         # assert error on origin update
-        exc_str = (
-            r"Attempting.*factor model set of dimension 3 "
-            r"to value of dimension 2"
-        )
+        exc_str = r"Attempting.*factor model set of dimension 3 to value of dimension 2"
         with self.assertRaisesRegex(ValueError, exc_str):
             fset.origin = [1, 3]
 
@@ -2595,23 +2877,12 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         is negative int, or AttributeError
         if attempting to update (should be immutable).
         """
-        exc_str = (
-            r".*'number_of_factors' must be a positive int "
-            r"\(provided value -1\)"
-        )
+        exc_str = r".*'number_of_factors' must be a positive int \(provided value -1\)"
         with self.assertRaisesRegex(ValueError, exc_str):
-            FactorModelSet(
-                origin=[0],
-                number_of_factors=-1,
-                psi_mat=[[1, 1]],
-                beta=0.1,
-            )
+            FactorModelSet(origin=[0], number_of_factors=-1, psi_mat=[[1, 1]], beta=0.1)
 
         fset = FactorModelSet(
-            origin=[0],
-            number_of_factors=2,
-            psi_mat=[[1, 1]],
-            beta=0.1,
+            origin=[0], number_of_factors=2, psi_mat=[[1, 1]], beta=0.1
         )
 
         exc_str = r".*'number_of_factors' is immutable"
@@ -2631,13 +2902,9 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
 
         # assert error on construction
         neg_exc_str = (
-            r".*must be a real number between 0 and 1.*"
-            r"\(provided value -0.5\)"
+            r".*must be a real number between 0 and 1.*\(provided value -0.5\)"
         )
-        big_exc_str = (
-            r".*must be a real number between 0 and 1.*"
-            r"\(provided value 1.5\)"
-        )
+        big_exc_str = r".*must be a real number between 0 and 1.*\(provided value 1.5\)"
         with self.assertRaisesRegex(ValueError, neg_exc_str):
             FactorModelSet(origin, number_of_factors, psi_mat, neg_beta)
         with self.assertRaisesRegex(ValueError, big_exc_str):
@@ -2670,25 +2937,16 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             origin=[0, 0],
             number_of_factors=3,
             psi_mat=[[1, -1, 1], [1, 0.1, 1]],
-            beta=1/6,
+            beta=1 / 6,
         )
         fset2 = FactorModelSet(
-            origin=[0],
-            number_of_factors=3,
-            psi_mat=[[1, 6, 8]],
-            beta=1/2,
+            origin=[0], number_of_factors=3, psi_mat=[[1, 6, 8]], beta=1 / 2
         )
         fset3 = FactorModelSet(
-            origin=[1],
-            number_of_factors=2,
-            psi_mat=[[1, 2]],
-            beta=1/4,
+            origin=[1], number_of_factors=2, psi_mat=[[1, 2]], beta=1 / 4
         )
         fset4 = FactorModelSet(
-            origin=[1],
-            number_of_factors=3,
-            psi_mat=[[-1, -6, -8]],
-            beta=1/2,
+            origin=[1], number_of_factors=3, psi_mat=[[-1, -6, -8]], beta=1 / 2
         )
 
         # check parameter bounds matches LP results
@@ -2722,14 +2980,18 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.util = Block()
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
-        F=1
+        F = 1
         psi_mat = np.zeros(shape=(len(m.uncertain_params), F))
         for i in range(len(psi_mat)):
             random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
             for j in range(len(psi_mat[i])):
                 psi_mat[i][j] = random_row_entries[j]
-        _set = FactorModelSet(origin=[0,0], psi_mat=psi_mat, number_of_factors=F, beta=1)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
+        _set = FactorModelSet(
+            origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1
+        )
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars, model=m
+        )
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -2738,10 +3000,12 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
-
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars.values()],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_incorrect_params(self):
@@ -2755,15 +3019,21 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
         m.util = Block()
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
         F = 1
         psi_mat = np.zeros(shape=(len(m.uncertain_params), F))
         for i in range(len(psi_mat)):
             random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
             for j in range(len(psi_mat[i])):
                 psi_mat[i][j] = random_row_entries[j]
-        _set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
-        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
+        _set = FactorModelSet(
+            origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1
+        )
+        m.uncertainty_set_contr = _set.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars, model=m
+        )
         vars_in_expr = []
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -2773,9 +3043,12 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         vars_in_expr.append(v)
 
-        self.assertEqual(len(vars_in_expr), 0,
-                             msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                                 " variable expression.")
+        self.assertEqual(
+            len(vars_in_expr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()
@@ -2790,14 +3063,17 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
             for j in range(len(psi_mat[i])):
                 psi_mat[i][j] = random_row_entries[j]
-        _set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
-        self.assertTrue(_set.point_in_set([0, 0]),
-                        msg="Point is not in the FactorModelSet.")
+        _set = FactorModelSet(
+            origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1
+        )
+        self.assertTrue(
+            _set.point_in_set([0, 0]), msg="Point is not in the FactorModelSet."
+        )
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.util = Block()
-        m.util.uncertain_param_vars = Var([0,1], initialize=0)
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0)
 
         F = 1
         psi_mat = np.zeros(shape=(len(list(m.util.uncertain_param_vars.values())), F))
@@ -2805,16 +3081,34 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
             for j in range(len(psi_mat[i])):
                 psi_mat[i][j] = random_row_entries[j]
-        _set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
+        _set = FactorModelSet(
+            origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1
+        )
         config = Block()
         config.uncertainty_set = _set
 
         FactorModelSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
-        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for FactorModelSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for FactorModelSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for FactorModelSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for FactorModelSet")
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].lb,
+            None,
+            "Bounds not added correctly for FactorModelSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].ub,
+            None,
+            "Bounds not added correctly for FactorModelSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].lb,
+            None,
+            "Bounds not added correctly for FactorModelSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].ub,
+            None,
+            "Bounds not added correctly for FactorModelSet",
+        )
 
 
 class testIntersectionSetClass(unittest.TestCase):
@@ -2840,7 +3134,7 @@ class testIntersectionSetClass(unittest.TestCase):
             msg=(
                 "IntersectionSet 'all_sets' attribute does not"
                 "contain expected BoxSet"
-            )
+            ),
         )
         self.assertIn(
             aset,
@@ -2848,7 +3142,7 @@ class testIntersectionSetClass(unittest.TestCase):
             msg=(
                 "IntersectionSet 'all_sets' attribute does not"
                 "contain expected AxisAlignedEllipsoidalSet"
-            )
+            ),
         )
 
     def test_error_on_intersecting_wrong_dims(self):
@@ -2909,26 +3203,19 @@ class testIntersectionSetClass(unittest.TestCase):
         # construct the set
         iset = IntersectionSet(box_set=bset, axis_set=aset)
 
-        exc_str = (
-            r"Attempting to set.*dimension 2 to a sequence.* of dimension 1"
-        )
+        exc_str = r"Attempting to set.*dimension 2 to a sequence.* of dimension 1"
 
         # assert error on update
         with self.assertRaisesRegex(ValueError, exc_str):
             # attempt to set to 1-dimensional sets
-            iset.all_sets = [
-                BoxSet([[1, 1]]),
-                AxisAlignedEllipsoidalSet([0], [1]),
-            ]
+            iset.all_sets = [BoxSet([[1, 1]]), AxisAlignedEllipsoidalSet([0], [1])]
 
     def test_error_on_too_few_sets(self):
         """
         Check ValueError raised if too few sets are passed
         to the intersection set.
         """
-        exc_str = (
-            r"Attempting.*minimum required length 2.*iterable of length 1"
-        )
+        exc_str = r"Attempting.*minimum required length 2.*iterable of length 1"
 
         # assert error on construction
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -2936,8 +3223,7 @@ class testIntersectionSetClass(unittest.TestCase):
 
         # construct a valid intersection set
         iset = IntersectionSet(
-            box_set=BoxSet([[1, 2]]),
-            axis_set=AxisAlignedEllipsoidalSet([0], [1]),
+            box_set=BoxSet([[1, 2]]), axis_set=AxisAlignedEllipsoidalSet([0], [1])
         )
 
         # assert error on update
@@ -2951,14 +3237,13 @@ class testIntersectionSetClass(unittest.TestCase):
         class behaves like a regular Python list.
         """
         iset = IntersectionSet(
-            bset=BoxSet([[0, 2]]),
-            aset=AxisAlignedEllipsoidalSet([0], [1]),
+            bset=BoxSet([[0, 2]]), aset=AxisAlignedEllipsoidalSet([0], [1])
         )
 
         # an UncertaintySetList of length 2.
         # should behave like a list of length 2
         all_sets = iset.all_sets
-        
+
         # test append
         all_sets.append(BoxSet([[1, 2]]))
         del all_sets[2:]
@@ -3003,8 +3288,11 @@ class testIntersectionSetClass(unittest.TestCase):
 
         # assigning to slices should work fine
         all_sets[3:] = [BoxSet([[1, 1.5]]), BoxSet([[1, 3]])]
-            
-    @unittest.skipUnless(SolverFactory('ipopt').available(exception_flag=False), "Local NLP solver is not available.")
+
+    @unittest.skipUnless(
+        SolverFactory('ipopt').available(exception_flag=False),
+        "Local NLP solver is not available.",
+    )
     def test_uncertainty_set_with_correct_params(self):
         '''
         Case in which the UncertaintySet is constructed using the uncertain_param objects from the model to
@@ -3016,7 +3304,7 @@ class testIntersectionSetClass(unittest.TestCase):
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
-        bounds = [(-1,1), (-1,1)]
+        bounds = [(-1, 1), (-1, 1)]
         Q1 = BoxSet(bounds=bounds)
         Q2 = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
         Q = IntersectionSet(Q1=Q1, Q2=Q2)
@@ -3025,7 +3313,9 @@ class testIntersectionSetClass(unittest.TestCase):
         solver = SolverFactory("ipopt")
         config.declare("global_solver", ConfigValue(default=solver))
 
-        m.uncertainty_set_contr = Q.set_as_constraint(uncertain_params=m.uncertain_param_vars, config=config)
+        m.uncertainty_set_contr = Q.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars, config=config
+        )
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -3034,11 +3324,17 @@ class testIntersectionSetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
-                              " be the same uncertain param Var objects in the original model.")
+        self.assertEqual(
+            [id(u) for u in uncertain_params_in_expr],
+            [id(u) for u in m.uncertain_param_vars.values()],
+            msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+            " be the same uncertain param Var objects in the original model.",
+        )
 
-    @unittest.skipUnless(SolverFactory('ipopt').available(exception_flag=False), "Local NLP solver is not available.")
+    @unittest.skipUnless(
+        SolverFactory('ipopt').available(exception_flag=False),
+        "Local NLP solver is not available.",
+    )
     def test_uncertainty_set_with_incorrect_params(self):
         '''
         Case in which the set is constructed using  uncertain_param objects which are Params instead of
@@ -3049,7 +3345,9 @@ class testIntersectionSetClass(unittest.TestCase):
         m.p1 = Var(initialize=0)
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
-        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
+        m.uncertain_param_vars = Param(
+            range(len(m.uncertain_params)), initialize=0, mutable=True
+        )
         bounds = [(-1, 1), (-1, 1)]
 
         Q1 = BoxSet(bounds=bounds)
@@ -3060,7 +3358,9 @@ class testIntersectionSetClass(unittest.TestCase):
         config = ConfigBlock()
         config.declare("global_solver", ConfigValue(default=solver))
 
-        m.uncertainty_set_contr = Q.set_as_constraint(uncertain_params=m.uncertain_param_vars, config=config)
+        m.uncertainty_set_contr = Q.set_as_constraint(
+            uncertain_params=m.uncertain_param_vars, config=config
+        )
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -3069,9 +3369,12 @@ class testIntersectionSetClass(unittest.TestCase):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         vars_in_expr.append(v)
 
-        self.assertEqual(len(vars_in_expr), 0,
-                             msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
-                                 " variable expression.")
+        self.assertEqual(
+            len(vars_in_expr),
+            0,
+            msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+            " variable expression.",
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()
@@ -3084,8 +3387,9 @@ class testIntersectionSetClass(unittest.TestCase):
         Q1 = BoxSet(bounds=bounds)
         Q2 = BoxSet(bounds=[(-2, 1), (-1, 2)])
         Q = IntersectionSet(Q1=Q1, Q2=Q2)
-        self.assertTrue(Q.point_in_set([0, 0]),
-                        msg="Point is not in the IntersectionSet.")
+        self.assertTrue(
+            Q.point_in_set([0, 0]), msg="Point is not in the IntersectionSet."
+        )
 
     @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
     def test_add_bounds_on_uncertain_parameters(self):
@@ -3103,91 +3407,126 @@ class testIntersectionSetClass(unittest.TestCase):
 
         IntersectionSet.add_bounds_on_uncertain_parameters(m, config)
 
-        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for IntersectionSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for IntersectionSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for IntersectionSet")
-        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for IntersectionSet")
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].lb,
+            None,
+            "Bounds not added correctly for IntersectionSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[0].ub,
+            None,
+            "Bounds not added correctly for IntersectionSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].lb,
+            None,
+            "Bounds not added correctly for IntersectionSet",
+        )
+        self.assertNotEqual(
+            m.util.uncertain_param_vars[1].ub,
+            None,
+            "Bounds not added correctly for IntersectionSet",
+        )
+
 
 # === master_problem_methods.py
 class testInitialConstructMaster(unittest.TestCase):
-    '''
-
-    '''
-
     def test_initial_construct_master(self):
         model_data = MasterProblemData()
         model_data.timing = None
         model_data.working_model = ConcreteModel()
         master_data = initial_construct_master(model_data)
-        self.assertTrue(hasattr(master_data, "master_model"),
-                        msg="Initial construction of master problem "
-                            "did not create a master problem ConcreteModel object.")
+        self.assertTrue(
+            hasattr(master_data, "master_model"),
+            msg="Initial construction of master problem "
+            "did not create a master problem ConcreteModel object.",
+        )
+
 
 class testAddScenarioToMaster(unittest.TestCase):
-    '''
-
-    '''
-
     def test_add_scenario_to_master(self):
         working_model = ConcreteModel()
-        working_model.p = Param([1,2],initialize=0,mutable=True)
+        working_model.p = Param([1, 2], initialize=0, mutable=True)
         working_model.x = Var()
         model_data = MasterProblemData()
         model_data.working_model = working_model
         model_data.timing = None
         master_data = initial_construct_master(model_data)
-        master_data.master_model.scenarios[0,0].transfer_attributes_from(working_model.clone())
+        master_data.master_model.scenarios[0, 0].transfer_attributes_from(
+            working_model.clone()
+        )
         master_data.master_model.scenarios[0, 0].util = Block()
-        master_data.master_model.scenarios[0, 0].util.first_stage_variables = \
-            [master_data.master_model.scenarios[0,0].x]
-        master_data.master_model.scenarios[0,0].util.uncertain_params = [master_data.master_model.scenarios[0,0].p[1],
-                                                                        master_data.master_model.scenarios[0,0].p[2]]
-        add_scenario_to_master(master_data, violations=[1,1])
+        master_data.master_model.scenarios[0, 0].util.first_stage_variables = [
+            master_data.master_model.scenarios[0, 0].x
+        ]
+        master_data.master_model.scenarios[0, 0].util.uncertain_params = [
+            master_data.master_model.scenarios[0, 0].p[1],
+            master_data.master_model.scenarios[0, 0].p[2],
+        ]
+        add_scenario_to_master(master_data, violations=[1, 1])
 
-        self.assertEqual(len(master_data.master_model.scenarios), 2, msg="Scenario not added to master correctly. "
-                                                                         "Expected 2 scenarios.")
+        self.assertEqual(
+            len(master_data.master_model.scenarios),
+            2,
+            msg="Scenario not added to master correctly. Expected 2 scenarios.",
+        )
+
 
 global_solver = "baron"
-class testSolveMaster(unittest.TestCase):
 
+
+class testSolveMaster(unittest.TestCase):
     @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
     def test_solve_master(self):
         working_model = m = ConcreteModel()
-        m.x = Var(initialize=0.5, bounds=(0,10))
-        m.y = Var(initialize=1.0, bounds=(0,5))
+        m.x = Var(initialize=0.5, bounds=(0, 10))
+        m.y = Var(initialize=1.0, bounds=(0, 5))
         m.z = Var(initialize=0, bounds=(None, None))
         m.p = Param(initialize=1, mutable=True)
         m.obj = Objective(expr=m.x)
-        m.con = Constraint(expr = m.x + m.y + m.z <= 3)
+        m.con = Constraint(expr=m.x + m.y + m.z <= 3)
         model_data = MasterProblemData()
         model_data.working_model = working_model
         model_data.timing = None
         model_data.iteration = 0
         master_data = initial_construct_master(model_data)
-        master_data.master_model.scenarios[0, 0].transfer_attributes_from(working_model.clone())
+        master_data.master_model.scenarios[0, 0].transfer_attributes_from(
+            working_model.clone()
+        )
         master_data.master_model.scenarios[0, 0].util = Block()
-        master_data.master_model.scenarios[0, 0].util.first_stage_variables = \
-            [master_data.master_model.scenarios[0, 0].x]
+        master_data.master_model.scenarios[0, 0].util.first_stage_variables = [
+            master_data.master_model.scenarios[0, 0].x
+        ]
         master_data.master_model.scenarios[0, 0].util.decision_rule_vars = []
         master_data.master_model.scenarios[0, 0].util.second_stage_variables = []
-        master_data.master_model.scenarios[0, 0].util.uncertain_params = [master_data.master_model.scenarios[0, 0].p]
+        master_data.master_model.scenarios[0, 0].util.uncertain_params = [
+            master_data.master_model.scenarios[0, 0].p
+        ]
         master_data.master_model.scenarios[0, 0].first_stage_objective = 0
-        master_data.master_model.scenarios[0, 0].second_stage_objective = \
-            Expression(expr=master_data.master_model.scenarios[0, 0].x)
+        master_data.master_model.scenarios[0, 0].second_stage_objective = Expression(
+            expr=master_data.master_model.scenarios[0, 0].x
+        )
         master_data.iteration = 0
         master_data.timing = Bunch()
 
-        box_set = BoxSet(bounds=[(0,2)])
+        box_set = BoxSet(bounds=[(0, 2)])
         solver = SolverFactory(global_solver)
         config = ConfigBlock()
-        config.declare("backup_global_solvers",ConfigValue(default=[]))
+        config.declare("backup_global_solvers", ConfigValue(default=[]))
         config.declare("backup_local_solvers", ConfigValue(default=[]))
         config.declare("solve_master_globally", ConfigValue(default=True))
         config.declare("global_solver", ConfigValue(default=solver))
         config.declare("tee", ConfigValue(default=False))
         config.declare("decision_rule_order", ConfigValue(default=1))
         config.declare("objective_focus", ConfigValue(default=ObjectiveType.worst_case))
-        config.declare("second_stage_variables", ConfigValue(default=master_data.master_model.scenarios[0, 0].util.second_stage_variables))
+        config.declare(
+            "second_stage_variables",
+            ConfigValue(
+                default=master_data.master_model.scenarios[
+                    0, 0
+                ].util.second_stage_variables
+            ),
+        )
         config.declare("subproblem_file_directory", ConfigValue(default=None))
         config.declare("time_limit", ConfigValue(default=None))
 
@@ -3202,9 +3541,9 @@ class testSolveMaster(unittest.TestCase):
                 ),
             )
 
+
 # === regression test for the solver
 class coefficientMatchingTests(unittest.TestCase):
-
     def test_coefficient_matching_correct_num_constraints_added(self):
         # Write the deterministic Pyomo model
         m = ConcreteModel()
@@ -3213,7 +3552,13 @@ class coefficientMatchingTests(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
-        m.eq_con = Constraint(expr =  m.u**2 * (m.x2- 1) + m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) == 0)
+        m.eq_con = Constraint(
+            expr=m.u**2 * (m.x2 - 1)
+            + m.u * (m.x1**3 + 0.5)
+            - 5 * m.u * m.x1 * m.x2
+            + m.u * (m.x1 + 2)
+            == 0
+        )
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         config = Block()
@@ -3229,12 +3574,23 @@ class coefficientMatchingTests(unittest.TestCase):
 
         m.util.h_x_q_constraints = ComponentSet()
 
-        coeff_matching_success, robust_infeasible = coefficient_matching(m, m.eq_con, [m.u], config)
+        coeff_matching_success, robust_infeasible = coefficient_matching(
+            m, m.eq_con, [m.u], config
+        )
 
-        self.assertEqual(coeff_matching_success, True, msg="Coefficient matching was unsuccessful.")
-        self.assertEqual(robust_infeasible, False, msg="Coefficient matching detected a robust infeasible constraint (1 == 0).")
-        self.assertEqual(len(m.coefficient_matching_constraints), 2,
-                         msg="Coefficient matching produced incorrect number of h(x,q)=0 constraints.")
+        self.assertEqual(
+            coeff_matching_success, True, msg="Coefficient matching was unsuccessful."
+        )
+        self.assertEqual(
+            robust_infeasible,
+            False,
+            msg="Coefficient matching detected a robust infeasible constraint (1 == 0).",
+        )
+        self.assertEqual(
+            len(m.coefficient_matching_constraints),
+            2,
+            msg="Coefficient matching produced incorrect number of h(x,q)=0 constraints.",
+        )
 
         config.decision_rule_order = 1
         model_data = Block()
@@ -3246,11 +3602,21 @@ class coefficientMatchingTests(unittest.TestCase):
         add_decision_rule_variables(model_data=model_data, config=config)
         add_decision_rule_constraints(model_data=model_data, config=config)
 
-        coeff_matching_success, robust_infeasible = coefficient_matching(m, m.eq_con, [m.u], config)
-        self.assertEqual(coeff_matching_success, False, msg="Coefficient matching should have been "
-                                                            "unsuccessful for higher order polynomial expressions.")
-        self.assertEqual(robust_infeasible, False, msg="Coefficient matching is not successful, "
-                                                       "but should not be proven robust infeasible.")
+        coeff_matching_success, robust_infeasible = coefficient_matching(
+            m, m.eq_con, [m.u], config
+        )
+        self.assertEqual(
+            coeff_matching_success,
+            False,
+            msg="Coefficient matching should have been "
+            "unsuccessful for higher order polynomial expressions.",
+        )
+        self.assertEqual(
+            robust_infeasible,
+            False,
+            msg="Coefficient matching is not successful, "
+            "but should not be proven robust infeasible.",
+        )
 
     def test_coefficient_matching_robust_infeasible_proof(self):
         # Write the deterministic Pyomo model
@@ -3260,7 +3626,13 @@ class coefficientMatchingTests(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
-        m.eq_con = Constraint(expr =  m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) + m.u**2 == 0)
+        m.eq_con = Constraint(
+            expr=m.u * (m.x1**3 + 0.5)
+            - 5 * m.u * m.x1 * m.x2
+            + m.u * (m.x1 + 2)
+            + m.u**2
+            == 0
+        )
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         config = Block()
@@ -3276,16 +3648,25 @@ class coefficientMatchingTests(unittest.TestCase):
 
         m.util.h_x_q_constraints = ComponentSet()
 
-        coeff_matching_success, robust_infeasible = coefficient_matching(m, m.eq_con, [m.u], config)
+        coeff_matching_success, robust_infeasible = coefficient_matching(
+            m, m.eq_con, [m.u], config
+        )
 
-        self.assertEqual(coeff_matching_success, False, msg="Coefficient matching should have been "
-                                                            "unsuccessful.")
-        self.assertEqual(robust_infeasible, True, msg="Coefficient matching should be proven robust infeasible.")
+        self.assertEqual(
+            coeff_matching_success,
+            False,
+            msg="Coefficient matching should have been unsuccessful.",
+        )
+        self.assertEqual(
+            robust_infeasible,
+            True,
+            msg="Coefficient matching should be proven robust infeasible.",
+        )
+
 
 # === regression test for the solver
 @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
 class RegressionTest(unittest.TestCase):
-
     def regression_test_constant_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -3309,16 +3690,20 @@ class RegressionTest(unittest.TestCase):
         box_set = BoxSet(bounds=[(1.8, 2.2)])
         solver = SolverFactory("baron")
         pyros = SolverFactory("pyros")
-        results = pyros.solve(model=m,
-                              first_stage_variables=m.decision_vars,
-                              second_stage_variables=[],
-                              uncertain_params=[m.p[1]],
-                              uncertainty_set=box_set,
-                              local_solver=solver,
-                              global_solver=solver,
-                              options={"objective_focus":ObjectiveType.nominal})
-        self.assertTrue(results.pyros_termination_condition,
-                         pyrosTerminationCondition.robust_feasible)
+        results = pyros.solve(
+            model=m,
+            first_stage_variables=m.decision_vars,
+            second_stage_variables=[],
+            uncertain_params=[m.p[1]],
+            uncertainty_set=box_set,
+            local_solver=solver,
+            global_solver=solver,
+            options={"objective_focus": ObjectiveType.nominal},
+        )
+        self.assertTrue(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+        )
 
     def regression_test_affine_drs(self):
         model = m = ConcreteModel()
@@ -3343,17 +3728,23 @@ class RegressionTest(unittest.TestCase):
         box_set = BoxSet(bounds=[(1.8, 2.2)])
         solver = SolverFactory("baron")
         pyros = SolverFactory("pyros")
-        results = pyros.solve(model=m,
-                              first_stage_variables=m.decision_vars,
-                              second_stage_variables=[],
-                              uncertain_params=[m.p[1]],
-                              uncertainty_set=box_set,
-                              local_solver=solver,
-                              global_solver=solver,
-                              options={"objective_focus": ObjectiveType.nominal,
-                                       "decision_rule_order":1})
-        self.assertTrue(results.pyros_termination_condition,
-                        pyrosTerminationCondition.robust_feasible)
+        results = pyros.solve(
+            model=m,
+            first_stage_variables=m.decision_vars,
+            second_stage_variables=[],
+            uncertain_params=[m.p[1]],
+            uncertainty_set=box_set,
+            local_solver=solver,
+            global_solver=solver,
+            options={
+                "objective_focus": ObjectiveType.nominal,
+                "decision_rule_order": 1,
+            },
+        )
+        self.assertTrue(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+        )
 
     def regression_test_quad_drs(self):
         model = m = ConcreteModel()
@@ -3378,27 +3769,33 @@ class RegressionTest(unittest.TestCase):
         box_set = BoxSet(bounds=[(1.8, 2.2)])
         solver = SolverFactory("baron")
         pyros = SolverFactory("pyros")
-        results = pyros.solve(model=m,
-                              first_stage_variables=m.decision_vars,
-                              second_stage_variables=[],
-                              uncertain_params=[m.p[1]],
-                              uncertainty_set=box_set,
-                              local_solver=solver,
-                              global_solver=solver,
-                              options={"objective_focus": ObjectiveType.nominal,
-                                       "decision_rule_order": 2})
-        self.assertTrue(results.pyros_termination_condition,
-                        pyrosTerminationCondition.robust_feasible)
+        results = pyros.solve(
+            model=m,
+            first_stage_variables=m.decision_vars,
+            second_stage_variables=[],
+            uncertain_params=[m.p[1]],
+            uncertainty_set=box_set,
+            local_solver=solver,
+            global_solver=solver,
+            options={
+                "objective_focus": ObjectiveType.nominal,
+                "decision_rule_order": 2,
+            },
+        )
+        self.assertTrue(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+        )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_minimize_dr_norm(self):
         m = ConcreteModel()
         m.p1 = Param(initialize=0, mutable=True)
         m.p2 = Param(initialize=0, mutable=True)
-        m.z1 = Var(initialize=0, bounds=(0,1))
-        m.z2 = Var(initialize=0, bounds=(0,1))
-
+        m.z1 = Var(initialize=0, bounds=(0, 1))
+        m.z2 = Var(initialize=0, bounds=(0, 1))
 
         m.working_model = ConcreteModel()
         m.working_model.util = Block()
@@ -3426,8 +3823,10 @@ class RegressionTest(unittest.TestCase):
         master.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
         master.scenarios[0, 0].transfer_attributes_from(m.working_model.clone())
         master.scenarios[0, 0].first_stage_objective = 0
-        master.scenarios[0, 0].second_stage_objective = Expression(expr=(master.scenarios[0, 0].util.second_stage_variables[0] - 1)**2 +
-                                    (master.scenarios[0, 0].util.second_stage_variables[1] - 1)**2)
+        master.scenarios[0, 0].second_stage_objective = Expression(
+            expr=(master.scenarios[0, 0].util.second_stage_variables[0] - 1) ** 2
+            + (master.scenarios[0, 0].util.second_stage_variables[1] - 1) ** 2
+        )
         master.obj = Objective(expr=master.scenarios[0, 0].second_stage_objective)
         master_data = MasterProblemData()
         master_data.master_model = master
@@ -3443,8 +3842,9 @@ class RegressionTest(unittest.TestCase):
                 msg="Minimize dr norm did not solve to optimality.",
             )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_identifying_violating_param_realization(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -3452,8 +3852,8 @@ class RegressionTest(unittest.TestCase):
         m.x3 = Var(initialize=0, bounds=(None, None))
         m.u = Param(initialize=1.125, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -3468,27 +3868,37 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        results = pyros_solver.solve(model=m,
-                                     first_stage_variables=[m.x1, m.x2],
-                                     second_stage_variables=[],
-                                     uncertain_params=[m.u],
-                                     uncertainty_set=interval,
-                                     local_solver=local_subsolver,
-                                     global_solver=global_subsolver,
-                                     options={
-                                         "objective_focus": ObjectiveType.worst_case,
-                                         "solve_master_globally": True
-                                     })
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
 
-        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
-                         msg="Did not identify robust optimal solution to problem instance.")
-        self.assertGreater(results.iterations, 0,
-                         msg="Robust infeasible model terminated in 0 iterations (nominal case).")
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance.",
+        )
+        self.assertGreater(
+            results.iterations,
+            0,
+            msg="Robust infeasible model terminated in 0 iterations (nominal case).",
+        )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
-    @unittest.skipUnless(baron_version<(23,1,5),
-                         "Test known to fail beginning with Baron 23.1.5")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    @unittest.skipUnless(
+        baron_version < (23, 1, 5), "Test known to fail beginning with Baron 23.1.5"
+    )
     def test_terminate_with_max_iter(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -3496,8 +3906,8 @@ class RegressionTest(unittest.TestCase):
         m.x3 = Var(initialize=0, bounds=(None, None))
         m.u = Param(initialize=1.125, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -3512,25 +3922,31 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        results = pyros_solver.solve(model=m,
-                                     first_stage_variables=[m.x1],
-                                     second_stage_variables=[m.x2],
-                                     uncertain_params=[m.u],
-                                     uncertainty_set=interval,
-                                     local_solver=local_subsolver,
-                                     global_solver=global_subsolver,
-                                     options={
-                                         "objective_focus": ObjectiveType.worst_case,
-                                         "solve_master_globally": True,
-                                         "max_iter":1,
-                                         "decision_rule_order":2
-                                     })
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+                "max_iter": 1,
+                "decision_rule_order": 2,
+            },
+        )
 
-        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.max_iter,
-                         msg="Returned termination condition is not return max_iter.")
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.max_iter,
+            msg="Returned termination condition is not return max_iter.",
+        )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_terminate_with_time_limit(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -3538,8 +3954,8 @@ class RegressionTest(unittest.TestCase):
         m.x3 = Var(initialize=0, bounds=(None, None))
         m.u = Param(initialize=1.125, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -3593,7 +4009,7 @@ class RegressionTest(unittest.TestCase):
 
     @unittest.skipUnless(
         SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed."
+        "Global NLP solver is not available and licensed.",
     )
     def test_separation_terminate_time_limit(self):
         """
@@ -3606,8 +4022,8 @@ class RegressionTest(unittest.TestCase):
         m.x3 = Var(initialize=0, bounds=(None, None))
         m.u = Param(initialize=1.125, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -3619,9 +4035,7 @@ class RegressionTest(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         local_subsolver = TimeDelaySolver(
-            calls_to_sleep=0,
-            sub_solver=SolverFactory("baron"),
-            max_time=1,
+            calls_to_sleep=0, sub_solver=SolverFactory("baron"), max_time=1
         )
         global_subsolver = SolverFactory("baron")
 
@@ -3648,7 +4062,7 @@ class RegressionTest(unittest.TestCase):
     @unittest.skipUnless(
         SolverFactory('gams').license_is_valid()
         and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed."
+        "Global NLP solver is not available and licensed.",
     )
     def test_gams_successful_time_limit(self):
         """
@@ -3661,8 +4075,8 @@ class RegressionTest(unittest.TestCase):
         m.x3 = Var(initialize=0, bounds=(None, None))
         m.u = Param(initialize=1.125, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -3732,10 +4146,7 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(
             len(list(global_subsolver.options.keys())),
             1,
-            msg=(
-                f"Global subsolver {global_subsolver} options "
-                "were changed by PyROS"
-            ),
+            msg=(f"Global subsolver {global_subsolver} options were changed by PyROS"),
         )
         self.assertEqual(
             global_subsolver.options["MaxTime"],
@@ -3761,8 +4172,9 @@ class RegressionTest(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_terminate_with_application_error(self):
         """
         Check that PyROS correctly raises ApplicationError
@@ -3781,9 +4193,8 @@ class RegressionTest(unittest.TestCase):
         box_set = BoxSet(bounds=[(1, 2)])
         pyros_solver = SolverFactory("pyros")
         with self.assertRaisesRegex(
-                ApplicationError,
-                r"Solver \(ipopt\) did not exit normally",
-                ):
+            ApplicationError, r"Solver \(ipopt\) did not exit normally"
+        ):
             pyros_solver.solve(
                 model=m,
                 first_stage_variables=[m.x1],
@@ -3800,10 +4211,7 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(
             len(list(solver.options.keys())),
             1,
-            msg=(
-                f"Local subsolver {solver} options "
-                "were changed by PyROS"
-            ),
+            msg=(f"Local subsolver {solver} options were changed by PyROS"),
         )
         self.assertEqual(
             solver.options["halt_on_ampl_error"],
@@ -3811,19 +4219,17 @@ class RegressionTest(unittest.TestCase):
             msg=(
                 f"Local subsolver {solver} option "
                 "'halt_on_ampl_error' was changed by PyROS"
-            )
+            ),
         )
         self.assertEqual(
             len(list(baron.options.keys())),
             0,
-            msg=(
-                f"Global subsolver {baron} options "
-                "were changed by PyROS"
-            ),
+            msg=(f"Global subsolver {baron} options were changed by PyROS"),
         )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_master_subsolver_error(self):
         """
         Test PyROS on a two-stage problem with a subsolver error
@@ -3864,11 +4270,12 @@ class RegressionTest(unittest.TestCase):
             msg=(
                 f"Returned termination condition for separation error"
                 "test is not {pyrosTerminationCondition.subsolver_error}.",
-            )
+            ),
         )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_separation_subsolver_error(self):
         """
         Test PyROS on a two-stage problem with a subsolver error
@@ -3910,11 +4317,12 @@ class RegressionTest(unittest.TestCase):
             msg=(
                 f"Returned termination condition for separation error"
                 "test is not {pyrosTerminationCondition.subsolver_error}.",
-            )
+            ),
         )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_nominal_focus_robust_feasible(self):
         """
         Test problem under nominal objective focus terminates
@@ -3926,8 +4334,8 @@ class RegressionTest(unittest.TestCase):
         m.x3 = Var(initialize=0, bounds=(None, None))
         m.u = Param(initialize=1.125, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         # singleton set, guaranteed robust feasibility
@@ -3953,7 +4361,7 @@ class RegressionTest(unittest.TestCase):
             bypass_local_separation=True,
             options={
                 "objective_focus": ObjectiveType.nominal,
-                "solve_master_globally": True
+                "solve_master_globally": True,
             },
         )
         # check for robust feasible termination
@@ -3963,8 +4371,9 @@ class RegressionTest(unittest.TestCase):
             msg="Returned termination condition is not return robust_optimal.",
         )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_discrete_separation(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -3972,8 +4381,8 @@ class RegressionTest(unittest.TestCase):
         m.x3 = Var(initialize=0, bounds=(None, None))
         m.u = Param(initialize=1.125, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -3988,25 +4397,32 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        results = pyros_solver.solve(model=m,
-                                     first_stage_variables=[m.x1, m.x2],
-                                     second_stage_variables=[],
-                                     uncertain_params=[m.u],
-                                     uncertainty_set=discrete_scenarios,
-                                     local_solver=local_subsolver,
-                                     global_solver=global_subsolver,
-                                     options={
-                                         "objective_focus": ObjectiveType.worst_case,
-                                         "solve_master_globally": True
-                                     })
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=discrete_scenarios,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
 
-        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
-                         msg="Returned termination condition is not return robust_optimal.")
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
-    @unittest.skipUnless(baron_version>=(23,1,5),
-                         "Test runs >90 minutes with Baron 22.9.30")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    @unittest.skipUnless(
+        baron_version >= (23, 1, 5), "Test runs >90 minutes with Baron 22.9.30"
+    )
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -4015,7 +4431,7 @@ class RegressionTest(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -4030,24 +4446,30 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        results = pyros_solver.solve(model=m,
-                                     first_stage_variables=[m.x1],
-                                     second_stage_variables=[m.x2],
-                                     uncertain_params=[m.u],
-                                     uncertainty_set=interval,
-                                     local_solver=local_subsolver,
-                                     global_solver=global_subsolver,
-                                     options={
-                                         "objective_focus": ObjectiveType.worst_case,
-                                         "solve_master_globally": True,
-                                         "decision_rule_order":2
-                                     })
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+                "decision_rule_order": 2,
+            },
+        )
 
-        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
-                         msg="Returned termination condition is not return robust_optimal.")
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_coefficient_matching_solve(self):
 
         # Write the deterministic Pyomo model
@@ -4057,7 +4479,13 @@ class RegressionTest(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
-        m.eq_con = Constraint(expr =  m.u**2 * (m.x2- 1) + m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) == 0)
+        m.eq_con = Constraint(
+            expr=m.u**2 * (m.x2 - 1)
+            + m.u * (m.x1**3 + 0.5)
+            - 5 * m.u * m.x1 * m.x2
+            + m.u * (m.x1 + 2)
+            == 0
+        )
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -4070,21 +4498,31 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        results = pyros_solver.solve(model=m,
-                                     first_stage_variables=[m.x1, m.x2],
-                                     second_stage_variables=[],
-                                     uncertain_params=[m.u],
-                                     uncertainty_set=interval,
-                                     local_solver=local_subsolver,
-                                     global_solver=global_subsolver,
-                                     options={
-                                         "objective_focus": ObjectiveType.worst_case,
-                                         "solve_master_globally": True
-                                     })
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
 
-        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
-                         msg="Non-optimal termination condition from robust feasible coefficient matching problem.")
-        self.assertAlmostEqual(results.final_objective_value, 6.0394, 2, msg="Incorrect objective function value.")
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Non-optimal termination condition from robust feasible coefficient matching problem.",
+        )
+        self.assertAlmostEqual(
+            results.final_objective_value,
+            6.0394,
+            2,
+            msg="Incorrect objective function value.",
+        )
 
     def test_coefficient_matching_robust_infeasible_proof_in_pyros(self):
         # Write the deterministic Pyomo model
@@ -4094,7 +4532,13 @@ class RegressionTest(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
-        m.eq_con = Constraint(expr =  m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) + m.u**2 == 0)
+        m.eq_con = Constraint(
+            expr=m.u * (m.x1**3 + 0.5)
+            - 5 * m.u * m.x1 * m.x2
+            + m.u * (m.x1 + 2)
+            + m.u**2
+            == 0
+        )
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -4108,20 +4552,25 @@ class RegressionTest(unittest.TestCase):
 
         # Call the PyROS solver
 
-        results = pyros_solver.solve(model=m,
-                                     first_stage_variables=[m.x1, m.x2],
-                                     second_stage_variables=[],
-                                     uncertain_params=[m.u],
-                                     uncertainty_set=interval,
-                                     local_solver=local_subsolver,
-                                     global_solver=global_subsolver,
-                                     options={
-                                         "objective_focus": ObjectiveType.worst_case,
-                                         "solve_master_globally": True
-                                     })
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
 
-        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_infeasible,
-                         msg="Robust infeasible problem not identified via coefficient matching.")
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+            msg="Robust infeasible problem not identified via coefficient matching.",
+        )
 
     def test_coefficient_matching_nonlinear_expr(self):
         # Write the deterministic Pyomo model
@@ -4131,7 +4580,13 @@ class RegressionTest(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
-        m.eq_con = Constraint(expr =  m.u**2 * (m.x2- 1) + m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) == 0)
+        m.eq_con = Constraint(
+            expr=m.u**2 * (m.x2 - 1)
+            + m.u * (m.x1**3 + 0.5)
+            - 5 * m.u * m.x1 * m.x2
+            + m.u * (m.x1 + 2)
+            == 0
+        )
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -4145,24 +4600,30 @@ class RegressionTest(unittest.TestCase):
 
         # Call the PyROS solver
         with self.assertRaises(
-                ValueError, msg="ValueError should be raised for general "
-                "nonlinear expressions in h(x,z,q)=0 constraints."):
-            results = pyros_solver.solve(model=m,
-                                         first_stage_variables=[m.x1],
-                                         second_stage_variables=[m.x2],
-                                         uncertain_params=[m.u],
-                                         uncertainty_set=interval,
-                                         local_solver=local_subsolver,
-                                         global_solver=global_subsolver,
-                                         options={
-                                             "objective_focus": ObjectiveType.worst_case,
-                                             "solve_master_globally": True,
-                                             "decision_rule_order":1
-                                         })
+            ValueError,
+            msg="ValueError should be raised for general "
+            "nonlinear expressions in h(x,z,q)=0 constraints.",
+        ):
+            results = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                    "decision_rule_order": 1,
+                },
+            )
 
 
-@unittest.skipUnless(baron_available and baron_license_is_valid,
-                     "Global NLP solver is not available and licensed.")
+@unittest.skipUnless(
+    baron_available and baron_license_is_valid,
+    "Global NLP solver is not available and licensed.",
+)
 class testBypassingSeparation(unittest.TestCase):
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
@@ -4173,7 +4634,7 @@ class testBypassingSeparation(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -4189,28 +4650,32 @@ class testBypassingSeparation(unittest.TestCase):
 
         # Call the PyROS solver
         results = pyros_solver.solve(
-                         model=m,
-                         first_stage_variables=[m.x1],
-                         second_stage_variables=[m.x2],
-                         uncertain_params=[m.u],
-                         uncertainty_set=interval,
-                         local_solver=local_subsolver,
-                         global_solver=global_subsolver,
-                         options={
-                             "objective_focus": ObjectiveType.worst_case,
-                             "solve_master_globally": True,
-                             "decision_rule_order":0,
-                             "bypass_global_separation": True
-                         }
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+                "decision_rule_order": 0,
+                "bypass_global_separation": True,
+            },
         )
 
-        self.assertEqual(results.pyros_termination_condition,
-                         pyrosTerminationCondition.robust_optimal,
-                         msg="Returned termination condition is not return robust_optimal.")
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
 
 
-@unittest.skipUnless(baron_available and baron_license_is_valid,
-                     "Global NLP solver is not available and licensed.")
+@unittest.skipUnless(
+    baron_available and baron_license_is_valid,
+    "Global NLP solver is not available and licensed.",
+)
 class testUninitializedVars(unittest.TestCase):
     def test_uninitialized_vars(self):
         """
@@ -4234,7 +4699,7 @@ class testUninitializedVars(unittest.TestCase):
         m.w = Var(bounds=(0, 1))
 
         # objectives
-        m.obj = Objective(expr=-m.x ** 2 + m.z ** 2)
+        m.obj = Objective(expr=-m.x**2 + m.z**2)
 
         # auxiliary constraints
         m.t_lb_con = Constraint(expr=m.x - m.z <= m.t)
@@ -4244,9 +4709,7 @@ class testUninitializedVars(unittest.TestCase):
         m.con1 = Constraint(expr=m.x - m.z >= 0.1)
         m.eq_con = Constraint(expr=m.w == 0.5 * m.t)
 
-        box_set = BoxSet(
-                bounds=((value(m.ell), value(m.u)),)
-        )
+        box_set = BoxSet(bounds=((value(m.ell), value(m.u)),))
 
         # solvers
         local_solver = SolverFactory("ipopt")
@@ -4265,34 +4728,39 @@ class testUninitializedVars(unittest.TestCase):
             uncertain_params = [model.p]
 
             res = pyros_solver.solve(
-                    model=model,
-                    first_stage_variables=fsv,
-                    second_stage_variables=ssv,
-                    uncertain_params=uncertain_params,
-                    uncertainty_set=box_set,
-                    local_solver=local_solver,
-                    global_solver=global_solver,
-                    objective_focus=ObjectiveType.worst_case,
-                    decision_rule_order=2,
-                    solve_master_globally=True
+                model=model,
+                first_stage_variables=fsv,
+                second_stage_variables=ssv,
+                uncertain_params=uncertain_params,
+                uncertainty_set=box_set,
+                local_solver=local_solver,
+                global_solver=global_solver,
+                objective_focus=ObjectiveType.worst_case,
+                decision_rule_order=2,
+                solve_master_globally=True,
             )
 
             self.assertEqual(
-                    res.pyros_termination_condition,
-                    pyrosTerminationCondition.robust_optimal,
-                    msg=("Returned termination condition for solve with"
-                         f"decision rule order {dr_order} is not return "
-                         "robust_optimal.")
+                res.pyros_termination_condition,
+                pyrosTerminationCondition.robust_optimal,
+                msg=(
+                    "Returned termination condition for solve with"
+                    f"decision rule order {dr_order} is not return "
+                    "robust_optimal."
+                ),
             )
 
 
-@unittest.skipUnless(baron_available and baron_license_is_valid,
-                     "Global NLP solver is not available and licensed.")
+@unittest.skipUnless(
+    baron_available and baron_license_is_valid,
+    "Global NLP solver is not available and licensed.",
+)
 class testModelMultipleObjectives(unittest.TestCase):
     """
     This class contains tests for models with multiple
     Objective attributes.
     """
+
     def test_multiple_objs(self):
         """Test bypassing of global separation solve calls."""
         m = ConcreteModel()
@@ -4302,7 +4770,7 @@ class testModelMultipleObjectives(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
@@ -4324,63 +4792,55 @@ class testModelMultipleObjectives(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         solve_kwargs = dict(
-             model=m,
-             first_stage_variables=[m.x1],
-             second_stage_variables=[m.x2],
-             uncertain_params=[m.u],
-             uncertainty_set=interval,
-             local_solver=local_subsolver,
-             global_solver=global_subsolver,
-             options={
-                 "objective_focus": ObjectiveType.worst_case,
-                 "solve_master_globally": True,
-                 "decision_rule_order":0,
-             }
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+                "decision_rule_order": 0,
+            },
         )
 
         # check validation error raised due to multiple objectives
         with self.assertRaisesRegex(
-                AttributeError,
-                "This model structure is not currently handled by the ROSolver."
-                ):
+            AttributeError,
+            "This model structure is not currently handled by the ROSolver.",
+        ):
             pyros_solver.solve(**solve_kwargs)
 
         # check validation error raised due to multiple objectives
         m.b.obj.deactivate()
         with self.assertRaisesRegex(
-                AttributeError,
-                "This model structure is not currently handled by the ROSolver."
-                ):
+            AttributeError,
+            "This model structure is not currently handled by the ROSolver.",
+        ):
             pyros_solver.solve(**solve_kwargs)
 
         # now solve with only one active obj,
         # check successful termination
         m.obj2.deactivate()
         res = pyros_solver.solve(**solve_kwargs)
-        self.assertIs(res.pyros_termination_condition,
-                      pyrosTerminationCondition.robust_optimal)
+        self.assertIs(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
 
         # check active objectives
-        self.assertEqual(
-            len(list(m.component_data_objects(Objective, active=True))),
-            1
-        )
+        self.assertEqual(len(list(m.component_data_objects(Objective, active=True))), 1)
         self.assertTrue(m.obj.active)
 
         # swap to maximization objective.
         # and solve again
-        m.obj_max = Objective(
-            expr=-m.obj.expr,
-            sense=pyo_max,
-        )
+        m.obj_max = Objective(expr=-m.obj.expr, sense=pyo_max)
         m.obj.deactivate()
         res = pyros_solver.solve(**solve_kwargs)
 
         # check active objectives
-        self.assertEqual(
-            len(list(m.component_data_objects(Objective, active=True))),
-            1
-        )
+        self.assertEqual(len(list(m.component_data_objects(Objective, active=True))), 1)
         self.assertTrue(m.obj_max.active)
 
 
@@ -4390,6 +4850,7 @@ class testModelIdentifyObjectives(unittest.TestCase):
     determine the first-stage and second-stage portions of a
     two-stage expression.
     """
+
     def test_identify_objectives(self):
         """
         Test first and second-stage objective identification
@@ -4410,10 +4871,12 @@ class testModelIdentifyObjectives(unittest.TestCase):
         # objective
         m.obj = Objective(
             expr=(
-                (m.x[0] + m.y) *
-                (sum(m.x[idx] * m.p[idx] for idx in range(3))
-                 + m.q * m.z
-                 + m.x[0] * m.q)
+                (m.x[0] + m.y)
+                * (
+                    sum(m.x[idx] * m.p[idx] for idx in range(3))
+                    + m.q * m.z
+                    + m.x[0] * m.q
+                )
                 + sin(m.x[0] + m.q)
                 + cos(m.x[2] + m.z)
             )
@@ -4433,12 +4896,10 @@ class testModelIdentifyObjectives(unittest.TestCase):
         # determine vars and uncertain params participating in
         # objective
         fsv_in_obj = ComponentSet(
-            var for var in identify_variables(m.obj)
-            if var in fsv_set
+            var for var in identify_variables(m.obj) if var in fsv_set
         )
         ssv_in_obj = ComponentSet(
-            var for var in identify_variables(m.obj)
-            if var not in fsv_set
+            var for var in identify_variables(m.obj) if var not in fsv_set
         )
         uncertain_params_in_obj = ComponentSet(
             param
@@ -4449,11 +4910,11 @@ class testModelIdentifyObjectives(unittest.TestCase):
         # determine vars and uncertain params participating in
         # first-stage objective
         fsv_in_first_stg_cost = ComponentSet(
-            var for var in identify_variables(m.first_stage_objective)
-            if var in fsv_set
+            var for var in identify_variables(m.first_stage_objective) if var in fsv_set
         )
         ssv_in_first_stg_cost = ComponentSet(
-            var for var in identify_variables(m.first_stage_objective)
+            var
+            for var in identify_variables(m.first_stage_objective)
             if var not in fsv_set
         )
         uncertain_params_in_first_stg_cost = ComponentSet(
@@ -4465,11 +4926,13 @@ class testModelIdentifyObjectives(unittest.TestCase):
         # determine vars and uncertain params participating in
         # second-stage objective
         fsv_in_second_stg_cost = ComponentSet(
-            var for var in identify_variables(m.second_stage_objective)
+            var
+            for var in identify_variables(m.second_stage_objective)
             if var in fsv_set
         )
         ssv_in_second_stg_cost = ComponentSet(
-            var for var in identify_variables(m.second_stage_objective)
+            var
+            for var in identify_variables(m.second_stage_objective)
             if var not in fsv_set
         )
         uncertain_params_in_second_stg_cost = ComponentSet(
@@ -4488,7 +4951,7 @@ class testModelIdentifyObjectives(unittest.TestCase):
             ssv_in_first_stg_cost,
             f"First-stage expression {str(m.first_stage_objective.expr)}"
             f" consists of non first-stage variables "
-            f"{{var.name for var in fsv_in_second_stg_cost}}"
+            f"{{var.name for var in fsv_in_second_stg_cost}}",
         )
         self.assertTrue(
             ssv_in_second_stg_cost == ssv_in_obj,
@@ -4499,12 +4962,12 @@ class testModelIdentifyObjectives(unittest.TestCase):
             uncertain_params_in_first_stg_cost,
             f"First-stage expression {str(m.first_stage_objective.expr)}"
             " consists of uncertain params"
-            f" {{p.name for p in uncertain_params_in_first_stg_cost}}"
+            f" {{p.name for p in uncertain_params_in_first_stg_cost}}",
         )
         self.assertTrue(
             uncertain_params_in_second_stg_cost == uncertain_params_in_obj,
             f"{{p.name for p in uncertain_params_in_second_stg_cost}} is not "
-            f"{{p.name for p in uncertain_params_in_obj}}"
+            f"{{p.name for p in uncertain_params_in_obj}}",
         )
 
     def test_identify_objectives_var_expr(self):
@@ -4533,19 +4996,14 @@ class testModelIdentifyObjectives(unittest.TestCase):
 
         identify_objective_functions(m, m.obj)
         fsv_in_second_stg_obj = list(
-            v.name for v in
-            identify_variables(m.second_stage_objective)
+            v.name for v in identify_variables(m.second_stage_objective)
         )
 
         # perform checks
-        self.assertTrue(
-            list(identify_variables(m.first_stage_objective))
-            == [m.x[1]]
-        )
+        self.assertTrue(list(identify_variables(m.first_stage_objective)) == [m.x[1]])
         self.assertFalse(
             fsv_in_second_stg_obj,
-            "Second stage objective contains variable(s) "
-            f"{fsv_in_second_stg_obj}"
+            "Second stage objective contains variable(s) " f"{fsv_in_second_stg_obj}",
         )
 
 
@@ -4553,10 +5011,13 @@ class testMasterFeasibilityUnitConsistency(unittest.TestCase):
     """
     Test cases for models with unit-laden model components.
     """
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
-    @unittest.skipUnless(baron_version<(23,1,5),
-                         "Test known to fail beginning with Baron 23.1.5")
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    @unittest.skipUnless(
+        baron_version < (23, 1, 5), "Test known to fail beginning with Baron 23.1.5"
+    )
     def test_two_stg_mod_with_axis_aligned_set(self):
         """
         Test two-stage model with `AxisAlignedEllipsoidalSet`
@@ -4570,19 +5031,16 @@ class testMasterFeasibilityUnitConsistency(unittest.TestCase):
         m.x2 = Var(initialize=0, bounds=(0, None), units=u.m)
         m.x3 = Var(initialize=0, bounds=(None, None))
         m.u1 = Param(initialize=1.125, mutable=True, units=u.s)
-        m.u2 = Param(initialize=1, mutable=True, units=u.m ** 2)
+        m.u2 = Param(initialize=1, mutable=True, units=u.m**2)
 
-        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
 
         # Define the uncertainty set
         # we take the parameter `u2` to be 'fixed'
-        ellipsoid = AxisAlignedEllipsoidalSet(
-            center=[1.125, 1],
-            half_lengths=[1, 0],
-        )
+        ellipsoid = AxisAlignedEllipsoidalSet(center=[1.125, 1], half_lengths=[1, 0])
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -4604,7 +5062,7 @@ class testMasterFeasibilityUnitConsistency(unittest.TestCase):
             options={
                 "objective_focus": ObjectiveType.worst_case,
                 "solve_master_globally": True,
-            }
+            },
         )
 
         # check successful termination
@@ -4612,7 +5070,7 @@ class testMasterFeasibilityUnitConsistency(unittest.TestCase):
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_optimal,
-            msg="Did not identify robust optimal solution to problem instance."
+            msg="Did not identify robust optimal solution to problem instance.",
         )
         self.assertGreater(
             results.iterations,
@@ -4622,7 +5080,7 @@ class testMasterFeasibilityUnitConsistency(unittest.TestCase):
                 " Hence master feasibility problem construction not tested."
                 " Consider implementing a more challenging model for this"
                 " test case."
-            )
+            ),
         )
 
 
@@ -4631,6 +5089,7 @@ class TestSubsolverTiming(unittest.TestCase):
     Tests to confirm that the PyROS subsolver timing routines
     work appropriately.
     """
+
     def simple_nlp_model(self):
         """
         Create simple NLP for the unit tests defined
@@ -4644,8 +5103,8 @@ class TestSubsolverTiming(unittest.TestCase):
         m.u1 = Param(initialize=1.125, mutable=True)
         m.u2 = Param(initialize=1, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
 
@@ -4664,10 +5123,7 @@ class TestSubsolverTiming(unittest.TestCase):
 
         # Define the uncertainty set
         # we take the parameter `u2` to be 'fixed'
-        ellipsoid = AxisAlignedEllipsoidalSet(
-            center=[1.125, 1],
-            half_lengths=[1, 0],
-        )
+        ellipsoid = AxisAlignedEllipsoidalSet(center=[1.125, 1], half_lengths=[1, 0])
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -4693,7 +5149,7 @@ class TestSubsolverTiming(unittest.TestCase):
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_feasible,
-            msg="Did not identify robust optimal solution to problem instance."
+            msg="Did not identify robust optimal solution to problem instance.",
         )
         self.assertFalse(
             math.isnan(results.time),
@@ -4716,10 +5172,7 @@ class TestSubsolverTiming(unittest.TestCase):
 
         # Define the uncertainty set
         # we take the parameter `u2` to be 'fixed'
-        ellipsoid = AxisAlignedEllipsoidalSet(
-            center=[1.125, 1],
-            half_lengths=[1, 0],
-        )
+        ellipsoid = AxisAlignedEllipsoidalSet(center=[1.125, 1], half_lengths=[1, 0])
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -4745,7 +5198,7 @@ class TestSubsolverTiming(unittest.TestCase):
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_feasible,
-            msg="Did not identify robust optimal solution to problem instance."
+            msg="Did not identify robust optimal solution to problem instance.",
         )
         self.assertFalse(
             math.isnan(results.time),
@@ -4755,8 +5208,9 @@ class TestSubsolverTiming(unittest.TestCase):
             ),
         )
 
-    @unittest.skipUnless(baron_license_is_valid,
-                         "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_two_stg_mod_with_intersection_set(self):
         """
         Test two-stage model with `AxisAlignedEllipsoidalSet`
@@ -4770,16 +5224,13 @@ class TestSubsolverTiming(unittest.TestCase):
         m.u1 = Param(initialize=1.125, mutable=True)
         m.u2 = Param(initialize=1, mutable=True)
 
-        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
 
         # construct the IntersectionSet
-        ellipsoid = AxisAlignedEllipsoidalSet(
-            center=[1.125, 1],
-            half_lengths=[1, 0],
-        )
+        ellipsoid = AxisAlignedEllipsoidalSet(center=[1.125, 1], half_lengths=[1, 0])
         bset = BoxSet(bounds=[[1, 2], [0.5, 1.5]])
         iset = IntersectionSet(ellipsoid=ellipsoid, bset=bset)
 
@@ -4802,21 +5253,20 @@ class TestSubsolverTiming(unittest.TestCase):
             options={
                 "objective_focus": ObjectiveType.worst_case,
                 "solve_master_globally": True,
-            }
+            },
         )
 
         # check successful termination
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_optimal,
-            msg="Did not identify robust optimal solution to problem instance."
+            msg="Did not identify robust optimal solution to problem instance.",
         )
         self.assertGreater(
             results.iterations,
             0,
-            msg="Robust infeasible model terminated in 0 iterations (nominal case)."
+            msg="Robust infeasible model terminated in 0 iterations (nominal case).",
         )
-
 
 
 if __name__ == "__main__":

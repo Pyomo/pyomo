@@ -11,16 +11,17 @@
 
 from pyomo.common.modeling import NOTSET
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.base import (
-    ICategorizedObject, _abstract_readwrite_property,
-)
+from pyomo.core.kernel.base import ICategorizedObject, _abstract_readwrite_property
 from pyomo.core.kernel.container_utils import define_simple_containers
-from pyomo.core.expr.numvalue import (NumericValue,
-                                      is_fixed,
-                                      is_constant,
-                                      is_potentially_variable,
-                                      is_numeric_data,
-                                      value)
+from pyomo.core.expr.numvalue import (
+    NumericValue,
+    is_fixed,
+    is_constant,
+    is_potentially_variable,
+    is_numeric_data,
+    value,
+)
+
 
 class IIdentityExpression(NumericValue):
     """The interface for classes that simply wrap another
@@ -29,8 +30,8 @@ class IIdentityExpression(NumericValue):
     Derived classes should declare an _expr attribute or
     override all implemented methods.
     """
-    __slots__ = ()
 
+    __slots__ = ()
 
     PRECEDENCE = 0
 
@@ -112,7 +113,13 @@ class IIdentityExpression(NumericValue):
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """Convert this expression into a string."""
-        return EXPR.expression_to_string(self, verbose=verbose, labeler=labeler, smap=smap, compute_values=compute_values)
+        return EXPR.expression_to_string(
+            self,
+            verbose=verbose,
+            labeler=labeler,
+            smap=smap,
+            compute_values=compute_values,
+        )
 
     def _to_string(self, values, verbose, smap):
         if verbose:
@@ -144,13 +151,14 @@ class IIdentityExpression(NumericValue):
         return self.__class__(expr=values[0])
 
     def is_constant(self):
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     def is_potentially_variable(self):
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     def clone(self):
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
+
 
 class noclone(IIdentityExpression):
     """
@@ -161,6 +169,7 @@ class noclone(IIdentityExpression):
     is not an instance of NumericValue, that value is simply
     returned.
     """
+
     __slots__ = ("_expr",)
 
     def __new__(cls, expr=NOTSET):
@@ -206,6 +215,7 @@ class noclone(IIdentityExpression):
         """Return a clone of this expression (no-op)."""
         return self
 
+
 class npv_noclone(noclone):
     def is_potentially_variable(self):
         """A boolean indicating whether this expression can
@@ -220,6 +230,7 @@ class IExpression(ICategorizedObject, IIdentityExpression):
     """
     The interface for mutable expressions.
     """
+
     __slots__ = ()
 
     #
@@ -228,8 +239,7 @@ class IExpression(ICategorizedObject, IIdentityExpression):
     # by overriding the @property method
     #
 
-    expr = _abstract_readwrite_property(
-        doc="The stored expression")
+    expr = _abstract_readwrite_property(doc="The stored expression")
 
     #
     # Override some of the NumericValue methods implemented
@@ -249,14 +259,13 @@ class IExpression(ICategorizedObject, IIdentityExpression):
         """Return a clone of this expression (no-op)."""
         return self
 
+
 class expression(IExpression):
     """A named, mutable expression."""
+
     _ctype = IExpression
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_expr",
-                 "__weakref__")
+    __slots__ = ("_parent", "_storage_key", "_active", "_expr", "__weakref__")
+
     def __init__(self, expr=None):
         self._parent = None
         self._storage_key = None
@@ -273,15 +282,18 @@ class expression(IExpression):
     @property
     def expr(self):
         return self._expr
+
     @expr.setter
     def expr(self, expr):
         self._expr = expr
+
 
 class data_expression(expression):
     """A named, mutable expression that is restricted to
     storage of data expressions. An exception will be raised
     if an expression is assigned that references (or is
     allowed to reference) variables."""
+
     __slots__ = ()
 
     #
@@ -302,16 +314,14 @@ class data_expression(expression):
     @property
     def expr(self):
         return self._expr
+
     @expr.setter
     def expr(self, expr):
-        if (expr is not None) and \
-           (not is_numeric_data(expr)):
-            raise ValueError("Expression is not restricted to "
-                             "numeric data.")
+        if (expr is not None) and (not is_numeric_data(expr)):
+            raise ValueError("Expression is not restricted to numeric data.")
         self._expr = expr
+
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module
-define_simple_containers(globals(),
-                         "expression",
-                         IExpression)
+define_simple_containers(globals(), "expression", IExpression)

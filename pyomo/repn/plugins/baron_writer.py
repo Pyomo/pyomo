@@ -673,7 +673,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         Vars = []
         for vid in referenced_variable_ids:
             name = symbol_map.byObject[vid]
-            var_data = symbol_map.bySymbol[name]()
+            var_data = symbol_map.bySymbol[name]
 
             if var_data.is_continuous():
                 if var_data.has_lb() and (value(var_data.lb) >= 0):
@@ -719,7 +719,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         lbounds = {}
         for vid in referenced_variable_ids:
             name = symbol_map.byObject[vid]
-            var_data = symbol_map.bySymbol[name]()
+            var_data = symbol_map.bySymbol[name]
 
             if var_data.fixed:
                 if output_fixed_variable_bounds:
@@ -748,7 +748,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         ubounds = {}
         for vid in referenced_variable_ids:
             name = symbol_map.byObject[vid]
-            var_data = symbol_map.bySymbol[name]()
+            var_data = symbol_map.bySymbol[name]
 
             if var_data.fixed:
                 if output_fixed_variable_bounds:
@@ -810,7 +810,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         tmp = {}
         for vid in referenced_variable_ids:
             name = symbol_map.byObject[vid]
-            var_data = symbol_map.bySymbol[name]()
+            var_data = symbol_map.bySymbol[name]
 
             starting_point = var_data.value
             if starting_point is not None:

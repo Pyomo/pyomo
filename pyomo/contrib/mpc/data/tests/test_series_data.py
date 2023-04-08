@@ -17,7 +17,6 @@ from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 
 
 class TestSeriesData(unittest.TestCase):
-
     def _make_model(self):
         m = pyo.ConcreteModel()
         m.time = pyo.Set(initialize=[0.0, 0.1, 0.2])
@@ -68,24 +67,18 @@ class TestSeriesData(unittest.TestCase):
         data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}
         data = TimeSeriesData(data_dict, m.time)
         new_data = data.get_data_at_time_indices(1)
-        self.assertEqual(
-            ScalarData({m.var[:, "A"]: 2, m.var[:, "B"]: 4}),
-            new_data,
-        )
+        self.assertEqual(ScalarData({m.var[:, "A"]: 2, m.var[:, "B"]: 4}), new_data)
 
         new_data = data.get_data_at_time_indices([1])
-        t1 = m.time.at(2) # Sets are indexed starting from 1...
+        t1 = m.time.at(2)  # Sets are indexed starting from 1...
         self.assertEqual(
-            TimeSeriesData({m.var[:, "A"]: [2], m.var[:, "B"]: [4]}, [t1]),
-            new_data,
+            TimeSeriesData({m.var[:, "A"]: [2], m.var[:, "B"]: [4]}, [t1]), new_data
         )
 
         new_t = [m.time.at(1), m.time.at(3)]
         new_data = data.get_data_at_time_indices([0, 2])
         self.assertEqual(
-            TimeSeriesData(
-                {m.var[:, "A"]: [1, 3], m.var[:, "B"]: [2, 6]}, new_t
-            ),
+            TimeSeriesData({m.var[:, "A"]: [1, 3], m.var[:, "B"]: [2, 6]}, new_t),
             new_data,
         )
 
@@ -94,24 +87,18 @@ class TestSeriesData(unittest.TestCase):
         data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}
         data = TimeSeriesData(data_dict, m.time)
         new_data = data.get_data_at_time(0.1)
-        self.assertEqual(
-            ScalarData({m.var[:, "A"]: 2, m.var[:, "B"]: 4}),
-            new_data,
-        )
+        self.assertEqual(ScalarData({m.var[:, "A"]: 2, m.var[:, "B"]: 4}), new_data)
 
         t1 = 0.1
         new_data = data.get_data_at_time([t1])
         self.assertEqual(
-            TimeSeriesData({m.var[:, "A"]: [2], m.var[:, "B"]: [4]}, [t1]),
-            new_data,
+            TimeSeriesData({m.var[:, "A"]: [2], m.var[:, "B"]: [4]}, [t1]), new_data
         )
 
         new_t = [0.0, 0.2]
         new_data = data.get_data_at_time(new_t)
         self.assertEqual(
-            TimeSeriesData(
-                {m.var[:, "A"]: [1, 3], m.var[:, "B"]: [2, 6]}, new_t
-            ),
+            TimeSeriesData({m.var[:, "A"]: [1, 3], m.var[:, "B"]: [2, 6]}, new_t),
             new_data,
         )
 
@@ -123,17 +110,11 @@ class TestSeriesData(unittest.TestCase):
         # Test an invalid time value. A tolerance of None gives us
         # the closest index
         new_data = data.get_data_at_time(-0.1, tolerance=None)
-        self.assertEqual(
-            ScalarData({m.var[:, "A"]: 1, m.var[:, "B"]: 2}),
-            new_data,
-        )
+        self.assertEqual(ScalarData({m.var[:, "A"]: 1, m.var[:, "B"]: 2}), new_data)
 
         # Test a value that is only valid within tolerance
         new_data = data.get_data_at_time(-0.0001, tolerance=1e-3)
-        self.assertEqual(
-            ScalarData({m.var[:, "A"]: 1, m.var[:, "B"]: 2}),
-            new_data,
-        )
+        self.assertEqual(ScalarData({m.var[:, "A"]: 1, m.var[:, "B"]: 2}), new_data)
 
         # The default is to raise an error in the case of any discrepancy.
         msg = "Time point.*is invalid"
@@ -159,7 +140,7 @@ class TestSeriesData(unittest.TestCase):
         # Test attributes of the TimeSeriesTuple namedtuple
         self.assertEqual(data.time, list(m.time))
         self.assertEqual(
-            data.data, 
+            data.data,
             {str(pyo.ComponentUID(key)): val for key, val in data_dict.items()},
         )
 
@@ -179,10 +160,7 @@ class TestSeriesData(unittest.TestCase):
             m.var[:, "B"]: [2, 4, 6, 2, 4, 6],
         }
         # Note that data1 has been modified in place
-        self.assertEqual(
-            TimeSeriesData(pred_data, pred_time),
-            data1,
-        )
+        self.assertEqual(TimeSeriesData(pred_data, pred_time), data1)
 
     def test_concatenate_exception(self):
         m = self._make_model()
@@ -201,10 +179,7 @@ class TestSeriesData(unittest.TestCase):
 
         offset = 1.0
         data.shift_time_points(offset)
-        self.assertEqual(
-            data.get_time_points(),
-            [t + offset for t in m.time],
-        )
+        self.assertEqual(data.get_time_points(), [t + offset for t in m.time])
 
     def test_extract_variables(self):
         m = self._make_model()
@@ -212,10 +187,7 @@ class TestSeriesData(unittest.TestCase):
         data = TimeSeriesData(data_dict, m.time)
 
         new_data = data.extract_variables([m.var[:, "A"]])
-        self.assertEqual(
-            new_data,
-            TimeSeriesData({m.var[:, "A"]: [1, 2, 3]}, m.time),
-        )
+        self.assertEqual(new_data, TimeSeriesData({m.var[:, "A"]: [1, 2, 3]}, m.time))
 
     def test_shift_then_get_data(self):
         m = self._make_model()
@@ -224,10 +196,7 @@ class TestSeriesData(unittest.TestCase):
 
         offset = 0.1
         data.shift_time_points(offset)
-        self.assertEqual(
-            data.get_time_points(),
-            [t + offset for t in m.time],
-        )
+        self.assertEqual(data.get_time_points(), [t + offset for t in m.time])
 
         # A time point of zero is no longer valid
         msg = "Time point.*is invalid"
@@ -235,10 +204,7 @@ class TestSeriesData(unittest.TestCase):
             t0_data = data.get_data_at_time(0.0, tolerance=1e-3)
 
         t1_data = data.get_data_at_time(0.1)
-        self.assertEqual(
-            t1_data,
-            ScalarData({m.var[:, "A"]: 1, m.var[:, "B"]: 2}),
-        )
+        self.assertEqual(t1_data, ScalarData({m.var[:, "A"]: 1, m.var[:, "B"]: 2}))
 
 
 if __name__ == "__main__":

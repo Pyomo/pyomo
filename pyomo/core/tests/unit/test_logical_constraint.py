@@ -1,10 +1,17 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.core.expr.sympy_tools import sympy_available
-from pyomo.environ import (AbstractModel, BooleanVar, ConcreteModel,
-                           LogicalConstraint, TransformationFactory, Constraint)
+from pyomo.environ import (
+    AbstractModel,
+    BooleanVar,
+    ConcreteModel,
+    LogicalConstraint,
+    TransformationFactory,
+    Constraint,
+)
 from pyomo.repn import generate_standard_repn
 from pyomo.gdp import Disjunction
+
 
 class TestLogicalConstraintCreation(unittest.TestCase):
     def create_model(self, abstract=False):
@@ -19,8 +26,10 @@ class TestLogicalConstraintCreation(unittest.TestCase):
 
     def test_construct(self):
         model = self.create_model()
+
         def rule(model):
             return model.x
+
         model.p = LogicalConstraint(rule=rule)
 
         self.assertIs(model.p.body, model.x)
@@ -51,26 +60,21 @@ class TestLogicalConstraintCreation(unittest.TestCase):
         # the default behavior.  However, we will preserve this (with an
         # explicit call to logical_to_linear) for posterity
         model = self.create_model()
-        model.disj = Disjunction(expr=[
-            [model.x.lor(model.y)], [model.y.lor(model.z)]
-        ])
+        model.disj = Disjunction(expr=[[model.x.lor(model.y)], [model.y.lor(model.z)]])
 
         TransformationFactory('core.logical_to_linear').apply_to(
-            model, targets=model.disj.disjuncts)
+            model, targets=model.disj.disjuncts
+        )
 
         bigmed = TransformationFactory('gdp.bigm').create_using(model)
         # check that the algebraic versions are living on the Disjuncts
-        self.check_lor_on_disjunct(bigmed, bigmed.disj.disjuncts[0], bigmed.x,
-                                   bigmed.y)
-        self.check_lor_on_disjunct(bigmed, bigmed.disj.disjuncts[1], bigmed.y,
-                                   bigmed.z)
+        self.check_lor_on_disjunct(bigmed, bigmed.disj.disjuncts[0], bigmed.x, bigmed.y)
+        self.check_lor_on_disjunct(bigmed, bigmed.disj.disjuncts[1], bigmed.y, bigmed.z)
 
         TransformationFactory('gdp.hull').apply_to(model)
-        self.check_lor_on_disjunct(model, model.disj.disjuncts[0], model.x,
-                                   model.y)
-        self.check_lor_on_disjunct(model, model.disj.disjuncts[1], model.y,
-                                   model.z)
-        
+        self.check_lor_on_disjunct(model, model.disj.disjuncts[0], model.x, model.y)
+        self.check_lor_on_disjunct(model, model.disj.disjuncts[1], model.y, model.z)
+
     # TODO look to test_con.py for inspiration
 
 

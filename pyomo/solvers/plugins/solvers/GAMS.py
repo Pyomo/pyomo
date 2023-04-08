@@ -526,8 +526,7 @@ class GAMSDirect(_GAMSSolver):
 
         soln.gap = abs(results.problem.upper_bound - results.problem.lower_bound)
 
-        for sym, ref in symbolMap.bySymbol.items():
-            obj = ref()
+        for sym, obj in symbolMap.bySymbol.items():
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
                 if obj.ctype is IObjective:
@@ -1090,8 +1089,7 @@ class GAMSShell(_GAMSSolver):
         soln.gap = abs(results.problem.upper_bound - results.problem.lower_bound)
 
         has_rc_info = True
-        for sym, ref in symbolMap.bySymbol.items():
-            obj = ref()
+        for sym, obj in symbolMap.bySymbol.items():
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
                 if obj.ctype is IObjective:

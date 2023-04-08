@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [ 'Connector' ]
+__all__ = ['Connector']
 
 import logging
 import sys
@@ -34,7 +34,7 @@ logger = logging.getLogger('pyomo.core')
 class _ConnectorData(ComponentData, NumericValue):
     """Holds the actual connector information"""
 
-    __slots__ = ('vars','aggregators')
+    __slots__ = ('vars', 'aggregators')
 
     def __init__(self, component=None):
         """Constructor"""
@@ -43,8 +43,7 @@ class _ConnectorData(ComponentData, NumericValue):
         # following constructors:
         #   - ComponentData
         #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
+        self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
 
         self.vars = {}
@@ -88,17 +87,17 @@ class _ConnectorData(ComponentData, NumericValue):
     def is_continuous(self):
         return len(self) and all(v.is_continuous() for v in self._iter_vars())
 
-
     def add(self, var, name=None, aggregate=None):
         if name is None:
             name = var.local_name
         if name in self.vars:
-            raise ValueError("Cannot insert duplicate variable name "
-                             "'%s' into Connector '%s'" % (name, self.name))
+            raise ValueError(
+                "Cannot insert duplicate variable name "
+                "'%s' into Connector '%s'" % (name, self.name)
+            )
         self.vars[name] = var
         if aggregate is not None:
             self.aggregators[name] = aggregate
-
 
     def _iter_vars(self):
         for var in self.vars.values():
@@ -110,10 +109,13 @@ class _ConnectorData(ComponentData, NumericValue):
 
 
 @ModelComponentFactory.register(
-    "A bundle of variables that can be manipulated together.")
-@deprecated("Use of pyomo.connectors is deprecated. "
-            "Its functionality has been replaced by pyomo.network.",
-            version='5.6.9')
+    "A bundle of variables that can be manipulated together."
+)
+@deprecated(
+    "Use of pyomo.connectors is deprecated. "
+    "Its functionality has been replaced by pyomo.network.",
+    version='5.6.9',
+)
 class Connector(IndexedComponent):
     """A collection of variables, which may be defined over a index
 
@@ -161,15 +163,15 @@ class Connector(IndexedComponent):
         _conval = self._data[idx] = _ConnectorData(component=self)
         return _conval
 
-
     def construct(self, data=None):
-        if is_debug_set(logger):  #pragma:nocover
-            logger.debug( "Constructing Connector, name=%s, from data=%s"
-                          % (self.name, data) )
+        if is_debug_set(logger):  # pragma:nocover
+            logger.debug(
+                "Constructing Connector, name=%s, from data=%s" % (self.name, data)
+            )
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        self._constructed=True
+        self._constructed = True
         #
         # Construct _ConnectorData objects for all index values
         #
@@ -184,40 +186,41 @@ class Connector(IndexedComponent):
         for idx in initSet:
             tmp = self[idx]
             for key in self._implicit:
-                tmp.add(None,key)
+                tmp.add(None, key)
             if self._extends:
                 for key, val in self._extends.vars.items():
-                    tmp.add(val,key)
+                    tmp.add(val, key)
             for key, val in self._initialize.items():
-                tmp.add(val,key)
+                tmp.add(val, key)
             if self._rule:
-                items = apply_indexed_rule(
-                    self, self._rule, self._parent(), idx)
+                items = apply_indexed_rule(self, self._rule, self._parent(), idx)
                 for key, val in items.items():
-                    tmp.add(val,key)
-
+                    tmp.add(val, key)
 
     def _pprint(self, ostream=None, verbose=False):
         """Print component information."""
-        def _line_generator(k,v):
+
+        def _line_generator(k, v):
             for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _len = '-'
                 elif _k in v.aggregators:
                     _len = '*'
-                elif hasattr(_v,'__len__'):
+                elif hasattr(_v, '__len__'):
                     _len = len(_v)
                 else:
                     _len = 1
                 yield _k, _len, str(_v)
-        return ( [("Size", len(self)),
-                  ("Index", self._index_set if self.is_indexed() else None),
-                  ],
-                 self._data.items(),
-                 ( "Name","Size", "Variable", ),
-                 _line_generator
-             )
 
+        return (
+            [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+            ],
+            self._data.items(),
+            ("Name", "Size", "Variable"),
+            _line_generator,
+        )
 
     def display(self, prefix="", ostream=None):
         """
@@ -229,28 +232,36 @@ class Connector(IndexedComponent):
             return
         if ostream is None:
             ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        ostream.write("Size="+str(len(self)))
+        tab = "    "
+        ostream.write(prefix + self.local_name + " : ")
+        ostream.write("Size=" + str(len(self)))
 
         ostream.write("\n")
-        def _line_generator(k,v):
+
+        def _line_generator(k, v):
             for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _val = '-'
                 elif not hasattr(_v, 'is_indexed') or not _v.is_indexed():
-                    _val = str(value( _v ))
+                    _val = str(value(_v))
                 else:
-                    _val = "{%s}" % (', '.join('%r: %r' % (
-                        x, value(_v[x])) for x in sorted(_v._data) ),)
+                    _val = "{%s}" % (
+                        ', '.join(
+                            '%r: %r' % (x, value(_v[x])) for x in sorted(_v._data)
+                        ),
+                    )
                 yield _k, _val
-        tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in self._data.items()),
-                        ( "Name","Value" ), _line_generator )
+
+        tabular_writer(
+            ostream,
+            prefix + tab,
+            ((k, v) for k, v in self._data.items()),
+            ("Name", "Value"),
+            _line_generator,
+        )
 
 
 class ScalarConnector(Connector, _ConnectorData):
-
     def __init__(self, *args, **kwd):
         _ConnectorData.__init__(self, component=self)
         Connector.__init__(self, *args, **kwd)
@@ -264,5 +275,5 @@ class SimpleConnector(metaclass=RenamedClass):
 
 class IndexedConnector(Connector):
     """An array of connectors"""
-    pass
 
+    pass

@@ -985,7 +985,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 % (model.name)
             )
         elif n_objs == 1:
-            symbol_map.alias(symbol_map.bySymbol["o0"](), "__default_objective__")
+            symbol_map.alias(symbol_map.bySymbol["o0"], "__default_objective__")
 
         if show_section_timing:
             subsection_timer.report("Generate objective representation")

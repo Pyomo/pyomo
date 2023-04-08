@@ -22,49 +22,76 @@ from pyomo.common.fileutils import Executable
 
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.interval_var import (
-    IntervalVarStartTime, IntervalVarEndTime, IntervalVarPresence,
-    IntervalVarLength, ScalarIntervalVar, IntervalVarData, IndexedIntervalVar
+    IntervalVarStartTime,
+    IntervalVarEndTime,
+    IntervalVarPresence,
+    IntervalVarLength,
+    ScalarIntervalVar,
+    IntervalVarData,
+    IndexedIntervalVar,
 )
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
-    BeforeExpression, AtExpression
+    BeforeExpression,
+    AtExpression,
 )
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
-    AlwaysIn, StepAt, StepAtStart, StepAtEnd, Pulse, CumulativeFunction,
-    NegatedStepFunction
+    AlwaysIn,
+    StepAt,
+    StepAtStart,
+    StepAtEnd,
+    Pulse,
+    CumulativeFunction,
+    NegatedStepFunction,
 )
 
 from pyomo.core.base import (
-    minimize, maximize, SortComponents, Block, Objective, Constraint, Var,
-    Param, BooleanVar, LogicalConstraint, Suffix, value
+    minimize,
+    maximize,
+    SortComponents,
+    Block,
+    Objective,
+    Constraint,
+    Var,
+    Param,
+    BooleanVar,
+    LogicalConstraint,
+    Suffix,
+    value,
 )
 from pyomo.core.base.boolean_var import (
-    ScalarBooleanVar, _GeneralBooleanVarData, IndexedBooleanVar
+    ScalarBooleanVar,
+    _GeneralBooleanVarData,
+    IndexedBooleanVar,
 )
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.param import IndexedParam, ScalarParam
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.logical_expr import (
-    AndExpression, OrExpression, XorExpression, NotExpression,
-    EquivalenceExpression, ImplicationExpression, ExactlyExpression,
-    AtMostExpression, AtLeastExpression
+    AndExpression,
+    OrExpression,
+    XorExpression,
+    NotExpression,
+    EquivalenceExpression,
+    ImplicationExpression,
+    ExactlyExpression,
+    AtMostExpression,
+    AtLeastExpression,
 )
 from pyomo.core.expr.numeric_expr import MinExpression, MaxExpression
 from pyomo.core.expr.relational_expr import NotEqualExpression
 from pyomo.core.expr.template_expr import CallExpression
-from pyomo.core.expr.visitor import (
-    StreamBasedExpressionVisitor, identify_variables
-)
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 from pyomo.core.base import Set, RangeSet
 from pyomo.core.base.set import SetProduct
-from pyomo.opt import (
-    WriterFactory, SolverFactory, TerminationCondition, SolverResults
-)
+from pyomo.opt import WriterFactory, SolverFactory, TerminationCondition, SolverResults
 
 ### FIXME: Remove the following as soon as non-active components no
 ### longer report active==True
 from pyomo.network import Port
+
 ###
+
 
 def _finalize_docplex(module, available):
     if not available:
@@ -89,30 +116,74 @@ def _finalize_docplex(module, available):
     _time_point_dispatchers[_END_TIME] = module.end_of
 
 
-cp, docplex_available = attempt_import(
-    'docplex.cp.model', callback=_finalize_docplex)
+cp, docplex_available = attempt_import('docplex.cp.model', callback=_finalize_docplex)
 cp_solver, docplex_available = attempt_import('docplex.cp.solver')
 
 logger = logging.getLogger('pyomo.contrib.cp')
 
+
 # These are things that don't need special handling:
-class _GENERAL(object): pass
+class _GENERAL(object):
+    pass
+
+
 # These are operations that need to be deferred sometimes, usually because of
 # indirection:
-class _START_TIME(object): pass
-class _END_TIME(object): pass
-class _DEFERRED_ELEMENT_CONSTRAINT(object): pass
-class _ELEMENT_CONSTRAINT(object): pass
-class _DEFERRED_BEFORE(object): pass
-class _DEFERRED_AFTER(object): pass
-class _DEFERRED_AT(object): pass
-class _BEFORE(object): pass
-class _AT(object): pass
-class _IMPLIES(object): pass
-class _LAND(object): pass
-class _LOR(object): pass
-class _XOR(object): pass
-class _EQUIVALENT_TO(object): pass
+class _START_TIME(object):
+    pass
+
+
+class _END_TIME(object):
+    pass
+
+
+class _DEFERRED_ELEMENT_CONSTRAINT(object):
+    pass
+
+
+class _ELEMENT_CONSTRAINT(object):
+    pass
+
+
+class _DEFERRED_BEFORE(object):
+    pass
+
+
+class _DEFERRED_AFTER(object):
+    pass
+
+
+class _DEFERRED_AT(object):
+    pass
+
+
+class _BEFORE(object):
+    pass
+
+
+class _AT(object):
+    pass
+
+
+class _IMPLIES(object):
+    pass
+
+
+class _LAND(object):
+    pass
+
+
+class _LOR(object):
+    pass
+
+
+class _XOR(object):
+    pass
+
+
+class _EQUIVALENT_TO(object):
+    pass
+
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
@@ -121,14 +192,16 @@ def _check_var_domain(visitor, node, var):
         # already be errors handling the children of this expression.
         raise ValueError(
             "Variable indirection '%s' contains argument '%s', "
-            "which is not a discrete variable" % (node, var))
+            "which is not a discrete variable" % (node, var)
+        )
     bnds = var.bounds
     if None in bnds:
         raise ValueError(
             "Variable indirection '%s' contains argument '%s', "
-            "which is not restricted to a finite discrete domain"
-            % (node, var))
+            "which is not restricted to a finite discrete domain" % (node, var)
+        )
     return var.domain & RangeSet(*bnds)
+
 
 def _handle_getitem(visitor, node, *data):
     # First we need to determine the range for each of the the
@@ -148,7 +221,7 @@ def _handle_getitem(visitor, node, *data):
             arg_set.construct()
             arg_domain.append(arg_set)
             arg_scale.append(None)
-        elif node.arg(i+1).is_expression_type():
+        elif node.arg(i + 1).is_expression_type():
             # This argument is an expression.  It could be any
             # combination of any number of integer variables, as long as
             # the resulting expression is still an IntExpression.  We
@@ -159,10 +232,9 @@ def _handle_getitem(visitor, node, *data):
             #
             # We will brute force it: go through every combination of
             # every variable and record the resulting expression value.
-            arg_expr = node.arg(i+1)
+            arg_expr = node.arg(i + 1)
             var_list = list(identify_variables(arg_expr, include_fixed=False))
-            var_domain = [list(_check_var_domain(visitor, node, v))
-                          for v in var_list]
+            var_domain = [list(_check_var_domain(visitor, node, v)) for v in var_list]
             arg_vals = set()
             for var_vals in itertools.product(*var_domain):
                 for v, val in zip(var_list, var_vals):
@@ -179,7 +251,8 @@ def _handle_getitem(visitor, node, *data):
                 raise ValueError(
                     "Variable indirection '%s' contains argument expression "
                     "'%s' that does not evaluate to a simple discrete set"
-                    % (node, arg_expr))
+                    % (node, arg_expr)
+                )
             arg_domain.append(arg_set)
             arg_scale.append(interval)
         else:
@@ -188,7 +261,7 @@ def _handle_getitem(visitor, node, *data):
             # variables, we will need to ensure that the categoricals
             # have already been converted to simple integer domains by
             # this point.
-            var = node.arg(i+1)
+            var = node.arg(i + 1)
             arg_domain.append(_check_var_domain(visitor, node, var))
             arg_scale.append(arg_domain[-1].get_interval())
         # Buid the expression that maps arguments to GetItem() to a
@@ -201,8 +274,8 @@ def _handle_getitem(visitor, node, *data):
             if _step is None:
                 raise ValueError(
                     "Variable indirection '%s' is over a discrete domain "
-                    "without a constant step size. This is not supported."
-                    % node)
+                    "without a constant step size. This is not supported." % node
+                )
             expr += mult * (arg[1] - _min) // _step
             # This could be (_max - _min) // _step + 1, but that assumes
             # that the set correctly collapsed the bounds and that the
@@ -223,7 +296,8 @@ def _handle_getitem(visitor, node, *data):
             raise ValueError(
                 "Variable indirection '%s' permits an index '%s' "
                 "that is not a valid key. In CP Optimizer, this is a "
-                "structural infeasibility." % (node, idx))
+                "structural infeasibility." % (node, idx)
+            )
             # NOTE: If we thought it was the right thing to do in the future, we
             # could fill in with a bogus variable and add a constraint
             # disallowing it from being selected
@@ -231,6 +305,7 @@ def _handle_getitem(visitor, node, *data):
         return (_ELEMENT_CONSTRAINT, cp.element(elements, expr))
     except AssertionError:
         return (_DEFERRED_ELEMENT_CONSTRAINT, (elements, expr))
+
 
 _element_constraint_attr_dispatcher = {
     'before': _DEFERRED_BEFORE,
@@ -245,6 +320,7 @@ _element_constraint_attr_dispatcher = {
 # This will get populated when cp is finally imported
 _deferred_element_getattr_dispatcher = {}
 
+
 def _handle_getattr(visitor, node, obj, attr):
     # We either end up here because we do not yet know the list of variables to
     # make an element constraint (the first case) or because we are asking for
@@ -255,23 +331,25 @@ def _handle_getattr(visitor, node, obj, attr):
         # and then at the end we need to make the element constraint we couldn't
         # make before.
         try:
-            ans = list(map(_deferred_element_getattr_dispatcher[attr[1]],
-                           obj[1][0]))
+            ans = list(map(_deferred_element_getattr_dispatcher[attr[1]], obj[1][0]))
         except KeyError:
-            logger.error("Unrecognized attrribute in GetAttrExpression: "
-                         "%s." % attr[1])
+            logger.error("Unrecognized attrribute in GetAttrExpression: %s." % attr[1])
             raise
         return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
     elif obj[0] is _ELEMENT_CONSTRAINT:
         try:
             return (_element_constraint_attr_dispatcher[attr[1]], obj)
         except KeyError:
-            logger.error("Unrecognized attribute in GetAttrExpression:"
-                         "%s. Found for object: %s" % (attr[1], obj[1]))
+            logger.error(
+                "Unrecognized attribute in GetAttrExpression:"
+                "%s. Found for object: %s" % (attr[1], obj[1])
+            )
             raise
     else:
-        raise DeveloperError("Unrecognized argument type '%s' to getattr "
-                             "dispatcher." % obj[0])
+        raise DeveloperError(
+            "Unrecognized argument type '%s' to getattr dispatcher." % obj[0]
+        )
+
 
 def _before_boolean_var(visitor, child):
     _id = id(child)
@@ -289,50 +367,56 @@ def _before_boolean_var(visitor, child):
         visitor.pyomo_to_docplex[child] = cpx_var
     return False, (_GENERAL, visitor.var_map[_id])
 
+
 def _before_indexed_boolean_var(visitor, child):
     cpx_vars = {}
     for i, v in child.items():
         if v.fixed:
             cpx_vars[i] = v.value
             continue
-        cpx_var = cp.binary_var(name=v.name if visitor.symbolic_solver_labels
-                                else None)
+        cpx_var = cp.binary_var(name=v.name if visitor.symbolic_solver_labels else None)
         visitor.cpx.add(cpx_var)
         visitor.var_map[id(v)] = cpx_var == 1
         visitor.pyomo_to_docplex[v] = cpx_var
         cpx_vars[i] = cpx_var == 1
     return False, (_GENERAL, cpx_vars)
 
+
 def _before_param(visitor, child):
     return False, (_GENERAL, value(child))
 
+
 def _before_indexed_param(visitor, child):
     return False, (_GENERAL, {idx: value(p) for idx, p in child.items()})
+
 
 def _create_docplex_var(pyomo_var, name=None):
     if pyomo_var.is_binary():
         return cp.binary_var(name=name)
     elif pyomo_var.is_integer():
-        return cp.integer_var(min=pyomo_var.bounds[0], max=pyomo_var.bounds[1],
-                              name=name)
+        return cp.integer_var(
+            min=pyomo_var.bounds[0], max=pyomo_var.bounds[1], name=name
+        )
     elif pyomo_var.domain.isdiscrete():
         if pyomo_var.domain.isfinite():
-            return cp.integer_var(domain=[d for d in pyomo_var.domain],
-                                  name=name)
+            return cp.integer_var(domain=[d for d in pyomo_var.domain], name=name)
         else:
             # If we ever want to handle this case, I think we might be able to
             # make a normal integer var and then constrain it into the
             # domain. But no reason to go to the effort for now because I don't
             # know if the solver can even work with such a var.
-            raise ValueError("The LogicalToDoCplex writer does not support "
-                             "infinite discrete domains. Cannot write "
-                             "Var '%s' with domain '%s'" % (pyomo_var.name,
-                                                            pyomo_var.domain))
+            raise ValueError(
+                "The LogicalToDoCplex writer does not support "
+                "infinite discrete domains. Cannot write "
+                "Var '%s' with domain '%s'" % (pyomo_var.name, pyomo_var.domain)
+            )
     else:
-        raise ValueError("The LogicalToDoCplex writer can only support "
-                         "integer- or Boolean-valued variables. Cannot "
-                         "write Var '%s' with domain '%s'" % (pyomo_var.name,
-                                                              pyomo_var.domain))
+        raise ValueError(
+            "The LogicalToDoCplex writer can only support "
+            "integer- or Boolean-valued variables. Cannot "
+            "write Var '%s' with domain '%s'" % (pyomo_var.name, pyomo_var.domain)
+        )
+
 
 def _before_var(visitor, child):
     _id = id(child)
@@ -340,34 +424,38 @@ def _before_var(visitor, child):
         if child.fixed:
             return False, (_GENERAL, child.value)
         cpx_var = _create_docplex_var(
-            child,
-            name=child.name if visitor.symbolic_solver_labels else None)
+            child, name=child.name if visitor.symbolic_solver_labels else None
+        )
         visitor.cpx.add(cpx_var)
         visitor.var_map[_id] = cpx_var
         visitor.pyomo_to_docplex[child] = cpx_var
     return False, (_GENERAL, visitor.var_map[_id])
 
+
 def _before_indexed_var(visitor, child):
     cpx_vars = {}
     for i, v in child.items():
         cpx_var = _create_docplex_var(
-            v,
-            name=v.name if visitor.symbolic_solver_labels else None)
+            v, name=v.name if visitor.symbolic_solver_labels else None
+        )
         visitor.cpx.add(cpx_var)
         visitor.var_map[id(v)] = cpx_var
         visitor.pyomo_to_docplex[v] = cpx_var
         cpx_vars[i] = cpx_var
     return False, (_GENERAL, cpx_vars)
 
+
 def _handle_named_expression_node(visitor, node, expr):
     visitor._named_expressions[id(node)] = expr[1]
     return expr
+
 
 def _before_named_expression(visitor, child):
     _id = id(child)
     if _id not in visitor._named_expressions:
         return True, None
     return False, (_GENERAL, visitor._named_expressions[_id])
+
 
 def _create_docplex_interval_var(visitor, interval_var):
     # Create a new docplex interval var and then figure out all the info that
@@ -416,6 +504,7 @@ def _create_docplex_interval_var(visitor, interval_var):
 
     return cpx_interval_var
 
+
 def _get_docplex_interval_var(visitor, interval_var):
     # We might already have the interval_var and just need to retrieve it
     if id(interval_var) in visitor.var_map:
@@ -424,6 +513,7 @@ def _get_docplex_interval_var(visitor, interval_var):
         cpx_interval_var = _create_docplex_interval_var(visitor, interval_var)
         visitor.cpx.add(cpx_interval_var)
     return cpx_interval_var
+
 
 def _before_interval_var(visitor, child):
     _id = id(child)
@@ -434,6 +524,7 @@ def _before_interval_var(visitor, child):
 
     return False, (_GENERAL, visitor.var_map[_id])
 
+
 def _before_indexed_interval_var(visitor, child):
     cpx_vars = {}
     for i, v in child.items():
@@ -443,6 +534,7 @@ def _before_indexed_interval_var(visitor, child):
         cpx_vars[i] = cpx_interval_var
     return False, (_GENERAL, cpx_vars)
 
+
 def _before_interval_var_start_time(visitor, child):
     _id = id(child)
     interval_var = child.get_associated_interval_var()
@@ -451,6 +543,7 @@ def _before_interval_var_start_time(visitor, child):
 
     return False, (_START_TIME, visitor.var_map[id(interval_var)])
 
+
 def _before_interval_var_end_time(visitor, child):
     _id = id(child)
     interval_var = child.get_associated_interval_var()
@@ -458,6 +551,7 @@ def _before_interval_var_end_time(visitor, child):
         cpx_interval_var = _get_docplex_interval_var(visitor, interval_var)
 
     return False, (_END_TIME, visitor.var_map[id(interval_var)])
+
 
 def _before_interval_var_length(visitor, child):
     _id = id(child)
@@ -470,6 +564,7 @@ def _before_interval_var_length(visitor, child):
     # just treat this expression as if it's a normal variable.
     return False, (_GENERAL, visitor.var_map[_id])
 
+
 def _before_interval_var_presence(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
@@ -481,23 +576,29 @@ def _before_interval_var_presence(visitor, child):
     # we just treat this expression as if it's a normal variable.
     return False, (_GENERAL, visitor.var_map[_id])
 
+
 def _handle_step_at_node(visitor, node):
     return cp.step_at(node._time, node._height)
+
 
 def _handle_step_at_start_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._time)
     return cp.step_at_start(cpx_var, node._height)
 
+
 def _handle_step_at_end_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._time)
     return cp.step_at_end(cpx_var, node._height)
+
 
 def _handle_pulse_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._interval_var)
     return cp.pulse(cpx_var, node._height)
 
+
 def _handle_negated_step_function_node(visitor, node):
     return _step_function_handles[node.args[0].__class__](visitor, node.args[0])
+
 
 def _handle_cumulative_function(visitor, node):
     expr = 0
@@ -508,6 +609,7 @@ def _handle_cumulative_function(visitor, node):
             expr += _step_function_handles[arg.__class__](visitor, arg)
 
     return False, (_GENERAL, expr)
+
 
 _step_function_handles = {
     StepAt: _handle_step_at_node,
@@ -523,6 +625,7 @@ step_func_expression_types = _step_function_handles.keys()
 # Algebraic expressions
 ##
 
+
 def _get_int_valued_expr(arg):
     if arg[0] in {_GENERAL, _ELEMENT_CONSTRAINT}:
         return arg[1]
@@ -531,8 +634,11 @@ def _get_int_valued_expr(arg):
     elif arg[0] is _END_TIME:
         return cp.end_of(arg[1])
     else:
-        raise DeveloperError("Attempting to get a docplex integer-valued "
-                             "expression from object in class %s" % str(arg[0]))
+        raise DeveloperError(
+            "Attempting to get a docplex integer-valued "
+            "expression from object in class %s" % str(arg[0])
+        )
+
 
 def _get_bool_valued_expr(arg):
     if arg[0] is _GENERAL:
@@ -555,134 +661,190 @@ def _get_bool_valued_expr(arg):
         (lhs, rhs) = arg[2]
         return _handle_equality_node(None, None, lhs, rhs)[1]
     else:
-        raise DeveloperError("Attempting to get a docplex Boolean-valued "
-                             "expression from object in class %s" % str(arg[0]))
+        raise DeveloperError(
+            "Attempting to get a docplex Boolean-valued "
+            "expression from object in class %s" % str(arg[0])
+        )
+
 
 def _handle_monomial_expr(visitor, node, arg1, arg2):
     # Monomial terms show up a lot.  This handles some common
     # simplifications (necessary in part for the unit tests)
     if arg2[1].__class__ in EXPR.native_types:
-        return _GENERAL, arg1[1]*arg2[1]
+        return _GENERAL, arg1[1] * arg2[1]
     elif arg1[1] == 1:
         return arg2
-    return (_GENERAL, cp.times(_get_int_valued_expr(arg1),
-                               _get_int_valued_expr(arg2)))
+    return (_GENERAL, cp.times(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)))
+
 
 def _handle_sum_node(visitor, node, *args):
-    return (_GENERAL, sum((_get_int_valued_expr(arg) for arg in args[1:]),
-                           _get_int_valued_expr(args[0])))
+    return (
+        _GENERAL,
+        sum(
+            (_get_int_valued_expr(arg) for arg in args[1:]),
+            _get_int_valued_expr(args[0]),
+        ),
+    )
+
 
 def _handle_negation_node(visitor, node, arg1):
     return (_GENERAL, cp.times(-1, _get_int_valued_expr(arg1)))
 
+
 def _handle_product_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.times(_get_int_valued_expr(arg1),
-                               _get_int_valued_expr(arg2)))
+    return (_GENERAL, cp.times(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)))
+
 
 def _handle_division_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.float_div(_get_int_valued_expr(arg1),
-                                   _get_int_valued_expr(arg2)))
+    return (
+        _GENERAL,
+        cp.float_div(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)),
+    )
+
 
 def _handle_pow_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.power(_get_int_valued_expr(arg1),
-                               _get_int_valued_expr(arg2)))
+    return (_GENERAL, cp.power(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)))
+
 
 def _handle_abs_node(visitor, node, arg1):
     return (_GENERAL, cp.abs(_get_int_valued_expr(arg1)))
 
+
 def _handle_min_node(visitor, node, *args):
     return (_GENERAL, cp.min((_get_int_valued_expr(arg) for arg in args)))
 
+
 def _handle_max_node(visitor, node, *args):
     return (_GENERAL, cp.max((_get_int_valued_expr(arg) for arg in args)))
+
 
 ##
 # Relational expressions
 ##
 
+
 def _handle_equality_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.equal(_get_int_valued_expr(arg1),
-                               _get_int_valued_expr(arg2)))
+    return (_GENERAL, cp.equal(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)))
+
 
 def _handle_inequality_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.less_or_equal(_get_int_valued_expr(arg1),
-                                       _get_int_valued_expr(arg2)))
+    return (
+        _GENERAL,
+        cp.less_or_equal(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)),
+    )
+
 
 def _handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
-    return (_GENERAL, cp.range(_get_int_valued_expr(arg2),
-                               lb=_get_int_valued_expr(arg1),
-                               ub=_get_int_valued_expr(arg3)))
+    return (
+        _GENERAL,
+        cp.range(
+            _get_int_valued_expr(arg2),
+            lb=_get_int_valued_expr(arg1),
+            ub=_get_int_valued_expr(arg3),
+        ),
+    )
+
 
 def _handle_not_equal_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.diff(_get_int_valued_expr(arg1),
-                              _get_int_valued_expr(arg2)))
+    return (_GENERAL, cp.diff(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)))
 
 
 ##
 # Logical expressions
 ##
 
+
 def _handle_and_node(visitor, node, *args):
-    return (_GENERAL, cp.logical_and((_get_bool_valued_expr(arg) for arg in
-                                      args)))
+    return (_GENERAL, cp.logical_and((_get_bool_valued_expr(arg) for arg in args)))
+
 
 def _handle_or_node(visitor, node, *args):
-    return (_GENERAL, cp.logical_or((_get_bool_valued_expr(arg) for arg in
-                                     args)))
+    return (_GENERAL, cp.logical_or((_get_bool_valued_expr(arg) for arg in args)))
+
 
 def _handle_xor_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.equal(cp.count([_get_bool_valued_expr(arg1),
-                                         _get_bool_valued_expr(arg2)], 1),
-                               1))
+    return (
+        _GENERAL,
+        cp.equal(
+            cp.count([_get_bool_valued_expr(arg1), _get_bool_valued_expr(arg2)], 1), 1
+        ),
+    )
+
 
 def _handle_not_node(visitor, node, arg):
     return (_GENERAL, cp.logical_not(_get_bool_valued_expr(arg)))
 
+
 def _handle_equivalence_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.equal(_get_bool_valued_expr(arg1),
-                               _get_bool_valued_expr(arg2)))
+    return (
+        _GENERAL,
+        cp.equal(_get_bool_valued_expr(arg1), _get_bool_valued_expr(arg2)),
+    )
+
 
 def _handle_implication_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.if_then(_get_bool_valued_expr(arg1),
-                                 _get_bool_valued_expr(arg2)))
+    return (
+        _GENERAL,
+        cp.if_then(_get_bool_valued_expr(arg1), _get_bool_valued_expr(arg2)),
+    )
+
 
 def _handle_exactly_node(visitor, node, *args):
-    return (_GENERAL, cp.equal(cp.count((_get_bool_valued_expr(arg) for arg in
-                                         args[1:]), 1),
-                               _get_int_valued_expr(args[0])))
+    return (
+        _GENERAL,
+        cp.equal(
+            cp.count((_get_bool_valued_expr(arg) for arg in args[1:]), 1),
+            _get_int_valued_expr(args[0]),
+        ),
+    )
+
 
 def _handle_at_most_node(visitor, node, *args):
-    return (_GENERAL, cp.less_or_equal(cp.count((_get_bool_valued_expr(arg) for
-                                                 arg in args[1:]), 1),
-                                       _get_int_valued_expr(args[0])))
+    return (
+        _GENERAL,
+        cp.less_or_equal(
+            cp.count((_get_bool_valued_expr(arg) for arg in args[1:]), 1),
+            _get_int_valued_expr(args[0]),
+        ),
+    )
+
 
 def _handle_at_least_node(visitor, node, *args):
-    return (_GENERAL, cp.greater_or_equal(cp.count((_get_bool_valued_expr(arg)
-                                                    for arg in args[1:]), 1),
-                                          _get_int_valued_expr(args[0])))
+    return (
+        _GENERAL,
+        cp.greater_or_equal(
+            cp.count((_get_bool_valued_expr(arg) for arg in args[1:]), 1),
+            _get_int_valued_expr(args[0]),
+        ),
+    )
+
 
 ## CallExpression handllers
+
 
 def _before_call_dispatcher(visitor, node, *args):
     if len(args) == 2:
         return _handle_inequality_node(visitor, node, args[0], args[1])
-    else: # a delay is also specified
+    else:  # a delay is also specified
         lhs = _handle_sum_node(visitor, node, args[0], args[2])
         return _handle_inequality_node(visitor, node, lhs, args[1])
+
 
 def _after_call_dispatcher(visitor, node, *args):
     if len(args) == 2:
         return _handle_inequality_node(visitor, node, args[1], args[0])
-    else: # delay is also specified
+    else:  # delay is also specified
         lhs = _handle_sum_node(visitor, node, args[1], args[2])
         return _handle_inequality_node(visitor, node, lhs, args[0])
+
 
 def _at_call_dispatcher(visitor, node, *args):
     if len(args) == 2:
         return _handle_equality_node(visitor, node, args[0], args[1])
-    else: # a delay is also specified
+    else:  # a delay is also specified
         rhs = _handle_sum_node(visitor, node, args[1], args[2])
         return _handle_equality_node(visitor, node, args[0], rhs)
+
 
 _call_dispatchers = {
     _DEFERRED_BEFORE: _before_call_dispatcher,
@@ -695,8 +857,10 @@ _call_dispatchers = {
     _EQUIVALENT_TO: _handle_equivalence_node,
 }
 
+
 def _handle_call(visitor, node, *args):
     return _call_dispatchers[args[0][0]](visitor, node, args[0][1], *args[1:])
+
 
 ##
 # Scheduling
@@ -705,19 +869,16 @@ def _handle_call(visitor, node, *args):
 # This will get populated when cp is finally imported
 _before_dispatchers = {}
 _at_dispatchers = {}
-_time_point_dispatchers = {
-    _GENERAL: lambda x: x,
-    _ELEMENT_CONSTRAINT: lambda x: x,
-}
+_time_point_dispatchers = {_GENERAL: lambda x: x, _ELEMENT_CONSTRAINT: lambda x: x}
 
 _non_precedence_types = {_GENERAL, _ELEMENT_CONSTRAINT}
+
 
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
     t1 = (_GENERAL, _time_point_dispatchers[time1[0]](time1[1]))
     t2 = (_GENERAL, _time_point_dispatchers[time2[0]](time2[1]))
     lhs = _handle_sum_node(visitor, None, t1, delay)
-    if (time1[0] in _non_precedence_types or
-        time2[0] in _non_precedence_types):
+    if time1[0] in _non_precedence_types or time2[0] in _non_precedence_types:
         # we alredy know we can't use a start_before_start function or its ilk:
         # Just build the correct inequality.
         return _handle_inequality_node(visitor, None, lhs, t2)
@@ -725,25 +886,35 @@ def _handle_before_expression_node(visitor, node, time1, time2, delay):
     # If this turns out to be the root, we can use the second return, but we
     # also pass the args for the inequality expression in case we use this in a
     # boolean-valued context.
-    return (_BEFORE, _before_dispatchers[time1[0], time2[0]](time1[1], time2[1],
-                                                          delay[1]), (lhs, t2))
+    return (
+        _BEFORE,
+        _before_dispatchers[time1[0], time2[0]](time1[1], time2[1], delay[1]),
+        (lhs, t2),
+    )
+
 
 def _handle_at_expression_node(visitor, node, time1, time2, delay):
     t1 = (_GENERAL, _time_point_dispatchers[time1[0]](time1[1]))
     t2 = (_GENERAL, _time_point_dispatchers[time2[0]](time2[1]))
     lhs = _handle_sum_node(visitor, None, t1, delay)
-    if (time1[0] in _non_precedence_types or
-        time2[0] in _non_precedence_types):
+    if time1[0] in _non_precedence_types or time2[0] in _non_precedence_types:
         # we can't use a start_before_start function or its ilk: Just build the
         # correct inequality.
         return _handle_equality_node(visitor, None, lhs, t2)
 
-    return (_AT, _at_dispatchers[time1[0], time2[0]](time1[1], time2[1],
-                                                     delay[1]), (lhs, t2))
+    return (
+        _AT,
+        _at_dispatchers[time1[0], time2[0]](time1[1], time2[1], delay[1]),
+        (lhs, t2),
+    )
+
 
 def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
-    return (_GENERAL, cp.always_in(cumul_func[1], interval=(start[1], end[1]),
-                                   min=lb[1], max=ub[1]))
+    return (
+        _GENERAL,
+        cp.always_in(cumul_func[1], interval=(start[1], end[1]), min=lb[1], max=ub[1]),
+    )
+
 
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
@@ -801,8 +972,8 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IndexedBooleanVar: _before_indexed_boolean_var,
         _GeneralExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
-        IndexedParam: _before_indexed_param,# Because of indirection
-        ScalarParam: _before_param
+        IndexedParam: _before_indexed_param,  # Because of indirection
+        ScalarParam: _before_param,
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):
@@ -843,13 +1014,11 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
 
 # [ESJ 11/7/22]: TODO: We should revisit this method in the future, as it is not
 # very efficient.
-def collect_valid_components(model, active=True, sort=None, valid=set(),
-                             targets=set()):
+def collect_valid_components(model, active=True, sort=None, valid=set(), targets=set()):
     assert active in (True, None)
     unrecognized = {}
     components = {k: [] for k in targets}
-    for obj in model.component_data_objects(active=True, descend_into=True,
-                                            sort=sort):
+    for obj in model.component_data_objects(active=True, descend_into=True, sort=sort):
         ctype = obj.ctype
         if ctype in components:
             components[ctype].append(obj)
@@ -863,14 +1032,18 @@ def collect_valid_components(model, active=True, sort=None, valid=set(),
 
 
 @WriterFactory.register(
-    'docplex_model', 'Generate the corresponding docplex model object')
+    'docplex_model', 'Generate the corresponding docplex model object'
+)
 class DocplexWriter(object):
     CONFIG = ConfigDict('docplex_model_writer')
-    CONFIG.declare('symbolic_solver_labels', ConfigValue(
-        default=False,
-        domain=bool,
-        description='Write Pyomo Var and Constraint names to docplex model',
-    ))
+    CONFIG.declare(
+        'symbolic_solver_labels',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description='Write Pyomo Var and Constraint names to docplex model',
+        ),
+    )
 
     def __init__(self):
         self.config = self.CONFIG()
@@ -883,28 +1056,38 @@ class DocplexWriter(object):
             active=True,
             sort=SortComponents.deterministic,
             valid={
-                Block, Objective, Constraint, Var, Param, BooleanVar,
-                LogicalConstraint, Suffix,
+                Block,
+                Objective,
+                Constraint,
+                Var,
+                Param,
+                BooleanVar,
+                LogicalConstraint,
+                Suffix,
                 # FIXME: Non-active components should not report as Active
-                Set, RangeSet, Port,
+                Set,
+                RangeSet,
+                Port,
             },
-            targets={
-                Objective, Constraint, LogicalConstraint, IntervalVar
-            }
+            targets={Objective, Constraint, LogicalConstraint, IntervalVar},
         )
         if unknown:
             raise ValueError(
                 "The model ('%s') contains the following active components "
-                "that the docplex writer does not know how to process:\n\t%s" %
-                (model.name, "\n\t".join("%s:\n\t\t%s" % (
-                    k, "\n\t\t".join(map(attrgetter('name'), v)))
-                    for k, v in unknown.items())))
+                "that the docplex writer does not know how to process:\n\t%s"
+                % (
+                    model.name,
+                    "\n\t".join(
+                        "%s:\n\t\t%s" % (k, "\n\t\t".join(map(attrgetter('name'), v)))
+                        for k, v in unknown.items()
+                    ),
+                )
+            )
 
         cpx_model = cp.CpoModel()
         visitor = LogicalToDoCplex(
-            cpx_model,
-            symbolic_solver_labels=config.symbolic_solver_labels)
-
+            cpx_model, symbolic_solver_labels=config.symbolic_solver_labels
+        )
 
         active_objs = components[Objective]
         # [ESJ 09/29/22]: TODO: I think that CP Optimizer can support
@@ -913,8 +1096,8 @@ class DocplexWriter(object):
         if len(active_objs) > 1:
             raise ValueError(
                 "More than one active objective defined for "
-                "input model '%s': Cannot write to docplex."
-                % model.name)
+                "input model '%s': Cannot write to docplex." % model.name
+            )
         elif len(active_objs) == 1:
             obj = active_objs[0]
             obj_expr = visitor.walk_expression((obj.expr, obj, 0))
@@ -961,26 +1144,26 @@ class DocplexWriter(object):
         return cpx_model, visitor.pyomo_to_docplex
 
 
-@SolverFactory.register(
-    'cp_optimizer',
-    doc='Direct interface to CPLEX CP Optimizer'
-)
+@SolverFactory.register('cp_optimizer', doc='Direct interface to CPLEX CP Optimizer')
 class CPOptimizerSolver(object):
     CONFIG = ConfigDict("cp_optimizer_solver")
-    CONFIG.declare('symbolic_solver_labels', ConfigValue(
-        default=False,
-        domain=bool,
-        description='Write Pyomo Var and Constraint names to docplex model',
-    ))
-    CONFIG.declare('tee', ConfigValue(
-        default=False,
-        domain=bool,
-        description="Stream solver output to terminal."
-    ))
-    CONFIG.declare('options', ConfigValue(
-        default={},
-        description="Dictionary of solver options."
-    ))
+    CONFIG.declare(
+        'symbolic_solver_labels',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description='Write Pyomo Var and Constraint names to docplex model',
+        ),
+    )
+    CONFIG.declare(
+        'tee',
+        ConfigValue(
+            default=False, domain=bool, description="Stream solver output to terminal."
+        ),
+    )
+    CONFIG.declare(
+        'options', ConfigValue(default={}, description="Dictionary of solver options.")
+    )
 
     _unrestricted_license = None
 
@@ -993,8 +1176,8 @@ class CPOptimizerSolver(object):
                 cp.SOLVE_STATUS_INFEASIBLE: TerminationCondition.infeasible,
                 cp.SOLVE_STATUS_FEASIBLE: TerminationCondition.feasible,
                 cp.SOLVE_STATUS_OPTIMAL: TerminationCondition.optimal,
-                cp.SOLVE_STATUS_JOB_ABORTED: None, # we need the fail status
-                cp.SOLVE_STATUS_JOB_FAILED: TerminationCondition.solverFailure
+                cp.SOLVE_STATUS_JOB_ABORTED: None,  # we need the fail status
+                cp.SOLVE_STATUS_JOB_FAILED: TerminationCondition.solverFailure,
             }
             self._stop_cause_map = {
                 # We only need to check this if we get an 'aborted' status, so
@@ -1007,7 +1190,7 @@ class CPOptimizerSolver(object):
                 # docplex says "Search aborted externally"
                 cp.STOP_CAUSE_ABORT: TerminationCondition.userInterrupt,
                 # This is in their documentation, but not here, for some reason
-                #cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unkown
+                # cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unkown
             }
 
     @property
@@ -1050,7 +1233,8 @@ class CPOptimizerSolver(object):
 
         writer = DocplexWriter()
         cpx_model, var_map = writer.write(
-            model, symbolic_solver_labels=config.symbolic_solver_labels)
+            model, symbolic_solver_labels=config.symbolic_solver_labels
+        )
         if not config.tee:
             # If the user has also set LogVerbosity, we'll assume they know what
             # they're doing.
@@ -1095,9 +1279,11 @@ class CPOptimizerSolver(object):
 
         results.solver.solve_time = msol.get_solve_time()
         solve_status = msol.get_solve_status()
-        results.solver.termination_condition = self._solve_status_map[
-            solve_status] if solve_status is not None else \
-            self._stop_cause_map[msol.get_stop_cause()]
+        results.solver.termination_condition = (
+            self._solve_status_map[solve_status]
+            if solve_status is not None
+            else self._stop_cause_map[msol.get_stop_cause()]
+        )
 
         # Copy the variable values onto the Pyomo model, using the map we stored
         # on the writer.
@@ -1106,8 +1292,10 @@ class CPOptimizerSolver(object):
             for py_var, cp_var in var_map.items():
                 sol = cp_sol.get_var_solution(cp_var)
                 if sol is None:
-                    logger.warning("CP optimizer did not return a value "
-                                   "for variable '%s'" % py_var.name)
+                    logger.warning(
+                        "CP optimizer did not return a value "
+                        "for variable '%s'" % py_var.name
+                    )
                 else:
                     sol = sol.get_value()
                 if py_var.ctype is IntervalVar:
@@ -1119,13 +1307,13 @@ class CPOptimizerSolver(object):
                         py_var.is_present.set_value(True)
                         py_var.start_time.set_value(start, skip_validation=True)
                         py_var.end_time.set_value(end, skip_validation=True)
-                        py_var.length.set_value(end - start,
-                                                skip_validation=True)
+                        py_var.length.set_value(end - start, skip_validation=True)
                 elif py_var.ctype in {Var, BooleanVar}:
                     py_var.set_value(sol, skip_validation=True)
                 else:
                     raise DeveloperError(
                         "Unrecognized Pyomo type in pyomo-to-docplex "
-                        "variable map: %s" % type(py_var))
+                        "variable map: %s" % type(py_var)
+                    )
 
         return results

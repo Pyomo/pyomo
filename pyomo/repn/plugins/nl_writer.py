@@ -1696,7 +1696,7 @@ class AMPLRepn(object):
         ans.nl = self.nl
         ans.mult = self.mult
         ans.const = self.const
-        ans.linear = self.linear
+        ans.linear = None if self.linear is None else dict(self.linear)
         ans.nonlinear = self.nonlinear
         ans.named_exprs = self.named_exprs
         return ans
