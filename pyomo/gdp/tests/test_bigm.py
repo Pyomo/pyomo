@@ -1313,7 +1313,7 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
             )
         self.assertRegex(
             log.getvalue(),
-            r".*Constraint 'b.simpledisj1.c\[1\]' " r"has not been transformed.",
+            r".*Constraint 'b.simpledisj1.c\[1\]' has not been transformed.",
         )
 
         # and the rest of the container was transformed
@@ -2251,7 +2251,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
             )
         self.assertRegex(
             out.getvalue(),
-            r".*Constraint 'evil\[1\].b.anotherblock.c' " r"has not been transformed.",
+            r".*Constraint 'evil\[1\].b.anotherblock.c' has not been transformed.",
         )
         evil1 = bigm.get_transformed_constraints(m.evil[1].bb[1].c)
         self.assertEqual(len(evil1), 2)

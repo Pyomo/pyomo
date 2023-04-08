@@ -11,6 +11,7 @@
 
 from collections import OrderedDict
 import importlib
+
 """
 This module is a collection of classes that provide a
 friendlier interface to MPI (through mpi4py). They help
@@ -25,6 +26,7 @@ is needed to make this appropriate for general use.
 
 class MPIInterface:
     __have_mpi__ = None
+
     def __init__(self):
         if MPIInterface.__have_mpi__ is None:
             # This is trying to import mpy4py.MPI, and setting a flag to indicate
@@ -58,14 +60,15 @@ class MPIInterface:
     @property
     def comm(self):
         return self._comm
-    
+
     @property
     def rank(self):
         return self._rank
-    
+
     @property
     def size(self):
         return self._size
+
 
 class ParallelTaskManager:
     def __init__(self, n_total_tasks, mpi_interface=None):
@@ -110,23 +113,25 @@ class ParallelTaskManager:
     def global_to_local_data(self, global_data):
         if type(global_data) is list:
             local_data = list()
-            assert (len(global_data) == self._n_total_tasks)
+            assert len(global_data) == self._n_total_tasks
             for i in self._local_map:
                 local_data.append(global_data[i])
             return local_data
         elif type(global_data) is OrderedDict:
             local_data = OrderedDict()
-            assert (len(global_data) == self._n_total_tasks)
+            assert len(global_data) == self._n_total_tasks
             idx = 0
             for k, v in global_data.items():
                 if idx in self._local_map:
                     local_data[k] = v
                 idx += idx
             return local_data
-        raise ValueError('Unknown type passed to global_to_local_data. Expected list or OrderedDict.')
+        raise ValueError(
+            'Unknown type passed to global_to_local_data. Expected list or OrderedDict.'
+        )
 
     def allgather_global_data(self, local_data):
-        assert (len(local_data) == len(self._local_map))
+        assert len(local_data) == len(self._local_map)
         if not self._mpi_interface.have_mpi:
             return list(local_data)
 
@@ -136,7 +141,7 @@ class ParallelTaskManager:
         return self._stack_global_data(global_data_list_of_lists)
 
     def gather_global_data(self, local_data):
-        assert (len(local_data) == len(self._local_map))
+        assert len(local_data) == len(self._local_map)
         if not self._mpi_interface.have_mpi:
             return list(local_data)
 
@@ -148,7 +153,6 @@ class ParallelTaskManager:
 
         assert self.is_root() == False
         return None
-
 
     def _stack_global_data(self, global_data_list_of_lists):
         # stack the list of lists into one global data list

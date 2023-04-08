@@ -12,27 +12,34 @@
 import pickle
 
 import pyomo.common.unittest as unittest
-from pyomo.core.expr.numvalue import (NumericValue,
-                                      is_fixed,
-                                      is_constant,
-                                      is_potentially_variable,
-                                      value)
+from pyomo.core.expr.numvalue import (
+    NumericValue,
+    is_fixed,
+    is_constant,
+    is_potentially_variable,
+    value,
+)
 import pyomo.kernel
-from pyomo.core.tests.unit.kernel.test_dict_container import \
-    _TestActiveDictContainerBase
-from pyomo.core.tests.unit.kernel.test_tuple_container import \
-    _TestActiveTupleContainerBase
-from pyomo.core.tests.unit.kernel.test_list_container import \
-    _TestActiveListContainerBase
+from pyomo.core.tests.unit.kernel.test_dict_container import (
+    _TestActiveDictContainerBase,
+)
+from pyomo.core.tests.unit.kernel.test_tuple_container import (
+    _TestActiveTupleContainerBase,
+)
+from pyomo.core.tests.unit.kernel.test_list_container import (
+    _TestActiveListContainerBase,
+)
 from pyomo.core.kernel.base import ICategorizedObject
-from pyomo.core.kernel.expression import (IIdentityExpression,
-                                          noclone,
-                                          IExpression,
-                                          expression,
-                                          data_expression,
-                                          expression_dict,
-                                          expression_tuple,
-                                          expression_list)
+from pyomo.core.kernel.expression import (
+    IIdentityExpression,
+    noclone,
+    IExpression,
+    expression,
+    data_expression,
+    expression_dict,
+    expression_tuple,
+    expression_list,
+)
 from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.parameter import parameter
 from pyomo.core.kernel.objective import objective
@@ -40,12 +47,13 @@ from pyomo.core.kernel.block import block
 
 try:
     import numpy
+
     numpy_available = True
 except:
     numpy_available = False
 
-class Test_noclone(unittest.TestCase):
 
+class Test_noclone(unittest.TestCase):
     def test_is_named_expression_type(self):
         e = expression()
         self.assertEqual(e.is_named_expression_type(), True)
@@ -74,11 +82,23 @@ class Test_noclone(unittest.TestCase):
         e = expression()
         d = data_expression()
         o = objective()
-        for obj in (v, v+1, v**2,
-                    p, p+1, p**2,
-                    e, e+1, e**2,
-                    d, d+1, d**2,
-                    o, o+1, o**2):
+        for obj in (
+            v,
+            v + 1,
+            v**2,
+            p,
+            p + 1,
+            p**2,
+            e,
+            e + 1,
+            e**2,
+            d,
+            d + 1,
+            d**2,
+            o,
+            o + 1,
+            o**2,
+        ):
             self.assertTrue(isinstance(noclone(obj), NumericValue))
             self.assertTrue(isinstance(noclone(obj), IIdentityExpression))
             self.assertTrue(isinstance(noclone(obj), noclone))
@@ -86,6 +106,7 @@ class Test_noclone(unittest.TestCase):
 
     def test_pprint(self):
         import pyomo.kernel
+
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -103,20 +124,19 @@ class Test_noclone(unittest.TestCase):
         pyomo.kernel.pprint(b)
         pyomo.kernel.pprint(m)
         # tests compatibility with _ToStringVisitor
-        pyomo.kernel.pprint(noclone(v)+1)
-        pyomo.kernel.pprint(noclone(v+1))
+        pyomo.kernel.pprint(noclone(v) + 1)
+        pyomo.kernel.pprint(noclone(v + 1))
         x = variable()
         y = variable()
-        pyomo.kernel.pprint(y + x*noclone(noclone(x*y)))
-        pyomo.kernel.pprint(y + noclone(noclone(x*y))*x)
+        pyomo.kernel.pprint(y + x * noclone(noclone(x * y)))
+        pyomo.kernel.pprint(y + noclone(noclone(x * y)) * x)
 
     def test_pickle(self):
         v = variable()
         e = noclone(v)
         self.assertEqual(type(e), noclone)
         self.assertIs(type(e.expr), variable)
-        eup = pickle.loads(
-            pickle.dumps(e))
+        eup = pickle.loads(pickle.dumps(e))
         self.assertEqual(type(eup), noclone)
         self.assertTrue(e is not eup)
         self.assertIs(type(eup.expr), variable)
@@ -131,8 +151,7 @@ class Test_noclone(unittest.TestCase):
         b.v = v
         eraw = b.v + 1
         b.e = 1 + noclone(eraw)
-        bup = pickle.loads(
-            pickle.dumps(b))
+        bup = pickle.loads(pickle.dumps(b))
         self.assertTrue(isinstance(bup.e, NumericValue))
         self.assertEqual(value(bup.e), 3.0)
         b.v.value = 2
@@ -219,13 +238,23 @@ class Test_noclone(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), None)
 
     def test_is_expression_type(self):
-        for obj in (variable(), parameter(), objective(),
-                    expression(), data_expression()):
+        for obj in (
+            variable(),
+            parameter(),
+            objective(),
+            expression(),
+            data_expression(),
+        ):
             self.assertEqual(noclone(obj).is_expression_type(), True)
 
     def test_is_parameter_type(self):
-        for obj in (variable(), parameter(), objective(),
-                    expression(), data_expression()):
+        for obj in (
+            variable(),
+            parameter(),
+            objective(),
+            expression(),
+            data_expression(),
+        ):
             self.assertEqual(noclone(obj).is_parameter_type(), False)
 
     def test_args(self):
@@ -254,9 +283,9 @@ class Test_noclone(unittest.TestCase):
         # use __future__ behavior
         e = noclone(parameter(value=2))
         self.assertIs(type(e.expr), parameter)
-        self.assertEqual((1/e)(), 0.5)
-        self.assertEqual((parameter(1)/e)(), 0.5)
-        self.assertEqual((1/e.expr()), 0.5)
+        self.assertEqual((1 / e)(), 0.5)
+        self.assertEqual((parameter(1) / e)(), 0.5)
+        self.assertEqual((1 / e.expr()), 0.5)
 
     def test_to_string(self):
         b = block()
@@ -270,10 +299,11 @@ class Test_noclone(unittest.TestCase):
         b.e = e
         b.p = p
         self.assertNotEqual(p.name, None)
-        self.assertEqual(e.to_string(verbose=True), "{pow("+p.name+", 2)}")
+        self.assertEqual(e.to_string(verbose=True), "{pow(" + p.name + ", 2)}")
         self.assertEqual(e.to_string(verbose=True), "{pow(p, 2)}")
         del b.e
         del b.p
+
 
 class _Test_expression_base(object):
 
@@ -281,6 +311,7 @@ class _Test_expression_base(object):
 
     def test_pprint(self):
         import pyomo.kernel
+
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -302,16 +333,14 @@ class _Test_expression_base(object):
         self.assertEqual(type(e.expr), float)
         self.assertEqual(e.expr, 1.0)
         self.assertEqual(e.parent, None)
-        eup = pickle.loads(
-            pickle.dumps(e))
+        eup = pickle.loads(pickle.dumps(e))
         self.assertEqual(type(eup.expr), float)
         self.assertEqual(eup.expr, 1.0)
         self.assertEqual(eup.parent, None)
         b = block()
         b.e = e
         self.assertIs(e.parent, b)
-        bup = pickle.loads(
-            pickle.dumps(b))
+        bup = pickle.loads(pickle.dumps(b))
         eup = bup.e
         self.assertEqual(type(eup.expr), float)
         self.assertEqual(eup.expr, 1.0)
@@ -401,9 +430,9 @@ class _Test_expression_base(object):
         e = self._ctype_factory()
         e.expr = 2
         self.assertIs(type(e.expr), int)
-        self.assertEqual((1/e)(), 0.5)
-        self.assertEqual((parameter(1)/e)(), 0.5)
-        self.assertEqual((1/e.expr), 0.5)
+        self.assertEqual((1 / e)(), 0.5)
+        self.assertEqual((parameter(1) / e)(), 0.5)
+        self.assertEqual((1 / e.expr), 0.5)
 
     def test_to_string(self):
         b = block()
@@ -414,9 +443,9 @@ class _Test_expression_base(object):
 
         self.assertEqual(str(e.expr), "None")
         self.assertEqual(str(e), label)
-        self.assertEqual(e.to_string(), label+"{Undefined}")
-        self.assertEqual(e.to_string(verbose=False), label+"{Undefined}")
-        self.assertEqual(e.to_string(verbose=True), label+"{Undefined}")
+        self.assertEqual(e.to_string(), label + "{Undefined}")
+        self.assertEqual(e.to_string(verbose=False), label + "{Undefined}")
+        self.assertEqual(e.to_string(verbose=True), label + "{Undefined}")
         b.e = e
         self.assertNotEqual(e.name, None)
         self.assertEqual(e.to_string(verbose=True), "e{Undefined}")
@@ -428,13 +457,12 @@ class _Test_expression_base(object):
         self.assertEqual(str(e), label)
         self.assertEqual(e.to_string(), "1")
         self.assertEqual(e.to_string(verbose=False), "1")
-        self.assertEqual(e.to_string(verbose=True), label+"{1}")
+        self.assertEqual(e.to_string(verbose=True), label + "{1}")
         b.e = e
         self.assertNotEqual(e.name, None)
         self.assertEqual(e.to_string(verbose=True), "e{1}")
         del b.e
         self.assertEqual(e.name, None)
-
 
         p = parameter()
         e.expr = p**2
@@ -442,12 +470,12 @@ class _Test_expression_base(object):
         self.assertEqual(str(e), label)
         self.assertEqual(e.to_string(), "(<parameter>**2)")
         self.assertEqual(e.to_string(verbose=False), "(<parameter>**2)")
-        self.assertEqual(e.to_string(verbose=True), label+"{pow(<parameter>, 2)}")
+        self.assertEqual(e.to_string(verbose=True), label + "{pow(<parameter>, 2)}")
         b.e = e
         b.p = p
         self.assertNotEqual(e.name, None)
         self.assertNotEqual(p.name, None)
-        self.assertEqual(e.to_string(verbose=True), e.name+"{pow("+p.name+", 2)}")
+        self.assertEqual(e.to_string(verbose=True), e.name + "{pow(" + p.name + ", 2)}")
         self.assertEqual(e.to_string(verbose=True), "e{pow(p, 2)}")
         del b.e
         del b.p
@@ -458,12 +486,12 @@ class _Test_expression_base(object):
         # expression
         e = self._ctype_factory(1.0)
         expr = 0.0
-        for v in [1.0,e]:
+        for v in [1.0, e]:
             expr += v
         self.assertEqual(e.expr, 1)
         self.assertEqual(expr(), 2)
         expr = 0.0
-        for v in [e,1.0]:
+        for v in [e, 1.0]:
             expr += v
         self.assertEqual(e.expr, 1)
         self.assertEqual(expr(), 2)
@@ -474,12 +502,12 @@ class _Test_expression_base(object):
         # expression
         e = self._ctype_factory(1.0)
         expr = 0.0
-        for v in [1.0,e]:
+        for v in [1.0, e]:
             expr -= v
         self.assertEqual(e.expr, 1)
         self.assertEqual(expr(), -2)
         expr = 0.0
-        for v in [e,1.0]:
+        for v in [e, 1.0]:
             expr -= v
         self.assertEqual(e.expr, 1)
         self.assertEqual(expr(), -2)
@@ -490,12 +518,12 @@ class _Test_expression_base(object):
         # expression
         e = self._ctype_factory(3.0)
         expr = 1.0
-        for v in [2.0,e]:
+        for v in [2.0, e]:
             expr *= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 6)
         expr = 1.0
-        for v in [e,2.0]:
+        for v in [e, 2.0]:
             expr *= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 6)
@@ -507,12 +535,12 @@ class _Test_expression_base(object):
         # floating point division
         e = self._ctype_factory(3.0)
         expr = e
-        for v in [2.0,1.0]:
+        for v in [2.0, 1.0]:
             expr /= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 1.5)
         expr = e
-        for v in [1.0,2.0]:
+        for v in [1.0, 2.0]:
             expr /= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 1.5)
@@ -520,12 +548,12 @@ class _Test_expression_base(object):
         # Pyomo expressions
         e = self._ctype_factory(3)
         expr = e
-        for v in [2,1]:
+        for v in [2, 1]:
             expr /= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 1.5)
         expr = e
-        for v in [1,2]:
+        for v in [1, 2]:
             expr /= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 1.5)
@@ -536,25 +564,25 @@ class _Test_expression_base(object):
         # expression
         e = self._ctype_factory(3.0)
         expr = e
-        for v in [2.0,1.0]:
+        for v in [2.0, 1.0]:
             expr **= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 9)
         expr = e
-        for v in [1.0,2.0]:
+        for v in [1.0, 2.0]:
             expr **= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 9)
 
-class Test_expression(_Test_expression_base,
-                      unittest.TestCase):
+
+class Test_expression(_Test_expression_base, unittest.TestCase):
     _ctype_factory = expression
 
     def test_associativity(self):
         x = variable()
         y = variable()
-        pyomo.kernel.pprint(y + x*expression(expression(x*y)))
-        pyomo.kernel.pprint(y + expression(expression(x*y))*x)
+        pyomo.kernel.pprint(y + x * expression(expression(x * y)))
+        pyomo.kernel.pprint(y + expression(expression(x * y)) * x)
 
     def test_ctype(self):
         e = expression()
@@ -614,18 +642,16 @@ class Test_expression(_Test_expression_base,
         v.free()
         self.assertEqual(e.polynomial_degree(), None)
 
-class Test_data_expression(_Test_expression_base,
-                           unittest.TestCase):
+
+class Test_data_expression(_Test_expression_base, unittest.TestCase):
 
     _ctype_factory = data_expression
 
     def test_associativity(self):
         x = parameter()
         y = parameter()
-        pyomo.kernel.pprint(
-            y + x*data_expression(data_expression(x*y)))
-        pyomo.kernel.pprint(
-            y + data_expression(data_expression(x*y))*x)
+        pyomo.kernel.pprint(y + x * data_expression(data_expression(x * y)))
+        pyomo.kernel.pprint(y + data_expression(data_expression(x * y)) * x)
 
     def test_ctype(self):
         e = data_expression()
@@ -661,7 +687,7 @@ class Test_data_expression(_Test_expression_base,
         self.assertEqual(e.is_fixed(), True)
         self.assertEqual(is_fixed(e), True)
         a = self._ctype_factory()
-        e.expr = (a*p)**2/(p + 5)
+        e.expr = (a * p) ** 2 / (p + 5)
         self.assertEqual(e.is_fixed(), True)
         self.assertEqual(is_fixed(e), True)
         a.expr = 2.0
@@ -686,7 +712,7 @@ class Test_data_expression(_Test_expression_base,
         self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(is_potentially_variable(e), False)
         a = self._ctype_factory()
-        e.expr = (a*p)**2/(p + 5)
+        e.expr = (a * p) ** 2 / (p + 5)
         self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(is_potentially_variable(e), False)
         a.expr = 2.0
@@ -708,7 +734,7 @@ class Test_data_expression(_Test_expression_base,
         e.expr = p**2
         self.assertEqual(e.polynomial_degree(), 0)
         a = self._ctype_factory()
-        e.expr = (a*p)**2/(p + 5)
+        e.expr = (a * p) ** 2 / (p + 5)
         self.assertEqual(e.polynomial_degree(), 0)
         a.expr = 2.0
         p.value = 5.0
@@ -719,20 +745,21 @@ class Test_data_expression(_Test_expression_base,
         with self.assertRaises(ValueError):
             e.expr = v + 1
 
-class Test_expression_dict(_TestActiveDictContainerBase,
-                           unittest.TestCase):
+
+class Test_expression_dict(_TestActiveDictContainerBase, unittest.TestCase):
     _container_type = expression_dict
     _ctype_factory = lambda self: expression()
 
-class Test_expression_tuple(_TestActiveTupleContainerBase,
-                           unittest.TestCase):
+
+class Test_expression_tuple(_TestActiveTupleContainerBase, unittest.TestCase):
     _container_type = expression_tuple
     _ctype_factory = lambda self: expression()
 
-class Test_expression_list(_TestActiveListContainerBase,
-                           unittest.TestCase):
+
+class Test_expression_list(_TestActiveListContainerBase, unittest.TestCase):
     _container_type = expression_list
     _ctype_factory = lambda self: expression()
+
 
 if __name__ == "__main__":
     unittest.main()

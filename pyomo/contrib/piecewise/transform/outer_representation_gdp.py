@@ -13,16 +13,20 @@ import pyomo.common.dependencies.numpy as np
 from pyomo.common.dependencies.scipy import spatial
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
-    PiecewiseLinearToGDP)
+    PiecewiseLinearToGDP,
+)
 from pyomo.core import Constraint, NonNegativeIntegers, Suffix, Var
 from pyomo.core.base import TransformationFactory
 from pyomo.gdp import Disjunct, Disjunction
 
-@TransformationFactory.register('contrib.piecewise.outer_repn_gdp',
-                                doc="Convert piecewise-linear model to a GDP "
-                                "using an outer (Ax <= b) representation of "
-                                "the simplices that are the domains of the "
-                                "linear functions.")
+
+@TransformationFactory.register(
+    'contrib.piecewise.outer_repn_gdp',
+    doc="Convert piecewise-linear model to a GDP "
+    "using an outer (Ax <= b) representation of "
+    "the simplices that are the domains of the "
+    "linear functions.",
+)
 class OuterRepresentationGDPTransformation(PiecewiseLinearToGDP):
     """
     Convert a model involving piecewise linear expressions into a GDP by
@@ -44,20 +48,20 @@ class OuterRepresentationGDPTransformation(PiecewiseLinearToGDP):
            parent Block as the component owning their parent expression. In
            this mode, targets must be Blocks, Constraints, and/or Objectives.
     """
+
     CONFIG = PiecewiseLinearToGDP.CONFIG()
     _transformation_name = 'pw_linear_outer_repn'
 
-    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func,
-                                  transformation_block):
+    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
         transBlock = transformation_block.transformed_functions[
-            len(transformation_block.transformed_functions)]
+            len(transformation_block.transformed_functions)
+        ]
 
         # get the PiecewiseLinearFunctionExpression
         dimension = pw_expr.nargs()
         transBlock.disjuncts = Disjunct(NonNegativeIntegers)
         substitute_var = transBlock.substitute_var = Var()
-        pw_linear_func.map_transformation_var(pw_expr,
-                                              substitute_var)
+        pw_linear_func.map_transformation_var(pw_expr, substitute_var)
         substitute_var_lb = float('inf')
         substitute_var_ub = -float('inf')
         if dimension > 1:
@@ -65,17 +69,21 @@ class OuterRepresentationGDPTransformation(PiecewiseLinearToGDP):
             b = np.zeros(dimension + 1)
             b[-1] = 1
 
-        for simplex, linear_func in zip(pw_linear_func._simplices,
-                                        pw_linear_func._linear_functions):
+        for simplex, linear_func in zip(
+            pw_linear_func._simplices, pw_linear_func._linear_functions
+        ):
             disj = transBlock.disjuncts[len(transBlock.disjuncts)]
 
             if dimension == 1:
                 # We don't need scipy, and the polytopes are 1-dimensional
                 # simplices, so they are defined by two bounds constraints:
                 disj.simplex_halfspaces = Constraint(
-                    expr=(pw_linear_func._points[simplex[0]][0], 
-                          pw_expr.args[0], 
-                          pw_linear_func._points[simplex[1]][0]))
+                    expr=(
+                        pw_linear_func._points[simplex[0]][0],
+                        pw_expr.args[0],
+                        pw_linear_func._points[simplex[1]][0],
+                    )
+                )
             else:
                 disj.simplex_halfspaces = Constraint(range(dimension + 1))
                 # we will use scipy to get the convex hull of the extreme
@@ -89,13 +97,14 @@ class OuterRepresentationGDPTransformation(PiecewiseLinearToGDP):
                     # The equations are given as normal vectors (A) followed by
                     # offsets (b) such that Ax + b <= 0 gives the halfspaces
                     # defining the simplex. (See Qhull documentation)
-                    disj.simplex_halfspaces[i] = sum(eqn[j]*v for j, v in
-                                                    enumerate(vars)) + \
-                        float(eqn[dimension]) <= 0
+                    disj.simplex_halfspaces[i] = (
+                        sum(eqn[j] * v for j, v in enumerate(vars))
+                        + float(eqn[dimension])
+                        <= 0
+                    )
 
             linear_func_expr = linear_func(*pw_expr.args)
-            disj.set_substitute = Constraint(expr=substitute_var ==
-                                             linear_func_expr)
+            disj.set_substitute = Constraint(expr=substitute_var == linear_func_expr)
             (lb, ub) = compute_bounds_on_expr(linear_func_expr)
             if lb is not None and lb < substitute_var_lb:
                 substitute_var_lb = lb
@@ -107,6 +116,7 @@ class OuterRepresentationGDPTransformation(PiecewiseLinearToGDP):
         if substitute_var_ub > -float('inf'):
             transBlock.substitute_var.setub(substitute_var_ub)
         transBlock.pick_a_piece = Disjunction(
-            expr=[d for d in transBlock.disjuncts.values()])
+            expr=[d for d in transBlock.disjuncts.values()]
+        )
 
         return transBlock.substitute_var

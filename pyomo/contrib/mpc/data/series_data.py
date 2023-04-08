@@ -11,16 +11,9 @@
 
 from collections import namedtuple
 from pyomo.core.expr.numvalue import value as pyo_value
-from pyomo.contrib.mpc.data.find_nearest_index import (
-    find_nearest_index,
-)
-from pyomo.contrib.mpc.data.get_cuid import (
-    get_indexed_cuid,
-)
-from pyomo.contrib.mpc.data.dynamic_data_base import (
-    _is_iterable,
-    _DynamicDataBase,
-)
+from pyomo.contrib.mpc.data.find_nearest_index import find_nearest_index
+from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
+from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable, _DynamicDataBase
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 
 
@@ -46,9 +39,7 @@ class TimeSeriesData(_DynamicDataBase):
         """
         _time = list(time)
         if _time != list(sorted(time)):
-            raise ValueError(
-                "Time points are not sorted in increasing order"
-            )
+            raise ValueError("Time points are not sorted in increasing order")
         self._time = _time
 
         # When looking up a value at a particular time point, we will use
@@ -68,22 +59,17 @@ class TimeSeriesData(_DynamicDataBase):
                 raise ValueError(
                     "Data lists must have same length as time. "
                     "Length of time is %s while length of data for "
-                    "key %s is %s."
-                    % (len(time), key, len(data_list))
+                    "key %s is %s." % (len(time), key, len(data_list))
                 )
         super().__init__(data, time_set=time_set, context=context)
 
     def __eq__(self, other):
         if isinstance(other, TimeSeriesData):
-            return (
-                self._data == other._data
-                and self._time == other._time
-            )
+            return self._data == other._data and self._time == other._time
         else:
             # Should this return False or raise TypeError?
             raise TypeError(
-                "%s and %s are not comparable"
-                % (self.__class__, other.__class__)
+                "%s and %s are not comparable" % (self.__class__, other.__class__)
             )
 
     def get_time_points(self):
@@ -111,9 +97,9 @@ class TimeSeriesData(_DynamicDataBase):
             return TimeSeriesData(data, time_list, time_set=time_set)
         else:
             # indices is a scalar
-            return ScalarData({
-                cuid: values[indices] for cuid, values in self._data.items()
-            })
+            return ScalarData(
+                {cuid: values[indices] for cuid, values in self._data.items()}
+            )
 
     def get_data_at_time(self, time=None, tolerance=0.0):
         """
@@ -156,8 +142,7 @@ class TimeSeriesData(_DynamicDataBase):
                 idx = find_nearest_index(self._time, t, tolerance=tolerance)
             if idx is None:
                 raise RuntimeError(
-                    "Time point %s is invalid within tolerance %s"
-                    % (t, tolerance)
+                    "Time point %s is invalid within tolerance %s" % (t, tolerance)
                 )
             indices.append(idx)
         if not is_iterable:
@@ -224,15 +209,10 @@ class TimeSeriesData(_DynamicDataBase):
         if copy_values:
             raise NotImplementedError(
                 "extract_variables with copy_values=True has not been"
-                " implemented by %s"
-                % self.__class__
+                " implemented by %s" % self.__class__
             )
         data = {}
         for var in variables:
-            cuid = get_indexed_cuid(
-                var, (self._orig_time_set,), context=context
-            )
+            cuid = get_indexed_cuid(var, (self._orig_time_set,), context=context)
             data[cuid] = self._data[cuid]
-        return TimeSeriesData(
-            data, self._time, time_set=self._orig_time_set
-        )
+        return TimeSeriesData(data, self._time, time_set=self._orig_time_set)

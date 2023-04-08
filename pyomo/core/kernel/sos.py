@@ -10,17 +10,15 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import is_numeric_data
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readwrite_property)
-from pyomo.core.kernel.container_utils import \
-    define_simple_containers
+from pyomo.core.kernel.base import ICategorizedObject, _abstract_readwrite_property
+from pyomo.core.kernel.container_utils import define_simple_containers
 
 
 class ISOS(ICategorizedObject):
     """
     The interface for Special Ordered Sets.
     """
+
     __slots__ = ()
 
     #
@@ -29,12 +27,9 @@ class ISOS(ICategorizedObject):
     # by overriding the @property method
     #
 
-    variables = _abstract_readwrite_property(
-        doc="The sos variables")
-    weights = _abstract_readwrite_property(
-        doc="The sos variables")
-    level = _abstract_readwrite_property(
-        doc="The sos level (e.g., 1,2,...)")
+    variables = _abstract_readwrite_property(doc="The sos variables")
+    weights = _abstract_readwrite_property(doc="The sos variables")
+    level = _abstract_readwrite_property(doc="The sos level (e.g., 1,2,...)")
 
     #
     # Interface
@@ -54,16 +49,21 @@ class ISOS(ICategorizedObject):
         """The number of members in the set"""
         return len(self.variables)
 
+
 class sos(ISOS):
     """A Special Ordered Set of type n."""
+
     _ctype = ISOS
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_variables",
-                 "_weights",
-                 "_level",
-                 "__weakref__")
+    __slots__ = (
+        "_parent",
+        "_storage_key",
+        "_active",
+        "_variables",
+        "_weights",
+        "_level",
+        "__weakref__",
+    )
+
     def __init__(self, variables, weights=None, level=1):
         self._parent = None
         self._storage_key = None
@@ -72,14 +72,15 @@ class sos(ISOS):
         self._weights = None
         self._level = level
         if weights is None:
-            self._weights = tuple(range(1,len(self._variables)+1))
+            self._weights = tuple(range(1, len(self._variables) + 1))
         else:
             self._weights = tuple(weights)
             for w in self._weights:
                 if not is_numeric_data(w):
                     raise ValueError(
                         "Weights for Special Ordered Sets must be "
-                        "expressions restricted to numeric data")
+                        "expressions restricted to numeric data"
+                    )
 
         assert len(self._variables) == len(self._weights)
         assert self._level >= 1
@@ -89,17 +90,24 @@ class sos(ISOS):
     #
 
     @property
-    def variables(self): return self._variables
+    def variables(self):
+        return self._variables
+
     @property
-    def weights(self): return self._weights
+    def weights(self):
+        return self._weights
+
     @property
-    def level(self): return self._level
+    def level(self):
+        return self._level
+
 
 def sos1(variables, weights=None):
     """A Special Ordered Set of type 1.
 
     This is an alias for sos(..., level=1)"""
     return sos(variables, weights=weights, level=1)
+
 
 def sos2(variables, weights=None):
     """A Special Ordered Set of type 2.
@@ -108,8 +116,7 @@ def sos2(variables, weights=None):
     """
     return sos(variables, weights=weights, level=2)
 
+
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module
-define_simple_containers(globals(),
-                         "sos",
-                         ISOS)
+define_simple_containers(globals(), "sos", ISOS)

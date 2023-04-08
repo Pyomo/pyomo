@@ -9,8 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar',
-           'ScalarVar']
+__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar', 'ScalarVar']
 
 import logging
 import sys
@@ -26,21 +25,33 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.current import GetItemExpression
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
-    NumericValue, value, is_potentially_variable, native_numeric_types,
+    NumericValue,
+    value,
+    is_potentially_variable,
+    native_numeric_types,
     native_types,
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.indexed_component import (
-    IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
+    IndexedComponent,
+    UnindexedComponent_set,
+    IndexedComponent_NDArrayMixin,
 )
 from pyomo.core.base.initializer import (
-    Initializer, DefaultInitializer, BoundInitializer)
+    Initializer,
+    DefaultInitializer,
+    BoundInitializer,
+)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import (
-    Reals, Binary, Set, SetInitializer,
-    real_global_set_ids, integer_global_set_ids,
+    Reals,
+    Binary,
+    Set,
+    SetInitializer,
+    real_global_set_ids,
+    integer_global_set_ids,
 )
 from pyomo.core.base.units_container import units
 from pyomo.core.base.util import is_functor
@@ -52,16 +63,33 @@ _ninf = -_inf
 _no_lower_bound = {None, _ninf}
 _no_upper_bound = {None, _inf}
 _known_global_real_domains = dict(
-    [(_, True) for _ in real_global_set_ids] +
-    [(_, False) for _ in integer_global_set_ids]
+    [(_, True) for _ in real_global_set_ids]
+    + [(_, False) for _ in integer_global_set_ids]
 )
 _VARDATA_API = (
     # including 'domain' runs afoul of logic in Block._add_implicit_sets()
     # 'domain',
-    'bounds', 'lower', 'upper', 'lb', 'ub', 'has_lb', 'has_ub',
-    'setlb', 'setub', 'get_units',
-    'is_integer', 'is_binary', 'is_continuous', 'is_fixed',
-    'fix', 'unfix', 'free', 'set_value', 'value', 'stale', 'fixed',
+    'bounds',
+    'lower',
+    'upper',
+    'lb',
+    'ub',
+    'has_lb',
+    'has_ub',
+    'setlb',
+    'setub',
+    'get_units',
+    'is_integer',
+    'is_binary',
+    'is_continuous',
+    'is_fixed',
+    'fix',
+    'unfix',
+    'free',
+    'set_value',
+    'value',
+    'stale',
+    'fixed',
 )
 
 
@@ -115,6 +143,7 @@ class _VarData(ComponentData, NumericValue):
 
         """
         return self.lb, self.ub
+
     @bounds.setter
     def bounds(self, val):
         self.lower, self.upper = val
@@ -124,6 +153,7 @@ class _VarData(ComponentData, NumericValue):
         """Return (or set) the numeric value of the variable lower bound."""
         lb = value(self.lower)
         return None if lb == _ninf else lb
+
     @lb.setter
     def lb(self, val):
         self.lower = val
@@ -133,6 +163,7 @@ class _VarData(ComponentData, NumericValue):
         """Return (or set) the numeric value of the variable upper bound."""
         ub = value(self.upper)
         return None if ub == _inf else ub
+
     @ub.setter
     def ub(self, val):
         self.upper = val
@@ -285,9 +316,7 @@ class _VarData(ComponentData, NumericValue):
 
 
 class _GeneralVarData(_VarData):
-    """This class defines the data for a single variable.
-
-    """
+    """This class defines the data for a single variable."""
 
     __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
     __autoslot_mappers__ = {'_stale': StaleFlagManager.stale_mapper}
@@ -299,8 +328,7 @@ class _GeneralVarData(_VarData):
         #   - _VarData
         #   - ComponentData
         #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
+        self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
         self._value = None
         #
@@ -313,7 +341,7 @@ class _GeneralVarData(_VarData):
         self._ub = None
         self._domain = None
         self._fixed = False
-        self._stale = 0 # True
+        self._stale = 0  # True
 
     @classmethod
     def copy(cls, src):
@@ -348,7 +376,7 @@ class _GeneralVarData(_VarData):
         # Special case: setting a variable to None "clears" the variable.
         if val is None:
             self._value = None
-            self._stale = 0 # True
+            self._stale = 0  # True
             return
         # TODO: generate a warning/error:
         #
@@ -359,24 +387,27 @@ class _GeneralVarData(_VarData):
                 _src_magnitude = value(val)
                 _src_units = units.get_units(val)
                 val = units.convert_value(
-                    num_value=_src_magnitude, from_units=_src_units,
-                    to_units=self.parent_component()._units)
+                    num_value=_src_magnitude,
+                    from_units=_src_units,
+                    to_units=self.parent_component()._units,
+                )
             else:
                 val = value(val)
 
         if not skip_validation:
             if val not in self.domain:
                 logger.warning(
-                    "Setting Var '%s' to a value `%s` (%s) not in domain %s." %
-                    (self.name, val, type(val).__name__, self.domain),
-                    extra={'id':'W1001'},
+                    "Setting Var '%s' to a value `%s` (%s) not in domain %s."
+                    % (self.name, val, type(val).__name__, self.domain),
+                    extra={'id': 'W1001'},
                 )
             elif (self._lb is not None and val < value(self._lb)) or (
-                    self._ub is not None and val > value(self._ub)):
+                self._ub is not None and val > value(self._ub)
+            ):
                 logger.warning(
                     "Setting Var '%s' to a numeric value `%s` "
                     "outside the bounds %s." % (self.name, val, self.bounds),
-                    extra={'id':'W1002'},
+                    extra={'id': 'W1002'},
                 )
 
         self._value = val
@@ -385,6 +416,7 @@ class _GeneralVarData(_VarData):
     @property
     def value(self):
         return self._value
+
     @value.setter
     def value(self, val):
         self.set_value(val)
@@ -392,6 +424,7 @@ class _GeneralVarData(_VarData):
     @property
     def domain(self):
         return self._domain
+
     @domain.setter
     def domain(self, domain):
         try:
@@ -399,9 +432,9 @@ class _GeneralVarData(_VarData):
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
-                "instance of a Pyomo Set or convertable to a Pyomo Set."
-                % (domain,),
-                extra={'id': 'E2001'})
+                "instance of a Pyomo Set or convertable to a Pyomo Set." % (domain,),
+                extra={'id': 'E2001'},
+            )
             raise
 
     @_VarData.bounds.getter
@@ -477,6 +510,7 @@ class _GeneralVarData(_VarData):
             return self._lb
         # _process_bound() guarantees _lb is not potentially variable
         return NPV_MaxExpression((self._lb, dlb))
+
     @lower.setter
     def lower(self, val):
         self._lb = self._process_bound(val, 'lower')
@@ -501,6 +535,7 @@ class _GeneralVarData(_VarData):
             return self._ub
         # _process_bound() guarantees _lb is not potentially variable
         return NPV_MinExpression((self._ub, dub))
+
     @upper.setter
     def upper(self, val):
         self._ub = self._process_bound(val, 'upper')
@@ -514,6 +549,7 @@ class _GeneralVarData(_VarData):
     @property
     def fixed(self):
         return self._fixed
+
     @fixed.setter
     def fixed(self, val):
         self._fixed = bool(val)
@@ -521,10 +557,11 @@ class _GeneralVarData(_VarData):
     @property
     def stale(self):
         return StaleFlagManager.is_stale(self._stale)
+
     @stale.setter
     def stale(self, val):
         if val:
-            self._stale = 0 # True
+            self._stale = 0  # True
         else:
             self._stale = StaleFlagManager.get_flag(0)
 
@@ -543,7 +580,8 @@ class _GeneralVarData(_VarData):
                 "Potentially variable input of type '%s' supplied as "
                 "%s bound for variable '%s' - legal types must be constants "
                 "or non-potentially variable expressions."
-                % (type(val).__name__, bound_type, self.name))
+                % (type(val).__name__, bound_type, self.name)
+            )
         else:
             # We want to create an expression and not just convert the
             # current value so that things like mutable Params behave as
@@ -584,24 +622,37 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     def __new__(cls, *args, **kwargs):
         if cls is not Var:
             return super(Var, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             return super(Var, cls).__new__(AbstractScalarVar)
         else:
             return super(Var, cls).__new__(IndexedVar)
 
     @overload
-    def __init__(self, *indexes, domain=Reals, within=Reals, bounds=None,
-                 initialize=None, rule=None, dense=True, units=None,
-                 name=None, doc=None): ...
+    def __init__(
+        self,
+        *indexes,
+        domain=Reals,
+        within=Reals,
+        bounds=None,
+        initialize=None,
+        rule=None,
+        dense=True,
+        units=None,
+        name=None,
+        doc=None
+    ):
+        ...
 
     def __init__(self, *args, **kwargs):
         #
         # Default keyword values
         #
-        self._rule_init = Initializer(self._pop_from_kwargs(
-            'Var', kwargs, ('rule', 'initialize'), None))
-        self._rule_domain = SetInitializer(self._pop_from_kwargs(
-            'Var', kwargs, ('domain', 'within'), Reals))
+        self._rule_init = Initializer(
+            self._pop_from_kwargs('Var', kwargs, ('rule', 'initialize'), None)
+        )
+        self._rule_domain = SetInitializer(
+            self._pop_from_kwargs('Var', kwargs, ('domain', 'within'), Reals)
+        )
         _bounds_arg = kwargs.pop('bounds', None)
         self._dense = kwargs.pop('dense', True)
         self._units = kwargs.pop('units', None)
@@ -618,8 +669,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         if not self.is_indexed() and not self._dense:
             logger.warning(
                 "ScalarVar object '%s': dense=False is not allowed "
-                "for scalar variables; converting to dense=True"
-                % (self.name,))
+                "for scalar variables; converting to dense=True" % (self.name,)
+            )
             self._dense = True
         self._rule_bounds = BoundInitializer(_bounds_arg, self)
 
@@ -635,10 +686,12 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         Return a dictionary of index-value pairs.
         """
         if include_fixed_values:
-            return {idx:vardata.value for idx,vardata in self._data.items()}
-        return {idx:vardata.value
-                            for idx, vardata in self._data.items()
-                                                if not vardata.fixed}
+            return {idx: vardata.value for idx, vardata in self._data.items()}
+        return {
+            idx: vardata.value
+            for idx, vardata in self._data.items()
+            if not vardata.fixed
+        }
 
     extract_values = get_values
 
@@ -667,7 +720,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         """
         if self._constructed:
             return
-        self._constructed=True
+        self._constructed = True
 
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
@@ -690,17 +743,16 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                     "with 'dense=True'.  Reverting to 'dense=False' as "
                     "it is not possible to make this variable dense.  "
                     "This warning can be suppressed by specifying "
-                    "'dense=False'" % (self.name,))
+                    "'dense=False'" % (self.name,)
+                )
                 self._dense = False
 
-            if ( self._rule_init is not None and
-                 self._rule_init.contains_indices() ):
+            if self._rule_init is not None and self._rule_init.contains_indices():
                 # Historically we have allowed Vars to be initialized by
                 # a sparse map (i.e., a dict containing only some of the
                 # keys).  We will wrap the incoming initializer to map
                 # KeyErrors to None
-                self._rule_init = DefaultInitializer(
-                    self._rule_init, None, KeyError)
+                self._rule_init = DefaultInitializer(self._rule_init, None, KeyError)
                 # The index is coming in externally; we need to validate it
                 for index in self._rule_init.indices():
                     self[index]
@@ -723,22 +775,21 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # (constant portions of) every VarData so as to not
                 # repeat all the domain/bounds validation.
                 try:
-                    ref = self._getitem_when_not_present(
-                        next(iter(self.index_set())))
+                    ref = self._getitem_when_not_present(next(iter(self.index_set())))
                 except StopIteration:
                     # Empty index!
                     return
                 call_domain_rule = not self._rule_domain.constant()
                 call_bounds_rule = (
-                    self._rule_bounds is not None
-                    and not self._rule_bounds.constant()
+                    self._rule_bounds is not None and not self._rule_bounds.constant()
                 )
                 call_init_rule = self._rule_init is not None and (
                     not self._rule_init.constant()
                     # If either the domain or bounds change, then we
                     # need to re-verify the initial value, even if it is
                     # constant:
-                    or call_domain_rule or call_bounds_rule
+                    or call_domain_rule
+                    or call_bounds_rule
                 )
                 # Initialize all the component datas with the common data
                 for index in self.index_set():
@@ -772,10 +823,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             logger.error(
                 "Rule failed when initializing variable for "
                 "Var %s with index %s:\n%s: %s"
-                % (self.name,
-                   str(index),
-                   type(err).__name__,
-                   err))
+                % (self.name, str(index), type(err).__name__, err)
+            )
             raise
         finally:
             timer.report()
@@ -825,17 +874,19 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         ]
         if self._units is not None:
             headers.append(('Units', str(self._units)))
-        return ( headers,
-                 self._data.items(),
-                 ( "Lower","Value","Upper","Fixed","Stale","Domain"),
-                 lambda k, v: [ value(v.lb),
-                                v.value,
-                                value(v.ub),
-                                v.fixed,
-                                v.stale,
-                                v.domain
-                                ]
-                 )
+        return (
+            headers,
+            self._data.items(),
+            ("Lower", "Value", "Upper", "Fixed", "Stale", "Domain"),
+            lambda k, v: [
+                value(v.lb),
+                v.value,
+                value(v.ub),
+                v.fixed,
+                v.stale,
+                v.domain,
+            ],
+        )
 
 
 class ScalarVar(_GeneralVarData, Var):
@@ -905,7 +956,9 @@ class IndexedVar(Var):
         raise AttributeError(
             "The domain is not an attribute for IndexedVar. It "
             "can be set for all indices using this property setter, "
-            "but must be accessed for individual variables in this container.")
+            "but must be accessed for individual variables in this container."
+        )
+
     @domain.setter
     def domain(self, domain):
         """Sets the domain for all variables in this container."""
@@ -932,10 +985,11 @@ class IndexedVar(Var):
             return super().__getitem__(args)
         except RuntimeError:
             tmp = args if args.__class__ is tuple else (args,)
-            if any(hasattr(arg, 'is_potentially_variable')
-                   and arg.is_potentially_variable()
-                   for arg in tmp
-               ):
+            if any(
+                hasattr(arg, 'is_potentially_variable')
+                and arg.is_potentially_variable()
+                for arg in tmp
+            ):
                 return GetItemExpression((self,) + tmp)
             raise
 
@@ -971,7 +1025,7 @@ class VarList(IndexedVar):
         if self._rule_init is not None and self._rule_init.contains_indices():
             for i, idx in enumerate(self._rule_init.indices()):
                 self._index_set.add(i + self._starting_index)
-        super(VarList,self).construct(data)
+        super(VarList, self).construct(data)
 
     def add(self):
         """Add a variable to this list."""

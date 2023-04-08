@@ -25,8 +25,9 @@ class ScipyInterface(ScipyLU, IPLinearSolverInterface):
     def do_numeric_factorization(
         self, matrix: Union[spmatrix, BlockMatrix], raise_on_error: bool = True
     ) -> LinearSolverResults:
-        res = super(ScipyInterface, self).do_numeric_factorization(matrix=matrix,
-                                                                   raise_on_error=raise_on_error)
+        res = super(ScipyInterface, self).do_numeric_factorization(
+            matrix=matrix, raise_on_error=raise_on_error
+        )
 
         if self.compute_inertia:
             eig = eigvals(matrix.toarray())
@@ -39,5 +40,7 @@ class ScipyInterface(ScipyLU, IPLinearSolverInterface):
 
     def get_inertia(self):
         if self._inertia is None:
-            raise RuntimeError('The intertia was not computed during do_numeric_factorization. Set compute_inertia to True.')
+            raise RuntimeError(
+                'The intertia was not computed during do_numeric_factorization. Set compute_inertia to True.'
+            )
         return self._inertia

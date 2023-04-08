@@ -65,7 +65,7 @@ class TestTiming(unittest.TestCase):
         a = TransformationTimer(None)
         self.assertRegex(
             str(a),
-            r"TransformationTimer object for NoneType; " r"[0-9\.]+ elapsed seconds",
+            r"TransformationTimer object for NoneType; [0-9\.]+ elapsed seconds",
         )
 
         v = _pseudo_component()

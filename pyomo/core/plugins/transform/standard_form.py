@@ -15,7 +15,9 @@ from pyomo.core.plugins.transform.nonnegative_transform import NonNegativeTransf
 from pyomo.core.plugins.transform.equality_transform import EqualityTransform
 
 
-@TransformationFactory.register("core.standard_form", doc="Create an equivalent LP model in standard form.")
+@TransformationFactory.register(
+    "core.standard_form", doc="Create an equivalent LP model in standard form."
+)
 class StandardForm(IsomorphicTransformation):
     """
     Produces a standard-form representation of the model. This form has

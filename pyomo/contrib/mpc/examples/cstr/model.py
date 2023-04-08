@@ -24,21 +24,25 @@ def _conc_out_eqn_rule(m, t, j):
 
 
 def _rate_eqn_rule(m, t, j):
-    return m.rate_gen[t, j] - m.stoich[j]*m.k_rxn*m.conc[t, "A"] == 0
+    return m.rate_gen[t, j] - m.stoich[j] * m.k_rxn * m.conc[t, "A"] == 0
 
 
 def _conc_diff_eqn_rule(m, t, j):
-    return m.dcdt[t, j] - (
-        m.flow_in[t]*m.conc_in[t, j]
-        - m.flow_out[t]*m.conc_out[t, j]
-        + m.rate_gen[t, j]
-    ) == 0
+    return (
+        m.dcdt[t, j]
+        - (
+            m.flow_in[t] * m.conc_in[t, j]
+            - m.flow_out[t] * m.conc_out[t, j]
+            + m.rate_gen[t, j]
+        )
+        == 0
+    )
 
 
 def _conc_steady_eqn_rule(m, t, j):
     return (
-        m.flow_in[t]*m.conc_in[t, j]
-        - m.flow_out[t]*m.conc_out[t, j]
+        m.flow_in[t] * m.conc_in[t, j]
+        - m.flow_out[t] * m.conc_out[t, j]
         + m.rate_gen[t, j]
     ) == 0
 
@@ -74,18 +78,14 @@ def make_model(dynamic=True, horizon=10.0):
     if dynamic:
         m.conc_diff_eqn = pyo.Constraint(time, comp, rule=_conc_diff_eqn_rule)
     else:
-        m.conc_steady_eqn = pyo.Constraint(
-            time, comp, rule=_conc_steady_eqn_rule
-        )
+        m.conc_steady_eqn = pyo.Constraint(time, comp, rule=_conc_steady_eqn_rule)
 
     return m
 
 
 def initialize_model(m, dynamic=True, ntfe=None):
     if ntfe is not None and not dynamic:
-        raise RuntimeError(
-            "Cannot provide ntfe to initialize steady model"
-        )
+        raise RuntimeError("Cannot provide ntfe to initialize steady model")
     elif dynamic and ntfe is None:
         ntfe = 10
     if dynamic:
@@ -106,11 +106,7 @@ def initialize_model(m, dynamic=True, ntfe=None):
         m.conc[t0, "B"].fix(0.0)
 
 
-def create_instance(
-    dynamic=True,
-    horizon=None,
-    ntfe=None,
-):
+def create_instance(dynamic=True, horizon=None, ntfe=None):
     if horizon is None and dynamic:
         horizon = 10.0
     if ntfe is None and dynamic:

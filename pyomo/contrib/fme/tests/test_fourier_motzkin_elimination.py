@@ -11,7 +11,8 @@
 
 import os
 from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
+
+currdir = dirname(abspath(__file__)) + os.sep
 
 # Need solvers/writers registered.
 import pyomo.environ as pyo
@@ -19,8 +20,17 @@ import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
-from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
-                        Binary, value, Block, Objective)
+from pyomo.core import (
+    Var,
+    Constraint,
+    Param,
+    ConcreteModel,
+    NonNegativeReals,
+    Binary,
+    value,
+    Block,
+    Objective,
+)
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
@@ -34,6 +44,7 @@ import random
 
 solvers = check_available_solvers('glpk')
 
+
 class TestFourierMotzkinElimination(unittest.TestCase):
     def setUp(self):
         # will need this so we know transformation block names in the test that
@@ -44,25 +55,25 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def makeModel():
         """
         This is a single-level reformulation of a bilevel model.
-        We project out the dual variables to recover the reformulation in 
+        We project out the dual variables to recover the reformulation in
         the original space.
         """
         m = ConcreteModel()
-        m.x = Var(bounds=(0,2))
+        m.x = Var(bounds=(0, 2))
         m.y = Var(domain=NonNegativeReals)
         m.lamb = Var([1, 2], domain=NonNegativeReals)
         m.M = Param([1, 2], mutable=True, default=100)
         m.u = Var([1, 2], domain=Binary)
 
-        m.primal1 = Constraint(expr=m.x - 0.01*m.y <= 1)
-        m.dual1 = Constraint(expr=1 - m.lamb[1] - 0.01*m.lamb[2] == 0)
+        m.primal1 = Constraint(expr=m.x - 0.01 * m.y <= 1)
+        m.dual1 = Constraint(expr=1 - m.lamb[1] - 0.01 * m.lamb[2] == 0)
 
         @m.Constraint([1, 2])
         def bound_lambdas(m, i):
-            return m.lamb[i] <= m.u[i]*m.M[i]
+            return m.lamb[i] <= m.u[i] * m.M[i]
 
-        m.bound_y = Constraint(expr=m.y <= 1000*(1 - m.u[1]))
-        m.dual2 = Constraint(expr=-m.x + 0.01*m.y + 1 <= (1 - m.u[2])*1000)
+        m.bound_y = Constraint(expr=m.y <= 1000 * (1 - m.u[1]))
+        m.dual2 = Constraint(expr=-m.x + 0.01 * m.y + 1 <= (1 - m.u[2]) * 1000)
 
         return m
 
@@ -73,9 +84,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "The Fourier-Motzkin Elimination transformation "
             "requires the argument vars_to_eliminate, a "
             "list of Vars to be projected out of the model.",
-            TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to,
-            m)
+            TransformationFactory('contrib.fourier_motzkin_elimination').apply_to,
+            m,
+        )
 
     unfiltered_indices = [1, 2, 3, 6]
     filtered_indices = [1, 2, 3, 4]
@@ -140,29 +151,28 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_transformed_constraints_indexed_var_arg(self):
         m = self.makeModel()
-        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
-            m,
-            vars_to_eliminate = m.lamb,
-            constraint_filtering_callback=None)
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
+            m, vars_to_eliminate=m.lamb, constraint_filtering_callback=None
+        )
         # we get some trivial constraints too, but let's check that the ones
         # that should be there really are
         self.check_projected_constraints(m, self.unfiltered_indices)
 
     def test_transformed_constraints_varData_list_arg(self):
         m = self.makeModel()
-        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
             m,
-            vars_to_eliminate = [m.lamb[1], m.lamb[2]],
-            constraint_filtering_callback=None)
+            vars_to_eliminate=[m.lamb[1], m.lamb[2]],
+            constraint_filtering_callback=None,
+        )
 
         self.check_projected_constraints(m, self.unfiltered_indices)
 
     def test_transformed_constraints_indexedVar_list(self):
         m = self.makeModel()
-        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
-            m,
-            vars_to_eliminate = [m.lamb],
-            constraint_filtering_callback=None)
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
+            m, vars_to_eliminate=[m.lamb], constraint_filtering_callback=None
+        )
 
         self.check_projected_constraints(m, self.unfiltered_indices)
 
@@ -171,9 +181,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # during the transformation. This checks that we removed the constraints
         # we expect.
         m = self.makeModel()
-        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
-            m,
-            vars_to_eliminate = m.lamb)
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
+            m, vars_to_eliminate=m.lamb
+        )
 
         # we still have all the right constraints
         self.check_projected_constraints(m, self.filtered_indices)
@@ -183,10 +193,10 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_original_constraints_deactivated(self):
         m = self.makeModel()
-        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
-            m,
-            vars_to_eliminate = m.lamb)
-        
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
+            m, vars_to_eliminate=m.lamb
+        )
+
         self.assertFalse(m.primal1.active)
         self.assertFalse(m.dual1.active)
         self.assertFalse(m.dual2.active)
@@ -203,10 +213,10 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertRaisesRegex(
             RuntimeError,
             "Fourier-Motzkin found the model is infeasible!",
-            TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to,
-            m, 
-            vars_to_eliminate=m.x)
+            TransformationFactory('contrib.fourier_motzkin_elimination').apply_to,
+            m,
+            vars_to_eliminate=m.x,
+        )
 
     def test_infeasible_model_no_var_bounds(self):
         m = ConcreteModel()
@@ -217,16 +227,16 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertRaisesRegex(
             RuntimeError,
             "Fourier-Motzkin found the model is infeasible!",
-            TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to,
-            m, 
-            vars_to_eliminate=m.x)
-        
+            TransformationFactory('contrib.fourier_motzkin_elimination').apply_to,
+            m,
+            vars_to_eliminate=m.x,
+        )
+
     def test_nonlinear_error(self):
         m = ConcreteModel()
         m.x = Var()
         m.cons = Constraint(expr=m.x**2 >= 2)
-        m.cons2 = Constraint(expr=m.x<= 10)
+        m.cons2 = Constraint(expr=m.x <= 10)
 
         self.assertRaisesRegex(
             RuntimeError,
@@ -235,10 +245,10 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "Elimination transformation can only "
             "be used to eliminate variables "
             "which only appear linearly.",
-            TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to,
-            m, 
-            vars_to_eliminate=m.x)
+            TransformationFactory('contrib.fourier_motzkin_elimination').apply_to,
+            m,
+            vars_to_eliminate=m.x,
+        )
 
     def test_components_we_do_not_understand_error(self):
         m = self.makeModel()
@@ -250,17 +260,18 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "Fourier-Motzkin Elimination transformation can only "
             "handle purely algebraic models. That is, only "
             "Sets, Params, Vars, Constraints, Expressions, Blocks, "
-            "and Objectives may be active on the model." % (m.disj.name, 
-                                                            m.disj.type()),
-            TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to,
-            m, 
-            vars_to_eliminate=m.x)
+            "and Objectives may be active on the model." % (m.disj.name, m.disj.type()),
+            TransformationFactory('contrib.fourier_motzkin_elimination').apply_to,
+            m,
+            vars_to_eliminate=m.x,
+        )
 
     def test_bad_constraint_filtering_callback_error(self):
         m = self.makeModel()
+
         def not_a_callback(cons):
             raise RuntimeError("I don't know how to do my job.")
+
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
@@ -270,11 +281,13 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                 fme.apply_to,
                 m,
                 vars_to_eliminate=m.x,
-                constraint_filtering_callback=not_a_callback)
+                constraint_filtering_callback=not_a_callback,
+            )
         self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
-            "on constraint with right-hand side -1.0 and body:*")
+            "on constraint with right-hand side -1.0 and body:*",
+        )
 
     def test_constraint_filtering_callback_not_callable_error(self):
         m = self.makeModel()
@@ -287,11 +300,13 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                 fme.apply_to,
                 m,
                 vars_to_eliminate=m.x,
-                constraint_filtering_callback=5)
+                constraint_filtering_callback=5,
+            )
         self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
-            "on constraint with right-hand side -1.0 and body:*")
+            "on constraint with right-hand side -1.0 and body:*",
+        )
 
     def test_combine_three_inequalities_and_flatten_blocks(self):
         m = ConcreteModel()
@@ -303,7 +318,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.b.b2 = Block()
         m.b.b2.c = Constraint(expr=m.y >= 4)
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
-            m, vars_to_eliminate=m.y, do_integer_arithmetic=True)
+            m, vars_to_eliminate=m.y, do_integer_arithmetic=True
+        )
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         self.assertEqual(len(constraints), 2)
@@ -311,7 +327,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(value(cons.lower), 2)
         self.assertIsNone(cons.upper)
         self.assertIs(cons.body, m.x)
-        
+
         cons = constraints[2]
         self.assertEqual(value(cons.lower), 4)
         self.assertIsNone(cons.upper)
@@ -353,8 +369,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(
-            body.linear_vars[1], m.time1_disjuncts[0].binary_indicator_var)
+        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
         self.assertIs(body.linear_vars[0], m.p[1])
         self.assertEqual(body.linear_coefs[0], 1)
@@ -369,8 +384,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertTrue(body.is_linear())
         self.assertIs(body.linear_vars[0], m.p[1])
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(
-            body.linear_vars[1], m.time1_disjuncts[0].binary_indicator_var)
+        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 10)
 
         # p[2] - p[1] <= 3*on.ind_var + 2*startup.ind_var
@@ -428,11 +442,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(
-            body.linear_vars[0], m.time1_disjuncts[0].binary_indicator_var)
+        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(
-            body.linear_vars[1], m.time1_disjuncts[1].binary_indicator_var)
+        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 1)
 
         # 1 >= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
@@ -443,11 +455,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(
-            body.linear_vars[0], m.time1_disjuncts[0].binary_indicator_var)
+        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(
-            body.linear_vars[1], m.time1_disjuncts[1].binary_indicator_var)
+        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
 
         # 1 <= on.ind_var + startup.ind_var + off.ind_var
@@ -464,7 +474,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[1], 1)
         self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], 1)
-        
+
         # 1 >= on.ind_var + startup.ind_var + off.ind_var
         cons = constraints[indices[10]]
         self.assertEqual(cons.lower, -1)
@@ -503,50 +513,53 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
         disaggregatedVars = ComponentSet(
-            [hull.get_disaggregated_var(m.p[1], m.time1.disjuncts[0]),
-             hull.get_disaggregated_var(m.p[1], m.time1.disjuncts[1]),
-             hull.get_disaggregated_var(m.p[1], m.on),
-             hull.get_disaggregated_var(m.p[2], m.on),
-             hull.get_disaggregated_var(m.p[1], m.startup),
-             hull.get_disaggregated_var(m.p[2], m.startup),
-             hull.get_disaggregated_var(m.p[1], m.off),
-             hull.get_disaggregated_var(m.p[2], m.off)
-         ])
-        
+            [
+                hull.get_disaggregated_var(m.p[1], m.time1.disjuncts[0]),
+                hull.get_disaggregated_var(m.p[1], m.time1.disjuncts[1]),
+                hull.get_disaggregated_var(m.p[1], m.on),
+                hull.get_disaggregated_var(m.p[2], m.on),
+                hull.get_disaggregated_var(m.p[1], m.startup),
+                hull.get_disaggregated_var(m.p[2], m.startup),
+                hull.get_disaggregated_var(m.p[1], m.off),
+                hull.get_disaggregated_var(m.p[2], m.off),
+            ]
+        )
+
         return m, disaggregatedVars
 
     def test_project_disaggregated_vars(self):
-        """This is a little bit more of an integration test with GDP, 
-        but also an example of why FME is 'useful.' We will give a GDP, 
-        take hull relaxation, and then project out the disaggregated 
+        """This is a little bit more of an integration test with GDP,
+        but also an example of why FME is 'useful.' We will give a GDP,
+        take hull relaxation, and then project out the disaggregated
         variables."""
         m, disaggregatedVars = self.create_hull_model()
-        filtered = TransformationFactory('contrib.fourier_motzkin_elimination').\
-                   create_using(m, vars_to_eliminate=disaggregatedVars)
+        filtered = TransformationFactory(
+            'contrib.fourier_motzkin_elimination'
+        ).create_using(m, vars_to_eliminate=disaggregatedVars)
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
-            m, vars_to_eliminate=disaggregatedVars,
-            constraint_filtering_callback=None, do_integer_arithmetic=True)
+            m,
+            vars_to_eliminate=disaggregatedVars,
+            constraint_filtering_callback=None,
+            do_integer_arithmetic=True,
+        )
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # we of course get tremendous amounts of garbage, but we make sure that
         # what should be here is:
-        self.check_hull_projected_constraints(m, constraints, [23, 19, 8, 10,
-                                                               54, 67, 35, 3, 4,
-                                                               1, 2])
+        self.check_hull_projected_constraints(
+            m, constraints, [23, 19, 8, 10, 54, 67, 35, 3, 4, 1, 2]
+        )
         # and when we filter, it's still there.
-        constraints = filtered._pyomo_contrib_fme_transformation.\
-                      projected_constraints
-        self.check_hull_projected_constraints(filtered, constraints, [10, 8, 5,
-                                                                      6, 15, 19,
-                                                                      11, 3, 4,
-                                                                      1, 2])
-    
+        constraints = filtered._pyomo_contrib_fme_transformation.projected_constraints
+        self.check_hull_projected_constraints(
+            filtered, constraints, [10, 8, 5, 6, 15, 19, 11, 3, 4, 1, 2]
+        )
+
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_post_processing(self):
         m, disaggregatedVars = self.create_hull_model()
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        fme.apply_to(m, vars_to_eliminate=disaggregatedVars,
-                     do_integer_arithmetic=True)
+        fme.apply_to(m, vars_to_eliminate=disaggregatedVars, do_integer_arithmetic=True)
         # post-process
         fme.post_process_fme_constraints(m, SolverFactory('glpk'))
 
@@ -555,26 +568,25 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # They should be the same as the above, but now these are *all* the
         # constraints
-        self.check_hull_projected_constraints(m, constraints, [10, 8, 5, 6, 15,
-                                                               19, 11, 3, 4, 1,
-                                                               2])
+        self.check_hull_projected_constraints(
+            m, constraints, [10, 8, 5, 6, 15, 19, 11, 3, 4, 1, 2]
+        )
 
         # and check that we didn't change the model
         for disj in m.component_data_objects(Disjunct):
             self.assertIs(disj.binary_indicator_var.domain, Binary)
-        self.assertEqual(len([o for o in m.component_data_objects(Objective)]),
-                         1)
+        self.assertEqual(len([o for o in m.component_data_objects(Objective)]), 1)
         self.assertIsInstance(m.component("obj"), Objective)
         self.assertTrue(m.obj.active)
-        
+
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_model_with_unrelated_nonlinear_expressions(self):
         m = ConcreteModel()
-        m.x = Var([1, 2, 3], bounds=(0,3))
+        m.x = Var([1, 2, 3], bounds=(0, 3))
         m.y = Var()
         m.z = Var()
 
-        @m.Constraint([1,2])
+        @m.Constraint([1, 2])
         def cons(m, i):
             return m.x[i] <= m.y**i
 
@@ -584,9 +596,12 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons4 = Constraint(expr=m.x[3] <= log(m.y + 1))
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        fme.apply_to(m, vars_to_eliminate=m.x,
-                     projected_constraints_name='projected_constraints',
-                     constraint_filtering_callback=None)
+        fme.apply_to(
+            m,
+            vars_to_eliminate=m.x,
+            projected_constraints_name='projected_constraints',
+            constraint_filtering_callback=None,
+        )
         constraints = m.projected_constraints
 
         # 0 <= y <= 3
@@ -647,17 +662,23 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # check constraints valid for a selection of points (this is nonconvex,
         # but anyway...)
-        pts = [#(sqrt(3), 6), Not numerically stable enough for this test
-               (1, 4), (3, 6), (3, 0), (0, 0), (2,6)]
+        pts = [  # (sqrt(3), 6), Not numerically stable enough for this test
+            (1, 4),
+            (3, 6),
+            (3, 0),
+            (0, 0),
+            (2, 6),
+        ]
         for pt in pts:
             m.y.fix(pt[0])
             m.z.fix(pt[1])
             for i in constraints:
-                self.assertLessEqual(value(constraints[i].lower),
-                                     value(constraints[i].body))
+                self.assertLessEqual(
+                    value(constraints[i].lower), value(constraints[i].body)
+                )
         m.y.fixed = False
         m.z.fixed = False
-        
+
         # check post process these are non-convex, so I don't want to deal with
         # it... (and this is a good test that I *don't* deal with it.)
         constraints[2].deactivate()
@@ -666,8 +687,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # NOTE also that some of the suproblems in this test are unbounded: We
         # need to keep those constraints.
         fme.post_process_fme_constraints(
-            m, SolverFactory('glpk'),
-            projected_constraints=m.projected_constraints)
+            m, SolverFactory('glpk'), projected_constraints=m.projected_constraints
+        )
         # we needed all the constraints, so we kept them all
         self.assertEqual(len(constraints), 6)
 
@@ -677,8 +698,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # reason, we may as well use all the information we've got.)
         m.some_new_cons = Constraint(expr=m.y <= 2)
         fme.post_process_fme_constraints(
-            m, SolverFactory('glpk'),
-            projected_constraints=m.projected_constraints)
+            m, SolverFactory('glpk'), projected_constraints=m.projected_constraints
+        )
         # now we should have lost one constraint
         self.assertEqual(len(constraints), 5)
         # and it should be the y <= 3 one...
@@ -687,10 +708,10 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_noninteger_coefficients_of_vars_being_projected_error(self):
         m = ConcreteModel()
-        m.x = Var(bounds=(0,9))
+        m.x = Var(bounds=(0, 9))
         m.y = Var(bounds=(-5, 5))
-        m.c1 = Constraint(expr=2*m.x + 0.5*m.y >= 2)
-        m.c2 = Constraint(expr=0.25*m.y >= 0.5*m.x)
+        m.c1 = Constraint(expr=2 * m.x + 0.5 * m.y >= 2)
+        m.c2 = Constraint(expr=0.25 * m.y >= 0.5 * m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         self.assertRaisesRegex(
@@ -702,17 +723,18 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "Please set do_integer_arithmetic="
             "False, increase integer_tolerance, or make your data integer.",
             fme.apply_to,
-            m, 
-            vars_to_eliminate=m.x, 
-            do_integer_arithmetic=True)
+            m,
+            vars_to_eliminate=m.x,
+            do_integer_arithmetic=True,
+        )
 
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_noninteger_coefficients_of_vars_not_being_projected_error(self):
         m = ConcreteModel()
-        m.x = Var(bounds=(0,9))
+        m.x = Var(bounds=(0, 9))
         m.y = Var(bounds=(-5, 5))
-        m.c1 = Constraint(expr=2*m.x + 0.5*m.y >= 2)
-        m.c2 = Constraint(expr=0.25*m.y >= 5*m.x)
+        m.c1 = Constraint(expr=2 * m.x + 0.5 * m.y >= 2)
+        m.c2 = Constraint(expr=0.25 * m.y >= 5 * m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         self.assertRaisesRegex(
@@ -724,22 +746,27 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "Please set do_integer_arithmetic="
             "False, increase integer_tolerance, or make your data integer.",
             fme.apply_to,
-            m, 
-            vars_to_eliminate=m.x, 
-            do_integer_arithmetic=True)
+            m,
+            vars_to_eliminate=m.x,
+            do_integer_arithmetic=True,
+        )
 
     def test_integer_arithmetic_non1_coefficients(self):
         m = ConcreteModel()
-        m.x = Var(bounds=(0,9))
+        m.x = Var(bounds=(0, 9))
         m.y = Var(bounds=(-5, 5))
-        m.c1 = Constraint(expr=4*m.x + m.y >= 4)
-        m.c2 = Constraint(expr=m.y >= 2*m.x)
+        m.c1 = Constraint(expr=4 * m.x + m.y >= 4)
+        m.c2 = Constraint(expr=m.y >= 2 * m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        
-        fme.apply_to( m, vars_to_eliminate=m.x,
-                      constraint_filtering_callback=None,
-                      do_integer_arithmetic=True, verbose=True)
+
+        fme.apply_to(
+            m,
+            vars_to_eliminate=m.x,
+            constraint_filtering_callback=None,
+            do_integer_arithmetic=True,
+            verbose=True,
+        )
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
 
@@ -778,13 +805,12 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.x0 = Var()
         m.y = Var()
 
-        m.cons1 = Constraint(expr=(1.342 + 2.371e-8)*m.x0 <= m.x + 17*m.y)
-        m.cons2 = Constraint(expr=(17.56 + 3.2e-7)*m.x0 >= m.y)
-        
+        m.cons1 = Constraint(expr=(1.342 + 2.371e-8) * m.x0 <= m.x + 17 * m.y)
+        m.cons2 = Constraint(expr=(17.56 + 3.2e-7) * m.x0 >= m.y)
+
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        
-        fme.apply_to(m, vars_to_eliminate=[m.x0], verbose=True,
-                     zero_tolerance=1e-9)
+
+        fme.apply_to(m, vars_to_eliminate=[m.x0], verbose=True, zero_tolerance=1e-9)
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
 
@@ -794,7 +820,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         useful = constraints[1]
         repn = generate_standard_repn(useful.body)
         self.assertTrue(repn.is_linear())
-        self.assertEqual(len(repn.linear_coefs), 2) # this is the real test
+        self.assertEqual(len(repn.linear_coefs), 2)  # this is the real test
         self.assertEqual(useful.lower, 0)
         self.assertIs(repn.linear_vars[0], m.x)
         self.assertAlmostEqual(repn.linear_coefs[0], 0.7451564696962295)
@@ -812,27 +838,26 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.x = Var()
         m.x0 = Var()
         m.y = Var()
-        
+
         # we'll pretend that the 1.123e-9 is noise from previous calculations
-        m.cons1 = Constraint(expr=0 <= (4.27 + 1.123e-9)*m.x + 13*m.y - m.x0)
-        m.cons2 = Constraint(expr=m.x0 >= 12*m.y + 4.27*m.x)
+        m.cons1 = Constraint(expr=0 <= (4.27 + 1.123e-9) * m.x + 13 * m.y - m.x0)
+        m.cons2 = Constraint(expr=m.x0 >= 12 * m.y + 4.27 * m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        
+
         # doing my own clones because I want assertIs tests
         first = m.clone()
         second = m.clone()
         third = m.clone()
 
         fme.apply_to(first, vars_to_eliminate=[first.x0], zero_tolerance=1e-10)
-        constraints = first._pyomo_contrib_fme_transformation.\
-                      projected_constraints
+        constraints = first._pyomo_contrib_fme_transformation.projected_constraints
         cons = constraints[1]
         self.assertEqual(cons.lower, 0)
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_coefs), 2) # x is still around
+        self.assertEqual(len(repn.linear_coefs), 2)  # x is still around
         self.assertIs(repn.linear_vars[0], first.x)
         self.assertAlmostEqual(repn.linear_coefs[0], 1.123e-9)
         self.assertIs(repn.linear_vars[1], first.y)
@@ -842,24 +867,27 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # so just to drive home the point, this results in no constraints:
         # (Though also note that that only happens if x0 is the first to be
         # projected out)
-        fme.apply_to(second, vars_to_eliminate=[second.x0, second.x],
-                     zero_tolerance=1e-10)
-        self.assertEqual(len(second._pyomo_contrib_fme_transformation.\
-                             projected_constraints), 0)
-        
+        fme.apply_to(
+            second, vars_to_eliminate=[second.x0, second.x], zero_tolerance=1e-10
+        )
+        self.assertEqual(
+            len(second._pyomo_contrib_fme_transformation.projected_constraints), 0
+        )
+
         # but in this version, we assume that x is already gone...
-        fme.apply_to(third, vars_to_eliminate=[third.x0], verbose=True,
-                     zero_tolerance=1e-8)
-        constraints = third._pyomo_contrib_fme_transformation.\
-                      projected_constraints
+        fme.apply_to(
+            third, vars_to_eliminate=[third.x0], verbose=True, zero_tolerance=1e-8
+        )
+        constraints = third._pyomo_contrib_fme_transformation.projected_constraints
         cons = constraints[1]
         self.assertEqual(cons.lower, 0)
         self.assertIs(cons.body, third.y)
         self.assertIsNone(cons.upper)
 
         # and this is exactly the same as the above:
-        fme.apply_to(m, vars_to_eliminate=[m.x0, m.x], verbose=True,
-                     zero_tolerance=1e-8)
+        fme.apply_to(
+            m, vars_to_eliminate=[m.x0, m.x], verbose=True, zero_tolerance=1e-8
+        )
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         cons = constraints[1]
         self.assertEqual(cons.lower, 0)
@@ -892,8 +920,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         fme.apply_to(m.b, vars_to_eliminate=[m.y])
-        constraints = m.b.\
-                      _pyomo_contrib_fme_transformation.projected_constraints
+        constraints = m.b._pyomo_contrib_fme_transformation.projected_constraints
 
         # if we hadn't included y's bounds, then we wouldn't get any constraints
         # and y wouldn't be eliminated. If we do include y's bounds, we get new
@@ -903,13 +930,15 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def test_projected_constraints_named_correctly(self):
         m = self.make_tiny_model_where_bounds_matter()
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        fme.apply_to(m.b, vars_to_eliminate=[m.y],
-                     projected_constraints_name='fme_constraints')
+        fme.apply_to(
+            m.b, vars_to_eliminate=[m.y], projected_constraints_name='fme_constraints'
+        )
         self.assertIsInstance(m.b.component("fme_constraints"), Constraint)
         self.check_tiny_model_constraints(m.b.fme_constraints)
 
-        self.assertIsNone(m.b._pyomo_contrib_fme_transformation.component(
-            "projected_constraints"))
+        self.assertIsNone(
+            m.b._pyomo_contrib_fme_transformation.component("projected_constraints")
+        )
 
     def test_non_unique_constraint_name_error(self):
         m = self.make_tiny_model_where_bounds_matter()
@@ -918,21 +947,22 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             RuntimeError,
             "projected_constraints_name was specified "
             "as 'c', but this is already a component on "
-            "the instance! Please specify a unique " 
+            "the instance! Please specify a unique "
             "name.",
             fme.apply_to,
-            m.b, 
+            m.b,
             vars_to_eliminate=[m.y],
-            projected_constraints_name='c')
+            projected_constraints_name='c',
+        )
 
     def test_simple_hull_example(self):
         m = ConcreteModel()
-        m.x0 = Var(bounds=(0,3))
-        m.x1 = Var(bounds=(0,3))
-        m.x = Var(bounds=(0,3))
+        m.x0 = Var(bounds=(0, 3))
+        m.x1 = Var(bounds=(0, 3))
+        m.x = Var(bounds=(0, 3))
         m.disaggregation = Constraint(expr=m.x == m.x0 + m.x1)
         m.y = Var(domain=Binary)
-        m.cons = Constraint(expr=2*m.y <= m.x1)
+        m.cons = Constraint(expr=2 * m.y <= m.x1)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         fme.apply_to(m, vars_to_eliminate=[m.x0, m.x1])

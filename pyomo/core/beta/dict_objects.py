@@ -16,14 +16,10 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
-from pyomo.core.base.var import (IndexedVar,
-                                 _VarData)
-from pyomo.core.base.constraint import (IndexedConstraint,
-                                        _ConstraintData)
-from pyomo.core.base.objective import (IndexedObjective,
-                                       _ObjectiveData)
-from pyomo.core.base.expression import (IndexedExpression,
-                                        _ExpressionData)
+from pyomo.core.base.var import IndexedVar, _VarData
+from pyomo.core.base.constraint import IndexedConstraint, _ConstraintData
+from pyomo.core.base.objective import IndexedObjective, _ObjectiveData
+from pyomo.core.base.expression import IndexedExpression, _ExpressionData
 
 from collections.abc import MutableMapping
 from collections.abc import Mapping
@@ -37,8 +33,8 @@ logger = logging.getLogger('pyomo.core')
 # be implemented on top of these classes.
 #
 
-class ComponentDict(MutableMapping):
 
+class ComponentDict(MutableMapping):
     def __init__(self, interface_datatype, *args):
         self._interface_datatype = interface_datatype
         self._data = {}
@@ -46,15 +42,17 @@ class ComponentDict(MutableMapping):
             if len(args) > 1:
                 raise TypeError(
                     "ComponentDict expected at most 1 arguments, "
-                    "got %s" % (len(args)))
+                    "got %s" % (len(args))
+                )
             self.update(args[0])
 
     def construct(self, data=None):
         if is_debug_set(logger):
-            logger.debug(   #pragma:nocover
+            logger.debug(  # pragma:nocover
                 "Constructing ComponentDict object, name=%s, from data=%s"
-                % (self.name, str(data)))
-        if self._constructed:   #pragma:nocover
+                % (self.name, str(data))
+            )
+        if self._constructed:  # pragma:nocover
             return
         self._constructed = True
 
@@ -126,16 +124,14 @@ class ComponentDict(MutableMapping):
                 "Invalid component object assignment to ComponentDict "
                 "%s at key %s. A parent component has already been "
                 "assigned the object: %s"
-                % (self.name,
-                   key,
-                   val.parent_component().name))
+                % (self.name, key, val.parent_component().name)
+            )
         # see note about implicit assignment and update
         raise TypeError(
             "ComponentDict must be assigned objects "
             "of type %s. Invalid type for key %s: %s"
-            % (self._interface_datatype.__name__,
-               key,
-               type(val)))
+            % (self._interface_datatype.__name__, key, type(val))
+        )
 
     # Since we don't currently allow objects to be assigned when their
     # parent component is already set, it would make sense to reset
@@ -150,9 +146,14 @@ class ComponentDict(MutableMapping):
         obj._component = None
         del self._data[key]
 
-    def __getitem__(self, key): return self._data[key]
-    def __iter__(self): return self._data.__iter__()
-    def __len__(self): return self._data.__len__()
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __iter__(self):
+        return self._data.__iter__()
+
+    def __len__(self):
+        return self._data.__len__()
 
     #
     # Override a few default implementations on MutableMapping
@@ -165,62 +166,51 @@ class ComponentDict(MutableMapping):
     def __eq__(self, other):
         if not isinstance(other, Mapping):
             return False
-        return dict((key, (type(val), id(val)))
-                    for key,val in self.items()) == \
-               dict((key, (type(val), id(val)))
-                    for key,val in other.items())
+        return dict((key, (type(val), id(val))) for key, val in self.items()) == dict(
+            (key, (type(val), id(val))) for key, val in other.items()
+        )
+
     def __ne__(self, other):
         return not (self == other)
+
 
 #
 # ComponentDict needs to come before IndexedComponent
 # (or subclasses of) so we can override certain methods
 #
 
-class VarDict(ComponentDict, IndexedVar):
 
+class VarDict(ComponentDict, IndexedVar):
     def __init__(self, *args, **kwds):
         IndexedVar.__init__(self, Any, **kwds)
         # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentDict.__init__(self,
-                               _VarData,
-                               *args,
-                               **kwds)
+        ComponentDict.__init__(self, _VarData, *args, **kwds)
+
 
 class ConstraintDict(ComponentDict, IndexedConstraint):
-
     def __init__(self, *args, **kwds):
         IndexedConstraint.__init__(self, Any, **kwds)
         # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentDict.__init__(self,
-                               _ConstraintData,
-                               *args,
-                               **kwds)
+        ComponentDict.__init__(self, _ConstraintData, *args, **kwds)
+
 
 class ObjectiveDict(ComponentDict, IndexedObjective):
-
     def __init__(self, *args, **kwds):
         IndexedObjective.__init__(self, Any, **kwds)
         # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentDict.__init__(self,
-                               _ObjectiveData,
-                               *args,
-                               **kwds)
+        ComponentDict.__init__(self, _ObjectiveData, *args, **kwds)
+
 
 class ExpressionDict(ComponentDict, IndexedExpression):
-
     def __init__(self, *args, **kwds):
         IndexedExpression.__init__(self, Any, **kwds)
         # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentDict.__init__(self,
-                               _ExpressionData,
-                               *args,
-                               **kwds)
+        ComponentDict.__init__(self, _ExpressionData, *args, **kwds)

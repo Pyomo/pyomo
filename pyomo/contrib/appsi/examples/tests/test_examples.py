@@ -4,6 +4,7 @@ import pyomo.environ as pe
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib import appsi
 
+
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestExamples(unittest.TestCase):
     def test_getting_started(self):

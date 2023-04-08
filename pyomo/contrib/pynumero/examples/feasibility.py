@@ -10,9 +10,11 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.utils import (build_bounds_mask,
-                                                     build_compression_matrix,
-                                                     full_to_compressed)
+from pyomo.contrib.pynumero.interfaces.utils import (
+    build_bounds_mask,
+    build_compression_matrix,
+    full_to_compressed,
+)
 import pyomo.environ as pyo
 import numpy as np
 
@@ -31,7 +33,7 @@ def create_basic_model():
     m.x[2].setlb(0.0)
     m.x[3].setlb(0.0)
     m.x[2].setub(100.0)
-    m.obj = pyo.Objective(expr=m.x[2]**2)
+    m.obj = pyo.Objective(expr=m.x[2] ** 2)
     return m
 
 
@@ -95,14 +97,18 @@ def main():
 
     # lower and upper inequalities residual
     res_ineq_lb = Cineq_ineqlb * res_ineq - compressed_ineq_lb
-    res_ineq_ub = compressed_ineq_ub - Cineq_inequb*res_ineq
+    res_ineq_ub = compressed_ineq_ub - Cineq_inequb * res_ineq
     print("Residuals of inequality constraints lower bounds:", res_ineq_lb)
     print("Residuals of inequality constraints upper bounds:", res_ineq_ub)
 
     feasible = False
-    if np.all(res_xl >= 0) and np.all(res_xu >= 0) \
-        and np.all(res_ineq_lb >= 0) and np.all(res_ineq_ub >= 0) and \
-        np.allclose(res_eq, np.zeros(nlp.n_eq_constraints()), atol=1e-5):
+    if (
+        np.all(res_xl >= 0)
+        and np.all(res_xu >= 0)
+        and np.all(res_ineq_lb >= 0)
+        and np.all(res_ineq_ub >= 0)
+        and np.allclose(res_eq, np.zeros(nlp.n_eq_constraints()), atol=1e-5)
+    ):
         feasible = True
 
     print("Is x0 feasible:", feasible)

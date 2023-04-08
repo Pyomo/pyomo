@@ -14,7 +14,8 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.dependencies.scipy import spatial
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
-    PiecewiseLinearExpression)
+    PiecewiseLinearExpression,
+)
 from pyomo.core import Any, NonNegativeIntegers, value, Var
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
@@ -28,6 +29,7 @@ import pyomo.core.expr.current as EXPR
 # enough, but we need to make sure that 'barely negative' values are assumed to
 # be zero.
 ZERO_TOLERANCE = 1e-8
+
 
 class PiecewiseLinearFunctionData(_BlockData):
     _Block_reserved_words = Any
@@ -48,8 +50,10 @@ class PiecewiseLinearFunctionData(_BlockData):
         Returns a PiecewiseLinearExpression which is an instance of this
         function applied to the variables and/or constants specified in args.
         """
-        if all(type(arg) in EXPR.native_types or not
-               arg.is_potentially_variable() for arg in args):
+        if all(
+            type(arg) in EXPR.native_types or not arg.is_potentially_variable()
+            for arg in args
+        ):
             # We need to actually evaluate
             return self._evaluate(*args)
         else:
@@ -62,25 +66,30 @@ class PiecewiseLinearFunctionData(_BlockData):
         # ESJ: This is a very inefficient implementation in high dimensions, but
         # for now we will just do a linear scan of the simplices.
         if self._simplices is None:
-            raise RuntimeError("Cannot evaluate PiecewiseLinearFunction--it "
-                               "appears it is not fully defined. (No simplices "
-                               "are stored.)")
+            raise RuntimeError(
+                "Cannot evaluate PiecewiseLinearFunction--it "
+                "appears it is not fully defined. (No simplices "
+                "are stored.)"
+            )
 
         pt = [value(arg) for arg in args]
         for simplex, func in zip(self._simplices, self._linear_functions):
             if self._pt_in_simplex(pt, simplex):
                 return func(*args)
 
-        raise ValueError("Unsuccessful evaluation of PiecewiseLinearFunction "
-                         "'%s' at point (%s). Is the point in the function's "
-                         "domain?" %
-                         (self.name, ', '.join(str(arg) for arg in args)))
+        raise ValueError(
+            "Unsuccessful evaluation of PiecewiseLinearFunction "
+            "'%s' at point (%s). Is the point in the function's "
+            "domain?" % (self.name, ', '.join(str(arg) for arg in args))
+        )
 
     def _pt_in_simplex(self, pt, simplex):
         dim = len(pt)
         if dim == 1:
-            return self._points[simplex[0]][0] <= pt[0] and \
-                self._points[simplex[1]][0] >= pt[0]
+            return (
+                self._points[simplex[0]][0] <= pt[0]
+                and self._points[simplex[1]][0] >= pt[0]
+            )
         # Otherwise, we check if pt is a convex combination of the simplex's
         # extreme points
         A = np.ones((dim + 1, dim + 1))
@@ -132,6 +141,7 @@ class PiecewiseLinearFunctionData(_BlockData):
         else:
             return None
 
+
 class _univariate_linear_functor(AutoSlots.Mixin):
     __slots__ = ('slope', 'intercept')
 
@@ -140,16 +150,17 @@ class _univariate_linear_functor(AutoSlots.Mixin):
         self.intercept = intercept
 
     def __call__(self, x):
-        return self.slope*x + self.intercept
+        return self.slope * x + self.intercept
+
 
 class _multivariate_linear_functor(AutoSlots.Mixin):
-    __slots__ = ('normal')
+    __slots__ = 'normal'
 
     def __init__(self, normal):
         self.normal = normal
 
     def __call__(self, *args):
-        return sum(self.normal[i]*arg for i, arg in enumerate(args)) + self.normal[-1]
+        return sum(self.normal[i] * arg for i, arg in enumerate(args)) + self.normal[-1]
 
 
 def _define_handler(handle_map, *key):
@@ -157,7 +168,9 @@ def _define_handler(handle_map, *key):
         assert key not in handle_map
         handle_map[key] = obj
         return obj
+
     return _wrapper
+
 
 @ModelComponentFactory.register("Multidimensional piecewise linear function")
 class PiecewiseLinearFunction(Block):
@@ -192,6 +205,7 @@ class PiecewiseLinearFunction(Block):
         linear_functions: A list of functions, each of which returns an
             expression for a linear function of the arguments.
     """
+
     _ComponentDataClass = PiecewiseLinearFunctionData
 
     # Map 4-tuple of bool to hander: "(f, pts, simplices, linear_funcs) : handler"
@@ -200,12 +214,12 @@ class PiecewiseLinearFunction(Block):
     def __new__(cls, *args, **kwds):
         if cls is not PiecewiseLinearFunction:
             return super(PiecewiseLinearFunction, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return PiecewiseLinearFunction.__new__(
-                ScalarPiecewiseLinearFunction)
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
+            return PiecewiseLinearFunction.__new__(ScalarPiecewiseLinearFunction)
         else:
             return IndexedPiecewiseLinearFunction.__new__(
-                IndexedPiecewiseLinearFunction)
+                IndexedPiecewiseLinearFunction
+            )
 
     def __init__(self, *args, **kwargs):
         # [ESJ 1/24/23]: TODO: Eventually we should also support constructing
@@ -223,23 +237,25 @@ class PiecewiseLinearFunction(Block):
         # This cannot be a rule.
         self._func = _func_arg
         self._func_rule = Initializer(_func_rule_arg)
-        self._points_rule = Initializer(_points_arg,
-                                        treat_sequences_as_mappings=False)
-        self._simplices_rule = Initializer(_simplices_arg,
-                                           treat_sequences_as_mappings=False)
-        self._linear_funcs_rule = Initializer(_linear_functions,
-                                              treat_sequences_as_mappings=False)
+        self._points_rule = Initializer(_points_arg, treat_sequences_as_mappings=False)
+        self._simplices_rule = Initializer(
+            _simplices_arg, treat_sequences_as_mappings=False
+        )
+        self._linear_funcs_rule = Initializer(
+            _linear_functions, treat_sequences_as_mappings=False
+        )
 
     @_define_handler(_handlers, True, True, False, False)
-    def _construct_from_function_and_points(self, obj, parent,
-                                            nonlinear_function):
+    def _construct_from_function_and_points(self, obj, parent, nonlinear_function):
         parent = obj.parent_block()
         idx = obj._index
 
         points = self._points_rule(parent, idx)
         if len(points) < 1:
-            raise ValueError("Cannot construct PiecewiseLinearFunction from "
-                             "points list of length 0.")
+            raise ValueError(
+                "Cannot construct PiecewiseLinearFunction from "
+                "points list of length 0."
+            )
 
         if hasattr(points[0], '__len__'):
             dimension = len(points[0])
@@ -257,7 +273,8 @@ class PiecewiseLinearFunction(Block):
             # Add the last one
             obj._points.append((points[-1],))
             return self._construct_from_univariate_function_and_segments(
-                obj, nonlinear_function)
+                obj, nonlinear_function
+            )
 
         try:
             triangulation = spatial.Delaunay(points)
@@ -266,36 +283,34 @@ class PiecewiseLinearFunction(Block):
             raise
 
         obj._points = [pt for pt in points]
-        obj._simplices = [simplex for simplex in map(tuple,
-                                                     triangulation.simplices)]
+        obj._simplices = [simplex for simplex in map(tuple, triangulation.simplices)]
 
-        return self._construct_from_function_and_simplices(obj, parent,
-                                                           nonlinear_function)
+        return self._construct_from_function_and_simplices(
+            obj, parent, nonlinear_function
+        )
 
     def _construct_from_univariate_function_and_segments(self, obj, func):
         for idx1, idx2 in obj._simplices:
             x1 = obj._points[idx1][0]
             x2 = obj._points[idx2][0]
-            y = {x : func(x) for x in [x1, x2]}
-            slope = (y[x2] - y[x1])/(x2 - x1)
-            intercept = y[x1] - slope*x1
-            obj._linear_functions.append(
-                _univariate_linear_functor(slope, intercept)
-            )
+            y = {x: func(x) for x in [x1, x2]}
+            slope = (y[x2] - y[x1]) / (x2 - x1)
+            intercept = y[x1] - slope * x1
+            obj._linear_functions.append(_univariate_linear_functor(slope, intercept))
 
         return obj
 
     @_define_handler(_handlers, True, False, True, False)
-    def _construct_from_function_and_simplices(self, obj, parent,
-                                               nonlinear_function):
+    def _construct_from_function_and_simplices(self, obj, parent, nonlinear_function):
         if obj._simplices is None:
-            obj._get_simplices_from_arg(self._simplices_rule(parent,
-                                                             obj._index))
+            obj._get_simplices_from_arg(self._simplices_rule(parent, obj._index))
         simplices = obj._simplices
 
         if len(simplices) < 1:
-            raise ValueError("Cannot construct PiecewiseLinearFunction "
-                             "with empty list of simplices")
+            raise ValueError(
+                "Cannot construct PiecewiseLinearFunction "
+                "with empty list of simplices"
+            )
 
         dimension = len(simplices[0]) - 1
         if dimension == 1:
@@ -303,7 +318,8 @@ class PiecewiseLinearFunction(Block):
             # it separately in order to avoid a kind of silly dependence on
             # numpy.
             return self._construct_from_univariate_function_and_segments(
-                obj, nonlinear_function)
+                obj, nonlinear_function
+            )
 
         # evaluate the function at each of the points and form the homogeneous
         # system of equations
@@ -330,13 +346,13 @@ class PiecewiseLinearFunction(Block):
         return obj
 
     @_define_handler(_handlers, False, False, True, True)
-    def _construct_from_linear_functions_and_simplices(self, obj, parent,
-                                                       nonlinear_function):
+    def _construct_from_linear_functions_and_simplices(
+        self, obj, parent, nonlinear_function
+    ):
         # We know that we have simplices because else this handler wouldn't
         # have been called.
         obj._get_simplices_from_arg(self._simplices_rule(parent, obj._index))
-        obj._linear_functions = [f for f in self._linear_funcs_rule(
-            parent, obj._index)]
+        obj._linear_functions = [f for f in self._linear_funcs_rule(parent, obj._index)]
         return obj
 
     def _getitem_when_not_present(self, index):
@@ -354,22 +370,29 @@ class PiecewiseLinearFunction(Block):
         elif self._func is not None:
             nonlinear_function = self._func
 
-        handler = self._handlers.get((nonlinear_function is not None,
-                                      self._points_rule is not None,
-                                      self._simplices_rule is not None,
-                                      self._linear_funcs_rule is not None))
+        handler = self._handlers.get(
+            (
+                nonlinear_function is not None,
+                self._points_rule is not None,
+                self._simplices_rule is not None,
+                self._linear_funcs_rule is not None,
+            )
+        )
         if handler is None:
-            raise ValueError("Unsupported set of arguments given for "
-                             "constructing PiecewiseLinearFunction. "
-                             "Expected a nonlinear function and a list"
-                             "of breakpoints, a nonlinear function and a list "
-                             "of simplices, or a list of linear functions and "
-                             "a list of corresponding simplices.")
+            raise ValueError(
+                "Unsupported set of arguments given for "
+                "constructing PiecewiseLinearFunction. "
+                "Expected a nonlinear function and a list"
+                "of breakpoints, a nonlinear function and a list "
+                "of simplices, or a list of linear functions and "
+                "a list of corresponding simplices."
+            )
         return handler(self, obj, parent, nonlinear_function)
 
 
-class ScalarPiecewiseLinearFunction(PiecewiseLinearFunctionData,
-                                    PiecewiseLinearFunction):
+class ScalarPiecewiseLinearFunction(
+    PiecewiseLinearFunctionData, PiecewiseLinearFunction
+):
     def __init__(self, *args, **kwds):
         self._suppress_ctypes = set()
 
@@ -377,6 +400,7 @@ class ScalarPiecewiseLinearFunction(PiecewiseLinearFunctionData,
         PiecewiseLinearFunction.__init__(self, *args, **kwds)
         self._data[None] = self
         self._index = UnindexedComponent_index
+
 
 class IndexedPiecewiseLinearFunction(PiecewiseLinearFunction):
     pass

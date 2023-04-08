@@ -20,18 +20,13 @@ from pyomo.contrib.mpc.examples.cstr.model import (
 
 def get_input_sequence():
     input_sequence = mpc.TimeSeriesData(
-        {"flow_in[*]": [0.1, 1.0, 0.5, 1.3, 1.0, 0.3]},
-        [0.0, 2.0, 4.0, 6.0, 8.0, 15.0],
+        {"flow_in[*]": [0.1, 1.0, 0.5, 1.3, 1.0, 0.3]}, [0.0, 2.0, 4.0, 6.0, 8.0, 15.0]
     )
     return mpc.data.convert.series_to_interval(input_sequence)
 
 
 def run_cstr_openloop(
-    inputs,
-    model_horizon=1.0,
-    ntfe=10,
-    simulation_steps=15,
-    tee=False,
+    inputs, model_horizon=1.0, ntfe=10, simulation_steps=15, tee=False
 ):
     m = create_instance(horizon=model_horizon, ntfe=ntfe)
     dynamic_interface = mpc.DynamicModelInterface(m, m.time)
@@ -49,12 +44,10 @@ def run_cstr_openloop(
     for i in range(simulation_steps):
         # The starting point of this part of the simulation
         # in "real" time (rather than the model's time set)
-        sim_t0 = i*model_horizon
+        sim_t0 = i * model_horizon
 
         sim_time = [sim_t0 + t for t in m.time]
-        new_inputs = mpc.data.convert.interval_to_series(
-            inputs, time_points=sim_time
-        )
+        new_inputs = mpc.data.convert.interval_to_series(inputs, time_points=sim_time)
         new_inputs.shift_time_points(m.time.first() - sim_t0)
         dynamic_interface.load_data(new_inputs, tolerance=1e-6)
 
@@ -85,16 +78,8 @@ def run_cstr_openloop(
 def main():
     input_sequence = get_input_sequence()
     m, sim_data = run_cstr_openloop(input_sequence, tee=False)
-    _plot_time_indexed_variables(
-        sim_data,
-        [m.conc[:, "A"], m.conc[:, "B"]],
-        show=True,
-    )
-    _step_time_indexed_variables(
-        sim_data,
-        [m.flow_in[:]],
-        show=True,
-    )
+    _plot_time_indexed_variables(sim_data, [m.conc[:, "A"], m.conc[:, "B"]], show=True)
+    _step_time_indexed_variables(sim_data, [m.flow_in[:]], show=True)
 
 
 if __name__ == "__main__":

@@ -103,7 +103,7 @@ We'll first use a model from `Allman et al, 2019`_ :
 .. doctest::
 
     Required Imports
-    >>> from pyomo.contrib.community_detection.detection import detect_communities, detect_communities, CommunityMap, generate_model_graph
+    >>> from pyomo.contrib.community_detection.detection import detect_communities, CommunityMap, generate_model_graph
     >>> from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
     >>> from pyomo.core import ConcreteModel, Var, Constraint
     >>> import networkx as nx

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 class _StaleFlagManager(object):
     def __init__(self):
         self._current = 0
@@ -67,5 +68,6 @@ class _StaleFlagManager(object):
         else:
             setattr(self, 'get_flag', getattr(self, '_get_flag'))
             self._current += 1
+
 
 StaleFlagManager = _StaleFlagManager()

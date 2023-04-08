@@ -9,10 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-#from ..dependencies import numpy_available, scipy_available
+# from ..dependencies import numpy_available, scipy_available
 
 # TODO: What do we want to import from interfaces?
-#if numpy_available and scipy_available:
+# if numpy_available and scipy_available:
 #    from .nlp import AmplNLP, PyomoNLP
 #    from .ampl_nlp import AslNLP
 #    from .nlp_compositions import TwoStageStochasticNLP

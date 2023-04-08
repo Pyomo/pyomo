@@ -23,7 +23,9 @@ from pyomo.core.base.misc import apply_indexed_rule
 logger = logging.getLogger('pyomo.core')
 
 
-@ModelComponentFactory.register("A component that performs arbitrary actions during model construction.  The action rule is applied to every index value.")
+@ModelComponentFactory.register(
+    "A component that performs arbitrary actions during model construction.  The action rule is applied to every index value."
+)
 class BuildAction(IndexedComponent):
     """A build action, which executes a rule for all valid indices.
 
@@ -40,23 +42,31 @@ class BuildAction(IndexedComponent):
         IndexedComponent.__init__(self, *args, **kwd)
         #
         if not type(self._rule) is types.FunctionType:
-            raise ValueError("BuildAction must have an 'rule' option specified whose value is a function")
+            raise ValueError(
+                "BuildAction must have an 'rule' option specified whose value is a function"
+            )
 
     def _pprint(self):
-        return ([("Size", len(self)),
-                 ("Index", self._index_set if self.is_indexed() else None),
-                 ("Active", self.active),]
-                 , None, None, None)
+        return (
+            [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+                ("Active", self.active),
+            ],
+            None,
+            None,
+            None,
+        )
 
     def construct(self, data=None):
-        """ Apply the rule to construct values in this set """
-        if is_debug_set(logger):   #pragma:nocover
-            logger.debug("Constructing Action, name="+self.name)
+        """Apply the rule to construct values in this set"""
+        if is_debug_set(logger):  # pragma:nocover
+            logger.debug("Constructing Action, name=" + self.name)
         #
-        if self._constructed:                                  #pragma:nocover
+        if self._constructed:  # pragma:nocover
             return
         timer = ConstructionTimer(self)
-        self._constructed=True
+        self._constructed = True
         #
         if not self.is_indexed():
             # Scalar component
@@ -66,4 +76,3 @@ class BuildAction(IndexedComponent):
             for index in self._index_set:
                 apply_indexed_rule(self, self._rule, self._parent(), index)
         timer.report()
-

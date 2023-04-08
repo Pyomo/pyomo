@@ -10,11 +10,23 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.base.set import (
-    Reals, PositiveReals, NonPositiveReals, NegativeReals, NonNegativeReals,
-    Integers, PositiveIntegers, NonPositiveIntegers,
-    NegativeIntegers, NonNegativeIntegers,
-    Boolean, Binary,
-    Any, AnyWithNone, EmptySet, UnitInterval, PercentFraction,
-    RealInterval, IntegerInterval,
+    Reals,
+    PositiveReals,
+    NonPositiveReals,
+    NegativeReals,
+    NonNegativeReals,
+    Integers,
+    PositiveIntegers,
+    NonPositiveIntegers,
+    NegativeIntegers,
+    NonNegativeIntegers,
+    Boolean,
+    Binary,
+    Any,
+    AnyWithNone,
+    EmptySet,
+    UnitInterval,
+    PercentFraction,
+    RealInterval,
+    IntegerInterval,
 )
-

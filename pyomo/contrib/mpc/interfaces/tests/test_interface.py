@@ -20,7 +20,6 @@ from pyomo.contrib.mpc.data.interval_data import IntervalData
 
 
 class TestDynamicModelInterface(unittest.TestCase):
-
     def _make_model(self, n_time_points=3):
         m = pyo.ConcreteModel()
         m.time = pyo.Set(initialize=range(n_time_points))
@@ -28,17 +27,14 @@ class TestDynamicModelInterface(unittest.TestCase):
         m.var = pyo.Var(
             m.time,
             m.comp,
-            initialize={(i, j): 1.0 + i*0.1 for i, j in m.time*m.comp},
+            initialize={(i, j): 1.0 + i * 0.1 for i, j in m.time * m.comp},
         )
-        m.input = pyo.Var(
-            m.time,
-            initialize={i: 1.0 - i*0.1 for i in m.time},
-        )
+        m.input = pyo.Var(m.time, initialize={i: 1.0 - i * 0.1 for i in m.time})
         m.scalar = pyo.Var(initialize=0.5)
         m.var_squared = pyo.Expression(
             m.time,
             m.comp,
-            initialize={(i, j): m.var[i, j]**2 for i, j in m.time*m.comp},
+            initialize={(i, j): m.var[i, j] ** 2 for i, j in m.time * m.comp},
         )
         return m
 
@@ -78,10 +74,7 @@ class TestDynamicModelInterface(unittest.TestCase):
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
         data = interface.get_scalar_variable_data()
-        self.assertEqual(
-            {pyo.ComponentUID(m.scalar): 0.5},
-            data,
-        )
+        self.assertEqual({pyo.ComponentUID(m.scalar): 0.5}, data)
 
     def test_get_data_at_time_all_points(self):
         m = self._make_model()
@@ -117,13 +110,15 @@ class TestDynamicModelInterface(unittest.TestCase):
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
         data = interface.get_data_at_time(time=1, include_expr=True)
-        pred_data = ScalarData({
-            m.var[:, "A"]: 1.1,
-            m.var[:, "B"]: 1.1,
-            m.input[:]: 0.9,
-            m.var_squared[:, "A"]: 1.1**2,
-            m.var_squared[:, "B"]: 1.1**2,
-        })
+        pred_data = ScalarData(
+            {
+                m.var[:, "A"]: 1.1,
+                m.var[:, "B"]: 1.1,
+                m.input[:]: 0.9,
+                m.var_squared[:, "A"]: 1.1**2,
+                m.var_squared[:, "B"]: 1.1**2,
+            }
+        )
         self.assertEqual(data, pred_data)
 
     def test_load_scalar_data(self):
@@ -264,10 +259,7 @@ class TestDynamicModelInterface(unittest.TestCase):
         interface = DynamicModelInterface(m, m.time)
         new_A = [1.0, 2.0, 3.0]
         new_input = [4.0, 5.0, 6.0]
-        data = TimeSeriesData(
-            {m.var[:, "A"]: new_A, m.input[:]: new_input},
-            m.time,
-        )
+        data = TimeSeriesData({m.var[:, "A"]: new_A, m.input[:]: new_input}, m.time)
         interface.load_data(data)
 
         B_data = [m.var[t, "B"].value for t in m.time]
@@ -375,9 +367,7 @@ class TestDynamicModelInterface(unittest.TestCase):
         interface = DynamicModelInterface(m, m.time)
         target_points = [t for t in m.time if t != m.time.first()]
         target_subset = set(target_points)
-        interface.copy_values_at_time(
-            source_time=tf, target_time=target_points
-        )
+        interface.copy_values_at_time(source_time=tf, target_time=target_points)
         # Default is to copy values to all points in time
         for t in m.time:
             if t in target_subset:
@@ -396,9 +386,7 @@ class TestDynamicModelInterface(unittest.TestCase):
         interface = DynamicModelInterface(m, m.time)
         msg = "copy_values_at_time can only copy"
         with self.assertRaisesRegex(ValueError, msg):
-            interface.copy_values_at_time(
-                source_time=m.time, target_time=tf
-            )
+            interface.copy_values_at_time(source_time=m.time, target_time=tf)
 
     def test_shift_values_by_time(self):
         m = self._make_model()
@@ -430,39 +418,31 @@ class TestDynamicModelInterface(unittest.TestCase):
         weight_data = ScalarData({m.var[:, "A"]: 10.0, m.var[:, "B"]: 0.1})
 
         vset, tr_cost = interface.get_penalty_from_target(
-            setpoint_data, weight_data=weight_data,
+            setpoint_data, weight_data=weight_data
         )
         m.var_set = vset
         m.tracking_cost = tr_cost
         for t in m.time:
             for i in m.var_set:
                 pred_expr = (
-                    10.0*(m.var[t, "A"] - 1.0)**2
-                    if i == 0 else
-                    0.1*(m.var[t, "B"] - 2.0)**2
+                    10.0 * (m.var[t, "A"] - 1.0) ** 2
+                    if i == 0
+                    else 0.1 * (m.var[t, "B"] - 2.0) ** 2
                 )
-                self.assertEqual(
-                    pyo.value(pred_expr),
-                    pyo.value(m.tracking_cost[i, t]),
+                self.assertEqual(pyo.value(pred_expr), pyo.value(m.tracking_cost[i, t]))
+                self.assertTrue(
+                    compare_expressions(pred_expr, m.tracking_cost[i, t].expr)
                 )
-                self.assertTrue(compare_expressions(
-                    pred_expr,
-                    m.tracking_cost[i, t].expr,
-                ))
 
     def test_get_penalty_from_constant_target_var_subset(self):
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
-        setpoint_data = ScalarData({
-            m.var[:, "A"]: 1.0,
-            m.var[:, "B"]: 2.0,
-            m.input[:]: 3.0,
-        })
-        weight_data = ScalarData({
-            m.var[:, "A"]: 10.0,
-            m.var[:, "B"]: 0.1,
-            m.input[:]: 0.01,
-        })
+        setpoint_data = ScalarData(
+            {m.var[:, "A"]: 1.0, m.var[:, "B"]: 2.0, m.input[:]: 3.0}
+        )
+        weight_data = ScalarData(
+            {m.var[:, "A"]: 10.0, m.var[:, "B"]: 0.1, m.input[:]: 0.01}
+        )
 
         variables = [m.var[:, "A"], m.var[:, "B"]]
         m.variable_set = pyo.Set(initialize=range(len(variables)))
@@ -477,28 +457,23 @@ class TestDynamicModelInterface(unittest.TestCase):
         for t in m.time:
             for i in m.variable_set:
                 pred_expr = (
-                    10.0*(m.var[t, "A"] - 1.0)**2
-                    if i == 0 else
-                    + 0.1*(m.var[t, "B"] - 2.0)**2
+                    10.0 * (m.var[t, "A"] - 1.0) ** 2
+                    if i == 0
+                    else +0.1 * (m.var[t, "B"] - 2.0) ** 2
                 )
-                self.assertEqual(
-                    pyo.value(pred_expr), pyo.value(m.tracking_cost[i, t])
+                self.assertEqual(pyo.value(pred_expr), pyo.value(m.tracking_cost[i, t]))
+                self.assertTrue(
+                    compare_expressions(pred_expr, m.tracking_cost[i, t].expr)
                 )
-                self.assertTrue(compare_expressions(
-                    pred_expr, m.tracking_cost[i, t].expr
-                ))
 
 
 class TestGetPenaltyFromTarget(unittest.TestCase):
-
     def _make_model(self, n_time_points=3):
         m = pyo.ConcreteModel()
         m.time = pyo.Set(initialize=list(range(n_time_points)))
         m.comp = pyo.Set(initialize=["A", "B"])
         m.var = pyo.Var(
-            m.time,
-            m.comp,
-            initialize={(i, j): 1.1*i for i, j in m.time*m.comp},
+            m.time, m.comp, initialize={(i, j): 1.1 * i for i, j in m.time * m.comp}
         )
         return m
 
@@ -512,45 +487,35 @@ class TestGetPenaltyFromTarget(unittest.TestCase):
         # in some Python <=3.6 implementations
         pred_expr = {
             (i, t): (
-                (m.var[t, "A"] - 0.3)**2
-                if i == 0 else (m.var[t, "B"] - 0.4)**2
-            ) for i, t in m.var_set * m.time
+                (m.var[t, "A"] - 0.3) ** 2 if i == 0 else (m.var[t, "B"] - 0.4) ** 2
+            )
+            for i, t in m.var_set * m.time
         }
         for t in m.time:
             for i in m.var_set:
-                self.assertTrue(compare_expressions(
-                    pred_expr[i, t], m.penalty[i, t].expr
-                ))
-                self.assertEqual(
-                    pyo.value(pred_expr[i, t]),
-                    pyo.value(m.penalty[i, t]),
+                self.assertTrue(
+                    compare_expressions(pred_expr[i, t], m.penalty[i, t].expr)
                 )
+                self.assertEqual(pyo.value(pred_expr[i, t]), pyo.value(m.penalty[i, t]))
 
     def test_varying_setpoint(self):
         m = self._make_model(n_time_points=5)
         interface = DynamicModelInterface(m, m.time)
         A_target = [0.4, 0.6, 0.1, 0.0, 1.1]
         B_target = [0.8, 0.9, 1.3, 1.5, 1.4]
-        setpoint = (
-            {m.var[:, "A"]: A_target, m.var[:, "B"]: B_target},
-            m.time,
-        )
+        setpoint = ({m.var[:, "A"]: A_target, m.var[:, "B"]: B_target}, m.time)
         m.var_set, m.penalty = interface.get_penalty_from_target(setpoint)
 
         target = {
             (i, t): A_target[j] if i == 0 else B_target[t]
-            for i in m.var_set for (j, t) in enumerate(m.time)
+            for i in m.var_set
+            for (j, t) in enumerate(m.time)
         }
-        for i, t in m.var_set*m.time:
+        for i, t in m.var_set * m.time:
             var = m.var[t, "A"] if i == 0 else m.var[t, "B"]
-            pred_expr = (var - target[i, t])**2
-            self.assertTrue(compare_expressions(
-                pred_expr, m.penalty[i, t].expr
-            ))
-            self.assertEqual(
-                pyo.value(pred_expr),
-                pyo.value(m.penalty[i, t]),
-            )
+            pred_expr = (var - target[i, t]) ** 2
+            self.assertTrue(compare_expressions(pred_expr, m.penalty[i, t].expr))
+            self.assertEqual(pyo.value(pred_expr), pyo.value(m.penalty[i, t]))
 
     def test_piecewise_constant_setpoint(self):
         m = self._make_model(n_time_points=5)
@@ -564,9 +529,10 @@ class TestGetPenaltyFromTarget(unittest.TestCase):
         m.var_set, m.penalty = interface.get_penalty_from_target(setpoint)
         target = {
             (i, j): A_target[j] if i == 0 else B_target[j]
-            for i in m.var_set for j in range(len(A_target))
+            for i in m.var_set
+            for j in range(len(A_target))
         }
-        for i, t in m.var_set*m.time:
+        for i, t in m.var_set * m.time:
             if t == 0:
                 idx = 0
             elif t <= 2.0:
@@ -574,14 +540,9 @@ class TestGetPenaltyFromTarget(unittest.TestCase):
             elif t <= 4.0:
                 idx = 2
             var = m.var[t, "A"] if i == 0 else m.var[t, "B"]
-            pred_expr = (var - target[i, idx])**2
-            self.assertTrue(compare_expressions(
-                pred_expr, m.penalty[i, t].expr
-            ))
-            self.assertEqual(
-                pyo.value(pred_expr),
-                pyo.value(m.penalty[i, t]),
-            )
+            pred_expr = (var - target[i, idx]) ** 2
+            self.assertTrue(compare_expressions(pred_expr, m.penalty[i, t].expr))
+            self.assertEqual(pyo.value(pred_expr), pyo.value(m.penalty[i, t]))
 
     def test_piecewise_constant_setpoint_with_specified_variables(self):
         m = self._make_model(n_time_points=5)
@@ -594,12 +555,11 @@ class TestGetPenaltyFromTarget(unittest.TestCase):
         )
         variables = [pyo.Reference(m.var[:, "B"])]
         m.var_set, m.penalty = interface.get_penalty_from_target(
-            setpoint,
-            variables=variables,
+            setpoint, variables=variables
         )
         self.assertEqual(len(m.var_set), 1)
         self.assertEqual(m.var_set[1], 0)
-        for i, t in m.var_set*m.time:
+        for i, t in m.var_set * m.time:
             if t == 0:
                 idx = 0
             elif t <= 2.0:
@@ -607,14 +567,9 @@ class TestGetPenaltyFromTarget(unittest.TestCase):
             elif t <= 4.0:
                 idx = 2
             var = m.var[t, "B"]
-            pred_expr = (var - B_target[idx])**2
-            self.assertTrue(compare_expressions(
-                pred_expr, m.penalty[i, t].expr
-            ))
-            self.assertEqual(
-                pyo.value(pred_expr),
-                pyo.value(m.penalty[i, t]),
-            )
+            pred_expr = (var - B_target[idx]) ** 2
+            self.assertTrue(compare_expressions(pred_expr, m.penalty[i, t].expr))
+            self.assertEqual(pyo.value(pred_expr), pyo.value(m.penalty[i, t]))
 
     def test_piecewise_constant_setpoint_time_subset(self):
         m = self._make_model(n_time_points=5)
@@ -627,17 +582,17 @@ class TestGetPenaltyFromTarget(unittest.TestCase):
         )
         m.sample_points = pyo.Set(initialize=[0.0, 2.0, 4.0])
         m.var_set, m.penalty = interface.get_penalty_from_target(
-            setpoint,
-            time=m.sample_points,
+            setpoint, time=m.sample_points
         )
         idx_sets = ComponentSet(m.penalty.index_set().subsets())
         self.assertIn(m.var_set, idx_sets)
         self.assertIn(m.sample_points, idx_sets)
         target = {
             (i, j): A_target[j] if i == 0 else B_target[j]
-            for i in m.var_set for j in range(len(A_target))
+            for i in m.var_set
+            for j in range(len(A_target))
         }
-        for i, t in m.var_set*m.time:
+        for i, t in m.var_set * m.time:
             if t == 0:
                 idx = 0
             elif t <= 2.0:
@@ -646,14 +601,9 @@ class TestGetPenaltyFromTarget(unittest.TestCase):
                 idx = 2
             if t in m.sample_points:
                 var = m.var[t, "A"] if i == 0 else m.var[t, "B"]
-                pred_expr = (var - target[i, idx])**2
-                self.assertTrue(compare_expressions(
-                    pred_expr, m.penalty[i, t].expr
-                ))
-                self.assertEqual(
-                    pyo.value(pred_expr),
-                    pyo.value(m.penalty[i, t]),
-                )
+                pred_expr = (var - target[i, idx]) ** 2
+                self.assertTrue(compare_expressions(pred_expr, m.penalty[i, t].expr))
+                self.assertEqual(pyo.value(pred_expr), pyo.value(m.penalty[i, t]))
             else:
                 self.assertNotIn((i, t), m.penalty)
 

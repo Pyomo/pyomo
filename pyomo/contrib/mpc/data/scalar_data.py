@@ -10,13 +10,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import value as pyo_value
-from pyomo.contrib.mpc.data.dynamic_data_base import (
-    _is_iterable,
-    _DynamicDataBase,
-)
-from pyomo.contrib.mpc.data.get_cuid import (
-    get_indexed_cuid,
-)
+from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable, _DynamicDataBase
+from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
 
 
 class ScalarData(_DynamicDataBase):
@@ -36,8 +31,7 @@ class ScalarData(_DynamicDataBase):
         for key, val in data.items():
             if _is_iterable(val):
                 raise TypeError(
-                    "Value %s corresponding to key %s is not a scalar"
-                    % (val, key)
+                    "Value %s corresponding to key %s is not a scalar" % (val, key)
                 )
         super().__init__(data, time_set=time_set, context=context)
 

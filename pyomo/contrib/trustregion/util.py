@@ -36,6 +36,7 @@ def minIgnoreNone(a, b):
         return a
     return b
 
+
 def maxIgnoreNone(a, b):
     """
     Return the max of two numbers, ignoring None
@@ -54,10 +55,16 @@ class IterationRecord:
     Record relevant information at each individual iteration
     """
 
-    def __init__(self, iteration, feasibility=None, objectiveValue=None,
-                 trustRadius=None, stepNorm=None):
+    def __init__(
+        self,
+        iteration,
+        feasibility=None,
+        objectiveValue=None,
+        trustRadius=None,
+        stepNorm=None,
+    ):
         self.iteration = iteration
-        self.fStep, self.thetaStep, self.rejected = [False]*3
+        self.fStep, self.thetaStep, self.rejected = [False] * 3
         if feasibility is not None:
             self.feasibility = feasibility
         if objectiveValue is not None:
@@ -98,30 +105,35 @@ class IterationRecord:
             print("INFO: theta-type step")
         if self.rejected:
             print("INFO: step rejected")
-        print(25*'*')
+        print(25 * '*')
 
 
 class IterationLogger:
     """
     Log (and print) information for all iterations
     """
+
     def __init__(self):
         self.iterations = []
 
-    def newIteration(self, iteration, feasibility, objectiveValue,
-                     trustRadius, stepNorm):
+    def newIteration(
+        self, iteration, feasibility, objectiveValue, trustRadius, stepNorm
+    ):
         """
         Add a new iteration to the list of iterations
         """
-        self.iterrecord = IterationRecord(iteration,
-                                          feasibility=feasibility,
-                                          objectiveValue=objectiveValue,
-                                          trustRadius=trustRadius,
-                                          stepNorm=stepNorm)
+        self.iterrecord = IterationRecord(
+            iteration,
+            feasibility=feasibility,
+            objectiveValue=objectiveValue,
+            trustRadius=trustRadius,
+            stepNorm=stepNorm,
+        )
         self.iterations.append(self.iterrecord)
 
-    def updateIteration(self, feasibility=None, objectiveValue=None,
-                        trustRadius=None, stepNorm=None):
+    def updateIteration(
+        self, feasibility=None, objectiveValue=None, trustRadius=None, stepNorm=None
+    ):
         """
         Update values in current record
         """

@@ -14,8 +14,17 @@ Ref:
 
 """
 
-from pyomo.environ import (ConcreteModel, Constraint, Reals, Integers,
-                           Objective, Var, sqrt, minimize, exp)
+from pyomo.environ import (
+    ConcreteModel,
+    Constraint,
+    Reals,
+    Integers,
+    Objective,
+    Var,
+    sqrt,
+    minimize,
+    exp,
+)
 from pyomo.common.collections import ComponentMap
 
 
@@ -29,10 +38,14 @@ class SimpleMINLP4(ConcreteModel):
         m.x = Var(domain=Reals, bounds=(1, 20), initialize=5.29)
         m.y = Var(domain=Integers, bounds=(1, 20), initialize=3)
 
-        m.c1 = Constraint(expr=0.3*(m.x-8)**2 + 0.04 * (m.y - 6)
-                          ** 4 + 0.1 * exp(2*m.x)*((m.y)**(-4)) <= 56)
-        m.c2 = Constraint(expr=1/m.x + 1/m.y - sqrt(m.x) * sqrt(m.y) <= -1)
-        m.c3 = Constraint(expr=2*m.x - 5*m.y <= -1)
+        m.c1 = Constraint(
+            expr=0.3 * (m.x - 8) ** 2
+            + 0.04 * (m.y - 6) ** 4
+            + 0.1 * exp(2 * m.x) * ((m.y) ** (-4))
+            <= 56
+        )
+        m.c2 = Constraint(expr=1 / m.x + 1 / m.y - sqrt(m.x) * sqrt(m.y) <= -1)
+        m.c3 = Constraint(expr=2 * m.x - 5 * m.y <= -1)
 
         m.objective = Objective(expr=-6 * m.x - m.y, sense=minimize)
         m.optimal_value = -56.981

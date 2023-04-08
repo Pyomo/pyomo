@@ -20,6 +20,7 @@ class SquareNlpSolverBase(object):
     of equality constraints.
 
     """
+
     # Ideally, this ConfigBlock would contain options that are valid for any
     # square NLP solver. However, no such options seem to exist while
     # preserving the names of the SciPy function arguments. E.g., tolerance
@@ -56,8 +57,7 @@ class SquareNlpSolverBase(object):
                 "Cannot construct a square solver for an NLP that"
                 " does not have the same numbers of variables as"
                 " equality constraints. Got %s variables and %s"
-                " equalities."
-                % (self._nlp.n_primals(), self._nlp.n_eq_constraints())
+                " equalities." % (self._nlp.n_primals(), self._nlp.n_eq_constraints())
             )
         # Checking for a square system of equalities is easy, but checking
         # bounds is a little difficult. We don't know how an NLP will
@@ -91,13 +91,13 @@ class SquareNlpSolverBase(object):
 
 
 class DenseSquareNlpSolver(SquareNlpSolverBase):
-    """A square NLP solver that uses a dense Jacobian
-    """
+    """A square NLP solver that uses a dense Jacobian"""
 
     def evaluate_jacobian(self, x0):
         sparse_jac = super().evaluate_jacobian(x0)
         dense_jac = sparse_jac.toarray()
         return dense_jac
+
 
 class ScalarDenseSquareNlpSolver(DenseSquareNlpSolver):
     # A base class for solvers for scalar equations.
