@@ -119,15 +119,15 @@ class TwoTanksSeries(ExternalGreyBoxModel):
         self._c2 = c2
         self._N = N
         self._dt = dt
-        self._input_names = ["F1_{}".format(t) for t in range(1, N)]
-        self._input_names.extend(["F2_{}".format(t) for t in range(1, N)])
-        self._input_names.extend(["h1_{}".format(t) for t in range(0, N)])
-        self._input_names.extend(["h2_{}".format(t) for t in range(0, N)])
-        self._output_names = ["F12_{}".format(t) for t in range(0, N)]
-        self._output_names.extend(["Fo_{}".format(t) for t in range(0, N)])
-        self._equality_constraint_names = ["h1bal_{}".format(t) for t in range(1, N)]
+        self._input_names = ['F1_{}'.format(t) for t in range(1, N)]
+        self._input_names.extend(['F2_{}'.format(t) for t in range(1, N)])
+        self._input_names.extend(['h1_{}'.format(t) for t in range(0, N)])
+        self._input_names.extend(['h2_{}'.format(t) for t in range(0, N)])
+        self._output_names = ['F12_{}'.format(t) for t in range(0, N)]
+        self._output_names.extend(['Fo_{}'.format(t) for t in range(0, N)])
+        self._equality_constraint_names = ['h1bal_{}'.format(t) for t in range(1, N)]
         self._equality_constraint_names.extend(
-            ["h2bal_{}".format(t) for t in range(1, N)]
+            ['h2bal_{}'.format(t) for t in range(1, N)]
         )
 
         # inputs
@@ -384,30 +384,30 @@ def create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt):
 
     # initialize the same as the pyomo model
     for t in m2.Tu:
-        m2.egb.inputs["F1_{}".format(t)].value = 1 + 0.1 * t
-        m2.egb.inputs["F2_{}".format(t)].value = 2 + 0.1 * t
+        m2.egb.inputs['F1_{}'.format(t)].value = 1 + 0.1 * t
+        m2.egb.inputs['F2_{}'.format(t)].value = 2 + 0.1 * t
     for t in m2.T:
-        m2.egb.inputs["h1_{}".format(t)].value = 3 + 0.1 * t
-        m2.egb.inputs["h2_{}".format(t)].value = 4 + 0.1 * t
-        m2.egb.outputs["F12_{}".format(t)].value = 5 + 0.1 * t
-        m2.egb.outputs["Fo_{}".format(t)].value = 6 + 0.1 * t
+        m2.egb.inputs['h1_{}'.format(t)].value = 3 + 0.1 * t
+        m2.egb.inputs['h2_{}'.format(t)].value = 4 + 0.1 * t
+        m2.egb.outputs['F12_{}'.format(t)].value = 5 + 0.1 * t
+        m2.egb.outputs['Fo_{}'.format(t)].value = 6 + 0.1 * t
 
     @m2.Constraint(m2.Tu)
     def min_inflow(m, t):
-        F1_t = m.egb.inputs["F1_{}".format(t)]
+        F1_t = m.egb.inputs['F1_{}'.format(t)]
         return 2 <= F1_t
 
     @m2.Constraint(m2.T)
     def max_outflow(m, t):
-        Fo_t = m.egb.outputs["Fo_{}".format(t)]
+        Fo_t = m.egb.outputs['Fo_{}'.format(t)]
         return Fo_t <= 4.5
 
-    m2.h10 = pyo.Constraint(expr=m2.egb.inputs["h1_0"] == 1.5)
-    m2.h20 = pyo.Constraint(expr=m2.egb.inputs["h2_0"] == 0.5)
+    m2.h10 = pyo.Constraint(expr=m2.egb.inputs['h1_0'] == 1.5)
+    m2.h20 = pyo.Constraint(expr=m2.egb.inputs['h2_0'] == 0.5)
     m2.obj = pyo.Objective(
         expr=sum(
-            (m2.egb.inputs["h1_{}".format(t)] - 1.0) ** 2
-            + (m2.egb.inputs["h2_{}".format(t)] - 1.5) ** 2
+            (m2.egb.inputs['h1_{}'.format(t)] - 1.0) ** 2
+            + (m2.egb.inputs['h2_{}'.format(t)] - 1.5) ** 2
             for t in m2.T
         )
     )
@@ -417,7 +417,7 @@ def create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt):
 
 class TestGreyBoxModel(unittest.TestCase):
     @unittest.skipIf(
-        not pyo.SolverFactory("ipopt").available(exception_flag=False),
+        not pyo.SolverFactory('ipopt').available(exception_flag=False),
         "Ipopt needed to run tests with solve",
     )
     def test_compare_evaluations(self):
@@ -429,8 +429,8 @@ class TestGreyBoxModel(unittest.TestCase):
         dt = 1
 
         m = create_pyomo_model(A1, A2, c1, c2, N, dt)
-        solver = pyo.SolverFactory("ipopt")
-        solver.options["linear_solver"] = "mumps"
+        solver = pyo.SolverFactory('ipopt')
+        solver.options['linear_solver'] = 'mumps'
         status = solver.solve(m, tee=False)
         m_nlp = PyomoNLP(m)
 
@@ -446,76 +446,76 @@ class TestGreyBoxModel(unittest.TestCase):
         mex_c_order = mex_nlp.constraint_names()
 
         x1list = [
-            "h1[0]",
-            "h1[1]",
-            "h1[2]",
-            "h1[3]",
-            "h1[4]",
-            "h1[5]",
-            "h2[0]",
-            "h2[1]",
-            "h2[2]",
-            "h2[3]",
-            "h2[4]",
-            "h2[5]",
-            "F1[1]",
-            "F1[2]",
-            "F1[3]",
-            "F1[4]",
-            "F1[5]",
-            "F2[1]",
-            "F2[2]",
-            "F2[3]",
-            "F2[4]",
-            "F2[5]",
-            "F12[0]",
-            "F12[1]",
-            "F12[2]",
-            "F12[3]",
-            "F12[4]",
-            "F12[5]",
-            "Fo[0]",
-            "Fo[1]",
-            "Fo[2]",
-            "Fo[3]",
-            "Fo[4]",
-            "Fo[5]",
+            'h1[0]',
+            'h1[1]',
+            'h1[2]',
+            'h1[3]',
+            'h1[4]',
+            'h1[5]',
+            'h2[0]',
+            'h2[1]',
+            'h2[2]',
+            'h2[3]',
+            'h2[4]',
+            'h2[5]',
+            'F1[1]',
+            'F1[2]',
+            'F1[3]',
+            'F1[4]',
+            'F1[5]',
+            'F2[1]',
+            'F2[2]',
+            'F2[3]',
+            'F2[4]',
+            'F2[5]',
+            'F12[0]',
+            'F12[1]',
+            'F12[2]',
+            'F12[3]',
+            'F12[4]',
+            'F12[5]',
+            'Fo[0]',
+            'Fo[1]',
+            'Fo[2]',
+            'Fo[3]',
+            'Fo[4]',
+            'Fo[5]',
         ]
         x2list = [
-            "egb.inputs[h1_0]",
-            "egb.inputs[h1_1]",
-            "egb.inputs[h1_2]",
-            "egb.inputs[h1_3]",
-            "egb.inputs[h1_4]",
-            "egb.inputs[h1_5]",
-            "egb.inputs[h2_0]",
-            "egb.inputs[h2_1]",
-            "egb.inputs[h2_2]",
-            "egb.inputs[h2_3]",
-            "egb.inputs[h2_4]",
-            "egb.inputs[h2_5]",
-            "egb.inputs[F1_1]",
-            "egb.inputs[F1_2]",
-            "egb.inputs[F1_3]",
-            "egb.inputs[F1_4]",
-            "egb.inputs[F1_5]",
-            "egb.inputs[F2_1]",
-            "egb.inputs[F2_2]",
-            "egb.inputs[F2_3]",
-            "egb.inputs[F2_4]",
-            "egb.inputs[F2_5]",
-            "egb.outputs[F12_0]",
-            "egb.outputs[F12_1]",
-            "egb.outputs[F12_2]",
-            "egb.outputs[F12_3]",
-            "egb.outputs[F12_4]",
-            "egb.outputs[F12_5]",
-            "egb.outputs[Fo_0]",
-            "egb.outputs[Fo_1]",
-            "egb.outputs[Fo_2]",
-            "egb.outputs[Fo_3]",
-            "egb.outputs[Fo_4]",
-            "egb.outputs[Fo_5]",
+            'egb.inputs[h1_0]',
+            'egb.inputs[h1_1]',
+            'egb.inputs[h1_2]',
+            'egb.inputs[h1_3]',
+            'egb.inputs[h1_4]',
+            'egb.inputs[h1_5]',
+            'egb.inputs[h2_0]',
+            'egb.inputs[h2_1]',
+            'egb.inputs[h2_2]',
+            'egb.inputs[h2_3]',
+            'egb.inputs[h2_4]',
+            'egb.inputs[h2_5]',
+            'egb.inputs[F1_1]',
+            'egb.inputs[F1_2]',
+            'egb.inputs[F1_3]',
+            'egb.inputs[F1_4]',
+            'egb.inputs[F1_5]',
+            'egb.inputs[F2_1]',
+            'egb.inputs[F2_2]',
+            'egb.inputs[F2_3]',
+            'egb.inputs[F2_4]',
+            'egb.inputs[F2_5]',
+            'egb.outputs[F12_0]',
+            'egb.outputs[F12_1]',
+            'egb.outputs[F12_2]',
+            'egb.outputs[F12_3]',
+            'egb.outputs[F12_4]',
+            'egb.outputs[F12_5]',
+            'egb.outputs[Fo_0]',
+            'egb.outputs[Fo_1]',
+            'egb.outputs[Fo_2]',
+            'egb.outputs[Fo_3]',
+            'egb.outputs[Fo_4]',
+            'egb.outputs[Fo_5]',
         ]
         x1_x2_map = dict(zip(x1list, x2list))
         x1idx_x2idx_map = {
@@ -523,78 +523,78 @@ class TestGreyBoxModel(unittest.TestCase):
         }
 
         c1list = [
-            "h1bal[1]",
-            "h1bal[2]",
-            "h1bal[3]",
-            "h1bal[4]",
-            "h1bal[5]",
-            "h2bal[1]",
-            "h2bal[2]",
-            "h2bal[3]",
-            "h2bal[4]",
-            "h2bal[5]",
-            "F12con[0]",
-            "F12con[1]",
-            "F12con[2]",
-            "F12con[3]",
-            "F12con[4]",
-            "F12con[5]",
-            "Focon[0]",
-            "Focon[1]",
-            "Focon[2]",
-            "Focon[3]",
-            "Focon[4]",
-            "Focon[5]",
-            "min_inflow[1]",
-            "min_inflow[2]",
-            "min_inflow[3]",
-            "min_inflow[4]",
-            "min_inflow[5]",
-            "max_outflow[0]",
-            "max_outflow[1]",
-            "max_outflow[2]",
-            "max_outflow[3]",
-            "max_outflow[4]",
-            "max_outflow[5]",
-            "h10",
-            "h20",
+            'h1bal[1]',
+            'h1bal[2]',
+            'h1bal[3]',
+            'h1bal[4]',
+            'h1bal[5]',
+            'h2bal[1]',
+            'h2bal[2]',
+            'h2bal[3]',
+            'h2bal[4]',
+            'h2bal[5]',
+            'F12con[0]',
+            'F12con[1]',
+            'F12con[2]',
+            'F12con[3]',
+            'F12con[4]',
+            'F12con[5]',
+            'Focon[0]',
+            'Focon[1]',
+            'Focon[2]',
+            'Focon[3]',
+            'Focon[4]',
+            'Focon[5]',
+            'min_inflow[1]',
+            'min_inflow[2]',
+            'min_inflow[3]',
+            'min_inflow[4]',
+            'min_inflow[5]',
+            'max_outflow[0]',
+            'max_outflow[1]',
+            'max_outflow[2]',
+            'max_outflow[3]',
+            'max_outflow[4]',
+            'max_outflow[5]',
+            'h10',
+            'h20',
         ]
         c2list = [
-            "egb.h1bal_1",
-            "egb.h1bal_2",
-            "egb.h1bal_3",
-            "egb.h1bal_4",
-            "egb.h1bal_5",
-            "egb.h2bal_1",
-            "egb.h2bal_2",
-            "egb.h2bal_3",
-            "egb.h2bal_4",
-            "egb.h2bal_5",
-            "egb.output_constraints[F12_0]",
-            "egb.output_constraints[F12_1]",
-            "egb.output_constraints[F12_2]",
-            "egb.output_constraints[F12_3]",
-            "egb.output_constraints[F12_4]",
-            "egb.output_constraints[F12_5]",
-            "egb.output_constraints[Fo_0]",
-            "egb.output_constraints[Fo_1]",
-            "egb.output_constraints[Fo_2]",
-            "egb.output_constraints[Fo_3]",
-            "egb.output_constraints[Fo_4]",
-            "egb.output_constraints[Fo_5]",
-            "min_inflow[1]",
-            "min_inflow[2]",
-            "min_inflow[3]",
-            "min_inflow[4]",
-            "min_inflow[5]",
-            "max_outflow[0]",
-            "max_outflow[1]",
-            "max_outflow[2]",
-            "max_outflow[3]",
-            "max_outflow[4]",
-            "max_outflow[5]",
-            "h10",
-            "h20",
+            'egb.h1bal_1',
+            'egb.h1bal_2',
+            'egb.h1bal_3',
+            'egb.h1bal_4',
+            'egb.h1bal_5',
+            'egb.h2bal_1',
+            'egb.h2bal_2',
+            'egb.h2bal_3',
+            'egb.h2bal_4',
+            'egb.h2bal_5',
+            'egb.output_constraints[F12_0]',
+            'egb.output_constraints[F12_1]',
+            'egb.output_constraints[F12_2]',
+            'egb.output_constraints[F12_3]',
+            'egb.output_constraints[F12_4]',
+            'egb.output_constraints[F12_5]',
+            'egb.output_constraints[Fo_0]',
+            'egb.output_constraints[Fo_1]',
+            'egb.output_constraints[Fo_2]',
+            'egb.output_constraints[Fo_3]',
+            'egb.output_constraints[Fo_4]',
+            'egb.output_constraints[Fo_5]',
+            'min_inflow[1]',
+            'min_inflow[2]',
+            'min_inflow[3]',
+            'min_inflow[4]',
+            'min_inflow[5]',
+            'max_outflow[0]',
+            'max_outflow[1]',
+            'max_outflow[2]',
+            'max_outflow[3]',
+            'max_outflow[4]',
+            'max_outflow[5]',
+            'h10',
+            'h20',
         ]
         c1_c2_map = dict(zip(c1list, c2list))
         c1idx_c2idx_map = {
@@ -684,46 +684,46 @@ class TestGreyBoxModel(unittest.TestCase):
         dt = 1
 
         m = create_pyomo_model(A1, A2, c1, c2, N, dt)
-        solver = pyo.SolverFactory("cyipopt")
-        solver.config.options["linear_solver"] = "mumps"
+        solver = pyo.SolverFactory('cyipopt')
+        solver.config.options['linear_solver'] = 'mumps'
         status = solver.solve(m, tee=False)
 
         mex = create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt)
-        solver = pyo.SolverFactory("cyipopt")
-        solver.config.options["linear_solver"] = "mumps"
+        solver = pyo.SolverFactory('cyipopt')
+        solver.config.options['linear_solver'] = 'mumps'
         status = solver.solve(mex, tee=False)
 
         for k in m.F1:
             self.assertAlmostEqual(
                 pyo.value(m.F1[k]),
-                pyo.value(mex.egb.inputs["F1_{}".format(k)]),
+                pyo.value(mex.egb.inputs['F1_{}'.format(k)]),
                 places=3,
             )
             self.assertAlmostEqual(
                 pyo.value(m.F2[k]),
-                pyo.value(mex.egb.inputs["F2_{}".format(k)]),
+                pyo.value(mex.egb.inputs['F2_{}'.format(k)]),
                 places=3,
             )
         for k in m.h1:
             self.assertAlmostEqual(
                 pyo.value(m.h1[k]),
-                pyo.value(mex.egb.inputs["h1_{}".format(k)]),
+                pyo.value(mex.egb.inputs['h1_{}'.format(k)]),
                 places=3,
             )
             self.assertAlmostEqual(
                 pyo.value(m.h2[k]),
-                pyo.value(mex.egb.inputs["h2_{}".format(k)]),
+                pyo.value(mex.egb.inputs['h2_{}'.format(k)]),
                 places=3,
             )
         for k in m.F12:
             self.assertAlmostEqual(
                 pyo.value(m.F12[k]),
-                pyo.value(mex.egb.outputs["F12_{}".format(k)]),
+                pyo.value(mex.egb.outputs['F12_{}'.format(k)]),
                 places=3,
             )
             self.assertAlmostEqual(
                 pyo.value(m.Fo[k]),
-                pyo.value(mex.egb.outputs["Fo_{}".format(k)]),
+                pyo.value(mex.egb.outputs['Fo_{}'.format(k)]),
                 places=3,
             )
         """
@@ -736,6 +736,6 @@ class TestGreyBoxModel(unittest.TestCase):
         """
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     t = TestGreyBoxModel()
     t.test_solve()

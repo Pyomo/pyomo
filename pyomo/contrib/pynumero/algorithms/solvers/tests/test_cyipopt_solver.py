@@ -178,7 +178,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         nlp.set_duals(y_sol)
         self.assertAlmostEqual(nlp.evaluate_objective(), -428.6362455416348, places=5)
-        self.assertTrue(np.allclose(info["mult_g"], y_sol, rtol=1e-4))
+        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
 
     def test_model1_with_scaling(self):
         m = create_model1()
@@ -190,34 +190,34 @@ class TestCyIpoptSolver(unittest.TestCase):
 
         cynlp = CyIpoptNLP(PyomoNLP(m))
         options = {
-            "nlp_scaling_method": "user-scaling",
-            "output_file": "_cyipopt-scaling.log",
-            "file_print_level": 10,
-            "max_iter": 0,
+            'nlp_scaling_method': 'user-scaling',
+            'output_file': '_cyipopt-scaling.log',
+            'file_print_level': 10,
+            'max_iter': 0,
         }
         solver = CyIpoptSolver(cynlp, options=options)
         x, info = solver.solve()
 
-        with open("_cyipopt-scaling.log", "r") as fd:
+        with open('_cyipopt-scaling.log', 'r') as fd:
             solver_trace = fd.read()
         cynlp.close()
-        os.remove("_cyipopt-scaling.log")
+        os.remove('_cyipopt-scaling.log')
 
         # check for the following strings in the log and then delete the log
-        self.assertIn("nlp_scaling_method = user-scaling", solver_trace)
-        self.assertIn("output_file = _cyipopt-scaling.log", solver_trace)
-        self.assertIn("objective scaling factor = 1e-06", solver_trace)
-        self.assertIn("x scaling provided", solver_trace)
-        self.assertIn("c scaling provided", solver_trace)
-        self.assertIn("d scaling provided", solver_trace)
+        self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
+        self.assertIn('output_file = _cyipopt-scaling.log', solver_trace)
+        self.assertIn('objective scaling factor = 1e-06', solver_trace)
+        self.assertIn('x scaling provided', solver_trace)
+        self.assertIn('c scaling provided', solver_trace)
+        self.assertIn('d scaling provided', solver_trace)
         self.assertIn('DenseVector "x scaling vector" with 3 elements:', solver_trace)
-        self.assertIn("x scaling vector[    1]= 1.0000000000000000e+00", solver_trace)
-        self.assertIn("x scaling vector[    2]= 1.0000000000000000e+00", solver_trace)
-        self.assertIn("x scaling vector[    3]= 4.0000000000000000e+00", solver_trace)
+        self.assertIn('x scaling vector[    1]= 1.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    2]= 1.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    3]= 4.0000000000000000e+00', solver_trace)
         self.assertIn('DenseVector "c scaling vector" with 1 elements:', solver_trace)
-        self.assertIn("c scaling vector[    1]= 2.0000000000000000e+00", solver_trace)
+        self.assertIn('c scaling vector[    1]= 2.0000000000000000e+00', solver_trace)
         self.assertIn('DenseVector "d scaling vector" with 1 elements:', solver_trace)
-        self.assertIn("d scaling vector[    1]= 3.0000000000000000e+00", solver_trace)
+        self.assertIn('d scaling vector[    1]= 3.0000000000000000e+00', solver_trace)
 
     def test_model2(self):
         model = create_model2()
@@ -230,7 +230,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         nlp.set_duals(y_sol)
         self.assertAlmostEqual(nlp.evaluate_objective(), -31.000000057167462, places=5)
-        self.assertTrue(np.allclose(info["mult_g"], y_sol, rtol=1e-4))
+        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
 
     def test_model3(self):
         G = np.array([[6, 2, 1], [2, 5, 2], [1, 2, 4]])
@@ -248,12 +248,12 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         nlp.set_duals(y_sol)
         self.assertAlmostEqual(nlp.evaluate_objective(), -3.5, places=5)
-        self.assertTrue(np.allclose(info["mult_g"], y_sol, rtol=1e-4))
+        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
 
     def test_options(self):
         model = create_model1()
         nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(CyIpoptNLP(nlp), options={"max_iter": 1})
+        solver = CyIpoptSolver(CyIpoptNLP(nlp), options={'max_iter': 1})
         x, info = solver.solve(tee=False)
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)
