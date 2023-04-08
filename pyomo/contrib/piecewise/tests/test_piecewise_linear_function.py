@@ -109,6 +109,13 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         )
         self.check_ln_x_approx(m.pw, m.x)
 
+    def test_pw_linear_approx_of_ln_x_tabular_data(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(
+            tabular_data={1: 0, 3: log(3), 6: log(6), 10: log(10)}
+        )
+        self.check_ln_x_approx(m.pw, m.x)
+
     def test_use_pw_function_in_constraint(self):
         m = self.make_ln_x_model()
         m.pw = PiecewiseLinearFunction(
@@ -164,6 +171,22 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
 
         m.pw = PiecewiseLinearFunction(
             [1, 2], points=silly_pts_rule, function_rule=lambda m, i: m.funcs[i]
+        )
+        self.check_ln_x_approx(m.pw[2], m.z[2])
+        self.check_x_squared_approx(m.pw[1], m.z[1])
+
+    def test_indexed_pw_linear_function_tabular_data(self):
+        m = self.make_ln_x_model()
+        m.z = Var([1, 2], bounds=(-10, 10))
+
+        def silly_tabular_data_rule(m, i):
+            if i == 1:
+                return {1: 1, 3: 9, 6: 36, 10: 100}
+            if i == 2:
+                return {1: 0, 3: log(3), 6: log(6), 10: log(10)}
+
+        m.pw = PiecewiseLinearFunction(
+            [1, 2], tabular_data_rule=silly_tabular_data_rule
         )
         self.check_ln_x_approx(m.pw[2], m.z[2])
         self.check_x_squared_approx(m.pw[1], m.z[1])
@@ -274,6 +297,18 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         m = self.make_model()
         m.pw = PiecewiseLinearFunction(
             points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7)], function=m.g
+        )
+        self.check_pw_linear_approximation(m)
+
+    @unittest.skipUnless(scipy_available, "scipy is not available")
+    def test_pw_linear_approx_tabular_data(self):
+        m = self.make_model()
+
+        m.pw = PiecewiseLinearFunction(
+            tabular_data={
+                (0, 1): g(0, 1), (0, 4): g(0, 4), (0, 7): g(0, 7),
+                (3, 1): g(3, 1), (3, 4): g(3, 4), (3, 7): g(3, 7)
+            },
         )
         self.check_pw_linear_approximation(m)
 
