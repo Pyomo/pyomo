@@ -302,7 +302,6 @@ class PiecewiseLinearFunction(Block):
 
     @_define_handler(_handlers, True, True, False, False, False)
     def _construct_from_function_and_points(self, obj, parent, nonlinear_function):
-        parent = obj.parent_block()
         idx = obj._index
 
         points = self._points_rule(parent, idx)
