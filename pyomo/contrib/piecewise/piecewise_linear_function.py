@@ -170,8 +170,7 @@ class _tabular_data_functor(AutoSlots.Mixin):
         if not tupleize:
             self.tabular_data = tabular_data
         else:
-            self.tabular_data = {(pt,) : val for pt, val in
-                                 tabular_data.items()}
+            self.tabular_data = {(pt,): val for pt, val in tabular_data.items()}
 
     def __call__(self, *args):
         return self.tabular_data[args]
@@ -432,8 +431,7 @@ class PiecewiseLinearFunction(Block):
                 self._points_rule is not None,
                 self._simplices_rule is not None,
                 self._linear_funcs_rule is not None,
-                self._tabular_data is not None
-                or self._tabular_data_rule is not None,
+                self._tabular_data is not None or self._tabular_data_rule is not None,
             )
         )
         if handler is None:

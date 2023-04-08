@@ -306,9 +306,13 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
 
         m.pw = PiecewiseLinearFunction(
             tabular_data={
-                (0, 1): g(0, 1), (0, 4): g(0, 4), (0, 7): g(0, 7),
-                (3, 1): g(3, 1), (3, 4): g(3, 4), (3, 7): g(3, 7)
-            },
+                (0, 1): g(0, 1),
+                (0, 4): g(0, 4),
+                (0, 7): g(0, 7),
+                (3, 1): g(3, 1),
+                (3, 4): g(3, 4),
+                (3, 7): g(3, 7),
+            }
         )
         self.check_pw_linear_approximation(m)
 
@@ -366,7 +370,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         )
         # check it's equal to the original function at all the extreme points of
         # the simplices
-        for (x1, x2) in m.pw._points:
+        for x1, x2 in m.pw._points:
             self.assertAlmostEqual(m.pw(x1, x2), m.g(x1, x2))
         # check some points in the approximation
         self.assertAlmostEqual(m.pw(1, 3), g1(1, 3))
