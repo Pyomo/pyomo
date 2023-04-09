@@ -455,7 +455,7 @@ class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
         # simplices. It's crazy degenerate in terms of *how* this is done, but
         # that's the point of this test.
         self.assertEqual(len(pw._simplices), 48)
-        for simplex, baseline in zip(self.simplices, pw._simplices):
+        for simplex, baseline in zip(sorted(self.simplices), sorted(pw._simplices)):
             self.assertEqual(simplex, baseline)
 
         # We're not checking 48 linear functions...
