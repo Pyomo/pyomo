@@ -302,7 +302,7 @@ class PiecewiseLinearFunction(Block):
                 )
                 != 0
             ):
-                obj._simplices.append(tuple(simplex))
+                obj._simplices.append(tuple(sorted(simplex)))
 
         # It's possible that qhull dropped some points if there were numerical
         # issues with them (e.g., if they were redundant). We'll be polite and
