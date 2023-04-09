@@ -155,7 +155,8 @@ class SymbolMap(object):
             raise RuntimeError(
                 "Duplicate symbol '%s' already associated with "
                 "component '%s' (conflicting component: '%s')"
-                % (symbol, self.bySymbol[symbol].name, obj.name) )
+                % (symbol, self.bySymbol[symbol].name, obj.name)
+            )
         self.bySymbol[symbol] = obj
         self.byObject[obj_id] = symbol
         return symbol
@@ -180,8 +181,9 @@ class SymbolMap(object):
                     % (
                         name,
                         "UNKNOWN" if old_object is None else old_object.name,
-                        obj.name
-                    ))
+                        obj.name,
+                    )
+                )
         else:
             #
             # Add the alias

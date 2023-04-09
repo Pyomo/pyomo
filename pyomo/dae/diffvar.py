@@ -16,7 +16,7 @@ from pyomo.core.base.set import UnknownSetDimen
 from pyomo.core.base.var import Var
 from pyomo.dae.contset import ContinuousSet
 
-__all__ = ('DerivativeVar', 'DAE_Error',)
+__all__ = ('DerivativeVar', 'DAE_Error')
 
 
 def create_access_function(var):
@@ -24,8 +24,10 @@ def create_access_function(var):
     This method returns a function that returns a component by calling
     it rather than indexing it
     """
+
     def _fun(*args):
         return var[args]
+
     return _fun
 
 
@@ -76,12 +78,14 @@ class DerivativeVar(Var):
         if not isinstance(sVar, Var):
             raise DAE_Error(
                 "%s is not a variable. Can only take the derivative of a Var"
-                "component." % sVar)
+                "component." % sVar
+            )
 
         if "wrt" in kwds and "withrespectto" in kwds:
             raise TypeError(
                 "Cannot specify both 'wrt' and 'withrespectto keywords "
-                "in a DerivativeVar")
+                "in a DerivativeVar"
+            )
 
         wrt = kwds.pop('wrt', None)
         wrt = kwds.pop('withrespectto', wrt)
@@ -107,14 +111,15 @@ class DerivativeVar(Var):
                         raise DAE_Error(
                             "The variable %s is indexed by a Set (%s) with a "
                             "non-fixed dimension.  A DerivativeVar may only be "
-                            "indexed by Sets with constant dimension"
-                            % (sVar, s.name))
+                            "indexed by Sets with constant dimension" % (sVar, s.name)
+                        )
                     elif _dim is UnknownSetDimen:
                         raise DAE_Error(
                             "The variable %s is indexed by a Set (%s) with an "
                             "unknown dimension.  A DerivativeVar may only be "
                             "indexed by Sets with known constant dimension"
-                            % (sVar, s.name))
+                            % (sVar, s.name)
+                        )
                     loc += s.dimen
             num_contset = len(sVar._contset)
 
@@ -122,7 +127,8 @@ class DerivativeVar(Var):
             raise DAE_Error(
                 "The variable %s is not indexed by any ContinuousSets. A "
                 "derivative may only be taken with respect to a continuous "
-                "domain" % sVar)
+                "domain" % sVar
+            )
 
         if wrt is None:
             # Check to be sure Var is indexed by single ContinuousSet and take
@@ -131,30 +137,35 @@ class DerivativeVar(Var):
                 raise DAE_Error(
                     "The variable %s is indexed by multiple ContinuousSets. "
                     "The desired ContinuousSet must be specified using the "
-                    "keyword argument 'wrt'" % sVar)
-            wrt = [next(iter(sVar._contset.keys())), ]
+                    "keyword argument 'wrt'" % sVar
+                )
+            wrt = [next(iter(sVar._contset.keys()))]
         elif type(wrt) is ContinuousSet:
             if wrt not in sVar._contset:
                 raise DAE_Error(
                     "Invalid derivative: The variable %s is not indexed by "
-                    "the ContinuousSet %s" % (sVar, wrt))
-            wrt = [wrt, ]
+                    "the ContinuousSet %s" % (sVar, wrt)
+                )
+            wrt = [wrt]
         elif type(wrt) is tuple or type(wrt) is list:
             for i in wrt:
                 if type(i) is not ContinuousSet:
                     raise DAE_Error(
                         "Cannot take the derivative with respect to %s. "
                         "Expected a ContinuousSet or a tuple of "
-                        "ContinuousSets" % i)
+                        "ContinuousSets" % i
+                    )
                 if i not in sVar._contset:
                     raise DAE_Error(
                         "Invalid derivative: The variable %s is not indexed "
-                        "by the ContinuousSet %s" % (sVar, i))
+                        "by the ContinuousSet %s" % (sVar, i)
+                    )
             wrt = list(wrt)
         else:
             raise DAE_Error(
                 "Cannot take the derivative with respect to %s. "
-                "Expected a ContinuousSet or a tuple of ContinuousSets" % i)
+                "Expected a ContinuousSet or a tuple of ContinuousSets" % i
+            )
 
         wrtkey = [str(i) for i in wrt]
         wrtkey.sort()
@@ -164,7 +175,8 @@ class DerivativeVar(Var):
             raise DAE_Error(
                 "Cannot create a new derivative variable for variable "
                 "%s: derivative already defined as %s"
-                % (sVar.name, sVar._derivative[wrtkey]().name))
+                % (sVar.name, sVar._derivative[wrtkey]().name)
+            )
 
         sVar._derivative[wrtkey] = weakref.ref(self)
         self._sVar = sVar
@@ -172,11 +184,10 @@ class DerivativeVar(Var):
 
         kwds.setdefault('ctype', DerivativeVar)
 
-        Var.__init__(self,sVar.index_set(),**kwds)
-
+        Var.__init__(self, sVar.index_set(), **kwds)
 
     def get_continuousset_list(self):
-        """ Return the a list of :py:class:`ContinuousSet` components the
+        """Return the a list of :py:class:`ContinuousSet` components the
         derivative is being taken with respect to.
 
         Returns
@@ -201,7 +212,7 @@ class DerivativeVar(Var):
         return True
 
     def get_state_var(self):
-        """ Return the :py:class:`Var` that is being differentiated.
+        """Return the :py:class:`Var` that is being differentiated.
 
         Returns
         -------
@@ -224,9 +235,8 @@ class DerivativeVar(Var):
             return self._expr
 
     def set_derivative_expression(self, expr):
-        """ Sets``_expr``, an expression representing the discretization
+        """Sets``_expr``, an expression representing the discretization
         equations linking the :class:`DerivativeVar` to its state
         :class:`Var`
         """
         self._expr = expr
-

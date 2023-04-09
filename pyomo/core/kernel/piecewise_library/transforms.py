@@ -14,8 +14,8 @@ This module contains transformations for representing a
 single-variate piecewise linear function using a
 mixed-interger problem formulation. Reference::
 
-  Mixed-Integer Models for Non-separable Piecewise Linear \
-Optimization: Unifying framework and Extensions (Vielma, \
+  Mixed-Integer Models for Non-separable Piecewise Linear
+Optimization: Unifying framework and Extensions (Vielma,
 Nemhauser 2008)
 """
 
@@ -29,52 +29,63 @@ import bisect
 from pyomo.core.expr.numvalue import value as _value
 from pyomo.core.kernel.set_types import IntegerSet
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.expression import (expression,
-                                          expression_tuple)
-from pyomo.core.kernel.variable import (IVariable,
-                                        variable_list,
-                                        variable_tuple,
-                                        variable_dict,
-                                        variable)
-from pyomo.core.kernel.constraint import (constraint_list,
-                                          constraint_tuple,
-                                          linear_constraint)
+from pyomo.core.kernel.expression import expression, expression_tuple
+from pyomo.core.kernel.variable import (
+    IVariable,
+    variable_list,
+    variable_tuple,
+    variable_dict,
+    variable,
+)
+from pyomo.core.kernel.constraint import (
+    constraint_list,
+    constraint_tuple,
+    linear_constraint,
+)
 from pyomo.core.kernel.sos import sos2
-from pyomo.core.kernel.piecewise_library.util import \
-    (characterize_function,
-     is_nondecreasing,
-     is_positive_power_of_two,
-     log2floor,
-     generate_gray_code,
-     PiecewiseValidationError)
+from pyomo.core.kernel.piecewise_library.util import (
+    characterize_function,
+    is_nondecreasing,
+    is_positive_power_of_two,
+    log2floor,
+    generate_gray_code,
+    PiecewiseValidationError,
+)
 
 
 logger = logging.getLogger('pyomo.core')
 
 registered_transforms = {}
 
+
 # wrapper that allows a list containing parameters to be
 # used with the bisect module
 class _shadow_list(object):
     __slots__ = ("_x",)
+
     def __init__(self, x):
         self._x = x
+
     def __len__(self):
         return self._x.__len__()
+
     def __getitem__(self, i):
         return _value(self._x.__getitem__(i))
 
-def piecewise(breakpoints,
-              values,
-              input=None,
-              output=None,
-              bound='eq',
-              repn='sos2',
-              validate=True,
-              simplify=True,
-              equal_slopes_tolerance=1e-6,
-              require_bounded_input_variable=True,
-              require_variable_domain_coverage=True):
+
+def piecewise(
+    breakpoints,
+    values,
+    input=None,
+    output=None,
+    bound='eq',
+    repn='sos2',
+    validate=True,
+    simplify=True,
+    equal_slopes_tolerance=1e-6,
+    require_bounded_input_variable=True,
+    require_variable_domain_coverage=True,
+):
     """
     Models a single-variate piecewise linear function.
 
@@ -160,8 +171,8 @@ def piecewise(breakpoints,
             :attr:`False`.
 
     Returns:
-        TransformedPiecewiseLinearFunction: a block that \
-            stores any new variables, constraints, and other \
+        TransformedPiecewiseLinearFunction: a block that
+            stores any new variables, constraints, and other
             modeling objects used by the piecewise representation
     """
     transform = None
@@ -170,47 +181,41 @@ def piecewise(breakpoints,
     except KeyError:
         raise ValueError(
             "Keyword assignment repn='%s' is not valid. "
-            "Must be one of: %s"
-            % (repn,
-               str(sorted(registered_transforms.keys()))))
+            "Must be one of: %s" % (repn, str(sorted(registered_transforms.keys())))
+        )
     assert transform is not None
 
     if not validate:
         # can not simplify if we do not validate
         simplify = False
 
-    func = PiecewiseLinearFunction(breakpoints,
-                                   values,
-                                   validate=False)
+    func = PiecewiseLinearFunction(breakpoints, values, validate=False)
 
-    if simplify and \
-       (transform is not piecewise_convex):
-        ftype = func.validate(
-            equal_slopes_tolerance=equal_slopes_tolerance)
+    if simplify and (transform is not piecewise_convex):
+        ftype = func.validate(equal_slopes_tolerance=equal_slopes_tolerance)
 
-        if (bound == 'eq') and \
-           (ftype == characterize_function.affine):
+        if (bound == 'eq') and (ftype == characterize_function.affine):
             transform = piecewise_convex
-        elif (bound == 'lb') and \
-             (ftype in (characterize_function.affine,
-                        characterize_function.convex)):
+        elif (bound == 'lb') and (
+            ftype in (characterize_function.affine, characterize_function.convex)
+        ):
             transform = piecewise_convex
-        elif (bound == 'ub') and \
-             (ftype in (characterize_function.affine,
-                        characterize_function.concave)):
+        elif (bound == 'ub') and (
+            ftype in (characterize_function.affine, characterize_function.concave)
+        ):
             transform = piecewise_convex
 
-    return transform(func,
-                     input=input,
-                     output=output,
-                     bound=bound,
-                     validate=validate,
-                     equal_slopes_tolerance=\
-                         equal_slopes_tolerance,
-                     require_bounded_input_variable=\
-                         require_bounded_input_variable,
-                     require_variable_domain_coverage=\
-                         require_variable_domain_coverage)
+    return transform(
+        func,
+        input=input,
+        output=output,
+        bound=bound,
+        validate=validate,
+        equal_slopes_tolerance=equal_slopes_tolerance,
+        require_bounded_input_variable=require_bounded_input_variable,
+        require_variable_domain_coverage=require_variable_domain_coverage,
+    )
+
 
 class PiecewiseLinearFunction(object):
     """A piecewise linear function
@@ -238,13 +243,10 @@ class PiecewiseLinearFunction(object):
             keyword is :const:`True`; otherwise, they are
             ignored.
     """
+
     __slots__ = ("_breakpoints", "_values")
 
-    def __init__(self,
-                 breakpoints,
-                 values,
-                 validate=True,
-                 **kwds):
+    def __init__(self, breakpoints, values, validate=True, **kwds):
         self._breakpoints = breakpoints
         self._values = values
         if type(self._breakpoints) is not tuple:
@@ -255,14 +257,15 @@ class PiecewiseLinearFunction(object):
             raise ValueError(
                 "The number of breakpoints (%s) differs from "
                 "the number of function values (%s)"
-                % (len(self._breakpoints), len(self._values)))
+                % (len(self._breakpoints), len(self._values))
+            )
         if validate:
             self.validate(**kwds)
 
     def __getstate__(self):
         """Required for older versions of the pickle
         protocol since this class uses __slots__"""
-        return {key:getattr(self, key) for key in self.__slots__}
+        return {key: getattr(self, key) for key in self.__slots__}
 
     def __setstate__(self, state):
         """Required for older versions of the pickle
@@ -270,8 +273,7 @@ class PiecewiseLinearFunction(object):
         for key in state:
             setattr(self, key, state[key])
 
-    def validate(self,
-                 equal_slopes_tolerance=1e-6):
+    def validate(self, equal_slopes_tolerance=1e-6):
         """
         Validate this piecewise linear function by verifying
         various properties of the breakpoints and values
@@ -286,7 +288,7 @@ class PiecewiseLinearFunction(object):
 
         Returns:
             int:
-                a function characterization code (see \
+                a function characterization code (see
                 :func:`util.characterize_function`)
 
         Raises:
@@ -297,21 +299,24 @@ class PiecewiseLinearFunction(object):
         values = [_value(x) for x in self._values]
         if not is_nondecreasing(breakpoints):
             raise PiecewiseValidationError(
-                "The list of breakpoints is not nondecreasing: %s"
-                % (str(breakpoints)))
+                "The list of breakpoints is not nondecreasing: %s" % (str(breakpoints))
+            )
 
         ftype, slopes = characterize_function(breakpoints, values)
         for i in range(1, len(slopes)):
-            if (slopes[i-1] is not None) and \
-               (slopes[i] is not None) and \
-               (abs(slopes[i-1] - slopes[i]) <= equal_slopes_tolerance):
+            if (
+                (slopes[i - 1] is not None)
+                and (slopes[i] is not None)
+                and (abs(slopes[i - 1] - slopes[i]) <= equal_slopes_tolerance)
+            ):
                 raise PiecewiseValidationError(
                     "Piecewise function validation detected slopes "
                     "of consecutive line segments to be within %s "
                     "of one another. This may cause numerical issues. "
                     "To avoid this error, set the 'equal_slopes_tolerance' "
                     "keyword to a smaller value or disable validation."
-                    % (equal_slopes_tolerance))
+                    % (equal_slopes_tolerance)
+                )
 
         return ftype
 
@@ -335,18 +340,19 @@ class PiecewiseLinearFunction(object):
             if xP == x:
                 return float(_value(self.values[i]))
         elif i != len(self.breakpoints):
-            xL = _value(self.breakpoints[i-1])
+            xL = _value(self.breakpoints[i - 1])
             xU = _value(self.breakpoints[i])
             assert xL <= xU
             if (xL <= x) and (x <= xU):
-                yL = _value(self.values[i-1])
+                yL = _value(self.values[i - 1])
                 yU = _value(self.values[i])
-                return yL + (float(yU-yL)/(xU-xL))*(x-xL)
-        raise ValueError("The point %s is outside of the "
-                         "function domain: [%s,%s]."
-                         % (x,
-                            _value(self.breakpoints[0]),
-                            _value(self.breakpoints[-1])))
+                return yL + (float(yU - yL) / (xU - xL)) * (x - xL)
+        raise ValueError(
+            "The point %s is outside of the "
+            "function domain: [%s,%s]."
+            % (x, _value(self.breakpoints[0]), _value(self.breakpoints[-1]))
+        )
+
 
 class TransformedPiecewiseLinearFunction(block):
     """Base class for transformed piecewise linear functions
@@ -384,23 +390,16 @@ class TransformedPiecewiseLinearFunction(block):
             ignored.
     """
 
-    def __init__(self,
-                 f,
-                 input=None,
-                 output=None,
-                 bound='eq',
-                 validate=True,
-                 **kwds):
+    def __init__(self, f, input=None, output=None, bound='eq', validate=True, **kwds):
         super(TransformedPiecewiseLinearFunction, self).__init__()
         assert isinstance(f, PiecewiseLinearFunction)
         if bound not in ('lb', 'ub', 'eq'):
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            raise ValueError(
+                "Invalid bound type %r. Must be one of: ['lb','ub','eq']" % (bound)
+            )
         self._bound = bound
         self._f = f
-        self._inout = expression_tuple([expression(input),
-                                        expression(output)])
+        self._inout = expression_tuple([expression(input), expression(output)])
         if validate:
             self.validate(**kwds)
 
@@ -426,10 +425,12 @@ class TransformedPiecewiseLinearFunction(block):
         relationship ('lb','ub','eq')."""
         return self._bound
 
-    def validate(self,
-                 equal_slopes_tolerance=1e-6,
-                 require_bounded_input_variable=True,
-                 require_variable_domain_coverage=True):
+    def validate(
+        self,
+        equal_slopes_tolerance=1e-6,
+        require_bounded_input_variable=True,
+        require_variable_domain_coverage=True,
+    ):
         """
         Validate this piecewise linear function by verifying
         various properties of the breakpoints, values, and
@@ -459,58 +460,51 @@ class TransformedPiecewiseLinearFunction(block):
 
         Returns:
             int:
-                a function characterization code (see \
+                a function characterization code (see
                 :func:`util.characterize_function`)
 
         Raises:
             PiecewiseValidationError: if validation fails
         """
-        ftype = self._f.validate(
-            equal_slopes_tolerance=equal_slopes_tolerance)
-        assert ftype in (1,2,3,4,5)
+        ftype = self._f.validate(equal_slopes_tolerance=equal_slopes_tolerance)
+        assert ftype in (1, 2, 3, 4, 5)
 
         input_var = self.input.expr
         if not isinstance(input_var, IVariable):
             input_var = None
 
-        if require_bounded_input_variable and \
-           ((input_var is None) or \
-            (not input_var.has_lb()) or \
-            (not input_var.has_ub())):
-                raise PiecewiseValidationError(
-                    "Piecewise function input is not a "
-                    "variable with finite upper and lower "
-                    "bounds: %s. To avoid this error, set the "
-                    "'require_bounded_input_variable' keyword "
-                    "to False or disable validation."
-                    % (str(input_var)))
+        if require_bounded_input_variable and (
+            (input_var is None) or (not input_var.has_lb()) or (not input_var.has_ub())
+        ):
+            raise PiecewiseValidationError(
+                "Piecewise function input is not a "
+                "variable with finite upper and lower "
+                "bounds: %s. To avoid this error, set the "
+                "'require_bounded_input_variable' keyword "
+                "to False or disable validation." % (str(input_var))
+            )
 
-        if require_variable_domain_coverage and \
-           (input_var is not None):
+        if require_variable_domain_coverage and (input_var is not None):
             domain_lb = _value(self.breakpoints[0])
             domain_ub = _value(self.breakpoints[-1])
-            if input_var.has_lb() and \
-               _value(input_var.lb) < domain_lb:
+            if input_var.has_lb() and _value(input_var.lb) < domain_lb:
                 raise PiecewiseValidationError(
                     "Piecewise function domain does not include "
                     "the lower bound of the input variable: "
                     "%s.ub = %s > %s. To avoid this error, set "
                     "the 'require_variable_domain_coverage' "
                     "keyword to False or disable validation."
-                    % (input_var.name,
-                       _value(input_var.lb),
-                       domain_lb))
-            if input_var.has_ub() and \
-               _value(input_var.ub) > domain_ub:
+                    % (input_var.name, _value(input_var.lb), domain_lb)
+                )
+            if input_var.has_ub() and _value(input_var.ub) > domain_ub:
                 raise PiecewiseValidationError(
                     "Piecewise function domain does not include "
                     "the upper bound of the input variable: "
                     "%s.ub = %s > %s. To avoid this error, set "
                     "the 'require_variable_domain_coverage' "
                     "keyword to False or disable validation."
-                    % (input_var.name,
-                       _value(input_var.ub),
-                       domain_ub))
+                    % (input_var.name, _value(input_var.ub), domain_ub)
+                )
 
         return ftype
 
@@ -529,6 +523,7 @@ class TransformedPiecewiseLinearFunction(block):
         given point using interpolation"""
         return self._f(x)
 
+
 class piecewise_convex(TransformedPiecewiseLinearFunction):
     """Simple convex piecewise representation
 
@@ -543,15 +538,12 @@ class piecewise_convex(TransformedPiecewiseLinearFunction):
         breakpoints = self.breakpoints
         values = self.values
         self.c = constraint_list()
-        for i in range(len(breakpoints)-1):
+        for i in range(len(breakpoints) - 1):
             X0 = breakpoints[i]
             F_AT_X0 = values[i]
-            dF_AT_X0 = (values[i+1] - F_AT_X0) / \
-                       (breakpoints[i+1] - X0)
-            const = F_AT_X0 - dF_AT_X0*X0
-            con = linear_constraint(
-                (self.output, self.input),
-                (-1, dF_AT_X0))
+            dF_AT_X0 = (values[i + 1] - F_AT_X0) / (breakpoints[i + 1] - X0)
+            const = F_AT_X0 - dF_AT_X0 * X0
+            con = linear_constraint((self.output, self.input), (-1, dF_AT_X0))
             if self.bound == 'ub':
                 con.lb = -const
             elif self.bound == 'lb':
@@ -568,10 +560,11 @@ class piecewise_convex(TransformedPiecewiseLinearFunction):
         # variable, but its not always the case, and there's
         # no guarantee that the input "variable" is not a
         # more general linear expression.
-        self.c.append(linear_constraint(
-            terms=[(self.input, 1)],
-            lb=self.breakpoints[0],
-            ub=self.breakpoints[-1]))
+        self.c.append(
+            linear_constraint(
+                terms=[(self.input, 1)], lb=self.breakpoints[0], ub=self.breakpoints[-1]
+            )
+        )
 
     def validate(self, **kwds):
         """
@@ -584,32 +577,36 @@ class piecewise_convex(TransformedPiecewiseLinearFunction):
         descriptions.
         """
         ftype = super(piecewise_convex, self).validate(**kwds)
-        if (self.bound == 'eq') and \
-           (ftype != characterize_function.affine):
+        if (self.bound == 'eq') and (ftype != characterize_function.affine):
             raise PiecewiseValidationError(
                 "The bound type is 'eq' but the function "
                 "was not characterized as affine (only two "
                 "breakpoints). The 'convex' piecewise "
-                "representation does not support this function.")
-        elif (self.bound == 'lb') and \
-             (ftype not in (characterize_function.affine,
-                            characterize_function.convex)):
+                "representation does not support this function."
+            )
+        elif (self.bound == 'lb') and (
+            ftype not in (characterize_function.affine, characterize_function.convex)
+        ):
             raise PiecewiseValidationError(
                 "The bound type is 'lb' but the function "
                 "was not characterized as convex or affine. "
                 "The 'convex' piecewise representation does "
-                "not support this function.")
-        elif (self.bound == 'ub') and \
-             (ftype not in (characterize_function.affine,
-                            characterize_function.concave)):
+                "not support this function."
+            )
+        elif (self.bound == 'ub') and (
+            ftype not in (characterize_function.affine, characterize_function.concave)
+        ):
             raise PiecewiseValidationError(
                 "The bound type is 'ub' but the function "
                 "was not characterized as concave or affine. "
                 "The 'convex' piecewise representation does "
-                "not support this function.")
+                "not support this function."
+            )
         return ftype
 
+
 registered_transforms['convex'] = piecewise_convex
+
 
 class piecewise_sos2(TransformedPiecewiseLinearFunction):
     """Discrete SOS2 piecewise representation
@@ -622,21 +619,25 @@ class piecewise_sos2(TransformedPiecewiseLinearFunction):
         super(piecewise_sos2, self).__init__(*args, **kwds)
 
         # create vars
-        y_tuple = tuple(variable(lb=0)
-                        for i in range(len(self.breakpoints)))
+        y_tuple = tuple(variable(lb=0) for i in range(len(self.breakpoints)))
         y = self.v = variable_tuple(y_tuple)
 
         # create piecewise constraints
         self.c = constraint_list()
 
-        self.c.append(linear_constraint(
-            variables=y_tuple + (self.input,),
-            coefficients=self.breakpoints + (-1,),
-            rhs=0))
+        self.c.append(
+            linear_constraint(
+                variables=y_tuple + (self.input,),
+                coefficients=self.breakpoints + (-1,),
+                rhs=0,
+            )
+        )
 
-        self.c.append(linear_constraint(
-            variables=y_tuple + (self.output,),
-            coefficients=self.values + (-1,)))
+        self.c.append(
+            linear_constraint(
+                variables=y_tuple + (self.output,), coefficients=self.values + (-1,)
+            )
+        )
         if self.bound == 'ub':
             self.c[-1].lb = 0
         elif self.bound == 'lb':
@@ -645,9 +646,9 @@ class piecewise_sos2(TransformedPiecewiseLinearFunction):
             assert self.bound == 'eq'
             self.c[-1].rhs = 0
 
-        self.c.append(linear_constraint(variables=y_tuple,
-                                        coefficients=(1,)*len(y),
-                                        rhs=1))
+        self.c.append(
+            linear_constraint(variables=y_tuple, coefficients=(1,) * len(y), rhs=1)
+        )
 
         self.s = sos2(y)
 
@@ -663,7 +664,9 @@ class piecewise_sos2(TransformedPiecewiseLinearFunction):
         """
         return super(piecewise_sos2, self).validate(**kwds)
 
+
 registered_transforms['sos2'] = piecewise_sos2
+
 
 class piecewise_dcc(TransformedPiecewiseLinearFunction):
     """Discrete DCC piecewise representation
@@ -676,43 +679,50 @@ class piecewise_dcc(TransformedPiecewiseLinearFunction):
         super(piecewise_dcc, self).__init__(*args, **kwds)
 
         # create index sets
-        polytopes = range(len(self.breakpoints)-1)
+        polytopes = range(len(self.breakpoints) - 1)
         vertices = range(len(self.breakpoints))
+
         def polytope_verts(p):
-            return range(p,p+2)
+            return range(p, p + 2)
 
         # create vars
         self.v = variable_dict()
         lmbda = self.v['lambda'] = variable_dict(
-            ((p,v), variable(lb=0))
-            for p in polytopes
-            for v in vertices)
+            ((p, v), variable(lb=0)) for p in polytopes for v in vertices
+        )
         y = self.v['y'] = variable_tuple(
-            variable(domain_type=IntegerSet, lb=0, ub=1)
-            for p in polytopes)
+            variable(domain_type=IntegerSet, lb=0, ub=1) for p in polytopes
+        )
 
         # create piecewise constraints
         self.c = constraint_list()
 
-        self.c.append(linear_constraint(
-            variables=tuple(lmbda[p,v]
-                            for p in polytopes
-                            for v in polytope_verts(p)) + \
-                      (self.input,),
-            coefficients=tuple(self.breakpoints[v]
-                               for p in polytopes
-                               for v in polytope_verts(p)) + \
-                      (-1,),
-            rhs=0))
+        self.c.append(
+            linear_constraint(
+                variables=tuple(
+                    lmbda[p, v] for p in polytopes for v in polytope_verts(p)
+                )
+                + (self.input,),
+                coefficients=tuple(
+                    self.breakpoints[v] for p in polytopes for v in polytope_verts(p)
+                )
+                + (-1,),
+                rhs=0,
+            )
+        )
 
-        self.c.append(linear_constraint(
-            variables=tuple(lmbda[p,v]
-                            for p in polytopes
-                            for v in polytope_verts(p)) + \
-                      (self.output,),
-            coefficients=tuple(self.values[v]
-                               for p in polytopes
-                               for v in polytope_verts(p)) + (-1,)))
+        self.c.append(
+            linear_constraint(
+                variables=tuple(
+                    lmbda[p, v] for p in polytopes for v in polytope_verts(p)
+                )
+                + (self.output,),
+                coefficients=tuple(
+                    self.values[v] for p in polytopes for v in polytope_verts(p)
+                )
+                + (-1,),
+            )
+        )
         if self.bound == 'ub':
             self.c[-1].lb = 0
         elif self.bound == 'lb':
@@ -723,18 +733,19 @@ class piecewise_dcc(TransformedPiecewiseLinearFunction):
 
         clist = []
         for p in polytopes:
-            variables = tuple(lmbda[p,v] for v in polytope_verts(p))
+            variables = tuple(lmbda[p, v] for v in polytope_verts(p))
             clist.append(
                 linear_constraint(
                     variables=variables + (y[p],),
-                    coefficients=(1,)*len(variables) + (-1,),
-                    rhs=0))
+                    coefficients=(1,) * len(variables) + (-1,),
+                    rhs=0,
+                )
+            )
         self.c.append(constraint_tuple(clist))
 
-        self.c.append(linear_constraint(
-            variables=tuple(y),
-            coefficients=(1,)*len(y),
-            rhs=1))
+        self.c.append(
+            linear_constraint(variables=tuple(y), coefficients=(1,) * len(y), rhs=1)
+        )
 
     def validate(self, **kwds):
         """
@@ -748,7 +759,9 @@ class piecewise_dcc(TransformedPiecewiseLinearFunction):
         """
         return super(piecewise_dcc, self).validate(**kwds)
 
+
 registered_transforms['dcc'] = piecewise_dcc
+
 
 class piecewise_cc(TransformedPiecewiseLinearFunction):
     """Discrete CC piecewise representation
@@ -761,37 +774,42 @@ class piecewise_cc(TransformedPiecewiseLinearFunction):
         super(piecewise_cc, self).__init__(*args, **kwds)
 
         # create index sets
-        polytopes = range(len(self.breakpoints)-1)
+        polytopes = range(len(self.breakpoints) - 1)
         vertices = range(len(self.breakpoints))
+
         def vertex_polys(v):
             if v == 0:
                 return [v]
-            if v == len(self.breakpoints)-1:
-                return [v-1]
+            if v == len(self.breakpoints) - 1:
+                return [v - 1]
             else:
-                return [v-1,v]
+                return [v - 1, v]
 
         # create vars
         self.v = variable_dict()
-        lmbda = self.v['lambda'] = variable_tuple(
-            variable(lb=0) for v in vertices)
+        lmbda = self.v['lambda'] = variable_tuple(variable(lb=0) for v in vertices)
         y = self.v['y'] = variable_tuple(
-            variable(domain_type=IntegerSet, lb=0, ub=1)
-            for p in polytopes)
+            variable(domain_type=IntegerSet, lb=0, ub=1) for p in polytopes
+        )
 
         lmbda_tuple = tuple(lmbda)
 
         # create piecewise constraints
         self.c = constraint_list()
 
-        self.c.append(linear_constraint(
-            variables=lmbda_tuple + (self.input,),
-            coefficients=self.breakpoints + (-1,),
-            rhs=0))
+        self.c.append(
+            linear_constraint(
+                variables=lmbda_tuple + (self.input,),
+                coefficients=self.breakpoints + (-1,),
+                rhs=0,
+            )
+        )
 
-        self.c.append(linear_constraint(
-            variables=lmbda_tuple + (self.output,),
-            coefficients=self.values + (-1,)))
+        self.c.append(
+            linear_constraint(
+                variables=lmbda_tuple + (self.output,), coefficients=self.values + (-1,)
+            )
+        )
         if self.bound == 'ub':
             self.c[-1].lb = 0
         elif self.bound == 'lb':
@@ -800,24 +818,27 @@ class piecewise_cc(TransformedPiecewiseLinearFunction):
             assert self.bound == 'eq'
             self.c[-1].rhs = 0
 
-        self.c.append(linear_constraint(
-            variables=lmbda_tuple,
-            coefficients=(1,)*len(lmbda),
-            rhs=1))
+        self.c.append(
+            linear_constraint(
+                variables=lmbda_tuple, coefficients=(1,) * len(lmbda), rhs=1
+            )
+        )
 
         clist = []
         for v in vertices:
             variables = tuple(y[p] for p in vertex_polys(v))
-            clist.append(linear_constraint(
-                variables=variables + (lmbda[v],),
-                coefficients=(1,)*len(variables) + (-1,),
-                lb=0))
+            clist.append(
+                linear_constraint(
+                    variables=variables + (lmbda[v],),
+                    coefficients=(1,) * len(variables) + (-1,),
+                    lb=0,
+                )
+            )
         self.c.append(constraint_tuple(clist))
 
-        self.c.append(linear_constraint(
-            variables=tuple(y),
-            coefficients=(1,)*len(y),
-            rhs=1))
+        self.c.append(
+            linear_constraint(variables=tuple(y), coefficients=(1,) * len(y), rhs=1)
+        )
 
     def validate(self, **kwds):
         """
@@ -831,7 +852,9 @@ class piecewise_cc(TransformedPiecewiseLinearFunction):
         """
         return super(piecewise_cc, self).validate(**kwds)
 
+
 registered_transforms['cc'] = piecewise_cc
+
 
 class piecewise_mc(TransformedPiecewiseLinearFunction):
     """Discrete MC piecewise representation
@@ -844,38 +867,46 @@ class piecewise_mc(TransformedPiecewiseLinearFunction):
         super(piecewise_mc, self).__init__(*args, **kwds)
 
         # create indexers
-        polytopes = range(len(self.breakpoints)-1)
+        polytopes = range(len(self.breakpoints) - 1)
 
         # create constants (using future division)
         # these might also be expressions if the breakpoints
         # or values lists contain mutable objects
-        slopes = tuple((self.values[p+1] - self.values[p]) / \
-                       (self.breakpoints[p+1] - self.breakpoints[p])
-                       for p in polytopes)
-        intercepts = tuple(self.values[p] - \
-                           (slopes[p] * self.breakpoints[p])
-                           for p in polytopes)
+        slopes = tuple(
+            (self.values[p + 1] - self.values[p])
+            / (self.breakpoints[p + 1] - self.breakpoints[p])
+            for p in polytopes
+        )
+        intercepts = tuple(
+            self.values[p] - (slopes[p] * self.breakpoints[p]) for p in polytopes
+        )
 
         # create vars
         self.v = variable_dict()
-        lmbda = self.v['lambda'] = variable_tuple(
-            variable() for p in polytopes)
+        lmbda = self.v['lambda'] = variable_tuple(variable() for p in polytopes)
         lmbda_tuple = tuple(lmbda)
         y = self.v['y'] = variable_tuple(
-            variable(domain_type=IntegerSet, lb=0, ub=1) for p in polytopes)
+            variable(domain_type=IntegerSet, lb=0, ub=1) for p in polytopes
+        )
         y_tuple = tuple(y)
 
         # create piecewise constraints
         self.c = constraint_list()
 
-        self.c.append(linear_constraint(
-            variables=lmbda_tuple + (self.input,),
-            coefficients=(1,)*len(lmbda) + (-1,),
-            rhs=0))
+        self.c.append(
+            linear_constraint(
+                variables=lmbda_tuple + (self.input,),
+                coefficients=(1,) * len(lmbda) + (-1,),
+                rhs=0,
+            )
+        )
 
-        self.c.append(linear_constraint(
-            variables=lmbda_tuple + y_tuple + (self.output,),
-            coefficients=slopes + intercepts + (-1,)))
+        self.c.append(
+            linear_constraint(
+                variables=lmbda_tuple + y_tuple + (self.output,),
+                coefficients=slopes + intercepts + (-1,),
+            )
+        )
         if self.bound == 'ub':
             self.c[-1].lb = 0
         elif self.bound == 'lb':
@@ -887,21 +918,26 @@ class piecewise_mc(TransformedPiecewiseLinearFunction):
         clist1 = []
         clist2 = []
         for p in polytopes:
-            clist1.append(linear_constraint(
-                variables=(y[p], lmbda[p]),
-                coefficients=(self.breakpoints[p], -1),
-                ub=0))
-            clist2.append(linear_constraint(
-                variables=(lmbda[p], y[p]),
-                coefficients=(1, -self.breakpoints[p+1]),
-                ub=0))
+            clist1.append(
+                linear_constraint(
+                    variables=(y[p], lmbda[p]),
+                    coefficients=(self.breakpoints[p], -1),
+                    ub=0,
+                )
+            )
+            clist2.append(
+                linear_constraint(
+                    variables=(lmbda[p], y[p]),
+                    coefficients=(1, -self.breakpoints[p + 1]),
+                    ub=0,
+                )
+            )
         self.c.append(constraint_tuple(clist1))
         self.c.append(constraint_tuple(clist2))
 
-        self.c.append(linear_constraint(
-            variables=y_tuple,
-            coefficients=(1,)*len(y),
-            rhs=1))
+        self.c.append(
+            linear_constraint(variables=y_tuple, coefficients=(1,) * len(y), rhs=1)
+        )
 
     def validate(self, **kwds):
         """
@@ -917,11 +953,13 @@ class piecewise_mc(TransformedPiecewiseLinearFunction):
         # this representation does not support step functions
         if ftype == characterize_function.step:
             raise PiecewiseValidationError(
-                "The 'mc' piecewise representation does "
-                "not support step functions.")
+                "The 'mc' piecewise representation does not support step functions."
+            )
         return ftype
 
+
 registered_transforms['mc'] = piecewise_mc
+
 
 class piecewise_inc(TransformedPiecewiseLinearFunction):
     """Discrete INC piecewise representation
@@ -934,34 +972,39 @@ class piecewise_inc(TransformedPiecewiseLinearFunction):
         super(piecewise_inc, self).__init__(*args, **kwds)
 
         # create indexers
-        polytopes = range(len(self.breakpoints)-1)
+        polytopes = range(len(self.breakpoints) - 1)
 
         # create vars
         self.v = variable_dict()
-        delta = self.v['delta'] = variable_tuple(
-            variable() for p in polytopes)
+        delta = self.v['delta'] = variable_tuple(variable() for p in polytopes)
         delta[0].ub = 1
         delta[-1].lb = 0
         delta_tuple = tuple(delta)
         y = self.v['y'] = variable_tuple(
-            variable(domain_type=IntegerSet, lb=0, ub=1)
-            for p in polytopes[:-1])
+            variable(domain_type=IntegerSet, lb=0, ub=1) for p in polytopes[:-1]
+        )
 
         # create piecewise constraints
         self.c = constraint_list()
 
-        self.c.append(linear_constraint(
-            variables=(self.input,) + delta_tuple,
-            coefficients=(-1,) + tuple(self.breakpoints[p+1] - \
-                                       self.breakpoints[p]
-                                       for p in polytopes),
-            rhs=-self.breakpoints[0]))
+        self.c.append(
+            linear_constraint(
+                variables=(self.input,) + delta_tuple,
+                coefficients=(-1,)
+                + tuple(
+                    self.breakpoints[p + 1] - self.breakpoints[p] for p in polytopes
+                ),
+                rhs=-self.breakpoints[0],
+            )
+        )
 
-        self.c.append(linear_constraint(
-            variables=(self.output,) + delta_tuple,
-            coefficients=(-1,) + tuple(self.values[p+1] - \
-                                       self.values[p]
-                                       for p in polytopes)))
+        self.c.append(
+            linear_constraint(
+                variables=(self.output,) + delta_tuple,
+                coefficients=(-1,)
+                + tuple(self.values[p + 1] - self.values[p] for p in polytopes),
+            )
+        )
         if self.bound == 'ub':
             self.c[-1].lb = -self.values[0]
         elif self.bound == 'lb':
@@ -973,14 +1016,16 @@ class piecewise_inc(TransformedPiecewiseLinearFunction):
         clist1 = []
         clist2 = []
         for p in polytopes[:-1]:
-            clist1.append(linear_constraint(
-                variables=(delta[p+1], y[p]),
-                coefficients=(1, -1),
-                ub=0))
-            clist2.append(linear_constraint(
-                variables=(y[p], delta[p]),
-                coefficients=(1, -1),
-                ub=0))
+            clist1.append(
+                linear_constraint(
+                    variables=(delta[p + 1], y[p]), coefficients=(1, -1), ub=0
+                )
+            )
+            clist2.append(
+                linear_constraint(
+                    variables=(y[p], delta[p]), coefficients=(1, -1), ub=0
+                )
+            )
         self.c.append(constraint_tuple(clist1))
         self.c.append(constraint_tuple(clist2))
 
@@ -996,7 +1041,9 @@ class piecewise_inc(TransformedPiecewiseLinearFunction):
         """
         return super(piecewise_inc, self).validate(**kwds)
 
+
 registered_transforms['inc'] = piecewise_inc
+
 
 class piecewise_dlog(TransformedPiecewiseLinearFunction):
     """Discrete DLOG piecewise representation
@@ -1012,51 +1059,55 @@ class piecewise_dlog(TransformedPiecewiseLinearFunction):
         breakpoints = self.breakpoints
         values = self.values
 
-        if not is_positive_power_of_two(len(breakpoints)-1):
-            raise ValueError("The list of breakpoints must be "
-                             "of length (2^n)+1 for some positive "
-                             "integer n. Invalid length: %s"
-                             % (len(breakpoints)))
+        if not is_positive_power_of_two(len(breakpoints) - 1):
+            raise ValueError(
+                "The list of breakpoints must be "
+                "of length (2^n)+1 for some positive "
+                "integer n. Invalid length: %s" % (len(breakpoints))
+            )
 
         # create branching schemes
-        L = log2floor(len(breakpoints)-1)
-        assert 2**L == len(breakpoints)-1
+        L = log2floor(len(breakpoints) - 1)
+        assert 2**L == len(breakpoints) - 1
         B_LEFT, B_RIGHT = self._branching_scheme(L)
 
         # create indexers
-        polytopes = range(len(breakpoints)-1)
+        polytopes = range(len(breakpoints) - 1)
         vertices = range(len(breakpoints))
+
         def polytope_verts(p):
-            return range(p,p+2)
+            return range(p, p + 2)
 
         # create vars
         self.v = variable_dict()
         lmbda = self.v['lambda'] = variable_dict(
-            ((p,v), variable(lb=0))
-            for p in polytopes
-            for v in polytope_verts(p))
+            ((p, v), variable(lb=0)) for p in polytopes for v in polytope_verts(p)
+        )
         y = self.v['y'] = variable_tuple(
-            variable(domain_type=IntegerSet, lb=0, ub=1) for i in range(L))
+            variable(domain_type=IntegerSet, lb=0, ub=1) for i in range(L)
+        )
 
         # create piecewise constraints
         self.c = constraint_list()
 
-        self.c.append(linear_constraint(
-            variables=(self.input,) + tuple(lmbda[p,v]
-                                            for p in polytopes
-                                            for v in polytope_verts(p)),
-            coefficients=(-1,) + tuple(breakpoints[v]
-                                       for p in polytopes
-                                       for v in polytope_verts(p)),
-            rhs=0))
+        self.c.append(
+            linear_constraint(
+                variables=(self.input,)
+                + tuple(lmbda[p, v] for p in polytopes for v in polytope_verts(p)),
+                coefficients=(-1,)
+                + tuple(breakpoints[v] for p in polytopes for v in polytope_verts(p)),
+                rhs=0,
+            )
+        )
 
-        self.c.append(linear_constraint(
-            variables=(self.output,) + tuple(lmbda[p,v]
-                                             for p in polytopes
-                                             for v in polytope_verts(p)),
-            coefficients=(-1,) + tuple(values[v]
-                                       for p in polytopes
-                                       for v in polytope_verts(p))))
+        self.c.append(
+            linear_constraint(
+                variables=(self.output,)
+                + tuple(lmbda[p, v] for p in polytopes for v in polytope_verts(p)),
+                coefficients=(-1,)
+                + tuple(values[v] for p in polytopes for v in polytope_verts(p)),
+            )
+        )
         if self.bound == 'ub':
             self.c[-1].lb = 0
         elif self.bound == 'lb':
@@ -1065,44 +1116,49 @@ class piecewise_dlog(TransformedPiecewiseLinearFunction):
             assert self.bound == 'eq'
             self.c[-1].rhs = 0
 
-        self.c.append(linear_constraint(
-            variables=tuple(lmbda.values()),
-            coefficients=(1,)*len(lmbda),
-            rhs=1))
+        self.c.append(
+            linear_constraint(
+                variables=tuple(lmbda.values()), coefficients=(1,) * len(lmbda), rhs=1
+            )
+        )
 
         clist = []
         for i in range(L):
-            variables = tuple(lmbda[p,v]
-                              for p in B_LEFT[i]
-                              for v in polytope_verts(p))
-            clist.append(linear_constraint(
-                variables=variables + (y[i],),
-                coefficients=(1,)*len(variables) + (-1,),
-                ub=0))
+            variables = tuple(lmbda[p, v] for p in B_LEFT[i] for v in polytope_verts(p))
+            clist.append(
+                linear_constraint(
+                    variables=variables + (y[i],),
+                    coefficients=(1,) * len(variables) + (-1,),
+                    ub=0,
+                )
+            )
         self.c.append(constraint_tuple(clist))
         del clist
 
         clist = []
         for i in range(L):
-            variables = tuple(lmbda[p,v]
-                              for p in B_RIGHT[i]
-                              for v in polytope_verts(p))
-            clist.append(linear_constraint(
-                variables=variables + (y[i],),
-                coefficients=(1,)*len(variables) + (1,),
-                ub=1))
+            variables = tuple(
+                lmbda[p, v] for p in B_RIGHT[i] for v in polytope_verts(p)
+            )
+            clist.append(
+                linear_constraint(
+                    variables=variables + (y[i],),
+                    coefficients=(1,) * len(variables) + (1,),
+                    ub=1,
+                )
+            )
         self.c.append(constraint_tuple(clist))
 
     def _branching_scheme(self, L):
         N = 2**L
         B_LEFT = []
-        for i in range(1,L+1):
+        for i in range(1, L + 1):
             start = 1
-            step = N//(2**i)
+            step = N // (2**i)
             tmp = []
             while start < N:
-                tmp.extend(j-1 for j in range(start,start+step))
-                start += 2*step
+                tmp.extend(j - 1 for j in range(start, start + step))
+                start += 2 * step
             B_LEFT.append(tmp)
 
         biglist = range(N)
@@ -1128,7 +1184,9 @@ class piecewise_dlog(TransformedPiecewiseLinearFunction):
         """
         return super(piecewise_dlog, self).validate(**kwds)
 
+
 registered_transforms['dlog'] = piecewise_dlog
+
 
 class piecewise_log(TransformedPiecewiseLinearFunction):
     """Discrete LOG piecewise representation
@@ -1144,15 +1202,16 @@ class piecewise_log(TransformedPiecewiseLinearFunction):
         breakpoints = self.breakpoints
         values = self.values
 
-        if not is_positive_power_of_two(len(breakpoints)-1):
-            raise ValueError("The list of breakpoints must be "
-                             "of length (2^n)+1 for some positive "
-                             "integer n. Invalid length: %s"
-                             % (len(breakpoints)))
+        if not is_positive_power_of_two(len(breakpoints) - 1):
+            raise ValueError(
+                "The list of breakpoints must be "
+                "of length (2^n)+1 for some positive "
+                "integer n. Invalid length: %s" % (len(breakpoints))
+            )
 
         # create branching schemes
-        L = log2floor(len(breakpoints)-1)
-        S,B_LEFT,B_RIGHT = self._branching_scheme(L)
+        L = log2floor(len(breakpoints) - 1)
+        S, B_LEFT, B_RIGHT = self._branching_scheme(L)
 
         # create indexers
         polytopes = range(len(breakpoints) - 1)
@@ -1160,22 +1219,27 @@ class piecewise_log(TransformedPiecewiseLinearFunction):
 
         # create vars
         self.v = variable_dict()
-        lmbda = self.v['lambda'] = variable_tuple(
-            variable(lb=0) for v in vertices)
+        lmbda = self.v['lambda'] = variable_tuple(variable(lb=0) for v in vertices)
         y = self.v['y'] = variable_list(
-            variable(domain_type=IntegerSet, lb=0, ub=1) for s in S)
+            variable(domain_type=IntegerSet, lb=0, ub=1) for s in S
+        )
 
         # create piecewise constraints
         self.c = constraint_list()
 
-        self.c.append(linear_constraint(
-            variables=(self.input,) + tuple(lmbda),
-            coefficients=(-1,) + breakpoints,
-            rhs=0))
+        self.c.append(
+            linear_constraint(
+                variables=(self.input,) + tuple(lmbda),
+                coefficients=(-1,) + breakpoints,
+                rhs=0,
+            )
+        )
 
-        self.c.append(linear_constraint(
-            variables=(self.output,) + tuple(lmbda),
-            coefficients=(-1,) + values))
+        self.c.append(
+            linear_constraint(
+                variables=(self.output,) + tuple(lmbda), coefficients=(-1,) + values
+            )
+        )
         if self.bound == 'ub':
             self.c[-1].lb = 0
         elif self.bound == 'lb':
@@ -1184,40 +1248,57 @@ class piecewise_log(TransformedPiecewiseLinearFunction):
             assert self.bound == 'eq'
             self.c[-1].rhs = 0
 
-        self.c.append(linear_constraint(
-            variables=tuple(lmbda),
-            coefficients=(1,)*len(lmbda),
-            rhs=1))
+        self.c.append(
+            linear_constraint(
+                variables=tuple(lmbda), coefficients=(1,) * len(lmbda), rhs=1
+            )
+        )
 
         clist = []
         for s in S:
-            variables=tuple(lmbda[v] for v in B_LEFT[s])
-            clist.append(linear_constraint(
-                variables=variables + (y[s],),
-                coefficients=(1,)*len(variables) + (-1,),
-                ub=0))
+            variables = tuple(lmbda[v] for v in B_LEFT[s])
+            clist.append(
+                linear_constraint(
+                    variables=variables + (y[s],),
+                    coefficients=(1,) * len(variables) + (-1,),
+                    ub=0,
+                )
+            )
         self.c.append(constraint_tuple(clist))
         del clist
 
         clist = []
         for s in S:
-            variables=tuple(lmbda[v] for v in B_RIGHT[s])
-            clist.append(linear_constraint(
-                variables=variables + (y[s],),
-                coefficients=(1,)*len(variables) + (1,),
-                ub=1))
+            variables = tuple(lmbda[v] for v in B_RIGHT[s])
+            clist.append(
+                linear_constraint(
+                    variables=variables + (y[s],),
+                    coefficients=(1,) * len(variables) + (1,),
+                    ub=1,
+                )
+            )
         self.c.append(constraint_tuple(clist))
 
     def _branching_scheme(self, n):
         N = 2**n
         S = range(n)
         G = generate_gray_code(n)
-        L = tuple([k for k in range(N+1)
-                   if ((k == 0) or (G[k-1][s] == 1))
-                   and ((k == N) or (G[k][s] == 1))] for s in S)
-        R = tuple([k for k in range(N+1)
-                   if ((k == 0) or (G[k-1][s] == 0))
-                   and ((k == N) or (G[k][s] == 0))] for s in S)
+        L = tuple(
+            [
+                k
+                for k in range(N + 1)
+                if ((k == 0) or (G[k - 1][s] == 1)) and ((k == N) or (G[k][s] == 1))
+            ]
+            for s in S
+        )
+        R = tuple(
+            [
+                k
+                for k in range(N + 1)
+                if ((k == 0) or (G[k - 1][s] == 0)) and ((k == N) or (G[k][s] == 0))
+            ]
+            for s in S
+        )
         return S, L, R
 
     def validate(self, **kwds):
@@ -1231,5 +1312,6 @@ class piecewise_log(TransformedPiecewiseLinearFunction):
         descriptions.
         """
         return super(piecewise_log, self).validate(**kwds)
+
 
 registered_transforms['log'] = piecewise_log
