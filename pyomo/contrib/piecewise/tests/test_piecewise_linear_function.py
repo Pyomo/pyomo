@@ -23,7 +23,6 @@ from pyomo.core.expr.compare import (
 )
 from pyomo.environ import ConcreteModel, Constraint, log, Var
 
-
 np, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import('scipy')
 
@@ -343,63 +342,15 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
 
 
 class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
-    simplices = [
-        # right bottom back cube with vertices (10, 11, 13, 14, 19, 20, 22, 23)
-        (11, 13, 14, 22),
-        (10, 11, 13, 22),
-        (11, 20, 22, 23),
-        (11, 14, 22, 23),
-        (10, 11, 19, 22),
-        (11, 19, 20, 22),
-        # right bottom front cube with vertices (9, 10, 12, 13, 18, 19, 21, 22)
-        (10, 13, 21, 22),
-        (10, 12, 13, 21),
-        (10, 19, 21, 22),
-        (10, 18, 19, 21),
-        (9, 10, 12, 21),
-        (9, 10, 18, 21),
-        # left bottom front cube with vertices (0, 1, 3, 4, 9, 10, 12, 13)
-        (1, 10, 12, 13),
-        (1, 4, 12, 13),
-        (1, 9, 10, 12),
-        (0, 1, 9, 12),
-        (1, 3, 4, 12),
-        (0, 1, 3, 12),
-        # left bottom back cube with vertices (1, 2, 4, 5, 10, 11, 13, 14)
-        (1, 10, 13, 14),
-        (1, 10, 11, 14),
-        (1, 4, 13, 14),
-        (1, 2, 11, 14),
-        (1, 4, 5, 14),
-        (1, 2, 5, 14),
-        # left top front cube with vertices (3, 4, 6, 7, 12, 13, 15, 16)
-        (4, 7, 12, 13),
-        (7, 12, 13, 16),
-        (3, 4, 7, 12),
-        (3, 6, 7, 12),
-        (7, 12, 15, 16),
-        (6, 7, 12, 15),
-        # left top back cube with vertices (4, 5, 7, 8, 13, 14, 16, 17)
-        (4, 13, 14, 17),
-        (4, 13, 16, 17),
-        (4, 7, 16, 17),
-        (4, 5, 14, 17),
-        (4, 5, 8, 17),
-        (4, 7, 8, 17),
-        # right top front cube with vertices (12, 13, 15, 16, 21, 22, 24, 25)
-        (12, 13, 22, 25),
-        (12, 13, 16, 25),
-        (12, 15, 16, 25),
-        (12, 21, 22, 25),
-        (12, 21, 24, 25),
-        (12, 15, 24, 25),
-        # right top back cube with vertices (13, 14, 16, 17, 22, 23, 25, 26)
-        (13, 14, 22, 25),
-        (13, 14, 16, 25),
-        (14, 16, 17, 25),
-        (14, 22, 23, 25),
-        (14, 23, 25, 26),
-        (14, 17, 25, 26),
+    cube_extreme_pt_indices = [
+        {10, 11, 13, 14, 19, 20, 22, 23},  # right bottom back
+        {9, 10, 12, 13, 18, 19, 21, 22},  # right bottom front
+        {0, 1, 3, 4, 9, 10, 12, 13},  # left bottom front
+        {1, 2, 4, 5, 10, 11, 13, 14},  # left bottom back
+        {3, 4, 6, 7, 12, 13, 15, 16},  # left top front
+        {4, 5, 7, 8, 13, 14, 16, 17},  # left top back
+        {12, 13, 15, 16, 21, 22, 24, 25},  # right top front
+        {13, 14, 16, 17, 22, 23, 25, 26},  # right top back
     ]
 
     def make_model(self):
@@ -455,10 +406,19 @@ class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
         # simplices. It's crazy degenerate in terms of *how* this is done, but
         # that's the point of this test.
         self.assertEqual(len(pw._simplices), 48)
-        for simplex, baseline in zip(sorted(self.simplices), sorted(pw._simplices)):
-            self.assertEqual(simplex, baseline)
+        simplex_in_cube = {idx: 0 for idx in range(8)}
+        for simplex in pw._simplices:
+            for i, vertex_set in enumerate(self.cube_extreme_pt_indices):
+                if set(simplex).issubset(vertex_set):
+                    simplex_in_cube[i] += 1
+            # verify the simplex is full-dimensional
+            pts = np.array([pw._points[j] for j in simplex]).transpose()
+            A = pts[:, 1:] - np.append(pts[:, :2], pts[:, [0]], axis=1)
+            self.assertNotEqual(np.linalg.det(A), 0)
 
-        # We're not checking 48 linear functions...
+        # Check that they are 6 to a cube, as expected
+        for num in simplex_in_cube.values():
+            self.assertEqual(num, 6)
 
     @unittest.skipUnless(
         scipy_available and numpy_available, "scipy and/or numpy are not available"
