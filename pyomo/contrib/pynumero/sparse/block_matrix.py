@@ -1148,8 +1148,8 @@ class BlockMatrix(BaseBlockMatrix):
                     else:
                         nrows = self._brow_lengths[i]
                         ncols = self._bcol_lengths[j]
-                        matrix = coo_matrix((nrows, ncols))
-                        result.set_block(i, j, operation(matrix, other))
+                        mat = coo_matrix((nrows, ncols))
+                        result.set_block(i, j, operation(mat, other))
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockMatrix':
