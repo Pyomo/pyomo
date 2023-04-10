@@ -20,7 +20,7 @@ Pyomo 6.5.0    (16 Feb 2023)
   - Require `version=` for all deprecation utilities (#2744)
   - Fix `pyomo --version` version string (#2743)
 - Core
-  - Fix minor typo: that -> that in set.py (#2679)
+  - Fix minor typo in set.py (#2679)
   - Fix bugs in scaling transformation (#2678)
   - Rework handling of 'dimensionless' units in Pyomo (#2691)
 - Solver Interfaces
