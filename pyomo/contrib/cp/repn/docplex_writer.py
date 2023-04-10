@@ -121,6 +121,7 @@ cp_solver, docplex_available = attempt_import('docplex.cp.solver')
 
 logger = logging.getLogger('pyomo.contrib.cp')
 
+
 # These are things that don't need special handling:
 class _GENERAL(object):
     pass

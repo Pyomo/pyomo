@@ -93,7 +93,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def __init__(
         self, nbrows, nbcols, rank_ownership, mpi_comm, assert_correct_owners=False
     ):
-
         shape = (nbrows, nbcols)
         self._block_matrix = BlockMatrix(nbrows, nbcols)
         self._mpiw = mpi_comm

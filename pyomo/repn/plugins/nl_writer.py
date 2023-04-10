@@ -2502,7 +2502,6 @@ for _type in (
     ScalarObjective,
     kernel.objective.objective,
 ):
-
     _before_child_handlers[_type] = _before_named_expression
 # Special linear / summation expressions
 _before_child_handlers[MonomialTermExpression] = _before_monomial

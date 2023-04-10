@@ -60,7 +60,6 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                     and self._disjunct_on_active_block(disjunct)
                     and self._disjunct_not_fixed_true(disjunct)
                 ):
-
                     # First, do a couple checks in order to give a more
                     # useful error message
                     disjunction_set = {

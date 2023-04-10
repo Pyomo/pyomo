@@ -1359,7 +1359,6 @@ class Piecewise(Block):
         timer.report()
 
     def add(self, index, _is_indexed=None):
-
         if _is_indexed is None:
             _is_indexed = self.is_indexed()
 

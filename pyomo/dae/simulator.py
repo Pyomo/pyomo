@@ -398,7 +398,6 @@ class Simulator:
     """
 
     def __init__(self, m, package='scipy'):
-
         self._intpackage = package
         if self._intpackage not in ['scipy', 'casadi']:
             raise DAE_Error(
@@ -462,7 +461,6 @@ class Simulator:
         # RHS. Must find a RHS for every derivative var otherwise ERROR. Build
         # dictionary of DerivativeVar:RHS equation.
         for con in m.component_objects(Constraint, active=True):
-
             # Skip the discretization equations if model is discretized
             if '_disc_eq' in con.name:
                 continue
@@ -923,7 +921,6 @@ class Simulator:
                 initcon, tsim, switchpts, varying_inputs, integrator, integrator_options
             )
         else:
-
             if len(switchpts) != 0:
                 tsim, profile = self._simulate_with_casadi_with_inputs(
                     initcon, tsim, varying_inputs, integrator, integrator_options
@@ -941,7 +938,6 @@ class Simulator:
     def _simulate_with_scipy(
         self, initcon, tsim, switchpts, varying_inputs, integrator, integrator_options
     ):
-
         scipyint = scipy.integrate.ode(self._rhsfun).set_integrator(
             integrator, **integrator_options
         )
@@ -950,7 +946,6 @@ class Simulator:
         profile = np.array(initcon)
         i = 1
         while scipyint.successful() and scipyint.t < tsim[-1]:
-
             # check if tsim[i-1] is a switching time and update value
             if tsim[i - 1] in switchpts:
                 for v in self._siminputvars.keys():
@@ -1005,7 +1000,6 @@ class Simulator:
     def _simulate_with_casadi_with_inputs(
         self, initcon, tsim, varying_inputs, integrator, integrator_options
     ):
-
         xalltemp = [self._templatemap[i] for i in self._diffvars]
         xall = casadi.vertcat(*xalltemp)
 

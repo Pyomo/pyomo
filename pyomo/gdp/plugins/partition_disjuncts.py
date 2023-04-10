@@ -781,7 +781,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         # this is a list which might have two constraints in it if we had
         # both a lower and upper value.
         leq_constraints = self._get_leq_constraints(cons)
-        for (body, rhs) in leq_constraints:
+        for body, rhs in leq_constraints:
             repn = generate_standard_repn(body, compute_values=True)
             nonlinear_repn = None
             if repn.nonlinear_expr is not None:

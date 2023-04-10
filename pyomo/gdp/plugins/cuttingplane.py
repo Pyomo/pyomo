@@ -992,7 +992,6 @@ class CuttingPlane_Transformation(Transformation):
     def _generate_cuttingplanes(
         self, instance_rBigM, cuts_obj, instance_rHull, var_info, transBlockName
     ):
-
         opt = SolverFactory(self._config.solver)
         stream_solver = self._config.stream_solver
         opt.options = dict(self._config.solver_options)

@@ -609,7 +609,6 @@ class MOSEKDirect(DirectSolver):
             self._whichsol = mosek.soltype.bas
 
     def _postsolve(self):
-
         extract_duals = False
         extract_slacks = False
         extract_reduced_costs = False
@@ -1037,7 +1036,6 @@ class MOSEKDirect(DirectSolver):
 
         elif self._load_solutions:
             if self.results.problem.number_of_solutions > 0:
-
                 self.load_vars()
 
                 if extract_reduced_costs:

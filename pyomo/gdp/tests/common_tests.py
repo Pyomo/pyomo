@@ -1159,6 +1159,7 @@ def check_iteratively_adding_disjunctions_transform_model(self, transformation):
 
 # transforming blocks
 
+
 # If you transform a block as if it is a model, the transformation should
 # only modify the block you passed it, else when you solve the block, you
 # are missing the disjunction you thought was on there.

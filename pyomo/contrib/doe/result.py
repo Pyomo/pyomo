@@ -414,7 +414,6 @@ class GridSearchResult:
 
         # loop over deign value combinations
         for design_set_iter in search_design_set:
-
             # locate this grid in the dictionary of combined results
             result_object_asdict = {
                 k: v for k, v in self.FIM_result_list.items() if k == design_set_iter

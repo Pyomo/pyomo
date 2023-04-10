@@ -538,6 +538,7 @@ def build_model():
         return model.FlowRate[j, t] <= model.SupplyAndDemandUBs[j, t]
 
     model.demand_UB = Constraint(model.Products, model.TimePeriods, rule=demand_UB_rule)
+
     # demand lower bound
     def demand_LB_rule(model, j, t):
         return model.FlowRate[j, t] >= model.DemandLB[j, t]

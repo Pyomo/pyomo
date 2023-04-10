@@ -4,7 +4,6 @@ import pyomo.kernel as pmo
 
 
 def solve_nonlinear(Aw, Af, alpha, beta, gamma, delta):
-
     m = pmo.block()
 
     m.h = pmo.variable(lb=0)
@@ -33,7 +32,6 @@ def solve_nonlinear(Aw, Af, alpha, beta, gamma, delta):
 
 
 def solve_conic(Aw, Af, alpha, beta, gamma, delta):
-
     m = pmo.block()
 
     m.x = pmo.variable()

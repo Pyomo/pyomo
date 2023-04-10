@@ -22,6 +22,7 @@ logger = logging.getLogger('pyomo.common')
 
 registry = {}
 
+
 #
 # Decorate functions that are Pyomo commands
 #

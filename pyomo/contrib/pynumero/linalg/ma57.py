@@ -18,7 +18,6 @@ import os
 
 
 class MA57Interface(object):
-
     libname = _NotSet
 
     @classmethod
@@ -30,7 +29,6 @@ class MA57Interface(object):
         return os.path.exists(cls.libname)
 
     def __init__(self, work_factor=None, fact_factor=None, ifact_factor=None):
-
         if not MA57Interface.available():
             raise RuntimeError('Could not find pynumero_MA57 library.')
 

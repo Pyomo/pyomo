@@ -533,7 +533,6 @@ def _numpy_vector(val):
 
 
 class PyomoCyIpoptSolver(object):
-
     CONFIG = ConfigBlock("cyipopt")
     CONFIG.declare(
         "tee",

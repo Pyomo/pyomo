@@ -239,7 +239,6 @@ def _LoadASLInterface(libname):
 
 
 class AmplInterface(object):
-
     libname = _NotSet
     ASLib = None
     interface_version = None
@@ -254,7 +253,6 @@ class AmplInterface(object):
         return os.path.exists(cls.libname)
 
     def __init__(self, filename=None, nl_buffer=None):
-
         if not AmplInterface.available():
             raise RuntimeError("Cannot load the PyNumero ASL interface (pynumero_ASL)")
 

@@ -1016,7 +1016,6 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __rsub__(self, other):  # other - self
-
         result = BlockVector(self.nblocks)
         assert_block_structure(self)
         if isinstance(other, BlockVector):

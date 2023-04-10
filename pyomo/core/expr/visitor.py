@@ -1553,7 +1553,6 @@ RIGHT_TO_LEFT = common.OperatorAssociativity.RIGHT_TO_LEFT
 
 
 class _ToStringVisitor(ExpressionValueVisitor):
-
     _expression_handlers = None
 
     def __init__(self, verbose, smap):

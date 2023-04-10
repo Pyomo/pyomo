@@ -893,7 +893,6 @@ class TestComponentUID(unittest.TestCase):
 
         @m.Block()
         def b(b):
-
             b.b = Block()
 
             @b.Block(m.d1_1)

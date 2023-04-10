@@ -178,7 +178,6 @@ class CBCSHELL(SystemCallSolver):
         return _ver and _ver >= (2, 8, 0, 0)
 
     def _write_soln_file(self, instance, filename):
-
         # Maybe this could be a useful method for any instance.
 
         if isinstance(instance, IBlock):
@@ -206,12 +205,10 @@ class CBCSHELL(SystemCallSolver):
     # Write a warm-start file in the SOLN format.
     #
     def _warm_start(self, instance):
-
         self._write_soln_file(instance, self._warm_start_file_name)
 
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
-
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
         TempfileManager.push()
@@ -271,7 +268,6 @@ class CBCSHELL(SystemCallSolver):
         # symbol_map is actually constructed!
 
         if (len(args) > 0) and (not isinstance(args[0], str)):
-
             if len(args) != 1:
                 raise ValueError(
                     "CBCplugin _presolve method can only handle a single "
@@ -281,7 +277,6 @@ class CBCSHELL(SystemCallSolver):
             # write the warm-start file - currently only supports MIPs.
             # we only know how to deal with a single problem instance.
             if self._warm_start_solve and (not user_warmstart):
-
                 start_time = time.time()
                 self._warm_start(args[0])
                 end_time = time.time()
@@ -1088,7 +1083,6 @@ class CBCSHELL(SystemCallSolver):
             results.solution.insert(solution)
 
     def _postsolve(self):
-
         # let the base class deal with returning results.
         results = super(CBCSHELL, self)._postsolve()
 

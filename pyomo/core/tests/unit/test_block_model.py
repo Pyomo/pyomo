@@ -147,7 +147,6 @@ class Test(unittest.TestCase):
         # FIXME: Not sure what to assert here, but at the moment this throws an error anyways.
 
     def test_len(self):
-
         model = AbstractModel()
         model.b = Block()
 
@@ -158,7 +157,6 @@ class Test(unittest.TestCase):
         self.assertEqual(len(inst.b), 1)
 
     def test_none_key(self):
-
         model = AbstractModel()
         model.b = Block()
 

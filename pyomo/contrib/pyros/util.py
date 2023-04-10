@@ -832,7 +832,6 @@ def coefficient_matching(model, constraint, uncertain_params, config):
     if all(
         v in ComponentSet(first_stage_variables) for v in variables_in_constraint
     ) and any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
-
         # Swap param objects for variable objects in this constraint
         model.param_set = []
         for i in range(len(list(variables_in_constraint))):

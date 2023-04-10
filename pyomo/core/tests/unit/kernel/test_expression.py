@@ -268,7 +268,6 @@ class Test_noclone(unittest.TestCase):
         self.assertTrue(tuple(e.args)[0] is e.expr)
 
     def test_clone(self):
-
         p = parameter()
         e = noclone(p)
         self.assertTrue(e.clone() is e)
@@ -306,7 +305,6 @@ class Test_noclone(unittest.TestCase):
 
 
 class _Test_expression_base(object):
-
     _ctype_factory = None
 
     def test_pprint(self):
@@ -644,7 +642,6 @@ class Test_expression(_Test_expression_base, unittest.TestCase):
 
 
 class Test_data_expression(_Test_expression_base, unittest.TestCase):
-
     _ctype_factory = data_expression
 
     def test_associativity(self):

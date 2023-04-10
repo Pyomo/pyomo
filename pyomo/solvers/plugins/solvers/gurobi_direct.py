@@ -76,7 +76,6 @@ gurobipy, gurobipy_available = attempt_import(
 
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
-
     _verified_license = None
     _import_messages = ''
     _name = None
@@ -815,7 +814,6 @@ class GurobiDirect(DirectSolver):
                             soln_constraints[name]["Slack"] = val
         elif self._load_solutions:
             if gprob.SolCount > 0:
-
                 self.load_vars()
 
                 if extract_reduced_costs:

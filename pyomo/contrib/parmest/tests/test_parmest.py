@@ -317,6 +317,7 @@ class TestRooneyBiegler(unittest.TestCase):
         Scipy results differ in the 3rd decimal place from the paper. It is possible
         the paper used an alternative finite difference approximation for the Jacobian.
         '''
+
         ## solve with optimize.curve_fit
         def model(t, asymptote, rate_constant):
             return asymptote * (1 - np.exp(-rate_constant * t))
@@ -348,14 +349,12 @@ class TestRooneyBiegler(unittest.TestCase):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestModelVariants(unittest.TestCase):
     def setUp(self):
-
         self.data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=['hour', 'y'],
         )
 
         def rooney_biegler_params(data):
-
             model = pyo.ConcreteModel()
 
             model.asymptote = pyo.Param(initialize=15, mutable=True)
@@ -370,7 +369,6 @@ class TestModelVariants(unittest.TestCase):
             return model
 
         def rooney_biegler_indexed_params(data):
-
             model = pyo.ConcreteModel()
 
             model.param_names = pyo.Set(initialize=['asymptote', 'rate_constant'])
@@ -391,7 +389,6 @@ class TestModelVariants(unittest.TestCase):
             return model
 
         def rooney_biegler_vars(data):
-
             model = pyo.ConcreteModel()
 
             model.asymptote = pyo.Var(initialize=15)
@@ -408,7 +405,6 @@ class TestModelVariants(unittest.TestCase):
             return model
 
         def rooney_biegler_indexed_vars(data):
-
             model = pyo.ConcreteModel()
 
             model.var_names = pyo.Set(initialize=['asymptote', 'rate_constant'])
@@ -485,7 +481,6 @@ class TestModelVariants(unittest.TestCase):
         "Cannot test covariance matrix: required ASL dependency is missing",
     )
     def test_parmest_basics(self):
-
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
                 parmest_input['model'],
@@ -514,7 +509,6 @@ class TestModelVariants(unittest.TestCase):
             self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
 
     def test_parmest_basics_with_initialize_parmest_model_option(self):
-
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
                 parmest_input['model'],
@@ -546,7 +540,6 @@ class TestModelVariants(unittest.TestCase):
             self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
 
     def test_parmest_basics_with_square_problem_solve(self):
-
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
                 parmest_input['model'],
@@ -578,7 +571,6 @@ class TestModelVariants(unittest.TestCase):
             self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
 
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
-
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
                 parmest_input['model'],
@@ -681,14 +673,12 @@ class TestReactorDesign(unittest.TestCase):
 )
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 class TestReactorDesign_DAE(unittest.TestCase):
-
     # Based on a reactor example in `Chemical Reactor Analysis and Design Fundamentals`,
     # https://sites.engineering.ucsb.edu/~jbraw/chemreacfun/
     # https://sites.engineering.ucsb.edu/~jbraw/chemreacfun/fig-html/appendix/fig-A-10.html
 
     def setUp(self):
         def ABC_model(data):
-
             ca_meas = data['ca']
             cb_meas = data['cb']
             cc_meas = data['cc']
@@ -821,7 +811,6 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.m_dict = ABC_model(data_dict)
 
     def test_dataformats(self):
-
         obj1, theta1 = self.pest_df.theta_est()
         obj2, theta2 = self.pest_dict.theta_est()
 
@@ -852,7 +841,6 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(return_vals2['time'].loc[1][18], 2.368, places=3)
 
     def test_covariance(self):
-
         from pyomo.contrib.interior_point.inverse_reduced_hessian import (
             inv_reduced_hessian_barrier,
         )

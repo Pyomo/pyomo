@@ -206,7 +206,6 @@ class LazyOACallback_cplex(
                         'MindtPy_utils.objective_constr' in constr.name
                         and constr.has_ub()
                     ):
-
                         pyomo_expr = sum(
                             value(jacs[constr][var]) * (var - var.value)
                             for var in constr_vars
@@ -270,7 +269,6 @@ class LazyOACallback_cplex(
             counter = 0
 
             for constr in m.MindtPy_utils.nonlinear_constraint_list:
-
                 vars_in_constr = list(identify_variables(constr.body))
                 if any(var.value is None for var in vars_in_constr):
                     continue  # a variable has no values

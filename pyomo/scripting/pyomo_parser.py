@@ -14,6 +14,7 @@ __all__ = ['add_subparser', 'get_parser', 'subparsers']
 import argparse
 import sys
 
+
 #
 # Sort sub_parser names, since these are inserted throughout Pyomo
 #

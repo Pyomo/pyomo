@@ -5,7 +5,6 @@ import pyomo.environ as pyo
 
 
 def IC_model(A, h, d, c, b, u):
-
     model = pyo.ConcreteModel(name="(H)")
 
     def x_bounds(m, i):

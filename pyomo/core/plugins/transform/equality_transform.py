@@ -72,8 +72,7 @@ class EqualityTransform(IsomorphicTransformation):
             # con._data on-the-fly.
             #
             indices = con._data.keys()
-            for (ndx, cdata) in [(ndx, con._data[ndx]) for ndx in indices]:
-
+            for ndx, cdata in [(ndx, con._data[ndx]) for ndx in indices]:
                 qualified_con_name = create_name(con_name, ndx)
 
                 # Do nothing with equality constraints
@@ -82,7 +81,6 @@ class EqualityTransform(IsomorphicTransformation):
 
                 # Add an excess variable if the lower bound exists
                 if cdata.lower is not None:
-
                     # Make the excess variable
                     excess_name = "%s_%s" % (qualified_con_name, excess_suffix)
                     equality.__setattr__(excess_name, Var(within=NonNegativeReals))
@@ -95,7 +93,6 @@ class EqualityTransform(IsomorphicTransformation):
 
                 # Add a slack variable if the lower bound exists
                 if cdata.upper is not None:
-
                     # Make the excess variable
                     slack_name = "%s_%s" % (qualified_con_name, slack_suffix)
                     equality.__setattr__(slack_name, Var(within=NonNegativeReals))

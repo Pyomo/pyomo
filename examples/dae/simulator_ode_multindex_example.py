@@ -15,7 +15,6 @@ from pyomo.dae.simulator import Simulator
 
 
 def create_model():
-
     m = ConcreteModel()
 
     m.t = ContinuousSet(bounds=(0.0, 20.0))
@@ -65,7 +64,6 @@ def create_model():
 
 
 def simulate_model(m):
-
     if False:
         # Simulate the model using casadi
         sim = Simulator(m, package='casadi')

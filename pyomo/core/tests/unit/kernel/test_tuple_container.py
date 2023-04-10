@@ -38,7 +38,6 @@ class _bad_ctype(object):
 
 
 class _TestTupleContainerBase(object):
-
     # set by derived class
     _container_type = None
     _ctype_factory = None
@@ -349,7 +348,6 @@ class _TestTupleContainerBase(object):
         self.assertEqual(len(set(id(_c) for _c in ctuple.components())), 5)
 
     def test_preorder_traversal(self):
-
         csubtuple = self._container_type([self._ctype_factory()])
         ctuple = self._container_type(
             [self._ctype_factory(), csubtuple, self._ctype_factory()]
@@ -373,7 +371,6 @@ class _TestTupleContainerBase(object):
         return ctuple, traversal
 
     def test_preorder_traversal_descend_check(self):
-
         csubtuple = self._container_type([self._ctype_factory()])
         ctuple = self._container_type(
             [self._ctype_factory(), csubtuple, self._ctype_factory()]

@@ -331,7 +331,6 @@ class Expression(IndexedComponent):
     # checked through the __getitem__ method of this class.
     #
     def store_values(self, new_values):
-
         if (self.is_indexed() is False) and (not None in new_values):
             raise KeyError(
                 "Cannot store value for scalar Expression"
@@ -463,7 +462,6 @@ class SimpleExpression(metaclass=RenamedClass):
 
 
 class IndexedExpression(Expression):
-
     #
     # Leaving this method for backward compatibility reasons
     # Note: It allows adding members outside of self._index_set.

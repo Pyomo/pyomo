@@ -91,7 +91,6 @@ class BlockMatrix(BaseBlockMatrix):
     format = 'block_matrix'
 
     def __init__(self, nbrows, nbcols):
-
         shape = (nbrows, nbcols)
 
         self._blocks = np.empty(shape, dtype='object')
@@ -402,7 +401,6 @@ class BlockMatrix(BaseBlockMatrix):
         nnz = 0
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
-
             B = self.get_block(i, j).tocoo()
             # get slice that contains all elements in current block
             idx = slice(nnz, nnz + B.nnz)
@@ -958,7 +956,6 @@ class BlockMatrix(BaseBlockMatrix):
                 result.set_block(i, _tmp)
             return result
         elif isinstance(other, np.ndarray):
-
             if other.ndim != 1:
                 raise NotImplementedError('Operation not supported by BlockMatrix')
 
@@ -1025,7 +1022,6 @@ class BlockMatrix(BaseBlockMatrix):
         return res
 
     def __iadd__(self, other):
-
         if isinstance(other, BlockMatrix):
             assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
                 self.bshape, other.bshape
@@ -1051,7 +1047,6 @@ class BlockMatrix(BaseBlockMatrix):
             raise NotImplementedError('Operation not supported by BlockMatrix')
 
     def __isub__(self, other):
-
         if isinstance(other, BlockMatrix):
             assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
                 self.bshape, other.bshape

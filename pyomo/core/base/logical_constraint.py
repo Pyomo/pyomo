@@ -492,7 +492,6 @@ class SimpleLogicalConstraint(metaclass=RenamedClass):
 
 
 class IndexedLogicalConstraint(LogicalConstraint):
-
     #
     # Leaving this method for backward compatibility reasons
     #
@@ -569,7 +568,6 @@ class LogicalConstraintList(IndexedLogicalConstraint):
                 self.add(expr)
 
         else:
-
             for expr in _generator:
                 if expr is None:
                     raise ValueError(

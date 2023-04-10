@@ -498,6 +498,7 @@ class _slice_generator(object):
 # Backwards compatibility
 _IndexedComponent_slice = IndexedComponent_slice
 
+
 # Mock up a callable object with a "check_complete" method
 def _advance_iter(_iter):
     return next(_iter)
@@ -508,6 +509,7 @@ def _advance_iter_check_complete():
 
 
 _advance_iter.check_complete = _advance_iter_check_complete
+
 
 # A dummy class that we can use as a named entity below
 class _NotIterable(object):

@@ -77,6 +77,8 @@ def f(model):
 
 
 model.A = Set(initialize=f)
+
+
 #
 #  Option 'ordered' specifies whether the set elements are ordered
 #  This option allows for more sophisticated construction rules
@@ -95,6 +97,8 @@ model.A = Set(ordered=True, initialize=f)
 #  Option 'within' specifies a set that is used to validate set elements
 #
 model.B = Set(within=model.A)
+
+
 #
 #  Option 'validate' specifies a function that is used to validate set elements
 #
@@ -223,6 +227,8 @@ model.Z = Param(model.A, model.B)
 model.Z = Param(initialize=9)
 model.Z = Param(model.A, initialize={1: 1, 2: 4, 3: 9})
 model.Z = Param(model.A, initialize=2)
+
+
 #
 #  Option 'initialize' can also specify a function used to construct the
 #       parameter
@@ -244,6 +250,8 @@ model.Z = Param(model.A, default=9.0)
 #  Option 'within' specifies a set that is used to validate parameters
 #
 model.Z = Param(within=model.A)
+
+
 #
 #  Option 'validate' specifies a function that is used to validate parameters
 #
@@ -321,6 +329,8 @@ model.x = Var(model.A, model.B)
 model.x = Var(initialize=9)
 model.x = Var(model.A, initialize={1: 1, 2: 4, 3: 9})
 model.x = Var(model.A, initialize=2)
+
+
 #
 #  Option 'initialize' can specify a function used to construct the initial
 #   variable values
@@ -523,6 +533,8 @@ def f(model, i):
 
 
 model.con = Constraint(model.A, rule=f)
+
+
 #
 # Note: the constructor rule must include the specification of bounds
 # information for the constraint.  This can be done in one of two ways.  First,
@@ -555,6 +567,7 @@ def f(model, i):
 #    expr = expr <= val     Upper bound
 #    expr = expr == val     Equality constraint
 #
+
 
 #
 # If the constructor rule returns Constraint.Skip, then the constraint index

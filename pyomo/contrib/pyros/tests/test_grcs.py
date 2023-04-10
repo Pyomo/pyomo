@@ -726,11 +726,9 @@ class myUncertaintySet(UncertaintySet):
     '''
 
     def set_as_constraint(self, uncertain_params, **kwargs):
-
         return Constraint(expr=sum(v for v in uncertain_params) <= 0)
 
     def point_in_set(self, uncertain_params, **kwargs):
-
         return True
 
     def geometry(self):
@@ -4471,7 +4469,6 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_coefficient_matching_solve(self):
-
         # Write the deterministic Pyomo model
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))

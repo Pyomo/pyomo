@@ -42,6 +42,7 @@ def pyomo_create_model(options=None, model_options=None):
     #
     # Index set for points
     model.POINTS = RangeSet(1, model.N)
+
     #
     # (x,y) location
     def x_rule(model, i):
@@ -53,6 +54,7 @@ def pyomo_create_model(options=None, model_options=None):
         return y[i - 1]
 
     model.y = Param(model.POINTS)
+
     #
     # Derived data
     #
@@ -62,6 +64,7 @@ def pyomo_create_model(options=None, model_options=None):
         return set([(i, j) for i in model.POINTS for j in model.POINTS if i < j])
 
     model.LINKS = Set(dimen=2)
+
     #
     # Distance between points
     def d_rule(model, i, j):
@@ -80,6 +83,7 @@ def pyomo_create_model(options=None, model_options=None):
     #
     # Minimize tour length
     model.tour_length = Objective(expr=sum_product(model.d, model.Z))
+
     #
     # Each vertex has degree 2
     def Degrees_rule(model, i):

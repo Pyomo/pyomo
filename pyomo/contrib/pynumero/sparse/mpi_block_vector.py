@@ -86,7 +86,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     """
 
     def __new__(cls, nblocks, rank_owner, mpi_comm, assert_correct_owners=False):
-
         assert isinstance(nblocks, int)
         assert len(rank_owner) == nblocks
 
@@ -255,7 +254,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         x1 = args[0]
         x2 = args[1]
         if isinstance(x1, MPIBlockVector) and isinstance(x2, MPIBlockVector):
-
             msg = 'BlockVectors must be distributed in same processors'
             assert (
                 np.array_equal(x1._rank_owner, x2._rank_owner)
@@ -515,7 +513,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     # Note: this requires communication but is only run in __new__
     def _assert_correct_owners(self, root=0):
-
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 

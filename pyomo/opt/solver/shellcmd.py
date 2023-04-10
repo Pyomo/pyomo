@@ -269,7 +269,6 @@ class SystemCallSolver(OptSolver):
         return Bunch(rc=self._rc, log=self._log)
 
     def _postsolve(self):
-
         if self._log_file is not None:
             OUTPUT = open(self._log_file, "w")
             OUTPUT.write("Solver command line: " + str(self._command.cmd) + '\n')

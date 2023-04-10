@@ -69,7 +69,6 @@ class SCIPAMPL(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-
         executable = Executable("scip")
 
         if executable:
@@ -112,7 +111,6 @@ class SCIPAMPL(SystemCallSolver):
         return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
-
         assert self._problem_format == ProblemFormat.nl
         assert self._results_format == ResultsFormat.sol
 
@@ -216,7 +214,6 @@ class SCIPAMPL(SystemCallSolver):
         return Bunch(cmd=cmd, log_file=self._log_file, env=env, cwd=options_dir)
 
     def _postsolve(self):
-
         # find SCIP version (calling version() and _get_version() mess things)
 
         executable = self._command.cmd[0]
@@ -224,14 +221,12 @@ class SCIPAMPL(SystemCallSolver):
         version = self._known_versions[executable]
 
         if version < (8, 0, 0, 0):
-
             # it may be possible to get results from older version but this was
             # not tested, so the old way of doing things is here preserved
 
             results = super(SCIPAMPL, self)._postsolve()
 
         else:
-
             # repeat code from super(SCIPAMPL, self)._postsolve()
             # in order to access the log file and get the results from there
 
@@ -261,7 +256,6 @@ class SCIPAMPL(SystemCallSolver):
                 log_dict = self.read_scip_log(self._log_file)
 
                 if len(log_dict) != 0:
-
                     # if any were read, store them
 
                     results.solver.time = log_dict['solving_time']
@@ -311,7 +305,6 @@ class SCIPAMPL(SystemCallSolver):
         # OK # maxEvaluations='maxEvaluations' # Exceeded maximum number of problem evaluations
 
         elif results.solver.message == "node limit reached":
-
             results.solver.status = SolverStatus.ok
             results.solver.termination_condition = TerminationCondition.maxEvaluations
             if len(results.solution) > 0:
@@ -426,13 +419,11 @@ class SCIPAMPL(SystemCallSolver):
 
     @staticmethod
     def read_scip_log(filename: str):
-
         # TODO: check file exists, ensure opt has finished, etc
 
         from collections import deque
 
         with open(filename) as f:
-
             scip_lines = list(deque(f, 7))
             scip_lines.pop()
 
@@ -448,9 +439,7 @@ class SCIPAMPL(SystemCallSolver):
         colon_position = 19  # or scip_lines[0].index(':')
 
         for i, log_file_line in enumerate(scip_lines):
-
             if expected_labels[i] != log_file_line[0 : colon_position + 1]:
-
                 return {}
 
         # get data
@@ -466,7 +455,6 @@ class SCIPAMPL(SystemCallSolver):
                 scip_lines[2][colon_position + 2 : scip_lines[2].index('(')]
             )
         except ValueError:
-
             solving_nodes = int(
                 scip_lines[2][colon_position + 2 : scip_lines[2].index('\n')]
             )
@@ -482,11 +470,9 @@ class SCIPAMPL(SystemCallSolver):
         try:
             gap = float(scip_lines[5][colon_position + 2 : scip_lines[5].index('%')])
         except ValueError:
-
             gap = scip_lines[5][colon_position + 2 : scip_lines[5].index('\n')]
 
             if gap == 'infinite':
-
                 gap = float('inf')
 
         out_dict = {

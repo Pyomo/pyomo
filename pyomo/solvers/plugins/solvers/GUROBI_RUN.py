@@ -41,7 +41,6 @@ def _is_numeric(x):
 
 
 def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes):
-
     # figure out what suffixes we need to extract.
     extract_duals = False
     extract_slacks = False

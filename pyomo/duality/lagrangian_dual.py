@@ -98,7 +98,7 @@ class DualTransformation(IsomorphicTransformation):
         c = _sparse(0)
 
         # Walk constraints
-        for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
+        for con_name, con_array in sf.component_map(Constraint, active=True).items():
             for con in (con_array[ndx] for ndx in con_array.index_set()):
                 # The qualified constraint name
                 cname = "%s%s" % (variable_prefix, con.local_name)
@@ -111,7 +111,7 @@ class DualTransformation(IsomorphicTransformation):
 
                 # Add variable coefficients to the 'A' matrix
                 row = _sparse(0)
-                for (vname, coef) in body_terms.items():
+                for vname, coef in body_terms.items():
                     row["%s%s" % (vname, constraint_suffix)] += coef
 
                 # Process the upper bound of the constraint. We rely on
@@ -123,14 +123,14 @@ class DualTransformation(IsomorphicTransformation):
                 b[cname] += lower_terms.pop(None, 0)
 
                 # Add any variables to the 'A' matrix, if present
-                for (vname, coef) in lower_terms.items():
+                for vname, coef in lower_terms.items():
                     row["%s%s" % (vname, constraint_suffix)] -= coef
 
                 A[cname] = row
 
         # Walk objectives. Multiply all coefficients by the objective's 'sense'
         # to convert maximizing objectives to minimizing ones.
-        for (obj_name, obj_array) in sf.component_map(Objective, active=True).items():
+        for obj_name, obj_array in sf.component_map(Objective, active=True).items():
             for obj in (obj_array[ndx] for ndx in obj_array.index_set()):
                 # The qualified objective name
 
@@ -138,7 +138,7 @@ class DualTransformation(IsomorphicTransformation):
                 terms = process_canonical_repn(generate_standard_repn(obj.expr))
 
                 # Add coefficients
-                for (name, coef) in terms.items():
+                for name, coef in terms.items():
                     c["%s%s" % (name, constraint_suffix)] += coef * obj_array.sense
 
         # Form the dual
@@ -146,14 +146,14 @@ class DualTransformation(IsomorphicTransformation):
 
         # Make constraint index set
         constraint_set_init = []
-        for (var_name, var_array) in sf.component_map(Var, active=True).items():
+        for var_name, var_array in sf.component_map(Var, active=True).items():
             for var in (var_array[ndx] for ndx in var_array.index_set()):
                 constraint_set_init.append("%s%s" % (var.local_name, constraint_suffix))
 
         # Make variable index set
         variable_set_init = []
         dual_variable_roots = []
-        for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
+        for con_name, con_array in sf.component_map(Constraint, active=True).items():
             for con in (con_array[ndx] for ndx in con_array.index_set()):
                 dual_variable_roots.append(con.local_name)
                 variable_set_init.append("%s%s" % (variable_prefix, con.local_name))

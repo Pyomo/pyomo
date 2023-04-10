@@ -29,6 +29,7 @@ from pyomo.contrib.pynumero.interfaces.nlp import ExtendedNLP
 
 __all__ = ['AslNLP', 'AmplNLP']
 
+
 # ToDo: need to add support for modifying bounds.
 # support for changing variable bounds seems possible.
 # support for changing inequality bounds would require more work. (this is less frequent?)

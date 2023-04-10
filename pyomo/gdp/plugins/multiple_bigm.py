@@ -521,7 +521,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 relaxationBlock._constraintMap['srcConstraints'][
                     transformed[idx, 'lb']
                 ] = []
-                for (c, disj) in lower_bound_constraints_by_var[v]:
+                for c, disj in lower_bound_constraints_by_var[v]:
                     relaxationBlock._constraintMap['srcConstraints'][
                         transformed[idx, 'lb']
                     ].append(c)
@@ -533,7 +533,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 relaxationBlock._constraintMap['srcConstraints'][
                     transformed[idx, 'ub']
                 ] = []
-                for (c, disj) in upper_bound_constraints_by_var[v]:
+                for c, disj in upper_bound_constraints_by_var[v]:
                     relaxationBlock._constraintMap['srcConstraints'][
                         transformed[idx, 'ub']
                     ].append(c)

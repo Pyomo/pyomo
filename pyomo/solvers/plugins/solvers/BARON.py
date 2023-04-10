@@ -194,7 +194,6 @@ class BARONSHELL(SystemCallSolver):
         return ver
 
     def create_command_line(self, executable, problem_files):
-
         # The solution file is created in the _convert_problem function.
         # The bar file needs the solution filename in the OPTIONS section, but
         # this function is executed after the bar problem file writing.
@@ -210,11 +209,9 @@ class BARONSHELL(SystemCallSolver):
     # automatically be included in the Baron input file
     # (returning True implies the opposite and requires another function)
     def warm_start_capable(self):
-
         return False
 
     def _convert_problem(self, args, problem_format, valid_problem_formats, **kwds):
-
         # Baron needs all solver options and file redirections
         # inside the input file, so we need to input those
         # here through io_options before calling the baron writer
@@ -278,7 +275,6 @@ class BARONSHELL(SystemCallSolver):
         )
 
     def process_logfile(self):
-
         results = SolverResults()
 
         #
@@ -563,7 +559,6 @@ the Pyomo model and BARON version) to the Pyomo Developers."""
             # filled with variable name, number, and value. Also,
             # optionally fill the baron_marginal suffix
             for i, (label, val) in enumerate(zip(var_name, var_value)):
-
                 soln_variable[label] = {"Value": val}
 
                 # Only adds the baron_marginal key it is requested and exists

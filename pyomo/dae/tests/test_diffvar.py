@@ -26,7 +26,6 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 
 class TestDerivativeVar(unittest.TestCase):
-
     # test valid declarations
     def test_valid(self):
         m = ConcreteModel()

@@ -297,7 +297,6 @@ def add_no_good_cuts(target_model, var_values, config, timing, mip_iter=0, cb_op
     if not config.add_no_good_cuts:
         return
     with time_code(timing, 'no_good cut generation'):
-
         config.logger.debug('Adding no-good cuts')
 
         m = target_model

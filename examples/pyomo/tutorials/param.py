@@ -44,6 +44,7 @@ model.Y = Param(model.A)
 #
 model.X = Param(model.A, model.B)
 
+
 ##
 ## Parameter Data
 ##
@@ -86,6 +87,8 @@ model.U = Param(initialize=9.9)
 # option:
 #
 model.T = Param(within=model.B)
+
+
 #
 # Note that the default domain for parameters is Reals, the set of floating
 # point values.

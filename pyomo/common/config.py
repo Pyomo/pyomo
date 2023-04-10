@@ -1991,7 +1991,6 @@ class ConfigBase(object):
         visibility=None,
         format='latex',
     ):
-
         if isinstance(format, str):
             formatter = ConfigFormatter.formats.get(format, None)
             if formatter is None:

@@ -124,7 +124,6 @@ class DirectSolver(DirectOrPersistentSolver):
             self._options_string_to_dict(kwds.pop('options_string', ''))
         )
         try:
-
             # we're good to go.
             initial_time = time.time()
 

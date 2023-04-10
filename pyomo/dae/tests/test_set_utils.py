@@ -94,7 +94,6 @@ def make_model():
 
 
 class TestDaeSetUtils(unittest.TestCase):
-
     # Test explicit/implicit index detection functions
     def test_indexed_by(self):
         m = ConcreteModel()

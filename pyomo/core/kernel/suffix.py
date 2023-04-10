@@ -21,6 +21,7 @@ logger = logging.getLogger('pyomo.core')
 
 _noarg = object()
 
+
 # Note: ComponentMap is first in the inheritance chain
 #       because its __getstate__ / __setstate__ methods
 #       contain some special hacks that allow it to be used

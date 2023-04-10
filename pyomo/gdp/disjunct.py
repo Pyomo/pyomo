@@ -399,7 +399,6 @@ class _DisjunctData(_BlockData):
 
 @ModelComponentFactory.register("Disjunctive blocks.")
 class Disjunct(Block):
-
     _ComponentDataClass = _DisjunctData
 
     def __new__(cls, *args, **kwds):

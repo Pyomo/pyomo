@@ -120,7 +120,6 @@ xpress, xpress_available = attempt_import(
 
 @SolverFactory.register('xpress_direct', doc='Direct python interface to XPRESS')
 class XpressDirect(DirectSolver):
-
     _name = None
     _version = None
     XpressException = RuntimeError
@@ -948,7 +947,6 @@ class XpressDirect(DirectSolver):
 
         elif self._load_solutions:
             if have_soln:
-
                 self.load_vars()
 
                 if extract_reduced_costs:

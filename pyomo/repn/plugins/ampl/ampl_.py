@@ -125,6 +125,7 @@ _intrinsic_function_operators = {
     'floor': 'o13',
 }
 
+
 # build string templates
 def _build_op_template():
     _op_template = {}
@@ -254,7 +255,6 @@ class ModelSOS(object):
             return not bool(len(self.ids))
 
     def __init__(self, ampl_var_id, varID_map):
-
         self.ampl_var_id = ampl_var_id
         self.sosno = self.AmplSuffix('sosno')
         self.ref = self.AmplSuffix('ref')
@@ -262,7 +262,6 @@ class ModelSOS(object):
         self.varID_map = varID_map
 
     def count_constraint(self, soscondata):
-
         ampl_var_id = self.ampl_var_id
         varID_map = self.varID_map
 
@@ -314,7 +313,6 @@ class ModelSOS(object):
 
 
 class RepnWrapper(object):
-
     __slots__ = ('repn', 'linear_vars', 'nonlinear_vars')
 
     def __init__(self, repn, linear, nonlinear):
@@ -334,7 +332,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._varID_map = None
 
     def __call__(self, model, filename, solver_capability, io_options):
-
         # Rebuild the OP template (as the expression tree system may
         # have been switched)
         _op_template, _op_comment = _build_op_template()
@@ -490,7 +487,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             self_varID_map = self._varID_map
             quadratic_vars = []
             quadratic_coefs = []
-            for (i, (v1, v2)) in sorted(
+            for i, (v1, v2) in sorted(
                 enumerate(old_quadratic_vars),
                 key=lambda x: (
                     self_varID_map[id(x[1][0])],
@@ -774,7 +771,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         include_all_variable_bounds=False,
         export_nonlinear_variables=False,
     ):
-
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
 
@@ -890,7 +886,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ObjNonlinearVars = set()
         ObjNonlinearVarsInt = set()
         for block in all_blocks_list:
-
             gen_obj_repn = getattr(block, "_gen_obj_repn", None)
             if gen_obj_repn is not None:
                 gen_obj_repn = bool(gen_obj_repn)
@@ -1023,7 +1018,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
             for constraint_data in block.component_data_objects(
                 Constraint, active=True, sort=sorter, descend_into=False
             ):
-
                 if (not constraint_data.has_lb()) and (not constraint_data.has_ub()):
                     assert not constraint_data.equality
                     continue  # non-binding, so skip
@@ -1607,7 +1601,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
             mod_s_lines = []
             for suffix in suffixes:
                 for component_data, suffix_value in suffix.items():
-
                     try:
                         symbol = symbol_map_byObject[id(component_data)]
                         type_tag = symbol[0]
@@ -1736,7 +1729,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "O" lines
         #
         for obj_ID, (obj, wrapped_repn) in Objectives_dict.items():
-
             k = 0
             if not obj.is_minimizing():
                 k = 1
@@ -1784,7 +1776,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if 'dual' in suffix_dict:
             s_lines = []
             for dual_suffix in suffix_dict['dual']:
-
                 for constraint_data, suffix_value in dual_suffix.items():
                     try:
                         # a constraint might not be referenced
@@ -1969,7 +1960,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "G" lines
         #
         for obj_ID, (obj, wrapped_repn) in Objectives_dict.items():
-
             grad_entries = {}
             for idx, obj_var in enumerate(wrapped_repn.linear_vars):
                 grad_entries[

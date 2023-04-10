@@ -92,7 +92,6 @@ def to_standard_form(self):
     objectives = {}
     # For each registered component
     for c in self.component_map(active=True):
-
         # Get all subclasses of Constraint
         if issubclass(c, Constraint):
             cons = self.component_map(c, active=True)
@@ -128,7 +127,6 @@ def to_standard_form(self):
                         # Add constraint to equality constraints
                         eqConstraints[(con_set_name, ndx)] = terms
                     else:
-
                         # Process upper bounds (<= constraints)
                         if con.upper is not None:
                             # Less than or equal to constraint

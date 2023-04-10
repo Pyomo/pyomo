@@ -128,7 +128,6 @@ def expand_components(block):
     # swallowed by the LoggingIntercept context below are re-raised if the
     # discretization encounters an error it isn't expecting.
     try:
-
         # Intercept logging to suppress Error messages arising from failed
         # constraint rules. These error messages get logged even though the
         # AttributeError causing the error is caught and handled by this
@@ -137,7 +136,6 @@ def expand_components(block):
         # unexpected exception is raised.
         buf = StringIO()
         with LoggingIntercept(buf, 'pyomo.core', logging.ERROR):
-
             # Identify components that need to be expanded and try expanding
             # them
             for c in block.component_objects(

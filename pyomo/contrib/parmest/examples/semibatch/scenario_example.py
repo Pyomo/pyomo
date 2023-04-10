@@ -17,7 +17,6 @@ import pyomo.contrib.parmest.scenariocreator as sc
 
 
 def main():
-
     # Vars to estimate in parmest
     theta_names = ['k1', 'k2', 'E1', 'E2']
 

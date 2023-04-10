@@ -23,6 +23,8 @@ model.y = Var(model.J, domain=NonNegativeReals)
 # we are using a dictionary so that we can have different
 # breakpoints for each index. But we won't.
 model.bpts = {}
+
+
 # @Function_valid_declaration
 def bpts_build(model, j):
     # @Function_valid_declaration

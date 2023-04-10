@@ -203,7 +203,7 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None, nonant_for_fixed_vars=Tru
 
     EF_instance._ef_scenario_names = []
     EF_instance._mpisppy_probability = 0
-    for (sname, scenario_instance) in scen_dict.items():
+    for sname, scenario_instance in scen_dict.items():
         EF_instance.add_component(sname, scenario_instance)
         EF_instance._ef_scenario_names.append(sname)
         # Now deactivate the scenario instance Objective
@@ -242,12 +242,12 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None, nonant_for_fixed_vars=Tru
     nonant_constr_suppl = pyo.Constraint(pyo.Any, name='_C_EF_suppl')
     EF_instance.add_component('_C_EF_suppl', nonant_constr_suppl)
 
-    for (sname, s) in scen_dict.items():
+    for sname, s in scen_dict.items():
         nlens = {
             node.name: len(node.nonant_vardata_list) for node in s._mpisppy_node_list
         }
 
-        for (node_name, num_nonant_vars) in nlens.items():  # copy nlens to EF
+        for node_name, num_nonant_vars in nlens.items():  # copy nlens to EF
             if (
                 node_name in EF_instance._nlens.keys()
                 and num_nonant_vars != EF_instance._nlens[node_name]

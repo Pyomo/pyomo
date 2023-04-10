@@ -662,6 +662,7 @@ tokens = [
     "PICKLE",  # a pickled index object
 ]
 
+
 # Numbers should only appear in getitem lists, so they must be followed
 # by a delimiter token (one of ',]')
 @ply.lex.TOKEN(_re_number.pattern + r'(?=[,\]])')

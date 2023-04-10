@@ -181,7 +181,6 @@ class _ComplementarityData(_BlockData):
 
 @ModelComponentFactory.register("Complementarity conditions.")
 class Complementarity(Block):
-
     _ComponentDataClass = _ComplementarityData
 
     def __new__(cls, *args, **kwds):

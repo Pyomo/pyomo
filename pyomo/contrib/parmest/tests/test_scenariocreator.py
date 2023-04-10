@@ -134,7 +134,6 @@ class TestScenarioSemibatch(unittest.TestCase):
         self.pest = parmest.Estimator(sb.generate_model, data, theta_names)
 
     def test_semibatch_bootstrap(self):
-
         scenmaker = sc.ScenarioCreator(self.pest, "ipopt")
         bootscens = sc.ScenarioSet("Bootstrap")
         numtomake = 2

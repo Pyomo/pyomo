@@ -16,7 +16,6 @@ from pyomo.contrib.parmest.examples.semibatch.semibatch import generate_model
 
 
 def main():
-
     # Vars to estimate
     theta_names = ['k1', 'k2', 'E1', 'E2']
 

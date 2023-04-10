@@ -331,7 +331,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         )
         # check it's equal to the original function at all the extreme points of
         # the simplices
-        for (x1, x2) in m.pw._points:
+        for x1, x2 in m.pw._points:
             self.assertAlmostEqual(m.pw(x1, x2), m.g(x1, x2))
         # check some points in the approximation
         self.assertAlmostEqual(m.pw(1, 3), g1(1, 3))

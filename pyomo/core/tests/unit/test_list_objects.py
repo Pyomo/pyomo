@@ -24,7 +24,6 @@ from pyomo.core.base.expression import _GeneralExpressionData
 
 
 class _TestComponentListBase(object):
-
     _ctype = None
     _cdatatype = None
 

@@ -2628,7 +2628,6 @@ class _MindtPyAlgorithm(object):
             MindtPy unable to handle the termination condition of the FP-NLP subproblem.
         """
         while self.fp_iter < config.fp_iteration_limit:
-
             # solve MILP main problem
             with time_code(self.timing, 'fp main'):
                 fp_main, fp_main_results = self.solve_fp_main(config)
@@ -2868,7 +2867,6 @@ class _MindtPyAlgorithm(object):
             The strategy value is not correct or not included.
         """
         while self.mip_iter < config.iteration_limit:
-
             # solve MILP main problem
             with time_code(self.timing, 'main'):
                 main_mip, main_mip_results = self.solve_main(config)

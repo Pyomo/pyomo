@@ -796,7 +796,6 @@ class PyomoDataPortal(unittest.TestCase):
 
 
 class TestOnlyTextPortal(unittest.TestCase):
-
     suffix = '.tab'
     skiplist = []
 
@@ -1003,7 +1002,6 @@ class TestOnlyTextPortal(unittest.TestCase):
 
 
 class TestOnlyCsvPortal(TestOnlyTextPortal):
-
     suffix = '.csv'
 
     def create_options(self, name):
@@ -1015,7 +1013,6 @@ class TestOnlyCsvPortal(TestOnlyTextPortal):
 
 
 class TestOnlyXmlPortal(TestOnlyTextPortal):
-
     suffix = '.xml'
     skiplist = ['tableD', 'tableT', 'tableU']
 
@@ -1028,7 +1025,6 @@ class TestOnlyXmlPortal(TestOnlyTextPortal):
 
 
 class TestOnlyJsonPortal(TestOnlyTextPortal):
-
     suffix = '.json'
     skiplist = ['tableD', 'tableT', 'tableU', 'tableXW_4']
 
@@ -1135,7 +1131,6 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
 
 @unittest.skipIf(not yaml_interface, "No YAML interface available")
 class TestOnlyYamlPortal(TestOnlyJsonPortal):
-
     suffix = '.yaml'
 
     def create_options(self, name):
@@ -1147,7 +1142,6 @@ class TestOnlyYamlPortal(TestOnlyJsonPortal):
 
 
 class TestTextPortal(unittest.TestCase):
-
     suffix = '.tab'
     skiplist = []
 
@@ -1499,7 +1493,6 @@ class TestTextPortal(unittest.TestCase):
 
 
 class TestCsvPortal(TestTextPortal):
-
     suffix = '.csv'
 
     def create_options(self, name):
@@ -1511,7 +1504,6 @@ class TestCsvPortal(TestTextPortal):
 
 
 class TestXmlPortal(TestTextPortal):
-
     suffix = '.xml'
     skiplist = ['tableD', 'tableT', 'tableU']
 
@@ -1524,7 +1516,6 @@ class TestXmlPortal(TestTextPortal):
 
 
 class TestJsonPortal(TestTextPortal):
-
     suffix = '.json'
     skiplist = ['tableD', 'tableT', 'tableU', 'tableXW_4']
 
@@ -1538,7 +1529,6 @@ class TestJsonPortal(TestTextPortal):
 
 @unittest.skipIf(not yaml_interface, "YAML interface not available")
 class TestYamlPortal(TestTextPortal):
-
     suffix = '.yaml'
     skiplist = ['tableD', 'tableT', 'tableU', 'tableXW_4']
 
@@ -1551,7 +1541,6 @@ class TestYamlPortal(TestTextPortal):
 
 
 class LoadTests(object):
-
     skiplist = []
 
     #
@@ -1845,17 +1834,14 @@ class LoadTests(object):
 
 
 class TestTextLoad(LoadTests, unittest.TestCase):
-
     suffix = 'tab'
 
 
 class TestCsvLoad(LoadTests, unittest.TestCase):
-
     suffix = 'csv'
 
 
 class TestXmlLoad(LoadTests, unittest.TestCase):
-
     suffix = 'xml'
     skiplist = ['tableD', 'tableT', 'tableU']
 
@@ -1922,25 +1908,21 @@ class Spreadsheet(LoadTests):
 
 @unittest.skipIf(not xls_interface, "No XLS interface available")
 class TestSpreadsheetXLS(Spreadsheet, unittest.TestCase):
-
     _filename = 'excel.xls'
 
 
 @unittest.skipIf(not xlsx_interface, "No XLSX interface available")
 class TestSpreadsheetXLSX(Spreadsheet, unittest.TestCase):
-
     _filename = 'excel.xlsx'
 
 
 @unittest.skipIf(not xlsb_interface, "No XLSB interface available")
 class TestSpreadsheetXLSB(Spreadsheet, unittest.TestCase):
-
     _filename = 'excel.xlsb'
 
 
 @unittest.skipIf(not xlsm_interface, "No XLSM interface available")
 class TestSpreadsheetXLSM(Spreadsheet, unittest.TestCase):
-
     _filename = 'excel.xlsm'
 
 

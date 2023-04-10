@@ -299,14 +299,14 @@ class NonNegativeTransformation(IsomorphicTransformation):
 
         # Remove all existing variables.
         toRemove = []
-        for (attr_name, attr) in nonneg.__dict__.items():
+        for attr_name, attr in nonneg.__dict__.items():
             if isinstance(attr, Var):
                 toRemove.append(attr_name)
         for attr_name in toRemove:
             nonneg.__delattr__(attr_name)
 
         # Add the sets defining the variables, then the variables
-        for (k, v) in var_indices.items():
+        for k, v in var_indices.items():
             sname = "%s_indices" % k
             nonneg.__setattr__(sname, Set(initialize=v))
             nonneg.__setattr__(
@@ -339,7 +339,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
             # Map from constraint indices to a corrected expression
             exprMap = {}
 
-            for (ndx, cdata) in con._data.items():
+            for ndx, cdata in con._data.items():
                 lower = _walk_expr(cdata.lower, var_map)
                 body = _walk_expr(cdata.body, var_map)
                 upper = _walk_expr(cdata.upper, var_map)
@@ -367,14 +367,14 @@ class NonNegativeTransformation(IsomorphicTransformation):
             # Map from objective indices to a corrected expression
             exprMap = {}
 
-            for (ndx, odata) in obj._data.items():
+            for ndx, odata in obj._data.items():
                 exprMap[ndx] = _walk_expr(odata.expr, var_map)
 
             # Add to list of expression maps
             objectiveExprs[objName] = exprMap
 
         # Make the modified original constraints
-        for (conName, ruleMap) in constraintExprs.items():
+        for conName, ruleMap in constraintExprs.items():
             # Make the set of indices
             sname = conName + "_indices"
             _set = Set(initialize=ruleMap.keys())
@@ -389,7 +389,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
             _con.construct()
 
         # Make the bounds constraints
-        for (varName, ruleMap) in constraint_rules.items():
+        for varName, ruleMap in constraint_rules.items():
             conName = varName + "_constraints"
             # Make the set of indices
             sname = conName + "_indices"
@@ -406,7 +406,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
             _con.construct()
 
         # Make the objectives
-        for (objName, ruleMap) in objectiveExprs.items():
+        for objName, ruleMap in objectiveExprs.items():
             # Make the set of indices
             sname = objName + "_indices"
             _set = Set(initialize=ruleMap.keys())

@@ -434,7 +434,6 @@ all                    1     [0-9.]+ +[0-9.]+ +100.0
 
 
 class TestFlattenHierarchicalTimer(unittest.TestCase):
-
     #
     # The following methods create some hierarchical timers, then
     # hand-code the total time of each timer in the data structure.

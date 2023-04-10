@@ -16,11 +16,11 @@ subsq_to_row_col[7] = [(i, j) for i in range(7, 10) for j in range(1, 4)]
 subsq_to_row_col[8] = [(i, j) for i in range(7, 10) for j in range(4, 7)]
 subsq_to_row_col[9] = [(i, j) for i in range(7, 10) for j in range(7, 10)]
 
+
 # creates the sudoku model for a 10x10 board, where the
 # input board is a list of fixed numbers specified in
 # (row, col, val) tuples.
 def create_sudoku_model(board):
-
     model = pyo.ConcreteModel()
 
     # store the starting board for the model
@@ -36,7 +36,7 @@ def create_sudoku_model(board):
     model.y = pyo.Var(model.ROWS, model.COLS, model.VALUES, within=pyo.Binary)
 
     # fix variables based on the current board
-    for (r, c, v) in board:
+    for r, c, v in board:
         model.y[r, c, v].fix(1)
 
     # create the objective - this is a feasibility problem

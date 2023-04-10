@@ -46,7 +46,6 @@ if not SKIPTESTS:
 
 @unittest.pytest.mark.mpi
 class TestMPIBlockMatrix(unittest.TestCase):
-
     # Because the setUpClass is called before decorators around the
     # class itself, we need to put the skipIf on the class setup and not
     # the class.
@@ -163,7 +162,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
             self.square_mpi_mat.coo_data()
 
     def test_getitem(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -184,7 +182,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
             self.assertTrue((m == self.square_mpi_mat2.get_block(0, 1)).toarray().all())
 
     def test_setitem(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -207,7 +204,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
         self.assertEqual(self.rectangular_mpi_mat.nnz, 16)
 
     def test_block_shapes(self):
-
         m, n = self.square_mpi_mat.bshape
         mpi_shapes = self.square_mpi_mat.block_shapes()
         serial_shapes = self.square_serial_mat.block_shapes()
@@ -216,7 +212,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 self.assertEqual(serial_shapes[i][j], mpi_shapes[i][j])
 
     def test_reset_brow(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -245,7 +240,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(serial_bm.row_block_sizes(), bm.row_block_sizes()))
 
     def test_reset_bcol(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -282,7 +276,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
             self.square_mpi_mat.has_empty_cols()
 
     def test_transpose(self):
-
         mat1 = self.square_mpi_mat
         mat2 = self.rectangular_mpi_mat
 
@@ -412,7 +405,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
             res = serial_mat2.tocoo() + mat1
 
     def test_sub(self):
-
         mat1 = self.square_mpi_mat
         mat2 = self.square_mpi_mat2
 
@@ -440,7 +432,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
             res = serial_mat2.tocoo() - mat1
 
     def test_div(self):
-
         mat1 = self.square_mpi_mat
         serial_mat1 = self.square_serial_mat
 
@@ -461,7 +452,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 self.assertIsNone(serial_res.get_block(i, j))
 
     def test_iadd(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -498,7 +488,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
         self._compare_mpi_and_serial_block_matrices(bm, serial_bm)
 
     def test_isub(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -535,7 +524,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
         self._compare_mpi_and_serial_block_matrices(bm, serial_bm)
 
     def test_imul(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -568,7 +556,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 )
 
     def test_idiv(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -601,7 +588,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 )
 
     def test_neg(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -634,7 +620,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 )
 
     def test_abs(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2.0, 1, 3, 4, 5, 1])
@@ -667,7 +652,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 )
 
     def test_eq(self):
-
         mat1 = self.square_mpi_mat
         mat2 = self.square_mpi_mat2
 
@@ -722,7 +706,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
             res = mat1 == serial_mat1
 
     def test_ne(self):
-
         mat1 = self.square_mpi_mat
         mat2 = self.square_mpi_mat2
 
@@ -799,7 +782,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
                     self.assertIsNone(serial_res.get_block(i, j))
 
     def test_le(self):
-
         mat1 = self.square_mpi_mat
         mat2 = self.square_mpi_mat2
 
@@ -891,7 +873,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
                     self.assertIsNone(serial_res.get_block(i, j))
 
     def test_lt(self):
-
         mat1 = self.square_mpi_mat
         mat2 = self.square_mpi_mat2
 
@@ -949,7 +930,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
             res = serial_mat1 < mat1
 
     def test_ge(self):
-
         mat1 = self.square_mpi_mat
         mat2 = self.square_mpi_mat2
 
@@ -1007,7 +987,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
             res = serial_mat1 >= mat1
 
     def test_gt(self):
-
         mat1 = self.square_mpi_mat
         mat2 = self.square_mpi_mat2
 

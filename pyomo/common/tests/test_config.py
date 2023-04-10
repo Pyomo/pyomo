@@ -77,6 +77,7 @@ from pyomo.common.config import (
 )
 from pyomo.common.log import LoggingIntercept
 
+
 # Utility to redirect display() to a string
 def _display(obj, *args):
     test = StringIO()

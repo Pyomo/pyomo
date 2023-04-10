@@ -119,7 +119,7 @@ class ModelSolution(object):
 
     def __getstate__(self):
         state = {'_metadata': self._metadata, '_entry': {}}
-        for (name, data) in self._entry.items():
+        for name, data in self._entry.items():
             tmp = state['_entry'][name] = []
             # Note: We must convert all weakrefs to hard refs and
             # not indirect references like ComponentUIDs because
@@ -343,7 +343,6 @@ class ModelSolutions(object):
         ignore_missing_symbols=True,
         default_variable_value=None,
     ):
-
         instance = self._instance()
 
         soln = ModelSolution()
@@ -782,7 +781,6 @@ arguments (which have been ignored):"""
         # sufficient to keep memory use under control.
         #
         with PauseGC() as pgc:
-
             #
             # Unlike the standard method in the pympler summary
             # module, the tracker doesn't print 0-byte entries to pad
@@ -819,7 +817,6 @@ arguments (which have been ignored):"""
             #
 
             for component_name, component in self.component_map().items():
-
                 if component.ctype is Model:
                     continue
 

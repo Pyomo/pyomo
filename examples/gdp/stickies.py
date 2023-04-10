@@ -173,6 +173,7 @@ def build_model():
         within=NonNegativeReals,
         bounds=get_accepted_component_flow_bounds,
     )
+
     # rejected flow of component j from screen s (f_{s,j}^R)
     def rej_component_flow_bounds(model, k, s):
         return (

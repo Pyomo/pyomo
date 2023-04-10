@@ -1022,6 +1022,7 @@ pyomo_constant_types.add(NumericConstant)
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)
 
+
 #
 # Note: the "if numpy_available" in the class definition also ensures
 # that the numpy types are registered if numpy is in fact available

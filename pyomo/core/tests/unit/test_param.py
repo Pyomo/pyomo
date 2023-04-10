@@ -1616,7 +1616,6 @@ intrinsic_test_list = [
 
 
 class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
-
     # Test that non-indexed params are mutable
     def test_mutable_self(self):
         model = ConcreteModel()
@@ -1736,7 +1735,6 @@ assignTestsNonIndexedParamTests(MiscNonIndexedParamBehaviorTests, intrinsic_test
 
 
 class MiscIndexedParamBehaviorTests(unittest.TestCase):
-
     # Test that indexed params are mutable
     def test_mutable_self1(self):
         model = ConcreteModel()

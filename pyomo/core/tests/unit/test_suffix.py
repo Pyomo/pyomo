@@ -54,7 +54,6 @@ def simple_obj_rule(model, i):
 
 
 class TestSuffixMethods(unittest.TestCase):
-
     # test __init__
     def test_init(self):
         model = ConcreteModel()

@@ -18,6 +18,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.sorting import sorted_robust, _robust_sort_keyfcn
 
+
 # The following are custom types used for testing sorted_robust.  They
 # are declared at the module scope to ensure consistent generation of
 # the class __name__.

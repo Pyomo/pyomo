@@ -346,7 +346,6 @@ class Estimator(object):
         diagnostic_mode=False,
         solver_options=None,
     ):
-
         self.model_function = model_function
 
         assert isinstance(
@@ -455,7 +454,6 @@ class Estimator(object):
         return model
 
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
-
         # cb_data is a list of dictionaries, list of dataframes, OR list of json file names
         exp_data = cb_data[experiment_number]
         if isinstance(exp_data, (dict, pd.DataFrame)):
@@ -528,7 +526,6 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
@@ -641,7 +638,6 @@ class Estimator(object):
                     return objval, thetavals, var_values
 
             if calc_cov:
-
                 return objval, thetavals, cov
             else:
                 return objval, thetavals
@@ -845,7 +841,6 @@ class Estimator(object):
         return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
-
         samplelist = list()
 
         scenario_numbers = list(range(len(self.callback_data)))
@@ -1105,7 +1100,6 @@ class Estimator(object):
 
         results = []
         for idx, sample in global_list:
-
             # Reset callback_data to only include the sample
             self.callback_data = [data[i] for i in sample]
 
@@ -1332,7 +1326,6 @@ class Estimator(object):
             test_result = test_theta_values.copy()
 
         for a in alphas:
-
             if distribution == 'Rect':
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = (theta_values > lb).all(axis=1) & (
