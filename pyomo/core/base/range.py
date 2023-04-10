@@ -612,7 +612,7 @@ class NumericRange(object):
         """Return the intersection between this range and a set of other ranges.
 
         Parameters
-        ---------
+        ----------
             other_ranges: `iterable`
                 An iterable of other range objects to intersect with this range
 

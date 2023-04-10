@@ -67,7 +67,7 @@ class DirectOrPersistentSolver(OptSolver):
         """A dictionary mapping pyomo constraints to solver constraints."""
 
         self._vars_referenced_by_con = ComponentMap()
-        """A dictionary mapping constraints to a ComponentSet constaint the pyomo variables referenced by that
+        """A dictionary mapping constraints to a ComponentSet containing the pyomo variables referenced by that
         constraint. This is primarily needed for the persistent solvers. When a constraint is deleted, we need
         to decrement the number of times those variables are referenced (see self._referenced_variables)."""
 
