@@ -2,7 +2,7 @@
 #          running `git blame`.
 # USAGE: To use this file, you can do one of the following:
 #  1) git blame --ignore-revs-file .git-blame-ignore-revs
-#  2) git config --global blame.ignoreRevsFile .git-blame-ignore-revs
+#  2) git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 # Most of these will be ignoring application
 # of black to the repository
