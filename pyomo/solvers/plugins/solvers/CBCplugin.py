@@ -154,7 +154,7 @@ class CBCSHELL(SystemCallSolver):
                         "ASL support disabled (falling back on LP interface)."
                     )
                     logger.warning(
-                        "Upgrade CBC to activate ASL " "support in this plugin"
+                        "Upgrade CBC to activate ASL support in this plugin"
                     )
                     # Fall back on LP
                     self.set_problem_format(ProblemFormat.cpxlp)

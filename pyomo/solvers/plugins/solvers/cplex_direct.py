@@ -531,7 +531,7 @@ class CPLEXDirect(DirectSolver):
             sos_type = self._solver_model.SOS.type.SOS2
         else:
             raise ValueError(
-                "Solver does not support SOS " "level {0} constraints".format(level)
+                "Solver does not support SOS level {0} constraints".format(level)
             )
 
         cplex_vars = []
