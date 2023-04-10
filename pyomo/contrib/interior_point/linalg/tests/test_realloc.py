@@ -19,7 +19,6 @@ from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus
 @unittest.skipIf(not mumps_available, 'mumps is not available')
 class TestReallocation(unittest.TestCase):
     def test_reallocate_memory_mumps(self):
-
         # Create a tri-diagonal matrix with small entries on the diagonal
         n = 10000
         small_val = 1e-7

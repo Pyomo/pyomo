@@ -25,6 +25,8 @@ model.I = RangeSet(1, model.N)
 # Variable b
 #
 model.b = Var(model.I, domain=Boolean)
+
+
 #
 # Objective zot
 #
@@ -38,6 +40,8 @@ def costrule(model):
 
 # model.zot = Objective(rule=costrule)
 model.zot = Objective(rule=costrule, sense=maximize)
+
+
 #
 # Set w_ind
 #
@@ -68,6 +72,8 @@ model.rhs_ind = RangeSet(1, model.N - 9)
 # Parameter rhs
 #
 model.rhs = Param(model.rhs_ind)
+
+
 #
 # Constraint bletch
 #

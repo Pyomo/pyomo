@@ -22,7 +22,7 @@ class IntervalTestBase(object):
     in the other module. Therefore, we use this base class
     for testing both modules. The only difference in the
     derived classes is in the self.add, self.sub,
-    self.mul, etc. atrributes.
+    self.mul, etc. attributes.
     """
 
     def setUp(self):

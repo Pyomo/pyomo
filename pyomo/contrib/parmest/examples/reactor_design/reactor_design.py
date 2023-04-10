@@ -26,7 +26,6 @@ from pyomo.environ import (
 
 
 def reactor_design_model(data):
-
     # Create the concrete model
     model = ConcreteModel()
 

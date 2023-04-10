@@ -77,9 +77,7 @@ class ContinuousSet(SortedScalarSet):
         #  ContinuousSet")
         kwds.setdefault('dimen', 1)
         if kwds["dimen"] != 1:
-            raise TypeError(
-                "'dimen' is not a valid keyword argument for ContinuousSet"
-            )
+            raise TypeError("'dimen' is not a valid keyword argument for ContinuousSet")
         if kwds.pop("virtual", None) is not None:
             raise TypeError(
                 "'virtual' is not a valid keyword argument for ContinuousSet"

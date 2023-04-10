@@ -78,7 +78,6 @@ _cpxlp_translation_table = _CharMapper(
 
 
 def cpxlp_label_from_name(name):
-
     if name is None:
         raise RuntimeError(
             "Illegal name=None supplied to cpxlp_label_from_name function"
@@ -93,7 +92,6 @@ _alphanum_translation_table = _CharMapper(
 
 
 def alphanum_label_from_name(name):
-
     if name is None:
         raise RuntimeError(
             "Illegal name=None supplied to alphanum_label_from_name function"

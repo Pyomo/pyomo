@@ -120,7 +120,7 @@ LP/NLP Based Branch-and-Bound
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 MindtPy also supports single-tree implementation of Outer-Approximation (OA) algorithm, which is known as LP/NLP based branch-and-bound algorithm originally described in [`Quesada & Grossmann, 1992`_].
-The LP/NLP based branch-and-bound algorithm in MindtPy is implemeted based on the LazyConstraintCallback function in commercial solvers.
+The LP/NLP based branch-and-bound algorithm in MindtPy is implemented based on the LazyConstraintCallback function in commercial solvers.
 
 .. _Quesada & Grossmann, 1992: https://www.sciencedirect.com/science/article/abs/pii/0098135492800288
 
@@ -181,7 +181,7 @@ A usage example for OA with solution pool is as follows:
 
   >>> pyo.SolverFactory('mindtpy').solve(model,
   ...                                    strategy='OA',
-  ...                                    mip_solver='cplex_peristent',
+  ...                                    mip_solver='cplex_persistent',
   ...                                    nlp_solver='ipopt',
   ...                                    solution_pool=True,
   ...                                    num_solution_iteration=10, # default=5

@@ -35,7 +35,6 @@ class TestUtils(unittest.TestCase):
 
     @unittest.pytest.mark.expensive
     def test_convert_param_to_var(self):
-
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
             reactor_design_model,
         )

@@ -51,6 +51,7 @@ from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
 #             [Pout - (P2 - 2*c*F^2]
 #   h_o(u) = {empty}
 
+
 # Model 4: Same as model 2, but treat P2 as an input to be converged by the solver
 #   u = [Pin, c, F, P2]
 #   o = [Pout]

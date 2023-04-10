@@ -39,6 +39,7 @@ class Transformer(pyomo.kernel.block):
 
 print(_fmt(pympler.asizeof.asizeof(Transformer())))
 
+
 # @aml
 def Transformer():
     b = pyomo.environ.Block(concrete=True)

@@ -9,7 +9,6 @@ from pyomo.gdp import *
 
 
 def build_model():
-
     model = ConcreteModel()
 
     # x >= 0 _|_ y>=0

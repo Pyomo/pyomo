@@ -183,7 +183,6 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         to indicate an error.
         """
         for jobNumber in self._ah:
-
             status = self.kestrel.neos.getJobStatus(
                 jobNumber, self._ah[jobNumber].password
             )

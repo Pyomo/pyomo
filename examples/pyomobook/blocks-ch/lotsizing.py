@@ -21,6 +21,7 @@ model.i_pos = pyo.Var(model.T, domain=pyo.NonNegativeReals)
 model.i_neg = pyo.Var(model.T, domain=pyo.NonNegativeReals)
 # @:vars
 
+
 # define the inventory relationships
 def inventory_rule(m, t):
     if t == m.T.first():
@@ -37,12 +38,14 @@ def pos_neg_rule(m, t):
 
 model.pos_neg = pyo.Constraint(model.T, rule=pos_neg_rule)
 
+
 # create the big-M constraint for the production indicator variable
 def prod_indicator_rule(m, t):
     return m.x[t] <= P * m.y[t]
 
 
 model.prod_indicator = pyo.Constraint(model.T, rule=prod_indicator_rule)
+
 
 # define the cost function
 def obj_rule(m):

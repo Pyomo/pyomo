@@ -46,7 +46,6 @@ def F(model, t, x):
 
 
 def define_model(**kwds):
-
     model = ConcreteModel()
 
     model.x = Var(INDEX_SET, bounds=(-5, 4))  # domain variable

@@ -106,18 +106,18 @@ def _check_productexpression(expr, i):
     if dv is None:
         return None
 
-    numer = 1
+    numerator = 1
     denom = 1
     for term, e_ in pterms:
         if e_ == 1:
             denom *= term
         else:
-            numer *= term
+            numerator *= term
     curr, e_ = dv
     if e_ == 1:
-        return [curr, expr.arg(1 - i) * numer / denom]
+        return [curr, expr.arg(1 - i) * numerator / denom]
     else:
-        return [curr, denom / (expr.arg(1 - i) * numer)]
+        return [curr, denom / (expr.arg(1 - i) * numerator)]
 
 
 def _check_negationexpression(expr, i):
@@ -235,7 +235,7 @@ class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
 def convert_pyomo2scipy(expr, templatemap):
     """Substitute _GetItem nodes in an expression tree.
 
-    This substition function is used to replace Pyomo _GetItem
+    This substitution function is used to replace Pyomo _GetItem
     nodes with mutable Params.
 
     Args:
@@ -337,7 +337,7 @@ class Convert_Pyomo2Casadi_Visitor(EXPR.ExpressionValueVisitor):
 def substitute_pyomo2casadi(expr, templatemap):
     """Substitute IndexTemplates in an expression tree.
 
-    This substition function is used to replace Pyomo intrinsic
+    This substitution function is used to replace Pyomo intrinsic
     functions with CasADi functions.
 
     Args:
@@ -398,7 +398,6 @@ class Simulator:
     """
 
     def __init__(self, m, package='scipy'):
-
         self._intpackage = package
         if self._intpackage not in ['scipy', 'casadi']:
             raise DAE_Error(
@@ -462,7 +461,6 @@ class Simulator:
         # RHS. Must find a RHS for every derivative var otherwise ERROR. Build
         # dictionary of DerivativeVar:RHS equation.
         for con in m.component_objects(Constraint, active=True):
-
             # Skip the discretization equations if model is discretized
             if '_disc_eq' in con.name:
                 continue
@@ -923,7 +921,6 @@ class Simulator:
                 initcon, tsim, switchpts, varying_inputs, integrator, integrator_options
             )
         else:
-
             if len(switchpts) != 0:
                 tsim, profile = self._simulate_with_casadi_with_inputs(
                     initcon, tsim, varying_inputs, integrator, integrator_options
@@ -941,7 +938,6 @@ class Simulator:
     def _simulate_with_scipy(
         self, initcon, tsim, switchpts, varying_inputs, integrator, integrator_options
     ):
-
         scipyint = scipy.integrate.ode(self._rhsfun).set_integrator(
             integrator, **integrator_options
         )
@@ -950,7 +946,6 @@ class Simulator:
         profile = np.array(initcon)
         i = 1
         while scipyint.successful() and scipyint.t < tsim[-1]:
-
             # check if tsim[i-1] is a switching time and update value
             if tsim[i - 1] in switchpts:
                 for v in self._siminputvars.keys():
@@ -1005,7 +1000,6 @@ class Simulator:
     def _simulate_with_casadi_with_inputs(
         self, initcon, tsim, varying_inputs, integrator, integrator_options
     ):
-
         xalltemp = [self._templatemap[i] for i in self._diffvars]
         xall = casadi.vertcat(*xalltemp)
 

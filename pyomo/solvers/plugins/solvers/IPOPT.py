@@ -87,7 +87,6 @@ class IPOPT(SystemCallSolver):
         return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
-
         assert self._problem_format == ProblemFormat.nl
         assert self._results_format == ResultsFormat.sol
 

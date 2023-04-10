@@ -32,7 +32,6 @@ cbc_available = opt_cbc.available(exception_flag=False)
 class CBCTests(unittest.TestCase):
     @unittest.skipIf(not cbc_available, "The CBC solver is not available")
     def test_warm_start(self):
-
         m = ConcreteModel()
         m.x = Var()
         m.z = Var(domain=Integers)

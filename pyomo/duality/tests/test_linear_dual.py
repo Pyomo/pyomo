@@ -30,7 +30,6 @@ solver = None
 
 
 class CommonTests(object):
-
     solve = True
 
     def run_bilevel(self, *_args, **kwds):
@@ -102,7 +101,6 @@ class CommonTests(object):
 
 
 class Reformulate(unittest.TestCase, CommonTests):
-
     solve = False
 
     def tearDown(self):

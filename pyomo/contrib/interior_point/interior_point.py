@@ -47,7 +47,6 @@ class LinearSolveContext(object):
         filename=None,
         level=logging.INFO,
     ):
-
         self.interior_point_logger = interior_point_logger
         self.linear_solver_logger = linear_solver_logger
         self.filename = filename

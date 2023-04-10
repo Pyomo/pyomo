@@ -169,47 +169,47 @@ ExpectedFailures['cbc', 'nl', 'SOS2_simple'] = (
 
 ExpectedFailures['ipopt', 'nl', 'LP_duals_maximize'] = (
     lambda v: v == (3, 10, 3, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.4",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.4",
 )
 
 ExpectedFailures['ipopt', 'nl', 'QCP_simple'] = (
     lambda v: v == (3, 10, 3, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.4",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.4",
 )
 
 ExpectedFailures['ipopt', 'nl', 'LP_block'] = (
     lambda v: v <= (3, 10, 2, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.3",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.3",
 )
 
 ExpectedFailures['ipopt', 'nl', 'LP_duals_minimize'] = (
     lambda v: v <= (3, 10, 2, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.3",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.3",
 )
 
 ExpectedFailures['ipopt', 'nl', 'LP_inactive_index'] = (
     lambda v: v <= (3, 10, 2, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.3",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.3",
 )
 
 ExpectedFailures['ipopt', 'nl', 'LP_piecewise'] = (
     lambda v: v <= (3, 10, 2, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.3",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.3",
 )
 
 ExpectedFailures['ipopt', 'nl', 'LP_simple'] = (
     lambda v: v <= (3, 10, 2, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.3",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.3",
 )
 
 ExpectedFailures['ipopt', 'nl', 'QP_simple'] = (
     lambda v: v <= (3, 10, 2, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.3",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.3",
 )
 
 ExpectedFailures['ipopt', 'nl', 'LP_trivial_constraints'] = (
     lambda v: v <= (3, 10, 2, 0),
-    "Ipopt returns duals with a different sign convention. " "Fixed in Ipopt 3.10.3",
+    "Ipopt returns duals with a different sign convention. Fixed in Ipopt 3.10.3",
 )
 
 #

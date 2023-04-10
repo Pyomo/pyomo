@@ -491,7 +491,7 @@ class Path(object):
 class PathList(Path):
     """Domain validator for a list of path-like objects.
 
-    This will admit any iterable or object convertable to a string.
+    This will admit any iterable or object convertible to a string.
     Iterable objects (other than strings) will have each member
     normalized using :py:class:`Path`.  Other types will be passed to
     :py:class:`Path`, returning a list with the single resulting path.
@@ -1410,7 +1410,7 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
         # leading to less readable docs.  As they tolerate omitting the
         # space before the colon at the top level (which at lower levels
         # causes nested definition lists to NOT omit the colon), we will
-        # generate non-standard ReST and omit the preceeding space:
+        # generate non-standard ReST and omit the preceding space:
         self.out.write(f'\n{indent}{obj.name()}: {typeinfo}\n')
         self.wrapper.initial_indent = indent + ' ' * self.indent_spacing
         self.wrapper.subsequent_indent = indent + ' ' * self.indent_spacing
@@ -1991,7 +1991,6 @@ class ConfigBase(object):
         visibility=None,
         format='latex',
     ):
-
         if isinstance(format, str):
             formatter = ConfigFormatter.formats.get(format, None)
             if formatter is None:
@@ -2235,7 +2234,7 @@ class ConfigList(ConfigBase, Sequence):
 
     def get(self, key, default=NOTSET):
         # Note: get() is borrowed from ConfigDict for cases where we
-        # want the raw stored object (and to aviod the implicit
+        # want the raw stored object (and to avoid the implicit
         # conversion of ConfigValue members to their stored data).
         try:
             val = self._data[key]
@@ -2290,7 +2289,7 @@ class ConfigList(ConfigBase, Sequence):
         ConfigBase.reset(self)
         # Because the base reset() calls set_value, any deefault list
         # entries will get their userSet flag set.  This is wrong, as
-        # reset() should conceptually reset teh object to it's default
+        # reset() should conceptually reset the object to it's default
         # state (e.g., before the user ever had a chance to mess with
         # things).  As the list could contain a ConfigDict, this is a
         # recursive operation to put the userSet values back.
@@ -2360,7 +2359,7 @@ class ConfigDict(ConfigBase, Mapping):
     implicit: bool, optional
         If True, the ConfigDict will allow "implicitly" declared
         keys, that is, keys can be stored into the ConfigDict that
-        were not prevously declared using :py:meth:`declare` or
+        were not previously declared using :py:meth:`declare` or
         :py:meth:`declare_from`.
 
     implicit_domain: Callable, optional

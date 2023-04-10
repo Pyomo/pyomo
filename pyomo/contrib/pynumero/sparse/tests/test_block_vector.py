@@ -29,7 +29,6 @@ from pyomo.contrib.pynumero.sparse.block_vector import (
 
 class TestBlockVector(unittest.TestCase):
     def test_constructor(self):
-
         v = BlockVector(2)
         self.assertEqual(v.nblocks, 2)
         self.assertEqual(v.bshape, (2,))
@@ -47,7 +46,6 @@ class TestBlockVector(unittest.TestCase):
             BlockVector('hola')
 
     def setUp(self):
-
         self.ones = BlockVector(3)
         self.list_sizes_ones = [2, 4, 3]
         for idx, s in enumerate(self.list_sizes_ones):
@@ -81,7 +79,6 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(v.sum(), 46)
 
     def test_all(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.ones(3)
@@ -97,7 +94,6 @@ class TestBlockVector(unittest.TestCase):
         self.assertFalse(v.all())
 
     def test_any(self):
-
         v = BlockVector(2)
         a = np.zeros(5)
         b = np.ones(3)
@@ -141,7 +137,6 @@ class TestBlockVector(unittest.TestCase):
             v.choose(1)
 
     def test_clip(self):
-
         v = BlockVector(3)
         v2 = BlockVector(3)
         a = np.zeros(5)
@@ -191,7 +186,6 @@ class TestBlockVector(unittest.TestCase):
             v.compress(1.0)
 
     def test_nonzero(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
@@ -208,7 +202,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(blk, v2.get_block(bid)))
 
     def test_ptp(self):
-
         v = BlockVector(2)
         a = np.arange(5)
         b = np.arange(9)
@@ -219,7 +212,6 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(vv.ptp(), v.ptp())
 
     def test_round(self):
-
         v = BlockVector(2)
         a = np.ones(5) * 1.1
         b = np.ones(9) * 1.1
@@ -236,7 +228,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(blk, v.get_block(bid)))
 
     def test_std(self):
-
         v = BlockVector(2)
         a = np.arange(5)
         b = np.arange(9)
@@ -441,7 +432,6 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(argmin, 4)
 
     def test_cumprod(self):
-
         v = BlockVector(3)
         v.set_block(0, np.arange(1, 5))
         v.set_block(1, np.arange(5, 10))
@@ -477,7 +467,6 @@ class TestBlockVector(unittest.TestCase):
         self.assertListEqual(x.tolist(), d.tolist())
 
     def test_add(self):
-
         v = self.ones
         v1 = self.ones
         result = v + v1
@@ -843,7 +832,6 @@ class TestBlockVector(unittest.TestCase):
         self.assertListEqual(v.tolist(), v2.tolist())
 
     def test_gt(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
@@ -868,7 +856,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(blk, v.get_block(bid)))
 
     def test_ge(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
@@ -897,7 +884,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(blk, v.get_block(bid)))
 
     def test_lt(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
@@ -931,7 +917,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(blk, v.get_block(bid)))
 
     def test_le(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
@@ -959,7 +944,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(blk, vv.get_block(bid)))
 
     def test_eq(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
@@ -984,7 +968,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(blk, v.get_block(bid)))
 
     def test_ne(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
@@ -1009,7 +992,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(blk, v.get_block(bid)))
 
     def test_contains(self):
-
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
@@ -1041,7 +1023,6 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(v.get_block(1).size, v2.get_block(1).size)
 
     def test_unary_ufuncs(self):
-
         v = BlockVector(2)
         a = np.ones(3) * 0.5
         b = np.ones(2) * 0.8
@@ -1111,7 +1092,6 @@ class TestBlockVector(unittest.TestCase):
             np.cbrt(v)
 
     def test_reduce_ufuncs(self):
-
         v = BlockVector(2)
         a = np.ones(3) * 0.5
         b = np.ones(2) * 0.8
@@ -1127,7 +1107,6 @@ class TestBlockVector(unittest.TestCase):
             self.assertAlmostEqual(fun(v), fun(v.flatten()))
 
     def test_binary_ufuncs(self):
-
         v = BlockVector(2)
         a = np.ones(3) * 0.5
         b = np.ones(2) * 0.8

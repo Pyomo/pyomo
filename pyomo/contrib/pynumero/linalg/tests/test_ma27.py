@@ -152,7 +152,7 @@ class TestMA27Interface(unittest.TestCase):
         sol = ma27.do_backsolve(rhs)
         self.assertTrue(np.allclose(sol, np.array(expected_sol)))
 
-        # Check that we can perform a numeric factorization with differnt lengths
+        # Check that we can perform a numeric factorization with different lengths
         # due to extra zero entries
         irn_mod = irn_mod[1:]
         icn_mod = icn_mod[1:]

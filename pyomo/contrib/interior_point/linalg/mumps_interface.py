@@ -136,7 +136,7 @@ class MumpsInterface(MumpsCentralizedAssembledLinearSolver, IPLinearSolverInterf
         log_string += '{1:<10}'
         log_string += '{2:<10}'
 
-        # Allocate 15 spsaces for the rest, which I assume are floats
+        # Allocate 15 spaces for the rest, which I assume are floats
         for i in range(4, len(fields)):
             log_string += '{' + str(i) + ':<15.3e}'
 

@@ -52,7 +52,7 @@ ABS_CON_CHECK_FEAS_TOL = 1e-5
 TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
 
 
-'''Code borrowed from gdpopt: time_code, get_main_ellapsed_time, a_logger.'''
+'''Code borrowed from gdpopt: time_code, get_main_elapsed_time, a_logger.'''
 
 
 @contextmanager
@@ -240,7 +240,7 @@ def ValidEnum(enum_class):
         if obj not in enum_class:
             raise ValueError(
                 "Expected an {0} object, "
-                "instead recieved {1}".format(
+                "instead received {1}".format(
                     enum_class.__name__, obj.__class__.__name__
                 )
             )
@@ -832,7 +832,6 @@ def coefficient_matching(model, constraint, uncertain_params, config):
     if all(
         v in ComponentSet(first_stage_variables) for v in variables_in_constraint
     ) and any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
-
         # Swap param objects for variable objects in this constraint
         model.param_set = []
         for i in range(len(list(variables_in_constraint))):

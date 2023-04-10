@@ -185,7 +185,6 @@ class Suffix(ComponentMap, ActiveComponent):
         ...
 
     def __init__(self, **kwds):
-
         # Suffix type information
         self._direction = None
         self._datatype = None
@@ -305,7 +304,6 @@ class Suffix(ComponentMap, ActiveComponent):
         set_value on every component.
         """
         if expand:
-
             try:
                 items = data.items()
             except AttributeError:
@@ -315,7 +313,6 @@ class Suffix(ComponentMap, ActiveComponent):
                 self.set_value(component, value, expand=expand)
 
         else:
-
             # As implemented by MutableMapping
             self.update(data)
 

@@ -32,19 +32,18 @@ thisDir = dirname(abspath(__file__))
 # Cleanup Expected Failure Results Files
 _cleanup_expected_failures = True
 
+
 #
 # A function that returns a function that gets
 # added to a test class.
 #
 def create_method(test_name, model, solver, io, test_case, symbolic_labels):
-
     is_expected_failure = test_case.status == 'expected failure'
 
     #
     # Create a function that executes the test
     #
     def writer_test(self):
-
         # Create the model test class
         model_class = test_case.model()
 
@@ -96,7 +95,7 @@ def create_method(test_name, model, solver, io, test_case, symbolic_labels):
             if rc[0]:
                 self.fail(
                     "\nTest model '%s' was marked as an expected "
-                    "failure but no failure occured. The "
+                    "failure but no failure occurred. The "
                     "reason given for the expected failure "
                     "is:\n\n****\n%s\n****\n\n"
                     "Please remove this case as an expected "

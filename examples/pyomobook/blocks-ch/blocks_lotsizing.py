@@ -12,6 +12,7 @@ P = 5.0  # maximum production amount
 # demand during period t
 d = {1: 5.0, 2: 7.0, 3: 6.2, 4: 3.1, 5: 1.7}
 
+
 # @blockrule:
 # create a block for a single time period
 def lotsizing_block_rule(b, t):
@@ -32,6 +33,7 @@ def lotsizing_block_rule(b, t):
 model.lsb = pyo.Block(model.T, rule=lotsizing_block_rule)
 # @:blockrule
 
+
 # link the inventory variables between blocks
 def i_linking_rule(m, t):
     if t == m.T.first():
@@ -40,6 +42,7 @@ def i_linking_rule(m, t):
 
 
 model.i_linking = pyo.Constraint(model.T, rule=i_linking_rule)
+
 
 # construct the objective function over all the blocks
 def obj_rule(m):

@@ -26,6 +26,7 @@ from pyomo.gdp import Disjunct
 
 logger = logging.getLogger('pyomo.core')
 
+
 #
 # This transformation reworks each Complementarity block to
 # create a mixed-complementarity problem that can be written to an NL file.

@@ -1406,7 +1406,6 @@ class MiscVarTests(unittest.TestCase):
         # pass
 
     def test_set_index(self):
-
         model = ConcreteModel()
         model.s = Set(initialize=[1, 2, 3])
         model.x = Var(model.s, initialize=0, dense=True)
@@ -1509,7 +1508,6 @@ class MiscVarTests(unittest.TestCase):
             model.x.add()
 
     def test_setdata_index(self):
-
         model = ConcreteModel()
         model.sindex = Set(initialize=[1])
         model.s = Set(model.sindex, initialize=[1, 2, 3])
@@ -1538,7 +1536,6 @@ class MiscVarTests(unittest.TestCase):
         self.assertTrue(newIdx in model.x)
 
     def test_setdata_multidimen_index(self):
-
         model = ConcreteModel()
         model.sindex = Set(initialize=[1])
         model.s = Set(model.sindex, dimen=2, initialize=[(1, 1), (1, 2), (1, 3)])

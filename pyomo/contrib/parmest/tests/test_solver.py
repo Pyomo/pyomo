@@ -52,7 +52,6 @@ class TestSolver(unittest.TestCase):
         pass
 
     def test_ipopt_solve_with_stats(self):
-
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
             rooney_biegler_model,
         )

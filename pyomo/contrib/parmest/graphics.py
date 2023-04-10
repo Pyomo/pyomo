@@ -69,7 +69,6 @@ def _get_XYgrid(x, y, ncells):
 
 
 def _get_data_slice(xvar, yvar, columns, data, theta_star):
-
     search_ranges = {}
     for var in columns:
         if var in [xvar, yvar]:
@@ -187,7 +186,6 @@ def _add_obj_contour(x, y, color, columns, data, theta_star, label=None):
 
 
 def _set_axis_limits(g, axis_limits, theta_vals, theta_star):
-
     if theta_star is not None:
         theta_vals = pd.concat([theta_vals, theta_star], ignore_index=True)
 
@@ -380,7 +378,6 @@ def pairwise_plot(
     # Plot confidence regions
     colors = ['r', 'mediumblue', 'darkgray']
     if (alpha is not None) and (len(distributions) > 0):
-
         if theta_star is None:
             print(
                 """theta_star is not defined, confidence region slice will be 

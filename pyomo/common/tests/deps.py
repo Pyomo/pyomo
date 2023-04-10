@@ -13,7 +13,7 @@
 # This module supports testing the attempt_import() functionality when
 # used at the module scope.  It cannot be in the actual test module, as
 # pytest accesses objects in the module scope during test collection
-# (which would inadvertantly trigger premature module import)
+# (which would inadvertently trigger premature module import)
 #
 
 from pyomo.common.dependencies import attempt_import

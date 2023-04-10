@@ -1936,7 +1936,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
 
 
 class TestPrettyPrinter_oldStyle(unittest.TestCase):
-
     _save = None
 
     def setUp(self):
@@ -2127,7 +2126,6 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
 
 
 class TestPrettyPrinter_newStyle(unittest.TestCase):
-
     _save = None
 
     def setUp(self):

@@ -41,7 +41,6 @@ def _is_numeric(x):
 
 
 def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes):
-
     # figure out what suffixes we need to extract.
     extract_duals = False
     extract_slacks = False
@@ -130,7 +129,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     return_code = 0
     if solver_status == GRB.LOADED:
         status = 'aborted'
-        message = 'Model is loaded, but no solution information is availale.'
+        message = 'Model is loaded, but no solution information is available.'
         term_cond = 'error'
         solution_status = 'unknown'
     elif solver_status == GRB.OPTIMAL:

@@ -25,7 +25,6 @@ values = [-(x**2) for x in breakpoints]
 
 
 def define_model(**kwds):
-
     sense = kwds.pop("sense")
 
     m = block()

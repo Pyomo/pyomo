@@ -17,7 +17,6 @@ block_vector = attempt_import(
 
 
 def norm(x, ord=None):
-
     f = np.linalg.norm
     if isinstance(x, np.ndarray):
         return f(x, ord=ord)
@@ -40,7 +39,6 @@ def concatenate(arrays):
 
 
 def where(*args):
-
     condition = args[0]
 
     if len(args) == 2:
@@ -260,7 +258,6 @@ def where(*args):
         if n_args == 1:
             return np.where(*args)
         else:
-
             x = args[1]
             y = args[2]
             if isinstance(x, block_vector.BlockVector):
@@ -274,7 +271,6 @@ def where(*args):
 
 
 def isin(element, test_elements, assume_unique=False, invert=False):
-
     if isinstance(element, block_vector.BlockVector) and isinstance(
         test_elements, block_vector.BlockVector
     ):
@@ -303,7 +299,6 @@ def isin(element, test_elements, assume_unique=False, invert=False):
     elif isinstance(element, block_vector.BlockVector) and isinstance(
         test_elements, np.ndarray
     ):
-
         assert (
             not element.has_none
         ), 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
@@ -321,7 +316,6 @@ def isin(element, test_elements, assume_unique=False, invert=False):
         return res
 
     elif isinstance(element, np.ndarray) and isinstance(test_elements, np.ndarray):
-
         return np.isin(
             element, test_elements, assume_unique=assume_unique, invert=invert
         )
@@ -331,7 +325,6 @@ def isin(element, test_elements, assume_unique=False, invert=False):
 
 
 def intersect1d(ar1, ar2, assume_unique=False, return_indices=False):
-
     if return_indices:
         raise NotImplementedError()
 
@@ -356,7 +349,6 @@ def intersect1d(ar1, ar2, assume_unique=False, return_indices=False):
     if isinstance(x, block_vector.BlockVector) and isinstance(
         y, block_vector.BlockVector
     ):
-
         assert x.nblocks == y.nblocks, "Number of blocks does not match"
         assert (
             not x.has_none
@@ -386,7 +378,6 @@ def intersect1d(ar1, ar2, assume_unique=False, return_indices=False):
             )
         return res
     elif isinstance(x, np.ndarray) and isinstance(y, block_vector.BlockVector):
-
         assert (
             not y.has_none
         ), 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
@@ -402,7 +393,6 @@ def intersect1d(ar1, ar2, assume_unique=False, return_indices=False):
 
 
 def setdiff1d(ar1, ar2, assume_unique=False):
-
     if isinstance(ar1, tuple) and len(ar1) == 1:
         x = ar1[0]
     elif isinstance(ar1, np.ndarray) or isinstance(ar1, block_vector.BlockVector):
@@ -424,7 +414,6 @@ def setdiff1d(ar1, ar2, assume_unique=False):
     if isinstance(x, block_vector.BlockVector) and isinstance(
         y, block_vector.BlockVector
     ):
-
         assert x.nblocks == y.nblocks, "Number of blocks does not match"
         assert (
             not x.has_none
@@ -451,7 +440,6 @@ def setdiff1d(ar1, ar2, assume_unique=False):
             )
         return res
     elif isinstance(x, np.ndarray) and isinstance(y, block_vector.BlockVector):
-
         assert (
             not y.has_none
         ), 'Operation not allowed with None blocks. Specify all blocks in BlockVector'

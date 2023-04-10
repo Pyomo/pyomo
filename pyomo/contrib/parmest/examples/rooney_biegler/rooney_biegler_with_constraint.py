@@ -20,12 +20,12 @@ import pyomo.environ as pyo
 
 
 def rooney_biegler_model_with_constraint(data):
-
     model = pyo.ConcreteModel()
 
     model.asymptote = pyo.Var(initialize=15)
     model.rate_constant = pyo.Var(initialize=0.5)
     model.response_function = pyo.Var(data.hour, initialize=0.0)
+
     # changed from expression to constraint
     def response_rule(m, h):
         return m.response_function[h] == m.asymptote * (

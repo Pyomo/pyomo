@@ -38,7 +38,7 @@ PyROS 1.2.2    09 Nov 2022
 -------------------------------------------------------------------------------
 PyROS 1.2.1    05 Oct 2022
 -------------------------------------------------------------------------------
-- Fix subordinate optimizer SolverResults solve time acess routines.
+- Fix subordinate optimizer SolverResults solve time access routines.
 
 
 -------------------------------------------------------------------------------

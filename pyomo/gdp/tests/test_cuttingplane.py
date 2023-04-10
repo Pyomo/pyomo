@@ -706,7 +706,7 @@ class Grossmann_TestCases(unittest.TestCase):
     def test_cut_is_correct_facet_inf_norm(self):
         m = models.grossmann_oneDisj()
         # without the increase of cut_filtering_threshold, we get a third cut,
-        # whcih is also tight where cut 2 is. It doesn't improve the objective
+        # which is also tight where cut 2 is. It doesn't improve the objective
         # by much at all, so it's redundant.
         TransformationFactory('gdp.cuttingplane').apply_to(
             m, norm=float('inf'), cut_filtering_threshold=0.2

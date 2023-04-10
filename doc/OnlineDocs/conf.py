@@ -273,7 +273,7 @@ import pyomo.environ as _pe # (trigger all plugin registrations)
 import pyomo.opt as _opt
 
 # Not using SolverFactory to check solver availability because
-# as of June 2020 there is no way to supress warnings when 
+# as of June 2020 there is no way to suppress warnings when 
 # solvers are not available
 ipopt_available = bool(_opt.check_available_solvers('ipopt'))
 sipopt_available = bool(_opt.check_available_solvers('ipopt_sens'))

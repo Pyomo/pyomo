@@ -426,7 +426,7 @@ class TuplizeValuesInitializer(InitializerBase):
     """An initializer wrapper that will "tuplize" a sequence
 
     This initializer takes the result of another initializer, and if it
-    is a sequence that does not already contain tuples, wil convert it
+    is a sequence that does not already contain tuples, will convert it
     to a sequence of tuples, each of length 'dimen' before returning it.
 
     """
@@ -2272,7 +2272,7 @@ class Set(IndexedComponent):
         """
         #
         # Eventually, we might want to support a 'verbose' flag to
-        # pprint() that will suppress som of the very long (less
+        # pprint() that will suppress some of the very long (less
         # informative) output
         #
         # if verbose:
@@ -2962,7 +2962,7 @@ class RangeSet(Component):
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
         if len(args) == 1:
-            # This is a bit of a hack for backwards compatability with
+            # This is a bit of a hack for backwards compatibility with
             # the old RangeSet implementation, where we did less
             # validation of the RangeSet arguments, and allowed the
             # creation of 0-length RangeSets
@@ -2971,7 +2971,7 @@ class RangeSet(Component):
                 # automatically be truncated
                 ranges = ranges + (NumericRange(1, args[0], 1),)
         elif len(args) == 2:
-            # This is a bit of a hack for backwards compatability with
+            # This is a bit of a hack for backwards compatibility with
             # the old RangeSet implementation, where we did less
             # validation of the RangeSet arguments, and allowed the
             # creation of 0-length RangeSets
@@ -2982,7 +2982,7 @@ class RangeSet(Component):
             # Discrete ranges anchored by a floating point value or
             # incremented by a floating point value cannot be handled by
             # the NumericRange object.  We will just discretize this
-            # range (mostly for backwards compatability)
+            # range (mostly for backwards compatibility)
             start, end, step = args
             if step:
                 if start is None:
@@ -2990,7 +2990,7 @@ class RangeSet(Component):
                     step *= -1
 
                 if start is None:
-                    # Backwards compatability: assume unbounded RangeSet
+                    # Backwards compatibility: assume unbounded RangeSet
                     # is grounded at 0
                     ranges += (
                         NumericRange(0, None, step),
@@ -3593,7 +3593,7 @@ class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
                     for r0 in set0.ranges():
                         ranges.extend(r0.range_intersection(set1.ranges()))
                     # Note that the RangeSet is automatically
-                    # constucted, as it has no non-native positional
+                    # constructed, as it has no non-native positional
                     # parameters.
                     return iter(RangeSet(ranges=ranges))
         return (s for s in set0 if s in set1)
@@ -4189,7 +4189,7 @@ class _AnySet(_SetData, Set):
 class _AnyWithNoneSet(_AnySet):
     # Note that we put the deprecation warning on contains() and not on
     # the class because we will always create a global instance for
-    # backwards compatability with the Book.
+    # backwards compatibility with the Book.
     @deprecated(
         "The AnyWithNone set is deprecated.  Use Any, which includes None",
         version='5.7',

@@ -111,7 +111,7 @@ class GDPoptSolver(object):
             model (Block): a Pyomo model or block to be solved
 
         """
-        # The algorithm should have been specifed as an argument to the solve
+        # The algorithm should have been specified as an argument to the solve
         # method. We will instantiate an ephemeral instance of the correct
         # solver and call its solve method.
         options = kwds.pop('options', {})

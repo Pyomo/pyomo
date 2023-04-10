@@ -132,7 +132,6 @@ def generate_model_graph(
     # This if statement will be executed if the user chooses to include the objective function as a node in
     # the model graph
     if with_objective:
-
         # Use a loop to account for the possibility of multiple objective functions
         for objective_function in model.component_data_objects(
             ctype=Objective, active=use_only_active_components, descend_into=True

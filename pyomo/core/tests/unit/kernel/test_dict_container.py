@@ -40,7 +40,6 @@ class _bad_ctype(object):
 
 
 class _TestDictContainerBase(object):
-
     # set by derived class
     _container_type = None
     _ctype_factory = None
