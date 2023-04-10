@@ -10,9 +10,7 @@ from numpy.random import normal
 from numpy.linalg import norm
 
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.collections import ComponentSet
 import pyomo.environ as pe
-import pyomo.util.vars_from_expressions as vfe
 from pyomo.opt import SolverFactory
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.contrib import appsi
@@ -43,7 +41,7 @@ def _get_active_objective(model):
     active_objs = [o for o in model.component_data_objects(pe.Objective, 
                                                            active=True)]
     assert len(active_objs) == 1, \
-        "Model has more than one active objective function"
+        "Model has zero or more than one active objective function"
     
     return active_objs[0]
 
@@ -105,15 +103,6 @@ def _get_max_solutions(max_solutions):
     if max_solutions is None:
         num_solutions = sys.maxsize
     return num_solutions
-
-
-
-
-def get_solution(model, variables):
-    solution = []
-    for var in variables:
-        solution.append((var, pe.value(var)))
-    return solution
 
 def _get_random_direction(num_dimensions):
     idx = 0

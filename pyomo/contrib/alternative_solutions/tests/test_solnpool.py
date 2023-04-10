@@ -4,10 +4,10 @@ import yaml
 import pytest
 import random
 
-from munch import unmunchify
 import pyutilib.misc
 import pyomo.environ as pe
-from pyomo.contrib.alternative_solutions.solnpool import gurobi_generate_solutions
+from pyomo.contrib.alternative_solutions.solnpool import \
+    gurobi_generate_solutions
 from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.alternative_solutions.comparison import consensus
 
@@ -43,7 +43,7 @@ def run(testname, model, N, debug=False):
     print(solutions)
     # Verify final results
 
-    results = [unmunchify(soln) for soln in solutions]
+    results = [soln.get_variable_name_values() for soln in solutions]
     output = yaml.dump(results, default_flow_style=None)
     outputfile = join(currdir, "{}_results.yaml".format(testname))
     with open(outputfile, "w") as OUTPUT:

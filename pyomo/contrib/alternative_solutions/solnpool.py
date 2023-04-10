@@ -40,7 +40,7 @@ def gurobi_generate_solutions(model, max_solutions=10, rel_opt_gap=None,
             (i.e. that any feasible solution can be considered by Gurobi).
             This parameter maps to the PoolGapAbs parameter in Gurobi.
         search_mode : 0, 1, or 2
-            Indicates the Solution Pool mode that is used to generate 
+            Indicates the SolutionPool mode that is used to generate 
             alternative solutions in Gurobi. Mode 2 should typically be used as 
             it finds the best n solutions. Mode 0 finds a single optimal 
             solution (i.e. the standard mode in Gurobi). Mode 1 will generate n 
@@ -50,7 +50,7 @@ def gurobi_generate_solutions(model, max_solutions=10, rel_opt_gap=None,
             Boolean indicating that discrete values should be rounded to the 
             nearest integer in the solutions results.
         solver_options : dict
-            Solver option-value pairs to be passed to the solver.
+            Solver option-value pairs to be passed to the Gurobi solver.
             
         Returns
         -------
@@ -90,11 +90,13 @@ def gurobi_generate_solutions(model, max_solutions=10, rel_opt_gap=None,
 
     # Get model solutions
     solution_count = opt.get_model_attr('SolCount')
-    print("Gurobi found {} solutions".format(solution_count))
+    print("Gurobi found {} solutions.".format(solution_count))
     variables = var_utils.get_model_variables(model, 'all', include_fixed=True)
     solutions = []
     for i in range(solution_count):
         results.solution_loader.load_vars(solution_number=i)
-        solutions.append(solution.Solution(model, variables))
+        solutions.append(solution.Solution(model, variables, 
+                                           round_discrete_vars=\
+                                           round_discrete_vars))
 
     return solutions

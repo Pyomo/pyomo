@@ -66,6 +66,7 @@ def get_model_variables(model, components='all', include_continuous=True,
             A Pyomo ComponentSet containing _GeneralVarData variables.
     '''
 
+    # Validate inputs
     aos_utils._is_concrete_model(model)
     assert isinstance(include_continuous, bool), \
         'include_continuous must be a Boolean'
@@ -74,8 +75,8 @@ def get_model_variables(model, components='all', include_continuous=True,
         'include_integer must be a Boolean'
     assert isinstance(include_fixed, bool), 'include_fixed must be a Boolean'
     
+    # Gather variables
     variable_set = ComponentSet()
-
     if components == 'all':
         var_generator = vfe.get_vars_from_components(model, pe.Constraint, 
                                                      include_fixed=\
@@ -83,7 +84,6 @@ def get_model_variables(model, components='all', include_continuous=True,
         _filter_model_variables(variable_set, var_generator, 
                                 include_continuous, include_binary, 
                                 include_integer, include_fixed)
-        print('im here')
     else:
         assert hasattr(components, '__iter__'), \
             ('components parameters must be an iterable collection of Pyomo'
@@ -129,8 +129,6 @@ def get_model_variables(model, components='all', include_continuous=True,
                       format(comp))
                 
     return variable_set
-
-
 
 def check_variables(model, variables):
     pass
