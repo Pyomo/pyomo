@@ -37,7 +37,7 @@ run:
 
     # Auto-apply correct formatting
    pip install black
-   black -S -C <path>
+   black -S -C <path> --exclude examples/pyomobook/python-ch/BadIndent.py
    # Find typos in files
    conda install typos
    typos --config .github/workflows/typos.toml <path>
