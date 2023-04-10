@@ -314,7 +314,7 @@ class PiecewiseLinearFunction(Block):
             )
 
         return self._construct_from_function_and_simplices(
-            obj, parent, nonlinear_function
+            obj, parent, nonlinear_function, simplices_are_user_defined=False
         )
 
     def _construct_from_univariate_function_and_segments(self, obj, func):
@@ -329,7 +329,9 @@ class PiecewiseLinearFunction(Block):
         return obj
 
     @_define_handler(_handlers, True, False, True, False)
-    def _construct_from_function_and_simplices(self, obj, parent, nonlinear_function):
+    def _construct_from_function_and_simplices(
+        self, obj, parent, nonlinear_function, simplices_are_user_defined=True
+    ):
         if obj._simplices is None:
             obj._get_simplices_from_arg(self._simplices_rule(parent, obj._index))
         simplices = obj._simplices
@@ -373,13 +375,21 @@ class PiecewiseLinearFunction(Block):
                 normal = np.linalg.solve(A, b)
             except np.linalg.LinAlgError as e:
                 logger.warning('LinAlgError: %s' % e)
-                raise DeveloperError(
+                msg = (
                     "When calculating the hyperplane approximation over the simplex "
                     "with index %s, the matrix was unexpectedly singular. This "
-                    "likely means that this simplex is degenerate and "
-                    "that it should have been filtered out of the Delaunay "
-                    "triangulation" % num_piece
+                    "likely means that this simplex is degenerate" % num_piece
                 )
+
+                if simplices_are_user_defined:
+                    raise ValueError(msg)
+                # otherwise it's our fault, and I was hoping this is unreachable
+                # code...
+                raise DeveloperError(
+                    msg
+                    + "and that it should have been filtered out of the triangulation"
+                )
+
             obj._linear_functions.append(_multivariate_linear_functor(normal))
 
         return obj
