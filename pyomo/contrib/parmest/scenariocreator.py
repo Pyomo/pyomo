@@ -52,10 +52,10 @@ class ScenarioSet(object):
         self._scens.append(scen)
 
     def append_bootstrap(self, bootstrap_theta):
-        """Append a boostrap theta df to the scenario set; equally likely
+        """Append a bootstrap theta df to the scenario set; equally likely
 
         Args:
-            boostrap_theta (dataframe): created by the bootstrap
+            bootstrap_theta (dataframe): created by the bootstrap
         Note: this can be cleaned up a lot with the list becomes a df,
               which is why I put it in the ScenarioSet class.
         """
@@ -66,7 +66,7 @@ class ScenarioSet(object):
         dfdict = bootstrap_theta.to_dict(orient='index')
 
         for index, ThetaVals in dfdict.items():
-            name = "Boostrap" + str(index)
+            name = "Bootstrap" + str(index)
             self.addone(ParmestScen(name, ThetaVals, prob))
 
     def write_csv(self, filename):
@@ -96,7 +96,7 @@ class ParmestScen(object):
     Args:
         name (str): name for reporting; might be ""
         ThetaVals (dict): ThetaVals[name]=val
-        probability (float): probability of occurance "near" these ThetaVals
+        probability (float): probability of occurrence "near" these ThetaVals
     """
 
     def __init__(self, name, ThetaVals, probability):
@@ -133,10 +133,10 @@ class ScenarioCreator(object):
 
         assert isinstance(addtoSet, ScenarioSet)
 
-        senario_numbers = list(range(len(self.pest.callback_data)))
+        scenario_numbers = list(range(len(self.pest.callback_data)))
 
-        prob = 1.0 / len(senario_numbers)
-        for exp_num in senario_numbers:
+        prob = 1.0 / len(scenario_numbers)
+        for exp_num in scenario_numbers:
             ##print("Experiment number=", exp_num)
             model = self.pest._instance_creation_callback(
                 exp_num, self.pest.callback_data
@@ -152,7 +152,7 @@ class ScenarioCreator(object):
                 ThetaVals[theta] = tval
             addtoSet.addone(ParmestScen("ExpScen" + str(exp_num), ThetaVals, prob))
 
-    def ScenariosFromBoostrap(self, addtoSet, numtomake, seed=None):
+    def ScenariosFromBootstrap(self, addtoSet, numtomake, seed=None):
         """Creates new self.Scenarios list using the experiments only.
 
         Args:

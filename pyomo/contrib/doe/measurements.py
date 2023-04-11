@@ -151,7 +151,7 @@ class Measurements:
 
         Parameters
         ----------
-        flatten_measure_name: flattened measurement names. For e.g., flattenning {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
+        flatten_measure_name: flattened measurement names. For e.g., flattening {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
         variance:
             a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index name,
             values are its variance as a scalar number.

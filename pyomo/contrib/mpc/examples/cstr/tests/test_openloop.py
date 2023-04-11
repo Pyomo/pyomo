@@ -20,7 +20,6 @@ ipopt_available = pyo.SolverFactory("ipopt").available()
 
 @unittest.skipIf(not ipopt_available, "ipopt is not available")
 class TestCSTROpenLoop(unittest.TestCase):
-
     # This data was obtained from a run of this code. The test is
     # intended to make sure that values do not change, not that
     # they are correct in some absolute sense.

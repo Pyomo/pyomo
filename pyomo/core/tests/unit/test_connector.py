@@ -50,7 +50,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(model.c), 0)
         # FIXME: Not sure I like this behavior: but since this is
         # (currently) an attribute, there is no way to check for
-        # construction withough converting it to a property.
+        # construction without converting it to a property.
         #
         # TODO: if we move away from multiple inheritance for
         # simplevars, then this can trigger an exception (cleanly)

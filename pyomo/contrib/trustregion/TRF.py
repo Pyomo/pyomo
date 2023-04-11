@@ -51,7 +51,7 @@ def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, c
         are the degrees of freedom or decision variables within
         the model.
     ext_fcn_surrogate_map_rule : Function, optional
-        In the 2020 Yoshio/Biegler paper, this is refered to as
+        In the 2020 Yoshio/Biegler paper, this is referred to as
         the basis function `b(w)`.
         This is the low-fidelity model with which to solve the original
         process model problem and which is integrated into the
@@ -484,7 +484,7 @@ class TrustRegionSolver(object):
             are the degrees of freedom or decision variables within
             the model.
         ext_fcn_surrogate_map_rule : Function, optional
-            In the 2020 Yoshio/Biegler paper, this is refered to as
+            In the 2020 Yoshio/Biegler paper, this is referred to as
             the basis function `b(w)`.
             This is the low-fidelity model with which to solve the original
             process model problem and which is integrated into the

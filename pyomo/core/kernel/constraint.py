@@ -443,7 +443,6 @@ class constraint(_MutableBoundsConstraintMixin, IConstraint):
 
     @expr.setter
     def expr(self, expr):
-
         self._equality = False
         if expr is None:
             self.body = None

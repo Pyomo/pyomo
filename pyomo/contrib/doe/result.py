@@ -186,7 +186,7 @@ class FisherResults:
             measure_subset: the object of the measurement subsets
 
         Returns:
-            jaco_info: splitted Jacobian
+            jaco_info: split Jacobian
         """
         # create a dict for FIM. It has the same keys as the Jacobian dict.
         jaco_info = {}
@@ -341,7 +341,7 @@ class FisherResults:
 
         Return:
         ------
-        solver_status: a solver infomation dictionary containing the following key:value pairs
+        solver_status: a solver information dictionary containing the following key:value pairs
             -['square']: a string of square result solver status
             -['doe']: a string of doe result solver status
         """
@@ -414,7 +414,6 @@ class GridSearchResult:
 
         # loop over deign value combinations
         for design_set_iter in search_design_set:
-
             # locate this grid in the dictionary of combined results
             result_object_asdict = {
                 k: v for k, v in self.FIM_result_list.items() if k == design_set_iter

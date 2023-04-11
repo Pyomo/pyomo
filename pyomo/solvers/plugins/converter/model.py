@@ -21,7 +21,6 @@ from pyomo.core.kernel.block import IBlock
 
 @ProblemConverterFactory.register('pyomo')
 class PyomoMIPConverter(object):
-
     pico_converter = PicoMIPConverter()
 
     def can_convert(self, from_type, to_type):
@@ -84,7 +83,6 @@ class PyomoMIPConverter(object):
                     )
                 return (problem_filename,), symbol_map_id
             else:
-
                 #
                 # I'm simply exposing a fatal issue with
                 # this code path. How would we convert the
@@ -133,7 +131,6 @@ class PyomoMIPConverter(object):
                     )
                 return (problem_filename,), symbol_map_id
             else:
-
                 #
                 # I'm simply exposing a fatal issue with
                 # this code path. How would we convert the
@@ -192,7 +189,6 @@ class PyomoMIPConverter(object):
                     )
                 return (problem_filename,), symbol_map_id
             else:
-
                 #
                 # I'm simply exposing a fatal issue with
                 # this code path. How would we convert the

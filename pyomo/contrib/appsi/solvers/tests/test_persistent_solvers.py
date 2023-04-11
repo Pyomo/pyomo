@@ -48,7 +48,7 @@ get_duals                                  x
 get_reduced_costs                          x
 range constraints                          x
 MILP
-Model updates - added constriants          x
+Model updates - added constraints          x
 Model updates - removed constraints        x
 Model updates - added vars
 Model updates - removed vars
@@ -187,7 +187,7 @@ class TestSolvers(unittest.TestCase):
         m.c2 = pe.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
-        for (a1, a2, b1, b2) in params_to_test:
+        for a1, a2, b1, b2 in params_to_test:
             m.a1.value = a1
             m.a2.value = a2
             m.b1.value = b1
@@ -223,7 +223,7 @@ class TestSolvers(unittest.TestCase):
         m.c2 = pe.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
 
         params_to_test = [(1, 2, 1), (1, 2, 1), (1, 3, 1)]
-        for (a1, b1, b2) in params_to_test:
+        for a1, b1, b2 in params_to_test:
             a2 = m.a2.value
             m.a1.value = a1
             m.b1.value = b1
@@ -255,7 +255,7 @@ class TestSolvers(unittest.TestCase):
         m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
-        for (a1, a2, b1, b2) in params_to_test:
+        for a1, a2, b1, b2 in params_to_test:
             m.a1.value = a1
             m.a2.value = a2
             m.b1.value = b1
@@ -293,7 +293,7 @@ class TestSolvers(unittest.TestCase):
         m.c2 = pe.Constraint(expr=e == 0)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
-        for (a1, a2, b1, b2) in params_to_test:
+        for a1, a2, b1, b2 in params_to_test:
             m.a1.value = a1
             m.a2.value = a2
             m.b1.value = b1
@@ -321,7 +321,7 @@ class TestSolvers(unittest.TestCase):
         opt.config.stream_solver = True
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
-        for (a1, a2, b1, b2) in params_to_test:
+        for a1, a2, b1, b2 in params_to_test:
             m.a1.value = a1
             m.a2.value = a2
             m.b1.value = b1
@@ -676,7 +676,7 @@ class TestSolvers(unittest.TestCase):
                 pe.maximize,
             ),
         ]
-        for (a1, a2, b1, b2, c1, c2, sense) in params_to_test:
+        for a1, a2, b1, b2, c1, c2, sense in params_to_test:
             m.a1.value = float(a1)
             m.a2.value = float(a2)
             m.b1.value = float(b1)
@@ -1217,7 +1217,7 @@ class TestLegacySolverInterface(unittest.TestCase):
         m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
-        for (a1, a2, b1, b2) in params_to_test:
+        for a1, a2, b1, b2 in params_to_test:
             m.a1.value = a1
             m.a2.value = a2
             m.b1.value = b1

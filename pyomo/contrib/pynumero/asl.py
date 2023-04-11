@@ -239,7 +239,6 @@ def _LoadASLInterface(libname):
 
 
 class AmplInterface(object):
-
     libname = _NotSet
     ASLib = None
     interface_version = None
@@ -254,7 +253,6 @@ class AmplInterface(object):
         return os.path.exists(cls.libname)
 
     def __init__(self, filename=None, nl_buffer=None):
-
         if not AmplInterface.available():
             raise RuntimeError("Cannot load the PyNumero ASL interface (pynumero_ASL)")
 
@@ -358,7 +356,7 @@ class AmplInterface(object):
         )
 
     def eval_f(self, x):
-        assert x.size == self._nx, "Error: Dimension missmatch."
+        assert x.size == self._nx, "Error: Dimension mismatch."
         assert (
             x.dtype == np.double
         ), "Error: array type. Function eval_deriv_f expects an array of type double"
@@ -370,7 +368,7 @@ class AmplInterface(object):
         return sol.value
 
     def eval_deriv_f(self, x, df):
-        assert x.size == self._nx, "Error: Dimension missmatch."
+        assert x.size == self._nx, "Error: Dimension mismatch."
         assert (
             x.dtype == np.double
         ), "Error: array type. Function eval_deriv_f expects an array of type double"
@@ -382,10 +380,10 @@ class AmplInterface(object):
         jcol_p = jcol.astype(np.intc, casting='safe', copy=False)
         assert len(irow) == len(
             jcol
-        ), "Error: Dimension missmatch. Arrays irow and jcol must be of the same size"
+        ), "Error: Dimension mismatch. Arrays irow and jcol must be of the same size"
         assert (
             len(irow) == self._nnz_jac_g
-        ), "Error: Dimension missmatch. Jacobian has {} nnz".format(self._nnz_jac_g)
+        ), "Error: Dimension mismatch. Jacobian has {} nnz".format(self._nnz_jac_g)
         self.ASLib.EXTERNAL_AmplInterface_struct_jac_g(
             self._obj, irow_p, jcol_p, len(irow)
         )
@@ -395,17 +393,17 @@ class AmplInterface(object):
         jcol_p = jcol.astype(np.intc, casting='safe', copy=False)
         assert len(irow) == len(
             jcol
-        ), "Error: Dimension missmatch. Arrays irow and jcol must be of the same size"
+        ), "Error: Dimension mismatch. Arrays irow and jcol must be of the same size"
         assert (
             len(irow) == self._nnz_hess
-        ), "Error: Dimension missmatch. Hessian has {} nnz".format(self._nnz_hess)
+        ), "Error: Dimension mismatch. Hessian has {} nnz".format(self._nnz_hess)
         self.ASLib.EXTERNAL_AmplInterface_struct_hes_lag(
             self._obj, irow_p, jcol_p, len(irow)
         )
 
     def eval_jac_g(self, x, jac_g_values):
-        assert x.size == self._nx, "Error: Dimension missmatch."
-        assert jac_g_values.size == self._nnz_jac_g, "Error: Dimension missmatch."
+        assert x.size == self._nx, "Error: Dimension mismatch."
+        assert jac_g_values.size == self._nnz_jac_g, "Error: Dimension mismatch."
         xeval = x.astype(np.double, casting='safe', copy=False)
         jac_eval = jac_g_values.astype(np.double, casting='safe', copy=False)
         res = self.ASLib.EXTERNAL_AmplInterface_eval_jac_g(
@@ -414,8 +412,8 @@ class AmplInterface(object):
         assert res, "Error in AMPL evaluation"
 
     def eval_g(self, x, g):
-        assert x.size == self._nx, "Error: Dimension missmatch."
-        assert g.size == self._ny, "Error: Dimension missmatch."
+        assert x.size == self._nx, "Error: Dimension mismatch."
+        assert g.size == self._ny, "Error: Dimension mismatch."
         assert (
             x.dtype == np.double
         ), "Error: array type. Function eval_g expects an array of type double"
@@ -428,9 +426,9 @@ class AmplInterface(object):
         assert res, "Error in AMPL evaluation"
 
     def eval_hes_lag(self, x, lam, hes_lag, obj_factor=1.0):
-        assert x.size == self._nx, "Error: Dimension missmatch."
-        assert lam.size == self._ny, "Error: Dimension missmatch."
-        assert hes_lag.size == self._nnz_hess, "Error: Dimension missmatch."
+        assert x.size == self._nx, "Error: Dimension mismatch."
+        assert lam.size == self._ny, "Error: Dimension mismatch."
+        assert hes_lag.size == self._nnz_hess, "Error: Dimension mismatch."
         assert (
             x.dtype == np.double
         ), "Error: array type. Function eval_hes_lag expects an array of type double"

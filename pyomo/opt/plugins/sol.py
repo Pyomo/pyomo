@@ -48,7 +48,6 @@ class ResultsReader_sol(results.AbstractResultsReader):
             )
 
     def _load(self, fin, res, soln, suffixes):
-
         if res is None:
             res = SolverResults()
         #
@@ -167,7 +166,6 @@ class ResultsReader_sol(results.AbstractResultsReader):
             TerminationCondition.other,
             TerminationCondition.infeasible,
         ]:
-
             if soln is None:
                 soln = res.solution.add()
             res.solution.status = soln_status

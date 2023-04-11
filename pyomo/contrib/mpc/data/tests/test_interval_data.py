@@ -280,7 +280,7 @@ class TestLoadInputs(unittest.TestCase):
             if t < 3:
                 self.assertEqual(m.v[t].value, 1.0)
             elif t == 6:
-                # By default, prefering intervals to the right of time
+                # By default, preferring intervals to the right of time
                 # points will exclude the right endpoints of intervals.
                 self.assertEqual(m.v[t].value, 0.0)
             else:

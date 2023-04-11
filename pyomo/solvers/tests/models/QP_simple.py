@@ -73,7 +73,6 @@ class QP_simple(_BaseTestModel):
 
 @register_model
 class QP_simple_nosuffixes(QP_simple):
-
     description = "QP_simple_nosuffixes"
     test_pickling = False
 
@@ -104,7 +103,6 @@ class QP_simple_kernel(QP_simple):
 
 @register_model
 class QP_simple_nosuffixes_kernel(QP_simple_kernel):
-
     description = "QP_simple_nosuffixes"
     test_pickling = False
 

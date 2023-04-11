@@ -13,7 +13,7 @@ code.descname {
     font-weight: bold !important;
     color: black;
 }
-/* method argument lists shoult *not* be bold, argument names in black */
+/* method argument lists should *not* be bold, argument names in black */
 dl.py.method dt {
     font-weight: normal;
 }

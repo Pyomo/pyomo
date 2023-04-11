@@ -17,6 +17,7 @@ model.Lengths = Param(model.RECTANGLES)
 # width of strip
 model.StripWidth = Param()
 
+
 # upperbound on length (default is sum of lengths of rectangles)
 def sumLengths(model):
     return sum(model.Lengths[i] for i in model.RECTANGLES)
@@ -34,6 +35,7 @@ model.y = Var(model.RECTANGLES, bounds=(0, model.StripWidth))
 # length of strip (this will be the objective)
 model.Lt = Var(within=NonNegativeReals)
 
+
 # generate the list of possible rectangle conflicts (which are any pair)
 def rec_pairs_filter(model, i, j):
     return i < j
@@ -43,6 +45,7 @@ model.RectanglePairs = Set(
     initialize=model.RECTANGLES * model.RECTANGLES, dimen=2, filter=rec_pairs_filter
 )
 
+
 # strip length constraint
 def strip_ends_after_last_rec_rule(model, i):
     return model.Lt >= model.x[i] + model.Lengths[i]
@@ -51,6 +54,7 @@ def strip_ends_after_last_rec_rule(model, i):
 model.strip_ends_after_last_rec = Constraint(
     model.RECTANGLES, rule=strip_ends_after_last_rec_rule
 )
+
 
 # constraints to prevent rectangles from going off strip
 def no_recs_off_end_rule(model, i):
@@ -65,6 +69,7 @@ def no_recs_off_bottom_rule(model, i):
 
 
 model.no_recs_off_bottom = Constraint(model.RECTANGLES, rule=no_recs_off_bottom_rule)
+
 
 # Disjunctions to prevent overlap between rectangles
 def no_overlap_disjunct_rule(disjunct, i, j, recRelation):

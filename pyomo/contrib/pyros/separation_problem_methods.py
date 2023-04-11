@@ -220,7 +220,6 @@ def get_all_sep_objective_values(model_data, config):
 
 
 def get_index_of_max_violation(model_data, config, solve_data_list):
-
     is_discrete_scenarios = (
         True
         if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
@@ -314,7 +313,6 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
 
 
 def solve_separation_problem(model_data, config):
-
     # Timing variables
     global_solve_time = 0
     local_solve_time = 0

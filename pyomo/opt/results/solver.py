@@ -30,7 +30,7 @@ class SolverStatus(str, enum.Enum):
     error = 'error'  # Terminated internally with error
     aborted = 'aborted'  # Terminated due to external conditions
     #   (e.g. interrupts)
-    unknown = 'unknown'  # An unitialized value
+    unknown = 'unknown'  # An uninitialized value
 
     # Overloading __str__ is needed to match the behavior of the old
     # pyutilib.enum class (removed June 2020). There are spots in the
@@ -46,7 +46,7 @@ class SolverStatus(str, enum.Enum):
 #
 class TerminationCondition(str, enum.Enum):
     # UNKNOWN
-    unknown = 'unknown'  # An unitialized value
+    unknown = 'unknown'  # An uninitialized value
     # OK
     maxTimeLimit = 'maxTimeLimit'  # Exceeded maximum time limited allowed by user
     #    but having return a feasible solution

@@ -263,6 +263,7 @@ class Test(unittest.TestCase):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
+
         #
         def d_rule(model):
             return model.x[1] >= 0
@@ -440,7 +441,7 @@ class Test(unittest.TestCase):
     @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_solve7(self):
         #
-        # Test that solution values are writen with appropriate
+        # Test that solution values are written with appropriate
         # quotations in results
         #
         model = ConcreteModel()
@@ -510,6 +511,7 @@ class Test(unittest.TestCase):
         model.o = ObjectiveList()
         model.o.add(model.y[1])
         model.o.add(model.y[2])
+
         #
         def c_rule(model, i):
             expr = 0

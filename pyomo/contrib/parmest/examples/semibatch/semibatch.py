@@ -34,7 +34,6 @@ from pyomo.dae import ContinuousSet, DerivativeVar
 
 
 def generate_model(data):
-
     # unpack and fix the data
     cameastemp = data['Ca_meas']
     cbmeastemp = data['Cb_meas']

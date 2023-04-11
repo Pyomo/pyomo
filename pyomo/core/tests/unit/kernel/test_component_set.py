@@ -23,7 +23,6 @@ from pyomo.core.kernel.suffix import suffix
 
 
 class TestComponentSet(unittest.TestCase):
-
     _components = [
         variable(),
         variable_dict(),

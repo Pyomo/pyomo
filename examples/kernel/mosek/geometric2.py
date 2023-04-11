@@ -5,7 +5,6 @@ import pyomo.kernel as pmo
 
 
 def solve_nonlinear():
-
     m = pmo.block()
 
     m.x = pmo.variable()
@@ -32,7 +31,6 @@ def solve_nonlinear():
 
 
 def solve_conic():
-
     m = pmo.block()
 
     m.t = pmo.variable()

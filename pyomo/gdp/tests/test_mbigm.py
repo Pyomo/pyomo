@@ -573,7 +573,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
             "transformation:",
             warnings,
         )
-        for (cons, disj) in [
+        for cons, disj in [
             (m.d1.x1_bounds, m.d2),
             (m.d1.x2_bounds, m.d2),
             (m.d1.x1_bounds, m.d3),

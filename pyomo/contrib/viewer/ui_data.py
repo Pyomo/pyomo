@@ -129,7 +129,6 @@ else:
         exec_refresh = Signal()
 
         def __init__(self, *args, **kwargs):
-
             """
             This class holds the basic UI setup
 

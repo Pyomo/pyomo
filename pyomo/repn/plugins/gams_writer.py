@@ -100,7 +100,6 @@ def _handle_AbsExpression(visitor, node, values):
 # that is compatible with the GAMS syntax.
 #
 class ToGamsVisitor(EXPR._ToStringVisitor):
-
     _expression_handlers = {
         EXPR.PowExpression: _handle_PowExpression,
         EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,
@@ -601,7 +600,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # encountered will be added to the var_list due to the labeler
         # defined above.
         for con in model.component_data_objects(Constraint, active=True, sort=sort):
-
             if not con.has_lb() and not con.has_ub():
                 assert not con.equality
                 continue  # non-binding, so skip

@@ -121,6 +121,7 @@ cp_solver, docplex_available = attempt_import('docplex.cp.solver')
 
 logger = logging.getLogger('pyomo.contrib.cp')
 
+
 # These are things that don't need special handling:
 class _GENERAL(object):
     pass
@@ -263,7 +264,7 @@ def _handle_getitem(visitor, node, *data):
             var = node.arg(i + 1)
             arg_domain.append(_check_var_domain(visitor, node, var))
             arg_scale.append(arg_domain[-1].get_interval())
-        # Buid the expression that maps arguments to GetItem() to a
+        # Build the expression that maps arguments to GetItem() to a
         # position in the elements list
         if arg_scale[-1] is not None:
             _min, _max, _step = arg_scale[-1]
@@ -332,7 +333,7 @@ def _handle_getattr(visitor, node, obj, attr):
         try:
             ans = list(map(_deferred_element_getattr_dispatcher[attr[1]], obj[1][0]))
         except KeyError:
-            logger.error("Unrecognized attrribute in GetAttrExpression: %s." % attr[1])
+            logger.error("Unrecognized attribute in GetAttrExpression: %s." % attr[1])
             raise
         return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
     elif obj[0] is _ELEMENT_CONSTRAINT:
@@ -647,7 +648,7 @@ def _get_bool_valued_expr(arg):
         # or boolean-valued: they just complain if you use them in a boolean
         # context. So if we are about to use one that way, we set it equivalent
         # to True so that it will be boolean-valued according to docplex's
-        # idiosyncracies.
+        # idiosyncrasies.
         return arg[1] == True
     elif arg[0] is _BEFORE:
         # We're using a start-before-start or its ilk in a boolean-valued
@@ -872,7 +873,7 @@ def _handle_before_expression_node(visitor, node, time1, time2, delay):
     t2 = (_GENERAL, _time_point_dispatchers[time2[0]](time2[1]))
     lhs = _handle_sum_node(visitor, None, t1, delay)
     if time1[0] in _non_precedence_types or time2[0] in _non_precedence_types:
-        # we alredy know we can't use a start_before_start function or its ilk:
+        # we already know we can't use a start_before_start function or its ilk:
         # Just build the correct inequality.
         return _handle_inequality_node(visitor, None, lhs, t2)
 
@@ -1176,7 +1177,7 @@ class CPOptimizerSolver(object):
                 # docplex says "Search aborted externally"
                 cp.STOP_CAUSE_ABORT: TerminationCondition.userInterrupt,
                 # This is in their documentation, but not here, for some reason
-                # cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unkown
+                # cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unknown
             }
 
     @property

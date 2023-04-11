@@ -324,7 +324,7 @@ class NumericRange(object):
                 return True
             elif type(other) is NonNumericRange:
                 return False
-            # Other non NumericRange objects wil generate
+            # Other non NumericRange objects will generate
             # AttributeError exceptions below
 
         # First, do a simple sanity check on the endpoints
@@ -611,8 +611,8 @@ class NumericRange(object):
     def range_intersection(self, other_ranges):
         """Return the intersection between this range and a set of other ranges.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
             other_ranges: `iterable`
                 An iterable of other range objects to intersect with this range
 
@@ -901,7 +901,7 @@ class RangeProduct(object):
         # Remember, range_lists is a list of lists of range objects.  As
         # isdisjoint only accepts range objects, we need to unpack
         # everything.  Non-disjoint range products require overlaps in
-        # all dimentions.
+        # all dimensions.
         for s, o in zip(self.range_lists, other.range_lists):
             if all(s_rng.isdisjoint(o_rng) for s_rng in s for o_rng in o):
                 return True
@@ -915,7 +915,7 @@ class RangeProduct(object):
     def range_difference(self, other_ranges):
         # The goal is to start with a single range product and create a
         # set of range products that, when combined, model the
-        # range_difference.  This will potentally create (redundant)
+        # range_difference.  This will potentially create (redundant)
         # overlapping regions, but that is OK.
         ans = [self]
         N = len(self.range_lists)
@@ -944,7 +944,7 @@ class RangeProduct(object):
     def range_intersection(self, other_ranges):
         # The goal is to start with a single range product and create a
         # set of range products that, when combined, model the
-        # range_difference.  This will potentally create (redundant)
+        # range_difference.  This will potentially create (redundant)
         # overlapping regions, but that is OK.
         ans = list(self.range_lists)
         N = len(self.range_lists)

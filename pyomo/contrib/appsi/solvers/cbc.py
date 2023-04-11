@@ -326,7 +326,7 @@ class Cbc(PersistentSolver):
                 'A feasible solution was not found, so no solution can be loaded.'
                 'Please set opt.config.load_solution=False and check '
                 'results.termination_condition and '
-                'resutls.best_feasible_objective before loading a solution.'
+                'results.best_feasible_objective before loading a solution.'
             )
 
         return results

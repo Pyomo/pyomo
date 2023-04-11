@@ -276,7 +276,7 @@ def validate_array(
 def uncertainty_sets(obj):
     if not isinstance(obj, UncertaintySet):
         raise ValueError(
-            "Expected an UncertaintySet object, instead recieved %s" % (obj,)
+            "Expected an UncertaintySet object, instead received %s" % (obj,)
         )
     return obj
 
@@ -2060,7 +2060,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     ----------
     center : (N,) array_like
         Center of the ellipsoid.
-    half_lengths : (N,) aray_like
+    half_lengths : (N,) array_like
         Semi-axis lengths of the ellipsoid.
 
     Examples
@@ -2659,7 +2659,7 @@ class DiscreteScenarioSet(UncertaintySet):
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
-        Construct a list of contraints on a given sequence
+        Construct a list of constraints on a given sequence
         of uncertain parameter objects.
 
         Parameters

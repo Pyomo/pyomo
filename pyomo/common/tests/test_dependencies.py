@@ -32,6 +32,7 @@ import pyomo.common.tests.dep_mod as dep_mod
 
 from . import deps
 
+
 # global objects for the submodule tests
 def _finalize_pyo(module, available):
     if available:

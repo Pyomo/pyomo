@@ -76,7 +76,6 @@ class Test(unittest.TestCase):
         self.compare_json(_out, join(currdir, "test_scip_solve_from_instance.baseline"))
 
     def test_scip_solve_from_instance_options(self):
-
         # Creating a dummy scip.set file in the cwd
         # will cover the code that prints a warning
         _cwd = os.getcwd()

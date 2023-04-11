@@ -120,7 +120,7 @@ class Test_calc_var(unittest.TestCase):
             self.assertEqual(value(m.x), 3)
         with self.assertRaisesRegex(
             ValueError,
-            "Constraint 'tuple' is a Ranged Inequality " "with a variable upper bound.",
+            "Constraint 'tuple' is a Ranged Inequality with a variable upper bound.",
         ):
             calculate_variable_from_constraint(m.x, (15, 5 * m.x, m.x))
 
@@ -265,7 +265,7 @@ class Test_calc_var(unittest.TestCase):
             with self.assertRaises(TypeError):
                 calculate_variable_from_constraint(m.x, m.f, linesearch=False)
         self.assertIn(
-            'Encountered an error evaluating the expression ' 'at the initial guess',
+            'Encountered an error evaluating the expression at the initial guess',
             output.getvalue(),
         )
 
@@ -290,7 +290,7 @@ class Test_calc_var(unittest.TestCase):
                 # calculate_variable_from_constraint
                 calculate_variable_from_constraint(m.x, m.c, linesearch=False)
         self.assertIn(
-            "Newton's method encountered an error evaluating " "the expression.",
+            "Newton's method encountered an error evaluating the expression.",
             output.getvalue(),
         )
 
@@ -358,7 +358,7 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(m.x, m.c1)
         self.assertEqual(
             LOG.getvalue().strip(),
-            "Setting Var 'x' to a numeric value `10` outside the " "bounds (0, 1).",
+            "Setting Var 'x' to a numeric value `10` outside the bounds (0, 1).",
         )
         self.assertEqual(value(m.x), 10)
 
@@ -366,7 +366,7 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(m.x, m.c2)
         self.assertEqual(
             LOG.getvalue().strip(),
-            "Setting Var 'x' to a numeric value `2.0` outside the " "bounds (0, 1).",
+            "Setting Var 'x' to a numeric value `2.0` outside the bounds (0, 1).",
         )
         self.assertEqual(value(m.x), 2)
 
@@ -390,7 +390,7 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(m.x, m.c3)
         self.assertRegex(
             LOG.getvalue().strip(),
-            r"Setting Var 'x' to a value `[0-9\.]+` \(float\) not in " "domain Binary.",
+            r"Setting Var 'x' to a value `[0-9\.]+` \(float\) not in domain Binary.",
         )
         self.assertAlmostEqual(value(m.x), 3.5, 3)
 

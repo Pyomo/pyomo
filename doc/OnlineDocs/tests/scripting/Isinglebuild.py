@@ -13,7 +13,7 @@ model.NodesIn = Set(model.Nodes, within=model.Nodes, initialize=[])
 
 def Populate_In_and_Out(model):
     # loop over the arcs and put the end points in the appropriate places
-    for (i, j) in model.Arcs:
+    for i, j in model.Arcs:
         model.NodesIn[j].add(i)
         model.NodesOut[i].add(j)
 

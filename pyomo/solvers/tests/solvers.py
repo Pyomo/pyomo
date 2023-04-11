@@ -31,6 +31,7 @@ _test_solver_cases = {}
 
 licensed_solvers_with_demo_mode = {'baron'}
 
+
 #
 # NOTE: we initialize the test case, since different
 # interfaces may be used for the same "solver"

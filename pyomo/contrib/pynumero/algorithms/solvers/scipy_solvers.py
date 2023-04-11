@@ -33,7 +33,6 @@ pyomo_nlp, _ = attempt_import("pyomo.contrib.pynumero.interfaces.pyomo_nlp")
 
 
 class FsolveNlpSolver(DenseSquareNlpSolver):
-
     OPTIONS = DenseSquareNlpSolver.OPTIONS(
         description="Options for SciPy fsolve wrapper"
     )
@@ -103,7 +102,6 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
 
 
 class RootNlpSolver(DenseSquareNlpSolver):
-
     OPTIONS = DenseSquareNlpSolver.OPTIONS(
         description="Options for SciPy fsolve wrapper"
     )
@@ -354,7 +352,6 @@ class PyomoScipySolver(object):
 
 
 class PyomoFsolveSolver(PyomoScipySolver):
-
     # Note that scipy.optimize.fsolve does not return a
     # scipy.optimize.OptimizeResult object (as of SciPy 1.9.3).
     # To assess convergence, we must check the integer flag "ier"
@@ -446,7 +443,6 @@ class PyomoRootSolver(PyomoScipySolver):
 
 
 class PyomoNewtonSolver(PyomoScipySolver):
-
     _solver_name = "scipy.newton"
 
     def create_nlp_solver(self, **kwds):
@@ -498,7 +494,6 @@ class PyomoNewtonSolver(PyomoScipySolver):
 
 
 class PyomoSecantNewtonSolver(PyomoNewtonSolver):
-
     _solver_name = "scipy.secant-newton"
 
     def converged_with_secant(self):

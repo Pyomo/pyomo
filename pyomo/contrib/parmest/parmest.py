@@ -237,7 +237,7 @@ def _treemaker(scenlist):
     """
 
     num_scenarios = len(scenlist)
-    m = scenariotree.tree_structure_model.CreateAbstractScenarioTreeModel()
+    m = scenario_tree.tree_structure_model.CreateAbstractScenarioTreeModel()
     m = m.create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
@@ -346,7 +346,6 @@ class Estimator(object):
         diagnostic_mode=False,
         solver_options=None,
     ):
-
         self.model_function = model_function
 
         assert isinstance(
@@ -455,7 +454,6 @@ class Estimator(object):
         return model
 
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
-
         # cb_data is a list of dictionaries, list of dataframes, OR list of json file names
         exp_data = cb_data[experiment_number]
         if isinstance(exp_data, (dict, pd.DataFrame)):
@@ -528,7 +526,6 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
@@ -641,7 +638,6 @@ class Estimator(object):
                     return objval, thetavals, var_values
 
             if calc_cov:
-
                 return objval, thetavals, cov
             else:
                 return objval, thetavals
@@ -708,12 +704,12 @@ class Estimator(object):
 
         WorstStatus = pyo.TerminationCondition.optimal
         totobj = 0
-        senario_numbers = list(range(len(self.callback_data)))
+        scenario_numbers = list(range(len(self.callback_data)))
         if initialize_parmest_model:
             # create dictionary to store pyomo model instances (scenarios)
             scen_dict = dict()
 
-        for snum in senario_numbers:
+        for snum in scenario_numbers:
             sname = "scenario_NODE" + str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
 
@@ -812,7 +808,7 @@ class Estimator(object):
             objval = pyo.value(objobject)
             totobj += objval
 
-        retval = totobj / len(senario_numbers)  # -1??
+        retval = totobj / len(scenario_numbers)  # -1??
         if initialize_parmest_model and not hasattr(self, 'ef_instance'):
             # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
@@ -845,14 +841,13 @@ class Estimator(object):
         return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
-
         samplelist = list()
 
-        senario_numbers = list(range(len(self.callback_data)))
+        scenario_numbers = list(range(len(self.callback_data)))
 
         if num_samples is None:
             # This could get very large
-            for i, l in enumerate(combinations(senario_numbers, samplesize)):
+            for i, l in enumerate(combinations(scenario_numbers, samplesize)):
                 samplelist.append((i, np.sort(l)))
         else:
             for i in range(num_samples):
@@ -863,7 +858,7 @@ class Estimator(object):
                     not duplicate
                 ):
                     sample = np.random.choice(
-                        senario_numbers, samplesize, replace=replacement
+                        scenario_numbers, samplesize, replace=replacement
                     )
                     sample = np.sort(sample).tolist()
                     unique_samples = len(np.unique(sample))
@@ -1105,7 +1100,6 @@ class Estimator(object):
 
         results = []
         for idx, sample in global_list:
-
             # Reset callback_data to only include the sample
             self.callback_data = [data[i] for i in sample]
 
@@ -1195,8 +1189,8 @@ class Estimator(object):
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
             # # check if theta_names are in model
-            for thta in list(theta_names):
-                theta_temp = thta.replace("'", "")  # cleaning quotes from theta_names
+            for theta in list(theta_names):
+                theta_temp = theta.replace("'", "")  # cleaning quotes from theta_names
 
                 assert theta_temp in [
                     t.replace("'", "") for t in model_theta_list
@@ -1332,7 +1326,6 @@ class Estimator(object):
             test_result = test_theta_values.copy()
 
         for a in alphas:
-
             if distribution == 'Rect':
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = (theta_values > lb).all(axis=1) & (

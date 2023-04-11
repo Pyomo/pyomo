@@ -14,7 +14,7 @@ The developers gratefully acknowledge support from the U.S. Department of Energy
 Methodology Overview
 -----------------------------
 
-Below is an overview of the type of optimization models PyROS can accomodate.
+Below is an overview of the type of optimization models PyROS can accommodate.
 
 
 * PyROS is suitable for optimization models of **continuous variables**
@@ -82,7 +82,7 @@ where:
     redesignated to be part of either :math:`x` or :math:`z`.
 
 In order to cast the robust optimization counterpart of the
-:ref:`determinstic model <deterministic-model>`,
+:ref:`deterministic model <deterministic-model>`,
 we now assume that the uncertain parameters may attain
 any realization in a compact uncertainty set
 :math:`\mathcal{Q} \subseteq \mathbb{R}^{n_q}` containing

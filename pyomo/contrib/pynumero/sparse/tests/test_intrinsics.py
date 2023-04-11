@@ -38,7 +38,6 @@ class TestSparseIntrinsics(unittest.TestCase):
         self.bv2.set_blocks([self.v3, self.v4])
 
     def test_where(self):
-
         bv = self.bv
         condition = bv >= 4.5
         res = pn.where(condition)[0]
@@ -82,7 +81,6 @@ class TestSparseIntrinsics(unittest.TestCase):
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
     def test_isin(self):
-
         bv = self.bv
         test_bv = BlockVector(2)
         a = np.array([1.1, 3.3])
@@ -119,7 +117,6 @@ class TestSparseIntrinsics(unittest.TestCase):
     # ToDo: try np.copy on a blockvector
 
     def test_intersect1d(self):
-
         vv1 = np.array([1.1, 3.3])
         vv2 = np.array([4.4, 7.7])
         bvv = BlockVector(2)
@@ -139,7 +136,6 @@ class TestSparseIntrinsics(unittest.TestCase):
         self.assertTrue(np.allclose(res.get_block(1), np.array([7.7])))
 
     def test_setdiff1d(self):
-
         vv1 = np.array([1.1, 3.3])
         vv2 = np.array([4.4, 7.7])
         bvv = BlockVector(2)

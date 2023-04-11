@@ -169,7 +169,7 @@ class WrappingFormatter(logging.Formatter):
 
 
 class LegacyPyomoFormatter(logging.Formatter):
-    """This mocks up the legacy Pyomo log formating.
+    """This mocks up the legacy Pyomo log formatting.
 
     This formatter takes a callback function (`verbosity`) that will be
     called for each message.  Based on the result, one of two formatting

@@ -40,7 +40,7 @@ Note that blocks should only be set if the process/rank owns that
 block.
 
 The operations performed with `MPIBlockVector` are identical to the
-same operations peformed with `BlockVector` (or even NumPy arrays),
+same operations performed with `BlockVector` (or even NumPy arrays),
 except that the operations are now performed in parallel.
 
 `MPIBlockMatrix` construction is very similar. Consider the following

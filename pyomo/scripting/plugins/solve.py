@@ -137,7 +137,6 @@ more configuration options than are available with command-line options.
 
 
 def solve_exec(args, unparsed):
-
     import pyomo.scripting.util
 
     #

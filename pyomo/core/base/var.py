@@ -284,7 +284,7 @@ class _VarData(ComponentData, NumericValue):
 
         Updating a stale :class:`Var` value will not cause other
         variable values to be come stale.  However, updating the first
-        non-stale :class:`Var` value adter a solve or solution load
+        non-stale :class:`Var` value after a solve or solution load
         *will* cause all other variables to be marked as stale
 
         """
@@ -432,7 +432,7 @@ class _GeneralVarData(_VarData):
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
-                "instance of a Pyomo Set or convertable to a Pyomo Set." % (domain,),
+                "instance of a Pyomo Set or convertible to a Pyomo Set." % (domain,),
                 extra={'id': 'E2001'},
             )
             raise

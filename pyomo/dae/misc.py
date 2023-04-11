@@ -57,7 +57,7 @@ def generate_finite_elements(ds, nfe):
         # is placed at the midpoint of the largest step. This
         # process is repeated until we have achieved the desired
         # number of finite elements. If there are multiple "largest steps"
-        # the point will be placed at the first occurance of the
+        # the point will be placed at the first occurrence of the
         # largest step
 
         addpts = nfe - (len(ds) - 1)
@@ -128,7 +128,6 @@ def expand_components(block):
     # swallowed by the LoggingIntercept context below are re-raised if the
     # discretization encounters an error it isn't expecting.
     try:
-
         # Intercept logging to suppress Error messages arising from failed
         # constraint rules. These error messages get logged even though the
         # AttributeError causing the error is caught and handled by this
@@ -137,7 +136,6 @@ def expand_components(block):
         # unexpected exception is raised.
         buf = StringIO()
         with LoggingIntercept(buf, 'pyomo.core', logging.ERROR):
-
             # Identify components that need to be expanded and try expanding
             # them
             for c in block.component_objects(
@@ -183,7 +181,7 @@ def update_contset_indexed_component(comp, expansion_map):
     has changed
     """
 
-    # This implemenation will *NOT* check for or update
+    # This implementation will *NOT* check for or update
     # components which use a ContinuousSet implicitly. ex) an
     # objective function which iterates through a ContinuousSet and
     # sums the squared error.  If you use a ContinuousSet implicitly

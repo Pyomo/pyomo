@@ -44,7 +44,7 @@ class testOrderedSet(unittest.TestCase):
         a.add(0)
         self.assertEqual(list(a), [None, 1, 0])
 
-        # Adding a member alrady in the set does not change the ordering
+        # Adding a member already in the set does not change the ordering
         a.add(1)
         self.assertEqual(list(a), [None, 1, 0])
 

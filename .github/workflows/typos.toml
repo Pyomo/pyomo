@@ -1,0 +1,31 @@
+[files]
+extend-exclude = ["*.eps"]
+
+[default.extend-words]
+# Ignore IDAES
+IDAES = "IDAES"
+idaes = "idaes"
+# Ignore datas
+Datas = "Datas"
+datas = "datas"
+# Ignore ND
+ND = "ND"
+nd = "nd"
+# Ignore INOUT
+inout = "inout"
+INOUT= "INOUT"
+# Ignore MAYBEE from examples
+MAYBEE = "MAYBEE"
+# Ignore conext for constraint-external
+conext = "conext"
+# Ignore AFE (affine expression) from MOSEK vernacular
+afe = "afe"
+# Ignore Fo from PyNumero tests
+Fo = "Fo"
+# Ignore ba from contrib
+ba = "ba"
+# Ignore complimentarity from interior_point
+complimentarity = "complimentarity"
+# Ignore from "number of inputs" from core
+nin = "nin"
+# AS NEEDED: Add More Words Below

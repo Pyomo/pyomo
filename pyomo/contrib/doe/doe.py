@@ -137,7 +137,7 @@ class DesignOfExperiments:
 
         if self.formula not in ['central', 'forward', 'backward', None]:
             raise ValueError(
-                'Finite difference scheme should be chosen from "central", "forward", "backward" and None while receiving {}.'.formate(
+                'Finite difference scheme should be chosen from "central", "forward", "backward" and None while receiving {}.'.format(
                     self.formula
                 )
             )
@@ -483,7 +483,6 @@ class DesignOfExperiments:
             time_allsolve = []
             # loop over each scenario
             for no_s in scena_gen.scena_keys:
-
                 scenario_iter = scena_gen.next_sequential_scenario(no_s)
                 # create the model
                 time0_build = time.time()
@@ -1268,6 +1267,7 @@ class DesignOfExperiments:
             for i, bu in enumerate(m.para_set):
                 for j, un in enumerate(m.para_set):
                     dict_cho[(bu, un)] = self.L_initial[i][j]
+
         # use the L dictionary to initialize L matrix
         def init_cho(m, i, j):
             return dict_cho[(i, j)]

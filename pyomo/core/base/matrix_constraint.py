@@ -319,7 +319,6 @@ class MatrixConstraint(Mapping, IndexedConstraint):
     """
 
     def __init__(self, A_data, A_indices, A_indptr, lb, ub, x):
-
         m = len(lb)
         n = len(x)
         nnz = len(A_data)

@@ -39,7 +39,6 @@ model = create_sudoku_model(board)
 
 solution_count = 0
 while 1:
-
     with SolverFactory("glpk") as opt:
         results = opt.solve(model)
         if results.solver.termination_condition != TerminationCondition.optimal:

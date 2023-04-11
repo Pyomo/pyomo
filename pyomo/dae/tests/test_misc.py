@@ -49,7 +49,6 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 
 class TestDaeMisc(unittest.TestCase):
-
     # test generate_finite_elements method
     def test_generate_finite_elements(self):
         m = ConcreteModel()

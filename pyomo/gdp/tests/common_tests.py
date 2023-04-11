@@ -445,7 +445,7 @@ def check_indexed_xor_constraints(self, transformation):
 
 
 def check_indexed_xor_constraints_with_targets(self, transformation):
-    # check that when we use targets to specfy some DisjunctionDatas in an
+    # check that when we use targets to specify some DisjunctionDatas in an
     # IndexedDisjunction, the xor constraint is indexed correctly
     m = models.makeTwoTermIndexedDisjunction_BoundedVars()
     TransformationFactory('gdp.%s' % transformation).apply_to(
@@ -1158,6 +1158,7 @@ def check_iteratively_adding_disjunctions_transform_model(self, transformation):
 
 
 # transforming blocks
+
 
 # If you transform a block as if it is a model, the transformation should
 # only modify the block you passed it, else when you solve the block, you

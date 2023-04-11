@@ -91,7 +91,6 @@ class BlockMatrix(BaseBlockMatrix):
     format = 'block_matrix'
 
     def __init__(self, nbrows, nbcols):
-
         shape = (nbrows, nbcols)
 
         self._blocks = np.empty(shape, dtype='object')
@@ -402,7 +401,6 @@ class BlockMatrix(BaseBlockMatrix):
         nnz = 0
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
-
             B = self.get_block(i, j).tocoo()
             # get slice that contains all elements in current block
             idx = slice(nnz, nnz + B.nnz)
@@ -497,7 +495,7 @@ class BlockMatrix(BaseBlockMatrix):
             assert other.bshape[0] == self.bshape[1], "Dimension mismatch"
             result = BlockMatrix(self.bshape[0], other.bshape[1])
 
-            # get dimenions from the other matrix
+            # get dimensions from the other matrix
             other_col_sizes = other.col_block_sizes(copy=False)
 
             # compute result
@@ -958,7 +956,6 @@ class BlockMatrix(BaseBlockMatrix):
                 result.set_block(i, _tmp)
             return result
         elif isinstance(other, np.ndarray):
-
             if other.ndim != 1:
                 raise NotImplementedError('Operation not supported by BlockMatrix')
 
@@ -1025,7 +1022,6 @@ class BlockMatrix(BaseBlockMatrix):
         return res
 
     def __iadd__(self, other):
-
         if isinstance(other, BlockMatrix):
             assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
                 self.bshape, other.bshape
@@ -1051,7 +1047,6 @@ class BlockMatrix(BaseBlockMatrix):
             raise NotImplementedError('Operation not supported by BlockMatrix')
 
     def __isub__(self, other):
-
         if isinstance(other, BlockMatrix):
             assert other.bshape == self.bshape, 'dimensions mismatch {} != {}'.format(
                 self.bshape, other.bshape
@@ -1153,8 +1148,8 @@ class BlockMatrix(BaseBlockMatrix):
                     else:
                         nrows = self._brow_lengths[i]
                         ncols = self._bcol_lengths[j]
-                        matc = coo_matrix((nrows, ncols))
-                        result.set_block(i, j, operation(matc, other))
+                        mat = coo_matrix((nrows, ncols))
+                        result.set_block(i, j, operation(mat, other))
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockMatrix':
@@ -1209,7 +1204,7 @@ class BlockMatrix(BaseBlockMatrix):
         assert not self.has_undefined_col_sizes(), msgc
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self._bcol_lengths.cumsum()
         assert index >= 0, 'index out of bounds'
         assert index < cum[bn - 1], 'index out of bounds'
@@ -1247,7 +1242,7 @@ class BlockMatrix(BaseBlockMatrix):
         assert not self.has_undefined_row_sizes(), msgr
 
         bm, bn = self.bshape
-        # get cummulative sum of block sizes
+        # get cumulative sum of block sizes
         cum = self._brow_lengths.cumsum()
         assert index >= 0, 'index out of bounds'
         assert index < cum[bm - 1], 'index out of bounds'

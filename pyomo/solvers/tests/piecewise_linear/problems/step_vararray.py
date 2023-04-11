@@ -33,7 +33,6 @@ F = [0, 0, 1, 1, 2]
 
 
 def define_model(**kwds):
-
     model = ConcreteModel()
 
     model.x = Var(INDEX)  # domain variable

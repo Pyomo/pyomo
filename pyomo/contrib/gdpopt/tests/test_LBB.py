@@ -179,7 +179,7 @@ class TestGDPopt_LBB(unittest.TestCase):
     @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
     @unittest.skipUnless(
         SolverFactory('bonmin').available(exception_flag=False),
-        "Bonmin is not avaialable",
+        "Bonmin is not available",
     )
     def test_LBB_8PP_with_screening(self):
         """Test the logic-based branch and bound algorithm."""

@@ -30,7 +30,6 @@ solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
 
 
 class CommonTests:
-
     solve = True
     solver = 'mpec_minlp'
 

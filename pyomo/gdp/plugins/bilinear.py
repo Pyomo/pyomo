@@ -56,6 +56,7 @@ class Bilinear_Transformation(Transformation):
             active=True, sort=SortComponents.deterministic
         ):
             self._transformBlock(block, instance)
+
         #
         # WEH: I wish I had a DisjunctList and DisjunctionList object...
         #

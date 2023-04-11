@@ -18,7 +18,7 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
     "`pyomo.contrib.fbbt.compute_bounds_on_expr(constraint.body)`.",
     version='5.7',
 )
-class TightenContraintFromVars(IsomorphicTransformation):
+class TightenConstraintFromVars(IsomorphicTransformation):
     """Tightens upper and lower bound on constraints based on variable bounds.
 
     Iterates through each variable and tightens the constraint bounds using
@@ -29,7 +29,7 @@ class TightenContraintFromVars(IsomorphicTransformation):
     """
 
     def __init__(self):
-        super(TightenContraintFromVars, self).__init__()
+        super(TightenConstraintFromVars, self).__init__()
 
     def _apply_to(self, model):
         """Apply the transformation."""
@@ -45,7 +45,7 @@ class TightenContraintFromVars(IsomorphicTransformation):
             if repn.constant:
                 LB = UB = repn.constant
 
-            # loop through each coefficent and variable pair
+            # loop through each coefficient and variable pair
             for var, coef in zip(repn.linear_vars, repn.linear_coefs):
                 # Calculate bounds using interval arithmetic
                 if coef >= 0:
