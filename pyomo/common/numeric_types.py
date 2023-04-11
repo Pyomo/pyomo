@@ -66,6 +66,7 @@ native_types.update(native_logical_types)
 
 nonpyomo_leaf_types.update(native_types)
 
+
 def RegisterNumericType(new_type):
     """
     A utility function for updating the set of types that are

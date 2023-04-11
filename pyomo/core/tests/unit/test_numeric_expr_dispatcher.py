@@ -114,7 +114,7 @@ class Base(object):
         self.mon_param = MonomialTermExpression((self.m.q, self.m.x))
         self.mon_npv = MonomialTermExpression((self.npv, self.m.x))
         self.linear = LinearExpression([4, self.mon_native])
-        self.sum = SumExpression([4, self.mon_native, self.m.x ** 2])
+        self.sum = SumExpression([4, self.mon_native, self.m.x**2])
         self.other = PowExpression((self.m.x, 2))
 
         self.mutable_l0 = _MutableSumExpression([])
@@ -6850,7 +6850,7 @@ class TestExpressionGeneration_Misc(Base, unittest.TestCase):
         e = abs(obj)
         assertExpressionsEqual(self, AbsExpression((self.var,)), e)
 
-        e = obj ** 2
+        e = obj**2
         assertExpressionsEqual(self, PowExpression((self.var, 2)), e)
 
         e = obj + obj

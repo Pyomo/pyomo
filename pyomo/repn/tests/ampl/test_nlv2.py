@@ -68,7 +68,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x ** 2 / m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -120,7 +120,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x ** 2 / m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -205,7 +205,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x ** 2 / m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**2 / m.p, None, None))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -225,7 +225,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x ** m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -236,7 +236,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.p = 1
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x ** m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -247,7 +247,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.p = 0
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.x ** m.p, None, None))
+            repn = info.visitor.walk_expression((m.x**m.p, None, None))
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -326,7 +326,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.p * (m.x ** 2 / m.p), None, None))
+            repn = info.visitor.walk_expression((m.p * (m.x**2 / m.p), None, None))
         self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
@@ -381,7 +381,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
             info = INFO()
             with LoggingIntercept() as LOG, self.assertRaises(ZeroDivisionError):
-                info.visitor.walk_expression((m.x ** 2 / m.p, None, None))
+                info.visitor.walk_expression((m.x**2 / m.p, None, None))
             self.assertEqual(
                 LOG.getvalue(),
                 "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -414,7 +414,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.x.fix(0.5)
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((m.p ** m.x, None, None))
+            repn = info.visitor.walk_expression((m.p**m.x, None, None))
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
@@ -454,7 +454,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.y = Var()
         m.y.fix(1)
 
-        expr = m.y ** 2 * m.x ** 2 * (((3 * m.x) / m.p) * m.x) / m.y
+        expr = m.y**2 * m.x**2 * (((3 * m.x) / m.p) * m.x) / m.y
 
         info = INFO()
         with LoggingIntercept() as LOG:
@@ -550,7 +550,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(initialize=4)
         m.y = Var(initialize=4)
-        expr = Expr_if(m.x <= 4, m.x ** 2, m.y)
+        expr = Expr_if(m.x <= 4, m.x**2, m.y)
 
         info = INFO()
         with LoggingIntercept() as LOG:
@@ -591,7 +591,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(initialize=4)
         m.y = Var(initialize=4)
-        expr = Expr_if(m.x == 4, m.x ** 2, m.y)
+        expr = Expr_if(m.x == 4, m.x**2, m.y)
 
         info = INFO()
         with LoggingIntercept() as LOG:
@@ -632,7 +632,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(initialize=4)
         m.y = Var(initialize=4)
-        expr = Expr_if(inequality(1, m.x, 4), m.x ** 2, m.y)
+        expr = Expr_if(inequality(1, m.x, 4), m.x**2, m.y)
 
         info = INFO()
         with LoggingIntercept() as LOG:

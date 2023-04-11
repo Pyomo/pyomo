@@ -44,6 +44,7 @@ if not param_available:
 
 # Needed for testing (switches the matplotlib backend):
 from pyomo.common.dependencies import matplotlib_available
+
 bool(matplotlib_available)
 
 # Find all *.txt files, and use them to define baseline tests

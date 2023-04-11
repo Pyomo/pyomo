@@ -884,7 +884,7 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
             # If computing values and no linear terms, then the return a constant repn
             #
             elif compute_values and len(res.linear) == 0:
-                return Results(constant=multiplier * res.constant ** exponent)
+                return Results(constant=multiplier * res.constant**exponent)
             #
             # If the base is linear, then we compute the quadratic expression for it.
             #

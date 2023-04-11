@@ -176,8 +176,10 @@ class ToBaronVisitor(EXPR._ToStringVisitor):
     def _linear_to_string(self, node):
         values = [
             self._monomial_to_string(arg)
-            if (arg.__class__ is EXPR.MonomialTermExpression
-                and not arg.arg(1).is_fixed())
+            if (
+                arg.__class__ is EXPR.MonomialTermExpression
+                and not arg.arg(1).is_fixed()
+            )
             else ftoa(value(arg))
             for arg in node.args
         ]

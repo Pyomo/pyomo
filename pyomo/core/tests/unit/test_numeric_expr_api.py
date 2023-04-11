@@ -57,34 +57,35 @@ from pyomo.core.expr.numeric_expr import (
 )
 from pyomo.environ import ConcreteModel, Param, Var, ExternalFunction
 
+
 class MockExternalFunction(object):
     def evaluate(self, args):
-        x, = args
-        return (math.log(x)/math.log(2))**2
+        (x,) = args
+        return (math.log(x) / math.log(2)) ** 2
 
     def getname(self):
         return 'mock_fcn'
 
-class TestExpressionAPI(unittest.TestCase):
 
+class TestExpressionAPI(unittest.TestCase):
     def test_deprecated_functions(self):
         m = ConcreteModel()
         m.x = Var()
         e = m.x**10
         self.assertIs(type(e), PowExpression)
-        with LoggingIntercept() as LOG:            
+        with LoggingIntercept() as LOG:
             f = e.create_potentially_variable_object()
         self.assertIs(e, f)
         self.assertIs(type(e), PowExpression)
         self.assertIn(
             'DEPRECATED: The implicit recasting of a "not potentially variable" '
             'expression node to a potentially variable one is no longer supported',
-            LOG.getvalue().replace('\n', ' ')
+            LOG.getvalue().replace('\n', ' '),
         )
         self.assertNotIn(
             'recasting a non-potentially variable expression to a potentially variable '
             'one violates the immutability promise for Pyomo expression trees.',
-            LOG.getvalue().replace('\n', ' ')
+            LOG.getvalue().replace('\n', ' '),
         )
 
         m.p = Param(mutable=True)
@@ -97,12 +98,12 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertIn(
             'DEPRECATED: The implicit recasting of a "not potentially variable" '
             'expression node to a potentially variable one is no longer supported',
-            LOG.getvalue().replace('\n', ' ')
+            LOG.getvalue().replace('\n', ' '),
         )
         self.assertIn(
             'recasting a non-potentially variable expression to a potentially variable '
             'one violates the immutability promise for Pyomo expression trees.',
-            LOG.getvalue().replace('\n', ' ')
+            LOG.getvalue().replace('\n', ' '),
         )
 
         e = m.x + m.x
@@ -111,7 +112,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertIn(
             'DEPRECATED: SumExpression.add() is deprecated.  Please use regular '
             'Python operators',
-            LOG.getvalue().replace('\n', ' ')
+            LOG.getvalue().replace('\n', ' '),
         )
         self.assertEqual(str(e), 'x + x')
         self.assertEqual(str(f), 'x + x + 5')
@@ -128,10 +129,10 @@ class TestExpressionAPI(unittest.TestCase):
             e += m.x[0]
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableLinearExpression)
-            e += 100*m.x[1]
+            e += 100 * m.x[1]
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableLinearExpression)
-            e += m.x[0]**2
+            e += m.x[0] ** 2
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableSumExpression)
         self.assertIs(e, f)
@@ -149,10 +150,10 @@ class TestExpressionAPI(unittest.TestCase):
             e += m.x[0]
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableLinearExpression)
-            e += 100*m.x[1]
+            e += 100 * m.x[1]
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableLinearExpression)
-            e += m.x[0]**2
+            e += m.x[0] ** 2
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableSumExpression)
         self.assertIs(e, f)
@@ -170,10 +171,10 @@ class TestExpressionAPI(unittest.TestCase):
             e += m.x[0]
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableSumExpression)
-            e += 100*m.x[1]
+            e += 100 * m.x[1]
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableSumExpression)
-            e += m.x[0]**2
+            e += m.x[0] ** 2
             self.assertIs(e, f)
             self.assertIs(type(e), _MutableSumExpression)
         self.assertIs(e, f)
@@ -216,7 +217,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(str(e), "- p")
         self.assertEqual(e.to_string(verbose=True), "neg(p)")
 
-        e = -(m.x + 2*m.x)
+        e = -(m.x + 2 * m.x)
         self.assertTrue(e.is_potentially_variable())
         self.assertEqual(e.polynomial_degree(), 1)
         self.assertEqual(is_fixed(e), False)
@@ -310,7 +311,8 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-                ValueError, 'No value for uninitialized NumericValue object y'):
+            ValueError, 'No value for uninitialized NumericValue object y'
+        ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y**x")
         self.assertEqual(e.to_string(verbose=True), "pow(y, x)")
@@ -427,7 +429,8 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 2)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-                ValueError, 'No value for uninitialized NumericValue object y'):
+            ValueError, 'No value for uninitialized NumericValue object y'
+        ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
         self.assertEqual(e.to_string(verbose=True), "prod(y, x)")
@@ -438,7 +441,8 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 0)
         self.assertEqual(is_fixed(e), True)
         with self.assertRaisesRegex(
-                ValueError, 'No value for uninitialized NumericValue object y'):
+            ValueError, 'No value for uninitialized NumericValue object y'
+        ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
         self.assertEqual(e.to_string(verbose=True), "prod(y, x)")
@@ -448,18 +452,20 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 1)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-                ValueError, 'No value for uninitialized NumericValue object y'):
+            ValueError, 'No value for uninitialized NumericValue object y'
+        ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
         self.assertEqual(e.to_string(verbose=True), "prod(y, x)")
 
         m.y = 5
-        e = ProductExpression((1/m.y, m.x))
+        e = ProductExpression((1 / m.y, m.x))
         self.assertTrue(e.is_potentially_variable())
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-                ValueError, 'No value for uninitialized NumericValue object x'):
+            ValueError, 'No value for uninitialized NumericValue object x'
+        ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "1/y*x")
         self.assertEqual(e.to_string(verbose=True), "prod(div(1, y), x)")
@@ -490,7 +496,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(value(e), -4)
         self.assertEqual(str(e), "-2*x")
         self.assertEqual(e.to_string(verbose=True), "mon(-2, x)")
-    
+
     def test_division(self):
         m = ConcreteModel()
         m.x = Var(initialize=5)
@@ -625,11 +631,11 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertTrue(e.is_potentially_variable())
         self.assertEqual(e.polynomial_degree(), 1)
         self.assertEqual(is_fixed(e), False)
-        self.assertEqual(value(e), 1+4+5+2)
+        self.assertEqual(value(e), 1 + 4 + 5 + 2)
         self.assertEqual(str(e), "0*x[0] + x[1] + 2*x[2] + 5 + y - 3")
         self.assertEqual(
             e.to_string(verbose=True),
-            "sum(mon(0, x[0]), mon(1, x[1]), mon(2, x[2]), 5, mon(1, y), -3)"
+            "sum(mon(0, x[0]), mon(1, x[1]), mon(2, x[2]), 5, mon(1, y), -3)",
         )
 
         self.assertIs(type(e), LinearExpression)
@@ -639,7 +645,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertIs(cache, e._cache)
         self.assertEqual(e.linear_vars, [m.x[0], m.x[1], m.x[2], m.y])
         self.assertIs(cache, e._cache)
-        
+
         e = LinearExpression()
         self.assertEqual(e.linear_coefs, [])
         self.assertIsNot(cache, e._cache)
@@ -665,21 +671,18 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(is_fixed(e), False)
         self.assertEqual(value(e), 25)
         self.assertEqual(str(e), "5 + 3*y + 5*x[1]")
-        self.assertEqual(
-            e.to_string(verbose=True),
-            "sum(5, mon(3, y), mon(5, x[1]))"
-        )
-        
+        self.assertEqual(e.to_string(verbose=True), "sum(5, mon(3, y), mon(5, x[1]))")
+
         with self.assertRaisesRegex(
-                ValueError,
-                "Cannot specify both args and any of " 
-                "{constant, linear_coefs, or linear_vars}"
+            ValueError,
+            "Cannot specify both args and any of "
+            "{constant, linear_coefs, or linear_vars}",
         ):
             LinearExpression(5, constant=5)
 
         with self.assertRaisesRegex(
-                ValueError,
-                r"linear_vars \(\[y\]\) is not compatible with linear_coefs \(\[3, 5\]\)"
+            ValueError,
+            r"linear_vars \(\[y\]\) is not compatible with linear_coefs \(\[3, 5\]\)",
         ):
             LinearExpression(constant=5, linear_vars=[m.y], linear_coefs=[3, 5])
 
@@ -687,19 +690,18 @@ class TestExpressionAPI(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(range(3), initialize=range(3))
         m.y = Var(initialize=5)
-        e = Expr_if(IF=m.y >= 5, THEN=m.x[0] + 5, ELSE=m.x[1]**2)
+        e = Expr_if(IF=m.y >= 5, THEN=m.x[0] + 5, ELSE=m.x[1] ** 2)
 
         self.assertTrue(e.is_potentially_variable())
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
         self.assertEqual(value(e), 5)
         self.assertEqual(
-            str(e),
-            "Expr_if( ( 5  <=  y ), then=( x[0] + 5 ), else=( x[1]**2 ) )"
+            str(e), "Expr_if( ( 5  <=  y ), then=( x[0] + 5 ), else=( x[1]**2 ) )"
         )
         self.assertEqual(
             e.to_string(verbose=True),
-            "Expr_if( ( 5  <=  y ), then=( sum(mon(1, x[0]), 5) ), else=( pow(x[1], 2) ) )"
+            "Expr_if( ( 5  <=  y ), then=( sum(mon(1, x[0]), 5) ), else=( pow(x[1], 2) ) )",
         )
 
         m.y.fix()
@@ -729,7 +731,7 @@ class TestExpressionAPI(unittest.TestCase):
     def test_unary(self):
         m = ConcreteModel()
         m.x = Var(initialize=5)
-        e = sin(2*m.x)
+        e = sin(2 * m.x)
         self.assertTrue(e.is_potentially_variable())
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
@@ -749,7 +751,7 @@ class TestExpressionAPI(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(initialize=16)
         fcn = MockExternalFunction()
-        e = ExternalFunctionExpression((2*m.x,), fcn)
+        e = ExternalFunctionExpression((2 * m.x,), fcn)
         self.assertTrue(e.is_potentially_variable())
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
@@ -767,7 +769,6 @@ class TestExpressionAPI(unittest.TestCase):
 
 
 class TestExpressionDuplicateAPI(unittest.TestCase):
-
     def test_negation(self):
         m = ConcreteModel()
         m.x = Var(initialize=5)
@@ -792,7 +793,6 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data((m.x,))
         self.assertIsNot(f, e)
         self.assertIs(type(f), NegationExpression)
-
 
     def test_pow(self):
         m = ConcreteModel()
@@ -972,9 +972,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data((m.p, m.x**2))
         self.assertIsNot(f, e)
         self.assertIs(type(f), SumExpression)
-        assertExpressionsStructurallyEqual(
-            self, f.args, [m.p, PowExpression((m.x, 2))]
-        )
+        assertExpressionsStructurallyEqual(self, f.args, [m.p, PowExpression((m.x, 2))])
 
     def test_linear(self):
         m = ConcreteModel()
@@ -992,7 +990,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         m.x = Var(range(3), initialize=range(3))
         m.y = Var(initialize=5)
         m.p = Param(initialize=3, mutable=True)
-        e = Expr_if(IF=m.y >= 5, THEN=m.x[0] + 5, ELSE=m.x[1]**2)
+        e = Expr_if(IF=m.y >= 5, THEN=m.x[0] + 5, ELSE=m.x[1] ** 2)
 
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
@@ -1018,7 +1016,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         m.x = Var(range(3), initialize=range(3))
         m.y = Var(initialize=5)
         m.p = Param(initialize=3, mutable=True)
-        e = sin(2*m.y)
+        e = sin(2 * m.y)
 
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
@@ -1034,7 +1032,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         self.assertIs(e._fcn, f._fcn)
         self.assertIs(e._name, f._name)
 
-        e = sin((2*m.p))
+        e = sin((2 * m.p))
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
@@ -1053,7 +1051,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         m.x = Var(range(3), initialize=range(3))
         m.y = Var(initialize=5)
         m.p = Param(initialize=3, mutable=True)
-        e = abs(2*m.y)
+        e = abs(2 * m.y)
 
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
@@ -1069,7 +1067,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         self.assertIs(e._fcn, f._fcn)
         self.assertIs(e._name, f._name)
 
-        e = abs((2*m.p))
+        e = abs((2 * m.p))
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
@@ -1088,7 +1086,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         m.x = Var(initialize=16)
         m.p = Param(initialize=32, mutable=True)
         fcn = MockExternalFunction()
-        e = ExternalFunctionExpression((2*m.x,), fcn)
+        e = ExternalFunctionExpression((2 * m.x,), fcn)
 
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
@@ -1102,7 +1100,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         self.assertEqual(f.args, (m.x,))
         self.assertIs(e._fcn, f._fcn)
 
-        e = NPV_ExternalFunctionExpression((2*m.p,), fcn)
+        e = NPV_ExternalFunctionExpression((2 * m.p,), fcn)
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))

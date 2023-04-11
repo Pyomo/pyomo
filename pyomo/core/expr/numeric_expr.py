@@ -1109,6 +1109,7 @@ def _decompose_linear_terms(expr, multiplier=1):
 #
 # -------------------------------------------------------
 
+
 class ARG_TYPE(enum.Enum):
     MUTABLE = -2
     ASNUMERIC = -1

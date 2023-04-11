@@ -2471,6 +2471,7 @@ def _before_linear(visitor, child):
     else:
         return False, (_CONSTANT, const)
 
+
 def _before_named_expression(visitor, child):
     _id = id(child)
     if _id in visitor.subexpression_cache:

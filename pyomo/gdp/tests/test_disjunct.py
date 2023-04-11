@@ -608,12 +608,7 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             e = m.iv + 1
         assertExpressionsEqual(
-            self,
-            e,
-            EXPR.LinearExpression([
-                EXPR.MonomialTermExpression((1, m.biv)),
-                1,
-            ])
+            self, e, EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), 1])
         )
         self.assertIn(deprecation_msg, out.getvalue())
 
@@ -623,10 +618,7 @@ class TestAutoVars(unittest.TestCase):
         assertExpressionsEqual(
             self,
             e,
-            EXPR.LinearExpression([
-                EXPR.MonomialTermExpression((1, m.biv)),
-                -1,
-            ])
+            EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), -1]),
         )
         self.assertIn(deprecation_msg, out.getvalue())
 
@@ -649,12 +641,7 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             e = 1 + m.iv
         assertExpressionsEqual(
-            self,
-            e,
-            EXPR.LinearExpression([
-                1,
-                EXPR.MonomialTermExpression((1, m.biv)),
-            ])
+            self, e, EXPR.LinearExpression([1, EXPR.MonomialTermExpression((1, m.biv))])
         )
         self.assertIn(deprecation_msg, out.getvalue())
 
@@ -664,10 +651,7 @@ class TestAutoVars(unittest.TestCase):
         assertExpressionsEqual(
             self,
             e,
-            EXPR.LinearExpression([
-                1,
-                EXPR.MonomialTermExpression((-1, m.biv)),
-            ])
+            EXPR.LinearExpression([1, EXPR.MonomialTermExpression((-1, m.biv))]),
         )
         self.assertIn(deprecation_msg, out.getvalue())
 
@@ -691,12 +675,7 @@ class TestAutoVars(unittest.TestCase):
             a = m.iv
             a += 1
         assertExpressionsEqual(
-            self,
-            a,
-            EXPR.LinearExpression([
-                EXPR.MonomialTermExpression((1, m.biv)),
-                1,
-            ])
+            self, a, EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), 1])
         )
         self.assertIn(deprecation_msg, out.getvalue())
 
@@ -707,10 +686,7 @@ class TestAutoVars(unittest.TestCase):
         assertExpressionsEqual(
             self,
             a,
-            EXPR.LinearExpression([
-                EXPR.MonomialTermExpression((1, m.biv)),
-                -1,
-            ])
+            EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), -1]),
         )
         self.assertIn(deprecation_msg, out.getvalue())
 
