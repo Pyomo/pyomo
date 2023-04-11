@@ -275,7 +275,7 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         Last, note that in the case of constraints containing partially
         additively separable functions, it is required that the user specify
-        the variable parition(s).
+        the variable partition(s).
         """,
         ),
     )
@@ -285,7 +285,7 @@ class PartitionDisjuncts_Transformation(Transformation):
             default=None,
             domain=_to_dict,
             description="""Number of partitions of variables, if variable_partitions
-        is not specifed. Can be specified separately for specific Disjunctions
+        is not specified. Can be specified separately for specific Disjunctions
         if desired.""",
             doc="""
         Either a single value so that all Disjunctions will have variables
@@ -334,7 +334,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         If True, the transformation will create a correct model even if fixed
         variables are later unfixed. That is, bounds will be calculated based
         on fixed variables' bounds, not their values. However, if fixed
-        variables will never be unfixed, a possibly tigher model will result,
+        variables will never be unfixed, a possibly tighter model will result,
         and fixed variables need not have bounds.
 
         Note that this has no effect on fixed BooleanVars, including the
@@ -781,7 +781,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         # this is a list which might have two constraints in it if we had
         # both a lower and upper value.
         leq_constraints = self._get_leq_constraints(cons)
-        for (body, rhs) in leq_constraints:
+        for body, rhs in leq_constraints:
             repn = generate_standard_repn(body, compute_values=True)
             nonlinear_repn = None
             if repn.nonlinear_expr is not None:

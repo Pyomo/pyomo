@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 
 
 class SolverResults(MapContainer):
-
     undefined = undefined
     default_print_options = dpo
 

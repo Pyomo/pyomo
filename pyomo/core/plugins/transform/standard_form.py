@@ -43,7 +43,7 @@ class StandardForm(IsomorphicTransformation):
 
     def _create_using(self, model, **kwds):
         """
-        Tranform a model to standard form
+        Transform a model to standard form
         """
 
         # Optional naming schemes to pass to EqualityTransform
@@ -65,7 +65,7 @@ class StandardForm(IsomorphicTransformation):
         # (that aren't equality constraints) we call it first.
         #
         # EqualityTransform introduces new variables, but they are
-        # constrainted to be nonnegative.
+        # constrained to be nonnegative.
         sf = nonneg(model, **nn_kwds)
         sf = equality(sf, **eq_kwds)
 

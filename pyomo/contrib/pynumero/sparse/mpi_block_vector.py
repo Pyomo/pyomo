@@ -45,7 +45,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         A communicator from the MPI space. Typically MPI.COMM_WORLD
     _block_vector: BlockVector
         Internal BlockVector. Blocks that belong to this processor are stored
-        in _block_vector. Blocks that do not belong to this proceesor are empty
+        in _block_vector. Blocks that do not belong to this processor are empty
         and store as numpy.zeros(0)
     _owned_mask: numpy.ndarray bool
         1D-array that indicates if a block belongs to this processor. While
@@ -60,7 +60,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         include blocks with ownership -1.
     _brow_lengths: numpy.ndarray
         1D-Array of size nblocks that specifies the length of each entry
-        in the MPIBlockVector. This is the same accross all processors.
+        in the MPIBlockVector. This is the same across all processors.
     _undefined_brows: set
         A set of block indices for which the blocks are still None (i.e., the dimensions
         have not yet ben set). Operations with BlockVectors require all entries to be
@@ -86,7 +86,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     """
 
     def __new__(cls, nblocks, rank_owner, mpi_comm, assert_correct_owners=False):
-
         assert isinstance(nblocks, int)
         assert len(rank_owner) == nblocks
 
@@ -255,7 +254,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         x1 = args[0]
         x2 = args[1]
         if isinstance(x1, MPIBlockVector) and isinstance(x2, MPIBlockVector):
-
             msg = 'BlockVectors must be distributed in same processors'
             assert (
                 np.array_equal(x1._rank_owner, x2._rank_owner)
@@ -473,14 +471,14 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 processor_sizes = proc_dims[k]
                 block_length.add(processor_sizes[i])
             if len(block_length) > 2:
-                msg = 'Block {} has more than one dimension accross processors'.format(
-                    i
-                )
+                msg = 'Block {} has more than one dimension across processors'.format(i)
                 raise RuntimeError(msg)
             elif len(block_length) == 2:
                 if -1 not in block_length:
-                    msg = 'Block {} has more than one dimension accross processors'.format(
-                        i
+                    msg = (
+                        'Block {} has more than one dimension across processors'.format(
+                            i
+                        )
                     )
                     raise RuntimeError(msg)
                 block_length.remove(-1)
@@ -515,7 +513,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     # Note: this requires communication but is only run in __new__
     def _assert_correct_owners(self, root=0):
-
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 
@@ -822,7 +819,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         ----------
         value: scalar, optional
             all entries of the cloned vector are set to this value
-        copy: bool, optinal
+        copy: bool, optional
             if set to true makes a deepcopy of each block in this vector. default False
 
         Returns

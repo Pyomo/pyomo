@@ -16,6 +16,7 @@ logger = logging.getLogger('pyomo.core')
 from pyomo.common import deprecated
 from pyomo.core.base import Transformation, TransformationFactory, Var, Suffix, Reals
 
+
 #
 # This transformation relaxes integer ranges to their continuous
 # counterparts

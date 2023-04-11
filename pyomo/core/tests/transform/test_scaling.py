@@ -588,7 +588,7 @@ class TestScaleModelTransformation(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(model.x[3]), 3, 4)
         self.assertAlmostEqual(pyo.value(model.z), 10, 4)
 
-        # Cehck reference values
+        # Check reference values
         self.assertAlmostEqual(pyo.value(model.x_ref[1]), 1, 4)
         self.assertAlmostEqual(pyo.value(model.x_ref[2]), 2, 4)
         self.assertAlmostEqual(pyo.value(model.x_ref[3]), 3, 4)

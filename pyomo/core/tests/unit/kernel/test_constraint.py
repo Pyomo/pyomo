@@ -1423,7 +1423,6 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.uslack, None)
 
     def test_expr(self):
-
         x = variable(value=1.0)
         c = constraint()
         c.expr = (0, x, 2)

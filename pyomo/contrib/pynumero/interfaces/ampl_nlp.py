@@ -29,10 +29,11 @@ from pyomo.contrib.pynumero.interfaces.nlp import ExtendedNLP
 
 __all__ = ['AslNLP', 'AmplNLP']
 
+
 # ToDo: need to add support for modifying bounds.
 # support for changing variable bounds seems possible.
 # support for changing inequality bounds would require more work. (this is less frequent?)
-# TODO: check performance impacts of cacheing - memory and computational time.
+# TODO: check performance impacts of caching - memory and computational time.
 # TODO: only create and cache data for ExtendedNLP methods if they are ever asked for
 # TODO: There are todos in the code below
 class AslNLP(ExtendedNLP):
@@ -680,7 +681,7 @@ class AslNLP(ExtendedNLP):
                 raise RuntimeError(
                     'evaluate_hessian_lag called with an "out" argument'
                     ' that is invalid. This should be a coo_matrix with'
-                    ' shape=({},{}) adn nnz={}'.format(
+                    ' shape=({},{}) and nnz={}'.format(
                         self._n_primals, self._n_primals, self._nnz_hessian_lag
                     )
                 )

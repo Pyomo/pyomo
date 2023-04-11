@@ -102,7 +102,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         expr = self.interface.model.obj.expr
         new_expr = self.interface.replaceEF(expr)
         self.assertEqual(expr, new_expr)
-        # The first contraint has one EF.
+        # The first constraint has one EF.
         # Therefore, replaceEF should do a substitution
         expr = self.interface.model.c1.expr
         new_expr = self.interface.replaceEF(expr)
@@ -127,7 +127,7 @@ class TestTrustRegionInterface(unittest.TestCase):
             str(self.interface.model.obj.expr),
             '(z[0] - 1.0)**2 + (z[0] - z[1])**2 + (z[2] - 1.0)**2 + (x[0] - 1.0)**4 + (x[1] - 1.0)**6',
         )
-        # The first contraint has one EF.
+        # The first constraint has one EF.
         # Therefore, remove_ef_from_expr should do something
         component = self.interface.model.c1
         str_expr = str(component.expr)

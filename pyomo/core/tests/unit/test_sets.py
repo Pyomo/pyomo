@@ -578,7 +578,7 @@ class TestRangeSet(SimpleSetA):
             self.instance.A.discard(self.e3)
         self.assertEqual(len(self.instance.A), 5)
         self.assertTrue(
-            self.e3 in self.instance.A, "Found element in A that attemped to discard"
+            self.e3 in self.instance.A, "Found element in A that attempted to discard"
         )
 
     def test_discardInvalid(self):
@@ -627,6 +627,7 @@ class TestRangeSet2(TestRangeSet):
         # Create Model
         #
         PyomoModel.setUp(self)
+
         #
         # Create model instance
         #
@@ -1380,9 +1381,7 @@ class ArraySet2(PyomoModel):
         try:
             tmp = self.instance.A['A', 2]
         except:
-            self.fail(
-                "Problems getting a valid uninitialized subset from a set array"
-            )
+            self.fail("Problems getting a valid uninitialized subset from a set array")
 
         try:
             tmp = self.instance.A['A', 3]
@@ -2415,6 +2414,7 @@ class TestSetArgs1(PyomoModel):
             pass
         else:
             self.fail("test_dimen")
+
         #
         def f(model):
             return [(1, 1), (2, 2), (3, 3)]
@@ -3209,7 +3209,6 @@ class TestSetErrors(PyomoModel):
 
     @unittest.skipIf(not _has_numpy, "Numpy is not installed")
     def test_numpy_membership(self):
-
         self.assertEqual(numpy.int_(0) in Boolean, True)
         self.assertEqual(numpy.int_(1) in Boolean, True)
         self.assertEqual(numpy.bool_(True) in Boolean, True)
@@ -3357,6 +3356,7 @@ class TestSetErrors(PyomoModel):
         a = Set(initialize={})
         a.construct()
         self.assertEqual(a, EmptySet)
+
         #
         def init_fn(model):
             return []
@@ -3742,7 +3742,6 @@ class TestArraySetVirtual(unittest.TestCase):
 
 class TestNestedSetOperations(unittest.TestCase):
     def test_union(self):
-
         model = AbstractModel()
         s1 = set([1, 2])
         model.s1 = Set(initialize=s1)
@@ -3766,7 +3765,6 @@ class TestNestedSetOperations(unittest.TestCase):
         self.assertEqual(inst.union3, ((((s1 | s2) | s3) | s3) | s2))
 
     def test_intersection(self):
-
         model = AbstractModel()
         s1 = set([1, 2])
         model.s1 = Set(initialize=s1)
@@ -3806,7 +3804,6 @@ class TestNestedSetOperations(unittest.TestCase):
         self.assertEqual(sorted(inst.intersection4), sorted(s3 & s1 & s3))
 
     def test_difference(self):
-
         model = AbstractModel()
         s1 = set([1, 2])
         model.s1 = Set(initialize=s1)
@@ -3833,7 +3830,6 @@ class TestNestedSetOperations(unittest.TestCase):
         )
 
     def test_symmetric_difference(self):
-
         model = AbstractModel()
         s1 = set([1, 2])
         model.s1 = Set(initialize=s1)
@@ -3867,7 +3863,6 @@ class TestNestedSetOperations(unittest.TestCase):
         self.assertEqual(sorted(inst.symdiff4), sorted(s1 ^ s2 ^ s3))
 
     def test_product(self):
-
         model = AbstractModel()
         s1 = set([1, 2])
         model.s1 = Set(initialize=s1)

@@ -60,7 +60,7 @@ At this point we have defined our sets and parameters.  However, we have yet to 
 
 We restrict our domain to the non-negative reals.  If we accepted negative numbers than the model could tell us to buy negative amounts of food, which is an unrealistic---and thus useless---model.  We could further restrict the domain to the integers to make it more realistic, but that would make the problem much harder for little gain: if this model is used on a large scale than the difference between the integer solution and the non-integer solution is often irrelevant.
 
-At this point we must start defining the rules associated with our paramaters and variables.  We begin with the most important rule, the cost rule, which will tell the model to try and minimize the overall cost.  Logically, the total cost is going to be the sum of how much is spent on each food, and that value in turn is going to be determined by the cost of the food and how much of it is purchased.  For example, if three \$5 hamburgers and two \$1 apples are purchased, than the total cost would be $3 \cdot 5 + 2 \cdot 1 = 17$.  Note that this process is the same as taking the dot product of the amounts vector and the costs vector.
+At this point we must start defining the rules associated with our parameters and variables.  We begin with the most important rule, the cost rule, which will tell the model to try and minimize the overall cost.  Logically, the total cost is going to be the sum of how much is spent on each food, and that value in turn is going to be determined by the cost of the food and how much of it is purchased.  For example, if three \$5 hamburgers and two \$1 apples are purchased, than the total cost would be $3 \cdot 5 + 2 \cdot 1 = 17$.  Note that this process is the same as taking the dot product of the amounts vector and the costs vector.
 
 To input this, we must define the cost rule, which we creatively call costRule as 
 
@@ -84,7 +84,7 @@ We must also create a rule for the volume consumed.  The construction of this ru
 model.volume = Constraint(rule=volumeRule)
 \end{verbatim}
 
-Note that here we have a constraint instead of an objective.  This requires that the rule returns true, but otherwsie the value is irrelevant.  While objective looks for the least value, constraints just require that a value works.
+Note that here we have a constraint instead of an objective.  This requires that the rule returns true, but otherwise the value is irrelevant.  While objective looks for the least value, constraints just require that a value works.
 
 Finally, we need to add the constraint that ensures we obtain proper amounts of each nutrient.  This one is a bit more complicated for two reasons: the value needs to be within a range, rather than just greater than or less than another value, and nutrient\_value was a two dimensional variable.  It's easy to fix the first problem in a myriad of ways; the way we will do it involves defining another variable and checking if that is in the proper range.  To solve the second problem, we give the rule an index in addition to the model as an input.  The code will be
 
@@ -99,21 +99,21 @@ model.nutrientConstraint = Constraint(model.nutrients, rule=nutrientRule)
 
 The rule itself will act much like the previous rules, but by adding an index into the constraint we will cycle through each of the nutrients.  Essentially, what we have done is compressed many ``nutrient rules,'' each of which acts the same, into one rule that will look at each nutrient individually.
 
-At this point, we have finished creating the model file.  We have defined our sets, paramaters and variables.  We also defined the objective of the model and constraints that must be accepted for a solution.  All that's left now is to build a data file.
+At this point, we have finished creating the model file.  We have defined our sets, parameters and variables.  We also defined the objective of the model and constraints that must be accepted for a solution.  All that's left now is to build a data file.
 
 
 \subsection*{Data entry}
 
-Much like with the model, we begin wtih the two main sets we're looking at: foods and nutrients.  For brevety, we'll only look at three foods and three nutrients.  Note that ``vc'' is just shorthand for vitamin c.
+Much like with the model, we begin with the two main sets we're looking at: foods and nutrients.  For brevety, we'll only look at three foods and three nutrients.  Note that ``vc'' is just shorthand for vitamin c.
 
 \begin{verbatim}
 set foods := steak apple rice;
 set nutrients := calories protein vc;
 \end{verbatim}
 
-To define the set just put set [name] := [elements of set]; where the elements of the set are seperated by a single space.
+To define the set just put set [name] := [elements of set]; where the elements of the set are separated by a single space.
 
-We now define a paramater without an associated set.  In this case, it is the paramater ``max\_volume''.  To do this, simply input
+We now define a parameter without an associated set.  In this case, it is the parameter ``max\_volume''.  To do this, simply input
 
 \begin{verbatim}
 param: max_volume := 400;
@@ -122,7 +122,7 @@ param: max_volume := 400;
 \noindent
 It is worth pointing out that for this example the volumes are all fairly arbitrary.
 
-The parameters representing the costs, volumes, nutrient minimums and nutrient maximums can all be input in compareable fashions with the main difference being which set the paramater is over.  In the code, the first line defins what parameter is being looked at and each subsequent line gives a member of the appropriate set and a value associated with it.
+The parameters representing the costs, volumes, nutrient minimums and nutrient maximums can all be input in comparable fashions with the main difference being which set the parameter is over.  In the code, the first line defines what parameter is being looked at and each subsequent line gives a member of the appropriate set and a value associated with it.
 
 \begin{verbatim}
 param: costs :=
@@ -158,7 +158,7 @@ protein     40    1     5
 vc          0     30    0;
 \end{verbatim}
 
-The amount of spaces between each element is irrelevent (as long as there is at least one) so the matrix should be formatted for ease of reading.
+The amount of spaces between each element is irrelevant (as long as there is at least one) so the matrix should be formatted for ease of reading.
 
 Now that we have finished both the model and the data file save them both. It's convention to give the model file a .py extension and the data file a .dat extension.  
 

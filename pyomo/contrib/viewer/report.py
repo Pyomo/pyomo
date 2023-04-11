@@ -158,7 +158,7 @@ def degrees_of_freedom(blk):
 
 def free_variables_in_active_equalities_set(blk):
     """
-    Return a set of variables that are contined in active equalities.
+    Return a set of variables that are continued in active equalities.
     """
     vin = ComponentSet()
     for c in active_equalities(blk):

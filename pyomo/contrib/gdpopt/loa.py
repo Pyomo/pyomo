@@ -319,7 +319,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 counter += 1
             except ZeroDivisionError:
                 config.logger.warning(
-                    "Zero division occured attempting to generate OA cut for "
+                    "Zero division occurred attempting to generate OA cut for "
                     "constraint %s.\n"
                     "Skipping OA cut generation for this constraint." % (constr.name,)
                 )

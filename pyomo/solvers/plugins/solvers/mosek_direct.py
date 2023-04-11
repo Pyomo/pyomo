@@ -609,7 +609,6 @@ class MOSEKDirect(DirectSolver):
             self._whichsol = mosek.soltype.bas
 
     def _postsolve(self):
-
         extract_duals = False
         extract_slacks = False
         extract_reduced_costs = False
@@ -916,7 +915,7 @@ class MOSEKDirect(DirectSolver):
 
         if self._save_results:
             """
-            This code in this if statement is only needed for backwards compatability. It is more efficient to set
+            This code in this if statement is only needed for backwards compatibility. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
             if self.results.problem.number_of_solutions > 0:
@@ -1037,7 +1036,6 @@ class MOSEKDirect(DirectSolver):
 
         elif self._load_solutions:
             if self.results.problem.number_of_solutions > 0:
-
                 self.load_vars()
 
                 if extract_reduced_costs:

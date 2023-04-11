@@ -407,12 +407,10 @@ class CCTests(object):
 
 
 class CCTests_none(CCTests, unittest.TestCase):
-
     xfrm = None
 
 
 class CCTests_nl(CCTests, unittest.TestCase):
-
     xfrm = 'mpec.nl'
 
     def _print(self, model):
@@ -420,17 +418,14 @@ class CCTests_nl(CCTests, unittest.TestCase):
 
 
 class CCTests_standard_form(CCTests, unittest.TestCase):
-
     xfrm = 'mpec.standard_form'
 
 
 class CCTests_simple_nonlinear(CCTests, unittest.TestCase):
-
     xfrm = 'mpec.simple_nonlinear'
 
 
 class CCTests_simple_disjunction(CCTests, unittest.TestCase):
-
     xfrm = 'mpec.simple_disjunction'
 
 

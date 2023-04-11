@@ -10,7 +10,7 @@ Citation for parmest
 
 If you use parmest, please cite [ParmestPaper]_
 
-Index of parmest documenation
+Index of parmest documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. toctree::

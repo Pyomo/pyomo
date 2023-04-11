@@ -67,7 +67,7 @@ class DirectOrPersistentSolver(OptSolver):
         """A dictionary mapping pyomo constraints to solver constraints."""
 
         self._vars_referenced_by_con = ComponentMap()
-        """A dictionary mapping constraints to a ComponentSet containt the pyomo variables referenced by that
+        """A dictionary mapping constraints to a ComponentSet containing the pyomo variables referenced by that
         constraint. This is primarily needed for the persistent solvers. When a constraint is deleted, we need
         to decrement the number of times those variables are referenced (see self._referenced_variables)."""
 
@@ -101,7 +101,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._symbolic_solver_labels = False
         """A bool. If true then the solver components will be given names corresponding to the pyomo component names."""
 
-        self._capabilites = Bunch()
+        self._capabilities = Bunch()
 
         self._referenced_variables = ComponentMap()
         """dict: {var: count} where count is the number of constraints/objective referencing the var"""
@@ -110,9 +110,9 @@ class DirectOrPersistentSolver(OptSolver):
         """A bool. If True, then the solver log will be saved."""
 
         self._save_results = True
-        """A bool. This is used for backwards compatability. If True, the solution will be loaded into the Solution
+        """A bool. This is used for backwards compatibility. If True, the solution will be loaded into the Solution
         object that gets placed on the SolverResults object. This way, users can do model.solutions.load_from(results)
-        to load solutions into thier model. However, it is more efficient to bypass the Solution object and load
+        to load solutions into their model. However, it is more efficient to bypass the Solution object and load
         the results directly from the solver object. If False, the solution will not be loaded into the Solution
         object."""
 
@@ -138,7 +138,7 @@ class DirectOrPersistentSolver(OptSolver):
         OptSolver._presolve(self, **kwds)
 
         # ***********************************************************
-        # The following code is only needed for backwards compatability of load_solutions=False.
+        # The following code is only needed for backwards compatibility of load_solutions=False.
         # If we ever only want to support the load_vars, load_duals, etc. methods, then this can be deleted.
         if self._save_results:
             self._smap_id = id(self._symbol_map)

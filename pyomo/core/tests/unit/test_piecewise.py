@@ -23,7 +23,6 @@ from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Piecewise, Con
 
 
 class TestMiscPiecewise(unittest.TestCase):
-
     # test that activate and deactivate work
     def test_activate_deactivate_indexed(self):
         model = ConcreteModel()
@@ -152,7 +151,6 @@ class TestMiscPiecewise(unittest.TestCase):
 
 
 class TestInvalidPiecewise(unittest.TestCase):
-
     # test the that Piecewise component raises
     # an exception when the LOG/DLOG reps
     # are requested without a (2^n)+1 length
@@ -346,18 +344,14 @@ class TestInvalidPiecewise(unittest.TestCase):
         except Exception:
             pass
         else:
-            self.fail(
-                "Piecewise should fail when initialized with invalid bound type."
-            )
+            self.fail("Piecewise should fail when initialized with invalid bound type.")
         try:
             del keywords['pw_constr_type']
             model.con1 = Piecewise(*args, **keywords)
         except Exception:
             pass
         else:
-            self.fail(
-                "Piecewise should fail when initialized with invalid bound type."
-            )
+            self.fail("Piecewise should fail when initialized with invalid bound type.")
 
     # test the that Piecewise component raises
     # an exception if the piecewise representation

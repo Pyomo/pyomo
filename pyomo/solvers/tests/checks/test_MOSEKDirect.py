@@ -31,7 +31,6 @@ class MOSEKDirectTests(unittest.TestCase):
         sys.stderr = self.stderr
 
     def test_interface_call(self):
-
         interface_instance = type(pyo.SolverFactory('mosek_direct'))
         alt_1 = pyo.SolverFactory('mosek')
         alt_2 = pyo.SolverFactory('mosek', solver_io='python')
@@ -41,7 +40,6 @@ class MOSEKDirectTests(unittest.TestCase):
         self.assertIsInstance(alt_3, interface_instance)
 
     def test_infeasible_lp(self):
-
         model = pyo.ConcreteModel()
         model.X = pyo.Var(within=pyo.NonNegativeReals)
         model.C1 = pyo.Constraint(expr=model.X == 1)
@@ -60,7 +58,6 @@ class MOSEKDirectTests(unittest.TestCase):
         )
 
     def test_unbounded_lp(self):
-
         model = pyo.ConcreteModel()
         model.X = pyo.Var()
         model.O = pyo.Objective(expr=model.X)
@@ -77,7 +74,6 @@ class MOSEKDirectTests(unittest.TestCase):
         )
 
     def test_optimal_lp(self):
-
         model = pyo.ConcreteModel()
         model.X = pyo.Var(within=pyo.NonNegativeReals)
         model.O = pyo.Objective(expr=model.X)
@@ -88,7 +84,6 @@ class MOSEKDirectTests(unittest.TestCase):
         self.assertEqual(results.solution.status, SolutionStatus.optimal)
 
     def test_get_duals_lp(self):
-
         model = pyo.ConcreteModel()
         model.X = pyo.Var(within=pyo.NonNegativeReals)
         model.Y = pyo.Var(within=pyo.NonNegativeReals)
@@ -108,7 +103,6 @@ class MOSEKDirectTests(unittest.TestCase):
         self.assertAlmostEqual(model.dual[model.C2], 0.2, 4)
 
     def test_infeasible_mip(self):
-
         model = pyo.ConcreteModel()
         model.X = pyo.Var(within=pyo.NonNegativeIntegers)
         model.C1 = pyo.Constraint(expr=model.X == 1)
@@ -127,7 +121,6 @@ class MOSEKDirectTests(unittest.TestCase):
         )
 
     def test_unbounded_mip(self):
-
         model = pyo.AbstractModel()
         model.X = pyo.Var(within=pyo.Integers)
         model.O = pyo.Objective(expr=model.X)
@@ -145,7 +138,6 @@ class MOSEKDirectTests(unittest.TestCase):
         )
 
     def test_optimal_mip(self):
-
         model = pyo.ConcreteModel()
         model.X = pyo.Var(within=pyo.NonNegativeIntegers)
         model.O = pyo.Objective(expr=model.X)
@@ -190,7 +182,6 @@ class MOSEKDirectTests(unittest.TestCase):
         del model
 
     def test_conic(self):
-
         model = pmo.block()
         model.o = pmo.objective(0.0)
         model.c = pmo.constraint(body=0.0, rhs=1)

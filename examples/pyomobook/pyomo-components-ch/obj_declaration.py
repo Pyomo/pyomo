@@ -45,6 +45,8 @@ model.d = pyo.Objective(A, rule=d_rule)
 # @:declmulti
 
 print('declskip')
+
+
 # @declskip:
 def e_rule(model, i):
     if i == 'R':

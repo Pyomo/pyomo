@@ -27,6 +27,7 @@ model.u = Param(model.P)
 # Variables
 model.X = Var(model.P)
 
+
 # Objective
 def Objective_rule(model):
     return sum([model.c[j] * model.X[j] for j in model.P])
@@ -34,12 +35,14 @@ def Objective_rule(model):
 
 model.Total_Profit = Objective(rule=Objective_rule, sense=maximize)
 
+
 # Time Constraint
 def Time_rule(model):
     return sum_product(model.X, denom=model.a) <= model.b
 
 
 model.Time = Constraint(rule=Time_rule)
+
 
 # Limit Constraint
 def Limit_rule(model, j):

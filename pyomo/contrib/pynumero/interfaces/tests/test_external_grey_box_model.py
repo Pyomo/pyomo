@@ -604,6 +604,7 @@ class TestExternalGreyBoxModel(unittest.TestCase):
             hess = egbm.evaluate_hessian_outputs()
 """
 
+
 # TODO: make this work even if there is only external and no variables anywhere in pyomo part
 class TestPyomoGreyBoxNLP(unittest.TestCase):
     def test_error_no_variables(self):

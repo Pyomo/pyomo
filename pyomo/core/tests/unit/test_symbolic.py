@@ -170,7 +170,7 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertTrue(e.is_expression_type())
         self.assertEqual(s(e), s(2.0 * m.x * m.y**-1.0))
 
-    def test_trig_fuctions(self):
+    def test_trig_functions(self):
         m = ConcreteModel()
         m.x = Var()
 

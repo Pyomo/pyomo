@@ -31,6 +31,7 @@ from .external_grey_box import ExternalGreyBoxBlock
 
 __all__ = ['PyomoNLP']
 
+
 # TODO: There are todos in the code below
 class PyomoNLP(AslNLP):
     def __init__(self, pyomo_model, nl_file_options=None):
@@ -1305,7 +1306,7 @@ class _ExternalGreyBoxModelHelper(object):
         return np.concatenate((eq_scaling, output_con_scaling))
 
     def evaluate_residuals(self):
-        # evalute the equality constraints and the output equations
+        # evaluate the equality constraints and the output equations
         # and return a single vector of residuals
         # returns residual for h(x)=0, where h(x) = [h_eq(x); h_o(x)-o]
         resid_list = []

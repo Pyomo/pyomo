@@ -10,7 +10,7 @@ Pyomo Expressions
     This documentation does not explicitly reference objects in
     pyomo.core.kernel.  While the Pyomo5 expression system works
     with pyomo.core.kernel objects, the documentation of these
-    documents was not sufficient to appropriately descibe the use
+    documents was not sufficient to appropriately describe the use
     of kernel objects in expressions.
 
 Pyomo supports the declaration of symbolic expressions that represent

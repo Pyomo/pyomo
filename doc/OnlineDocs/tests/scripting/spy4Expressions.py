@@ -47,6 +47,7 @@ PieSlice = Constraint(rule=pi_rule)
 # model.pwconst = Piecewise(yvar,xvar,**Keywords)
 # @Declare_piecewise_constraints
 
+
 # @f_rule_Function_examples
 # A function that changes with index
 def f(model, j, x):
@@ -93,6 +94,7 @@ instance.e[1].value = instance.x**2
 # print the value of the expression given the loaded optimal solution
 print(value(instance.e[1]))
 # @Expression_objects_illustration
+
 
 # @Define_python_function
 def f(x, p):

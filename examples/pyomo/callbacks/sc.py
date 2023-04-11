@@ -27,7 +27,7 @@ def print_model_stats(options, model):
     colc = {}
     for i in model.J:
         colc[i] = 0
-    for (i, j) in model.S:
+    for i, j in model.S:
         rowc[i] += 1
         colc[j] += 1
     print("Row Counts")
@@ -72,6 +72,7 @@ def pyomo_create_model(options=None, model_options=None):
                 p = int(math.ceil(m * 0.7))
             else:
                 p = int(math.ceil(m * model_options.rho))
+
         #
         def S_rule(model):
             ans = set()
@@ -93,6 +94,7 @@ def pyomo_create_model(options=None, model_options=None):
                 p = int(math.ceil(n * 0.4))
             else:
                 p = int(math.ceil(n * model_options.rho))
+
         #
         def S_rule(model):
             ans = set()
@@ -108,6 +110,7 @@ def pyomo_create_model(options=None, model_options=None):
         # rho - probability of selecting element for a set
         #
         rho = 0.3 if model_options.rho is None else model_options.rho
+
         #
         def S_rule(model):
             ans = set()
@@ -122,6 +125,7 @@ def pyomo_create_model(options=None, model_options=None):
         # rho - |S|/(I*J)
         #
         rho = 0.3 if model_options.rho is None else model_options.rho
+
         #
         def S_rule(model):
             ans = set()
@@ -139,6 +143,7 @@ def pyomo_create_model(options=None, model_options=None):
     # (i,j) in S if element i in set j
     #
     model.S = Set(dimen=2, initialize=S_rule)
+
     #
     # Dynamically create the I and J index sets, since
     # some rows or columns of S may not be populated.
@@ -160,6 +165,7 @@ def pyomo_create_model(options=None, model_options=None):
     # Set selection binary variables
     #
     model.x = Var(model.J, within=Binary)
+
     #
     # Objective
     #

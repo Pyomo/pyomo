@@ -146,7 +146,7 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
             raise RuntimeError("Node %s provided more than once.")
         old_new_map[node] = i
 
-    for (node1, node2) in graph.edges():
+    for node1, node2 in graph.edges():
         if node1 in old_new_map and node2 in old_new_map:
             new_node_1 = old_new_map[node1]
             new_node_2 = old_new_map[node2]

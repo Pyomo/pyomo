@@ -176,7 +176,7 @@ class testSelectiveClone(unittest.TestCase):
         self.assertNotEqual(
             id(m.first_stage_vars),
             id(cloned_model.first_stage_vars),
-            msg="First stage variables shouldnot be equal.",
+            msg="First stage variables should not be equal.",
         )
 
     def test_cloning_positive_case(self):
@@ -193,7 +193,7 @@ class testSelectiveClone(unittest.TestCase):
         cloned_model = selective_clone(block=m, first_stage_vars=m.first_stage_vars)
 
         self.assertEqual(
-            id(m.x), id(cloned_model.x), msg="First stage variables shouldbe equal."
+            id(m.x), id(cloned_model.x), msg="First stage variables should be equal."
         )
         self.assertNotEqual(
             id(m.y),
@@ -726,11 +726,9 @@ class myUncertaintySet(UncertaintySet):
     '''
 
     def set_as_constraint(self, uncertain_params, **kwargs):
-
         return Constraint(expr=sum(v for v in uncertain_params) <= 0)
 
     def point_in_set(self, uncertain_params, **kwargs):
-
         return True
 
     def geometry(self):
@@ -4088,7 +4086,7 @@ class RegressionTest(unittest.TestCase):
 
         # Define subsolvers utilized in the algorithm
         # two GAMS solvers, one of which has reslim set
-        # (overriden when invoked in PyROS)
+        # (overridden when invoked in PyROS)
         local_subsolvers = [
             SolverFactory("gams:conopt"),
             SolverFactory("gams:conopt"),
@@ -4471,7 +4469,6 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_coefficient_matching_solve(self):
-
         # Write the deterministic Pyomo model
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))

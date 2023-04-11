@@ -66,7 +66,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             The strategy value is not correct or not included.
         """
         while self.mip_iter < config.iteration_limit:
-
             # solve MILP main problem
             main_mip, main_mip_results = self.solve_main(config)
             if main_mip_results is not None:

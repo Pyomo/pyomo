@@ -213,7 +213,7 @@ class PiecewiseLinearFunction(Block):
 
     _ComponentDataClass = PiecewiseLinearFunctionData
 
-    # Map 4-tuple of bool to hander: "(f, pts, simplices, linear_funcs) : handler"
+    # Map 4-tuple of bool to handler: "(f, pts, simplices, linear_funcs) : handler"
     _handlers = {}
 
     def __new__(cls, *args, **kwds):

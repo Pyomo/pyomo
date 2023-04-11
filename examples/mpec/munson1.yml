@@ -15,8 +15,8 @@ model:
                                  #   index of components when transforming the
                                  #   model. Anything less than 1 disables
                                  #   index sorting. Anything greater than 1
-                                 #   additionaly sorts by component name to
-                                 #   override declartion order.
+                                 #   additionally sorts by component name to
+                                 #   override declaration order.
                                  #   optimization model is setup).
 runtime:
   logging: verbose                  # Logging level:  quiet, warning, info,

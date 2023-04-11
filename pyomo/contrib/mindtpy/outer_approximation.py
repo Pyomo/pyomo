@@ -130,7 +130,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         )
 
     def deactivate_no_good_cuts_when_fixing_bound(self, no_good_cuts):
-        # Only deactive the last OA cuts may not be correct.
+        # Only deactivate the last OA cuts may not be correct.
         # Since integer solution may also be cut off by OA cuts due to calculation approximation.
         if self.config.add_no_good_cuts:
             no_good_cuts[len(no_good_cuts)].deactivate()
@@ -139,7 +139,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
     def objective_reformulation(self):
         # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated.
-        # For OA/GOA/LP-NLP algorithm, if the objective funtion is linear, it will not be reformulated as epigraph constraint.
+        # For OA/GOA/LP-NLP algorithm, if the objective function is linear, it will not be reformulated as epigraph constraint.
         # If the objective function is linear, it will be reformulated as epigraph constraint only if the Feasibility Pump or ROA/RLP-NLP algorithm is activated. (move_objective = True)
         # In some cases, the variable/constraint/objective lists will not be updated even if the objective is epigraph-reformulated.
         # In Feasibility Pump, since the distance calculation only includes discrete variables and the epigraph slack variables are continuous variables, the Feasibility Pump algorithm will not affected even if the variable list are updated.

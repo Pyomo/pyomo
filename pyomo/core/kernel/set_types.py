@@ -16,6 +16,7 @@ logger = logging.getLogger('pyomo.core')
 
 _virtual_sets = []
 
+
 #
 # Dummy types used by Kernel as domain flags
 #

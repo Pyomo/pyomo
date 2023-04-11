@@ -18,6 +18,7 @@ def xbounds_rule(model, i):
 
 model.x = pyo.Var(model.A, bounds=xbounds_rule)
 
+
 # @obj:
 def obj_rule(model):
     return sum(

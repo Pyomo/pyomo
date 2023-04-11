@@ -26,6 +26,8 @@ model.boundx = Constraint(rule=bRule)
 model = ConcreteModel()
 model.J = Set(initialize=['butter', 'scones'])
 model.x = Var(model.J)
+
+
 # @Constraint_example
 def teaOKrule(model):
     return model.x['butter'] + model.x['scones'] == 3

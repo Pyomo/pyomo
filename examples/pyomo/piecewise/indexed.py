@@ -13,6 +13,7 @@
 
 from pyomo.core import *
 
+
 # Define the function
 # Just like in Pyomo constraint rules, a Pyomo model object
 # must be the first argument for the function rule

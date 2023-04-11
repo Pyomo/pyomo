@@ -1022,7 +1022,6 @@ class AbstractSimpleConstraint(metaclass=RenamedClass):
 
 
 class IndexedConstraint(Constraint):
-
     #
     # Leaving this method for backward compatibility reasons
     #

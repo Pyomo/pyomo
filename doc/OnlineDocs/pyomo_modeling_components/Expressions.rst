@@ -2,7 +2,7 @@ Expressions
 ===========
 
 In this section, we use the word "expression" in two ways: first in the
-general sense of the word and second to desribe a class of Pyomo objects
+general sense of the word and second to describe a class of Pyomo objects
 that have the name ``Expression`` as described in the subsection on
 expression objects.
 

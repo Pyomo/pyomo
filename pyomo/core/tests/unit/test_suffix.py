@@ -54,7 +54,6 @@ def simple_obj_rule(model, i):
 
 
 class TestSuffixMethods(unittest.TestCase):
-
     # test __init__
     def test_init(self):
         model = ConcreteModel()
@@ -600,7 +599,7 @@ class TestSuffixMethods(unittest.TestCase):
         model.b = Block()
         model.B = Block([1, 2, 3])
 
-        # make sure each BlockData gets construced
+        # make sure each BlockData gets constructed
         model.B[1].x = 1
         model.B[2].x = 2
         model.B[3].x = 3
@@ -633,7 +632,7 @@ class TestSuffixMethods(unittest.TestCase):
         model.b = Block()
         model.B = Block([1, 2, 3])
 
-        # make sure each BlockData gets construced
+        # make sure each BlockData gets constructed
         model.B[1].x = 1
         model.B[2].x = 2
         model.B[3].x = 3
@@ -666,7 +665,7 @@ class TestSuffixMethods(unittest.TestCase):
         model.b = Block()
         model.B = Block([1, 2, 3])
 
-        # make sure each BlockData gets construced
+        # make sure each BlockData gets constructed
         model.B[1].x = 1
         model.B[2].x = 2
         model.B[3].x = 3

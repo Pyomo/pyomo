@@ -113,7 +113,7 @@ class TestReportFunctions(unittest.TestCase):
     def test_get_residual(self):
         dat = uidata.UIData(self.m)
         # so that the model viewer doesn't run slow on large models,
-        # you have to explicilty ask for constraints and expressions
+        # you have to explicitly ask for constraints and expressions
         # to be calculated. Getting the residual before calculation
         # should just give None
         assert rpt.get_residual(dat, self.m.c3) is None

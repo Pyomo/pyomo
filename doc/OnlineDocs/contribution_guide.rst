@@ -21,12 +21,29 @@ we encourage modular/targeted commits with descriptive commit messages.
 Coding Standards
 ++++++++++++++++
     
-    * Required: 4 space indentation (no tabs)
-    * Desired: PEP8
-    * No use of __author__ 
+    * Required: `black <https://black.readthedocs.io/en/stable/>`_
+    * No use of ``__author__`` 
     * Inside ``pyomo.contrib``: Contact information for the contribution
       maintainer (such as a Github ID) should be included in the Sphinx
       documentation
+
+The first step of Pyomo's GitHub Actions workflow is to run
+`black <https://black.readthedocs.io/en/stable/>`_ and a
+`spell-checker <https://github.com/crate-ci/typos>`_ to ensure style
+guide compliance and minimize typos. Before opening a pull request, please
+run:
+
+::
+
+    # Auto-apply correct formatting
+   pip install black
+   black -S -C <path> --exclude examples/pyomobook/python-ch/BadIndent.py
+   # Find typos in files
+   conda install typos
+   typos --config .github/workflows/typos.toml <path>
+   
+If the spell-checker returns a failure for a word that is spelled correctly,
+please add the word to the ``.github/workflows/typos.toml`` file.
 
 Online Pyomo documentation is generated using `Sphinx <https://www.sphinx-doc.org/en/master/>`_
 with the ``napoleon`` extension enabled. For API documentation we use of one of these 
@@ -57,7 +74,7 @@ merged.
 The Pyomo main branch provides a Github Actions workflow (configured
 in the ``.github/`` directory) that will test any changes pushed to
 a branch with a subset of the complete test harness that includes
-multiple virtual machines (ubuntu, mac-os, windows)
+multiple virtual machines (``ubuntu``, ``mac-os``, ``windows``)
 and multiple Python versions. For existing forks, fetch and merge
 your fork (and branches) with Pyomo's main. For new forks, you will
 need to enable GitHub Actions in the 'Actions' tab on your fork.
@@ -68,7 +85,7 @@ may be opened by including '[WIP]' at the beginning of the PR
 title. This allows your code changes to be tested by the full suite of
 Pyomo's automatic
 testing infrastructure. Any pull requests marked '[WIP]' will not be
-reviewed or merged by the core development team. In addition, any
+reviewed or merged by the core development team. However, any
 '[WIP]' pull request left open for an extended period of time without
 active development may be marked 'stale' and closed.
 
@@ -271,13 +288,14 @@ Setting up your development environment
 
 After cloning your fork, you will want to install Pyomo from source.
 
-Step 1 (recommended): Create a new conda environment.
+Step 1 (recommended): Create a new ``conda`` environment.
 
 ::
 
    conda create --name pyomodev
 
-You may change the environment name from ``pyomodev`` as you see fit. Then activate the environment:
+You may change the environment name from ``pyomodev`` as you see fit.
+Then activate the environment:
 
 ::
    
@@ -285,9 +303,11 @@ You may change the environment name from ``pyomodev`` as you see fit. Then activ
 
 Step 2 (optional): Install PyUtilib
 
-The hard dependency on PyUtilib was removed in Pyomo 6.0.0. There is still a soft dependency for any code related to ``pyomo.dataportal.plugins.sheet``.
+The hard dependency on PyUtilib was removed in Pyomo 6.0.0. There is still a
+soft dependency for any code related to ``pyomo.dataportal.plugins.sheet``.
 
-If your contribution requires PyUtilib, you will likely need the main branch of PyUtilib to contribute. Clone a copy of the repository in a new directory:
+If your contribution requires PyUtilib, you will likely need the main branch of
+PyUtilib to contribute. Clone a copy of the repository in a new directory:
 
 ::
 
@@ -307,7 +327,10 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
   python setup.py develop
 
-These commands register the cloned code with the active python environment (``pyomodev``). This way, your changes to the source code for ``pyomo`` are automatically used by the active environment. You can create another conda environment to switch to alternate versions of pyomo (e.g., stable).
+These commands register the cloned code with the active python environment
+(``pyomodev``). This way, your changes to the source code for ``pyomo`` are
+automatically used by the active environment. You can create another conda
+environment to switch to alternate versions of pyomo (e.g., stable).
 
 Review Process
 --------------
@@ -351,9 +374,11 @@ of third-party contributions that enhance Pyomo's core functionality.
 The are two ways that ``pyomo.contrib`` can be used to integrate
 third-party packages:
 
-* ``pyomo.contrib`` can provide wrappers for separate Python packages, thereby allowing these packages to be imported as subpackages of pyomo.
+* ``pyomo.contrib`` can provide wrappers for separate Python packages, thereby
+   allowing these packages to be imported as subpackages of pyomo.
 
-* ``pyomo.contrib`` can include contributed packages that are developed and maintained outside of the Pyomo developer team.  
+* ``pyomo.contrib`` can include contributed packages that are developed and
+   maintained outside of the Pyomo developer team.  
 
 Including contrib packages in the Pyomo source tree provides a
 convenient mechanism for defining new functionality that can be

@@ -59,7 +59,7 @@ class ExternalInputOutputModel(object, metaclass=abc.ABCMeta):
         """
         This method is called by the solver to set the current values
         for the input variables. The derived class must cache these if
-        necessary for any subsequent calls to evalute_outputs or
+        necessary for any subsequent calls to evaluate_outputs or
         evaluate_derivatives.
         """
         pass

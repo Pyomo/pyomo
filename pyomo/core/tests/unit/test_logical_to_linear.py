@@ -61,6 +61,7 @@ def _constrs_contained_within(test_case, test_constr_tuples, constraint_list):
     test_case : unittest.TestCase
 
     """
+
     # Move const term from body
     def _move_const_from_body(lower, repn, upper):
         if repn.constant is not None and not repn.constant == 0:

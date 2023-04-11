@@ -162,7 +162,6 @@ class Test(unittest.TestCase):
         # self.sisser_instance.load_solutions(results)
 
     def test_ipopt_solve_from_instance_OF_options(self):
-
         with self.assertRaises(ValueError):
             # using OF_ options AND option_file_name
             # is not allowed

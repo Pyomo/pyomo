@@ -82,7 +82,6 @@ def heterogeneous_containers(node, ctype=_no_ctype, active=True, descend_into=Tr
         return
 
     for child_ctype in node.child_ctypes():
-
         if not child_ctype._is_heterogeneous_container:
             continue
 
@@ -236,9 +235,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
         descend_into = _convert_descend_into(descend_into)
 
         if ctype is _no_ctype:
-
             for child in self.children():
-
                 if (active is not None) and (not child.active):
                     continue
 
@@ -266,7 +263,6 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                             )
 
         else:
-
             for item in heterogeneous_containers(
                 self, active=active, descend_into=descend_into
             ):

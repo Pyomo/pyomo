@@ -2153,7 +2153,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         )
 
     def test_hierarchical_badly_ordered_targets(self):
-        m = models.makeHierarchicalNested_DeclOrderMatchesInstantationOrder()
+        m = models.makeHierarchicalNested_DeclOrderMatchesInstantiationOrder()
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m, targets=[m.disjunction_block, m.disjunct_block.disj2])
 
@@ -2165,7 +2165,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
     def test_decl_order_opposite_instantiation_order(self):
         # In this test, we create the same problem as above, but we don't even
         # need targets!
-        m = models.makeHierarchicalNested_DeclOrderOppositeInstantationOrder()
+        m = models.makeHierarchicalNested_DeclOrderOppositeInstantiationOrder()
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m)
 

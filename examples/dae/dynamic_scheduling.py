@@ -43,6 +43,7 @@ m.dtime = DerivativeVar(m.time, wrt=m.tau)
 m.c['A', 0].fix(4)
 m.c['B', 0].fix(3)
 
+
 # Reaction kinetics
 def _diffeq(m, p, t):
     return m.dc[p, t] == -m.tproc[p] * m.k[p] * m.c[p, t]
@@ -54,6 +55,7 @@ m.diffeq = Constraint(m.products, m.tau, rule=_diffeq)
 m.time['A', 0].fix(0)
 m.time['B', 0].fix(0)
 
+
 # Bound on the final concentration of reactants
 def _finalc(m, p):
     return m.c[p, 1] <= 0.001
@@ -61,12 +63,14 @@ def _finalc(m, p):
 
 m.finalc = Constraint(m.products, rule=_finalc)
 
+
 # Scaled time
 def _diffeqtime(m, p, t):
     return m.dtime[p, t] == m.tproc[p]
 
 
 m.diffeqtime = Constraint(m.products, m.tau, rule=_diffeqtime)
+
 
 # No clash disjuncts
 def _noclash(disjunct, AthenB):
@@ -81,12 +85,14 @@ def _noclash(disjunct, AthenB):
 
 m.noclash = Disjunct(m.AthenB, rule=_noclash)
 
+
 # Define the disjunctions: either job I occurs before K or K before I
 def _disj(model):
     return [model.noclash[AthenB] for AthenB in model.AthenB]
 
 
 m.disj = Disjunction(rule=_disj)
+
 
 # Due Time
 def _duetime(m):
@@ -95,12 +101,14 @@ def _duetime(m):
 
 m.duetime = Constraint(rule=_duetime)
 
+
 # Feasibility
 def _feas(m, p):
     return m.totaltime >= m.tstart[p] + m.tproc[p]
 
 
 m.feas = Constraint(m.products, rule=_feas)
+
 
 # Objective
 def _obj(m):

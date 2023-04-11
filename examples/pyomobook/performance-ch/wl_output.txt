@@ -8,17 +8,17 @@ Building model
            0 seconds to construct Set OrderedSimpleSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
-        0.09 seconds to construct Var x; 40000 indicies total
+        0.09 seconds to construct Var x; 40000 indices total
            0 seconds to construct Set OrderedSimpleSet; 1 index total
-           0 seconds to construct Var y; 200 indicies total
+           0 seconds to construct Var y; 200 indices total
         0.19 seconds to construct Objective obj; 1 index total
            0 seconds to construct Set OrderedSimpleSet; 1 index total
-        0.11 seconds to construct Constraint demand; 200 indicies total
+        0.11 seconds to construct Constraint demand; 200 indices total
            0 seconds to construct Set OrderedSimpleSet; 1 index total
            0 seconds to construct Set OrderedSimpleSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
-        0.62 seconds to construct Constraint warehouse_active; 40000 indicies total
+        0.62 seconds to construct Constraint warehouse_active; 40000 indices total
            0 seconds to construct Constraint num_warehouses; 1 index total
 # @:report_timing
 
@@ -32,17 +32,17 @@ Building model with LinearExpression
            0 seconds to construct Set OrderedSimpleSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
-        0.12 seconds to construct Var x; 40000 indicies total
+        0.12 seconds to construct Var x; 40000 indices total
            0 seconds to construct Set OrderedSimpleSet; 1 index total
-           0 seconds to construct Var y; 200 indicies total
+           0 seconds to construct Var y; 200 indices total
         0.17 seconds to construct Objective obj; 1 index total
            0 seconds to construct Set OrderedSimpleSet; 1 index total
-        0.11 seconds to construct Constraint demand; 200 indicies total
+        0.11 seconds to construct Constraint demand; 200 indices total
            0 seconds to construct Set OrderedSimpleSet; 1 index total
            0 seconds to construct Set OrderedSimpleSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
-        0.49 seconds to construct Constraint warehouse_active; 40000 indicies total
+        0.49 seconds to construct Constraint warehouse_active; 40000 indices total
            0 seconds to construct Constraint num_warehouses; 1 index total
 # @:report_timing_with_lin_expr
 

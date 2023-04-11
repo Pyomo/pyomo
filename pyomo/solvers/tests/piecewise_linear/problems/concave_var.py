@@ -30,7 +30,6 @@ def F(model, x):
 
 
 def define_model(**kwds):
-
     model = ConcreteModel()
 
     model.x1 = Var(bounds=(-5, 4))  # domain variable

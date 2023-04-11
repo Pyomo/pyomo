@@ -1317,7 +1317,6 @@ def _process_arg(obj):
 
 # @profile
 def _generate_sum_expression(etype, _self, _other):
-
     if etype > _inplace:
         etype -= _inplace
 
@@ -1478,7 +1477,6 @@ def _generate_sum_expression(etype, _self, _other):
 
 # @profile
 def _generate_mul_expression(etype, _self, _other):
-
     if etype > _inplace:
         etype -= _inplace
 
@@ -1617,7 +1615,6 @@ def _generate_mul_expression(etype, _self, _other):
 
 # @profile
 def _generate_other_expression(etype, _self, _other):
-
     if etype > _inplace:
         etype -= _inplace
 

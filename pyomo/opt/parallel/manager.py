@@ -55,7 +55,6 @@ class ActionManagerError(Exception):
 
 
 class ActionHandle(object):
-
     id_counter = 0
 
     def __init__(self, error=False, explanation=""):
