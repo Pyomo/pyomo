@@ -429,7 +429,9 @@ class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
         m.points.append((-2, 0, 1))
 
         out = StringIO()
-        with LoggingIntercept(out, 'contrib.piecewise', level=logging.INFO):
+        with LoggingIntercept(
+            out, 'pyomo.contrib.piecewise.piecewise_linear_function', level=logging.INFO
+        ):
             m.approx = PiecewiseLinearFunction(points=m.points, function=m.f)
 
         self.assertIn(

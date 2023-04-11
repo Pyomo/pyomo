@@ -33,7 +33,7 @@ import pyomo.core.expr.current as EXPR
 # be zero.
 ZERO_TOLERANCE = 1e-8
 
-logger = logging.getLogger('contrib.piecewise')
+logger = logging.getLogger(__name__)
 
 
 class PiecewiseLinearFunctionData(_BlockData):
