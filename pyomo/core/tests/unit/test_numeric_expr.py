@@ -3625,12 +3625,12 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = pow(m.a, m.b)
         self.assertEqual(expr.polynomial_degree(), None)
         #
-        # A power with a constant exponent is not a polynomial
+        # A power with a constant exponent
         #
         m.b.fixed = True
         self.assertEqual(expr.polynomial_degree(), 2)
         m.b.value = 0
-        self.assertEqual(expr.polynomial_degree(), None)
+        self.assertEqual(expr.polynomial_degree(), 0)
         #
         # A power with a constant base and exponent is a constant
         #
@@ -3671,7 +3671,7 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), None)
 
         expr = pow(2**m.a, 0)
-        self.assertEqual(expr.polynomial_degree(), None)
+        self.assertEqual(expr.polynomial_degree(), 0)
         #
         # With an undefined exponent, the polynomial degree is None
         #

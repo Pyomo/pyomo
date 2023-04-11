@@ -281,7 +281,7 @@ class TestExpressionAPI(unittest.TestCase):
 
         m.p = 0
         self.assertTrue(e.is_potentially_variable())
-        self.assertEqual(e.polynomial_degree(), None)
+        self.assertEqual(e.polynomial_degree(), 0)
         self.assertEqual(is_fixed(e), True)
         self.assertEqual(value(e), 1)
         self.assertEqual(str(e), "x**p")
