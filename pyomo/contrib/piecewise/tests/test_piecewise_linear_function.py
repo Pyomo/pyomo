@@ -10,9 +10,11 @@
 #  ___________________________________________________________________________
 
 from io import StringIO
+import logging
 import pickle
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
 from pyomo.core.expr.compare import (
@@ -353,7 +355,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertEqual(str(m.c.body.expr), "pw(x1, x2)")
         self.assertIs(m.c.body.expr.pw_linear_function, m.pw)
 
-    @unittest.skipUnless(numpy_available, "numpy are not available")
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_evaluate_pw_linear_function(self):
         # NOTE: This test requires numpy because it is used to check which
         # simplex a point is in
@@ -376,3 +378,124 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertAlmostEqual(m.pw(1, 3), g1(1, 3))
         self.assertAlmostEqual(m.pw(2.5, 6), g2(2.5, 6))
         self.assertAlmostEqual(m.pw(0.2, 4.3), g2(0.2, 4.3))
+
+
+class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
+    cube_extreme_pt_indices = [
+        {10, 11, 13, 14, 19, 20, 22, 23},  # right bottom back
+        {9, 10, 12, 13, 18, 19, 21, 22},  # right bottom front
+        {0, 1, 3, 4, 9, 10, 12, 13},  # left bottom front
+        {1, 2, 4, 5, 10, 11, 13, 14},  # left bottom back
+        {3, 4, 6, 7, 12, 13, 15, 16},  # left top front
+        {4, 5, 7, 8, 13, 14, 16, 17},  # left top back
+        {12, 13, 15, 16, 21, 22, 24, 25},  # right top front
+        {13, 14, 16, 17, 22, 23, 25, 26},  # right top back
+    ]
+
+    def make_model(self):
+        m = ConcreteModel()
+
+        m.f = lambda x1, x2, y: x1 * x2 + y
+        # This is a 2x2 stack of cubes, so there are 8 total cubes, each of which
+        # will get divided into 6 simplices.
+        m.points = [
+            (-2.0, 0.0, 1.0),
+            (-2.0, 0.0, 4.0),
+            (-2.0, 0.0, 7.0),
+            (-2.0, 1.5, 1.0),
+            (-2.0, 1.5, 4.0),
+            (-2.0, 1.5, 7.0),
+            (-2.0, 3.0, 1.0),
+            (-2.0, 3.0, 4.0),
+            (-2.0, 3.0, 7.0),
+            (-1.5, 0.0, 1.0),
+            (-1.5, 0.0, 4.0),
+            (-1.5, 0.0, 7.0),
+            (-1.5, 1.5, 1.0),
+            (-1.5, 1.5, 4.0),
+            (-1.5, 1.5, 7.0),
+            (-1.5, 3.0, 1.0),
+            (-1.5, 3.0, 4.0),
+            (-1.5, 3.0, 7.0),
+            (-1.0, 0.0, 1.0),
+            (-1.0, 0.0, 4.0),
+            (-1.0, 0.0, 7.0),
+            (-1.0, 1.5, 1.0),
+            (-1.0, 1.5, 4.0),
+            (-1.0, 1.5, 7.0),
+            (-1.0, 3.0, 1.0),
+            (-1.0, 3.0, 4.0),
+            (-1.0, 3.0, 7.0),
+        ]
+        return m
+
+    @unittest.skipUnless(
+        scipy_available and numpy_available, "scipy and/or numpy are not available"
+    )
+    def test_degenerate_simplices_filtered(self):
+        m = self.make_model()
+        pw = m.approx = PiecewiseLinearFunction(points=m.points, function=m.f)
+
+        # check that all the points got used
+        self.assertEqual(len(pw._points), 27)
+        for p_model, p_pw in zip(m.points, pw._points):
+            self.assertEqual(p_model, p_pw)
+
+        # Started with a 2x2 grid of cubes, and each is divided into 6
+        # simplices. It's crazy degenerate in terms of *how* this is done, but
+        # that's the point of this test.
+        self.assertEqual(len(pw._simplices), 48)
+        simplex_in_cube = {idx: 0 for idx in range(8)}
+        for simplex in pw._simplices:
+            for i, vertex_set in enumerate(self.cube_extreme_pt_indices):
+                if set(simplex).issubset(vertex_set):
+                    simplex_in_cube[i] += 1
+            # verify the simplex is full-dimensional
+            pts = np.array([pw._points[j] for j in simplex]).transpose()
+            A = pts[:, 1:] - np.append(pts[:, :2], pts[:, [0]], axis=1)
+            self.assertNotEqual(np.linalg.det(A), 0)
+
+        # Check that they are 6 to a cube, as expected
+        for num in simplex_in_cube.values():
+            self.assertEqual(num, 6)
+
+    @unittest.skipUnless(
+        scipy_available and numpy_available, "scipy and/or numpy are not available"
+    )
+    def test_redundant_points_logged(self):
+        m = self.make_model()
+        # add a redundant point
+        m.points.append((-2, 0, 1))
+
+        out = StringIO()
+        with LoggingIntercept(
+            out, 'pyomo.contrib.piecewise.piecewise_linear_function', level=logging.INFO
+        ):
+            m.approx = PiecewiseLinearFunction(points=m.points, function=m.f)
+
+        self.assertIn(
+            "The Delaunay triangulation dropped the point with index 27 "
+            "from the triangulation",
+            out.getvalue(),
+        )
+
+    @unittest.skipUnless(numpy_available, "numpy is not available")
+    def test_user_given_degenerate_simplex_error(self):
+        m = self.make_model()
+        with self.assertRaisesRegex(
+            ValueError,
+            "When calculating the hyperplane approximation over the simplex "
+            "with index 0, the matrix was unexpectedly singular. This "
+            "likely means that this simplex is degenerate",
+        ):
+            m.pw = PiecewiseLinearFunction(
+                simplices=[
+                    (
+                        (-2.0, 0.0, 1.0),
+                        (-2.0, 0.0, 4.0),
+                        (-2.0, 1.5, 1.0),
+                        (-2.0, 1.5, 4.0),
+                    )
+                ],
+                function=m.f,
+            )
