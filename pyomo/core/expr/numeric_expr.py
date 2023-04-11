@@ -81,7 +81,7 @@ def enable_expression_optimizations(zero=None, one=None):
     that should be raised if `f(.)` resolves to `0` (in the case of
     `0/f(.)`), as well as any errors that would have otherwise been
     raised during the evaluation of `f(.)`.  In addition, optimizing
-    `f(.)**0 == 1` is only valid when `f(.)>=0`.  **Users who enable
+    `f(.)**0 == 1` is only valid when `f(.)!=0`.  **Users who enable
     this optimization bear responsibility for ensuring that these
     optimizations will be valid for the model.**
 
@@ -423,8 +423,6 @@ class PowExpression(NumericExpression):
         # too frequently (and in particular, a**2)
         l, r = result
         if r == 0:
-            if l == 0:
-                return 0
             # NOTE: use value before int() so that we don't
             #       run into the disabled __int__ method on
             #       NumericValue
@@ -432,8 +430,8 @@ class PowExpression(NumericExpression):
             if exp is None:
                 return None
             if exp == int(exp):
-                # Note: exp == 0 is still nonpolynomial
-                #   (-1**0 == -1, and 1**0 == 1)
+                if not exp:
+                    return 0
                 if l is not None and exp > 0:
                     return l * int(exp)
         return None
