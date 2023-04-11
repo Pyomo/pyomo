@@ -46,7 +46,7 @@ relocated_module_attribute(
     'pyomo.common.numeric_types._native_boolean_types',
     version='6.5.1.dev0',
     msg="The native_boolean_types set will be removed in the future: the set "
-    "contains types that were convertable to bool, and not types that should "
+    "contains types that were convertible to bool, and not types that should "
     "be treated as if they were bool (as was the case for the other "
     "native_*_types sets).  Users likely should use native_logical_types.",
 )

@@ -2418,7 +2418,7 @@ class TestExpressionGeneration_ZeroFilter(Base, unittest.TestCase):
                 NPV_SumExpression(self.mutable_l3.args + [-1]),
             ),
             # 20:
-            # Note that beause the mutable is resolved to a NPV_Sum in
+            # Note that because the mutable is resolved to a NPV_Sum in
             # the negation, the 1-term summation for the first arg is
             # not resolved to a bare term
             (

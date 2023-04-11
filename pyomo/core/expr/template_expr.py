@@ -741,7 +741,7 @@ def _reduce_template_to_component(expr):
     level = -1
 
     def beforeChild(node, child, child_idx):
-        # Efficiency: do not decend into leaf nodes.
+        # Efficiency: do not descend into leaf nodes.
         if type(child) in native_types:
             return False, child
         elif not child.is_expression_type():
