@@ -438,6 +438,7 @@ class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
             out.getvalue(),
         )
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_user_given_degenerate_simplex_error(self):
         m = self.make_model()
         with self.assertRaisesRegex(
