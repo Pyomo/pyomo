@@ -129,7 +129,7 @@ def value(obj, exception=True):
 
     Args:
         obj: The argument to evaluate. If it is None, a
-            string, or any other primative numeric type,
+            string, or any other primitive numeric type,
             then this function simply returns the argument.
             Otherwise, if the argument is a NumericValue
             then the __call__ method is executed.
@@ -1021,6 +1021,7 @@ pyomo_constant_types.add(NumericConstant)
 
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)
+
 
 #
 # Note: the "if numpy_available" in the class definition also ensures

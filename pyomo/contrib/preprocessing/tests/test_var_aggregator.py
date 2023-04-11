@@ -85,7 +85,7 @@ class TestVarAggregate(unittest.TestCase):
         with self.assertRaises(ValueError):
             TransformationFactory('contrib.aggregate_vars').apply_to(m)
 
-    def test_do_not_tranform_deactivated_constraints(self):
+    def test_do_not_transform_deactivated_constraints(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()

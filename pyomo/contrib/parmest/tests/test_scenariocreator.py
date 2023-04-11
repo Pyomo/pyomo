@@ -134,11 +134,10 @@ class TestScenarioSemibatch(unittest.TestCase):
         self.pest = parmest.Estimator(sb.generate_model, data, theta_names)
 
     def test_semibatch_bootstrap(self):
-
         scenmaker = sc.ScenarioCreator(self.pest, "ipopt")
         bootscens = sc.ScenarioSet("Bootstrap")
         numtomake = 2
-        scenmaker.ScenariosFromBoostrap(bootscens, numtomake, seed=1134)
+        scenmaker.ScenariosFromBootstrap(bootscens, numtomake, seed=1134)
         tval = bootscens.ScenarioNumber(0).ThetaVals["k1"]
         self.assertAlmostEqual(tval, 20.64, places=1)
 

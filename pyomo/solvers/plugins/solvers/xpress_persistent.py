@@ -32,7 +32,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
     Keyword Arguments
     -----------------
     model: ConcreteModel
-        Passing a model to the constructor is equivalent to calling the set_instance mehtod.
+        Passing a model to the constructor is equivalent to calling the set_instance method.
     type: str
         String indicating the class type of the solver instance.
     name: str
@@ -156,13 +156,13 @@ class XpressPersistent(PersistentSolver, XpressDirect):
 
     def get_xpress_attribute(self, *args):
         """
-        Get xpress atrributes.
+        Get xpress attributes.
 
         Parameters
         ----------
         control(s): str, strs, list, None
             The xpress attribute to get. Options include any xpress attribute.
-            Can also be list of xpress controls or None for every atrribute
+            Can also be list of xpress controls or None for every attribute
             Please see the Xpress documentation for options.
 
         See the Xpress documentation for xpress.problem.getAttrib for other
@@ -198,7 +198,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         ----------
         control(s): str, strs, list, None
             The xpress control to get. Options include any xpress control.
-            Can also be list of xpress controls or None for every contorl
+            Can also be list of xpress controls or None for every control
             Please see the Xpress documentation for options.
 
         See the Xpress documentation for xpress.problem.getControl for other

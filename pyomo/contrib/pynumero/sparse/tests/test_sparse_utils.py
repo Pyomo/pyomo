@@ -26,7 +26,6 @@ from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense, is_symmetric
 
 class TestSparseUtils(unittest.TestCase):
     def setUp(self):
-
         row = np.array([0, 1, 4, 1, 2, 7, 2, 3, 5, 3, 4, 5, 4, 7, 5, 6, 6, 7])
         col = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7])
         data = np.array(
@@ -56,7 +55,6 @@ class TestSparseUtils(unittest.TestCase):
         self.block11 = m
 
     def test_is_symmetric_dense(self):
-
         m = self.block00.toarray()
         self.assertTrue(is_symmetric_dense(m))
         self.assertTrue(is_symmetric_dense(2))

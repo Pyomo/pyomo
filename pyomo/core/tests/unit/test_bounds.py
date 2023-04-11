@@ -23,7 +23,6 @@ from pyomo.environ import AbstractModel, Param, Var, Constraint
 
 
 class Test(unittest.TestCase):
-
     # Test constraint bounds
     def test_constr_lower(self):
         model = AbstractModel()

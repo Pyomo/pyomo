@@ -1044,7 +1044,7 @@ class _MindtPyAlgorithm(object):
     def solve_subproblem(self, config):
         """Solves the Fixed-NLP (with fixed integers).
 
-        This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their intial var values,
+        This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their initial var values,
         precomputes dual values, deactivates trivial constraints, and then solves NLP model.
 
         Parameters
@@ -1065,7 +1065,7 @@ class _MindtPyAlgorithm(object):
         MindtPy.cuts.deactivate()
         if config.calculate_dual_at_solution:
             self.fixed_nlp.tmp_duals = ComponentMap()
-            # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
+            # tmp_duals are the value of the dual variables stored before using deactivate trivial constraints
             # The values of the duals are computed as follows: (Complementary Slackness)
             #
             # | constraint | c_geq | status at x1 | tmp_dual (violation) |
@@ -2121,7 +2121,7 @@ class _MindtPyAlgorithm(object):
             else:
                 config.logger.info(
                     'No solution obtained from the regularization subproblem.'
-                    'Please set mip_solver_tee to True for more informations.'
+                    'Please set mip_solver_tee to True for more information.'
                     'The solution of the OA main problem will be adopted.'
                 )
         else:
@@ -2460,7 +2460,7 @@ class _MindtPyAlgorithm(object):
 
         # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
         # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'   https://doi.org/10.1007/s10107-012-0608-x
-        # the norm type is consistant with the norm obj of the FP-main problem.
+        # the norm type is consistent with the norm obj of the FP-main problem.
         if config.fp_norm_constraint:
             generate_norm_constraint(fp_nlp, self.mip, config)
 
@@ -2628,7 +2628,6 @@ class _MindtPyAlgorithm(object):
             MindtPy unable to handle the termination condition of the FP-NLP subproblem.
         """
         while self.fp_iter < config.fp_iteration_limit:
-
             # solve MILP main problem
             with time_code(self.timing, 'fp main'):
                 fp_main, fp_main_results = self.solve_fp_main(config)
@@ -2811,7 +2810,7 @@ class _MindtPyAlgorithm(object):
 
     def objective_reformulation(self):
         # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated.
-        # For OA/GOA/LP-NLP algorithm, if the objective funtion is linear, it will not be reformulated as epigraph constraint.
+        # For OA/GOA/LP-NLP algorithm, if the objective function is linear, it will not be reformulated as epigraph constraint.
         # If the objective function is linear, it will be reformulated as epigraph constraint only if the Feasibility Pump or ROA/RLP-NLP algorithm is activated. (move_objective = True)
         # In some cases, the variable/constraint/objective lists will not be updated even if the objective is epigraph-reformulated.
         # In Feasibility Pump, since the distance calculation only includes discrete variables and the epigraph slack variables are continuous variables, the Feasibility Pump algorithm will not affected even if the variable list are updated.
@@ -2868,7 +2867,6 @@ class _MindtPyAlgorithm(object):
             The strategy value is not correct or not included.
         """
         while self.mip_iter < config.iteration_limit:
-
             # solve MILP main problem
             with time_code(self.timing, 'main'):
                 main_mip, main_mip_results = self.solve_main(config)

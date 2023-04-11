@@ -23,17 +23,16 @@ import pyomo.common.unittest as unittest
 from pyomo.solvers.tests.models.base import all_models
 from pyomo.solvers.tests.testcases import generate_scenarios
 
+
 #
 # A function that returns a function that gets
 # added to a test class.
 #
 def create_method(model, solver, io, test_case, symbolic_labels):
-
     # Ignore expected failures?
     is_expected_failure = False
 
     def pickle_test(self):
-
         # Instantiate the model class
         model_class = test_case.model()
 

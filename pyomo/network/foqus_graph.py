@@ -282,7 +282,7 @@ class FOQUSGraph(object):
                 List of lists of edge indexes leaving the SCC
         """
 
-        def sc(v, stk, depth, strngComps):
+        def sc(v, stk, depth, stringComps):
             # recursive sub-function for backtracking
             ndepth[v] = depth
             back[v] = depth
@@ -290,7 +290,7 @@ class FOQUSGraph(object):
             stk.append(v)
             for w in adj[v]:
                 if ndepth[w] == None:
-                    sc(w, stk, depth, strngComps)
+                    sc(w, stk, depth, stringComps)
                     back[v] = min(back[w], back[v])
                 elif w in stk:
                     back[v] = min(back[w], back[v])
@@ -301,27 +301,27 @@ class FOQUSGraph(object):
                     scomp.append(i2n[w])
                     if w == v:
                         break
-                strngComps.append(scomp)
+                stringComps.append(scomp)
             return depth
 
         i2n, adj, _ = self.adj_lists(G, excludeEdges=excludeEdges)
 
         stk = []  # node stack
-        strngComps = []  # list of SCCs
+        stringComps = []  # list of SCCs
         ndepth = [None] * len(i2n)
         back = [None] * len(i2n)
 
         # find the SCCs
         for v in range(len(i2n)):
             if ndepth[v] == None:
-                sc(v, stk, 0, strngComps)
+                sc(v, stk, 0, stringComps)
 
         # Find the rest of the information about SCCs given the node partition
-        sccNodes = strngComps
+        sccNodes = stringComps
         sccEdges = []
         outEdges = []
         inEdges = []
-        for nset in strngComps:
+        for nset in stringComps:
             e, ie, oe = self.sub_graph_edges(G, nset)
             sccEdges.append(e)
             inEdges.append(ie)
@@ -416,7 +416,7 @@ class FOQUSGraph(object):
         a tree the results are not valid.
 
         In the returned order, it is sometimes possible for more
-        than one node to be caclulated at once. So a list of lists
+        than one node to be calculated at once. So a list of lists
         is returned by this function. These represent a bredth
         first search order of the tree. Following the order, all
         nodes that lead to a particular node will be visited
@@ -528,7 +528,7 @@ class FOQUSGraph(object):
         """
         This finds optimal sets of tear edges based on two criteria.
         The primary objective is to minimize the maximum number of
-        times any cycle is broken. The seconday criteria is to
+        times any cycle is broken. The secondary criteria is to
         minimize the number of tears.
 
         This function uses a branch and bound type approach.
@@ -544,15 +544,15 @@ class FOQUSGraph(object):
             upperbound_total
                 The total number of loops
 
-        Improvemnts for the future
+        Improvements for the future
 
-        I think I can imporve the efficency of this, but it is good
+        I think I can improve the efficiency of this, but it is good
         enough for now. Here are some ideas for improvement:
 
             1. Reduce the number of redundant solutions. It is possible
             to find tears sets [1,2] and [2,1]. I eliminate
-            redundent solutions from the results, but they can
-            occur and it reduces efficency.
+            redundant solutions from the results, but they can
+            occur and it reduces efficiency.
 
             2. Look at strongly connected components instead of whole
             graph. This would cut back on the size of graph we are
@@ -684,8 +684,8 @@ class FOQUSGraph(object):
     def tear_upper_bound(self, G):
         """
         This function quickly finds a sub-optimal set of tear
-        edges. This serves as an inital upperbound when looking
-        for an optimal tear set. Having an inital upper bound
+        edges. This serves as an initial upperbound when looking
+        for an optimal tear set. Having an initial upper bound
         improves efficiency.
 
         This works by constructing a search tree and just makes a

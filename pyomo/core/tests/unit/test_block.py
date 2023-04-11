@@ -227,11 +227,9 @@ class TestGenerators(unittest.TestCase):
         return model
 
     def generator_runner(self, ctype):
-
         model = self.generate_model()
 
         for block in model.block_data_objects(sort=SortComponents.indices):
-
             # Non-nested components(active=True)
             generator = None
             try:
@@ -444,7 +442,6 @@ class TestGenerators(unittest.TestCase):
         self.generator_runner(SOSConstraint)
 
     def test_Block(self):
-
         self.generator_runner(Block)
 
         model = self.generate_model()
@@ -2703,6 +2700,7 @@ class TestBlock(unittest.TestCase):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
+
         #
         def d_rule(model):
             return model.x[1] >= 0
@@ -2827,7 +2825,7 @@ class TestBlock(unittest.TestCase):
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve7(self):
         #
-        # Test that solution values are writen with appropriate
+        # Test that solution values are written with appropriate
         # quotations in results
         #
         model = Block(concrete=True)

@@ -140,7 +140,7 @@ def sqp(
     nlp: NLP, linear_solver: LinearSolverInterface, max_iter=100, tol=1e-8, output=True
 ):
     """
-    An example of a simple SQP algoritm for
+    An example of a simple SQP algorithm for
     equality-constrained NLPs.
 
     Parameters

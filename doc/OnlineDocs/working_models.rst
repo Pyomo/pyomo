@@ -207,7 +207,7 @@ idea for users of an ``AbstractModel``:
 #. Create an ``AbstractModel`` (suppose it is called ``model``)
 #. Call ``model.create_instance()`` to create an instance (suppose it is called ``instance``)
 #. Solve ``instance``
-#. Change someting in ``instance``
+#. Change something in ``instance``
 #. Solve ``instance`` again
 
 .. note::
@@ -259,7 +259,7 @@ indexed), the assignment can be made using
    If the ``Param`` is not declared to be mutable, an error will occur if an assignment to it is attempted.
     
 For more information about access to Pyomo parameters, see the section
-in this document on ``Param`` access :ref:`ParmAccess`. Note that for
+in this document on ``Param`` access :ref:`ParamAccess`. Note that for
 concrete models, the model is the instance.
 
 Fixing Variables and Re-solving
@@ -479,7 +479,7 @@ blocks) is as follows (this particular snippet assumes that instead of
 .. literalinclude:: tests/scripting/block_iter_example_compprintloop.spy
    :language: python
 
-.. _ParmAccess:
+.. _ParamAccess:
 
 Accessing Parameter Values
 --------------------------

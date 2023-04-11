@@ -16,6 +16,7 @@ __all__ = ['ProblemFormat', 'ResultsFormat', 'guess_format']
 
 import enum
 
+
 #
 # pyomo - A pyomo.core.PyomoModel object, or a *.py file that defines such an object
 # cpxlp - A CPLEX LP file

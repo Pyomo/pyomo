@@ -13,7 +13,7 @@ classes to represent nonlinear programming problems. There are two
 classes that provide different representations for the NLP.
 
 The first interface (NLP) presents the NLP in the following form
-(where all equality and inequality constaints are combined)
+(where all equality and inequality constraints are combined)
 
 minimize             f(x)
 subject to    g_L <= g(x) <= g_U
@@ -21,7 +21,7 @@ subject to    g_L <= g(x) <= g_U
 
 where x \in R^{n_x} are the primal variables,
       x_L \in R^{n_x} are the lower bounds of the primal variables,
-      x_U \in R^{n_x} are the uppper bounds of the primal variables,
+      x_U \in R^{n_x} are the upper bounds of the primal variables,
       g: R^{n_x} \rightarrow R^{n_c} are constraints (combined 
          equality and inequality)
       
@@ -36,7 +36,7 @@ subject to           h(x) = 0
 
 where x \in R^{n_x} are the primal variables,
       x_L \in R^{n_x} are the lower bounds of the primal variables,
-      x_U \in R^{n_x} are the uppper bounds of the primal variables,
+      x_U \in R^{n_x} are the upper bounds of the primal variables,
       h: R^{n_x} \rightarrow R^{n_eq} are the equality constraints
       q: R^{n_x} \rightarrow R^{n_ineq} are the inequality constraints
 

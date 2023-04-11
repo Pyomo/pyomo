@@ -454,7 +454,7 @@ class SequentialDecomposition(FOQUSGraph):
                     "Found free splitfrac for arc '%s' with no current value. "
                     "Please use the set_split_fraction method on its source "
                     "port to set this value before expansion, or set its value "
-                    "manually if expansion has already occured." % arc.name
+                    "manually if expansion has already occurred." % arc.name
                 )
         elif sf is None:
             # if there is no splitfrac, but we have extensive members, then we
@@ -807,7 +807,7 @@ class SequentialDecomposition(FOQUSGraph):
         """
         This finds optimal sets of tear edges based on two criteria.
         The primary objective is to minimize the maximum number of
-        times any cycle is broken. The seconday criteria is to
+        times any cycle is broken. The secondary criteria is to
         minimize the number of tears.
 
         This function creates a MIP problem in Pyomo with a doubly

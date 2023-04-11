@@ -216,6 +216,7 @@ def _obj_rule(model):
 
 model.obj = Objective(rule=_obj_rule)
 
+
 ########################
 # Initial Conditions
 ########################

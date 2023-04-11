@@ -68,7 +68,7 @@ class LinearDual_PyomoTransformation(Transformation):
         if block is None:
             block = instance
         else:
-            for (name, data) in instance.component_map(Block, active=True).items():
+            for name, data in instance.component_map(Block, active=True).items():
                 if name == bname:
                     block = instance
         if block is None:

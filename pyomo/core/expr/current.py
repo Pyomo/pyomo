@@ -17,6 +17,7 @@ import math
 #
 from pyomo.core.expr import expr_common as common
 
+
 #
 # Provide a global value that indicates which expression system is being used
 #

@@ -17,7 +17,6 @@ import os
 
 
 class MA27Interface(object):
-
     libname = _NotSet
 
     @classmethod
@@ -29,7 +28,6 @@ class MA27Interface(object):
         return os.path.exists(cls.libname)
 
     def __init__(self, iw_factor=None, a_factor=None):
-
         if not MA27Interface.available():
             raise RuntimeError('Could not find pynumero_MA27 library.')
 

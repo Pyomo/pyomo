@@ -15,7 +15,6 @@ import numpy as np
 
 
 def is_symmetric_dense(mat):
-
     flag = False
     if isinstance(mat, np.ndarray):
         if mat.ndim == 2 and mat.shape[0] == mat.shape[1]:

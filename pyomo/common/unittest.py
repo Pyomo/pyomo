@@ -96,7 +96,7 @@ def assertStructuredAlmostEqual(
         `abs(first - second) / max(abs(first), abs(second))`,
     only when first != second (thereby avoiding divide-by-zero errors).
 
-    Items (entries other than Sequence / Mapping containters, matching
+    Items (entries other than Sequence / Mapping containers, matching
     strings, and items that satisfy `first is second`) are passed to the
     `item_callback` before testing equality and relative tolerances.
 

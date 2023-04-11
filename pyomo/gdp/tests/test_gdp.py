@@ -176,7 +176,6 @@ class CommonTests:
 
 
 class Reformulate(unittest.TestCase, CommonTests):
-
     solve = False
 
     def tearDown(self):

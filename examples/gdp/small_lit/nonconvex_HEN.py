@@ -21,7 +21,6 @@ from pyomo.environ import (
 
 
 def build_gdp_model():
-
     # PARAMETERS
     T1_lo, T1_up = 350.0, 400.0
     T2_lo, T2_up = 450.0, 500.0
@@ -102,7 +101,6 @@ def build_gdp_model():
 
 
 if __name__ == "__main__":
-
     # Decide whether to reformulate as MINLP and what method to use
     reformulation = True
     reformulation_method = 'hull'

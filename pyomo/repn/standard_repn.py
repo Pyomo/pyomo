@@ -251,6 +251,8 @@ representations be temporary.  They should be used to interface
 to a solver and then be deleted.
 
 """
+
+
 # @profile
 def generate_standard_repn(
     expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None
@@ -1553,7 +1555,6 @@ def _generate_linear_standard_repn(expr, idMap=None, compute_values=True, verbos
 
 
 def preprocess_block_objectives(block, idMap=None):
-
     # Get/Create the ComponentMap for the repn
     if not hasattr(block, '_repn'):
         block._repn = ComponentMap()
@@ -1562,7 +1563,6 @@ def preprocess_block_objectives(block, idMap=None):
     for objective_data in block.component_data_objects(
         Objective, active=True, descend_into=False
     ):
-
         if objective_data.expr is None:
             raise ValueError(
                 "No expression has been defined for objective %s"
@@ -1583,7 +1583,6 @@ def preprocess_block_objectives(block, idMap=None):
 
 
 def preprocess_block_constraints(block, idMap=None):
-
     # Get/Create the ComponentMap for the repn
     if not hasattr(block, '_repn'):
         block._repn = ComponentMap()
@@ -1592,12 +1591,10 @@ def preprocess_block_constraints(block, idMap=None):
     for constraint in block.component_objects(
         Constraint, active=True, descend_into=False
     ):
-
         preprocess_constraint(block, constraint, idMap=idMap, block_repn=block_repn)
 
 
 def preprocess_constraint(block, constraint, idMap=None, block_repn=None):
-
     from pyomo.repn.beta.matrix import MatrixConstraint
 
     if isinstance(constraint, MatrixConstraint):
@@ -1609,7 +1606,6 @@ def preprocess_constraint(block, constraint, idMap=None, block_repn=None):
     block_repn = block._repn
 
     for index, constraint_data in constraint.items():
-
         if not constraint_data.active:
             continue
 
@@ -1633,7 +1629,6 @@ def preprocess_constraint(block, constraint, idMap=None, block_repn=None):
 
 
 def preprocess_constraint_data(block, constraint_data, idMap=None, block_repn=None):
-
     # Get/Create the ComponentMap for the repn
     if not hasattr(block, '_repn'):
         block._repn = ComponentMap()

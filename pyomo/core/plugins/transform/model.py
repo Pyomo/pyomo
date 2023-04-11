@@ -52,7 +52,7 @@ def to_standard_form(self):
     # First we go through the constraints and introduce slack and excess
     # variables to eliminate inequality constraints
     #
-    # N.B. Structure heirarchy:
+    # N.B. Structure hierarchy:
     #
     # active_components: {class: {attr_name: object}}
     # object -> Constraint: ._data: {ndx: _ConstraintData}
@@ -92,7 +92,6 @@ def to_standard_form(self):
     objectives = {}
     # For each registered component
     for c in self.component_map(active=True):
-
         # Get all subclasses of Constraint
         if issubclass(c, Constraint):
             cons = self.component_map(c, active=True)
@@ -128,7 +127,6 @@ def to_standard_form(self):
                         # Add constraint to equality constraints
                         eqConstraints[(con_set_name, ndx)] = terms
                     else:
-
                         # Process upper bounds (<= constraints)
                         if con.upper is not None:
                             # Less than or equal to constraint

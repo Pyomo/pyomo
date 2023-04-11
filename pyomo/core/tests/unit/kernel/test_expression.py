@@ -262,13 +262,12 @@ class Test_noclone(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertTrue(e.arg(0) is e.expr)
 
-    def test_aruments(self):
+    def test_arguments(self):
         e = noclone(parameter() + 1)
         self.assertEqual(len(tuple(e.args)), 1)
         self.assertTrue(tuple(e.args)[0] is e.expr)
 
     def test_clone(self):
-
         p = parameter()
         e = noclone(p)
         self.assertTrue(e.clone() is e)
@@ -306,7 +305,6 @@ class Test_noclone(unittest.TestCase):
 
 
 class _Test_expression_base(object):
-
     _ctype_factory = None
 
     def test_pprint(self):
@@ -405,7 +403,7 @@ class _Test_expression_base(object):
         self.assertEqual(e.nargs(), 1)
         self.assertTrue(e.arg(0) is e.expr)
 
-    def test_aruments(self):
+    def test_arguments(self):
         e = self._ctype_factory()
         p = parameter()
         e.expr = p + 1
@@ -644,7 +642,6 @@ class Test_expression(_Test_expression_base, unittest.TestCase):
 
 
 class Test_data_expression(_Test_expression_base, unittest.TestCase):
-
     _ctype_factory = data_expression
 
     def test_associativity(self):

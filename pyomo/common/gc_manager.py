@@ -27,6 +27,7 @@ class __PauseGCCompanion(object):
 
 PauseGCCompanion: __PauseGCCompanion = MultiThreadWrapper(__PauseGCCompanion)
 
+
 # PauseGC is a class for clean, scoped management of the Python
 # garbage collector.  To disable the GC for the duration of a
 # scoped block use PauseGC in combination with the Python 'with'

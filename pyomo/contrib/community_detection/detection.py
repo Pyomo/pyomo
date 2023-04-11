@@ -542,7 +542,6 @@ class CommunityMap(object):
                 pos = nx.bipartite_layout(model_graph, top_nodes)
 
         else:  # This covers the case that type_of_community_map is 'constraint' or 'variable'
-
             # Constraints are in the first list of the tuples in community map and variables are in the second list
             position = 0 if type_of_graph == 'constraint' else 1
             list_of_node_lists = list(
@@ -688,12 +687,10 @@ class CommunityMap(object):
 
             # Loop through all of the constraints (from the original model) in the given community
             for stored_constraint in constraints_in_community:
-
                 # Now, loop through all of the variables within the given constraint expression
                 for variable_in_stored_constraint in identify_variables(
                     stored_constraint.expr
                 ):
-
                     # Loop through each of the "blocked" variables that a variable is mapped to and update
                     # replace_variables_in_expression_map if a variable has a "blocked" form in the given community
 
@@ -785,7 +782,6 @@ class CommunityMap(object):
                 active=self.use_only_active_components,
                 descend_into=True,
             ):
-
                 for variable_in_objective in identify_variables(objective_function):
                     # Add all of the variables in the objective function (not within any blocks)
 
@@ -794,7 +790,6 @@ class CommunityMap(object):
                         structured_model.find_component(str(variable_in_objective))
                         is None
                     ):
-
                         new_variable = Var(
                             domain=variable_in_objective.domain,
                             bounds=variable_in_objective.bounds,

@@ -60,6 +60,7 @@ def GenStartUp(b, g, t):
 model.GenStartup = Disjunct(model.GENERATORS, model.TIME, rule=GenStartUp)
 # @:disjuncts
 
+
 # @disjunction:
 def bind_generators(m, g, t):
     return [m.GenOn[g, t], m.GenOff[g, t], m.GenStartup[g, t]]
@@ -67,6 +68,7 @@ def bind_generators(m, g, t):
 
 model.bind_generators = Disjunction(model.GENERATORS, model.TIME, rule=bind_generators)
 # @:disjunction
+
 
 # @logic:
 def onState(m, g, t):
@@ -90,6 +92,7 @@ model.startupState = pyo.LogicalConstraint(
     model.GENERATORS, model.TIME, rule=startupState
 )
 # @:logic
+
 
 #
 # Fictitious objective to form a legal LP file

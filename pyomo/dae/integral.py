@@ -60,7 +60,6 @@ class Integral(Expression):
             return IndexedIntegral.__new__(IndexedIntegral)
 
     def __init__(self, *args, **kwds):
-
         if "wrt" in kwds and "withrespectto" in kwds:
             raise TypeError("Cannot specify both 'wrt' and 'withrespectto keywords")
 

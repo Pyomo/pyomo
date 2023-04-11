@@ -46,6 +46,7 @@ model.x = Var(model.CrudeType, model.GasType, within=NonNegativeReals)
 model.q = Var(model.CrudeType, within=NonNegativeReals)
 model.z = Var(model.GasType, within=NonNegativeReals)
 
+
 # Objective
 def CalcProfit(M):
     return sum(M.GasPrice[j] * M.z[j] for j in M.GasType) - sum(

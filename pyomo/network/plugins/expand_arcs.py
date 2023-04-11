@@ -49,7 +49,7 @@ class ExpandArcs(Transformation):
 
         for port in port_list:
             # iterate over ref so that the index set is the same
-            # for all occurences of this member in related ports
+            # for all occurrences of this member in related ports
             # and so we iterate over members deterministically
             ref = known_port_sets[id(matched_ports[port])]
             for k, v in sorted(ref.items()):

@@ -202,7 +202,6 @@ class Test_suffix(unittest.TestCase):
         self.assertEqual(s.name, "bdict[0].model.s")
 
     def test_active(self):
-
         s = suffix()
         with self.assertRaises(AttributeError):
             s.active = False

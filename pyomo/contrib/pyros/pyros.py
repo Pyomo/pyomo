@@ -88,7 +88,7 @@ class SolverResolvable(object):
         else:
             raise ValueError(
                 "Expected a Pyomo solver or string object, "
-                "instead recieved {1}".format(obj.__class__.__name__)
+                "instead received {1}".format(obj.__class__.__name__)
             )
 
 

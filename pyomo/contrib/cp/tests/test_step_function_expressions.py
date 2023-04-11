@@ -297,7 +297,7 @@ class TestSumStepFunctions(CommonTests):
         self.assertIs(expr.args[2], s2)
         self.assertIs(expr.args[3], s3)
 
-    def test_sum_two_cumul_funcs_requring_cloning_args(self):
+    def test_sum_two_cumul_funcs_requiring_cloning_args(self):
         m = self.get_model()
         s1 = Step(m.a.start_time, height=4)
         p1 = Step(m.a.start_time, height=4)

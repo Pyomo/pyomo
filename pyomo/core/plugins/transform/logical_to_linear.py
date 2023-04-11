@@ -304,7 +304,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
             rhs_lb, rhs_ub = compute_bounds_on_expr(values[0])
             if rhs_lb == float('-inf') or rhs_ub == float('inf'):
                 raise ValueError(
-                    "Cannnot generate linear constraints for %s"
+                    "Cannot generate linear constraints for %s"
                     "([N, *logical_args]) with unbounded N. "
                     "Detected %s <= N <= %s." % (type(node).__name__, rhs_lb, rhs_ub)
                 )

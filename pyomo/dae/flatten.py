@@ -243,7 +243,7 @@ def generate_sliced_components(
         Block whose components will be sliced
 
     index_stack: list
-        Sets above ``b`` in the block hierachy, including on its parent
+        Sets above ``b`` in the block hierarchy, including on its parent
         component, that have been sliced. This is necessary to return the
         sets that have been sliced.
 

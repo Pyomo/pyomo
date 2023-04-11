@@ -351,9 +351,7 @@ class matrix_constraint(constraint_tuple):
         if isinstance(lb, numpy.ndarray):
             numpy.copyto(self._lb, lb)
         elif isinstance(lb, NumericValue):
-            raise ValueError(
-                "lb must be set to a simple numeric type or a numpy array"
-            )
+            raise ValueError("lb must be set to a simple numeric type or a numpy array")
         else:
             self._lb.fill(lb)
 
@@ -375,9 +373,7 @@ class matrix_constraint(constraint_tuple):
         if isinstance(ub, numpy.ndarray):
             numpy.copyto(self._ub, ub)
         elif isinstance(ub, NumericValue):
-            raise ValueError(
-                "ub must be set to a simple numeric type or a numpy array"
-            )
+            raise ValueError("ub must be set to a simple numeric type or a numpy array")
         else:
             self._ub.fill(ub)
 

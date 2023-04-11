@@ -24,7 +24,7 @@ from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
 
 @TransformationFactory.register(
-    'contrib.strip_var_bounds', doc="Strip bounds from varaibles."
+    'contrib.strip_var_bounds', doc="Strip bounds from variables."
 )
 @document_kwargs_from_configdict('CONFIG')
 class VariableBoundStripper(NonIsomorphicTransformation):

@@ -20,7 +20,6 @@ import pyomo.environ as pyo
 
 
 def rooney_biegler_model(data):
-
     model = pyo.ConcreteModel()
 
     model.asymptote = pyo.Var(initialize=15)

@@ -179,7 +179,6 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_clonedModel_soln(self):
-
         m_orig = fc.create_model()
         fc.initialize_model(m_orig, 100)
 
@@ -313,7 +312,6 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_noClone_soln(self):
-
         m_orig = fc.create_model()
         fc.initialize_model(m_orig, 100)
 
@@ -432,7 +430,6 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_indexedParamsMapping(self):
-
         m = hiv.create_model()
         hiv.initialize_model(m, 10, 5, 1)
 
@@ -479,7 +476,6 @@ class TestSensitivityToolbox(unittest.TestCase):
     # test Constraint substitution
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_constraintSub(self):
-
         m = ri.create_model()
 
         m.pert_a = Param(initialize=0.01)
@@ -565,7 +561,6 @@ class TestSensitivityToolbox(unittest.TestCase):
     # Test example `parameter.py`
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_parameter_example(self):
-
         d = param_ex.run_example()
 
         d_correct = {
@@ -740,7 +735,6 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
     def test_noClone_soln_kaug(self):
-
         m_orig = fc.create_model()
         fc.initialize_model(m_orig, 100)
 
@@ -851,7 +845,6 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
     def test_indexedParamsMapping_kaug(self):
-
         m = hiv.create_model()
         hiv.initialize_model(m, 10, 5, 1)
 
@@ -899,7 +892,6 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
     def test_parameter_example_kaug(self):
-
         d = param_kaug_ex.run_example()
 
         d_correct = {

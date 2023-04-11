@@ -34,7 +34,6 @@ from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
 
 def create_model():
-
     m = ConcreteModel()
 
     m.tf = Param(initialize=20)

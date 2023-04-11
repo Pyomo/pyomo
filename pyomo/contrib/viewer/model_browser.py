@@ -109,7 +109,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
         Args:
             parent: parent widget
             ui_data: Contains model and ui information
-            standard: A standard setup for differnt types of model components
+            standard: A standard setup for different types of model components
                 {"Var", "Constraint", "Param", "Expression"}
         """
         super().__init__(parent=parent)
@@ -429,8 +429,8 @@ class ComponentDataModel(myqt.QAbstractItemModel):
         components as needed. The arguments are to be used in the recursive
         function. Entering into this don't specify any args.
         """
-        # Blocks are special they define the hiarchy of the model, so first
-        # check for blocks. Other comonent can be handled togeter
+        # Blocks are special they define the hierarchy of the model, so first
+        # check for blocks. Other component can be handled togeter
         if o is None and len(self.rootItems) > 0:  # top level object (no parent)
             parent = self.rootItems[0]  # should be single root node for now
             o = parent.data  # start with root node
@@ -492,8 +492,8 @@ class ComponentDataModel(myqt.QAbstractItemModel):
             parent: a ComponentDataItem underwhich to create a TreeItem
             o: A Pyomo component to add to the tree
         """
-        # Blocks are special they define the hiarchy of the model, so first
-        # check for blocks. Other comonent can be handled togeter
+        # Blocks are special they define the hierarchy of the model, so first
+        # check for blocks. Other component can be handled togeter
         if isinstance(
             o, Block._ComponentDataClass
         ):  # single block or element of indexed block

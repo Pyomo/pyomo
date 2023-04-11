@@ -74,7 +74,6 @@ class DerivativeVar(Var):
     #             linking the :class:`DerivativeVar` to its state :class:`Var`.
 
     def __init__(self, sVar, **kwds):
-
         if not isinstance(sVar, Var):
             raise DAE_Error(
                 "%s is not a variable. Can only take the derivative of a Var"
