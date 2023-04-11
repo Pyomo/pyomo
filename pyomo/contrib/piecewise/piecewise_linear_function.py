@@ -224,7 +224,7 @@ class PiecewiseLinearFunction(Block):
 
     _ComponentDataClass = PiecewiseLinearFunctionData
 
-    # Map 5-tuple of bool to hander: "(f, pts, simplices, linear_funcs,
+    # Map 5-tuple of bool to handler: "(f, pts, simplices, linear_funcs,
     # tabular_data) : handler"
     _handlers = {}
 
