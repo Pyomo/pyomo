@@ -441,6 +441,40 @@ class Highs(PersistentBase, PersistentSolver):
                 'Highs interface does not support SOS constraints'
             )
 
+    def _add_column(
+        self,
+        var: _GeneralVarData,
+        obj_coef: float,
+        constraints: List[_GeneralConstraintData],
+        coefficients: List[float],
+    ):
+        self._sol = None
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
+
+        # Get variable data
+        v_id = id(var)
+        lb, ub, vtype = self._process_domain_and_bounds(v_id)
+
+        # prepare constraint data
+        solver_cons = np.fromiter(
+            (self._pyomo_con_to_solver_con_map[con] for con in constraints),
+            dtype=np.int32,
+        )
+        solver_coefs = np.array(coefficients, dtype=np.double)
+
+        # Add the column
+        self._solver_model.addCol(
+            obj_coef, lb, ub, len(constraints), solver_cons, solver_coefs
+        )
+
+        # Add new variable to the variable map
+        var_idx = len(self._pyomo_var_to_solver_var_map)
+        self._pyomo_var_to_solver_var_map[v_id] = var_idx
+
+        # Set the variable type
+        self._solver_model.changeColIntegrality(var_idx, vtype)
+
     def _remove_constraints(self, cons: List[_GeneralConstraintData]):
         self._sol = None
         if self._last_results_object is not None:

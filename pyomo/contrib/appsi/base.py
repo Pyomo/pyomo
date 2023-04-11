@@ -804,6 +804,34 @@ class PersistentSolver(Solver):
         pass
 
     @abc.abstractmethod
+    def add_column(
+        self,
+        var: _GeneralVarData,
+        obj_coef: float,
+        constraints: List[_GeneralConstraintData],
+        coefficients: List[float],
+    ):
+        """Add a column to the solver's model
+
+        Add the Pyomo variable var to the solver's model, and put the
+        coefficients on the associated constraints in the solver model.
+        If the obj_coef is not zero, add obj_coef*var to the objective
+        of the solver's model.
+
+        The column will have already been added to the Pyomo model before
+        this method is called, such that the variable is already incorporated
+        into the passed in constraints.
+
+        Parameters
+        ----------
+        var: Var (scalar Var or single _VarData)
+        obj_coef: float
+        constraints: list of solver constraints
+        coefficients: list of coefficients to put on var in the associated constraint
+        """
+        pass
+
+    @abc.abstractmethod
     def remove_variables(self, variables: List[_GeneralVarData]):
         pass
 
@@ -948,20 +976,17 @@ class PersistentBase(abc.ABC):
 
     def add_variables(self, variables: List[_GeneralVarData]):
         for v in variables:
-            if id(v) in self._referenced_variables:
-                raise ValueError(
-                    'variable {name} has already been added'.format(name=v.name)
-                )
-            self._referenced_variables[id(v)] = [dict(), dict(), None]
-            self._vars[id(v)] = (
-                v,
-                v._lb,
-                v._ub,
-                v.fixed,
-                v.domain.get_interval(),
-                v.value,
-            )
+            self._cache_variable_data(v)
         self._add_variables(variables)
+
+    def _cache_variable_data(self, variable: _GeneralVarData):
+        v = variable
+        if id(v) in self._referenced_variables:
+            raise ValueError(
+                'variable {name} has already been added'.format(name=v.name)
+            )
+        self._referenced_variables[id(v)] = [dict(), dict(), None]
+        self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain.get_interval(), v.value)
 
     @abc.abstractmethod
     def _add_params(self, params: List[_ParamData]):
@@ -1041,6 +1066,43 @@ class PersistentBase(abc.ABC):
             for v in variables:
                 self._referenced_variables[id(v)][1][con] = None
         self._add_sos_constraints(cons)
+
+    def _add_column(
+        self,
+        var: _GeneralVarData,
+        obj_coef: float,
+        constraints: List[_GeneralConstraintData],
+        coefficients: List[float],
+    ):
+        """Add a column to the solver's model
+
+        Add the Pyomo variable var to the solver's model, and put the
+        coefficients on the associated constraints in the solver model.
+        If the obj_coef is not zero, add obj_coef*var to the objective
+        of the solver's model.
+
+        The column will have already been added to the Pyomo model before
+        this method is called, such that the variable is already incorporated
+        into the passed in constraints.
+
+        Parameters
+        ----------
+        var: Var (scalar Var or single _VarData)
+        obj_coef: float
+        constraints: list of solver constraints
+        coefficients: list of coefficients to put on var in the associated constraint
+        """
+
+        # This method is intended to be overridden by derived classes when
+        # it can be done more efficiently than the default implementation found
+        # here. The default implementation replaces the existing objective and
+        # constraints.
+        self._add_variables([var])
+        if obj_coef != 0.0:
+            self._set_objective(self._objective)
+        # Constraint objects have already been updated, just replace them
+        self._remove_constraints(constraints)
+        self._add_constraints(constraints)
 
     @abc.abstractmethod
     def _set_objective(self, obj: _GeneralObjectiveData):
@@ -1462,6 +1524,75 @@ class PersistentBase(abc.ABC):
         if need_to_set_objective:
             self.set_objective(pyomo_obj)
         timer.stop('objective')
+
+    def add_column(
+        self,
+        var: _GeneralVarData,
+        obj_coef: float,
+        constraints: List[_GeneralConstraintData],
+        coefficients: List[float],
+        timer: HierarchicalTimer = None,
+    ):
+        """Add a column to Pyomo model and solver model.
+
+        This method takes a Pyomo variable var that has already been
+        added to the Pyomo model and adds it to the Pyomo model's objective
+        and constraints. It will then add the variable to the solver's model,
+        including changes to the objective and constraints.
+
+        Parameters
+        ----------
+        model: pyomo ConcreteModel to which the column will be added
+        var: Var (scalar Var or single _VarData)
+        obj_coef: float, pyo.Param
+        constraints: list of scalar Constraints of single _ConstraintDatas
+        coefficients: list of the coefficient to put on var in the associated constraint
+
+        """
+        if timer is None:
+            timer = HierarchicalTimer()
+
+        timer.start('add column')
+
+        # First we update the Pyomo model and the PersistentBase data
+        timer.start('update Pyomo model')
+
+        # Add the column's data to cached model info.
+        # We do this before calling update() so that the variable
+        # won't be added to the solver model at this time.
+        self._cache_variable_data(var)
+        vid = id(var)
+
+        # Make sure the model is up to date before adding the new column
+        self.update(timer)
+
+        # Add the variable to the objective
+        if obj_coef != 0.0 and self._objective is not None:
+            # Add variable to the pyomo objective
+            self._objective.expr = self._objective.expr + obj_coef * var
+            # Update cache
+            self._objective_expr = self._objective.expr
+            self._referenced_variables[vid][2] = self._objective
+            self._vars_referenced_by_obj.append(var)
+
+        # Add the variable to each constraint
+        for con, coef in zip(constraints, coefficients):
+            if coef != 0.0:
+                # Add variable to the pyomo constraint
+                con.set_value((con.lower, con.body + coef * var, con.upper))
+                # Update cache
+                self._active_constraints[con] = (con.lower, con.body, con.upper)
+                self._referenced_variables[vid][0][con] = None
+                self._vars_referenced_by_con[con].append(var)
+
+        timer.stop('update Pyomo model')
+
+        # Add the new column to the solver model
+        timer.start('update solver model')
+        self._add_column(var, obj_coef, constraints, coefficients)
+        timer.stop('update solver model')
+
+        timer.stop('add column')
 
 
 legacy_termination_condition_map = {

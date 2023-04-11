@@ -165,6 +165,15 @@ class Cbc(PersistentSolver):
     def add_block(self, block: _BlockData):
         self._writer.add_block(block)
 
+    def add_column(
+        self,
+        var: _GeneralVarData,
+        obj_coef: float,
+        constraints: List[_GeneralConstraintData],
+        coefficients: List[float],
+    ):
+        self._writer.add_column(var, obj_coef, constraints, coefficients)
+
     def remove_variables(self, variables: List[_GeneralVarData]):
         self._writer.remove_variables(variables)
 

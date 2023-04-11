@@ -857,6 +857,43 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._solver_model.setObjective(gurobi_expr + value(repn_constant), sense=sense)
         self._needs_updated = True
 
+    def _add_column(
+        self,
+        var: _GeneralVarData,
+        obj_coef: float,
+        constraints: List[_GeneralConstraintData],
+        coefficients: List[float],
+    ):
+        # Get variable data in solver format
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        mutable_lb = dict()
+        mutable_ub = dict()
+        lb, ub, vtype = self._process_domain_and_bounds(
+            var, id(var), mutable_lb, mutable_ub, 0, None
+        )
+
+        # Map pyomo constraints to solver constraints
+        solver_cons = [self._pyomo_con_to_solver_con_map[con] for con in constraints]
+
+        # Add the variable to the solver, including constraints
+        gurobipy_var = self._solver_model.addVar(
+            obj=obj_coef,
+            lb=lb,
+            ub=ub,
+            vtype=vtype,
+            name=varname,
+            column=gurobipy.Column(coeffs=coefficients, constrs=solver_cons),
+        )
+
+        # Do book keeping
+        self._pyomo_var_to_solver_var_map[id(var)] = gurobipy_var
+        if 0 in mutable_lb:
+            mutable_lb[0].var = gurobipy_var
+        if 0 in mutable_ub:
+            mutable_ub[0].var = gurobipy_var
+        self._vars_added_since_update.add(var)
+        self._needs_updated = True
+
     def _postsolve(self, timer: HierarchicalTimer):
         config = self.config
 
