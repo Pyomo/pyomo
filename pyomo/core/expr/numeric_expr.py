@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
-
 import collections
 import enum
 import logging
@@ -85,7 +83,7 @@ def enable_expression_optimizations(zero=None, one=None):
     raised during the evaluation of `f(.)`.  In addition, optimizing
     `f(.)**0 == 1` is only valid when `f(.)>=0`.  **Users who enable
     this optimization bear responsibility for ensuring that these
-    conditions do not exist in the model.**
+    optimizations will be valid for the model.**
 
     The `one` optimizations should generally be safe.
 
@@ -1010,7 +1008,7 @@ class NPV_AbsExpression(Numeric_NPV_Mixin, AbsExpression):
 
 
 def decompose_term(expr):
-    """A function that returns a tuple consisting of (1) a flag indicated
+    """A function that returns a tuple consisting of (1) a flag indicating
     whether the expression is linear, and (2) a list of tuples that
     represents the terms in the linear expression.
 

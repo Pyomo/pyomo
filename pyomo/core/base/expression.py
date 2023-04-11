@@ -192,7 +192,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
                 self._expr = expr
                 return
         except AttributeError:
-            if check_if_numeric_type(arg):
+            if check_if_numeric_type(expr):
                 self._expr = expr
                 return
         raise ValueError(

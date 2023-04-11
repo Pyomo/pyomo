@@ -59,7 +59,8 @@ from pyomo.core.expr.expr_common import (
 )
 import pyomo.common.numeric_types as _numeric_types
 
-# TODO: update imports of these objects to pull from numeric_types
+# TODO: update Pyomo to import these objects from common.numeric_types
+#   (and not from here)
 from pyomo.common.numeric_types import (
     nonpyomo_leaf_types,
     native_types,

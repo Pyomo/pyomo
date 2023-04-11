@@ -199,7 +199,7 @@ class Test_polydegree(unittest.TestCase):
         val = False
         with self.assertRaisesRegex(
             TypeError,
-            "Cannot evaluate the polynomial degree " "of a non-numeric type: bool",
+            "Cannot evaluate the polynomial degree of a non-numeric type: bool",
         ):
             polynomial_degree(val)
 
@@ -450,12 +450,12 @@ class Test_as_numeric(unittest.TestCase):
     def test_bool(self):
         with self.assertRaisesRegex(
             TypeError,
-            r"bool values \('False'\) are not allowed " "in Pyomo numeric expressions",
+            r"bool values \('False'\) are not allowed in Pyomo numeric expressions",
         ):
             as_numeric(False)
         with self.assertRaisesRegex(
             TypeError,
-            r"bool values \('True'\) are not allowed " "in Pyomo numeric expressions",
+            r"bool values \('True'\) are not allowed in Pyomo numeric expressions",
         ):
             as_numeric(True)
 
