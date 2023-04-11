@@ -9,6 +9,7 @@ from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
+from pyomo.core.expr.compare import assertExpressionsEqual
 import os
 
 numpy, numpy_available = attempt_import('numpy')
@@ -1195,6 +1196,40 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(res.best_feasible_objective, 3)
+
+    @parameterized.expand(input=all_solvers)
+    def test_add_column(self, name: str, opt_class: Type[PersistentSolver]):
+        '''Verify that add_column() modifies models correctly.'''
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+
+        # Create a concrete model
+        m = pe.ConcreteModel()
+        m.x = pe.Var(within=pe.NonNegativeReals)
+        m.c1 = pe.Constraint(expr=(0, m.x, 1))
+        m.c2 = pe.Constraint(expr=(0, m.x, 1))
+        m.obj = pe.Objective(expr=-m.x)
+
+        # Solve first version of concrete model
+        opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 1)
+
+        # Add a new variable
+        m.y = pe.Var(within=pe.NonNegativeReals)
+
+        # Add new column for the new variable
+        opt.add_column(m.y, -3, [m.c2], [2])
+
+        # verify the pyomo model was updated correctly
+        # assertExpressionsEqual(self, m.obj.expr, -m.x - 3 * m.y)
+        # assertExpressionsEqual(self, m.c1.expr, pe.Constraint(expr=(0, m.x, 1)).expr)
+        # assertExpressionsEqual(self, m.c2.expr, pe.Constraint(expr=(0, m.x + 2 * m.y, 1)).expr)
+
+        # Re-solve and verify results reflect the additional column
+        opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 0.5)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
