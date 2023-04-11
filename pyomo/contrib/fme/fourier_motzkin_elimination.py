@@ -385,7 +385,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         return constraints_to_add
 
     def _move_constant_and_add_map(self, cons_dict):
-        """Takes constraint in dicionary form already in >= form,
+        """Takes constraint in dictionary form already in >= form,
         and moves the constant to the RHS
         """
         body = cons_dict['body']
@@ -396,7 +396,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         # store a map of vars to coefficients. We can't use this in place of
         # standard repn because determinism, but this will save a lot of linear
         # time searches later. Note also that we will take the value of the
-        # coeficient here so that we never have to worry about it again during
+        # coefficient here so that we never have to worry about it again during
         # the transformation.
         cons_dict['map'] = ComponentMap(
             zip(body.linear_vars, [value(coef) for coef in body.linear_coefs])

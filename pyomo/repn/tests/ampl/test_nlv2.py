@@ -743,10 +743,10 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.e = Expression(expr=2*m.x + 3*m.y)
+        m.e = Expression(expr=2 * m.x + 3 * m.y)
 
-        expr1 = 10*m.e
-        expr2 = m.e + 100*m.x + 100*m.y
+        expr1 = 10 * m.e
+        expr2 = m.e + 100 * m.x + 100 * m.y
 
         info = INFO()
         with LoggingIntercept() as LOG:

@@ -646,7 +646,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
             )
         )
 
-    def test_using_precedence_expr_as_booolean_expr(self):
+    def test_using_precedence_expr_as_boolean_expr(self):
         m = self.get_model()
         e = m.b.implies(m.i2[2].start_time.before(m.i2[1].start_time))
 
@@ -665,7 +665,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
             expr[1].equals(cp.if_then(b, cp.start_of(i22) + 0 <= cp.start_of(i21)))
         )
 
-    def test_using_precedence_expr_as_booolean_expr_positive_delay(self):
+    def test_using_precedence_expr_as_boolean_expr_positive_delay(self):
         m = self.get_model()
         e = m.b.implies(m.i2[2].start_time.before(m.i2[1].start_time, delay=4))
 
@@ -684,7 +684,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
             expr[1].equals(cp.if_then(b, cp.start_of(i22) + 4 <= cp.start_of(i21)))
         )
 
-    def test_using_precedence_expr_as_booolean_expr_negative_delay(self):
+    def test_using_precedence_expr_as_boolean_expr_negative_delay(self):
         m = self.get_model()
         e = m.b.implies(m.i2[2].start_time.at(m.i2[1].start_time, delay=-3))
 

@@ -612,7 +612,7 @@ class IndexTemplate(NumericValue):
 
     def set_value(self, values=_NotSpecified, lock=None):
         # It might be nice to check if the value is valid for the base
-        # set, but things are tricky when the base set is not dimention
+        # set, but things are tricky when the base set is not dimension
         # 1.  So, for the time being, we will just "trust" the user.
         # After all, the actual Set will raise exceptions if the value
         # is not present.
@@ -663,7 +663,7 @@ def resolve_template(expr):
     level = -1
 
     def beforeChild(node, child, child_idx):
-        # Efficiency: do not decend into leaf nodes.
+        # Efficiency: do not descend into leaf nodes.
         if type(child) in native_types:
             return False, child
         elif not child.is_expression_type():
@@ -854,7 +854,7 @@ def substitute_template_expression(expr, substituter, *args, **kwargs):
     """Substitute IndexTemplates in an expression tree.
 
     This is a general utility function for walking the expression tree
-    and subtituting all occurances of IndexTemplate and
+    and substituting all occurrences of IndexTemplate and
     GetItemExpression nodes.
 
     Args:

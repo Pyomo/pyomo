@@ -532,7 +532,6 @@ class SimpleObjective(metaclass=RenamedClass):
 
 
 class IndexedObjective(Objective):
-
     #
     # Leaving this method for backward compatibility reasons
     #

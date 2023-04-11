@@ -65,7 +65,6 @@ class TestSimulator(unittest.TestCase):
 
     # Testing invalid simulator arguments
     def test_invalid_argument_values(self):
-
         m = self.m
         m.w = Var(m.t)
         m.y = Var()
@@ -89,7 +88,6 @@ class TestSimulator(unittest.TestCase):
     # Testing the simulator's handling of inequality constraints
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_inequality_constraints(self):
-
         m = self.m
 
         def _deq(m, i):
@@ -107,7 +105,6 @@ class TestSimulator(unittest.TestCase):
     # the simulator generates the correct RHS expression
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case2(self):
-
         m = self.m
         m.w = Var(m.t, m.s)
         m.dw = DerivativeVar(m.w)
@@ -145,7 +142,6 @@ class TestSimulator(unittest.TestCase):
     # the simulator generates the correct RHS expression
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case3(self):
-
         m = self.m
         m.w = Var(m.t, m.s)
         m.dw = DerivativeVar(m.w)
@@ -216,7 +212,6 @@ class TestSimulator(unittest.TestCase):
     # the simulator generates the correct RHS expression
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case4(self):
-
         m = self.m
         m.w = Var(m.t, m.s)
         m.dw = DerivativeVar(m.w)
@@ -287,7 +282,6 @@ class TestSimulator(unittest.TestCase):
     # the simulator generates the correct RHS expression
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case5(self):
-
         m = self.m
         m.w = Var(m.t, m.s)
         m.dw = DerivativeVar(m.w)
@@ -358,7 +352,6 @@ class TestSimulator(unittest.TestCase):
     # the simulator generates the correct RHS expression
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case6(self):
-
         m = self.m
         m.w = Var(m.t, m.s)
         m.dw = DerivativeVar(m.w)
@@ -429,7 +422,6 @@ class TestSimulator(unittest.TestCase):
     # the simulator generates the correct RHS expression
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case8(self):
-
         m = self.m
         m.w = Var(m.t, m.s)
         m.dw = DerivativeVar(m.w)
@@ -469,7 +461,6 @@ class TestSimulator(unittest.TestCase):
     # the simulator generates the correct RHS expression
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case9(self):
-
         m = self.m
         m.w = Var(m.t, m.s)
         m.dw = DerivativeVar(m.w)
@@ -509,7 +500,6 @@ class TestSimulator(unittest.TestCase):
     # single index
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_sim_initialization_single_index(self):
-
         m = self.m
         m.w = Var(m.t)
         m.dw = DerivativeVar(m.w)
@@ -555,7 +545,6 @@ class TestSimulator(unittest.TestCase):
     # two indexing sets
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_sim_initialization_multi_index(self):
-
         m = self.m
         m.w1 = Var(m.t, m.s)
         m.dw1 = DerivativeVar(m.w1)
@@ -653,7 +642,6 @@ class TestSimulator(unittest.TestCase):
     # multi-dimensional and multiple indexing sets
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_sim_initialization_multi_index2(self):
-
         m = self.m
         m.s2 = Set(initialize=[(1, 1), (2, 2)])
         m.w1 = Var(m.t, m.s2)
@@ -759,7 +747,6 @@ class TestSimulator(unittest.TestCase):
     # Testing the Simulator construction on un-supported models and
     # components with a single indexing set
     def test_non_supported_single_index(self):
-
         # Can't simulate a model with no ContinuousSet
         m = ConcreteModel()
         with self.assertRaises(DAE_Error):
@@ -807,7 +794,6 @@ class TestSimulator(unittest.TestCase):
     # components with multiple indexing sets
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_non_supported_multi_index(self):
-
         m = self.m
         m.v2 = Var(m.t, m.s)
         m.v3 = Var(m.s, m.t)
@@ -861,7 +847,6 @@ class TestSimulator(unittest.TestCase):
 
     # Testing the Simulator using scipy on unsupported models
     def test_scipy_unsupported(self):
-
         m = self.m
         m.a = Var(m.t)
 
@@ -879,7 +864,6 @@ class TestSimulator(unittest.TestCase):
     # variables
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_time_indexed_algebraic(self):
-
         m = self.m
         m.a = Var(m.t)
 
@@ -900,7 +884,6 @@ class TestSimulator(unittest.TestCase):
     # indexed by time and other indexing sets
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_time_multi_indexed_algebraic(self):
-
         m = self.m
         m.v2 = Var(m.t, m.s)
         m.v3 = Var(m.s, m.t)
@@ -937,7 +920,6 @@ class TestSimulator(unittest.TestCase):
     # appearing in RHS of a differential equation
     @unittest.skipIf(not casadi_available, "casadi not available")
     def test_nonRHS_vars(self):
-
         m = self.m
         m.v2 = Var(m.t)
         m.dv2 = DerivativeVar(m.v2)
@@ -971,7 +953,6 @@ class TestExpressionCheckers(unittest.TestCase):
 
     # Testing checker for GetItemExpression objects
     def test_check_getitemexpression(self):
-
         m = self.m
         t = IndexTemplate(m.t)
 
@@ -1084,7 +1065,6 @@ class TestExpressionCheckers(unittest.TestCase):
 
     # Testing the checker for NegationExpressions
     def test_check_negationexpression(self):
-
         m = self.m
         t = IndexTemplate(m.t)
 
@@ -1114,7 +1094,6 @@ class TestExpressionCheckers(unittest.TestCase):
 
     # Testing the checker for SumExpressions
     def test_check_viewsumexpression(self):
-
         m = self.m
         m.p = Param(initialize=5)
         m.mp = Param(initialize=5, mutable=True)
@@ -1177,7 +1156,6 @@ class TestCasadiSubstituters(unittest.TestCase):
     # Testing substituter for replacing GetItemExpression objects with
     # CasADi sym objects
     def test_substitute_casadi_sym(self):
-
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)
@@ -1197,7 +1175,6 @@ class TestCasadiSubstituters(unittest.TestCase):
     # Testing substituter for replacing Pyomo intrinsic functions with
     # CasADi intrinsic functions
     def test_substitute_casadi_intrinsic1(self):
-
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)
@@ -1213,7 +1190,6 @@ class TestCasadiSubstituters(unittest.TestCase):
     # Testing substituter for replacing Pyomo intrinsic functions with
     # CasADi intrinsic functions
     def test_substitute_casadi_intrinsic2(self):
-
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)
@@ -1231,7 +1207,6 @@ class TestCasadiSubstituters(unittest.TestCase):
     # Testing substituter for replacing Pyomo intrinsic functions with
     # CasADi intrinsic functions
     def test_substitute_casadi_intrinsic3(self):
-
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)
@@ -1248,7 +1223,6 @@ class TestCasadiSubstituters(unittest.TestCase):
     # Testing substituter for replacing Pyomo intrinsic functions with
     # CasADi intrinsic functions
     def test_substitute_casadi_intrinsic4(self):
-
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)
@@ -1281,7 +1255,6 @@ class TestSimulationInterface:
         return results
 
     def _test(self, tname):
-
         bfile = join(currdir, tname + '.' + self.sim_mod + '.json')
 
         # create model
@@ -1316,7 +1289,6 @@ class TestSimulationInterface:
             self.assertStructuredAlmostEqual(results, baseline, abstol=1e-2)
 
     def _test_disc_first(self, tname):
-
         bfile = join(currdir, tname + '.' + self.sim_mod + '.json')
 
         # create model
@@ -1410,5 +1382,4 @@ class TestCasadiSimulation(unittest.TestCase, TestSimulationInterface):
 
 
 if __name__ == "__main__":
-
     unittest.main()

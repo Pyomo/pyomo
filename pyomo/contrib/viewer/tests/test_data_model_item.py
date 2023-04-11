@@ -168,8 +168,8 @@ class TestDataModelItem(unittest.TestCase):
         cdi.ui_data.calculate_constraints()
         # the ui lists the upper and lower attributes as ub and lb
         # this was originally so I could easily combine variables and
-        # constarints in the same view, but I split them up, so may want
-        # to reconsider that choise in the future. This is to remind myself
+        # constraint in the same view, but I split them up, so may want
+        # to reconsider that choice in the future. This is to remind myself
         # why I'm getting "ub" and not "upper"
         self.assertEqual(cdi.get("ub"), "Divide_by_0")
 
@@ -178,8 +178,8 @@ class TestDataModelItem(unittest.TestCase):
         cdi.ui_data.calculate_constraints()
         # the ui lists the upper and lower attributes as ub and lb
         # this was originally so I could easily combine variables and
-        # constarints in the same view, but I split them up, so may want
-        # to reconsider that choise in the future. This is to remind myself
+        # constraint in the same view, but I split them up, so may want
+        # to reconsider that choice in the future. This is to remind myself
         # why I'm getting "ub" and not "upper"
         self.assertEqual(cdi.get("lb"), 0)
 

@@ -794,7 +794,7 @@ class _NLWriter_impl(object):
             map(self.subexpression_cache.__getitem__, self.subexpression_order),
             linear_by_comp,
         )
-        n_subexpressions = self._count_subexpression_occurances()
+        n_subexpressions = self._count_subexpression_occurrences()
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var = self._categorize_vars(
             objectives, linear_by_comp
         )
@@ -1025,7 +1025,7 @@ class _NLWriter_impl(object):
                         tag = -sos_id
                     else:
                         raise ValueError(
-                            f"SOSContraint '{sos.name}' has sos "
+                            f"SOSConstraint '{sos.name}' has sos "
                             f"type='{sos.level}', which is not supported "
                             "by the NL file interface"
                         )
@@ -1566,7 +1566,7 @@ class _NLWriter_impl(object):
             all_linear_vars -= all_nonlinear_vars
         return all_linear_vars, all_nonlinear_vars, nnz_by_var
 
-    def _count_subexpression_occurances(self):
+    def _count_subexpression_occurrences(self):
         """Categorize named subexpressions based on where they are used.
 
         This iterates through the `subexpression_order` and categorizes
@@ -2167,7 +2167,7 @@ def handle_named_expression_node(visitor, node, arg1):
     # This is a 3-tuple [con_id, obj_id, substitute_expression].  If the
     # expression is used by more than 1 constraint / objective, then the
     # id is set to 0.  If it is not used by any, then it is None.
-    # substitue_expression is a bool indicating if this named
+    # substitute_expression is a bool indicating if this named
     # subexpression tree should be directly substituted into any
     # expression tree that references this node (i.e., do NOT emit the V
     # line).
@@ -2205,7 +2205,7 @@ def handle_named_expression_node(visitor, node, arg1):
             repn.compile_nonlinear_fragment(visitor)
 
         if repn.linear:
-            # If this expession has both linear and nonlinear
+            # If this expression has both linear and nonlinear
             # components, we will follow the ASL convention and break
             # the named subexpression into two named subexpressions: one
             # that is only the nonlinear component and one that has the
@@ -2508,7 +2508,6 @@ for _type in (
     ScalarObjective,
     kernel.objective.objective,
 ):
-
     _before_child_handlers[_type] = _before_named_expression
 # Special linear / summation expressions
 _before_child_handlers[MonomialTermExpression] = _before_monomial

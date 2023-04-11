@@ -233,7 +233,7 @@ class SatSolverTests(unittest.TestCase):
         m = exfile.build_eight_process_flowsheet()
         self.assertTrue(satisfiable(m) is not False)
 
-    def test_8PP_deactive(self):
+    def test_8PP_deactivate(self):
         exfile = import_file(join(exdir, 'eight_process', 'eight_proc_model.py'))
         m = exfile.build_eight_process_flowsheet()
         for djn in m.component_data_objects(ctype=Disjunction):

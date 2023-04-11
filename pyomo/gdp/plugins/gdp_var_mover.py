@@ -60,7 +60,6 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                     and self._disjunct_on_active_block(disjunct)
                     and self._disjunct_not_fixed_true(disjunct)
                 ):
-
                     # First, do a couple checks in order to give a more
                     # useful error message
                     disjunction_set = {
@@ -115,7 +114,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             disjunct_component.parent_block().reclassify_component_type(
                 disjunct_component, Block
             )
-            # HACK: activate teh block, but do not activate the
+            # HACK: activate the block, but do not activate the
             # _BlockData objects
             super(ActiveIndexedComponent, disjunct_component).activate()
 

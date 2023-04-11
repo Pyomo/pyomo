@@ -238,7 +238,7 @@ def get_dsdp(model, theta_names, theta, tee=False):
               0 <= x1, x2, x3 <= 10
               p1 = 10
               p2 = 5
-    the function retuns dx/dp and dp/dp, and column orders.
+    the function returns dx/dp and dp/dp, and column orders.
 
     The following terms are used to define the output dimensions:
     Ncon   = number of constraints

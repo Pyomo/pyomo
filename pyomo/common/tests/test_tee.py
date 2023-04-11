@@ -317,7 +317,7 @@ class TestFileDescriptor(unittest.TestCase):
             os.close(1)
             self.assertEqual(FILE.read(), "to_fd1_2\n")
 
-    def test_caputure_output_fd(self):
+    def test_capture_output_fd(self):
         r, w = os.pipe()
         os.dup2(w, 1)
         sys.stdout = os.fdopen(1, 'w', closefd=False)

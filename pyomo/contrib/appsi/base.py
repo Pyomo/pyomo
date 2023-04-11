@@ -194,8 +194,8 @@ class SolutionLoaderBase(abc.ABC):
         Parameters
         ----------
         vars_to_load: list
-            A list of the variables whose solution value should be retreived. If vars_to_load is None,
-            then the values for all variables will be retreived.
+            A list of the variables whose solution value should be retrieved. If vars_to_load is None,
+            then the values for all variables will be retrieved.
 
         Returns
         -------
@@ -213,8 +213,8 @@ class SolutionLoaderBase(abc.ABC):
         Parameters
         ----------
         cons_to_load: list
-            A list of the constraints whose duals should be retreived. If cons_to_load is None, then the duals for all
-            constraints will be retreived.
+            A list of the constraints whose duals should be retrieved. If cons_to_load is None, then the duals for all
+            constraints will be retrieved.
 
         Returns
         -------
@@ -253,7 +253,7 @@ class SolutionLoaderBase(abc.ABC):
         Parameters
         ----------
         vars_to_load: list
-            A list of the variables whose reduced cost should be retreived. If vars_to_load is None, then the
+            A list of the variables whose reduced cost should be retrieved. If vars_to_load is None, then the
             reduced costs for all variables will be loaded.
 
         Returns
@@ -701,7 +701,7 @@ class PersistentSolver(Solver):
         self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
     ) -> NoReturn:
         """
-        Load the solution of the primal variables into the value attribut of the variables.
+        Load the solution of the primal variables into the value attribute of the variables.
 
         Parameters
         ----------

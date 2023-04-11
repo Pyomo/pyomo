@@ -431,7 +431,7 @@ class _BaseTestModel(object):
         return (True, "")
 
     def validate_capabilities(self, opt):
-        """Validate the capabilites of the optimizer"""
+        """Validate the capabilities of the optimizer"""
         if (self.linear is True) and (not opt.has_capability('linear') is True):
             return False
         if (self.integer is True) and (not opt.has_capability('integer') is True):

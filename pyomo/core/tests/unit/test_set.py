@@ -3891,7 +3891,7 @@ class TestSet(unittest.TestCase):
 
             self.assertEqual(output.getvalue(), "")
 
-            # Assing unsorted data should generate warnings
+            # Assign unsorted data should generate warnings
             m.I.update({3, 4})
             self.assertIn(
                 "Calling update() on an insertion order Set with a "
@@ -3973,7 +3973,7 @@ class TestSet(unittest.TestCase):
 
             self.assertEqual(output.getvalue(), "")
 
-            # Assing unsorted data should not generate warnings (since
+            # Assign unsorted data should not generate warnings (since
             # we are sorting the Set!)
             m.I.update({3, 4})
             self.assertEqual(output.getvalue(), "")
@@ -4747,7 +4747,7 @@ I : Size=1, Index=None, Ordered=Insertion
         m.J = Set(initialize=_j_init)
         self.assertEqual(list(m.J), [1, 2, 3])
 
-        # Backwards compatability: Test rule for indexed component that
+        # Backwards compatibility: Test rule for indexed component that
         # does not take the index
         @simple_set_rule
         def _k_init(m):

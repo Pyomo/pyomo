@@ -28,7 +28,6 @@ model.loadOnRoad = Constraint(model.routes, rule=loadRule)
 
 
 def supplyDemandRule(model, nn):
-
     amountIn = sum(model.amount[i, j] for (i, j) in model.routes if j == nn)
     amountOut = sum(model.amount[i, j] for (i, j) in model.routes if i == nn)
 

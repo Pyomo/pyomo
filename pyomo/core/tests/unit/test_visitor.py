@@ -1821,7 +1821,9 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             # overflow error
             cases = []
         else:
-            cases = [(0, ""), (3, warn_msg)]
+            # 3 sufficed through Python 3.10, but appeared to need to be
+            # raised to 5 for recent 3.11 builds (3.11.2)
+            cases = [(0, ""), (5, warn_msg)]
 
         head_room = sys.getrecursionlimit() - get_stack_depth()
         for n, msg in cases:

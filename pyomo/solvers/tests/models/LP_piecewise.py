@@ -54,7 +54,6 @@ class LP_piecewise(_BaseTestModel):
 
 @register_model
 class LP_piecewise_nosuffixes(LP_piecewise):
-
     description = "LP_piecewise_nosuffixes"
     test_pickling = False
 

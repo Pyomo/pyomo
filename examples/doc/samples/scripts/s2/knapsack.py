@@ -27,6 +27,7 @@ def weight_rule(model):
 
 model.weight = Constraint(rule=weight_rule)
 
+
 # This constraint is not active, to illustrate how zero dual values are
 # handled by the pyomo command.
 def W_rule(model):

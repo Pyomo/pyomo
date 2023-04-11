@@ -87,7 +87,7 @@ class parameter(IParameter):
 
     @property
     def value(self):
-        """The value of the paramater"""
+        """The value of the parameter"""
         return self._value
 
     @value.setter

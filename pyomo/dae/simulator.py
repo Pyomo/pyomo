@@ -107,18 +107,18 @@ def _check_productexpression(expr, i):
     if dv is None:
         return None
 
-    numer = 1
+    numerator = 1
     denom = 1
     for term, e_ in pterms:
         if e_ == 1:
             denom *= term
         else:
-            numer *= term
+            numerator *= term
     curr, e_ = dv
     if e_ == 1:
-        return [curr, expr.arg(1 - i) * numer / denom]
+        return [curr, expr.arg(1 - i) * numerator / denom]
     else:
-        return [curr, denom / (expr.arg(1 - i) * numer)]
+        return [curr, denom / (expr.arg(1 - i) * numerator)]
 
 
 def _check_negationexpression(expr, i):
@@ -238,7 +238,7 @@ class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
 def convert_pyomo2scipy(expr, templatemap):
     """Substitute _GetItem nodes in an expression tree.
 
-    This substition function is used to replace Pyomo _GetItem
+    This substitution function is used to replace Pyomo _GetItem
     nodes with mutable Params.
 
     Args:
@@ -340,7 +340,7 @@ class Convert_Pyomo2Casadi_Visitor(EXPR.ExpressionValueVisitor):
 def substitute_pyomo2casadi(expr, templatemap):
     """Substitute IndexTemplates in an expression tree.
 
-    This substition function is used to replace Pyomo intrinsic
+    This substitution function is used to replace Pyomo intrinsic
     functions with CasADi functions.
 
     Args:

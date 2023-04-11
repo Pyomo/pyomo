@@ -591,7 +591,7 @@ def _perform_import(
 def declare_deferred_modules_as_importable(globals_dict):
     """Make all DeferredImportModules in ``globals_dict`` importable
 
-    This function will go throught the specified ``globals_dict``
+    This function will go throughout the specified ``globals_dict``
     dictionary and add any instances of :py:class:`DeferredImportModule`
     that it finds (and any of their deferred submodules) to
     ``sys.modules`` so that the modules can be imported through the

@@ -76,7 +76,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         config.use_mcpp = True
         config.equality_relaxation = False
         config.use_fbbt = True
-        # add_no_good_cuts is Ture by default in GOA
+        # add_no_good_cuts is True by default in GOA
         if not config.add_no_good_cuts and not config.use_tabu_list:
             config.add_no_good_cuts = True
             config.use_tabu_list = False

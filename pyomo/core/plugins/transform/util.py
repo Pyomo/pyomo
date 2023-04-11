@@ -79,11 +79,10 @@ def collectAbstractComponents(model):
 
     # Iterate over all model components
     for comp in cp._ctypes:
-
         # Collect all Constraint objects
         if issubclass(comp, Constraint):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this constraint's attributes
                 data = {}
 
@@ -99,7 +98,7 @@ def collectAbstractComponents(model):
         # Collect all Objective objects
         if issubclass(comp, Objective):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this objective's attributes
                 data = {}
 
@@ -115,7 +114,7 @@ def collectAbstractComponents(model):
         # Collect all Var objects
         if issubclass(comp, Var):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this variable's attributes
                 data = {}
 
@@ -134,7 +133,7 @@ def collectAbstractComponents(model):
         # Collect all Set objects
         if issubclass(comp, Set):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this variable's attributes
                 data = {}
 
@@ -150,7 +149,7 @@ def collectAbstractComponents(model):
         # Collect all Param objects
         if issubclass(comp, Param):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this variable's attributes
                 data = {}
 

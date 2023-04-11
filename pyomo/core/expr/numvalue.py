@@ -153,7 +153,7 @@ def value(obj, exception=True):
 
     Args:
         obj: The argument to evaluate. If it is None, a
-            string, or any other primative numeric type,
+            string, or any other primitive numeric type,
             then this function simply returns the argument.
             Otherwise, if the argument is a NumericValue
             then the __call__ method is executed.

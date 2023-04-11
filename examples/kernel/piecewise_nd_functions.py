@@ -84,7 +84,6 @@ print("Real f value at NL solution: %s" % (f(m.x.value, m.y.value)))
 print("Real g value at NL solution: %s" % (f(m.x.value, m.y.value)))
 
 if show_plots:
-
     import matplotlib.pylab as plt
     import mpl_toolkits.mplot3d
 

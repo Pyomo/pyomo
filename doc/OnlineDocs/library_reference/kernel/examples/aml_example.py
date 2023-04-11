@@ -30,6 +30,8 @@ m.q = aml.RangeSet(1, 3)
 
 # @Parameters_single
 m.p = aml.Param(mutable=True, initialize=0)
+
+
 # @Parameters_single
 # @Parameters_dict
 # pd[1] = 0, pd[2] = 1
@@ -56,6 +58,7 @@ m.v = aml.Var(initialize=1.0, bounds=(1, 4))
 # @Variables_dict
 m.vd = aml.Var(m.s, bounds=(None, 9))
 
+
 # @Variables_dict
 # @Variables_list
 # used 1-based indexing
@@ -70,6 +73,8 @@ for j in m.q:
 
 # @Constraints_single
 m.c = aml.Constraint(expr=sum(m.vd.values()) <= 9)
+
+
 # @Constraints_single
 # @Constraints_dict
 def cd_(m, i, j):
@@ -90,6 +95,8 @@ for j in m.q:
 
 # @Expressions_single
 m.e = aml.Expression(expr=-m.v)
+
+
 # @Expressions_single
 # @Expressions_dict
 def ed_(m, i):
@@ -109,6 +116,8 @@ m.ed = aml.Expression(m.s, rule=ed_)
 
 # @Objectives_single
 m.o = aml.Objective(expr=-m.v)
+
+
 # @Objectives_single
 # @Objectives_dict
 def od_(m, i):
@@ -129,6 +138,8 @@ for j in m.q:
 # @SOS_single
 m.sos1 = aml.SOSConstraint(var=m.vl, level=1)
 m.sos2 = aml.SOSConstraint(var=m.vd, level=2)
+
+
 # @SOS_single
 # @SOS_dict
 def sd_(m, i):

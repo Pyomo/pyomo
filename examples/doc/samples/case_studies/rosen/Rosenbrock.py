@@ -6,6 +6,8 @@ model = AbstractModel()
 # @vars:
 model.x = Var(initialize=1.5)
 model.y = Var(initialize=1.5)
+
+
 # @:vars
 # @obj:
 def rosenbrock(amodel):

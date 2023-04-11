@@ -264,7 +264,6 @@ class Test_piecewise(unittest.TestCase):
             self.assertIsNot(pup.input.expr, b.v)
 
     def test_call(self):
-
         g = PiecewiseLinearFunction([1], [0])
         f = TransformedPiecewiseLinearFunction(g, require_bounded_input_variable=False)
         self.assertTrue(f.parent is None)
@@ -598,7 +597,6 @@ class Test_piecewise(unittest.TestCase):
                         self.assertIs(p.parent, None)
 
     def test_bad_init(self):
-
         # lists not the same length
         with self.assertRaises(ValueError):
             PiecewiseLinearFunction([1, 2, 3], [1, 2, 1, 1], validate=False)
@@ -869,7 +867,6 @@ class Test_piecewise_nd(unittest.TestCase):
             self.assertIs(pup.parent, bup)
 
     def test_call(self):
-
         #
         # 2d points
         #

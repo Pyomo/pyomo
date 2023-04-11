@@ -74,7 +74,7 @@ class _ComplementarityData(_BlockData):
 
     def to_standard_form(self):
         #
-        # Add auxilliary variables and constraints that ensure
+        # Add auxiliary variables and constraints that ensure
         # a monotone transformation of general complementary constraints to
         # the form:
         #       l1 <= v1 <= u1   OR   l2 <= v2 <= u2
@@ -181,7 +181,6 @@ class _ComplementarityData(_BlockData):
 
 @ModelComponentFactory.register("Complementarity conditions.")
 class Complementarity(Block):
-
     _ComponentDataClass = _ComplementarityData
 
     def __new__(cls, *args, **kwds):

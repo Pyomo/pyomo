@@ -27,7 +27,7 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
     Keyword Arguments
     -----------------
     model: ConcreteModel
-        Passing a model to the constructor is equivalent to calling the set_instance mehtod.
+        Passing a model to the constructor is equivalent to calling the set_instance method.
     type: str
         String indicating the class type of the solver instance.
     name: str

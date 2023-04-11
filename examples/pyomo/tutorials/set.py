@@ -51,6 +51,7 @@ model.H = model.A * model.B
 #
 model.Hsub = Set(within=model.A * model.B)
 
+
 ##
 ## Data for Simple Sets
 ##
@@ -80,7 +81,7 @@ model.J.construct()
 model.J.add(1, 4, 9)
 #
 # The _initialize_ option can also be used to specify the values in
-# a set.  These default values may be overriden by later construction
+# a set.  These default values may be overridden by later construction
 # steps, or by data in an input file:
 #
 model.K = Set(initialize=[1, 4, 9])
@@ -90,6 +91,8 @@ model.K_2 = Set(initialize=[(1, 4), (9, 16)], dimen=2)
 # superset can be specified with the _within_ option:
 #
 model.L = Set(within=model.A)
+
+
 #
 # Validation of set data can also be performed with the _validate_ option,
 # which is a function that returns True if a data belongs in this set:
@@ -104,6 +107,8 @@ model.M = Set(validate=M_validate)
 # a temporary set.  For example, consider the declaration
 #
 model.N = Set(within=model.A * model.B)
+
+
 #
 # In this example, the cross-product of sets A and B is needed to validate
 # the members of set C.  Pyomo creates this set implicitly and uses
@@ -115,6 +120,7 @@ def O_validate(model, value):
 
 
 model.O = Set(validate=O_validate)
+
 
 ##
 ## Data for Set Arrays
@@ -164,6 +170,8 @@ model.R = Set(model.B, initialize=R_init)
 # elements of all sets in the array must be in this set:
 #
 model.S = Set(model.B, within=model.A)
+
+
 #
 # Validation of set arrays can also be performed with the _validate_ option.
 # This is applied to all sets in the array:
@@ -173,6 +181,7 @@ def T_validate(model, value):
 
 
 model.T = Set(model.B, validate=M_validate)
+
 
 ##
 ## Set options
@@ -197,6 +206,8 @@ def U_init(model, z):
 
 
 model.U = Set(ordered=True, initialize=U_init)
+
+
 #
 # This example can be generalized to array sets.  Note that in this case
 # we can use ordered sets to to index the array, thereby guaranteeing that

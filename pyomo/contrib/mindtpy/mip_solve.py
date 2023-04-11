@@ -326,7 +326,7 @@ def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config
         else:
             config.logger.info(
                 'No solution obtained from the regularization subproblem.'
-                'Please set mip_solver_tee to True for more informations.'
+                'Please set mip_solver_tee to True for more information.'
                 'The solution of the OA main problem will be adopted.'
             )
     else:

@@ -661,7 +661,6 @@ class TestFlatten(_TestFlattenBase, unittest.TestCase):
         D2N2 = m.d2.cross(m.dn, m.d2)
 
         for sets, comps in zip(sets_list, comps_list):
-
             if len(sets) == 1 and sets[0] is m.d1:
                 ref_data = set()
                 # Don't expand indices:
@@ -745,7 +744,6 @@ class TestFlatten(_TestFlattenBase, unittest.TestCase):
         assert len(sets_list) == 3
 
         for sets, comps in zip(sets_list, comps_list):
-
             if len(sets) == 1 and sets[0] is m.d1:
                 ref_data = set()
                 # Must iterate and slice in a manner consistent with
@@ -817,7 +815,6 @@ class TestFlatten(_TestFlattenBase, unittest.TestCase):
         assert len(sets_list) == 2
 
         for sets, comps in zip(sets_list, comps_list):
-
             if len(sets) == 1 and sets[0] is m.d2:
                 ref_data = set()
                 ref_data.update(
@@ -888,7 +885,6 @@ class TestFlatten(_TestFlattenBase, unittest.TestCase):
         assert len(sets_list) == 3
 
         for sets, comps in zip(sets_list, comps_list):
-
             if len(sets) == 1 and sets[0] is UnindexedComponent_set:
                 ref_data = set()
                 ref_data.update(self._hashRef(v) for v in m.v_12.values())

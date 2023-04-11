@@ -667,7 +667,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # last check that if someone activates something on the model in
         # between, we just use it. (I struggle to imagine why you would do this
-        # because why withold the information *during* FME, but if there's some
+        # because why withhold the information *during* FME, but if there's some
         # reason, we may as well use all the information we've got.)
         m.some_new_cons = Constraint(expr=m.y <= 2)
         fme.post_process_fme_constraints(

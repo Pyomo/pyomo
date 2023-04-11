@@ -17,7 +17,6 @@ import pyomo.contrib.parmest.scenariocreator as sc
 
 
 def main():
-
     # Vars to estimate in parmest
     theta_names = ['k1', 'k2', 'E1', 'E2']
 
@@ -42,7 +41,7 @@ def main():
 
     # Use the bootstrap to make 3 scenarios and print
     bootscens = sc.ScenarioSet("Bootstrap")
-    scenmaker.ScenariosFromBoostrap(bootscens, 3)
+    scenmaker.ScenariosFromBootstrap(bootscens, 3)
     for s in bootscens.ScensIterator():
         print("{}, {}".format(s.name, s.probability))
         for n, v in s.ThetaVals.items():

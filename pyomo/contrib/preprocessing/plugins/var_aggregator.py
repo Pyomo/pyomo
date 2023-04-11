@@ -53,7 +53,7 @@ def _get_equality_linked_variables(constraint):
         # Expect a constraint of form x == y --> 0 == -1 * x + 1 * y;
         # otherwise, return empty tuple.
         return ()
-    # Above checks are satisifed. Return the variables.
+    # Above checks are satisfied. Return the variables.
     return nonzero_coef_vars
 
 

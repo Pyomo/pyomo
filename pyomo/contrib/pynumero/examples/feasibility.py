@@ -20,7 +20,6 @@ import numpy as np
 
 
 def create_basic_model():
-
     m = pyo.ConcreteModel()
     m.x = pyo.Var([1, 2, 3], domain=pyo.Reals)
     for i in range(1, 4):

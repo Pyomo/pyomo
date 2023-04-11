@@ -39,7 +39,6 @@ from pyomo.core.kernel.conic import (
 
 
 class _conic_tester_base(object):
-
     _object_factory = None
 
     def setUp(self):
@@ -154,7 +153,6 @@ class _conic_tester_base(object):
 
 
 class Test_quadratic(_conic_tester_base, unittest.TestCase):
-
     _object_factory = lambda self: quadratic(
         r=variable(lb=0), x=[variable(), variable()]
     )
@@ -235,7 +233,6 @@ class Test_quadratic(_conic_tester_base, unittest.TestCase):
 
 
 class Test_rotated_quadratic(_conic_tester_base, unittest.TestCase):
-
     _object_factory = lambda self: rotated_quadratic(
         r1=variable(lb=0), r2=variable(lb=0), x=[variable(), variable()]
     )
@@ -333,7 +330,6 @@ class Test_rotated_quadratic(_conic_tester_base, unittest.TestCase):
 
 
 class Test_primal_exponential(_conic_tester_base, unittest.TestCase):
-
     _object_factory = lambda self: primal_exponential(
         r=variable(lb=0), x1=variable(lb=0), x2=variable()
     )
@@ -425,7 +421,6 @@ class Test_primal_exponential(_conic_tester_base, unittest.TestCase):
 
 
 class Test_primal_power(_conic_tester_base, unittest.TestCase):
-
     _object_factory = lambda self: primal_power(
         r1=variable(lb=0),
         r2=variable(lb=0),
@@ -561,7 +556,6 @@ class Test_primal_power(_conic_tester_base, unittest.TestCase):
 
 
 class Test_dual_exponential(_conic_tester_base, unittest.TestCase):
-
     _object_factory = lambda self: dual_exponential(
         r=variable(lb=0), x1=variable(), x2=variable(ub=0)
     )
@@ -653,7 +647,6 @@ class Test_dual_exponential(_conic_tester_base, unittest.TestCase):
 
 
 class Test_dual_power(_conic_tester_base, unittest.TestCase):
-
     _object_factory = lambda self: dual_power(
         r1=variable(lb=0),
         r2=variable(lb=0),

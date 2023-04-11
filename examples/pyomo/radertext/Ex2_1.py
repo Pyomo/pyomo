@@ -34,12 +34,14 @@ model.LaborLimit = Param(within=NonNegativeReals)
 # Variables
 model.NumDoors = Var(model.DoorType, within=NonNegativeIntegers)
 
+
 # Objective
 def CalcProfit(M):
     return sum(M.NumDoors[d] * M.Profit[d] for d in M.DoorType)
 
 
 model.TotProf = Objective(rule=CalcProfit, sense=maximize)
+
 
 # Constraints
 def EnsureMachineLimit(M, m):

@@ -32,7 +32,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     Keyword Arguments
     -----------------
     model: ConcreteModel
-        Passing a model to the constructor is equivalent to calling the set_instance mehtod.
+        Passing a model to the constructor is equivalent to calling the set_instance method.
     type: str
         String indicating the class type of the solver instance.
     name: str
@@ -469,7 +469,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         Parameters
         ----------
         param: str
-            The gurobi parameter to get info for. See Gurobi documenation for possible options.
+            The gurobi parameter to get info for. See Gurobi documentation for possible options.
 
         Returns
         -------
@@ -508,7 +508,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                              & y \in \mathbb{Z}
                \end{array}
 
-            as an MILP using exteneded cutting planes in callbacks.
+            as an MILP using extended cutting planes in callbacks.
 
             .. testcode::
                :skipif: not gurobipy_available
@@ -576,7 +576,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('cbCut expected an active constraint.')
 
         if is_fixed(con.body):
-            raise ValueError('cbCut expected a non-trival constraint')
+            raise ValueError('cbCut expected a non-trivial constraint')
 
         gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
             con.body, self._max_constraint_degree
@@ -654,7 +654,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('cbLazy expected an active constraint.')
 
         if is_fixed(con.body):
-            raise ValueError('cbLazy expected a non-trival constraint')
+            raise ValueError('cbLazy expected a non-trivial constraint')
 
         gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
             con.body, self._max_constraint_degree

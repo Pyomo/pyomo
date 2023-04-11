@@ -334,7 +334,7 @@ class _ReferenceDict(MutableMapping):
         iterates over the keys and looks the values up in the
         dictionary.  Unfortunately some slices have structures that make
         looking up components by the wildcard keys very expensive
-        (linear time; e.g., the use of elipses with jagged sets).  By
+        (linear time; e.g., the use of ellipses with jagged sets).  By
         implementing this method without using lookups, general methods
         that iterate over everything (like component.pprint()) will
         still be linear and not quadratic time.
@@ -744,7 +744,7 @@ def Reference(reference, ctype=NOTSET):
         if slice_idx is not None:
             # As long as we haven't ruled out the possibility of common
             # wildcard sets, then we will use _identify_wildcard_sets to
-            # identify the wilcards for this obj and check compatibility
+            # identify the wildcards for this obj and check compatibility
             # of the wildcards with any previously-identified wildcards.
             slice_idx = _identify_wildcard_sets(_iter._iter_stack, slice_idx)
         elif ctype is not NOTSET or len(ctypes) > 1:

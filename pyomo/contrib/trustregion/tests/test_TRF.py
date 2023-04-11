@@ -44,7 +44,6 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 )
 class TestTrustRegionConfig(unittest.TestCase):
     def setUp(self):
-
         self.m = ConcreteModel()
         self.m.z = Var(range(3), domain=Reals, initialize=2.0)
         self.m.x = Var(range(2), initialize=2.0)
@@ -183,7 +182,6 @@ class TestTrustRegionConfig(unittest.TestCase):
 )
 class TestTrustRegionMethod(unittest.TestCase):
     def setUp(self):
-
         self.m = ConcreteModel()
         self.m.z = Var(range(3), domain=Reals, initialize=2.0)
         self.m.x = Var(range(2), initialize=2.0)

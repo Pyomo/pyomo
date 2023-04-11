@@ -267,7 +267,7 @@ class IndexedComponent(Component):
                                 component data objects
         _index_set              The set of valid indices
         _implicit_subsets   A temporary data element that stores
-                                sets that are transfered to the model
+                                sets that are transferred to the model
     """
 
     class Skip(object):

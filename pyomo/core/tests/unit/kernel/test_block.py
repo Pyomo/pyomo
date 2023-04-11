@@ -109,7 +109,6 @@ class junk_list(pmo.block_list):
 
 
 class TestHeterogeneousContainer(unittest.TestCase):
-
     model = pmo.block()
     model.v = pmo.variable()
     model.V = pmo.variable_list()
@@ -924,7 +923,6 @@ class TestMisc(unittest.TestCase):
         self.assertAlmostEqual(b.y(), 1.0, places=5)
 
     def test_traversal(self):
-
         b = block()
         b.v = variable()
         b.c1 = constraint()
@@ -1344,7 +1342,6 @@ class TestMisc(unittest.TestCase):
 
 
 class _Test_block_base(object):
-
     _children = None
     _child_key = None
     _components_no_descend = None
@@ -1871,7 +1868,6 @@ class _Test_block_base(object):
 
 
 class _Test_block(_Test_block_base):
-
     _do_clone = None
 
     @classmethod
@@ -2321,7 +2317,6 @@ class _MyBlock(_MyBlockBase):
 
 
 class _Test_small_block(_Test_block_base):
-
     _do_clone = None
 
     @classmethod

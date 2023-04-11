@@ -534,8 +534,7 @@ class TestAutoVars(unittest.TestCase):
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                TypeError,
-                r"Implicit conversion of Pyomo numeric value \(biv\) to int",
+                TypeError, r"Implicit conversion of Pyomo numeric value \(biv\) to int"
             ):
                 int(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())

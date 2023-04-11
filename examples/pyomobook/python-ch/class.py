@@ -1,5 +1,6 @@
 # class.py
 
+
 # @all:
 class IntLocker:
     sint = None

@@ -240,7 +240,6 @@ class Finite_Difference_Transformation(Transformation):
         return instance
 
     def _transformBlock(self, block, currentds):
-
         self._fe = {}
         for ds in block.component_objects(ContinuousSet):
             if currentds is None or currentds == ds.name or currentds is ds:
@@ -317,7 +316,6 @@ class Finite_Difference_Transformation(Transformation):
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
-
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
                     i.parent_block().reclassify_component_type(i, Expression)

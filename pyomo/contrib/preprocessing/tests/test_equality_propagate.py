@@ -107,7 +107,7 @@ class TestEqualityPropagate(unittest.TestCase):
 
     def test_var_fix_accounts_for_constants(self):
         """Test to make sure that constraints of the form x == y + constant
-        are handled correctly when propogating fixed variables."""
+        are handled correctly when propagating fixed variables."""
         m = ConcreteModel()
         m.v = Var(initialize=1.0)
         m.v2 = Var(initialize=1.0)

@@ -336,7 +336,6 @@ class Test(unittest.TestCase):
     # components was incorrectly and unexpectedly modifying
     # object state.
     def test_pickle4(self):
-
         model = ConcreteModel()
         model.s = Set(initialize=[1, 2])
         model.x = Var(within=NonNegativeReals)

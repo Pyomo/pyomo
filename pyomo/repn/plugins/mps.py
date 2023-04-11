@@ -56,7 +56,6 @@ def _get_bound(exp):
 @WriterFactory.register('mps', 'Generate the corresponding MPS file')
 class ProblemWriter_mps(AbstractProblemWriter):
     def __init__(self):
-
         AbstractProblemWriter.__init__(self, ProblemFormat.mps)
 
         # the MPS writer is responsible for tracking which variables are
@@ -80,7 +79,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
         self._precision_string = '.17g'
 
     def __call__(self, model, output_filename, solver_capability, io_options):
-
         # Make sure not to modify the user's dictionary,
         # they may be reusing it outside of this call
         io_options = dict(io_options)
@@ -183,7 +181,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
     def _extract_variable_coefficients(
         self, row_label, repn, column_data, quadratic_data, variable_to_column
     ):
-
         #
         # Linear
         #
@@ -211,7 +208,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
     def _printSOS(
         self, symbol_map, labeler, variable_symbol_map, soscondata, output_file
     ):
-
         if hasattr(soscondata, 'get_items'):
             sos_items = list(soscondata.get_items())
         else:
@@ -243,7 +239,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
             if vardata.fixed:
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
-                    "currently not supported. Deactive this constraint in order to "
+                    "currently not supported. Deactivate this constraint in order to "
                     "proceed." % (soscondata.name, vardata.name)
                 )
             self._referenced_variable_ids[id(vardata)] = vardata
@@ -266,7 +262,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
         include_all_variable_bounds=False,
         skip_objective_sense=False,
     ):
-
         symbol_map = SymbolMap()
         variable_symbol_map = SymbolMap()
         # NOTE: we use createSymbol instead of getSymbol because we
@@ -291,13 +286,11 @@ class ProblemWriter_mps(AbstractProblemWriter):
         all_blocks = []
         variable_list = []
         for block in model.block_data_objects(active=True, sort=sortOrder):
-
             all_blocks.append(block)
 
             for vardata in block.component_data_objects(
                 Var, active=True, sort=sortOrder, descend_into=False
             ):
-
                 variable_list.append(vardata)
                 variable_label_pairs.append(
                     (vardata, create_symbol_func(symbol_map, vardata, labeler))
@@ -340,7 +333,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
         numObj = 0
         onames = []
         for block in all_blocks:
-
             gen_obj_repn = getattr(block, "_gen_obj_repn", True)
 
             # Get/Create the ComponentMap for the repn
@@ -350,7 +342,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
             for objective_data in block.component_data_objects(
                 Objective, active=True, sort=sortOrder, descend_into=False
             ):
-
                 numObj += 1
                 onames.append(objective_data.name)
                 if numObj > 1:
@@ -415,7 +406,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
         # Constraints
         def constraint_generator():
             for block in all_blocks:
-
                 gen_con_repn = getattr(block, "_gen_con_repn", True)
 
                 # Get/Create the ComponentMap for the repn
@@ -426,7 +416,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 for constraint_data in block.component_data_objects(
                     Constraint, active=True, sort=sortOrder, descend_into=False
                 ):
-
                     if (not constraint_data.has_lb()) and (
                         not constraint_data.has_ub()
                     ):
@@ -455,7 +444,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
             yield_all_constraints = constraint_generator
 
         for constraint_data, repn in yield_all_constraints():
-
             degree = repn.polynomial_degree()
 
             # Write constraint
@@ -571,11 +559,9 @@ class ProblemWriter_mps(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         for block in all_blocks:
-
             for soscondata in block.component_data_objects(
                 SOSConstraint, active=True, sort=sortOrder, descend_into=False
             ):
-
                 create_symbol_func(symbol_map, soscondata, labeler)
 
                 level = soscondata.level

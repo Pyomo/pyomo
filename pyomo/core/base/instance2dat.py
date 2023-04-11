@@ -19,7 +19,6 @@ from pyomo.core.base import Set, Param, value
 
 
 def instance2dat(instance, output_filename):
-
     output_file = open(output_filename, "w")
 
     for set_name, set_object in instance.component_map(Set, active=True).items():

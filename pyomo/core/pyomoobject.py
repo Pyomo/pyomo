@@ -11,6 +11,7 @@
 
 from pyomo.common.autoslots import AutoSlots
 
+
 # Note: in an ideal world, PyomoObject would use the AutoSlots
 # metaclass.  However, declaring a custom (non-type) metaclass has
 # measurable performance implications.  It is faster to just look for

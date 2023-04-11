@@ -3,6 +3,7 @@ import pyomo.environ as pyo
 model = pyo.ConcreteModel()
 model.A = pyo.Set(initialize=[1, 2, 3])
 
+
 # @decl3b:
 def X_init(model, i, j):
     return i * j
@@ -10,6 +11,7 @@ def X_init(model, i, j):
 
 model.X = pyo.Param(model.A, model.A, initialize=X_init)
 # @:decl3b
+
 
 # @decl3c:
 def XX_init(model, i, j):
