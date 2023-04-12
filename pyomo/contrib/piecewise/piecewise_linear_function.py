@@ -284,7 +284,7 @@ class PiecewiseLinearFunction(Block):
 
         return dimension
 
-    def _construct_simplices_from_multivariate_points(self, obj, points):
+    def _construct_simplices_from_multivariate_points(self, obj, points, dimension):
         try:
             triangulation = spatial.Delaunay(points)
         except (spatial.QhullError, ValueError) as error:
@@ -341,7 +341,7 @@ class PiecewiseLinearFunction(Block):
                 obj, nonlinear_function
             )
 
-        self._construct_simplices_from_multivariate_points(obj, points)
+        self._construct_simplices_from_multivariate_points(obj, points, dimension)
         return self._construct_from_function_and_simplices(
             obj, parent, nonlinear_function, simplices_are_user_defined=False
         )
@@ -451,7 +451,7 @@ class PiecewiseLinearFunction(Block):
                 obj, _tabular_data_functor(tabular_data, tupleize=True)
             )
 
-        self._construct_simplices_from_multivariate_points(obj, points)
+        self._construct_simplices_from_multivariate_points(obj, points, dimension)
         return self._construct_from_function_and_simplices(
             obj, parent, _tabular_data_functor(tabular_data)
         )
