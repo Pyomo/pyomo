@@ -19,6 +19,7 @@
 import enum
 import logging
 import math
+import re
 import sys
 from io import StringIO
 
@@ -448,6 +449,24 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
     return timeout_decorator
 
 
+class _AssertRaisesContext_NormalizeWhitespace(_unittest.case._AssertRaisesContext):
+    def __exit__(self, exc_type, exc_value, tb):
+        try:
+            _save_re = self.expected_regex
+            self.expected_regex = None
+            if not super().__exit__(exc_type, exc_value, tb):
+                return False
+        finally:
+            self.expected_regex = _save_re
+
+        exc_value = re.sub('(?s)\s+', ' ', str(exc_value))
+        if not _save_re.search(exc_value):
+            self._raiseFailure(
+                '"{}" does not match "{}"'.format(_save_re.pattern, exc_value)
+            )
+        return True
+
+
 class TestCase(_unittest.TestCase):
     """A Pyomo-specific class whose instances are single test cases.
 
@@ -487,3 +506,34 @@ class TestCase(_unittest.TestCase):
             exception=self.failureException,
             formatter=self._formatMessage,
         )
+
+    def assertRaisesRegex(self, expected_exception, expected_regex, *args, **kwargs):
+        """Asserts that the message in a raised exception matches a regex.
+
+        This is a light weight wrapper arounf
+        :py:meth:`unittest.TestCase.assertRaisesRegex` that adds
+        handling of a `normalize_whitespace` keyword argument that
+        normalizes all consecutive whitespace in the exception message
+        to a single space before checking the regular expression.
+
+        Args:
+            expected_exception: Exception class expected to be raised.
+            expected_regex: Regex (re.Pattern object or string) expected
+                    to be found in error message.
+            args: Function to be called and extra positional args.
+            kwargs: Extra kwargs.
+            msg: Optional message used in case of failure. Can only be used
+                    when assertRaisesRegex is used as a context manager.
+            normalize_whitespace: Optional bool that, if True, collapses
+                    consecutive whitespace (including newlines) into a
+                    single space before checking against the regular
+                    expression
+
+        """
+        normalize_whitespace = kwargs.pop('normalize_whitespace', False)
+        if normalize_whitespace:
+            contextClass = _AssertRaisesContext_NormalizeWhitespace
+        else:
+            contextClass = _unittest.case._AssertRaisesContext
+        context = contextClass(expected_exception, self, expected_regex)
+        return context.handle('assertRaisesRegex', args, kwargs)
