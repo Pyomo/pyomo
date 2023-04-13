@@ -163,8 +163,9 @@ class MouseTrap(PyomoException, NotImplementedError):
             repr(super().__str__()),
             prolog="Sorry, mouse, no cookies here!",
             epilog="This is functionality we think may be rational to "
-            "support, but is not yet implemented since it might go "
-            "beyond what can practically be solved. However, please "
-            "feed the mice: pull requests are always welcome!",
+            "support, but is not yet implemented (possibly due to developer "
+            "availability, complexity of edge cases, or general practicality "
+            "or tractability). However, please feed the mice: "
+            "pull requests are always welcome!",
             exception=self,
         )
