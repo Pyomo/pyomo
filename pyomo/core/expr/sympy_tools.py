@@ -76,6 +76,7 @@ def _configure_sympy(sympy, available):
             EXPR.LinearExpression: sympy.Add,
             EXPR.ProductExpression: sympy.Mul,
             EXPR.MonomialTermExpression: sympy.Mul,
+            EXPR.ExternalFunctionExpression: _external_fcn,
             LEXPR.AndExpression: sympy.And,
             LEXPR.OrExpression: sympy.Or,
             LEXPR.ImplicationExpression: sympy.Implies,
@@ -133,6 +134,13 @@ def _nondifferentiable(x):
         wrt = x[1]
     raise NondifferentiableError(
         "The sub-expression '%s' is not differentiable with respect to %s" % (x[0], wrt)
+    )
+
+
+def _external_fcn(x):
+    raise ValueError(
+        "Expressions containing external functions are not convertible to "
+        f"sympy expressions (found 'f{x}')"
     )
 
 
