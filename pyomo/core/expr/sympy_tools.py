@@ -191,15 +191,16 @@ class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
         if type(child) in native_types:
             return False, child
         #
-        # We will descend into all expressions...
-        #
-        if child.is_expression_type():
-            return True, None
-        #
         # Replace pyomo variables with sympy variables
         #
         if child.is_potentially_variable():
-            return False, self.object_map.getSympySymbol(child)
+            #
+            # We will descend into all expressions...
+            #
+            if child.is_expression_type():
+                return True, None
+            else:
+                return False, self.object_map.getSympySymbol(child)
         #
         # Everything else is a constant...
         #
