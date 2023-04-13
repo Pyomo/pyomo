@@ -216,21 +216,19 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
         return self.beforeChild(None, expr, None)
 
     def enterNode(self, node):
-        return (node._args, [])
+        return (node.args, [])
 
     def exitNode(self, node, values):
         """Visit nodes that have been expanded"""
-        _sympyOp = node
-        _op = _operatorMap.get(type(_sympyOp), None)
+        _op = _operatorMap.get(node.func, None)
         if _op is None:
             raise DeveloperError(
-                "sympy expression type '%s' not found in the operator "
-                "map" % type(_sympyOp)
+                "sympy expression type %s not found in the operator " "map" % node.func
             )
         return _op(tuple(values))
 
     def beforeChild(self, node, child, child_idx):
-        if not child._args:
+        if not child.args:
             item = self.object_map.getPyomoSymbol(child, None)
             if item is None:
                 item = float(child.evalf())
