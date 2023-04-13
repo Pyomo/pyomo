@@ -13,154 +13,30 @@
 from pyomo.common import DeveloperError
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
-from pyomo.core.expr.logical_expr import (
-    AndExpression,
-    EquivalenceExpression,
-    equivalent,
-    ImplicationExpression,
-    implies,
-    land,
-    lnot,
-    lor,
-    NotExpression,
-    OrExpression,
-    special_boolean_atom_types,
-    XorExpression,
-)
+from pyomo.core.expr.logical_expr import special_boolean_atom_types
 from pyomo.core.expr.numvalue import native_types, value
-from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
-
-_operatorMap = {}
-_pyomo_operator_map = {}
-
-
-def _configure_sympy(sympy, available):
-    if not available:
-        return
-
-    _operatorMap.update(
-        {
-            sympy.Or: lor,
-            sympy.And: land,
-            sympy.Implies: implies,
-            sympy.Equivalent: equivalent,
-            sympy.Not: lnot,
-        }
-    )
-
-    _pyomo_operator_map.update(
-        {
-            AndExpression: sympy.And,
-            OrExpression: sympy.Or,
-            ImplicationExpression: sympy.Implies,
-            EquivalenceExpression: sympy.Equivalent,
-            XorExpression: sympy.Xor,
-            NotExpression: sympy.Not,
-        }
-    )
+from pyomo.core.expr.sympy_tools import (
+    Pyomo2SympyVisitor,
+    PyomoSympyBimap,
+    sympy,
+    sympy2pyomo_expression,
+)
 
 
-sympy, _sympy_available = attempt_import('sympy', callback=_configure_sympy)
-
-
-class _PyomoSympyLogicalBimap(object):
-    def __init__(self):
-        self.pyomo2sympy = ComponentMap()
-        self.sympy2pyomo = {}
-        self.i = 0
-
-    def getPyomoSymbol(self, sympy_object, default=None):
-        return self.sympy2pyomo.get(sympy_object, default)
-
-    def getSympySymbol(self, pyomo_object):
-        if pyomo_object in self.pyomo2sympy:
-            return self.pyomo2sympy[pyomo_object]
-        # Pyomo currently ONLY supports Real variables (not complex
-        # variables).  If that ever changes, then we will need to
-        # revisit hard-coding the symbol type here
-        sympy_obj = sympy.Symbol("x%d" % self.i, real=True)
-        self.i += 1
-        self.pyomo2sympy[pyomo_object] = sympy_obj
-        self.sympy2pyomo[sympy_obj] = pyomo_object
-        return sympy_obj
-
-    def sympyVars(self):
-        return self.sympy2pyomo.keys()
-
-
-class _Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
+class CNF_Pyomo2SympyVisitor(Pyomo2SympyVisitor):
     def __init__(self, object_map, bool_varlist):
-        sympy.Add  # this ensures _configure_sympy gets run
-        super(_Pyomo2SympyVisitor, self).__init__()
-        self.object_map = object_map
+        super().__init__(object_map)
         self.boolean_variable_list = bool_varlist
         self.special_atom_map = ComponentMap()
 
-    def exitNode(self, node, values):
-        _op = _pyomo_operator_map.get(node.__class__, None)
-        if _op is None:
-            if node.__class__ in special_boolean_atom_types:
-                raise ValueError(
-                    "Encountered special atom class '%s' in root node" % node.__class__
-                )
-            return node._apply_operation(values)
-        else:
-            return _op(*tuple(values))
-
     def beforeChild(self, node, child, child_idx):
-        #
-        # Don't replace native or sympy types
-        #
-        if type(child) in native_types:
-            return False, child
-        #
-        # We will descend into all expressions...
-        #
-        if child.is_expression_type():
+        descend, result = super().beforeChild(node, child, child_idx)
+        if descend:
             if child.__class__ in special_boolean_atom_types:
                 indicator_var = self.boolean_variable_list.add()
                 self.special_atom_map[indicator_var] = child
                 return False, self.object_map.getSympySymbol(indicator_var)
-            else:
-                return True, None
-        #
-        # Replace pyomo variables with sympy variables
-        #
-        if child.is_potentially_variable():
-            return False, self.object_map.getSympySymbol(child)
-        #
-        # Everything else is a constant...
-        #
-        return False, value(child)
-
-
-class _Sympy2PyomoVisitor(StreamBasedExpressionVisitor):
-    def __init__(self, object_map):
-        sympy.Add  # this ensures _configure_sympy gets run
-        super(_Sympy2PyomoVisitor, self).__init__()
-        self.object_map = object_map
-
-    def enterNode(self, node):
-        return (node.args, [])
-
-    def exitNode(self, node, values):
-        """Visit nodes that have been expanded"""
-        _sympyOp = node
-        _op = _operatorMap.get(type(_sympyOp), None)
-        if _op is None:
-            raise DeveloperError(
-                "sympy expression type '%s' not found in the operator "
-                "map" % type(_sympyOp)
-            )
-        return _op(*tuple(values))
-
-    def beforeChild(self, node, child, child_idx):
-        if not child.args:
-            item = self.object_map.getPyomoSymbol(child, None)
-            if item is None:
-                item = float(child.evalf())
-            return False, item
-        return True, None
+        return descend, result
 
 
 def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
@@ -199,13 +75,13 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
 
     # While performing conversion to sympy, substitute new boolean variables for
     # non-root special atoms.
-    pyomo_sympy_map = _PyomoSympyLogicalBimap()
+    pyomo_sympy_map = PyomoSympyBimap()
     bool_var_to_special_atoms = (
         ComponentMap()
         if bool_var_to_special_atoms is None
         else bool_var_to_special_atoms
     )
-    visitor = _Pyomo2SympyVisitor(pyomo_sympy_map, bool_varlist)
+    visitor = CNF_Pyomo2SympyVisitor(pyomo_sympy_map, bool_varlist)
     sympy_expr = visitor.walk_expression(expr)
 
     new_statements = []
@@ -219,7 +95,7 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
 
     cnf_form = sympy.to_cnf(sympy_expr)
     return [
-        _sympy2pyomo_expression(cnf_form, pyomo_sympy_map)
+        sympy2pyomo_expression(cnf_form, pyomo_sympy_map)
     ] + new_statements  # additional statements
 
 
@@ -261,11 +137,3 @@ def _convert_children_to_literals(
         return [new_atom_with_literals] + new_statements
     else:
         return [special_atom]
-
-
-def _sympy2pyomo_expression(expr, object_map):
-    visitor = _Sympy2PyomoVisitor(object_map)
-    is_expr, ans = visitor.beforeChild(None, expr, None)
-    if not is_expr:
-        return ans
-    return visitor.walk_expression(expr)
