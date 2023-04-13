@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
 from pyomo.common import DeveloperError
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
@@ -42,9 +41,11 @@ class CNF_Pyomo2SympyVisitor(Pyomo2SympyVisitor):
 def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     """Converts a Pyomo logical constraint to CNF form.
 
-    Note: the atoms AtMostExpression, AtLeastExpression, and ExactlyExpression
-    require special treatment if they are not the root node, or if their children are not atoms,
-    e.g. atmost(2, Y1, Y1 | Y2, Y2, Y3)
+    Note: the atoms AtMostExpression, AtLeastExpression, and
+    ExactlyExpression require special treatment if they are not the root
+    node, or if their children are not atoms, e.g.
+
+        atmost(2, Y1, Y1 | Y2, Y2, Y3)
 
     As a result, the model may need to be augmented with
     additional boolean indicator variables and logical propositions.
@@ -85,14 +86,14 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     sympy_expr = visitor.walk_expression(expr)
 
     new_statements = []
-    # If visitor encountered any special atoms in non-root node, ensure that their children are literals:
+    # If visitor encountered any special atoms in non-root node, ensure
+    # that their children are literals:
     for indicator_var, special_atom in visitor.special_atom_map.items():
         atom_cnf = _convert_children_to_literals(
             special_atom, bool_varlist, bool_var_to_special_atoms
         )
         bool_var_to_special_atoms[indicator_var] = atom_cnf[0]
         new_statements.extend(atom_cnf[1:])
-
     cnf_form = sympy.to_cnf(sympy_expr)
     return [
         sympy2pyomo_expression(cnf_form, pyomo_sympy_map)
@@ -102,7 +103,8 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
 def _convert_children_to_literals(
     special_atom, bool_varlist, bool_var_to_special_atoms
 ):
-    """If the child logical constraints are not literals, substitute augmented boolean variables.
+    """If the child logical constraints are not literals, substitute
+    augmented boolean variables.
 
     Same return types as to_cnf() function.
 
