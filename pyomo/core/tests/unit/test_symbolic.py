@@ -397,7 +397,8 @@ class SymbolicDerivatives(unittest.TestCase):
 
         class bogus(object):
             def __init__(self):
-                self._args = (obj_map.getSympySymbol(m.x),)
+                self.args = (obj_map.getSympySymbol(m.x),)
+                self.func = type(self)
 
         self.assertRaisesRegex(
             DeveloperError,
