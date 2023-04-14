@@ -137,7 +137,7 @@ def _nondifferentiable(x):
     )
 
 
-def _external_fcn(x):
+def _external_fcn(*x):
     raise ValueError(
         "Expressions containing external functions are not convertible to "
         f"sympy expressions (found 'f{x}')"
