@@ -401,10 +401,11 @@ class SymbolicDerivatives(unittest.TestCase):
 
         self.assertRaisesRegex(
             DeveloperError,
-            "sympy expression .* not found in the operator map",
+            "sympy expression .*bogus'> not found in the operator map",
             sympy2pyomo_expression,
             bogus(),
             obj_map,
+            normalize_whitespace=True,
         )
 
 
