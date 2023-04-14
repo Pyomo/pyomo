@@ -510,7 +510,7 @@ class TestCase(_unittest.TestCase):
     def assertRaisesRegex(self, expected_exception, expected_regex, *args, **kwargs):
         """Asserts that the message in a raised exception matches a regex.
 
-        This is a light weight wrapper arounf
+        This is a light weight wrapper around
         :py:meth:`unittest.TestCase.assertRaisesRegex` that adds
         handling of a `normalize_whitespace` keyword argument that
         normalizes all consecutive whitespace in the exception message

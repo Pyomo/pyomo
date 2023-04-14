@@ -45,7 +45,7 @@ def format_exception(msg, prolog=None, epilog=None, exception=None, width=76):
                 break_long_words=False,
                 break_on_hyphens=False,
             ).lstrip()
-        # If the prolog line-wrapped, endure that the message is
+        # If the prolog line-wrapped, ensure that the message is
         # indented an additional level.
         if '\n' in prolog:
             indent = ' ' * 8
