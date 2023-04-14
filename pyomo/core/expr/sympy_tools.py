@@ -232,7 +232,7 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
         _op = _operatorMap.get(node.func, None)
         if _op is None:
             raise DeveloperError(
-                "sympy expression type %s not found in the operator " "map" % node.func
+                f"sympy expression type {node.func} not found in the operator map"
             )
         return _op(tuple(values))
 

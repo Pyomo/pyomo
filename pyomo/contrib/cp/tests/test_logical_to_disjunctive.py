@@ -335,6 +335,7 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
             r"This may be a mathematically coherent expression; However "
             r"it is not yet supported to convert it to a disjunctive "
             r"program.",
+            normalize_whitespace=True,
         ):
             visitor.walk_expression(e)
 
@@ -357,6 +358,7 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
             r"This may be a mathematically coherent expression; However "
             r"it is not yet supported to convert it to a disjunctive "
             r"program",
+            normalize_whitespace=True,
         ):
             visitor.walk_expression(e)
 
@@ -379,6 +381,7 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
             r"This may be a mathematically coherent expression; However "
             r"it is not yet supported to convert it to a disjunctive "
             r"program",
+            normalize_whitespace=True,
         ):
             visitor.walk_expression(e)
 
@@ -390,9 +393,10 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
 
         with self.assertRaisesRegex(
             MouseTrap,
-            "The RelationalExpression '3  <=  x' was used as a Boolean "
+            "The RelationalExpression '3 <= x' was used as a Boolean "
             "term in a logical proposition. This is not yet supported "
             "when transforming to disjunctive form.",
+            normalize_whitespace=True,
         ):
             visitor.walk_expression(e)
 

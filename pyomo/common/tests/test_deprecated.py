@@ -657,6 +657,7 @@ class TestRenamedClass(unittest.TestCase):
             "Declaring class 'DeprecatedClass' using the "
             "RenamedClass metaclass, but without specifying the "
             "__renamed__version__ class attribute",
+            normalize_whitespace=True,
         ):
 
             class DeprecatedClass(metaclass=RenamedClass):
