@@ -205,7 +205,7 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
         _op = _operatorMap.get(type(_sympyOp), None)
         if _op is None:
             raise DeveloperError(
-                "sympy expression type '%s' not found in the operator "
+                "sympy expression type %s not found in the operator "
                 "map" % type(_sympyOp)
             )
         return _op(*tuple(values))
