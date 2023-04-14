@@ -361,7 +361,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
 
         # Only thing left should be _BooleanVarData
         #
-        # TODO: Aftter the expr_multiple_dispatch is merged, this should
+        # TODO: After the expr_multiple_dispatch is merged, this should
         # be switched to using as_numeric.
         if hasattr(child, 'get_associated_binary'):
             return False, child.get_associated_binary()
