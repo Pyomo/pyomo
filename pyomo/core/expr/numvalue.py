@@ -527,12 +527,11 @@ def check_if_numeric_type(obj):
         # numeric types is more robust when registering explicitly.
         #
         logger.warning(
-            """Dynamically registering the following numeric type:
-    %s
+            f"""Dynamically registering the following numeric type:
+    {obj_class.__module__}.{obj_class.__name__}
 Dynamic registration is supported for convenience, but there are known
 limitations to this approach.  We recommend explicitly registering
 numeric types using RegisterNumericType() or RegisterIntegerType()."""
-            % (obj_class.__name__,)
         )
         return True
     else:
@@ -1062,6 +1061,7 @@ ZeroConstant = as_numeric(0)
 # Note: the "if numpy_available" in the class definition also ensures
 # that the numpy types are registered if numpy is in fact available
 #
+
 class NumericNDArray(np.ndarray if numpy_available else object):
     """An ndarray subclass that stores Pyomo numeric expressions"""
 
