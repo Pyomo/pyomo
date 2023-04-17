@@ -144,8 +144,14 @@ class TransformCurrentDisjunctiveLogic(ReversibleTransformation):
                 true_val.add(disjunct)
             else:
                 false_val.add(disjunct)
-        if disjunction.xor:
-            if len(true_val) > 1 or len(false_val) == num_disjuncts:
+        if len(false_val) == num_disjuncts:
+            raise InfeasibleConstraintException(
+                "Logical constraint for Disjunction "
+                "'%s' is violated: All the Disjunct "
+                "indicator_vars are 'False.'" % disjunction.name
+            )
+        elif disjunction.xor:
+            if len(true_val) > 1:
                 raise InfeasibleConstraintException(
                     "Exactly-one constraint for Disjunction "
                     "'%s' is violated. The following Disjuncts "
@@ -168,13 +174,8 @@ class TransformCurrentDisjunctiveLogic(ReversibleTransformation):
                 )
                 reverse_token['_disjunctions'].add(disjunction)
                 disjunction.deactivate()
-        # It's only an 'at-least' not an 'exactly'...
-        elif len(false_val) == num_disjuncts:
-            raise InfeasibleConstraintException(
-                "Atleast-one constraint for Disjunction "
-                "'%s' is violated. That is, all the Disjunct "
-                "indicator_vars are 'False'." % disjunction.name
-            )
+        # It's only an 'at-least' not an 'exactly', so if everything has a value
+        # we can transform it
         elif len(no_val) == 0:
             self._reclassify_disjuncts(true_val, false_val, reverse_token['_disjuncts'])
             reverse_token['_disjunctions'].add(disjunction)

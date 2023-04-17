@@ -110,9 +110,9 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         m.d2.indicator_var.set_value(False)
         with self.assertRaisesRegex(
             InfeasibleConstraintException,
-            "Exactly-one constraint for Disjunction "
-            "'disjunction1' is violated. The following Disjuncts "
-            "are selected: ",
+            "Logical constraint for Disjunction "
+            "'disjunction1' is violated: All the "
+            "Disjunct indicator_vars are 'False.'",
         ):
             TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(m)
 
@@ -280,8 +280,8 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
 
         with self.assertRaisesRegex(
             InfeasibleConstraintException,
-            "Atleast-one constraint for Disjunction "
-            "'disjunction2' is violated. That is, all "
-            "the Disjunct indicator_vars are 'False'.",
+            "Logical constraint for Disjunction "
+            "'disjunction2' is violated: All "
+            "the Disjunct indicator_vars are 'False.'",
         ):
             TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(m)
