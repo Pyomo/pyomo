@@ -19,7 +19,6 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
 
 
 def main():
-
     # Vars to estimate
     theta_names = ['k1', 'k2', 'k3']
 

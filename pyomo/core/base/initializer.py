@@ -380,7 +380,7 @@ class CountedCallInitializer(InitializerBase):
     #
     # [JDS 6/2019] We will support a slightly restricted but more
     # consistent form of the original implementation for backwards
-    # compatability, but I believe that we should deprecate this syntax
+    # compatibility, but I believe that we should deprecate this syntax
     # entirely.
     __slots__ = ('_fcn', '_is_counted_rule', '_scalar', '_ctype', '_start')
 

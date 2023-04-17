@@ -86,7 +86,6 @@ class BaselineTests(Tests):
 
 @unittest.skipUnless(has_gjh_asl_json, "'gjh_asl_json' executable not available")
 class ASLJSONTests(Tests):
-
     #
     # The following test calls the gjh_asl_json executable to
     # generate JSON files corresponding to both the

@@ -83,7 +83,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertListEqual(ddata.tolist(), sdata.tolist())
 
     def test_tocsr(self):
-
         block = self.block_m
         m = self.basic_m
         scipy_mat = bmat([[block, block], [None, block]], format='csr')
@@ -114,7 +113,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertListEqual(ddata.tolist(), sdata.tolist())
 
     def test_multiply(self):
-
         # check scalar multiplication
         block = self.block_m
         m = self.basic_m * 5.0
@@ -178,7 +176,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
 
     def test_getitem(self):
-
         m = BlockMatrix(3, 3)
         for i in range(3):
             for j in range(3):
@@ -188,7 +185,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertEqual(m.get_block(0, 1).shape, self.block_m.shape)
 
     def test_setitem(self):
-
         m = BlockMatrix(2, 2)
         m.set_block(0, 1, self.block_m)
         self.assertFalse(m.is_empty_block(0, 1))
@@ -247,7 +243,6 @@ class TestBlockMatrix(unittest.TestCase):
             self.assertIsNone(self.basic_m.get_block(j, 0))
 
     def test_to_scipy(self):
-
         block = self.block_m
         m = self.basic_m
         scipy_mat = bmat([[block, block], [None, block]], format='coo')
@@ -269,7 +264,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertFalse(self.basic_m.has_undefined_col_sizes())
 
     def test_transpose(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m
         A_dense_t = A_dense.transpose()
@@ -286,7 +280,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertEqual(len(self.basic_m.__repr__()), 17)
 
     def test_set_item(self):
-
         self.basic_m.set_block(1, 0, None)
         self.assertIsNone(self.basic_m.get_block(1, 0))
         self.basic_m.set_block(1, 1, None)
@@ -296,7 +289,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertEqual(self.basic_m._brow_lengths[1], self.block_m.shape[0])
 
     def test_add(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m
 
@@ -360,7 +352,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(res.toarray(), self.dense + self.dense.transpose()))
 
     def test_sub(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m
         A_block2 = 2 * self.basic_m
@@ -409,7 +400,6 @@ class TestBlockMatrix(unittest.TestCase):
         )
 
     def test_neg(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m
 
@@ -497,7 +487,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
     def test_iadd(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m.copy()
         A_dense += A_dense
@@ -522,7 +511,6 @@ class TestBlockMatrix(unittest.TestCase):
             A_block += 1.0
 
     def test_isub(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m
         A_dense -= A_dense
@@ -547,7 +535,6 @@ class TestBlockMatrix(unittest.TestCase):
             A_block -= 1.0
 
     def test_imul(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m
         print(A_dense)
@@ -571,7 +558,6 @@ class TestBlockMatrix(unittest.TestCase):
             A_block *= A_block.toarray()
 
     def test_itruediv(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m.copy()
         A_dense /= 3
@@ -589,7 +575,6 @@ class TestBlockMatrix(unittest.TestCase):
             A_block /= A_block.toarray()
 
     def test_truediv(self):
-
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m
         B_block = A_block / 3.0
@@ -608,7 +593,6 @@ class TestBlockMatrix(unittest.TestCase):
             B_block = 3.0 / A_block
 
     def test_eq(self):
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             A_flat = self.basic_m.tocoo()
@@ -629,7 +613,6 @@ class TestBlockMatrix(unittest.TestCase):
             self.assertTrue(np.allclose(A_bool_flat.toarray(), A_bool_block.toarray()))
 
     def test_ne(self):
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             A_flat = self.basic_m.tocoo()
@@ -649,7 +632,6 @@ class TestBlockMatrix(unittest.TestCase):
             self.assertTrue(np.allclose(A_bool_flat.toarray(), A_bool_block.toarray()))
 
     def test_le(self):
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             A_flat = self.basic_m.tocoo()
@@ -679,7 +661,6 @@ class TestBlockMatrix(unittest.TestCase):
             self.assertTrue(np.allclose(A_bool_flat.toarray(), A_bool_block.toarray()))
 
     def test_lt(self):
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             A_flat = self.basic_m.tocoo()
@@ -710,7 +691,6 @@ class TestBlockMatrix(unittest.TestCase):
             self.assertTrue(np.allclose(A_bool_flat.toarray(), A_bool_block.toarray()))
 
     def test_ge(self):
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             A_flat = self.basic_m.tocoo()
@@ -735,7 +715,6 @@ class TestBlockMatrix(unittest.TestCase):
             self.assertTrue(np.allclose(A_bool_flat.toarray(), A_bool_block.toarray()))
 
     def test_gt(self):
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             A = self.basic_m.copy()
@@ -746,7 +725,6 @@ class TestBlockMatrix(unittest.TestCase):
             self.assertTrue(np.allclose(res.toarray(), expected))
 
     def test_abs(self):
-
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = -1.0 * np.array([2.0, 1, 3, 4, 5, 1])
@@ -766,7 +744,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(abs_flat.toarray(), abs_mat.toarray()))
 
     def test_getcol(self):
-
         m = self.basic_m
 
         flat_mat = m.tocoo()
@@ -783,7 +760,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(flat_col.toarray().flatten(), block_col.flatten()))
 
     def test_getrow(self):
-
         m = self.basic_m
 
         flat_mat = m.tocoo()
@@ -796,7 +772,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(flat_row.toarray().flatten(), block_row.flatten()))
 
     def test_nonzero(self):
-
         m = self.basic_m
         flat_mat = m.tocoo()
         flat_row, flat_col = flat_mat.nonzero()
@@ -804,7 +779,6 @@ class TestBlockMatrix(unittest.TestCase):
             block_row, block_col = m.nonzero()
 
     def test_get_block_column_index(self):
-
         m = BlockMatrix(2, 4)
         m.set_block(0, 0, coo_matrix((3, 2)))
         m.set_block(0, 1, coo_matrix((3, 4)))
@@ -820,7 +794,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertEqual(bcol, 3)
 
     def test_get_block_row_index(self):
-
         m = BlockMatrix(2, 4)
         m.set_block(0, 0, coo_matrix((3, 2)))
         m.set_block(0, 1, coo_matrix((3, 4)))

@@ -117,7 +117,7 @@ class TestFixDisjuncts(unittest.TestCase):
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_logical_constraints_transformed(self):
         """It is expected that the result of this transformation is a MI(N)LP,
-        so check that LogicalConstraints are handeled correctly"""
+        so check that LogicalConstraints are handled correctly"""
         m = ConcreteModel()
         m.x = Var(bounds=(0, 10))
         m.d1 = Disjunct()

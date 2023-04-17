@@ -1101,7 +1101,7 @@ class PyomoUnitsContainer(object):
         if pint_unit is None:
             raise AttributeError(f'Attribute {item} not found.')
 
-    # We added support to specify a units definition file instead of this programatic interface
+    # We added support to specify a units definition file instead of this programmatic interface
     # def create_new_base_dimension(self, dimension_name, base_unit_name):
     #     """
     #     Use this method to create a new base dimension (e.g. a new dimension other than Length, Mass) for the unit manager.
@@ -1239,7 +1239,7 @@ class PyomoUnitsContainer(object):
 
     def convert_temp_K_to_C(self, value_in_K):
         """
-        Convert a value in Kelvin to degrees Celcius.  Note that this method
+        Convert a value in Kelvin to degrees Celsius.  Note that this method
         converts a numerical value only. If you need temperature
         conversions in expressions, please work in absolute
         temperatures only.
@@ -1250,7 +1250,7 @@ class PyomoUnitsContainer(object):
 
     def convert_temp_C_to_K(self, value_in_C):
         """
-        Convert a value in degrees Celcius to Kelvin Note that this
+        Convert a value in degrees Celsius to Kelvin Note that this
         method converts a numerical value only. If you need
         temperature conversions in expressions, please work in
         absolute temperatures only.
@@ -1501,7 +1501,7 @@ class _DeferredUnitsSingleton(PyomoUnitsContainer):
         pass
 
     def __getattribute__(self, attr):
-        # Note that this methos will only be called ONCE: either pint is
+        # Note that this method will only be called ONCE: either pint is
         # present, at which point this instance __class__ will fall back
         # to PyomoUnitsContainer (where this method is not declared, OR
         # pint is not available and an ImportError will be raised.

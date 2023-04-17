@@ -56,7 +56,7 @@ def tostr(value, quote_str=False):
     """
     # Override the generation of str(list), but only if the object is
     # using the default implementation of list.__str__.  Note that the
-    # default implemention of __str__ (in CPython) is to call __repr__,
+    # default implementation of __str__ (in CPython) is to call __repr__,
     # so we will test both.  This is particularly important for
     # collections.namedtuple, which reimplements __repr__ but not
     # __str__.

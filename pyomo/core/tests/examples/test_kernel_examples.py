@@ -57,7 +57,7 @@ def create_method(example):
     # It is important that this inner function has a name that
     # starts with 'test' in order for pytest to discover it
     # after we assign it to the class. I have _no_ idea why
-    # this is the case since we are returing the function object
+    # this is the case since we are returning the function object
     # and placing it on the class with a different name.
     def testmethod(self):
         if basename(example) == "piecewise_nd_functions.py":

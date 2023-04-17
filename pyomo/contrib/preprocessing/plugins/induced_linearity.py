@@ -148,7 +148,7 @@ def determine_valid_values(block, discr_var_to_constrs_map, config):
 
     Right now, we select a naive approach where we look for variables in the
     discreteness-inducing constraints. We then adjust their values and see if
-    things are stil feasible. Based on their coefficient values, we can infer a
+    things are still feasible. Based on their coefficient values, we can infer a
     set of allowable values for the effectively discrete variable.
 
     Args:

@@ -302,6 +302,7 @@ class TestIndexedComponent(unittest.TestCase):
             ".*The '_data' dictionary and '_index' attribute are out of "
             "sync for indexed Var 'x': The 2 entry in the '_data' "
             "dictionary does not map back to this component data object.",
+            normalize_whitespace=True,
         ):
             m.x[3].index()
 

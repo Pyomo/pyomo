@@ -143,6 +143,7 @@ def collect_linear_terms(block, unfixed):
                 #
                 v_domain[name, ndx] = 0
                 b_coef[name, ndx] = lower_terms.constant - body_terms.constant
+
     #
     # Collect bound constraints
     #

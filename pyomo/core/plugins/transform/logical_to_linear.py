@@ -1,6 +1,7 @@
 """Transformation from BooleanVar and LogicalConstraint to Binary and
 Constraints."""
 from pyomo.common.collections import ComponentMap
+from pyomo.common.errors import MouseTrap, DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
@@ -304,7 +305,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
             rhs_lb, rhs_ub = compute_bounds_on_expr(values[0])
             if rhs_lb == float('-inf') or rhs_ub == float('inf'):
                 raise ValueError(
-                    "Cannnot generate linear constraints for %s"
+                    "Cannot generate linear constraints for %s"
                     "([N, *logical_args]) with unbounded N. "
                     "Detected %s <= N <= %s." % (type(node).__name__, rhs_lb, rhs_ub)
                 )
@@ -335,7 +336,17 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
                     + (-(rhs_lb - 1) + num_args) * (1 - less_than_binary),
                     sum_values >= values[0] + 1 - (rhs_ub + 1) * (1 - more_than_binary),
                 ]
-            pass
+        if type(node) in _numeric_relational_types:
+            raise MouseTrap(
+                "core.logical_to_linear does not support transforming "
+                "LogicalConstraints with embedded relational expressions.  "
+                f"Found '{node}'."
+            )
+        else:
+            raise DeveloperError(
+                f"Unsupported node type {type(node)} encountered when "
+                f"transforming a CNF expression to its linear equivalent ({node})."
+            )
 
     def beforeChild(self, node, child, child_idx):
         if type(node) in special_boolean_atom_types and child is node.args[0]:
@@ -349,7 +360,13 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
             return True, None
 
         # Only thing left should be _BooleanVarData
-        return False, child.get_associated_binary()
+        #
+        # TODO: After the expr_multiple_dispatch is merged, this should
+        # be switched to using as_numeric.
+        if hasattr(child, 'get_associated_binary'):
+            return False, child.get_associated_binary()
+        else:
+            return False, child
 
     def finalizeResult(self, result):
         if type(result) is list:

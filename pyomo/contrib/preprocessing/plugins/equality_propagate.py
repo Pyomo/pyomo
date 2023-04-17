@@ -129,7 +129,7 @@ class FixedVarPropagator(IsomorphicTransformation):
         fixed_vars.update(newly_fixed)
         processed = ComponentSet()
         # Go through each fixed variable to propagate the 'fixed' status to all
-        # equality-linked variabes.
+        # equality-linked variables.
         for v1 in fixed_vars:
             # If we have already processed the variable, skip it.
             if v1 in processed:

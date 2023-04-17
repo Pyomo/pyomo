@@ -138,8 +138,8 @@ class _ComponentBase(PyomoObject):
             # will check that id(self) is not in __block_scope__: if it
             # is, then this is the top-level block and we need to do the
             # normal deepcopy.  We defer this check until now for
-            # efficiency reasons beause we expect that (for sane models)
-            # the bulk of the ccomponents we will encounter will be *in*
+            # efficiency reasons because we expect that (for sane models)
+            # the bulk of the components we will encounter will be *in*
             # scope.
             if not _in_scope and id(self) not in _scope:
                 # component is out-of-scope.  shallow copy only
@@ -416,7 +416,7 @@ class _ComponentBase(PyomoObject):
         if prefix:
             ostream = StreamIndenter(ostream, prefix)
 
-        # FIXME: HACK for backwards compatability with suppressing the
+        # FIXME: HACK for backwards compatibility with suppressing the
         # header for the top block
         if not _attr and self.parent_block() is None:
             _name = ''
@@ -441,7 +441,7 @@ class _ComponentBase(PyomoObject):
             ostream.write("\n")
 
         if not _constructed:
-            # HACK: for backwards compatability, Abstract blocks will
+            # HACK: for backwards compatibility, Abstract blocks will
             # still print their assigned components.  Should we instead
             # always pprint unconstructed components (possibly
             # suppressing the table header if the table is empty)?
@@ -618,7 +618,7 @@ class Component(_ComponentBase):
             Generate full name from nested block names
 
         relative_to: Block
-            Generate fully_qualified names reletive to the specified block.
+            Generate fully_qualified names relative to the specified block.
         """
         local_name = self._name
         if fully_qualified:
@@ -661,7 +661,7 @@ class Component(_ComponentBase):
         """Get the fully qualifed component name."""
         return self.getname(fully_qualified=True)
 
-    # Allow setting a componet's name if it is not owned by a parent
+    # Allow setting a component's name if it is not owned by a parent
     # block (this supports, e.g., naming a model)
     @name.setter
     def name(self, val):

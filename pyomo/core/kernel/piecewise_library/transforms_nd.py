@@ -12,7 +12,7 @@
 """
 This module contains transformations for representing a
 multi-variate piecewise linear function using a
-mixed-interger problem formulation. Reference::
+mixed-integer problem formulation. Reference::
 
   Mixed-Integer Models for Non-separable Piecewise Linear
 Optimization: Unifying framework and Extensions (Vielma,

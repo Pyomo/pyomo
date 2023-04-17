@@ -43,7 +43,7 @@ def _disable_method(fcn, msg=None, exception=RuntimeError):
     # functools.wraps doesn't preserve the function signature until
     # Python 3.4, and even then, does not preserve it accurately (e.g.,
     # calling with the incorrect number of arguments does not generate
-    # an error).  For backwards compatability with Python 2.x, we will
+    # an error).  For backwards compatibility with Python 2.x, we will
     # create a temporary (local) function using exec that matches the
     # function signature passed in and raises an exception
     sig = inspect.signature(fcn)

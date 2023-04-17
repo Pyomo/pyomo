@@ -532,7 +532,7 @@ class RenamedClass(type):
                 # Flag that this class is derived from a renamed class
                 classdict.setdefault('__renamed__new_class__', None)
             # Avoid duplicates (in case someone does a diamond between
-            # the renamed class and [a class dervied from] the new
+            # the renamed class and [a class derived from] the new
             # class)
             if base not in renamed_bases:
                 renamed_bases.append(base)

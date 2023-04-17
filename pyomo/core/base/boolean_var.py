@@ -165,7 +165,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
             self.set_value(value, skip_validation)
 
     def unfix(self):
-        """Unfix this varaible (treat as variable)
+        """Unfix this variable (treat as variable)
 
         This sets the `fixed` indicator to False.
 
@@ -583,7 +583,7 @@ class IndexedBooleanVar(BooleanVar):
             boolean_vardata.fix(value, skip_validation)
 
     def unfix(self):
-        """Unfix all varaibles in this IndexedBooleanVar (treat as variable)
+        """Unfix all variables in this IndexedBooleanVar (treat as variable)
 
         This sets the `fixed` indicator to False for every variable in
         this IndexedBooleanVar.

@@ -50,7 +50,7 @@ class ScenarioNode:
     """Store a node in the scenario tree.
 
     Note:
-      This can only be created programatically from a scenario
+      This can only be created programmatically from a scenario
       creation function. (maybe that function reads data)
 
     Args:

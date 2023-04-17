@@ -1510,6 +1510,7 @@ class MiscConTests(unittest.TestCase):
         except Exception:
             e = sys.exc_info()[1]
             self.fail("Failure to create empty constraint: %s" % str(e))
+
         #
         def rule1(model):
             return (0.0, model.x, 2.0)
@@ -1519,6 +1520,7 @@ class MiscConTests(unittest.TestCase):
         model.o = Constraint(rule=rule1)
 
         self.assertEqual(model.o(), 1.1)
+
         #
         def rule1(model, i):
             return Constraint.Skip
@@ -1553,6 +1555,7 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(model.c.lower, 0)
         self.assertIs(model.c.body, model.x)
         self.assertEqual(model.c.upper, 0)
+
         #
         def rule1(model):
             return (model.y, model.x, model.z)
@@ -1589,6 +1592,7 @@ class MiscConTests(unittest.TestCase):
         model.z = Var()
         model.o = Constraint(rule=rule1)
         self.assertRaises(TypeError, model.create_instance)
+
         #
         def rule1(model):
             expr = model.U >= model.x
@@ -1612,6 +1616,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
+
         # self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
@@ -1624,6 +1629,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
+
         # self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
@@ -1635,6 +1641,7 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.y = Var()
         model.o = Constraint(rule=rule1)
+
         # self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
@@ -1669,6 +1676,7 @@ class MiscConTests(unittest.TestCase):
         model.z = Var()
         model.o = Constraint(rule=rule1)
         self.assertRaises(TypeError, model.create_instance)
+
         #
         def rule1(model):
             expr = model.U <= model.x
@@ -1692,6 +1700,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
+
         # self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
@@ -1704,6 +1713,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
+
         # self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
@@ -1714,6 +1724,7 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.L = Param(initialize=0)
         model.o = Constraint(rule=rule1)
+
         #
         def rule1(model):
             expr = model.y >= model.x
@@ -1724,6 +1735,7 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.y = Var()
         model.o = Constraint(rule=rule1)
+
         # self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):

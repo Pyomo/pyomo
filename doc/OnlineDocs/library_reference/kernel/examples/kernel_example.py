@@ -5,6 +5,7 @@ import pyomo.kernel as pmo
 
 data = None
 
+
 # @AbstractModels
 def create(data):
     instance = pmo.block()

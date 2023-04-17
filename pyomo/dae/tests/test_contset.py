@@ -27,7 +27,6 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 
 class TestContinuousSet(unittest.TestCase):
-
     # test __init__
     def test_init(self):
         model = ConcreteModel()

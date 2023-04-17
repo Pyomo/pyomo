@@ -30,7 +30,6 @@ solvers = pyomo.opt.check_available_solvers('ipopt')
 
 
 class CommonTests:
-
     solve = True
     solver = 'mpec_nlp'
 

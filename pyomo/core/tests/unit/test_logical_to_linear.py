@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
+from pyomo.common.errors import MouseTrap, DeveloperError
 from pyomo.common.log import LoggingIntercept
 import logging
 
@@ -21,14 +22,16 @@ from pyomo.environ import (
     ConcreteModel,
     BooleanVar,
     LogicalConstraint,
-    lor,
     TransformationFactory,
     RangeSet,
     Var,
     Constraint,
+    ExternalFunction,
     ComponentMap,
     value,
     BooleanSet,
+    land,
+    lor,
     atleast,
     atmost,
     exactly,
@@ -61,6 +64,7 @@ def _constrs_contained_within(test_case, test_constr_tuples, constraint_list):
     test_case : unittest.TestCase
 
     """
+
     # Move const term from body
     def _move_const_from_body(lower, repn, upper):
         if repn.constant is not None and not repn.constant == 0:
@@ -825,6 +829,36 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
             r"\n\tReceived <class 'int'>",
         ):
             TransformationFactory('core.logical_to_linear').apply_to(m, targets=1)
+
+    def test_mixed_logical_relational_expressions(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = BooleanVar([1, 2])
+        m.c = LogicalConstraint(expr=(land(m.y[1], m.y[2]).implies(m.x >= 0)))
+        with self.assertRaisesRegex(
+            MouseTrap,
+            "core.logical_to_linear does not support transforming "
+            "LogicalConstraints with embedded relational expressions. "
+            "Found '0.0 <= x'.",
+            normalize_whitespace=True,
+        ):
+            TransformationFactory('core.logical_to_linear').apply_to(m)
+
+    def test_external_function(self):
+        def _fcn(*args):
+            raise RuntimeError('unreachable')
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.f = ExternalFunction(_fcn)
+        m.y = BooleanVar()
+        m.c = LogicalConstraint(expr=(m.y.implies(m.f(m.x))))
+        with self.assertRaisesRegex(
+            ValueError,
+            "Expressions containing external functions are not convertible "
+            r"to sympy expressions \(found 'f\(x1",
+        ):
+            TransformationFactory('core.logical_to_linear').apply_to(m)
 
 
 @unittest.skipUnless(sympy_available, "Sympy not available")

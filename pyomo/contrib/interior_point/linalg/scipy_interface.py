@@ -41,6 +41,6 @@ class ScipyInterface(ScipyLU, IPLinearSolverInterface):
     def get_inertia(self):
         if self._inertia is None:
             raise RuntimeError(
-                'The intertia was not computed during do_numeric_factorization. Set compute_inertia to True.'
+                'The inertia was not computed during do_numeric_factorization. Set compute_inertia to True.'
             )
         return self._inertia

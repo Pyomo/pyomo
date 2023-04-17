@@ -182,9 +182,9 @@
     <string>Move Cell &amp;Down</string>
    </property>
   </action>
-  <action name="action_Interupt_Kernel">
+  <action name="action_Interrupt_Kernel">
    <property name="text">
-    <string>&amp;Interupt Kernel</string>
+    <string>&amp;Interrupt Kernel</string>
    </property>
   </action>
   <action name="actionToggle_Always_on_Top">

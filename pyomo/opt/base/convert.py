@@ -77,9 +77,7 @@ def convert_problem(
     # Apply conversion and return for first match
     #
     for ptype in valid_ptypes:
-
         for s_ptype in source_ptype:
-
             #
             # If the source and target types are equal, then simply the return
             # the args (return just the first element of the tuple if it has length
@@ -91,7 +89,6 @@ def convert_problem(
             # Otherwise, try to convert
             #
             for name in ProblemConverterFactory:
-
                 converter = ProblemConverterFactory(name)
                 if converter.can_convert(s_ptype, ptype):
                     tmp = [s_ptype, ptype] + list(args)

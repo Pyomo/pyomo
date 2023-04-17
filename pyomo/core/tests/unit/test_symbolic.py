@@ -170,7 +170,7 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertTrue(e.is_expression_type())
         self.assertEqual(s(e), s(2.0 * m.x * m.y**-1.0))
 
-    def test_trig_fuctions(self):
+    def test_trig_functions(self):
         m = ConcreteModel()
         m.x = Var()
 
@@ -397,14 +397,16 @@ class SymbolicDerivatives(unittest.TestCase):
 
         class bogus(object):
             def __init__(self):
-                self._args = (obj_map.getSympySymbol(m.x),)
+                self.args = (obj_map.getSympySymbol(m.x),)
+                self.func = type(self)
 
         self.assertRaisesRegex(
             DeveloperError,
-            "sympy expression .* not found in the operator map",
+            "sympy expression .*bogus'> not found in the operator map",
             sympy2pyomo_expression,
             bogus(),
             obj_map,
+            normalize_whitespace=True,
         )
 
 

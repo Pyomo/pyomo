@@ -6,6 +6,7 @@ model = pyo.AbstractModel()
 model.Z = pyo.Param(within=pyo.Reals)
 # @:decl1
 
+
 # @decl2:
 def Y_validate(model, value):
     return value in pyo.Reals

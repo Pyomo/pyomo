@@ -1,5 +1,6 @@
 import pyomo.kernel
 
+
 # @Nonnegative
 class NonNegativeVariable(pyomo.kernel.variable):
     """A non-negative variable."""
@@ -31,6 +32,7 @@ class NonNegativeVariable(pyomo.kernel.variable):
 
 # @Nonnegative
 
+
 # @Point
 class Point(pyomo.kernel.variable_tuple):
     """A 3-dimensional point in Cartesian space with the
@@ -57,6 +59,7 @@ class Point(pyomo.kernel.variable_tuple):
 
 
 # @Point
+
 
 # @SOC
 class SOC(pyomo.kernel.constraint):

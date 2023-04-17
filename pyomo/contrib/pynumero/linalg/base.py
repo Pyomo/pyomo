@@ -57,7 +57,6 @@ class DirectLinearSolverInterface(LinearSolverInterface, metaclass=ABCMeta):
         rhs: Union[np.ndarray, BlockVector],
         raise_on_error: bool = True,
     ) -> Tuple[Optional[Union[np.ndarray, BlockVector]], LinearSolverResults]:
-
         symbolic_res = self.do_symbolic_factorization(
             matrix, raise_on_error=raise_on_error
         )

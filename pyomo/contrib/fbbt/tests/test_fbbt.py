@@ -1061,7 +1061,7 @@ class FbbtTestBase(object):
     def test_skip_unknown_expression1(self):
         if self.tightener is not fbbt:
             raise unittest.SkipTest(
-                'Appsi FBBT does not support unkown expressions yet'
+                'Appsi FBBT does not support unknown expressions yet'
             )
 
         m = pyo.ConcreteModel()
@@ -1083,7 +1083,7 @@ class FbbtTestBase(object):
     def test_skip_unknown_expression2(self):
         if self.tightener is not fbbt:
             raise unittest.SkipTest(
-                'Appsi FBBT does not support unkown expressions yet'
+                'Appsi FBBT does not support unknown expressions yet'
             )
 
         def dummy_unary_expr(x):
@@ -1290,7 +1290,7 @@ class FbbtTestBase(object):
     def test_external_function(self):
         if self.tightener is not fbbt:
             raise unittest.SkipTest(
-                'Appsi FBBT does not support unkown expressions yet'
+                'Appsi FBBT does not support unknown expressions yet'
             )
 
         m = pyo.ConcreteModel()

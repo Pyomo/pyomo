@@ -35,7 +35,6 @@ import pyomo.contrib.parmest.parmest as parmest
 
 
 def simple_reaction_model(data):
-
     # Create the concrete model
     model = ConcreteModel()
 

@@ -103,9 +103,9 @@ model.TDEC = Param(within=PositiveReals)
 # define stochastic info
 model.rand_d = Param(model.SCEN, model.DEM, within=NonNegativeReals, mutable=True)
 
+
 # convert units for input data
 def rescale_rule(m):
-
     for i in m.LINK:
         m.ldiam[i] = m.ldiam[i] * m.dfac
         m.llength[i] = m.llength[i] * m.lfac
@@ -131,7 +131,6 @@ model.rescale = BuildAction(rule=rescale_rule)
 
 
 def compute_constants(m):
-
     for i in m.LINK:
         m.lam[i] = (2.0 * log10(3.7 * m.ldiam[i] / (m.eps * m.dfac))) ** (-2.0)
         m.A[i] = (1.0 / 4.0) * m.pi * m.ldiam[i] * m.ldiam[i]
@@ -149,9 +148,9 @@ def compute_constants(m):
 
 model.compute_constants = BuildAction(rule=compute_constants)
 
+
 # set stochastic demands
 def compute_demands_rule(m):
-
     for k in m.SCEN:
         for j in m.DEM:
             if k == 2:
@@ -189,6 +188,7 @@ model.stochd = Param(
     mutable=True,
     default=stochd_init,
 )
+
 
 # define temporal variables
 def p_bounds_rule(m, k, j, t):
@@ -242,6 +242,7 @@ model.dfxdx = DerivativeVar(model.fx, wrt=model.DIS, initialize=0)
 
 # ----------- MODEL --------------
 
+
 # compressor equations
 def powereq_rule(m, j, i, t):
     return m.pow[j, i, t] == m.c4 * m.fin[j, i, t] * (
@@ -265,6 +266,7 @@ def cvarcost_rule(m):
 
 model.cvarcost = Expression(rule=cvarcost_rule)
 
+
 # node balances
 def nodeeq_rule(m, k, i, t):
     return (
@@ -277,6 +279,7 @@ def nodeeq_rule(m, k, i, t):
 
 
 model.nodeeq = Constraint(model.SCEN, model.NODE, model.TIME, rule=nodeeq_rule)
+
 
 # boundary conditions flow
 def flow_start_rule(m, j, i, t):
@@ -292,6 +295,7 @@ def flow_end_rule(m, j, i, t):
 
 model.flow_end = Constraint(model.SCEN, model.LINK, model.TIME, rule=flow_end_rule)
 
+
 # First PDE for gas network model
 def flow_rule(m, j, i, t, k):
     if t == m.TIME.first() or k == m.DIS.last():
@@ -302,6 +306,7 @@ def flow_rule(m, j, i, t, k):
 
 
 model.flow = Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=flow_rule)
+
 
 # Second PDE for gas network model
 def press_rule(m, j, i, t, k):
@@ -329,6 +334,7 @@ model.slackeq = Constraint(
     model.SCEN, model.LINK, model.TIME, model.DIS, rule=slackeq_rule
 )
 
+
 # boundary conditions pressure, passive links
 def presspas_start_rule(m, j, i, t):
     return m.px[j, i, t, m.DIS.first()] == m.p[j, m.lstartloc[i], t]
@@ -346,6 +352,7 @@ def presspas_end_rule(m, j, i, t):
 model.presspas_end = Constraint(
     model.SCEN, model.LINK_P, model.TIME, rule=presspas_end_rule
 )
+
 
 # boundary conditions pressure, active links
 def pressact_start_rule(m, j, i, t):
@@ -365,12 +372,14 @@ model.pressact_end = Constraint(
     model.SCEN, model.LINK_A, model.TIME, rule=pressact_end_rule
 )
 
+
 # fix pressure at supply nodes
-def suppres_rule(m, k, j, t):
+def suppress_rule(m, k, j, t):
     return m.p[k, m.sloc[j], t] == m.pmin[m.sloc[j]]
 
 
-model.suppres = Constraint(model.SCEN, model.SUP, model.TIME, rule=suppres_rule)
+model.suppress = Constraint(model.SCEN, model.SUP, model.TIME, rule=suppress_rule)
+
 
 # discharge pressure for compressors
 def dispress_rule(m, j, i, t):
@@ -378,6 +387,7 @@ def dispress_rule(m, j, i, t):
 
 
 model.dispress = Constraint(model.SCEN, model.LINK_A, model.TIME, rule=dispress_rule)
+
 
 # ss constraints
 def flow_ss_rule(m, j, i, k):
@@ -400,6 +410,7 @@ def pres_ss_rule(m, j, i, k):
 
 
 model.pres_ss = Constraint(model.SCEN, model.LINK, model.DIS, rule=pres_ss_rule)
+
 
 # non-anticipativity constraints
 def nonantdq_rule(m, j, i, t):

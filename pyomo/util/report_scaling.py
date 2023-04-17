@@ -68,7 +68,7 @@ def _print_coefficients(comp_map):
     return s
 
 
-def _check_coefficents(
+def _check_coefficients(
     comp, expr, too_large, too_small, largs_coef_map, small_coef_map
 ):
     ders = reverse_sd(expr)
@@ -129,7 +129,7 @@ def report_scaling(
     objs_with_small_coefficients = pyo.ComponentMap()
 
     for c in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
-        _check_coefficents(
+        _check_coefficients(
             c,
             c.body,
             too_large,
@@ -145,7 +145,7 @@ def report_scaling(
             cons_with_large_bounds[c] = (c_lb, c_ub)
 
     for c in m.component_data_objects(pyo.Objective, active=True, descend_into=True):
-        _check_coefficents(
+        _check_coefficients(
             c,
             c.expr,
             too_large,

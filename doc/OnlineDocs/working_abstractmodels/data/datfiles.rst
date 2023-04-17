@@ -63,7 +63,7 @@ The following data types can be represented in a data command file:
 
 Numeric values are automatically converted to Python integer or floating
 point values when a data command file is parsed. Additionally, if a
-quoted string can be intepreted as a numeric value, then it will be
+quoted string can be interpreted as a numeric value, then it will be
 converted to Python numeric types when the data is parsed.  For example,
 the string "100" is converted to a numeric value automatically.
 

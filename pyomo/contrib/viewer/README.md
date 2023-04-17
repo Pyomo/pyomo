@@ -57,7 +57,7 @@ Run ```pyomo model-viewer``` to get a stand-alone model viewer. The standalone
 viewer is the standard Jupyter qtconsole app with a few minor modifications. The
 file menu, contains a run script action. This will allow you to run a script
 to build a Pyomo model (this is the same as using the %run magic). The view 
-menu has two addtional items to show and hide the Pyomo model viewer. When a 
+menu has two additional items to show and hide the Pyomo model viewer. When a 
 new Jupyter kernel is started, it will automatically set up the Pyomo model 
 viewer and ```import pyomo.environ as pyo```.
 
@@ -81,7 +81,7 @@ the ```__main__``` name space and allows you to select one to view.
 You can have multiple models and switch the model viewer widgets between them
 using ```ui.set_model(model)```, or the model selector.
 
-# Controling the UI
+# Controlling the UI
 
 You can interact with the UI through code. For example (assuming the UI object
 is ```ui```) to expand or collapse the tree view for variables:

@@ -244,6 +244,7 @@ class TRFInterface(object):
         are activated later as necessary.
         """
         b = self.data
+
         # This implements: y = b(w) from Yoshio/Biegler (2020)
         @b.Constraint(b.ef_outputs.index_set())
         def basis_constraint(b, i):
@@ -264,6 +265,7 @@ class TRFInterface(object):
         b.truth_model_output = Param(b.ef_outputs.index_set(), mutable=True)
         b.grad_truth_model_output = Param(b.INPUT_OUTPUT, mutable=True)
         b.value_of_ef_inputs = Param(b.INPUT_OUTPUT, mutable=True)
+
         # This implements: y = r_k(w)
         @b.Constraint(b.ef_outputs.index_set())
         def sm_constraint_basis(b, i):
