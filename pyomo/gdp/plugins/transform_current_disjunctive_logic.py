@@ -41,7 +41,7 @@ class TransformCurrentDisjunctiveLogic(ReversibleTransformation):
     it will not transform Disjunctions that are not fully determined by the
     current logic. Be careful in partially-transformed states to remember that
     if even one DisjunctData in an IndexedDisjunct is reclassified as a Block,
-    all of the DisjunctDatas will be as well. It is stronly recommended to not use
+    all of the DisjunctDatas will be as well. It is strongly recommended to not use
     DisjunctDatas from a single IndexedDisjunction in multiple Disjunctions
     if you will be working with the partially-transformed model.
 
