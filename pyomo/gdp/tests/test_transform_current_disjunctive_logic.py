@@ -128,9 +128,9 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         ):
             TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(m)
 
-    def add_three_term_disjunction(self, m):
+    def add_three_term_disjunction(self, m, exactly_one=True):
         m.d = Disjunct([1, 2, 3])
-        m.disjunction2 = Disjunction(expr=[m.d[1], m.d[2], m.d[3]])
+        m.disjunction2 = Disjunction(expr=[m.d[1], m.d[2], m.d[3]], xor=exactly_one)
 
     def test_ignore_deactivated_disjuncts(self):
         m = self.make_two_term_disjunction()
@@ -156,6 +156,7 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         self.assertTrue(m.d[3].indicator_var.fixed)
         self.assertFalse(m.d[3].indicator_var.value)
         self.assertFalse(m.d[3].active)
+        self.assertIs(m.d[3].ctype, Block)
 
         self.assertFalse(m.disjunction2.active)
 
@@ -176,5 +177,111 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         self.assertFalse(m.d[3].indicator_var.fixed)
         self.assertFalse(m.d[3].indicator_var.value)
         self.assertTrue(m.d[3].active)
+        self.assertIs(m.d[3].ctype, Disjunct)
 
         self.assertTrue(m.disjunction2.active)
+
+    def test_partial_reverse(self):
+        m = self.make_two_term_disjunction()
+        self.add_three_term_disjunction(m)
+
+        m.d1.indicator_var.set_value(True)
+        m.d2.indicator_var.set_value(False)
+        m.d[2].indicator_var = True
+        m.d[3].indicator_var = False
+
+        reverse = TransformationFactory(
+            'gdp.transform_current_disjunctive_logic'
+        ).apply_to(m)
+
+        self.check_fixed_mip(m)
+
+        TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(
+            m, reverse=reverse, targets=m.disjunction2
+        )
+
+        self.assertFalse(m.d[1].indicator_var.fixed)
+        self.assertIsNone(m.d[1].indicator_var.value)
+        self.assertTrue(m.d[1].active)
+        self.assertIs(m.d[1].ctype, Disjunct)
+
+        self.assertFalse(m.d[2].indicator_var.fixed)
+        self.assertTrue(m.d[2].indicator_var.value)
+        self.assertTrue(m.d[2].active)
+        self.assertIs(m.d[2].ctype, Disjunct)
+
+        self.assertFalse(m.d[3].indicator_var.fixed)
+        self.assertFalse(m.d[3].indicator_var.value)
+        self.assertTrue(m.d[3].active)
+        self.assertIs(m.d[3].ctype, Disjunct)
+
+        self.assertTrue(m.disjunction2.active)
+
+        # But the other disjunction is still transformed
+        self.check_fixed_mip(m)
+
+    def test_at_least_one_disjunction(self):
+        m = ConcreteModel()
+        self.add_three_term_disjunction(m, exactly_one=False)
+
+        m.d[1].indicator_var.fix(True)
+        m.d[2].indicator_var = True
+        m.d[3].indicator_var = False
+
+        reverse = TransformationFactory(
+            'gdp.transform_current_disjunctive_logic'
+        ).apply_to(m)
+
+        self.assertTrue(m.d[1].indicator_var.fixed)
+        self.assertTrue(m.d[1].indicator_var.value)
+        self.assertTrue(m.d[1].active)
+        self.assertIs(m.d[1].ctype, Block)
+
+        self.assertTrue(m.d[2].indicator_var.fixed)
+        self.assertTrue(m.d[2].indicator_var.value)
+        self.assertTrue(m.d[2].active)
+        self.assertIs(m.d[2].ctype, Block)
+
+        self.assertTrue(m.d[3].indicator_var.fixed)
+        self.assertFalse(m.d[3].indicator_var.value)
+        self.assertFalse(m.d[3].active)
+        self.assertIs(m.d[3].ctype, Block)
+
+        self.assertFalse(m.disjunction2.active)
+
+        reverse = TransformationFactory(
+            'gdp.transform_current_disjunctive_logic'
+        ).apply_to(m, reverse=reverse)
+
+        self.assertTrue(m.d[1].indicator_var.fixed)
+        self.assertTrue(m.d[1].indicator_var.value)
+        self.assertTrue(m.d[1].active)
+        self.assertIs(m.d[1].ctype, Disjunct)
+
+        self.assertFalse(m.d[2].indicator_var.fixed)
+        self.assertTrue(m.d[2].indicator_var.value)
+        self.assertTrue(m.d[2].active)
+        self.assertIs(m.d[2].ctype, Disjunct)
+
+        self.assertFalse(m.d[3].indicator_var.fixed)
+        self.assertFalse(m.d[3].indicator_var.value)
+        self.assertTrue(m.d[3].active)
+        self.assertIs(m.d[3].ctype, Disjunct)
+
+        self.assertTrue(m.disjunction2.active)
+
+    def test_at_least_one_disjunction_infeasible(self):
+        m = ConcreteModel()
+        self.add_three_term_disjunction(m, exactly_one=False)
+
+        m.d[1].indicator_var.fix(False)
+        m.d[2].indicator_var = False
+        m.d[3].indicator_var = False
+
+        with self.assertRaisesRegex(
+            InfeasibleConstraintException,
+            "Atleast-one constraint for Disjunction "
+            "'disjunction2' is violated. That is, all "
+            "the Disjunct indicator_vars are 'False'.",
+        ):
+            TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(m)

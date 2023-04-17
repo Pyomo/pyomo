@@ -39,7 +39,11 @@ class TransformCurrentDisjunctiveLogic(ReversibleTransformation):
 
     Note that this transformation does not necessarily return a MI(N)LP since
     it will not transform Disjunctions that are not fully determined by the
-    current logic.
+    current logic. Be careful in partially-transformed states to remember that
+    if even one DisjunctData in an IndexedDisjunct is reclassified as a Block,
+    all of the DisjunctDatas will be as well. It is stronly recommended to not use
+    DisjunctDatas from a single IndexedDisjunction in multiple Disjunctions
+    if you will be working with the partially-transformed model.
 
     If using 'apply_to' rather than 'create_using', this transformation is
     reversible. Calling apply_to returns a token to reverse the transformation
@@ -204,6 +208,6 @@ class TransformCurrentDisjunctiveLogic(ReversibleTransformation):
             if disjunct in reverse_token['_disjuncts']:
                 disjunct.parent_block().reclassify_component_type(disjunct, Disjunct)
                 disjunct.activate()
-                (val, fixed) = reverse_token['_disjuncts'][disjunct]
+                (fixed, val) = reverse_token['_disjuncts'][disjunct]
                 disjunct.indicator_var = val
                 disjunct.indicator_var.fixed = fixed
