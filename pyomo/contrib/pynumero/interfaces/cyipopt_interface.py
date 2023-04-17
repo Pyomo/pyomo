@@ -341,7 +341,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         regularization_size,
         alpha_du,
         alpha_pr,
-        ls_trials
+        ls_trials,
     ):
         if self._intermediate_callback is not None:
             return self._intermediate_callback(
