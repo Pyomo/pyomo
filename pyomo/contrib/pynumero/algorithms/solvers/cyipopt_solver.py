@@ -22,11 +22,7 @@ import os
 import abc
 
 from pyomo.common.deprecation import relocated_module_attribute
-from pyomo.common.dependencies import (
-    attempt_import,
-    numpy as np,
-    numpy_available,
-)
+from pyomo.common.dependencies import attempt_import, numpy as np, numpy_available
 from pyomo.common.tee import redirect_fd, TeeStream
 
 # Because pynumero.interfaces requires numpy, we will leverage deferred
@@ -264,9 +260,7 @@ class PyomoCyIpoptSolver(object):
     CONFIG.declare(
         "tee",
         ConfigValue(
-            default=False,
-            domain=bool,
-            description="Stream solver output to console",
+            default=False, domain=bool, description="Stream solver output to console"
         ),
     )
     CONFIG.declare(

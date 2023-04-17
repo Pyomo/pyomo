@@ -22,13 +22,12 @@ objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
 import abc
 
-from pyomo.common.dependencies import (
-    attempt_import,
-    numpy as np, numpy_available,
-)
+from pyomo.common.dependencies import attempt_import, numpy as np, numpy_available
+
 
 def _cyipopt_importer():
     import cyipopt
+
     # cyipopt before version 1.0.3 called the problem class "Problem"
     if not hasattr(cyipopt, 'Problem'):
         cyipopt.Problem = cyipopt.problem
@@ -36,20 +35,23 @@ def _cyipopt_importer():
     # module (which was deprecated starting in 1.0.3)
     if not hasattr(cyipopt, '__version__'):
         import ipopt
+
         cyipopt.__version__ = ipopt.__version__
     # Beginning in 1.0.3, STATUS_MESSAGES is in a separate
     # ipopt_wrapper module
     if not hasattr(cyipopt, 'STATUS_MESSAGES'):
         import ipopt_wrapper
+
         cyipopt.STATUS_MESSAGES = ipopt_wrapper.STATUS_MESSAGES
     return cyipopt
 
+
 cyipopt, cyipopt_available = attempt_import(
-     'ipopt',
-     error_message='cyipopt solver relies on the ipopt module from cyipopt. '
-     'See https://github.com/mechmotum/cyipopt.git for cyipopt '
-     'installation instructions.',
-     importer=_cyipopt_importer,
+    'ipopt',
+    error_message='cyipopt solver relies on the ipopt module from cyipopt. '
+    'See https://github.com/mechmotum/cyipopt.git for cyipopt '
+    'installation instructions.',
+    importer=_cyipopt_importer,
 )
 
 # If cyipopt is not available, we will use object as our base class for
@@ -72,6 +74,7 @@ class CyIpoptProblemInterface(cyipopt_Problem, metaclass=abc.ABCMeta):
     is defined by ``cyipopt.Problem``.
 
     """
+
     def __init__(self):
         """Initialize the problem interface
 
@@ -93,42 +96,32 @@ class CyIpoptProblemInterface(cyipopt_Problem, metaclass=abc.ABCMeta):
         nx = len(xl)
         ng = len(gl)
         super(CyIpoptProblemInterface, self).__init__(
-            n=nx,
-            m=ng,
-            lb=xl,
-            ub=xu,
-            cl=gl,
-            cu=gu
+            n=nx, m=ng, lb=xl, ub=xu, cl=gl, cu=gu
         )
 
     @abc.abstractmethod
     def x_init(self):
-        """Return the initial values for x as a numpy ndarray
-        """
+        """Return the initial values for x as a numpy ndarray"""
         pass
 
     @abc.abstractmethod
     def x_lb(self):
-        """Return the lower bounds on x as a numpy ndarray
-        """
+        """Return the lower bounds on x as a numpy ndarray"""
         pass
 
     @abc.abstractmethod
     def x_ub(self):
-        """Return the upper bounds on x as a numpy ndarray
-        """
+        """Return the upper bounds on x as a numpy ndarray"""
         pass
 
     @abc.abstractmethod
     def g_lb(self):
-        """Return the lower bounds on the constraints as a numpy ndarray
-        """
+        """Return the lower bounds on the constraints as a numpy ndarray"""
         pass
 
     @abc.abstractmethod
     def g_ub(self):
-        """Return the upper bounds on the constraints as a numpy ndarray
-        """
+        """Return the upper bounds on the constraints as a numpy ndarray"""
         pass
 
     @abc.abstractmethod
@@ -199,9 +192,20 @@ class CyIpoptProblemInterface(cyipopt_Problem, metaclass=abc.ABCMeta):
         """
         pass
 
-    def intermediate(self, alg_mod, iter_count, obj_value,
-            inf_pr, inf_du, mu, d_norm, regularization_size,
-            alpha_du, alpha_pr, ls_trials):
+    def intermediate(
+        self,
+        alg_mod,
+        iter_count,
+        obj_value,
+        inf_pr,
+        inf_du,
+        mu,
+        d_norm,
+        regularization_size,
+        alpha_du,
+        alpha_pr,
+        ls_trials,
+    ):
         """Callback that can be used to examine or report intermediate
         results. This method is called each iteration
         """
@@ -340,7 +344,18 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             ls_trials
     ):
         if self._intermediate_callback is not None:
-            return self._intermediate_callback(self._nlp, alg_mod, iter_count, obj_value,
-                                               inf_pr, inf_du, mu, d_norm, regularization_size,
-                                               alpha_du, alpha_pr, ls_trials)
+            return self._intermediate_callback(
+                self._nlp,
+                alg_mod,
+                iter_count,
+                obj_value,
+                inf_pr,
+                inf_du,
+                mu,
+                d_norm,
+                regularization_size,
+                alpha_du,
+                alpha_pr,
+                ls_trials,
+            )
         return True

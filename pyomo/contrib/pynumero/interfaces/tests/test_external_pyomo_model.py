@@ -39,12 +39,8 @@ from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
     PyomoNLPWithGreyBoxBlocks,
 )
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver,
-)
-from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
-    CyIpoptNLP,
-)
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import CyIpoptNLP
 
 if not pyo.SolverFactory("ipopt").available():
     raise unittest.SkipTest("Need IPOPT to run ExternalPyomoModel tests")
