@@ -2446,6 +2446,8 @@ def _before_linear(visitor, child):
     # the original expression tree.
     var_map = visitor.var_map
     const = child.constant
+    if const.__class__ not in native_types:
+        const = const()
     linear = {}
     for v, c in zip(child.linear_vars, child.linear_coefs):
         if c.__class__ not in native_types:
