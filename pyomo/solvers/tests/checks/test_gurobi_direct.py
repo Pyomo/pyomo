@@ -7,13 +7,16 @@ import gc
 from unittest.mock import patch
 
 import pyomo.common.unittest as unittest
-from pyomo.environ import SolverFactory, ConcreteModel
 from pyomo.common.errors import ApplicationError
+from pyomo.environ import SolverFactory, ConcreteModel
+from pyomo.opt import SolverStatus, TerminationCondition
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
+
 
 try:
     import gurobipy as gp
 
+    NO_LICENSE = gp.GRB.Error.NO_LICENSE
     gurobipy_available = True
 except ImportError:
     gurobipy_available = False
@@ -47,6 +50,8 @@ def single_use_license():
 
 
 class GurobiBase(unittest.TestCase):
+    # Base class ensures the global environment is cleaned up
+
     def setUp(self):
         clean_up_global_state()
         self.model = ConcreteModel()
@@ -55,8 +60,20 @@ class GurobiBase(unittest.TestCase):
         clean_up_global_state()
 
 
+@unittest.skipIf(gurobipy_available, "gurobipy is installed, skip import test")
+class GurobiImportFailedTests(unittest.TestCase):
+    def test_gurobipy_not_installed(self):
+        # ApplicationError should be thrown if gurobipy is not available
+        model = ConcreteModel()
+        with SolverFactory("gurobi_direct") as opt:
+            with self.assertRaisesRegex(ApplicationError, "No Python bindings"):
+                opt.solve(model)
+
+
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
 class GurobiParameterTests(GurobiBase):
+    # Test parameter handling at the model and environment level
+
     def test_set_environment_parameters(self):
         # Solver options should handle parameters which must be set before the
         # environment is started (i.e. connection params, memory limits). This
@@ -74,7 +91,6 @@ class GurobiParameterTests(GurobiBase):
                 opt.solve(self.model)
 
     def test_set_once(self):
-
         # Make sure parameters aren't set twice. If they are set on the
         # environment, they shouldn't also be set on the model. This isn't an
         # issue for most parameters, but some license parameters (e.g. WLS)
@@ -92,7 +108,6 @@ class GurobiParameterTests(GurobiBase):
                 modelparams[param] = value
 
         with patch("gurobipy.Env", new=TempEnv), patch("gurobipy.Model", new=TempModel):
-
             with SolverFactory(
                 "gurobi_direct", options={"Method": 2, "MIPFocus": 1}, manage_env=True
             ) as opt:
@@ -138,6 +153,8 @@ class GurobiParameterTests(GurobiBase):
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
 class GurobiEnvironmentTests(GurobiBase):
+    # Test handling of gurobi environments
+
     def test_init_default_env(self):
         # available() calls with the default env shouldn't need a repeat check
         with patch("gurobipy.Model") as PatchModel:
@@ -148,7 +165,9 @@ class GurobiEnvironmentTests(GurobiBase):
 
     def test_close_global(self):
         # method releases the license and syncs the flag
-        with patch("gurobipy.Model") as PatchModel, patch("gurobipy.disposeDefaultEnv") as patch_dispose:
+        with patch("gurobipy.Model") as PatchModel, patch(
+            "gurobipy.disposeDefaultEnv"
+        ) as patch_dispose:
             with SolverFactory("gurobi_direct") as opt:
                 opt.available()
                 opt.available()
@@ -158,17 +177,118 @@ class GurobiEnvironmentTests(GurobiBase):
             opt.close_global()
             patch_dispose.assert_called_once_with()
 
-        with patch("gurobipy.Model") as PatchModel, patch("gurobipy.disposeDefaultEnv") as patch_dispose:
+        with patch("gurobipy.Model") as PatchModel, patch(
+            "gurobipy.disposeDefaultEnv"
+        ) as patch_dispose:
             with SolverFactory("gurobi_direct") as opt:
                 opt.available()
                 opt.available()
                 PatchModel.assert_called_once_with()
             patch_dispose.assert_not_called()
 
+    def test_persisted_license_failure(self):
+        # Gurobi error message should come through in the exception
+        # Failure to start an environment should not be persistent
+
+        with patch(
+            "gurobipy.Model", side_effect=gp.GurobiError(NO_LICENSE, "nolicense")
+        ):
+            with SolverFactory("gurobi_direct") as opt:
+                with self.assertRaisesRegex(ApplicationError, "nolicense"):
+                    results = opt.solve(self.model)
+
+        with SolverFactory("gurobi_direct") as opt:
+            results = opt.solve(self.model)
+            self.assertEqual(results.solver.status, SolverStatus.ok)
+
+    def test_persisted_license_failure_managed(self):
+        # Gurobi error message should come through in the exception
+        # Failure to start an environment should not be persistent
+
+        with patch("gurobipy.Env", side_effect=gp.GurobiError(NO_LICENSE, "nolicense")):
+            with SolverFactory("gurobi_direct", manage_env=True) as opt:
+                with self.assertRaisesRegex(ApplicationError, "nolicense"):
+                    results = opt.solve(self.model)
+
+        with SolverFactory("gurobi_direct", manage_env=True) as opt:
+            results = opt.solve(self.model)
+            self.assertEqual(results.solver.status, SolverStatus.ok)
+
+    def test_context(self):
+        # Context management should close the gurobi environment
+
+        with gp.Env() as use_env, patch("gurobipy.Env", return_value=use_env):
+            with SolverFactory("gurobi_direct", manage_env=True) as opt:
+                opt.solve(self.model)
+
+            # Environment was closed (cannot be restarted)
+            with self.assertRaises(gp.GurobiError):
+                use_env.start()
+
+    def test_close(self):
+        # Manual close() call should close the gurobi environment
+
+        with gp.Env() as use_env, patch("gurobipy.Env", return_value=use_env):
+            opt = SolverFactory("gurobi_direct", manage_env=True)
+            try:
+                opt.solve(self.model)
+            finally:
+                opt.close()
+
+            # Environment closed (cannot be restarted)
+            with self.assertRaises(gp.GurobiError):
+                use_env.start()
+
+    def test_multiple_solvers(self):
+        # Multiple solvers will share the default environment
+
+        with patch("gurobipy.Env", side_effect=gp.GurobiError(NO_LICENSE, "")):
+            with SolverFactory("gurobi_direct") as opt1, SolverFactory(
+                "gurobi_direct"
+            ) as opt2:
+                opt1.solve(self.model)
+                opt2.solve(self.model)
+
+    def test_managed_env(self):
+        # Test that manage_env=True explicitly creates and closes an environment
+
+        with (
+            gp.Env(params={"TimeLimit": 0.0}) as use_env,
+            patch("gurobipy.Env", return_value=use_env),
+        ):
+            # On the patched environment, solve times out due to parameter setting
+            with SolverFactory("gurobi_direct", manage_env=True) as opt:
+                results = opt.solve(self.model)
+                self.assertEqual(results.solver.status, SolverStatus.aborted)
+                self.assertEqual(
+                    results.solver.termination_condition,
+                    TerminationCondition.maxTimeLimit,
+                )
+
+            # Check that the patched environment was closed by pyomo
+            with self.assertRaises(gp.GurobiError):
+                use_env.start()
+
+    def test_nonmanaged_env(self):
+        # Test that manage_env=False (default) does not create an environment
+
+        with patch("gurobipy.Env", side_effect=gp.GurobiError(NO_LICENSE, "")):
+            with SolverFactory("gurobi_direct") as opt:
+                results = opt.solve(self.model)
+                self.assertEqual(results.solver.status, SolverStatus.ok)
+                self.assertEqual(
+                    results.solver.termination_condition, TerminationCondition.optimal
+                )
+
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
 @unittest.skipIf(not single_use_license(), reason="test needs a single use license")
 class GurobiSingleUseTests(GurobiBase):
+    # Integration tests for Gurobi single-use licenses (useful for checking all Gurobi
+    # environments were correctly freed). These tests are not run in pyomo's CI. Each
+    # test in this class has an equivalent in GurobiEnvironmentTests which tests the
+    # same behaviour via monkey patching.
+
     def test_persisted_license_failure(self):
         # Solver should allow retries to start the environment, instead of
         # persisting the same failure (default env).
@@ -220,7 +340,9 @@ class GurobiSingleUseTests(GurobiBase):
         # One environment per solver would break this pattern. Test that
         # global env is still used by default (manage_env=False)
 
-        with SolverFactory("gurobi_direct") as opt1, SolverFactory("gurobi_direct") as opt2:
+        with SolverFactory("gurobi_direct") as opt1, SolverFactory(
+            "gurobi_direct"
+        ) as opt2:
             opt1.solve(self.model)
             opt2.solve(self.model)
 
@@ -239,7 +361,7 @@ class GurobiSingleUseTests(GurobiBase):
             pass
 
     def test_close_global(self):
-        # If using the default environment, calling the close_global 
+        # If using the default environment, calling the close_global
         # classmethod closes the environment, providing any other solvers
         # have also been closed.
 
