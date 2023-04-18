@@ -24,6 +24,7 @@ _symbolic_modes = {
     differentiate.Modes.reverse_symbolic,
 }
 
+
 def calculate_variable_from_constraint(
     variable,
     constraint,
