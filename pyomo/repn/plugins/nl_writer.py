@@ -73,13 +73,6 @@ from pyomo.opt import WriterFactory
 
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
-if sys.version_info[:2] >= (3, 7):
-    _deterministic_dict = dict
-else:
-    from pyomo.common.collections import OrderedDict
-
-    _deterministic_dict = OrderedDict
-
 ### FIXME: Remove the following as soon as non-active components no
 ### longer report active==True
 from pyomo.core.base import Set, RangeSet
@@ -516,7 +509,7 @@ class _NLWriter_impl(object):
         self.subexpression_order = []
         self.external_functions = {}
         self.used_named_expressions = set()
-        self.var_map = _deterministic_dict()
+        self.var_map = {}
         self.visitor = AMPLRepnVisitor(
             self.template,
             self.subexpression_cache,

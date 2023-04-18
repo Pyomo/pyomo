@@ -45,7 +45,7 @@ class INFO(object):
         self.subexpression_cache = {}
         self.subexpression_order = []
         self.external_functions = {}
-        self.var_map = nl_writer._deterministic_dict()
+        self.var_map = {}
         self.used_named_expressions = set()
         self.symbolic_solver_labels = symbolic
 
