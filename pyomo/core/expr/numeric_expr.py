@@ -937,11 +937,11 @@ class LinearExpression(NumericExpression):
                 len(args) % 2 == 1
                 and all(
                     arg.__class__ in native_types or not arg.is_potentially_variable()
-                    for arg in args[: 1 + 1 + len(args) // 2]
+                    for arg in args[: 1 + len(args) // 2]
                 )
                 and not any(
                     arg.__class__ in native_types or not arg.is_potentially_variable()
-                    for arg in args[1 + 1 + len(args) // 2 :]
+                    for arg in args[1 + len(args) // 2 :]
                 )
             ):
                 deprecation_warning(
