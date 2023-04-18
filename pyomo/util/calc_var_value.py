@@ -17,6 +17,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+_default_differentiation_mode = differentiate.Modes.sympy
+_symbolic_modes = {
+    None,
+    differentiate.Modes.sympy,
+    differentiate.Modes.reverse_symbolic,
+}
 
 def calculate_variable_from_constraint(
     variable,
@@ -25,7 +31,7 @@ def calculate_variable_from_constraint(
     iterlim=1000,
     linesearch=True,
     alpha_min=1e-8,
-    diff_mode=differentiate.Modes.sympy,
+    diff_mode=None,
 ):
     """Calculate the variable value given a specified equality constraint
 
@@ -63,8 +69,9 @@ def calculate_variable_from_constraint(
         [default=True]
     alpha_min: `float`
         The minimum fractional step to use in the linesearch [default=1e-8].
-    diff_mode: `pyomo.core.expr.calculus.derivatives.Modes`
-        The mode of differentiation
+    diff_mode: :py:enum:`pyomo.core.expr.calculus.derivatives.Modes`
+        The mode to use to differentiate the expression.  If
+        unspecified, defaults to `Modes.sympy`
 
     Returns:
     --------
@@ -175,8 +182,22 @@ def calculate_variable_from_constraint(
     expr = body - upper
 
     expr_deriv = None
-    if diff_mode in {differentiate.Modes.sympy, differentiate.Modes.reverse_symbolic}:
-        expr_deriv = differentiate(expr, wrt=variable, mode=diff_mode)
+    if diff_mode in _symbolic_modes:
+        try:
+            expr_deriv = differentiate(
+                expr, wrt=variable, mode=diff_mode or _default_differentiation_mode
+            )
+        except:
+            if diff_mode is None:
+                # If the user didn't care how we differentiate, try to
+                # (mostly silently) revert to numeric differentiation.
+                logger.debug(
+                    'Calculating symbolic derivative of expression failed. '
+                    'Reverting to numeric differentiation'
+                )
+                diff_mode = differentiate.Modes.reverse_numeric
+            else:
+                raise
 
         if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
             raise ValueError("Variable derivative == 0, cannot solve for variable")
