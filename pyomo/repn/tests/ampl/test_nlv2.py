@@ -472,6 +472,26 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
+    def test_linearexpression_npv(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=4)
+        m.y = Var(initialize=4)
+        m.z = Var(initialize=4)
+        m.p = Param(initialize=5, mutable=True)
+
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression((
+                LinearExpression(args=[1, m.p, m.p*m.x, (m.p+2)*m.y, 3*m.z, m.p*m.z]),
+                None, None
+            ))
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 6)
+        self.assertEqual(repn.linear, {id(m.x): 5, id(m.y): 7, id(m.z): 8})
+        self.assertEqual(repn.nonlinear, None)
+
     def test_eval_pow(self):
         m = ConcreteModel()
         m.x = Var(initialize=4)
