@@ -933,14 +933,16 @@ class LinearExpression(NumericExpression):
                     "Cannot specify both args and any of "
                     "{constant, linear_coeffs, or linear_vars}"
                 )
-            if len(args) % 2 == 1 and all(
-                arg.__class__ in native_types
-                or not arg.is_potentially_variable()
-                for arg in args[ : 1 + 1 + len(args) // 2]
-            ) and not any(
-                arg.__class__ in native_types
-                or not arg.is_potentially_variable()
-                for arg in args[1 + 1 + len(args) // 2 : ]
+            if (
+                len(args) % 2 == 1
+                and all(
+                    arg.__class__ in native_types or not arg.is_potentially_variable()
+                    for arg in args[: 1 + 1 + len(args) // 2]
+                )
+                and not any(
+                    arg.__class__ in native_types or not arg.is_potentially_variable()
+                    for arg in args[1 + 1 + len(args) // 2 :]
+                )
             ):
                 deprecation_warning(
                     "LinearExpression has been updated to expect args= to "

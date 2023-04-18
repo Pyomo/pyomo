@@ -481,10 +481,15 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
         info = INFO()
         with LoggingIntercept() as LOG:
-            repn = info.visitor.walk_expression((
-                LinearExpression(args=[1, m.p, m.p*m.x, (m.p+2)*m.y, 3*m.z, m.p*m.z]),
-                None, None
-            ))
+            repn = info.visitor.walk_expression(
+                (
+                    LinearExpression(
+                        args=[1, m.p, m.p * m.x, (m.p + 2) * m.y, 3 * m.z, m.p * m.z]
+                    ),
+                    None,
+                    None,
+                )
+            )
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -911,15 +916,18 @@ class Test_NLWriter(unittest.TestCase):
     def test_linear_constraint_npv_const(self):
         # This tests an error possibly reported by #2810
         m = ConcreteModel()
-        m.x = Var([1,2])
+        m.x = Var([1, 2])
         m.p = Param(initialize=5, mutable=True)
         m.o = Objective(expr=1)
-        m.c = Constraint(expr=LinearExpression([m.p**2, 5*m.x[1], 10*m.x[2]]) == 0)
+        m.c = Constraint(
+            expr=LinearExpression([m.p**2, 5 * m.x[1], 10 * m.x[2]]) == 0
+        )
 
         OUT = io.StringIO()
         nl_writer.NLWriter().write(m, OUT)
-        self.assertEqual(*nl_diff(
-            """g3 1 1 0	# problem unknown
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
  2 1 1 0 1 	# vars, constraints, objectives, ranges, eqns
  0 0 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
  0 0	# network constraints: nonlinear, linear
@@ -945,5 +953,6 @@ J0 2
 0 5
 1 10
 """,
-            OUT.getvalue(),
-        ))
+                OUT.getvalue(),
+            )
+        )
