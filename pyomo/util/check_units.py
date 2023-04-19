@@ -57,7 +57,7 @@ def check_units_equivalent(*args):
 
     Returns
     -------
-    bool : True if all the expressions passed as argments have the same units
+    bool : True if all the expressions passed as arguments have the same units
     """
     try:
         assert_units_equivalent(*args)

@@ -19,27 +19,58 @@ import sys
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
-    ConcreteModel, RangeSet, Set, Param, Var, Expression, ExternalFunction,
-    VarList, sum_product, inequality, quicksum, sin, tanh, value,
+    ConcreteModel,
+    RangeSet,
+    Set,
+    Param,
+    Var,
+    Expression,
+    ExternalFunction,
+    VarList,
+    sum_product,
+    inequality,
+    quicksum,
+    sin,
+    tanh,
+    value,
 )
-from pyomo.core.expr.numvalue import (
-    native_types, nonpyomo_leaf_types, NumericConstant,
-)
+from pyomo.core.expr.numvalue import native_types, nonpyomo_leaf_types, NumericConstant
 from pyomo.core.expr.numeric_expr import (
-    SumExpression, ProductExpression, 
-    MonomialTermExpression, LinearExpression,
-    NPV_SumExpression, NPV_ProductExpression, NegationExpression,
-    NPV_NegationExpression, PowExpression, NPV_PowExpression,
-    MaxExpression, NPV_MaxExpression, MinExpression, NPV_MinExpression,
-    DivisionExpression, NPV_DivisionExpression, UnaryFunctionExpression,
-    NPV_UnaryFunctionExpression, AbsExpression, NPV_AbsExpression)
+    SumExpression,
+    ProductExpression,
+    MonomialTermExpression,
+    LinearExpression,
+    NPV_SumExpression,
+    NPV_ProductExpression,
+    NegationExpression,
+    NPV_NegationExpression,
+    PowExpression,
+    NPV_PowExpression,
+    MaxExpression,
+    NPV_MaxExpression,
+    MinExpression,
+    NPV_MinExpression,
+    DivisionExpression,
+    NPV_DivisionExpression,
+    UnaryFunctionExpression,
+    NPV_UnaryFunctionExpression,
+    AbsExpression,
+    NPV_AbsExpression,
+)
 from pyomo.core.expr.visitor import (
-    FixedExpressionError, NonConstantExpressionError,
-    StreamBasedExpressionVisitor, ExpressionReplacementVisitor,
-    evaluate_expression, expression_to_string, replace_expressions,
+    FixedExpressionError,
+    NonConstantExpressionError,
+    StreamBasedExpressionVisitor,
+    ExpressionReplacementVisitor,
+    evaluate_expression,
+    expression_to_string,
+    replace_expressions,
     sizeof_expression,
-    identify_variables, identify_components, identify_mutable_parameters,
-    RECURSION_LIMIT, get_stack_depth,
+    identify_variables,
+    identify_components,
+    identify_mutable_parameters,
+    RECURSION_LIMIT,
+    get_stack_depth,
 )
 from pyomo.core.base.param import _ParamData, ScalarParam
 from pyomo.core.expr.template_expr import IndexTemplate
@@ -51,12 +82,11 @@ from pyomo.core.expr.compare import compare_expressions
 
 
 class TestExpressionUtilities(unittest.TestCase):
-
     def test_identify_vars_numeric(self):
         #
         # There are no variables in a constant expression
         #
-        self.assertEqual( list(identify_variables(5)), [] )
+        self.assertEqual(list(identify_variables(5)), [])
 
     def test_identify_vars_params(self):
         m = ConcreteModel()
@@ -66,14 +96,14 @@ class TestExpressionUtilities(unittest.TestCase):
         #
         # There are no variables in expressions with only parameters
         #
-        self.assertEqual( list(identify_variables(m.a)), [] )
-        self.assertEqual( list(identify_variables(m.b[1])), [] )
-        self.assertEqual( list(identify_variables(m.a+m.b[1])), [] )
-        self.assertEqual( list(identify_variables(m.a**m.b[1])), [] )
-        self.assertEqual( list(identify_variables(
-            m.a**m.b[1] + m.b[2])), [] )
-        self.assertEqual( list(identify_variables(
-            m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])), [] )
+        self.assertEqual(list(identify_variables(m.a)), [])
+        self.assertEqual(list(identify_variables(m.b[1])), [])
+        self.assertEqual(list(identify_variables(m.a + m.b[1])), [])
+        self.assertEqual(list(identify_variables(m.a ** m.b[1])), [])
+        self.assertEqual(list(identify_variables(m.a ** m.b[1] + m.b[2])), [])
+        self.assertEqual(
+            list(identify_variables(m.a ** m.b[1] + m.b[2] * m.b[3] * m.b[2])), []
+        )
 
     def test_identify_duplicate_vars(self):
         #
@@ -82,10 +112,9 @@ class TestExpressionUtilities(unittest.TestCase):
         m = ConcreteModel()
         m.a = Var(initialize=1)
 
-        #self.assertEqual( list(identify_variables(2*m.a+2*m.a, allow_duplicates=True)),
+        # self.assertEqual( list(identify_variables(2*m.a+2*m.a, allow_duplicates=True)),
         #                  [ m.a, m.a ] )
-        self.assertEqual( list(identify_variables(2*m.a+2*m.a)),
-                          [ m.a ] )
+        self.assertEqual(list(identify_variables(2 * m.a + 2 * m.a)), [m.a])
 
     def test_identify_vars_expr(self):
         #
@@ -94,12 +123,12 @@ class TestExpressionUtilities(unittest.TestCase):
         m = ConcreteModel()
         m.a = Var(initialize=1)
         m.b = Var(initialize=2)
-        m.e = Expression(expr=3*m.a)
-        m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
+        m.e = Expression(expr=3 * m.a)
+        m.E = Expression([0, 1], initialize={0: 3 * m.a, 1: 4 * m.b})
 
-        self.assertEqual( list(identify_variables(m.b+m.e)), [ m.b, m.a ] )
-        self.assertEqual( list(identify_variables(m.E[0])), [ m.a ] )
-        self.assertEqual( list(identify_variables(m.E[1])), [ m.b ] )
+        self.assertEqual(list(identify_variables(m.b + m.e)), [m.b, m.a])
+        self.assertEqual(list(identify_variables(m.E[0])), [m.a])
+        self.assertEqual(list(identify_variables(m.E[1])), [m.b])
 
     def test_identify_vars_vars(self):
         m = ConcreteModel()
@@ -111,57 +140,53 @@ class TestExpressionUtilities(unittest.TestCase):
         #
         # Identify variables in various algebraic expressions
         #
-        self.assertEqual( list(identify_variables(m.a)), [m.a] )
-        self.assertEqual( list(identify_variables(m.b[1])), [m.b[1]] )
-        self.assertEqual( list(identify_variables(m.a+m.b[1])),
-                          [ m.a, m.b[1] ] )
-        self.assertEqual( list(identify_variables(m.a**m.b[1])),
-                          [ m.a, m.b[1] ] )
-        self.assertEqual( list(identify_variables(m.a**m.b[1] + m.b[2])),
-                          [ m.b[2], m.a, m.b[1]] )
-        self.assertEqual( list(identify_variables(
-            m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
-                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
-        self.assertEqual( list(identify_variables(
-            m.a**m.b[1] + m.b[2]/m.b[3]*m.b[2])),
-                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
+        self.assertEqual(list(identify_variables(m.a)), [m.a])
+        self.assertEqual(list(identify_variables(m.b[1])), [m.b[1]])
+        self.assertEqual(list(identify_variables(m.a + m.b[1])), [m.a, m.b[1]])
+        self.assertEqual(list(identify_variables(m.a ** m.b[1])), [m.a, m.b[1]])
+        self.assertEqual(
+            list(identify_variables(m.a ** m.b[1] + m.b[2])), [m.b[2], m.a, m.b[1]]
+        )
+        self.assertEqual(
+            list(identify_variables(m.a ** m.b[1] + m.b[2] * m.b[3] * m.b[2])),
+            [m.a, m.b[1], m.b[2], m.b[3]],
+        )
+        self.assertEqual(
+            list(identify_variables(m.a ** m.b[1] + m.b[2] / m.b[3] * m.b[2])),
+            [m.a, m.b[1], m.b[2], m.b[3]],
+        )
         #
         # Identify variables in the arguments to functions
         #
-        self.assertEqual( list(identify_variables(
-            m.x(m.a, 'string_param', 1, []) * m.b[1] )),
-                          [ m.b[1], m.a ] )
-        self.assertEqual( list(identify_variables(
-            m.x(m.p, 'string_param', 1, [])*m.b[1] )),
-                          [ m.b[1] ] )
-        self.assertEqual( list(identify_variables(
-            tanh(m.a)*m.b[1] )), [ m.b[1], m.a ] )
-        self.assertEqual( list(identify_variables(
-            abs(m.a) * m.b[1] )), [ m.b[1], m.a ] )
+        self.assertEqual(
+            list(identify_variables(m.x(m.a, 'string_param', 1, []) * m.b[1])),
+            [m.b[1], m.a],
+        )
+        self.assertEqual(
+            list(identify_variables(m.x(m.p, 'string_param', 1, []) * m.b[1])), [m.b[1]]
+        )
+        self.assertEqual(list(identify_variables(tanh(m.a) * m.b[1])), [m.b[1], m.a])
+        self.assertEqual(list(identify_variables(abs(m.a) * m.b[1])), [m.b[1], m.a])
         #
         # Check logic for allowing duplicates
         #
-        self.assertEqual( list(identify_variables(m.a**m.a + m.a)),
-                          [ m.a ] )
-        #self.assertEqual( list(identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
+        self.assertEqual(list(identify_variables(m.a**m.a + m.a)), [m.a])
+        # self.assertEqual( list(identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
         #                  [ m.a, m.a, m.a,  ] )
 
     def test_identify_vars_linear_expression(self):
         m = ConcreteModel()
         m.x = Var()
         expr = quicksum([m.x, m.x], linear=True)
-        self.assertEqual(list(identify_variables(
-            expr, include_fixed=False)), [m.x])
-
+        self.assertEqual(list(identify_variables(expr, include_fixed=False)), [m.x])
 
 
 class TestIdentifyParams(unittest.TestCase):
-
     def test_identify_params_numeric(self):
         #
         # There are no parameters in a constant expression
         #
-        self.assertEqual( list(identify_mutable_parameters(5)), [] )
+        self.assertEqual(list(identify_mutable_parameters(5)), [])
 
     def test_identify_mutable_parameters(self):
         m = ConcreteModel()
@@ -171,14 +196,15 @@ class TestIdentifyParams(unittest.TestCase):
         #
         # There are no parameters in expressions with only vars
         #
-        self.assertEqual( list(identify_mutable_parameters(m.a)), [] )
-        self.assertEqual( list(identify_mutable_parameters(m.b[1])), [] )
-        self.assertEqual( list(identify_mutable_parameters(m.a+m.b[1])), [] )
-        self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1])), [] )
-        self.assertEqual( list(identify_mutable_parameters(
-            m.a**m.b[1] + m.b[2])), [] )
-        self.assertEqual( list(identify_mutable_parameters(
-            m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])), [] )
+        self.assertEqual(list(identify_mutable_parameters(m.a)), [])
+        self.assertEqual(list(identify_mutable_parameters(m.b[1])), [])
+        self.assertEqual(list(identify_mutable_parameters(m.a + m.b[1])), [])
+        self.assertEqual(list(identify_mutable_parameters(m.a ** m.b[1])), [])
+        self.assertEqual(list(identify_mutable_parameters(m.a ** m.b[1] + m.b[2])), [])
+        self.assertEqual(
+            list(identify_mutable_parameters(m.a ** m.b[1] + m.b[2] * m.b[3] * m.b[2])),
+            [],
+        )
 
     def test_identify_mutable_parameters_constants(self):
         #
@@ -189,10 +215,10 @@ class TestIdentifyParams(unittest.TestCase):
         m.x.fix()
         m.p = Param(initialize=2, mutable=False)
         m.p_m = Param(initialize=3, mutable=True)
-        e1 = (m.x + m.p + NumericConstant(5))
+        e1 = m.x + m.p + NumericConstant(5)
         self.assertEqual(list(identify_mutable_parameters(e1)), [])
 
-        e2 = (5*m.x + NumericConstant(3)*m.p_m + m.p == 0)
+        e2 = 5 * m.x + NumericConstant(3) * m.p_m + m.p == 0
         mut_params = list(identify_mutable_parameters(e2))
         self.assertEqual(len(mut_params), 1)
         self.assertIs(mut_params[0], m.p_m)
@@ -204,8 +230,7 @@ class TestIdentifyParams(unittest.TestCase):
         m = ConcreteModel()
         m.a = Param(initialize=1, mutable=True)
 
-        self.assertEqual( list(identify_mutable_parameters(2*m.a+2*m.a)),
-                          [ m.a ] )
+        self.assertEqual(list(identify_mutable_parameters(2 * m.a + 2 * m.a)), [m.a])
 
     def test_identify_mutable_parameters_expr(self):
         #
@@ -214,12 +239,12 @@ class TestIdentifyParams(unittest.TestCase):
         m = ConcreteModel()
         m.a = Param(initialize=1, mutable=True)
         m.b = Param(initialize=2, mutable=True)
-        m.e = Expression(expr=3*m.a)
-        m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
+        m.e = Expression(expr=3 * m.a)
+        m.E = Expression([0, 1], initialize={0: 3 * m.a, 1: 4 * m.b})
 
-        self.assertEqual( list(identify_mutable_parameters(m.b+m.e)), [ m.b, m.a ] )
-        self.assertEqual( list(identify_mutable_parameters(m.E[0])), [ m.a ] )
-        self.assertEqual( list(identify_mutable_parameters(m.E[1])), [ m.b ] )
+        self.assertEqual(list(identify_mutable_parameters(m.b + m.e)), [m.b, m.a])
+        self.assertEqual(list(identify_mutable_parameters(m.E[0])), [m.a])
+        self.assertEqual(list(identify_mutable_parameters(m.E[1])), [m.b])
 
     def test_identify_mutable_parameters_logical_expr(self):
         #
@@ -227,7 +252,7 @@ class TestIdentifyParams(unittest.TestCase):
         #
         m = ConcreteModel()
         m.a = Param(initialize=0, mutable=True)
-        expr = m.a+1 == 0
+        expr = m.a + 1 == 0
         param_set = ComponentSet(identify_mutable_parameters(expr))
         self.assertEqual(len(param_set), 1)
         self.assertIn(m.a, param_set)
@@ -242,52 +267,57 @@ class TestIdentifyParams(unittest.TestCase):
         #
         # Identify variables in various algebraic expressions
         #
-        self.assertEqual( list(identify_mutable_parameters(m.a)), [m.a] )
-        self.assertEqual( list(identify_mutable_parameters(m.b[1])), [m.b[1]] )
-        self.assertEqual( list(identify_mutable_parameters(m.a+m.b[1])),
-                          [ m.a, m.b[1] ] )
-        self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1])),
-                          [ m.a, m.b[1] ] )
-        self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1] + m.b[2])),
-                          [ m.b[2], m.a, m.b[1] ] )
-        self.assertEqual( list(identify_mutable_parameters(
-            m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
-                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
-        self.assertEqual( list(identify_mutable_parameters(
-            m.a**m.b[1] + m.b[2]/m.b[3]*m.b[2])),
-                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
+        self.assertEqual(list(identify_mutable_parameters(m.a)), [m.a])
+        self.assertEqual(list(identify_mutable_parameters(m.b[1])), [m.b[1]])
+        self.assertEqual(list(identify_mutable_parameters(m.a + m.b[1])), [m.a, m.b[1]])
+        self.assertEqual(
+            list(identify_mutable_parameters(m.a ** m.b[1])), [m.a, m.b[1]]
+        )
+        self.assertEqual(
+            list(identify_mutable_parameters(m.a ** m.b[1] + m.b[2])),
+            [m.b[2], m.a, m.b[1]],
+        )
+        self.assertEqual(
+            list(identify_mutable_parameters(m.a ** m.b[1] + m.b[2] * m.b[3] * m.b[2])),
+            [m.a, m.b[1], m.b[2], m.b[3]],
+        )
+        self.assertEqual(
+            list(identify_mutable_parameters(m.a ** m.b[1] + m.b[2] / m.b[3] * m.b[2])),
+            [m.a, m.b[1], m.b[2], m.b[3]],
+        )
         #
         # Identify variables in the arguments to functions
         #
-        self.assertEqual( list(identify_mutable_parameters(
-            m.x(m.a, 'string_param', 1, [])*m.b[1] )),
-                          [ m.b[1], m.a ] )
-        self.assertEqual( list(identify_mutable_parameters(
-            m.x(m.p, 'string_param', 1, [])*m.b[1] )),
-                          [ m.b[1] ] )
-        self.assertEqual( list(identify_mutable_parameters(
-            tanh(m.a)*m.b[1] )), [ m.b[1], m.a ] )
-        self.assertEqual( list(identify_mutable_parameters(
-            abs(m.a)*m.b[1] )), [ m.b[1], m.a ] )
+        self.assertEqual(
+            list(identify_mutable_parameters(m.x(m.a, 'string_param', 1, []) * m.b[1])),
+            [m.b[1], m.a],
+        )
+        self.assertEqual(
+            list(identify_mutable_parameters(m.x(m.p, 'string_param', 1, []) * m.b[1])),
+            [m.b[1]],
+        )
+        self.assertEqual(
+            list(identify_mutable_parameters(tanh(m.a) * m.b[1])), [m.b[1], m.a]
+        )
+        self.assertEqual(
+            list(identify_mutable_parameters(abs(m.a) * m.b[1])), [m.b[1], m.a]
+        )
         #
         # Check logic for allowing duplicates
         #
-        self.assertEqual( list(identify_mutable_parameters(m.a**m.a + m.a)),
-                          [ m.a ] )
+        self.assertEqual(list(identify_mutable_parameters(m.a**m.a + m.a)), [m.a])
 
 
 #
 # Replace all variables with new variables from a varlist
 #
 class ReplacementWalkerTest1(ExpressionReplacementVisitor):
-
     def __init__(self, model):
         ExpressionReplacementVisitor.__init__(self)
         self.model = model
 
     def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types or\
-           not node.is_potentially_variable():
+        if node.__class__ in nonpyomo_leaf_types or not node.is_potentially_variable():
             return True, node
         if node.is_variable_type():
             if id(node) in self.substitute:
@@ -298,18 +328,17 @@ class ReplacementWalkerTest1(ExpressionReplacementVisitor):
 
 
 class WalkerTests(unittest.TestCase):
-
     def test_replacement_walker1(self):
         M = ConcreteModel()
         M.x = Var()
         M.y = Var()
         M.w = VarList()
 
-        e = sin(M.x) + M.x*M.y + 3
+        e = sin(M.x) + M.x * M.y + 3
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3, e))
-        self.assertTrue(compare_expressions(sin(M.w[1]) + M.w[1]*M.w[2] + 3, f))
+        self.assertTrue(compare_expressions(sin(M.x) + M.x * M.y + 3, e))
+        self.assertTrue(compare_expressions(sin(M.w[1]) + M.w[1] * M.w[2] + 3, f))
 
     def test_replacement_walker2(self):
         M = ConcreteModel()
@@ -328,11 +357,11 @@ class WalkerTests(unittest.TestCase):
         M.y = Var()
         M.w = VarList()
 
-        e = sin(M.x) + M.x*M.y + 3 <= 0
+        e = sin(M.x) + M.x * M.y + 3 <= 0
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3  <=  0, e))
-        self.assertTrue(compare_expressions(sin(M.w[1]) + M.w[1]*M.w[2] + 3  <=  0, f))
+        self.assertTrue(compare_expressions(sin(M.x) + M.x * M.y + 3 <= 0, e))
+        self.assertTrue(compare_expressions(sin(M.w[1]) + M.w[1] * M.w[2] + 3 <= 0, f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -340,11 +369,15 @@ class WalkerTests(unittest.TestCase):
         M.y = Var()
         M.w = VarList()
 
-        e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
+        e = inequality(0, sin(M.x) + M.x * M.y + 3, 1)
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(inequality(0, sin(M.x) + M.x*M.y + 3, 1), e))
-        self.assertTrue(compare_expressions(inequality(0, sin(M.w[1]) + M.w[1]*M.w[2] + 3, 1), f))
+        self.assertTrue(
+            compare_expressions(inequality(0, sin(M.x) + M.x * M.y + 3, 1), e)
+        )
+        self.assertTrue(
+            compare_expressions(inequality(0, sin(M.w[1]) + M.w[1] * M.w[2] + 3, 1), f)
+        )
 
     def test_replacement_walker0(self):
         M = ConcreteModel()
@@ -356,21 +389,51 @@ class WalkerTests(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                             linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                             linear_vars=[i for i in M.w.values()]), f))
+        self.assertTrue(
+            compare_expressions(
+                LinearExpression(
+                    linear_coefs=[i for i in M.z.values()],
+                    linear_vars=[i for i in M.x.values()],
+                ),
+                e,
+            )
+        )
+        self.assertTrue(
+            compare_expressions(
+                LinearExpression(
+                    linear_coefs=[i for i in M.z.values()],
+                    linear_vars=[i for i in M.w.values()],
+                ),
+                f,
+            )
+        )
 
         del M.w
         del M.w_index
         M.w = VarList()
-        e = 2*sum_product(M.z, M.x)
+        e = 2 * sum_product(M.z, M.x)
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                               linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                               linear_vars=[i for i in M.w.values()]), f))
+        self.assertTrue(
+            compare_expressions(
+                2
+                * LinearExpression(
+                    linear_coefs=[i for i in M.z.values()],
+                    linear_vars=[i for i in M.x.values()],
+                ),
+                e,
+            )
+        )
+        self.assertTrue(
+            compare_expressions(
+                2
+                * LinearExpression(
+                    linear_coefs=[i for i in M.z.values()],
+                    linear_vars=[i for i in M.w.values()],
+                ),
+                f,
+            )
+        )
 
     def test_replacement_linear_expression_with_constant(self):
         m = ConcreteModel()
@@ -387,10 +450,11 @@ class WalkerTests(unittest.TestCase):
         sub_map = dict()
         sub_map[id(m.x)] = 5
         e2 = replace_expressions(e, sub_map)
-        self.assertTrue(compare_expressions(
-            e2,
-            LinearExpression(constant=10, linear_coefs=[3], linear_vars=[m.y])
-        ))
+        self.assertTrue(
+            compare_expressions(
+                e2, LinearExpression(constant=10, linear_coefs=[3], linear_vars=[m.y])
+            )
+        )
 
     def test_replacement_linear_expression_with_nonlinear(self):
         m = ConcreteModel()
@@ -400,16 +464,13 @@ class WalkerTests(unittest.TestCase):
         sub_map = dict()
         sub_map[id(m.x)] = m.x**2
         e2 = replace_expressions(e, sub_map)
-        self.assertTrue(compare_expressions(
-            e2,
-            SumExpression([2*m.x**2, 3*m.y])
-        ))
+        self.assertTrue(compare_expressions(e2, SumExpression([2 * m.x**2, 3 * m.y])))
 
     def test_replace_expressions_with_monomial_term(self):
         M = ConcreteModel()
         M.x = Var()
-        e = 2.0*M.x
-        substitution_map = {id(M.x): 3.0*M.x}
+        e = 2.0 * M.x
+        substitution_map = {id(M.x): 3.0 * M.x}
         new_e = replace_expressions(e, substitution_map=substitution_map)
         self.assertEqual('6.0*x', str(new_e))
         # See comment about this test in ExpressionReplacementVisitor
@@ -421,7 +482,7 @@ class WalkerTests(unittest.TestCase):
         M.y = Var()
         M.w = Var()
 
-        e = sin(M.x) + M.x*M.w + 3
+        e = sin(M.x) + M.x * M.w + 3
         v = list(str(v) for v in identify_components(e, set([M.x.__class__])))
         self.assertEqual(v, ['x', 'w'])
         v = list(str(v) for v in identify_components(e, [M.x.__class__]))
@@ -435,7 +496,7 @@ class WalkerTests(unittest.TestCase):
         M.w = 2
         M.w.fixed = True
 
-        e = sin(M.x) + M.x*M.w + 3
+        e = sin(M.x) + M.x * M.w + 3
         v = list(str(v) for v in identify_variables(e))
         self.assertEqual(v, ['x', 'w'])
         v = list(str(v) for v in identify_variables(e, include_fixed=False))
@@ -446,34 +507,36 @@ class WalkerTests(unittest.TestCase):
         M.x = Var()
         M.w = Var()
 
-        e = sin(M.x) + M.x*M.w + 3
+        e = sin(M.x) + M.x * M.w + 3
         self.assertEqual("sin(x) + x*w + 3", expression_to_string(e))
         M.w = 2
         M.w.fixed = True
-        self.assertEqual("sin(x) + x*2 + 3", expression_to_string(e, compute_values=True))
+        self.assertEqual(
+            "sin(x) + x*2 + 3", expression_to_string(e, compute_values=True)
+        )
 
     def test_expression_component_to_string(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.e = Expression(expr=m.x*m.y)
+        m.e = Expression(expr=m.x * m.y)
         m.f = Expression(expr=m.e)
 
-        e = m.x + m.f*m.y
+        e = m.x + m.f * m.y
         self.assertEqual("x + ((x*y))*y", str(e))
         self.assertEqual("x + ((x*y))*y", expression_to_string(e))
+
+
 #
 # Replace all variables with a product expression
 #
 class ReplacementWalkerTest2(ExpressionReplacementVisitor):
-
     def __init__(self, model):
         ExpressionReplacementVisitor.__init__(self)
         self.model = model
 
     def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types or\
-           not node.is_potentially_variable():
+        if node.__class__ in nonpyomo_leaf_types or not node.is_potentially_variable():
             return True, node
 
         if node.is_variable_type():
@@ -485,18 +548,19 @@ class ReplacementWalkerTest2(ExpressionReplacementVisitor):
 
 
 class WalkerTests2(unittest.TestCase):
-
     def test_replacement_walker1(self):
         M = ConcreteModel()
         M.x = Var()
         M.y = Var()
         M.w = VarList()
 
-        e = sin(M.x) + M.x*M.y + 3
+        e = sin(M.x) + M.x * M.y + 3
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3, e))
-        self.assertTrue(compare_expressions(sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3, f))
+        self.assertTrue(compare_expressions(sin(M.x) + M.x * M.y + 3, e))
+        self.assertTrue(
+            compare_expressions(sin(2 * M.w[1]) + 2 * M.w[1] * (2 * M.w[2]) + 3, f)
+        )
 
     def test_replacement_walker2(self):
         M = ConcreteModel()
@@ -507,7 +571,7 @@ class WalkerTests2(unittest.TestCase):
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
         self.assertTrue(compare_expressions(M.x, e))
-        self.assertTrue(compare_expressions(2*M.w[1], f))
+        self.assertTrue(compare_expressions(2 * M.w[1], f))
 
     def test_replacement_walker3(self):
         M = ConcreteModel()
@@ -515,11 +579,13 @@ class WalkerTests2(unittest.TestCase):
         M.y = Var()
         M.w = VarList()
 
-        e = sin(M.x) + M.x*M.y + 3 <= 0
+        e = sin(M.x) + M.x * M.y + 3 <= 0
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3  <=  0, e))
-        self.assertTrue(compare_expressions(sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3  <=  0, f))
+        self.assertTrue(compare_expressions(sin(M.x) + M.x * M.y + 3 <= 0, e))
+        self.assertTrue(
+            compare_expressions(sin(2 * M.w[1]) + 2 * M.w[1] * (2 * M.w[2]) + 3 <= 0, f)
+        )
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -527,11 +593,17 @@ class WalkerTests2(unittest.TestCase):
         M.y = Var()
         M.w = VarList()
 
-        e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
+        e = inequality(0, sin(M.x) + M.x * M.y + 3, 1)
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(inequality(0  ,   sin(M.x) + M.x*M.y + 3  ,   1), e))
-        self.assertTrue(compare_expressions(inequality(0  ,   sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3  ,   1), f))
+        self.assertTrue(
+            compare_expressions(inequality(0, sin(M.x) + M.x * M.y + 3, 1), e)
+        )
+        self.assertTrue(
+            compare_expressions(
+                inequality(0, sin(2 * M.w[1]) + 2 * M.w[1] * (2 * M.w[2]) + 3, 1), f
+            )
+        )
 
     def test_replacement_walker5(self):
         M = ConcreteModel()
@@ -539,13 +611,13 @@ class WalkerTests2(unittest.TestCase):
         M.w = VarList()
         M.z = Param(mutable=True)
 
-        e = M.z*M.x
+        e = M.z * M.x
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
         self.assertTrue(e.__class__ is MonomialTermExpression)
         self.assertTrue(f.__class__ is ProductExpression)
-        self.assertTrue(compare_expressions(M.z*M.x, e))
-        self.assertTrue(compare_expressions(M.z*(2*M.w[1]), f))
+        self.assertTrue(compare_expressions(M.z * M.x, e))
+        self.assertTrue(compare_expressions(M.z * (2 * M.w[1]), f))
 
     def test_replacement_walker0(self):
         M = ConcreteModel()
@@ -557,22 +629,51 @@ class WalkerTests2(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                             linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(M.z[0]*(2*M.w[1]) + M.z[1]*(2*M.w[2]) + M.z[2]*(2*M.w[3]), f))
+        self.assertTrue(
+            compare_expressions(
+                LinearExpression(
+                    linear_coefs=[i for i in M.z.values()],
+                    linear_vars=[i for i in M.x.values()],
+                ),
+                e,
+            )
+        )
+        self.assertTrue(
+            compare_expressions(
+                M.z[0] * (2 * M.w[1]) + M.z[1] * (2 * M.w[2]) + M.z[2] * (2 * M.w[3]), f
+            )
+        )
 
-        e = 2*sum_product(M.z, M.x)
+        e = 2 * sum_product(M.z, M.x)
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                               linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(2*(M.z[0]*(2*M.w[4]) + M.z[1]*(2*M.w[5]) + M.z[2]*(2*M.w[6])), f))
+        self.assertTrue(
+            compare_expressions(
+                2
+                * LinearExpression(
+                    linear_coefs=[i for i in M.z.values()],
+                    linear_vars=[i for i in M.x.values()],
+                ),
+                e,
+            )
+        )
+        self.assertTrue(
+            compare_expressions(
+                2
+                * (
+                    M.z[0] * (2 * M.w[4])
+                    + M.z[1] * (2 * M.w[5])
+                    + M.z[2] * (2 * M.w[6])
+                ),
+                f,
+            )
+        )
+
 
 #
 # Replace all mutable parameters with variables
 #
 class ReplacementWalkerTest3(ExpressionReplacementVisitor):
-
     def __init__(self, model):
         super().__init__(remove_named_expressions=False)
         self.model = model
@@ -581,30 +682,31 @@ class ReplacementWalkerTest3(ExpressionReplacementVisitor):
         if node.__class__ in (_ParamData, ScalarParam):
             if id(node) in self.substitute:
                 return True, self.substitute[id(node)]
-            self.substitute[id(node)] = 2*self.model.w.add()
+            self.substitute[id(node)] = 2 * self.model.w.add()
             return True, self.substitute[id(node)]
 
-        if node.__class__ in nonpyomo_leaf_types or \
-            node.is_constant() or \
-            node.is_variable_type():
+        if (
+            node.__class__ in nonpyomo_leaf_types
+            or node.is_constant()
+            or node.is_variable_type()
+        ):
             return True, node
 
         return False, None
 
 
 class WalkerTests3(unittest.TestCase):
-
     def test_replacement_walker1(self):
         M = ConcreteModel()
         M.x = Param(mutable=True)
         M.y = Var()
         M.w = VarList()
 
-        e = sin(M.x) + M.x*M.y + 3
+        e = sin(M.x) + M.x * M.y + 3
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3, e))
-        self.assertTrue(compare_expressions(sin(2*M.w[1]) + 2*M.w[1]*M.y + 3, f))
+        self.assertTrue(compare_expressions(sin(M.x) + M.x * M.y + 3, e))
+        self.assertTrue(compare_expressions(sin(2 * M.w[1]) + 2 * M.w[1] * M.y + 3, f))
 
     def test_replacement_walker2(self):
         M = ConcreteModel()
@@ -615,7 +717,7 @@ class WalkerTests3(unittest.TestCase):
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
         self.assertTrue(compare_expressions(M.x, e))
-        self.assertTrue(compare_expressions(2*M.w[1], f))
+        self.assertTrue(compare_expressions(2 * M.w[1], f))
 
     def test_replacement_walker3(self):
         M = ConcreteModel()
@@ -623,11 +725,13 @@ class WalkerTests3(unittest.TestCase):
         M.y = Var()
         M.w = VarList()
 
-        e = sin(M.x) + M.x*M.y + 3 <= 0
+        e = sin(M.x) + M.x * M.y + 3 <= 0
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3  <=  0, e))
-        self.assertTrue(compare_expressions(sin(2*M.w[1]) + 2*M.w[1]*M.y + 3  <=  0, f))
+        self.assertTrue(compare_expressions(sin(M.x) + M.x * M.y + 3 <= 0, e))
+        self.assertTrue(
+            compare_expressions(sin(2 * M.w[1]) + 2 * M.w[1] * M.y + 3 <= 0, f)
+        )
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -635,11 +739,17 @@ class WalkerTests3(unittest.TestCase):
         M.y = Var()
         M.w = VarList()
 
-        e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
+        e = inequality(0, sin(M.x) + M.x * M.y + 3, 1)
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(inequality(0, sin(M.x) + M.x*M.y + 3, 1), e))
-        self.assertTrue(compare_expressions(inequality(0, sin(2*M.w[1]) + 2*M.w[1]*M.y + 3, 1), f))
+        self.assertTrue(
+            compare_expressions(inequality(0, sin(M.x) + M.x * M.y + 3, 1), e)
+        )
+        self.assertTrue(
+            compare_expressions(
+                inequality(0, sin(2 * M.w[1]) + 2 * M.w[1] * M.y + 3, 1), f
+            )
+        )
 
     def test_replacement_walker5(self):
         M = ConcreteModel()
@@ -647,14 +757,14 @@ class WalkerTests3(unittest.TestCase):
         M.w = VarList()
         M.z = Param(mutable=True)
 
-        e = M.z*M.x
+        e = M.z * M.x
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
         self.assertIs(e.__class__, MonomialTermExpression)
         self.assertIs(f.__class__, ProductExpression)
         self.assertTrue(f.arg(0).is_potentially_variable())
-        self.assertTrue(compare_expressions(M.z*M.x, e))
-        self.assertTrue(compare_expressions(2*M.w[1]*M.x, f))
+        self.assertTrue(compare_expressions(M.z * M.x, e))
+        self.assertTrue(compare_expressions(2 * M.w[1] * M.x, f))
 
     def test_replacement_walker6(self):
         M = ConcreteModel()
@@ -662,25 +772,35 @@ class WalkerTests3(unittest.TestCase):
         M.w = VarList()
         M.z = Param(mutable=True)
 
-        e = (M.z*2)*3
+        e = (M.z * 2) * 3
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
         self.assertTrue(not e.is_potentially_variable())
         self.assertTrue(f.is_potentially_variable())
-        self.assertTrue(compare_expressions(M.z*2*3, e))
-        self.assertTrue(compare_expressions(ProductExpression([ProductExpression([2*M.w[1], 2]), 3]), f))
+        self.assertTrue(compare_expressions(M.z * 2 * 3, e))
+        self.assertTrue(
+            compare_expressions(
+                ProductExpression([ProductExpression([2 * M.w[1], 2]), 3]), f
+            )
+        )
 
     def test_replacement_walker7(self):
         M = ConcreteModel()
         M.x = Var()
         M.w = VarList()
         M.z = Param(mutable=True)
-        M.e = Expression(expr=M.z*2)
+        M.e = Expression(expr=M.z * 2)
 
-        e = M.x*M.e
+        e = M.x * M.e
         self.assertTrue(e.arg(1).is_potentially_variable())
         self.assertTrue(not e.arg(1).arg(0).is_potentially_variable())
-        self.assertTrue(compare_expressions(ProductExpression([M.x, (NPV_ProductExpression([M.z, 2]))]), e, include_named_exprs=False))
+        self.assertTrue(
+            compare_expressions(
+                ProductExpression([M.x, (NPV_ProductExpression([M.z, 2]))]),
+                e,
+                include_named_exprs=False,
+            )
+        )
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
         self.assertTrue(e.__class__ is ProductExpression)
@@ -688,7 +808,11 @@ class WalkerTests3(unittest.TestCase):
         self.assertEqual(id(e), id(f))
         self.assertTrue(f.arg(1).is_potentially_variable())
         self.assertTrue(f.arg(1).arg(0).is_potentially_variable())
-        self.assertTrue(compare_expressions(M.x*ProductExpression([2*M.w[1], 2]), f, include_named_exprs=False))
+        self.assertTrue(
+            compare_expressions(
+                M.x * ProductExpression([2 * M.w[1], 2]), f, include_named_exprs=False
+            )
+        )
 
     def test_replacement_walker0(self):
         M = ConcreteModel()
@@ -700,23 +824,45 @@ class WalkerTests3(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                             linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(2*M.w[1]*M.x[0] + 2*M.w[2]*M.x[1] + 2*M.w[3]*M.x[2], f))
+        self.assertTrue(
+            compare_expressions(
+                LinearExpression(
+                    linear_coefs=[i for i in M.z.values()],
+                    linear_vars=[i for i in M.x.values()],
+                ),
+                e,
+            )
+        )
+        self.assertTrue(
+            compare_expressions(
+                2 * M.w[1] * M.x[0] + 2 * M.w[2] * M.x[1] + 2 * M.w[3] * M.x[2], f
+            )
+        )
 
-        e = 2*sum_product(M.z, M.x)
+        e = 2 * sum_product(M.z, M.x)
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                               linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(2*(2*M.w[4]*M.x[0] + 2*M.w[5]*M.x[1] + 2*M.w[6]*M.x[2]), f))
+        self.assertTrue(
+            compare_expressions(
+                2
+                * LinearExpression(
+                    linear_coefs=[i for i in M.z.values()],
+                    linear_vars=[i for i in M.x.values()],
+                ),
+                e,
+            )
+        )
+        self.assertTrue(
+            compare_expressions(
+                2 * (2 * M.w[4] * M.x[0] + 2 * M.w[5] * M.x[1] + 2 * M.w[6] * M.x[2]), f
+            )
+        )
 
 
 #
 # Replace all mutable parameters with variables
 #
 class ReplacementWalker_ReplaceInternal(ExpressionReplacementVisitor):
-
     def exitNode(self, node, data):
         if type(node) == ProductExpression:
             return sum(data[1])
@@ -725,27 +871,34 @@ class ReplacementWalker_ReplaceInternal(ExpressionReplacementVisitor):
 
 
 class WalkerTests_ReplaceInternal(unittest.TestCase):
-
     def test_no_replacement(self):
         m = ConcreteModel()
         m.x = Param(mutable=True)
-        m.y = Var([1,2,3])
+        m.y = Var([1, 2, 3])
 
         e = sum(m.y[i] for i in m.y) == 0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[3]  ==  0, e))
-        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[3]  ==  0, f))
+        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[3] == 0, e))
+        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[3] == 0, f))
         self.assertIs(e, f)
 
     def test_replace(self):
         m = ConcreteModel()
         m.x = Param(mutable=True)
-        m.y = Var([1,2,3])
+        m.y = Var([1, 2, 3])
 
-        e = m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0
+        e = m.y[1] * m.y[2] + m.y[2] * m.y[3] == 0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0, e))
-        self.assertTrue(compare_expressions(SumExpression([SumExpression([m.y[1], m.y[2]]), SumExpression([m.y[2], m.y[3]])])  ==  0, f))
+        self.assertTrue(compare_expressions(m.y[1] * m.y[2] + m.y[2] * m.y[3] == 0, e))
+        self.assertTrue(
+            compare_expressions(
+                SumExpression(
+                    [SumExpression([m.y[1], m.y[2]]), SumExpression([m.y[2], m.y[3]])]
+                )
+                == 0,
+                f,
+            )
+        )
         self.assertIs(type(f.arg(0)), SumExpression)
         self.assertEqual(f.arg(0).nargs(), 2)
         self.assertIs(type(f.arg(0).arg(0)), SumExpression)
@@ -756,18 +909,17 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
     def test_replace_nested(self):
         m = ConcreteModel()
         m.x = Param(mutable=True)
-        m.y = Var([1,2,3])
+        m.y = Var([1, 2, 3])
 
-        e = m.y[1]*m.y[2]*m.y[2]*m.y[3]  ==  0
+        e = m.y[1] * m.y[2] * m.y[2] * m.y[3] == 0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(m.y[1]*m.y[2]*m.y[2]*m.y[3]  ==  0, e))
-        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[2] + m.y[3]  ==  0, f))
+        self.assertTrue(compare_expressions(m.y[1] * m.y[2] * m.y[2] * m.y[3] == 0, e))
+        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[2] + m.y[3] == 0, f))
         self.assertIs(type(f.arg(0)), SumExpression)
         self.assertEqual(f.arg(0).nargs(), 4)
 
 
 class TestReplacementWithNPV(unittest.TestCase):
-
     def test_npv_sum(self):
         m = ConcreteModel()
         m.p1 = Param(mutable=True)
@@ -813,11 +965,11 @@ class TestReplacementWithNPV(unittest.TestCase):
         m.p2 = Param(mutable=True)
         m.x = Var()
 
-        e1 = m.p1*3
+        e1 = m.p1 * 3
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, m.p2*3))
+        self.assertTrue(compare_expressions(e2, m.p2 * 3))
         self.assertTrue(compare_expressions(e3, ProductExpression([m.x, 3])))
 
     def test_npv_div(self):
@@ -826,11 +978,11 @@ class TestReplacementWithNPV(unittest.TestCase):
         m.p2 = Param(mutable=True)
         m.x = Var()
 
-        e1 = m.p1/3
+        e1 = m.p1 / 3
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, m.p2/3))
+        self.assertTrue(compare_expressions(e2, m.p2 / 3))
         self.assertTrue(compare_expressions(e3, DivisionExpression([m.x, 3])))
 
     def test_npv_unary(self):
@@ -866,36 +1018,29 @@ class BaseStreamBasedVisitorTests(object):
         m.x = Var()
         m.y = Var()
         m.z = Var()
-        self.e = m.x**2 + m.y + m.z*(m.x+m.y)
+        self.e = m.x**2 + m.y + m.z * (m.x + m.y)
 
     def test_bad_args(self):
         with self.assertRaisesRegex(
-                RuntimeError, "Unrecognized keyword arguments: {'foo': None}"):
+            RuntimeError, "Unrecognized keyword arguments: {'foo': None}"
+        ):
             StreamBasedExpressionVisitor(foo=None)
 
     def test_default(self):
         walker = StreamBasedExpressionVisitor()
         ans = self.walk(walker, self.e)
-        ref = [
-            [[],[]],
-            [],
-            [[],[[],[]],]
-        ]
+        ref = [[[], []], [], [[], [[], []]]]
         self.assertEqual(ans, ref)
 
     def test_beforeChild(self):
         def before(node, child, child_idx):
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, [child]
+
         walker = StreamBasedExpressionVisitor(beforeChild=before)
         ans = self.walk(walker, self.e)
         m = self.m
-        ref = [
-            [[m.x], [2]],
-            [m.y],
-            [[m.z], [[m.x], [m.y]]]
-        ]
+        ref = [[[m.x], [2]], [m.y], [[m.z], [[m.x], [m.y]]]]
         self.assertEqual(str(ans), str(ref))
 
         ans = self.walk(walker, m.x)
@@ -908,24 +1053,22 @@ class BaseStreamBasedVisitorTests(object):
 
     def test_initializeWalker_beforeChild(self):
         def before(node, child, child_idx):
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, child
+
         def initialize(expr):
             ans = before(None, expr, 0)
             if ans is None:
                 return True, expr
             else:
                 return ans
+
         walker = StreamBasedExpressionVisitor(
-            beforeChild=before, initializeWalker=initialize)
+            beforeChild=before, initializeWalker=initialize
+        )
         ans = self.walk(walker, self.e)
         m = self.m
-        ref = [
-            [m.x, 2],
-            m.y,
-            [m.z, [m.x, m.y]]
-        ]
+        ref = [[m.x, 2], m.y, [m.z, [m.x, m.y]]]
         self.assertEqual(str(ans), str(ref))
 
         ans = self.walk(walker, m.x)
@@ -938,23 +1081,24 @@ class BaseStreamBasedVisitorTests(object):
 
     def test_beforeChild_exitNode(self):
         def before(node, child, child_idx):
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, [child]
+
         def exit(node, data):
             if hasattr(node, 'getname'):
                 data.insert(0, node.getname())
             else:
                 data.insert(0, str(node))
             return data
-        walker = StreamBasedExpressionVisitor(
-            beforeChild=before, exitNode=exit)
+
+        walker = StreamBasedExpressionVisitor(beforeChild=before, exitNode=exit)
         ans = self.walk(walker, self.e)
         m = self.m
-        ref = ['sum',
-               ['pow', [m.x], [2]],
-               [m.y],
-               ['prod', [m.z], ['sum', [m.x], [m.y]]]
+        ref = [
+            'sum',
+            ['pow', [m.x], [2]],
+            [m.y],
+            ['prod', [m.z], ['sum', [m.x], [m.y]]],
         ]
         self.assertEqual(str(ans), str(ref))
 
@@ -968,27 +1112,33 @@ class BaseStreamBasedVisitorTests(object):
 
     def test_beforeChild_enterNode_exitNode(self):
         i = [0]
+
         def before(node, child, child_idx):
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, [child]
+
         def enter(node):
             i[0] += 1
             return None, [i[0]]
+
         def exit(node, data):
             if hasattr(node, 'getname'):
                 data.insert(0, node.getname())
             else:
                 data.insert(0, str(node))
             return data
+
         walker = StreamBasedExpressionVisitor(
-            beforeChild=before, enterNode=enter, exitNode=exit)
+            beforeChild=before, enterNode=enter, exitNode=exit
+        )
         ans = self.walk(walker, self.e)
         m = self.m
-        ref = ['sum', 1,
-               ['pow', 2, [m.x], [2]],
-               [m.y],
-               ['prod', 3, [m.z], ['sum', 4, [m.x], [m.y]]]
+        ref = [
+            'sum',
+            1,
+            ['pow', 2, [m.x], [2]],
+            [m.y],
+            ['prod', 3, [m.z], ['sum', 4, [m.x], [m.y]]],
         ]
         self.assertEqual(str(ans), str(ref))
 
@@ -1002,24 +1152,22 @@ class BaseStreamBasedVisitorTests(object):
 
     def test_old_beforeChild(self):
         def before(node, child):
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, [child]
+
         os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             walker = StreamBasedExpressionVisitor(beforeChild=before)
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
             "has changed to include the child index for the beforeChild() "
-            "method", os.getvalue().replace('\n',' '))
+            "method",
+            os.getvalue().replace('\n', ' '),
+        )
 
         ans = self.walk(walker, self.e)
         m = self.m
-        ref = [
-            [[m.x], [2]],
-            [m.y],
-            [[m.z], [[m.x], [m.y]]]
-        ]
+        ref = [[[m.x], [2]], [m.y], [[m.z], [[m.x], [m.y]]]]
         self.assertEqual(str(ans), str(ref))
 
         ans = self.walk(walker, m.x)
@@ -1033,10 +1181,11 @@ class BaseStreamBasedVisitorTests(object):
     def test_reduce_in_accept(self):
         def enter(node):
             return None, 1
+
         def accept(node, data, child_result, child_idx):
             return data + child_result
-        walker = StreamBasedExpressionVisitor(
-            enterNode=enter, acceptChildResult=accept)
+
+        walker = StreamBasedExpressionVisitor(enterNode=enter, acceptChildResult=accept)
         # 4 operators, 6 leaf nodes
         self.assertEqual(self.walk(walker, self.e), 10)
 
@@ -1046,20 +1195,15 @@ class BaseStreamBasedVisitorTests(object):
     def test_enterNode(self):
         # This is an alternative way to implement the beforeChild test:
         def enter(node):
-            if type(node) in nonpyomo_leaf_types \
-               or not node.is_expression_type():
+            if type(node) in nonpyomo_leaf_types or not node.is_expression_type():
                 return (), [node]
             return node.args, []
-        walker = StreamBasedExpressionVisitor(
-            enterNode=enter)
+
+        walker = StreamBasedExpressionVisitor(enterNode=enter)
         m = self.m
 
         ans = self.walk(walker, self.e)
-        ref = [
-            [[m.x], [2]],
-            [m.y],
-            [[m.z], [[m.x], [m.y]]]
-        ]
+        ref = [[[m.x], [2]], [m.y], [[m.z], [[m.x], [m.y]]]]
         self.assertEqual(str(ans), str(ref))
 
         ans = self.walk(walker, m.x)
@@ -1073,20 +1217,15 @@ class BaseStreamBasedVisitorTests(object):
     def test_enterNode_noLeafList(self):
         # This is an alternative way to implement the beforeChild test:
         def enter(node):
-            if type(node) in nonpyomo_leaf_types \
-               or not node.is_expression_type():
+            if type(node) in nonpyomo_leaf_types or not node.is_expression_type():
                 return (), node
             return node.args, []
-        walker = StreamBasedExpressionVisitor(
-            enterNode=enter)
+
+        walker = StreamBasedExpressionVisitor(enterNode=enter)
         m = self.m
 
         ans = self.walk(walker, self.e)
-        ref = [
-            [m.x, 2],
-            m.y,
-            [m.z, [m.x, m.y]]
-        ]
+        ref = [[m.x, 2], m.y, [m.z, [m.x, m.y]]]
         self.assertEqual(str(ans), str(ref))
 
         ans = self.walk(walker, m.x)
@@ -1100,25 +1239,21 @@ class BaseStreamBasedVisitorTests(object):
     def test_enterNode_withFinalize(self):
         # This is an alternative way to implement the beforeChild test:
         def enter(node):
-            if type(node) in nonpyomo_leaf_types \
-               or not node.is_expression_type():
+            if type(node) in nonpyomo_leaf_types or not node.is_expression_type():
                 return (), node
             return node.args, []
+
         def finalize(result):
             if type(result) is list:
                 return result
             else:
-                return[result]
-        walker = StreamBasedExpressionVisitor(
-            enterNode=enter, finalizeResult=finalize)
+                return [result]
+
+        walker = StreamBasedExpressionVisitor(enterNode=enter, finalizeResult=finalize)
         m = self.m
 
         ans = self.walk(walker, self.e)
-        ref = [
-            [m.x, 2],
-            m.y,
-            [m.z, [m.x, m.y]]
-        ]
+        ref = [[m.x, 2], m.y, [m.z, [m.x, m.y]]]
         self.assertEqual(str(ans), str(ref))
 
         ans = self.walk(walker, m.x)
@@ -1136,15 +1271,12 @@ class BaseStreamBasedVisitorTests(object):
                 return data
             else:
                 return [node]
+
         walker = StreamBasedExpressionVisitor(exitNode=exit)
         m = self.m
 
         ans = self.walk(walker, self.e)
-        ref = [
-            [[m.x], [2]],
-            [m.y],
-            [[m.z], [[m.x], [m.y]]]
-        ]
+        ref = [[[m.x], [2]], [m.y], [[m.z], [[m.x], [m.y]]]]
         self.assertEqual(str(ans), str(ref))
 
         ans = self.walk(walker, m.x)
@@ -1156,71 +1288,88 @@ class BaseStreamBasedVisitorTests(object):
         self.assertEqual(str(ans), str(ref))
 
     def test_beforeChild_acceptChildResult_afterChild(self):
-        counts = [0,0,0]
+        counts = [0, 0, 0]
+
         def before(node, child, child_idx):
             counts[0] += 1
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, None
+
         def accept(node, data, child_result, child_idx):
             counts[1] += 1
+
         def after(node, child, child_idx):
             counts[2] += 1
+
         walker = StreamBasedExpressionVisitor(
-            beforeChild=before, acceptChildResult=accept, afterChild=after)
+            beforeChild=before, acceptChildResult=accept, afterChild=after
+        )
         ans = self.walk(walker, self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEqual(counts, [9,9,9])
+        self.assertEqual(counts, [9, 9, 9])
 
     def test_OLD_beforeChild_acceptChildResult_afterChild(self):
-        counts = [0,0,0]
+        counts = [0, 0, 0]
+
         def before(node, child):
             counts[0] += 1
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, None
+
         def accept(node, data, child_result):
             counts[1] += 1
+
         def after(node, child):
             counts[2] += 1
 
         os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             walker = StreamBasedExpressionVisitor(
-                beforeChild=before, acceptChildResult=accept, afterChild=after)
+                beforeChild=before, acceptChildResult=accept, afterChild=after
+            )
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
             "has changed to include the child index for the "
-            "beforeChild() method", os.getvalue().replace('\n',' '))
+            "beforeChild() method",
+            os.getvalue().replace('\n', ' '),
+        )
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
             "has changed to include the child index for the "
-            "acceptChildResult() method", os.getvalue().replace('\n',' '))
+            "acceptChildResult() method",
+            os.getvalue().replace('\n', ' '),
+        )
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
             "has changed to include the child index for the "
-            "afterChild() method", os.getvalue().replace('\n',' '))
+            "afterChild() method",
+            os.getvalue().replace('\n', ' '),
+        )
 
         ans = self.walk(walker, self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEqual(counts, [9,9,9])
+        self.assertEqual(counts, [9, 9, 9])
 
     def test_enterNode_acceptChildResult_beforeChild(self):
         ans = []
+
         def before(node, child, child_idx):
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, child
+
         def accept(node, data, child_result, child_idx):
             if data is not child_result:
                 data.append(child_result)
             return data
+
         def enter(node):
             return node.args, ans
+
         walker = StreamBasedExpressionVisitor(
-            enterNode=enter, beforeChild=before, acceptChildResult=accept)
+            enterNode=enter, beforeChild=before, acceptChildResult=accept
+        )
         ans = self.walk(walker, self.e)
         m = self.m
         ref = [m.x, 2, m.y, m.z, m.x, m.y]
@@ -1228,52 +1377,75 @@ class BaseStreamBasedVisitorTests(object):
 
     def test_finalize(self):
         ans = []
+
         def before(node, child, child_idx):
-            if type(child) in nonpyomo_leaf_types \
-               or not child.is_expression_type():
+            if type(child) in nonpyomo_leaf_types or not child.is_expression_type():
                 return False, child
+
         def accept(node, data, child_result, child_idx):
             if data is not child_result:
                 data.append(child_result)
             return data
+
         def enter(node):
             return node.args, ans
+
         def finalize(result):
             return len(result)
+
         walker = StreamBasedExpressionVisitor(
-            enterNode=enter, beforeChild=before, acceptChildResult=accept,
-            finalizeResult=finalize)
+            enterNode=enter,
+            beforeChild=before,
+            acceptChildResult=accept,
+            finalizeResult=finalize,
+        )
         ans = self.walk(walker, self.e)
         self.assertEqual(ans, 6)
 
     def test_all_function_pointers(self):
         ans = []
+
         def name(x):
             if type(x) in nonpyomo_leaf_types:
                 return str(x)
             else:
                 return x.name
+
         def initialize(expr):
             ans.append("Initialize")
             return True, None
+
         def enter(node):
             ans.append("Enter %s" % (name(node)))
+
         def exit(node, data):
             ans.append("Exit %s" % (name(node)))
+
         def before(node, child, child_idx):
             ans.append("Before %s (from %s)" % (name(child), name(node)))
+
         def accept(node, data, child_result, child_idx):
             ans.append("Accept into %s" % (name(node)))
+
         def after(node, child, child_idx):
             ans.append("After %s (from %s)" % (name(child), name(node)))
+
         def finalize(result):
             ans.append("Finalize")
+
         walker = StreamBasedExpressionVisitor(
             initializeWalker=initialize,
-            enterNode=enter, exitNode=exit, beforeChild=before, 
-            acceptChildResult=accept, afterChild=after, finalizeResult=finalize)
-        self.assertIsNone( self.walk(walker, self.e) )
-        self.assertEqual("\n".join(ans),"""Initialize
+            enterNode=enter,
+            exitNode=exit,
+            beforeChild=before,
+            acceptChildResult=accept,
+            afterChild=after,
+            finalizeResult=finalize,
+        )
+        self.assertIsNone(self.walk(walker, self.e))
+        self.assertEqual(
+            "\n".join(ans),
+            """Initialize
 Enter sum
 Before pow (from sum)
 Enter pow
@@ -1321,7 +1493,8 @@ Exit prod
 Accept into sum
 After prod (from sum)
 Exit sum
-Finalize""")
+Finalize""",
+        )
 
     def test_all_derived_class(self):
         def name(x):
@@ -1329,30 +1502,39 @@ Finalize""")
                 return str(x)
             else:
                 return x.name
+
         class all_callbacks(StreamBasedExpressionVisitor):
             def __init__(self):
                 self.ans = []
                 super(all_callbacks, self).__init__()
+
             def initializeWalker(self, expr):
                 self.ans.append("Initialize")
                 return True, None
+
             def enterNode(self, node):
                 self.ans.append("Enter %s" % (name(node)))
+
             def exitNode(self, node, data):
                 self.ans.append("Exit %s" % (name(node)))
+
             def beforeChild(self, node, child, child_idx):
-                self.ans.append("Before %s (from %s)"
-                                % (name(child), name(node)))
+                self.ans.append("Before %s (from %s)" % (name(child), name(node)))
+
             def acceptChildResult(self, node, data, child_result, child_idx):
                 self.ans.append("Accept into %s" % (name(node)))
+
             def afterChild(self, node, child, child_idx):
-                self.ans.append("After %s (from %s)"
-                                % (name(child), name(node)))
+                self.ans.append("After %s (from %s)" % (name(child), name(node)))
+
             def finalizeResult(self, result):
                 self.ans.append("Finalize")
+
         walker = all_callbacks()
-        self.assertIsNone( self.walk(walker, self.e) )
-        self.assertEqual("\n".join(walker.ans),"""Initialize
+        self.assertIsNone(self.walk(walker, self.e))
+        self.assertEqual(
+            "\n".join(walker.ans),
+            """Initialize
 Enter sum
 Before pow (from sum)
 Enter pow
@@ -1400,7 +1582,8 @@ Exit prod
 Accept into sum
 After prod (from sum)
 Exit sum
-Finalize""")
+Finalize""",
+        )
 
     def test_all_derived_class_oldAPI(self):
         def name(x):
@@ -1408,42 +1591,56 @@ Finalize""")
                 return str(x)
             else:
                 return x.name
+
         class all_callbacks(StreamBasedExpressionVisitor):
             def __init__(self):
                 self.ans = []
                 super(all_callbacks, self).__init__()
+
             def enterNode(self, node):
                 self.ans.append("Enter %s" % (name(node)))
+
             def exitNode(self, node, data):
                 self.ans.append("Exit %s" % (name(node)))
+
             def beforeChild(self, node, child):
-                self.ans.append("Before %s (from %s)"
-                                % (name(child), name(node)))
+                self.ans.append("Before %s (from %s)" % (name(child), name(node)))
+
             def acceptChildResult(self, node, data, child_result):
                 self.ans.append("Accept into %s" % (name(node)))
+
             def afterChild(self, node, child):
-                self.ans.append("After %s (from %s)"
-                                % (name(child), name(node)))
+                self.ans.append("After %s (from %s)" % (name(child), name(node)))
+
             def finalizeResult(self, result):
                 self.ans.append("Finalize")
+
         os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             walker = all_callbacks()
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
             "has changed to include the child index for the "
-            "beforeChild() method", os.getvalue().replace('\n',' '))
+            "beforeChild() method",
+            os.getvalue().replace('\n', ' '),
+        )
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
             "has changed to include the child index for the "
-            "acceptChildResult() method", os.getvalue().replace('\n',' '))
+            "acceptChildResult() method",
+            os.getvalue().replace('\n', ' '),
+        )
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
             "has changed to include the child index for the "
-            "afterChild() method", os.getvalue().replace('\n',' '))
+            "afterChild() method",
+            os.getvalue().replace('\n', ' '),
+        )
 
-        self.assertIsNone( self.walk(walker, self.e) )
-        self.assertEqual("\n".join(walker.ans),"""Enter sum
+        self.assertIsNone(self.walk(walker, self.e))
+        self.assertEqual(
+            "\n".join(walker.ans),
+            """Enter sum
 Before pow (from sum)
 Enter pow
 Before x (from pow)
@@ -1490,26 +1687,27 @@ Exit prod
 Accept into sum
 After prod (from sum)
 Exit sum
-Finalize""")
+Finalize""",
+        )
 
 
 class TestStreamBasedExpressionVisitor_Recursive(
-        BaseStreamBasedVisitorTests, unittest.TestCase):
-
+    BaseStreamBasedVisitorTests, unittest.TestCase
+):
     def walk(self, walker, expr):
         return walker.walk_expression(expr)
 
 
 class TestStreamBasedExpressionVisitor_NonRecursive(
-        BaseStreamBasedVisitorTests, unittest.TestCase):
-
+    BaseStreamBasedVisitorTests, unittest.TestCase
+):
     def walk(self, walker, expr):
         return walker.walk_expression_nonrecursive(expr)
 
 
 def fill_stack(n, fcn, *args):
     if n:
-        return fill_stack(n-1, fcn, *args)
+        return fill_stack(n - 1, fcn, *args)
     else:
         return fcn(*args)
 
@@ -1518,12 +1716,14 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
     def setUp(self):
         self.m = m = ConcreteModel()
         m.x = Var()
-        m.I = Set(initialize=range(2*RECURSION_LIMIT))
+        m.I = Set(initialize=range(2 * RECURSION_LIMIT))
+
         def _rule(m, i):
             if i:
-                return m.e[i-1]
+                return m.e[i - 1]
             else:
                 return m.x
+
         m.e = Expression(m.I, rule=_rule)
 
     def evaluate_bx(self):
@@ -1531,48 +1731,57 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             if type(child) in native_types or not child.is_expression_type():
                 return False, value(child)
             return True, None
+
         def exit(node, data):
             return data[0] + 1
-        return StreamBasedExpressionVisitor(
-            beforeChild=before, exitNode=exit)
+
+        return StreamBasedExpressionVisitor(beforeChild=before, exitNode=exit)
 
     def evaluate_bex(self):
         def before(node, child, idx):
             if type(child) in native_types or not child.is_expression_type():
                 return False, value(child)
             return True, None
+
         def enter(node):
             return None, []
+
         def exit(node, data):
             return data[0] + 1
+
         return StreamBasedExpressionVisitor(
-            beforeChild=before, enterNode=enter, exitNode=exit)
+            beforeChild=before, enterNode=enter, exitNode=exit
+        )
 
     def evaluate_abex(self):
         def before(node, child, idx):
             if type(child) in native_types or not child.is_expression_type():
                 return False, value(child)
             return True, None
+
         def enter(node):
             return None, 0
+
         def accept(node, data, child_result, child_idx):
             return data + child_result
+
         def exit(node, data):
             return data + 1
+
         return StreamBasedExpressionVisitor(
-            beforeChild=before, acceptChildResult=accept,
-            enterNode=enter, exitNode=exit)
+            beforeChild=before, acceptChildResult=accept, enterNode=enter, exitNode=exit
+        )
 
     def run_walker(self, walker):
         m = self.m
         m.x = 10
         self.assertEqual(
-            2*RECURSION_LIMIT + 10,
-            walker.walk_expression(m.e[2*RECURSION_LIMIT-1]),
+            2 * RECURSION_LIMIT + 10,
+            walker.walk_expression(m.e[2 * RECURSION_LIMIT - 1]),
         )
         self.assertEqual(
-            2*RECURSION_LIMIT + 10,
-            walker.walk_expression_nonrecursive(m.e[2*RECURSION_LIMIT-1]),
+            2 * RECURSION_LIMIT + 10,
+            walker.walk_expression_nonrecursive(m.e[2 * RECURSION_LIMIT - 1]),
         )
 
         # This is a "magic parameter" that quantifies the overhead
@@ -1593,8 +1802,7 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             # We have not yet determined how to trigger the
             # RecursionError on PyPy
             cases = [(0, "")]
-        elif (os.environ.get('GITHUB_ACTIONS', '')
-              and sys.platform.startswith('win')):
+        elif os.environ.get('GITHUB_ACTIONS', '') and sys.platform.startswith('win'):
             # The test for handling RecursionError appears to fail
             # inexplicably on GHA/Windows under pytest: the
             # RecursionError that is supposed to be raised is not
@@ -1602,17 +1810,20 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             # overflow error
             cases = []
         else:
-            cases = [(0, ""), (3, warn_msg)]
+            # 3 sufficed through Python 3.10, but appeared to need to be
+            # raised to 5 for recent 3.11 builds (3.11.2)
+            cases = [(0, ""), (5, warn_msg)]
 
         head_room = sys.getrecursionlimit() - get_stack_depth()
         for n, msg in cases:
             with LoggingIntercept() as LOG:
                 self.assertEqual(
-                    2*RECURSION_LIMIT + 10,
+                    2 * RECURSION_LIMIT + 10,
                     fill_stack(
                         head_room - RECURSION_LIMIT - TESTING_OVERHEAD + n,
                         walker.walk_expression,
-                        m.e[2*RECURSION_LIMIT-1]),
+                        m.e[2 * RECURSION_LIMIT - 1],
+                    ),
                 )
             self.assertEqual(msg, LOG.getvalue())
 
@@ -1627,7 +1838,6 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
 
 
 class TestEvaluateExpression(unittest.TestCase):
-
     def test_constant(self):
         m = ConcreteModel()
         m.p = Param(initialize=1)
@@ -1650,7 +1860,9 @@ class TestEvaluateExpression(unittest.TestCase):
 
         e = 1 + m.p
         self.assertRaises(ValueError, evaluate_expression, e)
-        self.assertRaises(NonConstantExpressionError, evaluate_expression, e, constant=True)
+        self.assertRaises(
+            NonConstantExpressionError, evaluate_expression, e, constant=True
+        )
 
     def test_initialized_variable(self):
         m = ConcreteModel()
@@ -1658,7 +1870,9 @@ class TestEvaluateExpression(unittest.TestCase):
 
         e = 1 + m.p
         self.assertTrue(2, evaluate_expression(e))
-        self.assertRaises(NonConstantExpressionError, evaluate_expression, e, constant=True)
+        self.assertRaises(
+            NonConstantExpressionError, evaluate_expression, e, constant=True
+        )
 
     def test_fixed_variable(self):
         m = ConcreteModel()
@@ -1671,14 +1885,17 @@ class TestEvaluateExpression(unittest.TestCase):
 
     def test_template_expr(self):
         m = ConcreteModel()
-        m.I = RangeSet(1,9)
-        m.x = Var(m.I, initialize=lambda m,i: i+1)
-        m.P = Param(m.I, initialize=lambda m,i: 10-i, mutable=True)
+        m.I = RangeSet(1, 9)
+        m.x = Var(m.I, initialize=lambda m, i: i + 1)
+        m.P = Param(m.I, initialize=lambda m, i: 10 - i, mutable=True)
         t = IndexTemplate(m.I)
 
-        e = m.x[t+m.P[t+1]] + 3
+        e = m.x[t + m.P[t + 1]] + 3
         self.assertRaises(TemplateExpressionError, evaluate_expression, e)
-        self.assertRaises(TemplateExpressionError, evaluate_expression, e, constant=True)
+        self.assertRaises(
+            TemplateExpressionError, evaluate_expression, e, constant=True
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

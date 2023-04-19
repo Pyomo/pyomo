@@ -15,7 +15,7 @@ Most Pyomo expression trees have the following form
 
 1. Interior nodes are objects that inherit from the :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>` class.  These objects typically have one or more child nodes.  Linear expression nodes do not have child nodes, but they are treated as interior nodes in the expression tree because they references other leaf nodes.
 
-2. Leaf nodes are numeric values, parameter components and variable components, which represent the *inputs* to the expresion.
+2. Leaf nodes are numeric values, parameter components and variable components, which represent the *inputs* to the expression.
 
 Expression Classes
 ------------------
@@ -41,7 +41,7 @@ logical relationships, which are summarized in the following table:
 ==================== ====================================   ========================================================================================
 Operation            Example                                Pyomo Class
 ==================== ====================================   ========================================================================================
-exernal function     ``myfunc(x,y,z)``                      :class:`ExternalFunctionExpression <pyomo.core.expr.current.ExternalFunctionExpression>`
+external function     ``myfunc(x,y,z)``                      :class:`ExternalFunctionExpression <pyomo.core.expr.current.ExternalFunctionExpression>`
 logical if-then-else ``Expr_if(IF=x, THEN=y, ELSE=z)``      :class:`Expr_ifExpression <pyomo.core.expr.current.Expr_ifExpression>`
 intrinsic function   ``sin(x)``                             :class:`UnaryFunctionExpression <pyomo.core.expr.current.UnaryFunctionExpression>`
 absolute function    ``abs(x)``                             :class:`AbsExpression <pyomo.core.expr.current.AbsExpression>`
@@ -149,7 +149,7 @@ Pyomo does not have a binary sum expression class.  Instead,
 it has an ``n``-ary summation class, :class:`SumExpression
 <pyomo.core.expr.current.SumExpression>`.  This expression class
 treats sums as ``n``-ary sums for efficiency reasons;  many large
-optimization models contain large sums. But note tht this class
+optimization models contain large sums. But note that this class
 maintains the immutability property described above.  This class
 shares an underlying list of arguments with other :class:`SumExpression
 <pyomo.core.expr.current.SumExpression>` objects. A particular

@@ -2,8 +2,7 @@
 """Tests deactivation of trivial constraints."""
 import pyomo.common.unittest as unittest
 from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.environ import (Constraint, ConcreteModel, TransformationFactory,
-                           Var)
+from pyomo.environ import Constraint, ConcreteModel, TransformationFactory, Var
 
 
 class TestTrivialConstraintDeactivator(unittest.TestCase):
@@ -20,8 +19,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.c3 = Constraint(expr=m.v1 <= 5)
         m.v1.fix()
 
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m)
         self.assertTrue(m.c.active)
         self.assertTrue(m.c2.active)
         self.assertFalse(m.c3.active)
@@ -38,9 +36,9 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.v1.fix()
 
         trivial = []
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(
-                m, return_trivial=trivial)
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+            m, return_trivial=trivial
+        )
         self.assertTrue(m.c.active)
         self.assertTrue(m.c2.active)
         self.assertFalse(m.c3.active)
@@ -58,8 +56,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.c3 = Constraint(expr=m.v1 <= 5)
         m.v1.fix()
 
-        xfrm = TransformationFactory(
-            'contrib.deactivate_trivial_constraints')
+        xfrm = TransformationFactory('contrib.deactivate_trivial_constraints')
         xfrm.apply_to(m, tmp=True)
         self.assertTrue(m.c.active)
         self.assertTrue(m.c2.active)
@@ -71,8 +68,9 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
     def test_trivial_constraints_lb_conflict(self):
         """Test for violated trivial constraint lower bound."""
         with self.assertRaisesRegex(
-                InfeasibleConstraintException, 
-                "Trivial constraint c violates LB 2.0 ≤ BODY 1."):
+            InfeasibleConstraintException,
+            "Trivial constraint c violates LB 2.0 ≤ BODY 1.",
+        ):
             self._trivial_constraints_lb_conflict()
 
     def _trivial_constraints_lb_conflict(self):
@@ -80,14 +78,14 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.v1 = Var(initialize=1)
         m.c = Constraint(expr=m.v1 >= 2)
         m.v1.fix()
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m)
 
     def test_trivial_constraints_ub_conflict(self):
         """Test for violated trivial constraint upper bound."""
         with self.assertRaisesRegex(
-                InfeasibleConstraintException, 
-                "Trivial constraint c violates BODY 1 ≤ UB 0.0."):
+            InfeasibleConstraintException,
+            "Trivial constraint c violates BODY 1 ≤ UB 0.0.",
+        ):
             self._trivial_constraints_ub_conflict()
 
     def _trivial_constraints_ub_conflict(self):
@@ -95,18 +93,16 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.v1 = Var(initialize=1)
         m.c = Constraint(expr=m.v1 <= 0)
         m.v1.fix()
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m)
 
     def test_trivial_constraint_due_to_0_coefficient(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
         m.y.fix(0)
-        m.c = Constraint(expr=m.x*m.y >= 0)
+        m.c = Constraint(expr=m.x * m.y >= 0)
 
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m)
 
         self.assertFalse(m.c.active)
 
@@ -115,10 +111,9 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.x = Var()
         m.y = Var()
         m.z = Var()
-        m.c = Constraint(expr=(m.x**2 + m.y)*m.z >= -8)
+        m.c = Constraint(expr=(m.x**2 + m.y) * m.z >= -8)
         m.z.fix(0)
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m)
         self.assertFalse(m.c.active)
 
     def test_trivial_linear_constraint_due_to_cancellation(self):
@@ -126,8 +121,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.x = Var()
         m.c = Constraint(expr=m.x - m.x <= 0)
 
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m)
 
         self.assertFalse(m.c.active)
 

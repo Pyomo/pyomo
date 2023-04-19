@@ -28,23 +28,30 @@ import pickle
 import ply.lex
 import re
 import sys
-from textwrap import wrap
+import textwrap
 import types
 
 from pyomo.common.collections import Sequence, Mapping
-from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.deprecation import (
+    deprecated,
+    deprecation_warning,
+    relocated_module_attribute,
+)
+from pyomo.common.errors import DeveloperError
 from pyomo.common.fileutils import import_file
+from pyomo.common.formatting import wrap_reStructuredText
 from pyomo.common.modeling import NOTSET
 
-logger = logging.getLogger('pyomo.common.config')
+logger = logging.getLogger(__name__)
 
 relocated_module_attribute(
-    'PYOMO_CONFIG_DIR', 'pyomo.common.envvar.PYOMO_CONFIG_DIR',
-    version='6.1')
+    'PYOMO_CONFIG_DIR', 'pyomo.common.envvar.PYOMO_CONFIG_DIR', version='6.1'
+)
 
 USER_OPTION = 0
-ADVANCED_OPTION = 1
-DEVELOPER_OPTION = 2
+ADVANCED_OPTION = 10
+DEVELOPER_OPTION = 20
+
 
 def Bool(val):
     """Domain validator for bool-like objects.
@@ -68,8 +75,8 @@ def Bool(val):
         v = int(val)
         if v in {0, 1}:
             return bool(v)
-    raise ValueError(
-        "Expected Boolean, but received %s" % (val,))
+    raise ValueError("Expected Boolean, but received %s" % (val,))
+
 
 def Integer(val):
     """Domain validation function admitting integers
@@ -83,9 +90,9 @@ def Integer(val):
     ans = int(val)
     # We want to give an error for floating point numbers...
     if ans != float(val):
-        raise ValueError(
-            "Expected integer, but received %s" % (val,))
+        raise ValueError("Expected integer, but received %s" % (val,))
     return ans
+
 
 def PositiveInt(val):
     """Domain validation function admitting strictly positive integers
@@ -97,9 +104,9 @@ def PositiveInt(val):
     ans = int(val)
     # We want to give an error for floating point numbers...
     if ans != float(val) or ans <= 0:
-        raise ValueError(
-            "Expected positive int, but received %s" % (val,))
+        raise ValueError("Expected positive int, but received %s" % (val,))
     return ans
+
 
 def NegativeInt(val):
     """Domain validation function admitting strictly negative integers
@@ -110,9 +117,9 @@ def NegativeInt(val):
     """
     ans = int(val)
     if ans != float(val) or ans >= 0:
-        raise ValueError(
-            "Expected negative int, but received %s" % (val,))
+        raise ValueError("Expected negative int, but received %s" % (val,))
     return ans
+
 
 def NonPositiveInt(val):
     """Domain validation function admitting integers <= 0
@@ -123,9 +130,9 @@ def NonPositiveInt(val):
     """
     ans = int(val)
     if ans != float(val) or ans > 0:
-        raise ValueError(
-            "Expected non-positive int, but received %s" % (val,))
+        raise ValueError("Expected non-positive int, but received %s" % (val,))
     return ans
+
 
 def NonNegativeInt(val):
     """Domain validation function admitting integers >= 0
@@ -136,9 +143,9 @@ def NonNegativeInt(val):
     """
     ans = int(val)
     if ans != float(val) or ans < 0:
-        raise ValueError(
-            "Expected non-negative int, but received %s" % (val,))
+        raise ValueError("Expected non-negative int, but received %s" % (val,))
     return ans
+
 
 def PositiveFloat(val):
     """Domain validation function admitting strictly positive numbers
@@ -150,9 +157,9 @@ def PositiveFloat(val):
     """
     ans = float(val)
     if ans <= 0:
-        raise ValueError(
-            "Expected positive float, but received %s" % (val,))
+        raise ValueError("Expected positive float, but received %s" % (val,))
     return ans
+
 
 def NegativeFloat(val):
     """Domain validation function admitting strictly negative numbers
@@ -164,9 +171,9 @@ def NegativeFloat(val):
     """
     ans = float(val)
     if ans >= 0:
-        raise ValueError(
-            "Expected negative float, but received %s" % (val,))
+        raise ValueError("Expected negative float, but received %s" % (val,))
     return ans
+
 
 def NonPositiveFloat(val):
     """Domain validation function admitting numbers less than or equal to 0
@@ -178,9 +185,9 @@ def NonPositiveFloat(val):
     """
     ans = float(val)
     if ans > 0:
-        raise ValueError(
-            "Expected non-positive float, but received %s" % (val,))
+        raise ValueError("Expected non-positive float, but received %s" % (val,))
     return ans
+
 
 def NonNegativeFloat(val):
     """Domain validation function admitting numbers greater than or equal to 0
@@ -192,8 +199,7 @@ def NonNegativeFloat(val):
     """
     ans = float(val)
     if ans < 0:
-        raise ValueError(
-            "Expected non-negative float, but received %s" % (val,))
+        raise ValueError("Expected non-negative float, but received %s" % (val,))
     return ans
 
 
@@ -214,7 +220,7 @@ class In(object):
         values are passed to ``domain.__contains__()``, and if ``True``
         is returned, the value is accepted and returned.
 
-    cast: callable, optional
+    cast: Callable, optional
         A callable object.  If specified, incoming values are first
         passed to `cast`, and the resulting object is checked for
         membership in `domain`
@@ -231,8 +237,12 @@ class In(object):
         # Convenience: enum.Enum supported __contains__ through Python
         # 3.7.  If the domain is an Enum and cast is not specified,
         # automatically return an InEnum to handle casting and validation
-        if cls is In and cast is None and inspect.isclass(domain) \
-           and issubclass(domain, enum.Enum):
+        if (
+            cls is In
+            and cast is None
+            and inspect.isclass(domain)
+            and issubclass(domain, enum.Enum)
+        ):
             return InEnum(domain)
         return super(In, cls).__new__(cls)
 
@@ -270,6 +280,7 @@ class InEnum(object):
         The enum that incoming values should be mapped to
 
     """
+
     def __init__(self, domain):
         self._domain = domain
 
@@ -283,8 +294,7 @@ class InEnum(object):
                 return self._domain[value]
             except KeyError:
                 pass
-        raise ValueError("%r is not a valid %s" % (
-            value, self._domain.__name__))
+        raise ValueError("%r is not a valid %s" % (value, self._domain.__name__))
 
     def domain_name(self):
         return f'InEnum[{self._domain.__name__}]'
@@ -311,6 +321,7 @@ class ListOf(object):
         no tokenization is performed.
 
     """
+
     def __init__(self, itemtype, domain=None, string_lexer=NOTSET):
         self.itemtype = itemtype
         if domain is None:
@@ -321,8 +332,7 @@ class ListOf(object):
             self.string_lexer = _default_string_list_lexer
         else:
             self.string_lexer = string_lexer
-        self.__name__ = 'ListOf(%s)' % (
-            getattr(self.domain, '__name__', self.domain),)
+        self.__name__ = 'ListOf(%s)' % (getattr(self.domain, '__name__', self.domain),)
 
     def __call__(self, value):
         if isinstance(value, str) and self.string_lexer is not None:
@@ -337,7 +347,7 @@ class ListOf(object):
 
 
 class Module(object):
-    """ Domain validator for modules.
+    """Domain validator for modules.
 
     Modules can be specified as module objects, by module name,
     or by the path to the module's file. If specified by path, the
@@ -350,21 +360,25 @@ class Module(object):
 
     Parameters
     ----------
-    basePath: None, str, ConfigValue
+    basePath : None, str, ConfigValue
         The base path that will be prepended to any non-absolute path
         values provided.  If None, defaults to :py:attr:`Path.BasePath`.
 
-    expandPath: bool
+    expandPath : bool
         If True, then the value will be expanded and normalized.  If
         False, the string representation of the value will be used
         unchanged.  If None, expandPath will defer to the (negated)
         value of :py:attr:`Path.SuppressPathExpansion`.
+
+    Examples
+    --------
 
     The following code shows the three ways you can specify a module: by file
     name, by module name, or by module object. Regardless of how the module is
     specified, what is stored in the configuration is a module object.
 
     .. doctest::
+
         >>> from pyomo.common.config import (
         ...     ConfigDict, ConfigValue, Module
         ... )
@@ -372,6 +386,7 @@ class Module(object):
         >>> config.declare('my_module', ConfigValue(
         ...     domain=Module(),
         ... ))
+        <pyomo.common.config.ConfigValue object at ...>
         >>> # Set using file path
         >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
         >>> # Set using python module name, as a string
@@ -379,7 +394,9 @@ class Module(object):
         >>> # Set using an imported module object
         >>> import os.path
         >>> config.my_module = os.path
+
     """
+
     def __init__(self, basePath=None, expandPath=None):
         self.basePath = basePath
         self.expandPath = expandPath
@@ -426,6 +443,7 @@ class Path(object):
         value of :py:attr:`Path.SuppressPathExpansion`
 
     """
+
     BasePath = None
     SuppressPathExpansion = False
 
@@ -459,16 +477,21 @@ class Path(object):
         if path and path[:6].lower() == '${cwd}':
             path = os.getcwd() + path[6:]
 
-        ans = os.path.normpath(os.path.abspath(os.path.join(
-            os.path.expanduser(os.path.expandvars(base)),
-            os.path.expanduser(os.path.expandvars(path)))))
+        ans = os.path.normpath(
+            os.path.abspath(
+                os.path.join(
+                    os.path.expanduser(os.path.expandvars(base)),
+                    os.path.expanduser(os.path.expandvars(path)),
+                )
+            )
+        )
         return ans
 
 
 class PathList(Path):
     """Domain validator for a list of path-like objects.
 
-    This will admit any iterable or object convertable to a string.
+    This will admit any iterable or object convertible to a string.
     Iterable objects (other than strings) will have each member
     normalized using :py:class:`Path`.  Other types will be passed to
     :py:class:`Path`, returning a list with the single resulting path.
@@ -489,9 +512,9 @@ class PathList(Path):
 
     def __call__(self, data):
         if hasattr(data, "__iter__") and not isinstance(data, str):
-            return [ super(PathList, self).__call__(i) for i in data ]
+            return [super(PathList, self).__call__(i) for i in data]
         else:
-            return [ super(PathList, self).__call__(data) ]
+            return [super(PathList, self).__call__(data)]
 
 
 class DynamicImplicitDomain(object):
@@ -503,7 +526,7 @@ class DynamicImplicitDomain(object):
     ``pyomo/common/tests/config_plugin.py``:
 
     .. literalinclude:: /../../pyomo/common/tests/config_plugin.py
-       :lines: 10-
+       :start-at: import
 
     .. doctest::
        :hide:
@@ -543,25 +566,12 @@ class DynamicImplicitDomain(object):
         (ConfigValue, ConfigList, or ConfigDict)
 
     """
+
     def __init__(self, callback):
         self.callback = callback
 
     def __call__(self, key, value):
         return self.callback(key, value)
-
-
-def add_docstring_list(docstring, configdict, indent_by=4):
-    """Returns the docstring with a formatted configuration arguments listing."""
-    return docstring + (" " * indent_by).join(
-        configdict.generate_documentation(
-            block_start="Keyword Arguments\n-----------------\n",
-            block_end="",
-            item_start="%s\n",
-            item_body="  %s",
-            item_end="",
-            indent_spacing=0,
-            width=256
-        ).splitlines(True))
 
 
 # Note: Enum uses a metaclass to work its magic.  To get a deprecation
@@ -574,12 +584,13 @@ def add_docstring_list(docstring, configdict, indent_by=4):
 # the original __new__ to generate the class docstring.
 @deprecated()
 class ConfigEnum(enum.Enum):
-
-    @deprecated("The ConfigEnum base class is deprecated.  "
-                "Directly inherit from enum.Enum and then use "
-                "In() or InEnum() as the ConfigValue 'domain' for "
-                "validation and int/string type conversions.",
-                version='6.0')
+    @deprecated(
+        "The ConfigEnum base class is deprecated.  "
+        "Directly inherit from enum.Enum and then use "
+        "In() or InEnum() as the ConfigValue 'domain' for "
+        "validation and int/string type conversions.",
+        version='6.0',
+    )
     def __new__(cls, value, *args):
         member = object.__new__(cls)
         member._value_ = value
@@ -616,7 +627,7 @@ values for those entries, and retrieve the current values:
 .. doctest::
 
     >>> from pyomo.common.config import (
-    ...     ConfigDict, ConfigList, ConfigValue, In,
+    ...     ConfigDict, ConfigList, ConfigValue
     ... )
     >>> config = ConfigDict()
     >>> config.declare('filename', ConfigValue(
@@ -700,7 +711,7 @@ validators for common use cases:
    Module
    Path
    PathList
-
+   DynamicImplicitDomain
 
 Configuring class hierarchies
 =============================
@@ -1013,16 +1024,18 @@ The defaults generate LaTeX documentation:
 
 """
 
+
 def _dump(*args, **kwds):
     try:
         from yaml import dump
     except ImportError:
-        #dump = lambda x,**y: str(x)
+        # dump = lambda x,**y: str(x)
         # YAML uses lowercase True/False
         def dump(x, **args):
             if type(x) is bool:
                 return str(x).lower()
             return str(x)
+
     assert '_dump' in globals()
     globals()['_dump'] = dump
     return dump(*args, **kwds)
@@ -1033,6 +1046,7 @@ def _munge_name(name, space_to_dash=True):
         name = re.sub(r'\s', '-', name)
     name = re.sub(r'_', '-', name)
     return re.sub(r'[^a-zA-Z0-9-_]', '_', name)
+
 
 def _domain_name(domain):
     if domain is None:
@@ -1046,7 +1060,9 @@ def _domain_name(domain):
     else:
         return None
 
+
 _leadingSpace = re.compile('^([ \t]*)')
+
 
 def _strip_indentation(doc):
     if not doc:
@@ -1071,8 +1087,7 @@ def _value2string(prefix, value, obj):
     if value is not None:
         try:
             _data = value._data if value is obj else value
-            if getattr(builtins, _data.__class__.__name__, None
-                   ) is not None:
+            if getattr(builtins, _data.__class__.__name__, None) is not None:
                 _str += _dump(_data, default_flow_style=True).rstrip()
                 if _str.endswith("..."):
                     _str = _str[:-3].rstrip()
@@ -1081,6 +1096,7 @@ def _value2string(prefix, value, obj):
         except:
             _str += str(type(_data))
     return _str.rstrip()
+
 
 def _value2yaml(prefix, value, obj):
     _str = prefix
@@ -1102,14 +1118,17 @@ class _UnpickleableDomain(object):
 
     def __call__(self, arg):
         logging.error(
-"""%s '%s' was pickled with an unpicklable domain.
+            """%s '%s' was pickled with an unpicklable domain.
     The domain was stripped and lost during the pickle process.  Setting
     new values on the restored object cannot be mapped into the correct
     domain.
-""" % ( self._type, self._name))
+"""
+            % (self._type, self._name)
+        )
         return arg
 
-def _picklable(field,obj):
+
+def _picklable(field, obj):
     ftype = type(field)
     # If the field is a type (class, etc), cache the 'known' status of
     # the actual field type and not the generic 'type' class
@@ -1142,33 +1161,33 @@ def _picklable(field,obj):
             _picklable.known[ftype] = False
         return _UnpickleableDomain(obj)
 
+
 _picklable.known = {}
 # The "picklability" of some types is not categorically "knowable"
 # (e.g., functions can be pickled, but only if they are declared at the
 # module scope)
-_picklable.unknowable_types = {type, types.FunctionType,}
+_picklable.unknowable_types = {type, types.FunctionType}
 
 _store_bool = {'store_true', 'store_false'}
+
 
 def _build_lexer(literals=''):
     # Ignore whitespace (space, tab, linefeed, and comma)
     t_ignore = " \t\r,"
 
-    tokens = [
-        "STRING", # quoted string
-        "WORD",   # unquoted string
-    ]
+    tokens = ["STRING", "WORD"]  # quoted string  # unquoted string
 
     # A "string" is a proper quoted string
     _quoted_str = r"'(?:[^'\\]|\\.)*'"
-    _general_str = "|".join([_quoted_str, _quoted_str.replace("'",'"')])
+    _general_str = "|".join([_quoted_str, _quoted_str.replace("'", '"')])
+
     @ply.lex.TOKEN(_general_str)
     def t_STRING(t):
         t.value = t.value[1:-1]
         return t
 
     # A "word" contains no whitesspace or commas
-    @ply.lex.TOKEN(r'[^' + repr(t_ignore+literals) + r']+')
+    @ply.lex.TOKEN(r'[^' + repr(t_ignore + literals) + r']+')
     def t_WORD(t):
         t.value = t.value
         return t
@@ -1177,10 +1196,12 @@ def _build_lexer(literals=''):
     def t_error(t):
         # Note this parser does not allow "\n", so lexpos is the
         # column number
-        raise IOError("ERROR: Token '%s' Line %s Column %s"
-          % (t.value, t.lineno, t.lexpos+1))
+        raise IOError(
+            "ERROR: Token '%s' Line %s Column %s" % (t.value, t.lineno, t.lexpos + 1)
+        )
 
     return ply.lex.lex()
+
 
 def _default_string_list_lexer(value):
     """Simple string tokenizer for lists of words.
@@ -1201,7 +1222,9 @@ def _default_string_list_lexer(value):
             break
         yield tok.value
 
+
 _default_string_list_lexer._lex = None
+
 
 def _default_string_dict_lexer(value):
     """Simple string tokenizer for dict data.
@@ -1223,39 +1246,357 @@ def _default_string_dict_lexer(value):
             break
         sep = _lex.token()
         if not sep:
-            raise ValueError(
-                "Expected ':' or '=' but encountered end of string")
+            raise ValueError("Expected ':' or '=' but encountered end of string")
         if sep.type not in ':=':
             raise ValueError(
                 f"Expected ':' or '=' but found '{sep.value}' at "
-                f"Line {sep.lineno} Column {sep.lexpos+1}")
+                f"Line {sep.lineno} Column {sep.lexpos+1}"
+            )
         val = _lex.token()
         if not val:
             raise ValueError(
                 f"Expected value following '{sep.type}' "
-                f"but encountered end of string")
+                f"but encountered end of string"
+            )
         yield key.value, val.value
+
 
 _default_string_dict_lexer._lex = None
 
 
+def _formatter_str_to_callback(pattern, formatter):
+    "Wrapper function that converts formatter strings to callback functions"
+
+    if not pattern:
+        pattern = ''
+    if '%s' in pattern:
+        cb = lambda self, indent, obj: self.out.write(indent + pattern % obj.name())
+    elif pattern:
+        cb = lambda self, indent, obj: self.out.write(indent + pattern)
+    else:
+        cb = lambda self, indent, obj: None
+    return types.MethodType(cb, formatter)
+
+
+def _formatter_str_to_item_callback(pattern, formatter):
+    "Wrapper function that converts item formatter strings to callback functions"
+
+    if not pattern:
+        pattern = ''
+    if '%s' in pattern:
+        _item_body_formatter = lambda doc: pattern % (doc,)
+    else:
+        _item_body_formatter = lambda doc: pattern
+
+    def _item_body_cb(self, indent, obj):
+        _doc = obj._doc or obj._description or ""
+        if not _doc:
+            return ''
+        wraplines = '\n ' not in _doc
+        _doc = _item_body_formatter(_doc).strip()
+        if not _doc:
+            return ''
+        _indent = indent + ' ' * self.indent_spacing
+        if wraplines:
+            doc_lines = textwrap.wrap(
+                _doc, self.width, initial_indent=_indent, subsequent_indent=_indent
+            )
+            self.out.write(('\n'.join(doc_lines)).rstrip() + '\n')
+        else:
+            self.out.write(_doc.rstrip() + '\n')
+
+    return types.MethodType(_item_body_cb, formatter)
+
+
+class ConfigFormatter(object):
+    def _initialize(self, indent_spacing, width, visibility):
+        self.out = io.StringIO()
+        self.indent_spacing = indent_spacing
+        self.width = width
+        self.visibility = visibility
+
+    def _block_start(self, indent, obj):
+        pass
+
+    def _block_end(self, indent, obj):
+        pass
+
+    def _item_start(self, indent, obj):
+        pass
+
+    def _item_body(self, indent, obj):
+        pass
+
+    def _item_end(self, indent, obj):
+        pass
+
+    def _finalize(self):
+        return self.out.getvalue()
+
+    def generate(self, config, indent_spacing=2, width=78, visibility=None):
+        self._initialize(indent_spacing, width, visibility)
+        level = []
+        lastObj = config
+        indent = ''
+        for lvl, pre, val, obj in config._data_collector(1, '', visibility, True):
+            if len(level) < lvl:
+                while len(level) < lvl - 1:
+                    level.append(None)
+                level.append(lastObj)
+                self._block_start(indent, lastObj)
+                indent += ' ' * indent_spacing
+            while len(level) > lvl:
+                _last = level.pop()
+                if _last is not None:
+                    indent = indent[:-indent_spacing]
+                    self._block_end(indent, _last)
+
+            lastObj = obj
+            self._item_start(indent, obj)
+            self._item_body(indent, obj)
+            self._item_end(indent, obj)
+        while level:
+            _last = level.pop()
+            if _last is not None:
+                indent = indent[:-indent_spacing]
+                self._block_end(indent, _last)
+        return self._finalize()
+
+
+class String_ConfigFormatter(ConfigFormatter):
+    def __init__(self, block_start, block_end, item_start, item_body, item_end):
+        self._block_start = _formatter_str_to_callback(block_start, self)
+        self._block_end = _formatter_str_to_callback(block_end, self)
+        self._item_start = _formatter_str_to_callback(item_start, self)
+        self._item_end = _formatter_str_to_callback(item_end, self)
+        self._item_body = _formatter_str_to_item_callback(item_body, self)
+
+
+class LaTeX_ConfigFormatter(String_ConfigFormatter):
+    def __init__(self):
+        super().__init__(
+            "\\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]\n",
+            "\\end{description}\n",
+            "\\item[{%s}]\\hfill\n",
+            "\\\\%s",
+            "",
+        )
+
+
+class numpydoc_ConfigFormatter(ConfigFormatter):
+    def _initialize(self, *args):
+        super()._initialize(*args)
+        self.wrapper = textwrap.TextWrapper(width=self.width)
+
+    def _item_body(self, indent, obj):
+        typeinfo = ', '.join(
+            filter(
+                None,
+                [
+                    'dict' if isinstance(obj, ConfigDict) else obj.domain_name(),
+                    'optional'
+                    if obj._default is None
+                    else f'default={repr(obj._default)}',
+                ],
+            )
+        )
+        # Note that numpydoc / ReST specifies that the colon in
+        # definition lists be surrounded by spaces (i.e., " : ").
+        # However, as of numpydoc (1.1.0) / Sphinx (3.4.3) / napoleon
+        # (0.7), things aren't really geared for nested lists of
+        # parameters.  Definition lists omit the colon, and
+        # sub-definitions are rendered as normal definition sections
+        # (without the special formatting applied to Parameters lists),
+        # leading to less readable docs.  As they tolerate omitting the
+        # space before the colon at the top level (which at lower levels
+        # causes nested definition lists to NOT omit the colon), we will
+        # generate non-standard ReST and omit the preceding space:
+        self.out.write(f'\n{indent}{obj.name()}: {typeinfo}\n')
+        self.wrapper.initial_indent = indent + ' ' * self.indent_spacing
+        self.wrapper.subsequent_indent = indent + ' ' * self.indent_spacing
+        vis = ""
+        if self.visibility is None and obj._visibility >= ADVANCED_OPTION:
+            vis = "[ADVANCED option]"
+            if obj._visibility >= DEVELOPER_OPTION:
+                vis = "[DEVELOPER option]"
+        itemdoc = wrap_reStructuredText(
+            '\n\n'.join(
+                filter(
+                    None, [vis, inspect.cleandoc(obj._doc or obj._description or "")]
+                )
+            ),
+            self.wrapper,
+        )
+        if itemdoc:
+            self.out.write(itemdoc + '\n')
+
+    def _finalize(self):
+        return inspect.cleandoc(self.out.getvalue())
+
+
+ConfigFormatter.formats = {
+    'latex': LaTeX_ConfigFormatter,
+    'numpydoc': numpydoc_ConfigFormatter,
+}
+
+
+@deprecated(
+    "add_docstring_list is deprecated.  Please use the "
+    "@document_kwargs_from_configdict() decorator.",
+    version='6.5.1.dev0',
+)
+def add_docstring_list(docstring, configdict, indent_by=4):
+    """Returns the docstring with a formatted configuration arguments listing."""
+    section = 'Keyword Arguments'
+    return (
+        inspect.cleandoc(docstring)
+        + '\n'
+        + section
+        + '\n'
+        + '-' * len(section)
+        + '\n'
+        + configdict.generate_documentation(
+            indent_spacing=indent_by, width=256, visibility=0, format='numpydoc'
+        )
+    )
+
+
+class document_kwargs_from_configdict(object):
+    """Decorator to append the documentation of a ConfigDict to the docstring
+
+    This adds the documentation of the specified :py:class:`ConfigDict`
+    (using the :py:class:`numpydoc_ConfigFormatter` formatter) to the
+    decorated object's docstring.
+
+    Parameters
+    ----------
+    config : ConfigDict or str
+        the :py:class:`ConfigDict` to document.  If a ``str``, then the
+        :py:class:`ConfigDict` is obtained by retrieving the named
+        attribute from the decorated object (thereby enabling
+        documenting class objects whose ``__init__`` keyword arguments
+        are processed by a :py:class:`ConfigDict` class attribute)
+
+    section : str
+        the section header to preface config documentation with
+
+    indent_spacing : int
+        number of spaces to indent each block of documentation
+
+    width : int
+        total documentation width in characters (for wrapping paragraphs)
+
+    doc : str, optional
+        the initial docstring to append the ConfigDict documentation to.
+        If None, then the decorated object's ``__doc__`` will be used.
+
+    Examples
+    --------
+
+    >>> from pyomo.common.config import (
+    ...     ConfigDict, ConfigValue, document_kwargs_from_configdict
+    ... )
+    >>> class MyClass(object):
+    ...     CONFIG = ConfigDict()
+    ...     CONFIG.declare('iterlim', ConfigValue(
+    ...         default=3000,
+    ...         domain=int,
+    ...         doc="Iteration limit.  Specify None for no limit"
+    ...     ))
+    ...     CONFIG.declare('tee', ConfigValue(
+    ...         domain=bool,
+    ...         doc="If True, stream the solver output to the console"
+    ...     ))
+    ...
+    ...     @document_kwargs_from_configdict(CONFIG)
+    ...     def solve(self, **kwargs):
+    ...         config = self.CONFIG(kwargs)
+    ...         # ...
+    ...
+    >>> help(MyClass.solve)
+    Help on function solve:
+    <BLANKLINE>
+    solve(self, **kwargs)
+        Keyword Arguments
+        -----------------
+        iterlim: int, default=3000
+            Iteration limit.  Specify None for no limit
+    <BLANKLINE>
+        tee: bool, optional
+            If True, stream the solver output to the console
+
+    """
+
+    def __init__(
+        self,
+        config,
+        section='Keyword Arguments',
+        indent_spacing=4,
+        width=78,
+        visibility=None,
+        doc=None,
+    ):
+        if '\n' not in section:
+            section += '\n' + '-' * len(section) + '\n'
+        self.config = config
+        self.section = section
+        self.indent_spacing = indent_spacing
+        self.width = width
+        self.visibility = visibility
+        self.doc = doc
+
+    def __call__(self, fcn):
+        if isinstance(self.config, str):
+            self.config = getattr(fcn, self.config)
+        if self.doc is not None:
+            doc = inspect.cleandoc(self.doc)
+        elif fcn.__doc__:
+            doc = inspect.cleandoc(fcn.__doc__)
+        else:
+            doc = ""
+        if doc:
+            if not doc.endswith('\n'):
+                doc += '\n\n'
+            else:
+                doc += '\n'
+        fcn.__doc__ = (
+            doc
+            + f'{self.section}'
+            + self.config.generate_documentation(
+                indent_spacing=self.indent_spacing,
+                width=self.width,
+                visibility=self.visibility,
+                format='numpydoc',
+            )
+        )
+        return fcn
+
+
 class ConfigBase(object):
-    __slots__ = ('_parent', '_name', '_userSet', '_userAccessed', '_data',
-                 '_default', '_domain', '_description', '_doc', '_visibility',
-                 '_argparse')
+    __slots__ = (
+        '_parent',
+        '_name',
+        '_userSet',
+        '_userAccessed',
+        '_data',
+        '_default',
+        '_domain',
+        '_description',
+        '_doc',
+        '_visibility',
+        '_argparse',
+    )
 
     # This just needs to be any singleton-like object; we use it so that
     # we can tell if an argument is provided (and we can't use None as
     # None is a valid user-specified argument).  Making it a class helps
     # when Config objects are pickled.
-    class NoArgument(object): pass
+    class NoArgument(object):
+        pass
 
-    def __init__(self,
-                 default=None,
-                 domain=None,
-                 description=None,
-                 doc=None,
-                 visibility=0):
+    def __init__(
+        self, default=None, domain=None, description=None, doc=None, visibility=0
+    ):
         self._parent = None
         self._name = None
         self._userSet = False
@@ -1297,11 +1638,18 @@ class ConfigBase(object):
             # of setting self.__dict__[key] = val.
             object.__setattr__(self, key, val)
 
-    def __call__(self, value=NOTSET, default=NOTSET,
-                 domain=NOTSET,  description=NOTSET,
-                 doc=NOTSET, visibility=NOTSET,
-                 implicit=NOTSET, implicit_domain=NOTSET,
-                 preserve_implicit=False):
+    def __call__(
+        self,
+        value=NOTSET,
+        default=NOTSET,
+        domain=NOTSET,
+        description=NOTSET,
+        doc=NOTSET,
+        visibility=NOTSET,
+        implicit=NOTSET,
+        implicit_domain=NOTSET,
+        preserve_implicit=False,
+    ):
         # We will pass through overriding arguments to the constructor.
         # This way if the constructor does special processing of any of
         # the arguments (like implicit_domain), we don't have to repeat
@@ -1316,16 +1664,14 @@ class ConfigBase(object):
             assert default is NOTSET
         else:
             fields += ('domain',)
-            kwds['default'] = (
-                self.value() if default is NOTSET else default
-            )
+            kwds['default'] = self.value() if default is NOTSET else default
             assert implicit is NOTSET
             assert implicit_domain is NOTSET
         for field in fields:
             if type(field) is tuple:
                 field, attr = field
             else:
-                attr = '_'+field
+                attr = '_' + field
             if locals()[field] is NOTSET:
                 kwds[field] = getattr(self, attr, NOTSET)
             else:
@@ -1395,9 +1741,11 @@ class ConfigBase(object):
                     _dom = self._domain.__name__
                 else:
                     _dom = type(self._domain)
-                raise ValueError("invalid value for configuration '%s':\n"
-                                 "\tFailed casting %s\n\tto %s\n\tError: %s" %
-                                 (self.name(True), value, _dom, err))
+                raise ValueError(
+                    "invalid value for configuration '%s':\n"
+                    "\tFailed casting %s\n\tto %s\n\tError: %s"
+                    % (self.name(True), value, _dom, err)
+                )
         else:
             return value
 
@@ -1431,7 +1779,8 @@ class ConfigBase(object):
             raise TypeError(
                 "You cannot specify an argparse default value with "
                 "ConfigBase.declare_as_argument().  The default value is "
-                "supplied automatically from the Config definition.")
+                "supplied automatically from the Config definition."
+            )
 
         if 'action' not in kwds and self._domain is bool:
             if not self._default:
@@ -1453,7 +1802,6 @@ class ConfigBase(object):
         return self
 
     def initialize_argparse(self, parser):
-
         def _get_subparser_or_group(_parser, name):
             # Note: strings also have a 'title()' method.  We are
             # looking for things that look like argparse
@@ -1461,15 +1809,16 @@ class ConfigBase(object):
             # is insufficient: it needs to be a string attribute as
             # well
             if isinstance(name, argparse._ActionsContainer):
-                #hasattr(_group, 'title') and \
+                # hasattr(_group, 'title') and \
                 #    isinstance(_group.title, str):
                 return 2, name
 
             if not isinstance(name, str):
                 raise RuntimeError(
                     'Unknown datatype (%s) for argparse group on '
-                    'configuration definition %s' %
-                    (type(name).__name__, obj.name(True)))
+                    'configuration definition %s'
+                    % (type(name).__name__, obj.name(True))
+                )
 
             try:
                 for _grp in _parser._subparsers._group_actions:
@@ -1496,14 +1845,17 @@ class ConfigBase(object):
                         if not _issub and _idx < len(_group) - 1:
                             raise RuntimeError(
                                 "Could not find argparse subparser '%s' for "
-                                "Config item %s" % (_grp, obj.name(True)))
+                                "Config item %s" % (_grp, obj.name(True))
+                            )
                 else:
                     _issub, _parser = _get_subparser_or_group(_parser, _group)
             if 'dest' not in _kwds:
                 _kwds['dest'] = 'CONFIGBLOCK.' + obj.name(True)
-                if ( 'metavar' not in _kwds
-                     and _kwds.get('action','') not in _store_bool
-                     and obj._domain is not None ):
+                if (
+                    'metavar' not in _kwds
+                    and _kwds.get('action', '') not in _store_bool
+                    and obj._domain is not None
+                ):
                     _kwds['metavar'] = obj.domain_name().upper()
             _parser.add_argument(*_args, default=argparse.SUPPRESS, **_kwds)
 
@@ -1529,18 +1881,21 @@ class ConfigBase(object):
                         del parsed_args.__dict__[_dest]
         return parsed_args
 
-    def display(self, content_filter=None, indent_spacing=2, ostream=None,
-                visibility=None):
+    def display(
+        self, content_filter=None, indent_spacing=2, ostream=None, visibility=None
+    ):
         if content_filter not in ConfigDict.content_filters:
-            raise ValueError("unknown content filter '%s'; valid values are %s"
-                             % (content_filter, ConfigDict.content_filters))
+            raise ValueError(
+                "unknown content filter '%s'; valid values are %s"
+                % (content_filter, ConfigDict.content_filters)
+            )
         _blocks = []
         if ostream is None:
-            ostream=sys.stdout
+            ostream = sys.stdout
 
         for lvl, prefix, value, obj in self._data_collector(0, "", visibility):
             _str = _value2string(prefix, value, obj)
-            _blocks[lvl:] = [' ' * indent_spacing * lvl + _str + "\n",]
+            _blocks[lvl:] = [' ' * indent_spacing * lvl + _str + "\n"]
             if content_filter == 'userdata' and not obj._userSet:
                 continue
             for i, v in enumerate(_blocks):
@@ -1558,20 +1913,24 @@ class ConfigBase(object):
             if lvl not in level_info:
                 level_info[lvl] = {'data': [], 'off': 0, 'line': 0, 'over': 0}
             level_info[lvl]['data'].append(
-                (_str.find(':') + 2, len(_str), len(obj._description or "")))
+                (_str.find(':') + 2, len(_str), len(obj._description or ""))
+            )
         for lvl in sorted(level_info):
             indent = lvl * indent_spacing
             _ok = width - indent - len(comment) - minDocWidth
-            offset = \
-                max( val if val < _ok else key
-                     for key,val,doc in level_info[lvl]['data'] )
+            offset = max(
+                val if val < _ok else key for key, val, doc in level_info[lvl]['data']
+            )
             offset += indent + len(comment)
-            over = sum(1 for key, val, doc in level_info[lvl]['data']
-                       if doc + offset > width)
+            over = sum(
+                1 for key, val, doc in level_info[lvl]['data'] if doc + offset > width
+            )
             if len(level_info[lvl]['data']) - over > 0:
-                line = max(offset + doc
-                           for key, val, doc in level_info[lvl]['data']
-                           if offset + doc <= width)
+                line = max(
+                    offset + doc
+                    for key, val, doc in level_info[lvl]['data']
+                    if offset + doc <= width
+                )
             else:
                 line = width
             level_info[lvl]['off'] = offset
@@ -1612,90 +1971,64 @@ class ConfigBase(object):
                 os.write(_str + '\n' + ' ' * field)
             os.write(comment)
             txtArea = max(width - field - len(comment), minDocWidth)
-            os.write(("\n" + ' ' * field + comment).join(
-                wrap(
-                    obj._description, txtArea, subsequent_indent='  ')))
+            os.write(
+                ("\n" + ' ' * field + comment).join(
+                    textwrap.wrap(obj._description, txtArea, subsequent_indent='  ')
+                )
+            )
             os.write('\n')
         return os.getvalue()
 
-
     def generate_documentation(
-            self, block_start=None, block_end=None,
-            item_start=None, item_body=None, item_end=None,
-            indent_spacing=2, width=78, visibility=0,
-            format='latex'):
-        _formats = ConfigBase.generate_documentation.formats
-        if block_start is None:
-            block_start = _formats.get(format, {}).get('block_start','')
-        if block_end is None:
-            block_end = _formats.get(format, {}).get('block_end','')
-        if item_start is None:
-            item_start = _formats.get(format, {}).get('item_start','')
-        if item_body is None:
-            item_body = _formats.get(format, {}).get('item_body','')
-        if item_end is None:
-            item_end = _formats.get(format, {}).get('item_end','')
+        self,
+        block_start=None,
+        block_end=None,
+        item_start=None,
+        item_body=None,
+        item_end=None,
+        indent_spacing=2,
+        width=78,
+        visibility=None,
+        format='latex',
+    ):
+        if isinstance(format, str):
+            formatter = ConfigFormatter.formats.get(format, None)
+            if formatter is None:
+                raise ValueError(f"Unrecognized documentation formatter, '{format}'")
+            formatter = formatter()
+        else:
+            # Assume everything not a str is a valid formatter object.
+            formatter = format
 
-        os = io.StringIO()
-        level = []
-        lastObj = self
-        indent = ''
-        for lvl, pre, val, obj in self._data_collector(1, '', visibility, True):
-            if len(level) < lvl:
-                while len(level) < lvl - 1:
-                    level.append(None)
-                level.append(lastObj)
-                if '%s' in block_start:
-                    os.write(indent + block_start % lastObj.name())
-                elif block_start:
-                    os.write(indent + block_start)
-                indent += ' ' * indent_spacing
-            while len(level) > lvl:
-                _last = level.pop()
-                if _last is not None:
-                    indent = indent[:-1 * indent_spacing]
-                    if '%s' in block_end:
-                        os.write(indent + block_end % _last.name())
-                    elif block_end:
-                        os.write(indent + block_end)
+        deprecated_args = (block_start, block_end, item_start, item_end)
+        if any(arg is not None for arg in deprecated_args):
+            names = ('block_start', 'block_end', 'item_start', 'item_end')
+            for arg, name in zip(deprecated_args, names):
+                if arg is None:
+                    continue
+                deprecation_warning(
+                    f"Overriding '{name}' by passing strings to "
+                    "generate_documentation is deprecated.  Create an instance of a "
+                    "StringConfigFormatter and pass it as the 'format' argument.",
+                    version='6.5.1.dev0',
+                )
+                setattr(
+                    formatter, "_" + name, _formatter_str_to_callback(arg, formatter)
+                )
+        if item_body is not None:
+            deprecation_warning(
+                f"Overriding 'item_body' by passing strings to "
+                "generate_documentation is deprecated.  Create an instance of a "
+                "StringConfigFormatter and pass it as the 'format' argument.",
+                version='6.5.1.dev0',
+            )
+            setattr(
+                formatter,
+                "_item_body",
+                _formatter_str_to_item_callback(item_body, formatter),
+            )
 
-            lastObj = obj
-            if '%s' in item_start:
-                os.write(indent + item_start % obj.name())
-            elif item_start:
-                os.write(indent + item_start)
-            _doc = obj._doc or obj._description or ""
-            if _doc:
-                _wrapLines = '\n ' not in _doc
-                if '%s' in item_body:
-                    _doc = item_body % (_doc,)
-                elif _doc:
-                    _doc = item_body
-                if _wrapLines:
-                    doc_lines = wrap(
-                        _doc,
-                        width,
-                        initial_indent=indent + ' ' * indent_spacing,
-                        subsequent_indent=indent + ' ' * indent_spacing)
-                else:
-                    doc_lines = (_doc,)
-                # Write things out
-                os.writelines('\n'.join(doc_lines))
-                if not doc_lines[-1].endswith("\n"):
-                    os.write('\n')
-            if '%s' in item_end:
-                os.write(indent + item_end % obj.name())
-            elif item_end:
-                os.write(indent + item_end)
-        while level:
-            _last = level.pop()
-            if _last is not None:
-                indent = indent[:-1 * indent_spacing]
-                if '%s' in block_end:
-                    os.write(indent + block_end % _last.name())
-                else:
-                    os.write(indent + block_end)
-        return os.getvalue()
+        return formatter.generate(self, indent_spacing, width, visibility)
 
     def user_values(self):
         if self._userSet:
@@ -1711,17 +2044,6 @@ class ConfigBase(object):
             if obj._userSet and not obj._userAccessed:
                 yield obj
 
-ConfigBase.generate_documentation.formats = {
-    'latex': {
-        'block_start': "\\begin{description}["
-            "topsep=0pt,parsep=0.5em,itemsep=-0.4em]\n",
-        'block_end': "\\end{description}\n",
-        'item_start': "\\item[{%s}]\\hfill\n",
-        'item_body': "\\\\%s",
-        'item_end': "",
-    }
-}
-
 
 class ConfigValue(ConfigBase):
     """Store and manipulate a single configuration value.
@@ -1732,7 +2054,7 @@ class ConfigValue(ConfigBase):
         The default value that this ConfigValue will take if no value is
         provided.
 
-    domain: callable, optional
+    domain: Callable, optional
         The domain can be any callable that accepts a candidate value
         and returns the value converted to the desired type, optionally
         performing any data validation.  The result will be stored into
@@ -1815,6 +2137,7 @@ class MarkImmutable(object):
 
     >>> locker.release_lock()
     """
+
     def __init__(self, *args):
         self._targets = args
         self._locked = []
@@ -1825,7 +2148,8 @@ class MarkImmutable(object):
             for cfg in self._targets:
                 if type(cfg) is not ConfigValue:
                     raise ValueError(
-                        'Only ConfigValue instances can be marked immutable.')
+                        'Only ConfigValue instances can be marked immutable.'
+                    )
                 cfg.__class__ = ImmutableConfigValue
                 self._locked.append(cfg)
         except:
@@ -1858,7 +2182,7 @@ class ConfigList(ConfigBase, Sequence):
         otherwise the default is cast to the domain and forms a default
         list with a single element.
 
-    domain: callable, optional
+    domain: Callable, optional
         The domain can be any callable that accepts a candidate value
         and returns the value converted to the desired type, optionally
         performing any data validation.  The result will be stored /
@@ -1910,7 +2234,7 @@ class ConfigList(ConfigBase, Sequence):
 
     def get(self, key, default=NOTSET):
         # Note: get() is borrowed from ConfigDict for cases where we
-        # want the raw stored object (and to aviod the implicit
+        # want the raw stored object (and to avoid the implicit
         # conversion of ConfigValue members to their stored data).
         try:
             val = self._data[key]
@@ -1927,7 +2251,7 @@ class ConfigList(ConfigBase, Sequence):
         # As a result, *this* list doesn't change when someone tries to
         # change an element; instead, the *element* gets its _userSet
         # flag set.
-        #self._userSet = True
+        # self._userSet = True
         self._data[key].set_value(val)
 
     def __len__(self):
@@ -1951,8 +2275,7 @@ class ConfigList(ConfigBase, Sequence):
         try:
             if isinstance(value, str):
                 value = list(_default_string_list_lexer(value))
-            if (type(value) is list) or \
-               isinstance(value, ConfigList):
+            if (type(value) is list) or isinstance(value, ConfigList):
                 for val in value:
                     self.append(val)
             else:
@@ -1966,7 +2289,7 @@ class ConfigList(ConfigBase, Sequence):
         ConfigBase.reset(self)
         # Because the base reset() calls set_value, any deefault list
         # entries will get their userSet flag set.  This is wrong, as
-        # reset() should conceptually reset teh object to it's default
+        # reset() should conceptually reset the object to it's default
         # state (e.g., before the user ever had a chance to mess with
         # things).  As the list could contain a ConfigDict, this is a
         # recursive operation to put the userSet values back.
@@ -1984,10 +2307,9 @@ class ConfigList(ConfigBase, Sequence):
         # Adding something to the container should not change the
         # userSet on the container (see Pyomo/pyomo#352; now
         # Pyomo/pysp#8 for justification)
-        #self._userSet = True
+        # self._userSet = True
 
-    @deprecated("ConfigList.add() has been deprecated.  Use append()",
-                version='5.7.2')
+    @deprecated("ConfigList.add() has been deprecated.  Use append()", version='5.7.2')
     def add(self, value=NOTSET):
         "Append the specified value to the list, casting as necessary."
         return self.append(value)
@@ -2003,8 +2325,9 @@ class ConfigList(ConfigBase, Sequence):
             # somewhat redundant, and worse, if the list is empty, then
             # no documentation is generated at all!)
             yield (level, prefix, None, self)
-            subDomain = self._domain._data_collector(level + 1, '- ',
-                                                     visibility, docMode)
+            subDomain = self._domain._data_collector(
+                level + 1, '- ', visibility, docMode
+            )
             # Pop off the (empty) block entry
             next(subDomain)
             for v in subDomain:
@@ -2036,10 +2359,10 @@ class ConfigDict(ConfigBase, Mapping):
     implicit: bool, optional
         If True, the ConfigDict will allow "implicitly" declared
         keys, that is, keys can be stored into the ConfigDict that
-        were not prevously declared using :py:meth:`declare` or
+        were not previously declared using :py:meth:`declare` or
         :py:meth:`declare_from`.
 
-    implicit_domain: callable, optional
+    implicit_domain: Callable, optional
         The domain that will be used for any implicitly-declared keys.
         Follows the same rules as :py:meth:`ConfigValue`'s `domain`.
 
@@ -2056,22 +2379,30 @@ class ConfigDict(ConfigBase, Mapping):
 
     content_filters = {None, 'all', 'userdata'}
 
-    __slots__ = ('_decl_order', '_declared', '_implicit_declaration',
-                 '_implicit_domain')
+    __slots__ = (
+        '_decl_order',
+        '_declared',
+        '_implicit_declaration',
+        '_implicit_domain',
+    )
     _all_slots = set(__slots__ + ConfigBase.__slots__)
 
-    def __init__(self,
-                 description=None,
-                 doc=None,
-                 implicit=False,
-                 implicit_domain=None,
-                 visibility=0):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
         self._decl_order = []
         self._declared = set()
         self._implicit_declaration = implicit
-        if ( implicit_domain is None
-             or type(implicit_domain) is DynamicImplicitDomain
-             or isinstance(implicit_domain, ConfigBase) ):
+        if (
+            implicit_domain is None
+            or type(implicit_domain) is DynamicImplicitDomain
+            or isinstance(implicit_domain, ConfigBase)
+        ):
             self._implicit_domain = implicit_domain
         else:
             self._implicit_domain = ConfigValue(None, domain=implicit_domain)
@@ -2098,7 +2429,7 @@ class ConfigDict(ConfigBase, Mapping):
 
     def __getitem__(self, key):
         self._userAccessed = True
-        _key = str(key).replace(' ','_')
+        _key = str(key).replace(' ', '_')
         if isinstance(self._data[_key], ConfigValue):
             return self._data[_key].value()
         else:
@@ -2106,7 +2437,7 @@ class ConfigDict(ConfigBase, Mapping):
 
     def get(self, key, default=NOTSET):
         self._userAccessed = True
-        _key = str(key).replace(' ','_')
+        _key = str(key).replace(' ', '_')
         if _key in self._data:
             return self._data[_key]
         if default is NOTSET:
@@ -2121,7 +2452,7 @@ class ConfigDict(ConfigBase, Mapping):
 
     def setdefault(self, key, default=NOTSET):
         self._userAccessed = True
-        _key = str(key).replace(' ','_')
+        _key = str(key).replace(' ', '_')
         if _key in self._data:
             return self._data[_key]
         if default is NOTSET:
@@ -2130,24 +2461,24 @@ class ConfigDict(ConfigBase, Mapping):
             return self.add(key, default)
 
     def __setitem__(self, key, val):
-        _key = str(key).replace(' ','_')
+        _key = str(key).replace(' ', '_')
         if _key not in self._data:
             self.add(key, val)
         else:
             self._data[_key].set_value(val)
-        #self._userAccessed = True
+        # self._userAccessed = True
 
     def __delitem__(self, key):
         # Note that this will produce a KeyError if the key is not valid
         # for this ConfigDict.
-        _key = str(key).replace(' ','_')
+        _key = str(key).replace(' ', '_')
         del self._data[_key]
         # Clean up the other data structures
         self._decl_order.remove(_key)
         self._declared.discard(_key)
 
     def __contains__(self, key):
-        _key = str(key).replace(' ','_')
+        _key = str(key).replace(' ', '_')
         return _key in self._data
 
     def __len__(self):
@@ -2160,7 +2491,7 @@ class ConfigDict(ConfigBase, Mapping):
         # Note: __getattr__ is only called after all "usual" attribute
         # lookup methods have failed.  So, if we get here, we already
         # know that key is not a __slot__ or a method, etc...
-        #if name in ConfigDict._all_slots:
+        # if name in ConfigDict._all_slots:
         #    return super(ConfigDict,self).__getattribute__(name)
         _name = name.replace(' ', '_')
         if _name not in self._data:
@@ -2174,15 +2505,17 @@ class ConfigDict(ConfigBase, Mapping):
             ConfigDict.__setitem__(self, name, value)
 
     def __delattr__(self, name):
-        _key = str(name).replace(' ','_')
+        _key = str(name).replace(' ', '_')
         if _key in self._data:
             del self[_key]
         elif _key in dir(self):
-            raise AttributeError("'%s' object attribute '%s' is read-only" %
-                                 (type(self).__name__, name))
+            raise AttributeError(
+                "'%s' object attribute '%s' is read-only" % (type(self).__name__, name)
+            )
         else:
-            raise AttributeError("'%s' object has no attribute '%s'" %
-                                 (type(self).__name__, name))
+            raise AttributeError(
+                "'%s' object has no attribute '%s'" % (type(self).__name__, name)
+            )
 
     def keys(self):
         return iter(self)
@@ -2197,18 +2530,15 @@ class ConfigDict(ConfigBase, Mapping):
         for key in self._decl_order:
             yield (self._data[key]._name, self[key])
 
-    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='6.0')
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
     def iterkeys(self):
         return self.keys()
 
-    @deprecated('The itervalues method is deprecated. Use dict.keys().',
-                version='6.0')
+    @deprecated('The itervalues method is deprecated. Use dict.keys().', version='6.0')
     def itervalues(self):
         return self.values()
 
-    @deprecated('The iteritems method is deprecated. Use dict.keys().',
-                version='6.0')
+    @deprecated('The iteritems method is deprecated. Use dict.keys().', version='6.0')
     def iteritems(self):
         return self.items()
 
@@ -2218,12 +2548,14 @@ class ConfigDict(ConfigBase, Mapping):
         if config._parent is not None:
             raise ValueError(
                 "config '%s' is already assigned to ConfigDict '%s'; "
-                "cannot reassign to '%s'" %
-                (name, config._parent.name(True), self.name(True)))
+                "cannot reassign to '%s'"
+                % (name, config._parent.name(True), self.name(True))
+            )
         if _name in self._data:
             raise ValueError(
-                "duplicate config '%s' defined for ConfigDict '%s'" %
-                (name, self.name(True)))
+                "duplicate config '%s' defined for ConfigDict '%s'"
+                % (name, self.name(True))
+            )
         self._data[_name] = config
         self._decl_order.append(_name)
         config._parent = self
@@ -2238,23 +2570,25 @@ class ConfigDict(ConfigBase, Mapping):
 
     def declare_from(self, other, skip=None):
         if not isinstance(other, ConfigDict):
-            raise ValueError(
-                "ConfigDict.declare_from() only accepts other ConfigDicts")
+            raise ValueError("ConfigDict.declare_from() only accepts other ConfigDicts")
         # Note that we duplicate ["other()"] other so that this
         # ConfigDict's entries are independent of the other's
         for key in other.keys():
             if skip and key in skip:
                 continue
             if key in self:
-                raise ValueError("ConfigDict.declare_from passed a block "
-                                 "with a duplicate field, '%s'" % (key,))
+                raise ValueError(
+                    "ConfigDict.declare_from passed a block "
+                    "with a duplicate field, '%s'" % (key,)
+                )
             self.declare(key, other.get(key)())
 
     def add(self, name, config):
         if not self._implicit_declaration:
-            raise ValueError("Key '%s' not defined in ConfigDict '%s'"
-                             " and Dict disallows implicit entries" %
-                             (name, self.name(True)))
+            raise ValueError(
+                "Key '%s' not defined in ConfigDict '%s'"
+                " and Dict disallows implicit entries" % (name, self.name(True))
+            )
 
         if self._implicit_domain is None:
             if isinstance(config, ConfigBase):
@@ -2269,24 +2603,27 @@ class ConfigDict(ConfigBase, Mapping):
         # Adding something to the container should not change the
         # userSet on the container (see Pyomo/pyomo#352; now
         # Pyomo/pysp#8 for justification)
-        #self._userSet = True
+        # self._userSet = True
         return ans
 
     def value(self, accessValue=True):
         if accessValue:
             self._userAccessed = True
-        return { cfg._name: cfg.value(accessValue)
-                 for cfg in map(self._data.__getitem__, self._decl_order) }
+        return {
+            cfg._name: cfg.value(accessValue)
+            for cfg in map(self._data.__getitem__, self._decl_order)
+        }
 
     def set_value(self, value, skip_implicit=False):
         if value is None:
             return self
         if isinstance(value, str):
             value = dict(_default_string_dict_lexer(value))
-        if (type(value) is not dict) and \
-           (not isinstance(value, ConfigDict)):
-            raise ValueError("Expected dict value for %s.set_value, found %s" %
-                             (self.name(True), type(value).__name__))
+        if (type(value) is not dict) and (not isinstance(value, ConfigDict)):
+            raise ValueError(
+                "Expected dict value for %s.set_value, found %s"
+                % (self.name(True), type(value).__name__)
+            )
         if not value:
             return self
         _implicit = []
@@ -2306,8 +2643,9 @@ class ConfigDict(ConfigBase, Mapping):
                 else:
                     raise ValueError(
                         "key '%s' not defined for ConfigDict '%s' and "
-                        "implicit (undefined) keys are not allowed" %
-                        (key, self.name(True)))
+                        "implicit (undefined) keys are not allowed"
+                        % (key, self.name(True))
+                    )
 
         # If the set_value fails part-way through the new values, we
         # want to restore a deterministic state.  That is, either
@@ -2340,6 +2678,7 @@ class ConfigDict(ConfigBase, Mapping):
             else:
                 del self._data[key]
             return keep
+
         # this is an in-place slice of a list...
         self._decl_order[:] = [x for x in self._decl_order if _keep(self, x)]
         self._userAccessed = False
@@ -2354,9 +2693,8 @@ class ConfigDict(ConfigBase, Mapping):
                 level += 1
         for key in self._decl_order:
             cfg = self._data[key]
-            for v in cfg._data_collector(
-                    level, cfg._name + ': ', visibility, docMode):
-                yield v
+            yield from cfg._data_collector(level, cfg._name + ': ', visibility, docMode)
+
 
 # Backwards compatibility: ConfigDict was originally named ConfigBlock.
 ConfigBlock = ConfigDict

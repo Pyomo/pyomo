@@ -58,7 +58,6 @@ class CPLEXDirectTests(unittest.TestCase):
     )
     def test_infeasible_lp(self):
         with SolverFactory("cplex", solver_io="python") as opt:
-
             model = ConcreteModel()
             model.X = Var(within=NonNegativeReals)
             model.C1 = Constraint(expr=model.X == 1)
@@ -76,7 +75,6 @@ class CPLEXDirectTests(unittest.TestCase):
     )
     def test_unbounded_lp(self):
         with SolverFactory("cplex", solver_io="python") as opt:
-
             model = ConcreteModel()
             model.X = Var()
             model.O = Objective(expr=model.X)
@@ -96,7 +94,6 @@ class CPLEXDirectTests(unittest.TestCase):
     )
     def test_optimal_lp(self):
         with SolverFactory("cplex", solver_io="python") as opt:
-
             model = ConcreteModel()
             model.X = Var(within=NonNegativeReals)
             model.O = Objective(expr=model.X)
@@ -110,7 +107,6 @@ class CPLEXDirectTests(unittest.TestCase):
     )
     def test_get_duals_lp(self):
         with SolverFactory("cplex", solver_io="python") as opt:
-
             model = ConcreteModel()
             model.X = Var(within=NonNegativeReals)
             model.Y = Var(within=NonNegativeReals)
@@ -133,7 +129,6 @@ class CPLEXDirectTests(unittest.TestCase):
     )
     def test_infeasible_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
-
             model = ConcreteModel()
             model.X = Var(within=NonNegativeIntegers)
             model.C1 = Constraint(expr=model.X == 1)
@@ -151,7 +146,6 @@ class CPLEXDirectTests(unittest.TestCase):
     )
     def test_unbounded_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
-
             model = AbstractModel()
             model.X = Var(within=Integers)
             model.O = Objective(expr=model.X)
@@ -172,7 +166,6 @@ class CPLEXDirectTests(unittest.TestCase):
     )
     def test_optimal_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
-
             model = ConcreteModel()
             model.X = Var(within=NonNegativeIntegers)
             model.O = Objective(expr=model.X)

@@ -229,7 +229,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             )
         if len(constraints) != len(coefficients):
             raise RuntimeError(
-                'The list of constraints and the list of coefficents '
+                'The list of constraints and the list of coefficients '
                 'be of equal length'
             )
         obj_coef, constraints, coefficients = self._add_and_collect_column_data(
@@ -424,7 +424,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         Keyword Arguments
         -----------------
         suffixes: list of str
-            The strings should represnt suffixes support by the solver. Examples include 'dual', 'slack', and 'rc'.
+            The strings should represent suffixes support by the solver. Examples include 'dual', 'slack', and 'rc'.
         options: dict
             Dictionary of solver options. See the solver documentation for possible solver options.
         warmstart: bool
@@ -492,7 +492,6 @@ class PersistentSolver(DirectOrPersistentSolver):
             self._options_string_to_dict(kwds.pop('options_string', ''))
         )
         try:
-
             # we're good to go.
             initial_time = time.time()
 
@@ -536,7 +535,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
             result = self._postsolve()
             # ***********************************************************
-            # The following code is only needed for backwards compatability of load_solutions=False.
+            # The following code is only needed for backwards compatibility of load_solutions=False.
             # If we ever only want to support the load_vars, load_duals, etc. methods, then this can be deleted.
             if self._save_results:
                 result._smap_id = self._smap_id

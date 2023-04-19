@@ -1,5 +1,8 @@
 import pyomo.environ as pyo
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
+from pyomo.contrib.pynumero.interfaces.external_grey_box import (
+    ExternalGreyBoxModel,
+    ExternalGreyBoxBlock,
+)
 import scipy.sparse as spa
 import numpy as np
 import math
@@ -31,55 +34,74 @@ and written as the following for the external model
 
 """
 
+
 def build_single_point_model_pyomo_only(m):
     # fixed parameters
-    m.Cp_h = 2131 # heat cap hot
-    m.Cp_c = 4178 # heat cap cold
-    m.Fh = 0.1 # flow hot
-    m.Fc = 0.2 # flow cold
-
+    m.Cp_h = 2131  # heat cap hot
+    m.Cp_c = 4178  # heat cap cold
+    m.Fh = 0.1  # flow hot
+    m.Fc = 0.2  # flow cold
 
     # model inputs
-    m.Th_in = pyo.Var(initialize=100, bounds=(10,None))
-    m.Th_out = pyo.Var(initialize=50, bounds=(10,None))
-    m.Tc_in = pyo.Var(initialize=30, bounds=(10,None))
-    m.Tc_out = pyo.Var(initialize=50, bounds=(10,None))
+    m.Th_in = pyo.Var(initialize=100, bounds=(10, None))
+    m.Th_out = pyo.Var(initialize=50, bounds=(10, None))
+    m.Tc_in = pyo.Var(initialize=30, bounds=(10, None))
+    m.Tc_out = pyo.Var(initialize=50, bounds=(10, None))
     m.UA = pyo.Var(initialize=100)
-    m.Q = pyo.Var(initialize=10000, bounds=(0,None))
-    m.lmtd = pyo.Var(initialize=20, bounds=(0,None))
-    m.dt1 = pyo.Var(initialize=20, bounds=(0,None))
-    m.dt2 = pyo.Var(initialize=20, bounds=(0,None))
+    m.Q = pyo.Var(initialize=10000, bounds=(0, None))
+    m.lmtd = pyo.Var(initialize=20, bounds=(0, None))
+    m.dt1 = pyo.Var(initialize=20, bounds=(0, None))
+    m.dt2 = pyo.Var(initialize=20, bounds=(0, None))
 
     # model constraints
-    m.dt1_con = pyo.Constraint(expr = m.dt1 == m.Th_in - m.Tc_out)
-    m.dt2_con = pyo.Constraint(expr = m.dt2 == m.Th_out - m.Tc_in)
-    m.lmtd_con = pyo.Constraint(expr = m.lmtd * pyo.log(m.dt2/m.dt1) == (m.dt2 - m.dt1))
-    
-    m.ua_con = pyo.Constraint(expr = m.Q == m.UA * m.lmtd)
-    m.Qh_con = pyo.Constraint(expr = m.Q == m.Fh*m.Cp_h*(m.Th_in - m.Th_out))
-    m.Qc_con = pyo.Constraint(expr = m.Q == m.Fc*m.Cp_c*(m.Tc_out - m.Tc_in))
+    m.dt1_con = pyo.Constraint(expr=m.dt1 == m.Th_in - m.Tc_out)
+    m.dt2_con = pyo.Constraint(expr=m.dt2 == m.Th_out - m.Tc_in)
+    m.lmtd_con = pyo.Constraint(expr=m.lmtd * pyo.log(m.dt2 / m.dt1) == (m.dt2 - m.dt1))
+
+    m.ua_con = pyo.Constraint(expr=m.Q == m.UA * m.lmtd)
+    m.Qh_con = pyo.Constraint(expr=m.Q == m.Fh * m.Cp_h * (m.Th_in - m.Th_out))
+    m.Qc_con = pyo.Constraint(expr=m.Q == m.Fc * m.Cp_c * (m.Tc_out - m.Tc_in))
+
 
 def build_single_point_model_external(m):
     ex_model = UAModelExternal()
     m.egb = ExternalGreyBoxBlock()
     m.egb.set_external_model(ex_model)
 
+
 class UAModelExternal(ExternalGreyBoxModel):
     def __init__(self):
         super(UAModelExternal, self).__init__()
-        self._input_names = ['Th_in', 'Th_out', 'Tc_in', 'Tc_out', 'UA', 'Q',
-                             'lmtd', 'dT1', 'dT2']
+        self._input_names = [
+            'Th_in',
+            'Th_out',
+            'Tc_in',
+            'Tc_out',
+            'UA',
+            'Q',
+            'lmtd',
+            'dT1',
+            'dT2',
+        ]
         self._input_values = np.zeros(self.n_inputs(), dtype=np.float64)
-        self._eq_constraint_names = \
-            ['dT1_con', 'dT2_con', 'lmtd_con', 'QUA_con', 'Qhot_con', 'Qcold_con']
-        self._eq_constraint_multipliers = np.zeros(self.n_equality_constraints(), dtype=np.float64)
+        self._eq_constraint_names = [
+            'dT1_con',
+            'dT2_con',
+            'lmtd_con',
+            'QUA_con',
+            'Qhot_con',
+            'Qcold_con',
+        ]
+        self._eq_constraint_multipliers = np.zeros(
+            self.n_equality_constraints(), dtype=np.float64
+        )
 
         # parameters
         self._Cp_h = 2131
         self._Cp_c = 4178
         self._Fh = 0.1
         self._Fc = 0.2
-        
+
     def n_inputs(self):
         return len(self.input_names())
 
@@ -94,7 +116,7 @@ class UAModelExternal(ExternalGreyBoxModel):
 
     def equality_constraint_names(self):
         return self._eq_constraint_names
-    
+
     def output_names(self):
         return []
 
@@ -110,7 +132,7 @@ class UAModelExternal(ExternalGreyBoxModel):
         pyomo_block.inputs['Tc_out'].set_value(50)
 
         pyomo_block.inputs['UA'].set_value(100)
-        
+
         pyomo_block.inputs['Q'].setlb(0)
         pyomo_block.inputs['Q'].set_value(10000)
 
@@ -144,7 +166,7 @@ class UAModelExternal(ExternalGreyBoxModel):
         resid = np.zeros(self.n_equality_constraints())
         resid[0] = Th_in - Tc_out - dT1
         resid[1] = Th_out - Tc_in - dT2
-        resid[2] = lmtd * math.log(dT2/dT1) - (dT2-dT1)
+        resid[2] = lmtd * math.log(dT2 / dT1) - (dT2 - dT1)
         resid[3] = UA * lmtd - Q
         resid[4] = self._Fh * self._Cp_h * (Th_in - Th_out) - Q
         resid[5] = -self._Fc * self._Cp_c * (Tc_in - Tc_out) - Q
@@ -179,11 +201,11 @@ class UAModelExternal(ExternalGreyBoxModel):
         idx += 1
         row[idx], col[idx], data[idx] = (1, 8, -1.0)
         idx += 1
-        row[idx], col[idx], data[idx] = (2, 6, math.log(dT2/dT1))
+        row[idx], col[idx], data[idx] = (2, 6, math.log(dT2 / dT1))
         idx += 1
-        row[idx], col[idx], data[idx] = (2, 7, -lmtd/dT1 + 1)
+        row[idx], col[idx], data[idx] = (2, 7, -lmtd / dT1 + 1)
         idx += 1
-        row[idx], col[idx], data[idx] = (2, 8, lmtd/dT2 - 1)
+        row[idx], col[idx], data[idx] = (2, 8, lmtd / dT2 - 1)
         idx += 1
         row[idx], col[idx], data[idx] = (3, 4, lmtd)
         idx += 1
@@ -191,21 +213,21 @@ class UAModelExternal(ExternalGreyBoxModel):
         idx += 1
         row[idx], col[idx], data[idx] = (3, 6, UA)
         idx += 1
-        row[idx], col[idx], data[idx] = (4, 0, self._Fh*self._Cp_h)
+        row[idx], col[idx], data[idx] = (4, 0, self._Fh * self._Cp_h)
         idx += 1
-        row[idx], col[idx], data[idx] = (4, 1, -self._Fh*self._Cp_h)
+        row[idx], col[idx], data[idx] = (4, 1, -self._Fh * self._Cp_h)
         idx += 1
         row[idx], col[idx], data[idx] = (4, 5, -1)
         idx += 1
-        row[idx], col[idx], data[idx] = (5, 2, -self._Fc*self._Cp_c)
+        row[idx], col[idx], data[idx] = (5, 2, -self._Fc * self._Cp_c)
         idx += 1
-        row[idx], col[idx], data[idx] = (5, 3, self._Fc*self._Cp_c)
+        row[idx], col[idx], data[idx] = (5, 3, self._Fc * self._Cp_c)
         idx += 1
         row[idx], col[idx], data[idx] = (5, 5, -1.0)
         idx += 1
         assert idx == 18
 
-        return spa.coo_matrix( (data, (row, col)), shape=(6,9) )
+        return spa.coo_matrix((data, (row, col)), shape=(6, 9))
 
     def evaluate_hessian_equality_constraints(self):
         Th_in = self._input_values[0]
@@ -225,21 +247,21 @@ class UAModelExternal(ExternalGreyBoxModel):
 
         idx = 0
         # lmtd_con
-        row[idx], col[idx], data[idx] = (7, 6, lam[2]*(-1)/dT1)
+        row[idx], col[idx], data[idx] = (7, 6, lam[2] * (-1) / dT1)
         idx += 1
-        row[idx], col[idx], data[idx] = (7, 7, lam[2]*lmtd/(dT1**2))
+        row[idx], col[idx], data[idx] = (7, 7, lam[2] * lmtd / (dT1**2))
         idx += 1
-        row[idx], col[idx], data[idx] = (8, 6, lam[2]*1/dT2)
+        row[idx], col[idx], data[idx] = (8, 6, lam[2] * 1 / dT2)
         idx += 1
-        row[idx], col[idx], data[idx] = (8, 8, lam[2]*(-lmtd)/(dT2**2))
+        row[idx], col[idx], data[idx] = (8, 8, lam[2] * (-lmtd) / (dT2**2))
         idx += 1
 
         # QUA_con
-        row[idx], col[idx], data[idx] = (6, 4, lam[3]*(1))
+        row[idx], col[idx], data[idx] = (6, 4, lam[3] * (1))
         idx += 1
         assert idx == 5
-        
-        return spa.coo_matrix( (data, (row, col)), shape=(9,9) )
+
+        return spa.coo_matrix((data, (row, col)), shape=(9, 9))
 
     #
     # Implement the following methods to provide support for

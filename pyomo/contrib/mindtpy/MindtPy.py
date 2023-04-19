@@ -55,20 +55,20 @@
 from pyomo.contrib.mindtpy import __version__
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
-from pyomo.common.config import add_docstring_list
+from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.contrib.mindtpy.config_options import _supported_algorithms
 
 
 @SolverFactory.register(
-    'mindtpy',
-    doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
+    'mindtpy', doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo'
+)
 class MindtPySolver(object):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
-    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver 
-    applies a variety of decomposition-based approaches to solve Mixed-Integer 
-    Nonlinear Programming (MINLP) problems. 
+    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver
+    applies a variety of decomposition-based approaches to solve Mixed-Integer
+    Nonlinear Programming (MINLP) problems.
     These approaches include:
 
     - Outer approximation (OA)
@@ -81,14 +81,14 @@ class MindtPySolver(object):
 
     This solver implementation has been developed by David Bernal <https://github.com/bernalde>
     and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann
-    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at 
+    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at
     Carnegie Mellon University.
     """
+
     CONFIG = _get_MindtPy_config()
 
     def available(self, exception_flag=True):
-        """Check if solver is available.
-        """
+        """Check if solver is available."""
         return True
 
     def license_is_valid(self):
@@ -98,8 +98,7 @@ class MindtPySolver(object):
         """Return a 3-tuple describing the solver version."""
         return __version__
 
-
-
+    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
         """Solve the model.
 
@@ -116,8 +115,9 @@ class MindtPySolver(object):
         # get the algorithm and then our job is done.
         config.set_value(kwds, skip_implicit=True)
 
-        return SolverFactory(
-            _supported_algorithms[config.strategy][0]).solve(model, **kwds)
+        return SolverFactory(_supported_algorithms[config.strategy][0]).solve(
+            model, **kwds
+        )
 
     #
     # Support 'with' statements.
@@ -127,8 +127,3 @@ class MindtPySolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
-
-
-# Add the CONFIG arguments to the solve method docstring
-MindtPySolver.solve.__doc__ = add_docstring_list(
-    MindtPySolver.solve.__doc__, MindtPySolver.CONFIG, indent_by=8)

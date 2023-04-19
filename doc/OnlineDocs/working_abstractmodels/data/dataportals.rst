@@ -456,7 +456,7 @@ Loading from Spreadsheets and Databases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Tabular data can be loaded from spreadsheets and databases using
-auxilliary Python packages that provide an interface to these data
+auxiliary Python packages that provide an interface to these data
 formats.  Data can be loaded from Excel spreadsheets using the
 ``win32com``, ``xlrd`` and ``openpyxl`` packages.  For example, consider
 the following range of cells, which is named ``PPtable``:
@@ -482,7 +482,7 @@ database:
 
 In this example, the interface ``sqlite3`` is used to load data from an
 SQLite database in the file ``PP.sqlite``.  More generally, an SQL query
-can be specified to dynamicly generate a table.  For example:
+can be specified to dynamically generate a table.  For example:
 
 .. literalinclude:: ../../tests/dataportal/dataportal_tab_db2.spy
     :language: python

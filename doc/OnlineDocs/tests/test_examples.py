@@ -149,7 +149,6 @@ def filter(line):
 
 
 for tdir in testdirs:
-
     for testdir in glob.glob(os.path.join(tdir, '*')):
         if not os.path.isdir(testdir):
             continue
@@ -176,7 +175,6 @@ for tdir in testdirs:
         for file in list(glob.glob(os.path.join(testdir, '*.py'))) + list(
             glob.glob(os.path.join(testdir, '*', '*.py'))
         ):
-
             test_file = os.path.abspath(file)
             bname = os.path.basename(test_file)
             dir_ = os.path.dirname(test_file)

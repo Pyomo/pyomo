@@ -12,12 +12,12 @@
 import pyomo.environ as pyo
 from pyomo.common.dependencies import (
     networkx_available,
+    plotly_available,
     scipy_available,
-    attempt_import,
 )
-plotly, plotly_available = attempt_import("plotly")
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
+    asl_available,
     IncidenceGraphInterface,
     get_structural_incidence_matrix,
     get_numeric_incidence_matrix,
@@ -29,40 +29,39 @@ from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import (
     map_coords_to_block_triangular_indices,
 )
-from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
-    dulmage_mendelsohn,
-)
+from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import dulmage_mendelsohn
 from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
     make_gas_expansion_model,
     make_degenerate_solid_phase_model,
     make_dynamic_model,
 )
+
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 if networkx_available:
     import networkx as nx
     from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
-from pyomo.contrib.pynumero.asl import AmplInterface
 
 import pyomo.common.unittest as unittest
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
     """
     This class tests the get_numeric_incidence_matrix function on
     the gas expansion model.
     """
+
     def test_incidence_matrix(self):
         N = 5
         model = make_gas_expansion_model(N)
         all_vars = list(model.component_data_objects(pyo.Var))
         all_cons = list(model.component_data_objects(pyo.Constraint))
         imat = get_numeric_incidence_matrix(all_vars, all_cons)
-        n_var = 4*(N+1)
-        n_con = 4*N+1
+        n_var = 4 * (N + 1)
+        n_con = 4 * N + 1
         self.assertEqual(imat.shape, (n_con, n_var))
 
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(all_vars))
@@ -70,103 +69,119 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
 
         # Map constraints to the variables they contain.
         csr_map = ComponentMap()
-        csr_map.update((model.mbal[i], ComponentSet([
-            model.F[i],
-            model.F[i-1],
-            model.rho[i],
-            model.rho[i-1],
-        ])) for i in model.streams if i != model.streams.first())
-        csr_map.update((model.ebal[i], ComponentSet([
-            model.F[i],
-            model.F[i-1],
-            model.rho[i],
-            model.rho[i-1],
-            model.T[i],
-            model.T[i-1],
-        ])) for i in model.streams if i != model.streams.first())
-        csr_map.update((model.expansion[i], ComponentSet([
-            model.rho[i],
-            model.rho[i-1],
-            model.P[i],
-            model.P[i-1],
-        ])) for i in model.streams if i != model.streams.first())
-        csr_map.update((model.ideal_gas[i], ComponentSet([
-            model.P[i],
-            model.rho[i],
-            model.T[i],
-        ])) for i in model.streams)
+        csr_map.update(
+            (
+                model.mbal[i],
+                ComponentSet(
+                    [model.F[i], model.F[i - 1], model.rho[i], model.rho[i - 1]]
+                ),
+            )
+            for i in model.streams
+            if i != model.streams.first()
+        )
+        csr_map.update(
+            (
+                model.ebal[i],
+                ComponentSet(
+                    [
+                        model.F[i],
+                        model.F[i - 1],
+                        model.rho[i],
+                        model.rho[i - 1],
+                        model.T[i],
+                        model.T[i - 1],
+                    ]
+                ),
+            )
+            for i in model.streams
+            if i != model.streams.first()
+        )
+        csr_map.update(
+            (
+                model.expansion[i],
+                ComponentSet(
+                    [model.rho[i], model.rho[i - 1], model.P[i], model.P[i - 1]]
+                ),
+            )
+            for i in model.streams
+            if i != model.streams.first()
+        )
+        csr_map.update(
+            (model.ideal_gas[i], ComponentSet([model.P[i], model.rho[i], model.T[i]]))
+            for i in model.streams
+        )
 
         # Map constraint and variable indices to the values of the derivatives
         # Note that the derivative values calculated here depend on the model's
         # canonical form.
         deriv_lookup = {}
-        m = model # for convenience
+        m = model  # for convenience
         for s in model.streams:
             # Ideal gas:
             i = con_idx_map[model.ideal_gas[s]]
             j = var_idx_map[model.P[s]]
-            deriv_lookup[i,j] = 1.0
+            deriv_lookup[i, j] = 1.0
 
             j = var_idx_map[model.rho[s]]
-            deriv_lookup[i,j] = - model.R.value*model.T[s].value
+            deriv_lookup[i, j] = -model.R.value * model.T[s].value
 
             j = var_idx_map[model.T[s]]
-            deriv_lookup[i,j] = - model.R.value*model.rho[s].value
+            deriv_lookup[i, j] = -model.R.value * model.rho[s].value
 
             if s != model.streams.first():
                 # Expansion:
                 i = con_idx_map[model.expansion[s]]
                 j = var_idx_map[model.P[s]]
-                deriv_lookup[i,j] = 1/model.P[s-1].value
+                deriv_lookup[i, j] = 1 / model.P[s - 1].value
 
-                j = var_idx_map[model.P[s-1]]
-                deriv_lookup[i,j] = -model.P[s].value/model.P[s-1]**2
+                j = var_idx_map[model.P[s - 1]]
+                deriv_lookup[i, j] = -model.P[s].value / model.P[s - 1] ** 2
 
                 j = var_idx_map[model.rho[s]]
-                deriv_lookup[i,j] = pyo.value(
-                    -m.gamma*(m.rho[s]/m.rho[s-1])**(m.gamma-1)/m.rho[s-1]
+                deriv_lookup[i, j] = pyo.value(
+                    -m.gamma * (m.rho[s] / m.rho[s - 1]) ** (m.gamma - 1) / m.rho[s - 1]
                 )
 
-                j = var_idx_map[model.rho[s-1]]
-                deriv_lookup[i,j] = pyo.value(
-                    -m.gamma*(m.rho[s]/m.rho[s-1])**(m.gamma-1) *
-                    (-m.rho[s]/m.rho[s-1]**2)
+                j = var_idx_map[model.rho[s - 1]]
+                deriv_lookup[i, j] = pyo.value(
+                    -m.gamma
+                    * (m.rho[s] / m.rho[s - 1]) ** (m.gamma - 1)
+                    * (-m.rho[s] / m.rho[s - 1] ** 2)
                 )
 
                 # Energy balance:
                 i = con_idx_map[m.ebal[s]]
-                j = var_idx_map[m.rho[s-1]]
-                deriv_lookup[i,j] = pyo.value(m.F[s-1]*m.T[s-1])
+                j = var_idx_map[m.rho[s - 1]]
+                deriv_lookup[i, j] = pyo.value(m.F[s - 1] * m.T[s - 1])
 
-                j = var_idx_map[m.F[s-1]]
-                deriv_lookup[i,j] = pyo.value(m.rho[s-1]*m.T[s-1])
+                j = var_idx_map[m.F[s - 1]]
+                deriv_lookup[i, j] = pyo.value(m.rho[s - 1] * m.T[s - 1])
 
-                j = var_idx_map[m.T[s-1]]
-                deriv_lookup[i,j] = pyo.value(m.F[s-1]*m.rho[s-1])
+                j = var_idx_map[m.T[s - 1]]
+                deriv_lookup[i, j] = pyo.value(m.F[s - 1] * m.rho[s - 1])
 
                 j = var_idx_map[m.rho[s]]
-                deriv_lookup[i,j] = pyo.value(-m.F[s]*m.T[s])
+                deriv_lookup[i, j] = pyo.value(-m.F[s] * m.T[s])
 
                 j = var_idx_map[m.F[s]]
-                deriv_lookup[i,j] = pyo.value(-m.rho[s]*m.T[s])
+                deriv_lookup[i, j] = pyo.value(-m.rho[s] * m.T[s])
 
                 j = var_idx_map[m.T[s]]
-                deriv_lookup[i,j] = pyo.value(-m.F[s]*m.rho[s])
+                deriv_lookup[i, j] = pyo.value(-m.F[s] * m.rho[s])
 
                 # Mass balance:
                 i = con_idx_map[m.mbal[s]]
-                j = var_idx_map[m.rho[s-1]]
-                deriv_lookup[i,j] = pyo.value(m.F[s-1])
+                j = var_idx_map[m.rho[s - 1]]
+                deriv_lookup[i, j] = pyo.value(m.F[s - 1])
 
-                j = var_idx_map[m.F[s-1]]
-                deriv_lookup[i,j] = pyo.value(m.rho[s-1])
+                j = var_idx_map[m.F[s - 1]]
+                deriv_lookup[i, j] = pyo.value(m.rho[s - 1])
 
                 j = var_idx_map[m.rho[s]]
-                deriv_lookup[i,j] = pyo.value(-m.F[s])
+                deriv_lookup[i, j] = pyo.value(-m.F[s])
 
                 j = var_idx_map[m.F[s]]
-                deriv_lookup[i,j] = pyo.value(-m.rho[s])
-
+                deriv_lookup[i, j] = pyo.value(-m.rho[s])
 
         # Want to test that the columns have the rows we expect.
         i = model.streams.first()
@@ -175,7 +190,7 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
             var = all_vars[j]
             self.assertIn(var, csr_map[con])
             csr_map[con].remove(var)
-            self.assertAlmostEqual(pyo.value(deriv_lookup[i,j]), pyo.value(e), 8)
+            self.assertAlmostEqual(pyo.value(deriv_lookup[i, j]), pyo.value(e), 8)
         # And no additional rows
         for con in csr_map:
             self.assertEqual(len(csr_map[con]), 0)
@@ -204,12 +219,15 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -218,8 +236,9 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
 
         n_var = len(variables)
         matching = maximum_matching(imat)
-        matching = ComponentMap((c, variables[matching[con_idx_map[c]]])
-                for c in constraints)
+        matching = ComponentMap(
+            (c, variables[matching[con_idx_map[c]]]) for c in constraints
+        )
         values = ComponentSet(matching.values())
         self.assertEqual(len(matching), n_var)
         self.assertEqual(len(values), n_var)
@@ -237,12 +256,15 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -251,15 +273,17 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
         row_block_map, col_block_map = map_coords_to_block_triangular_indices(imat)
-        var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
-                for v in variables)
-        con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
-                for c in constraints)
+        var_block_map = ComponentMap(
+            (v, col_block_map[var_idx_map[v]]) for v in variables
+        )
+        con_block_map = ComponentMap(
+            (c, row_block_map[con_idx_map[c]]) for c in constraints
+        )
 
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
-        self.assertEqual(len(var_values), N+1)
-        self.assertEqual(len(con_values), N+1)
+        self.assertEqual(len(var_values), N + 1)
+        self.assertEqual(len(con_values), N + 1)
 
         self.assertEqual(var_block_map[model.P[0]], 0)
 
@@ -283,14 +307,15 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
     This class tests the get_structural_incidence_matrix function
     on the gas expansion model.
     """
+
     def test_incidence_matrix(self):
         N = 5
         model = make_gas_expansion_model(N)
         all_vars = list(model.component_data_objects(pyo.Var))
         all_cons = list(model.component_data_objects(pyo.Constraint))
         imat = get_structural_incidence_matrix(all_vars, all_cons)
-        n_var = 4*(N+1)
-        n_con = 4*N+1
+        n_var = 4 * (N + 1)
+        n_con = 4 * N + 1
         self.assertEqual(imat.shape, (n_con, n_var))
 
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(all_vars))
@@ -298,31 +323,47 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
 
         # Map constraints to the variables they contain.
         csr_map = ComponentMap()
-        csr_map.update((model.mbal[i], ComponentSet([
-            model.F[i],
-            model.F[i-1],
-            model.rho[i],
-            model.rho[i-1],
-            ])) for i in model.streams if i != model.streams.first())
-        csr_map.update((model.ebal[i], ComponentSet([
-            model.F[i],
-            model.F[i-1],
-            model.rho[i],
-            model.rho[i-1],
-            model.T[i],
-            model.T[i-1],
-            ])) for i in model.streams if i != model.streams.first())
-        csr_map.update((model.expansion[i], ComponentSet([
-            model.rho[i],
-            model.rho[i-1],
-            model.P[i],
-            model.P[i-1],
-            ])) for i in model.streams if i != model.streams.first())
-        csr_map.update((model.ideal_gas[i], ComponentSet([
-            model.P[i],
-            model.rho[i],
-            model.T[i],
-            ])) for i in model.streams)
+        csr_map.update(
+            (
+                model.mbal[i],
+                ComponentSet(
+                    [model.F[i], model.F[i - 1], model.rho[i], model.rho[i - 1]]
+                ),
+            )
+            for i in model.streams
+            if i != model.streams.first()
+        )
+        csr_map.update(
+            (
+                model.ebal[i],
+                ComponentSet(
+                    [
+                        model.F[i],
+                        model.F[i - 1],
+                        model.rho[i],
+                        model.rho[i - 1],
+                        model.T[i],
+                        model.T[i - 1],
+                    ]
+                ),
+            )
+            for i in model.streams
+            if i != model.streams.first()
+        )
+        csr_map.update(
+            (
+                model.expansion[i],
+                ComponentSet(
+                    [model.rho[i], model.rho[i - 1], model.P[i], model.P[i - 1]]
+                ),
+            )
+            for i in model.streams
+            if i != model.streams.first()
+        )
+        csr_map.update(
+            (model.ideal_gas[i], ComponentSet([model.P[i], model.rho[i], model.T[i]]))
+            for i in model.streams
+        )
 
         # Want to test that the columns have the rows we expect.
         i = model.streams.first()
@@ -360,12 +401,15 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -374,8 +418,9 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
 
         n_var = len(variables)
         matching = maximum_matching(imat)
-        matching = ComponentMap((c, variables[matching[con_idx_map[c]]])
-                for c in constraints)
+        matching = ComponentMap(
+            (c, variables[matching[con_idx_map[c]]]) for c in constraints
+        )
         values = ComponentSet(matching.values())
         self.assertEqual(len(matching), n_var)
         self.assertEqual(len(values), n_var)
@@ -393,12 +438,15 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -407,15 +455,17 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
         var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
 
         row_block_map, col_block_map = map_coords_to_block_triangular_indices(imat)
-        var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
-                for v in variables)
-        con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
-                for c in constraints)
+        var_block_map = ComponentMap(
+            (v, col_block_map[var_idx_map[v]]) for v in variables
+        )
+        con_block_map = ComponentMap(
+            (c, row_block_map[con_idx_map[c]]) for c in constraints
+        )
 
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
-        self.assertEqual(len(var_values), N+1)
-        self.assertEqual(len(con_values), N+1)
+        self.assertEqual(len(var_values), N + 1)
+        self.assertEqual(len(con_values), N + 1)
 
         self.assertEqual(var_block_map[model.P[0]], 0)
 
@@ -434,7 +484,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+@unittest.skipUnless(asl_available, "pynumero PyomoNLP is not available")
 class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
     # In these tests, we pass the interface a PyomoNLP and cache
     # its Jacobian.
@@ -460,12 +510,15 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -491,23 +544,23 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_blocks, con_blocks = igraph.block_triangularize(
-            variables, constraints
-        )
+        var_blocks, con_blocks = igraph.block_triangularize(variables, constraints)
         partition = [
-            list(zip(vblock, cblock))
-            for vblock, cblock in zip(var_blocks, con_blocks)
+            list(zip(vblock, cblock)) for vblock, cblock in zip(var_blocks, con_blocks)
         ]
-        self.assertEqual(len(partition), N+1)
+        self.assertEqual(len(partition), N + 1)
 
         for i in model.streams:
             variables = ComponentSet([var for var, _ in partition[i]])
@@ -515,15 +568,17 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
             if i == model.streams.first():
                 self.assertEqual(variables, ComponentSet([model.P[0]]))
             else:
-                pred_vars = ComponentSet([
-                    model.rho[i], model.T[i], model.P[i], model.F[i]
-                ])
-                pred_cons = ComponentSet([
-                    model.ideal_gas[i],
-                    model.expansion[i],
-                    model.mbal[i],
-                    model.ebal[i],
-                ])
+                pred_vars = ComponentSet(
+                    [model.rho[i], model.T[i], model.P[i], model.F[i]]
+                )
+                pred_cons = ComponentSet(
+                    [
+                        model.ideal_gas[i],
+                        model.expansion[i],
+                        model.mbal[i],
+                        model.ebal[i],
+                    ]
+                )
                 self.assertEqual(pred_vars, variables)
                 self.assertEqual(pred_cons, constraints)
 
@@ -538,12 +593,15 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -552,8 +610,8 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
         )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
-        self.assertEqual(len(var_values), N+1)
-        self.assertEqual(len(con_values), N+1)
+        self.assertEqual(len(var_values), N + 1)
+        self.assertEqual(len(con_values), N + 1)
 
         self.assertEqual(var_block_map[model.P[0]], 0)
 
@@ -589,7 +647,6 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
     # In these tests we pass a model to the interface and are caching a
     # structural incidence matrix.
@@ -611,12 +668,15 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -640,23 +700,23 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_blocks, con_blocks = igraph.block_triangularize(
-            variables, constraints
-        )
+        var_blocks, con_blocks = igraph.block_triangularize(variables, constraints)
         partition = [
-            list(zip(vblock, cblock))
-            for vblock, cblock in zip(var_blocks, con_blocks)
+            list(zip(vblock, cblock)) for vblock, cblock in zip(var_blocks, con_blocks)
         ]
-        self.assertEqual(len(partition), N+1)
+        self.assertEqual(len(partition), N + 1)
 
         for i in model.streams:
             variables = ComponentSet([var for var, _ in partition[i]])
@@ -664,15 +724,17 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
             if i == model.streams.first():
                 self.assertEqual(variables, ComponentSet([model.P[0]]))
             else:
-                pred_vars = ComponentSet([
-                    model.rho[i], model.T[i], model.P[i], model.F[i]
-                ])
-                pred_cons = ComponentSet([
-                    model.ideal_gas[i],
-                    model.expansion[i],
-                    model.mbal[i],
-                    model.ebal[i],
-                ])
+                pred_vars = ComponentSet(
+                    [model.rho[i], model.T[i], model.P[i], model.F[i]]
+                )
+                pred_cons = ComponentSet(
+                    [
+                        model.ideal_gas[i],
+                        model.expansion[i],
+                        model.mbal[i],
+                        model.ebal[i],
+                    ]
+                )
                 self.assertEqual(pred_vars, variables)
                 self.assertEqual(pred_cons, constraints)
 
@@ -689,12 +751,15 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -703,8 +768,8 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
-        self.assertEqual(len(var_values), N+1)
-        self.assertEqual(len(con_values), N+1)
+        self.assertEqual(len(var_values), N + 1)
+        self.assertEqual(len(con_values), N + 1)
 
         self.assertEqual(var_block_map[model.P[0]], 0)
 
@@ -730,30 +795,23 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         # These are the variables and constraints of a square,
         # nonsingular subsystem
         variables = []
-        half = N//2
+        half = N // 2
         variables.extend(model.P[i] for i in model.streams if i >= half)
         variables.extend(model.T[i] for i in model.streams if i > half)
         variables.extend(model.rho[i] for i in model.streams if i > half)
         variables.extend(model.F[i] for i in model.streams if i > half)
 
         constraints = []
-        constraints.extend(model.ideal_gas[i] for i in model.streams
-                if i >= half)
-        constraints.extend(model.expansion[i] for i in model.streams
-                if i > half)
-        constraints.extend(model.mbal[i] for i in model.streams
-                if i > half)
-        constraints.extend(model.ebal[i] for i in model.streams
-                if i > half)
+        constraints.extend(model.ideal_gas[i] for i in model.streams if i >= half)
+        constraints.extend(model.expansion[i] for i in model.streams if i > half)
+        constraints.extend(model.mbal[i] for i in model.streams if i > half)
+        constraints.extend(model.ebal[i] for i in model.streams if i > half)
 
-        var_blocks, con_blocks = igraph.block_triangularize(
-            variables, constraints
-        )
+        var_blocks, con_blocks = igraph.block_triangularize(variables, constraints)
         partition = [
-            list(zip(vblock, cblock))
-            for vblock, cblock in zip(var_blocks, con_blocks)
+            list(zip(vblock, cblock)) for vblock, cblock in zip(var_blocks, con_blocks)
         ]
-        self.assertEqual(len(partition), (N-half)+1)
+        self.assertEqual(len(partition), (N - half) + 1)
 
         for i in model.streams:
             idx = i - half
@@ -762,15 +820,17 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
             if i == half:
                 self.assertEqual(variables, ComponentSet([model.P[half]]))
             elif i > half:
-                pred_var = ComponentSet([
-                    model.rho[i], model.T[i], model.P[i], model.F[i]
-                ])
-                pred_con = ComponentSet([
-                    model.ideal_gas[i],
-                    model.expansion[i],
-                    model.mbal[i],
-                    model.ebal[i],
-                ])
+                pred_var = ComponentSet(
+                    [model.rho[i], model.T[i], model.P[i], model.F[i]]
+                )
+                pred_con = ComponentSet(
+                    [
+                        model.ideal_gas[i],
+                        model.expansion[i],
+                        model.mbal[i],
+                        model.ebal[i],
+                    ]
+                )
                 self.assertEqual(variables, pred_var)
                 self.assertEqual(constraints, pred_con)
 
@@ -785,29 +845,25 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         # These are the variables and constraints of a square,
         # nonsingular subsystem
         variables = []
-        half = N//2
+        half = N // 2
         variables.extend(model.P[i] for i in model.streams if i >= half)
         variables.extend(model.T[i] for i in model.streams if i > half)
         variables.extend(model.rho[i] for i in model.streams if i > half)
         variables.extend(model.F[i] for i in model.streams if i > half)
 
         constraints = []
-        constraints.extend(model.ideal_gas[i] for i in model.streams
-                if i >= half)
-        constraints.extend(model.expansion[i] for i in model.streams
-                if i > half)
-        constraints.extend(model.mbal[i] for i in model.streams
-                if i > half)
-        constraints.extend(model.ebal[i] for i in model.streams
-                if i > half)
+        constraints.extend(model.ideal_gas[i] for i in model.streams if i >= half)
+        constraints.extend(model.expansion[i] for i in model.streams if i > half)
+        constraints.extend(model.mbal[i] for i in model.streams if i > half)
+        constraints.extend(model.ebal[i] for i in model.streams if i > half)
 
         var_block_map, con_block_map = igraph.map_nodes_to_block_triangular_indices(
             variables, constraints
         )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
-        self.assertEqual(len(var_values), (N-half)+1)
-        self.assertEqual(len(con_values), (N-half)+1)
+        self.assertEqual(len(var_values), (N - half) + 1)
+        self.assertEqual(len(con_values), (N - half) + 1)
 
         self.assertEqual(var_block_map[model.P[half]], 0)
 
@@ -840,6 +896,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
             igraph.block_triangularize(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_remove(self):
         model = make_gas_expansion_model()
         igraph = IncidenceGraphInterface(model)
@@ -883,7 +940,6 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
     # In these tests we do not cache anything and use the interface
     # simply as a convenient wrapper around the analysis functions,
@@ -908,12 +964,15 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -937,23 +996,23 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_blocks, con_blocks = igraph.block_triangularize(
-            variables, constraints
-        )
+        var_blocks, con_blocks = igraph.block_triangularize(variables, constraints)
         partition = [
-            list(zip(vblock, cblock))
-            for vblock, cblock in zip(var_blocks, con_blocks)
+            list(zip(vblock, cblock)) for vblock, cblock in zip(var_blocks, con_blocks)
         ]
-        self.assertEqual(len(partition), N+1)
+        self.assertEqual(len(partition), N + 1)
 
         for i in model.streams:
             variables = ComponentSet([var for var, _ in partition[i]])
@@ -961,15 +1020,17 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
             if i == model.streams.first():
                 self.assertEqual(variables, ComponentSet([model.P[0]]))
             else:
-                pred_vars = ComponentSet([
-                    model.rho[i], model.T[i], model.P[i], model.F[i]
-                ])
-                pred_cons = ComponentSet([
-                    model.ideal_gas[i],
-                    model.expansion[i],
-                    model.mbal[i],
-                    model.ebal[i],
-                ])
+                pred_vars = ComponentSet(
+                    [model.rho[i], model.T[i], model.P[i], model.F[i]]
+                )
+                pred_cons = ComponentSet(
+                    [
+                        model.ideal_gas[i],
+                        model.expansion[i],
+                        model.mbal[i],
+                        model.ebal[i],
+                    ]
+                )
                 self.assertEqual(pred_vars, variables)
                 self.assertEqual(pred_cons, constraints)
 
@@ -982,12 +1043,15 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
@@ -996,8 +1060,8 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         )
         var_values = set(var_block_map.values())
         con_values = set(con_block_map.values())
-        self.assertEqual(len(var_values), N+1)
-        self.assertEqual(len(con_values), N+1)
+        self.assertEqual(len(var_values), N + 1)
+        self.assertEqual(len(con_values), N + 1)
 
         self.assertEqual(var_block_map[model.P[0]], 0)
 
@@ -1022,22 +1086,23 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
-        var_blocks, con_blocks = igraph.get_diagonal_blocks(
-            variables, constraints
-        )
-        #self.assertIs(igraph.row_block_map, None)
-        #self.assertIs(igraph.col_block_map, None)
-        self.assertEqual(len(var_blocks), N+1)
-        self.assertEqual(len(con_blocks), N+1)
+        var_blocks, con_blocks = igraph.get_diagonal_blocks(variables, constraints)
+        # self.assertIs(igraph.row_block_map, None)
+        # self.assertIs(igraph.col_block_map, None)
+        self.assertEqual(len(var_blocks), N + 1)
+        self.assertEqual(len(con_blocks), N + 1)
 
         for i, (vars, cons) in enumerate(zip(var_blocks, con_blocks)):
             var_set = ComponentSet(vars)
@@ -1050,15 +1115,17 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
                 self.assertEqual(pred_con_set, con_set)
 
             else:
-                pred_var_set = ComponentSet([
-                    model.rho[i], model.T[i], model.P[i], model.F[i]
-                ])
-                pred_con_set = ComponentSet([
-                    model.ideal_gas[i],
-                    model.expansion[i],
-                    model.mbal[i],
-                    model.ebal[i],
-                ])
+                pred_var_set = ComponentSet(
+                    [model.rho[i], model.T[i], model.P[i], model.F[i]]
+                )
+                pred_con_set = ComponentSet(
+                    [
+                        model.ideal_gas[i],
+                        model.expansion[i],
+                        model.mbal[i],
+                        model.ebal[i],
+                    ]
+                )
                 self.assertEqual(pred_var_set, var_set)
                 self.assertEqual(pred_con_set, con_set)
 
@@ -1072,19 +1139,20 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
         # nonsingular subsystem
         variables = []
         variables.extend(model.P.values())
-        variables.extend(model.T[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.rho[i] for i in model.streams
-                if i != model.streams.first())
-        variables.extend(model.F[i] for i in model.streams
-                if i != model.streams.first())
+        variables.extend(
+            model.T[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.rho[i] for i in model.streams if i != model.streams.first()
+        )
+        variables.extend(
+            model.F[i] for i in model.streams if i != model.streams.first()
+        )
 
         constraints = list(model.component_data_objects(pyo.Constraint))
 
         igraph.block_triangularize(variables, constraints)
-        var_blocks, con_blocks = igraph.get_diagonal_blocks(
-            variables, constraints
-        )
+        var_blocks, con_blocks = igraph.get_diagonal_blocks(variables, constraints)
         # NOTE: row/col_block_map have been deprecated.
         # However, they still return None for now.
         self.assertIs(igraph.row_block_map, None)
@@ -1092,9 +1160,7 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestDulmageMendelsohnInterface(unittest.TestCase):
-
     def test_degenerate_solid_phase_model(self):
         m = make_degenerate_solid_phase_model()
         variables = list(m.component_data_objects(pyo.Var))
@@ -1107,8 +1173,8 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         underconstrained_vars.add(m.flow)
         underconstrained_cons = ComponentSet(m.flow_eqn.values())
 
-        self.assertEqual(len(var_dmp[0]+var_dmp[1]), len(underconstrained_vars))
-        for var in var_dmp[0]+var_dmp[1]:
+        self.assertEqual(len(var_dmp[0] + var_dmp[1]), len(underconstrained_vars))
+        for var in var_dmp[0] + var_dmp[1]:
             self.assertIn(var, underconstrained_vars)
 
         self.assertEqual(len(con_dmp[2]), len(underconstrained_cons))
@@ -1125,8 +1191,8 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for var in var_dmp[2]:
             self.assertIn(var, overconstrained_vars)
 
-        self.assertEqual(len(con_dmp[0]+con_dmp[1]), len(overconstrained_cons))
-        for con in con_dmp[0]+con_dmp[1]:
+        self.assertEqual(len(con_dmp[0] + con_dmp[1]), len(overconstrained_cons))
+        for con in con_dmp[0] + con_dmp[1]:
             self.assertIn(con, overconstrained_cons)
 
     def test_named_tuple(self):
@@ -1168,6 +1234,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for con in dmp_cons_over:
             self.assertIn(con, overconstrained_cons)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_incidence_graph(self):
         m = make_degenerate_solid_phase_model()
         variables = list(m.component_data_objects(pyo.Var))
@@ -1190,14 +1257,14 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         top_nodes = list(range(M))
         con_dmp, var_dmp = dulmage_mendelsohn(graph, top_nodes=top_nodes)
         con_dmp = tuple([constraints[i] for i in subset] for subset in con_dmp)
-        var_dmp = tuple([variables[i-M] for i in subset] for subset in var_dmp)
+        var_dmp = tuple([variables[i - M] for i in subset] for subset in var_dmp)
 
         underconstrained_vars = ComponentSet(m.flow_comp.values())
         underconstrained_vars.add(m.flow)
         underconstrained_cons = ComponentSet(m.flow_eqn.values())
 
-        self.assertEqual(len(var_dmp[0]+var_dmp[1]), len(underconstrained_vars))
-        for var in var_dmp[0]+var_dmp[1]:
+        self.assertEqual(len(var_dmp[0] + var_dmp[1]), len(underconstrained_vars))
+        for var in var_dmp[0] + var_dmp[1]:
             self.assertIn(var, underconstrained_vars)
 
         self.assertEqual(len(con_dmp[2]), len(underconstrained_cons))
@@ -1214,10 +1281,11 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for var in var_dmp[2]:
             self.assertIn(var, overconstrained_vars)
 
-        self.assertEqual(len(con_dmp[0]+con_dmp[1]), len(overconstrained_cons))
-        for con in con_dmp[0]+con_dmp[1]:
+        self.assertEqual(len(con_dmp[0] + con_dmp[1]), len(overconstrained_cons))
+        for con in con_dmp[0] + con_dmp[1]:
             self.assertIn(con, overconstrained_cons)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_remove(self):
         m = make_degenerate_solid_phase_model()
         variables = list(m.component_data_objects(pyo.Var))
@@ -1256,9 +1324,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestConnectedComponents(unittest.TestCase):
-
     def test_dynamic_model_backward(self):
         """
         This is the same test as performed in the test_connected.py
@@ -1269,12 +1335,10 @@ class TestConnectedComponents(unittest.TestCase):
         igraph = IncidenceGraphInterface(m)
         var_blocks, con_blocks = igraph.get_connected_components()
         vc_blocks = [
-            (tuple(vars), tuple(cons))
-            for vars, cons in zip(var_blocks, con_blocks)
+            (tuple(vars), tuple(cons)) for vars, cons in zip(var_blocks, con_blocks)
         ]
         key_fcn = lambda vc_comps: tuple(
-            tuple(comp.name for comp in comps)
-            for comps in vc_comps
+            tuple(comp.name for comp in comps) for comps in vc_comps
         )
         vc_blocks = list(sorted(vc_blocks, key=key_fcn))
 
@@ -1287,21 +1351,23 @@ class TestConnectedComponents(unittest.TestCase):
         con_key = lambda con: igraph.get_matrix_coord(con)
         var_blocks = [
             tuple(sorted(t0_vars, key=var_key)),
-            tuple(sorted(
-                (var for var in igraph.variables if var not in t0_vars),
-                key=var_key,
-            )),
+            tuple(
+                sorted(
+                    (var for var in igraph.variables if var not in t0_vars), key=var_key
+                )
+            ),
         ]
         con_blocks = [
             tuple(sorted(t0_cons, key=con_key)),
-            tuple(sorted(
-                (con for con in igraph.constraints if con not in t0_cons),
-                key=con_key,
-            )),
+            tuple(
+                sorted(
+                    (con for con in igraph.constraints if con not in t0_cons),
+                    key=con_key,
+                )
+            ),
         ]
         target_blocks = [
-            (tuple(vars), tuple(cons))
-            for vars, cons in zip(var_blocks, con_blocks)
+            (tuple(vars), tuple(cons)) for vars, cons in zip(var_blocks, con_blocks)
         ]
         target_blocks = list(sorted(target_blocks, key=key_fcn))
 
@@ -1310,7 +1376,7 @@ class TestConnectedComponents(unittest.TestCase):
         # So if this test fails, we'll get a somewhat confusing PyomoException
         # about not being able to convert non-constant expressions to bool
         # rather than a message saying that our variables are not the same.
-        #self.assertEqual(target_blocks, vc_blocks)
+        # self.assertEqual(target_blocks, vc_blocks)
         for block, target_block in zip(vc_blocks, target_blocks):
             vars, cons = block
             pred_vars, pred_cons = target_block
@@ -1325,7 +1391,6 @@ class TestConnectedComponents(unittest.TestCase):
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestExtraVars(unittest.TestCase):
-
     def test_unused_var(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1344,10 +1409,9 @@ class TestExtraVars(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestExceptions(unittest.TestCase):
-
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_nlp_fixed_error(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1359,6 +1423,8 @@ class TestExceptions(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fixed variables"):
             igraph = IncidenceGraphInterface(nlp, include_fixed=True)
 
+    @unittest.skipUnless(scipy_available, "scipy is not available.")
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_nlp_active_error(self):
         m = pyo.ConcreteModel()
         m.v1 = pyo.Var()
@@ -1379,7 +1445,6 @@ class TestExceptions(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestIncludeInequality(unittest.TestCase):
     def make_model_with_inequalities(self):
         m = make_degenerate_solid_phase_model()
@@ -1404,6 +1469,7 @@ class TestIncludeInequality(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, include_inequality=True)
         self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
 
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_dont_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
@@ -1411,6 +1477,7 @@ class TestIncludeInequality(unittest.TestCase):
         igraph = IncidenceGraphInterface(nlp, include_inequality=False)
         self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
 
+    @unittest.skipUnless(asl_available, "pynumero_ASL is not available")
     def test_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
@@ -1420,19 +1487,17 @@ class TestIncludeInequality(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGetIncidenceGraph(unittest.TestCase):
-
     def make_test_model(self):
         m = pyo.ConcreteModel()
         m.I = pyo.Set(initialize=[1, 2, 3, 4])
         m.v = pyo.Var(m.I, bounds=(0, None))
-        m.eq1 = pyo.Constraint(expr=m.v[1]**2 + m.v[2]**2 == 1.0)
+        m.eq1 = pyo.Constraint(expr=m.v[1] ** 2 + m.v[2] ** 2 == 1.0)
         m.eq2 = pyo.Constraint(expr=m.v[1] + 2.0 == m.v[3])
-        m.ineq1 = pyo.Constraint(expr=m.v[2] - m.v[3]**0.5 + m.v[4]**2 <= 1.0)
-        m.ineq2 = pyo.Constraint(expr=m.v[2]*m.v[4] >= 1.0)
-        m.ineq3 = pyo.Constraint(expr=m.v[1] >= m.v[4]**4)
-        m.obj = pyo.Objective(expr=-m.v[1] - m.v[2] + m.v[3]**2 + m.v[4]**2)
+        m.ineq1 = pyo.Constraint(expr=m.v[2] - m.v[3] ** 0.5 + m.v[4] ** 2 <= 1.0)
+        m.ineq2 = pyo.Constraint(expr=m.v[2] * m.v[4] >= 1.0)
+        m.ineq3 = pyo.Constraint(expr=m.v[1] >= m.v[4] ** 4)
+        m.obj = pyo.Objective(expr=-m.v[1] - m.v[2] + m.v[3] ** 2 + m.v[4] ** 2)
         return m
 
     def test_bipartite_incidence_graph(self):
@@ -1582,21 +1647,16 @@ class TestGetIncidenceGraph(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGetAdjacent(unittest.TestCase):
-
     def test_get_adjacent_to_var(self):
         m = make_degenerate_solid_phase_model()
         igraph = IncidenceGraphInterface(m)
         adj_cons = igraph.get_adjacent_to(m.rho)
         self.assertEqual(
             ComponentSet(adj_cons),
-            ComponentSet([
-                m.holdup_eqn[1],
-                m.holdup_eqn[2],
-                m.holdup_eqn[3],
-                m.density_eqn,
-            ]),
+            ComponentSet(
+                [m.holdup_eqn[1], m.holdup_eqn[2], m.holdup_eqn[3], m.density_eqn]
+            ),
         )
 
     def test_get_adjacent_to_con(self):
@@ -1604,13 +1664,7 @@ class TestGetAdjacent(unittest.TestCase):
         igraph = IncidenceGraphInterface(m)
         adj_vars = igraph.get_adjacent_to(m.density_eqn)
         self.assertEqual(
-            ComponentSet(adj_vars),
-            ComponentSet([
-                m.x[1],
-                m.x[2],
-                m.x[3],
-                m.rho,
-            ]),
+            ComponentSet(adj_vars), ComponentSet([m.x[1], m.x[2], m.x[3], m.rho])
         )
 
     def test_get_adjacent_exceptions(self):
@@ -1628,9 +1682,7 @@ class TestGetAdjacent(unittest.TestCase):
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
-@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestInterface(unittest.TestCase):
-
     def test_subgraph_with_fewer_var_or_con(self):
         m = pyo.ConcreteModel()
         m.I = pyo.Set(initialize=[1, 2])
@@ -1664,13 +1716,27 @@ class TestInterface(unittest.TestCase):
         m.z = pyo.Var()
         # NOTE: Objective will not be displayed
         m.obj = pyo.Objective(expr=m.y**2 + m.z**2)
-        m.c1 = pyo.Constraint(expr=m.y == 2*m.x + 1)
+        m.c1 = pyo.Constraint(expr=m.y == 2 * m.x + 1)
         m.c2 = pyo.Constraint(expr=m.z >= m.x)
         m.y.fix()
-        igraph = IncidenceGraphInterface(
-            m, include_inequality=True, include_fixed=True
-        )
+        igraph = IncidenceGraphInterface(m, include_inequality=True, include_fixed=True)
         igraph.plot(title='test plot', show=False)
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+class TestIndexedBlock(unittest.TestCase):
+    def test_block_data_obj(self):
+        m = pyo.ConcreteModel()
+        m.block = pyo.Block([1, 2, 3])
+        m.block[1].subblock = make_degenerate_solid_phase_model()
+        igraph = IncidenceGraphInterface(m.block[1])
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+        self.assertEqual(len(var_dmp.unmatched), 1)
+        self.assertEqual(len(con_dmp.unmatched), 1)
+
+        msg = "Unsupported type.*_BlockData"
+        with self.assertRaisesRegex(TypeError, msg):
+            igraph = IncidenceGraphInterface(m.block)
 
 
 if __name__ == "__main__":

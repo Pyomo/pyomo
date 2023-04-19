@@ -67,7 +67,7 @@ assert v3 in s
 s = pmo.sos([v1, v2], weights=[1.2, 2.5])
 assert s.weights == (1.2, 2.5)
 
-# using paramters
+# using parameters
 p = pmo.parameter_list(pmo.parameter() for i in range(2))
 s = pmo.sos([v1, v2], weights=[p[0] ** 2, p[1] ** 2])
 assert len(s.weights) == 2

@@ -16,14 +16,10 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
-from pyomo.core.base.var import (IndexedVar,
-                                 _VarData)
-from pyomo.core.base.constraint import (IndexedConstraint,
-                                        _ConstraintData)
-from pyomo.core.base.objective import (IndexedObjective,
-                                       _ObjectiveData)
-from pyomo.core.base.expression import (IndexedExpression,
-                                        _ExpressionData)
+from pyomo.core.base.var import IndexedVar, _VarData
+from pyomo.core.base.constraint import IndexedConstraint, _ConstraintData
+from pyomo.core.base.objective import IndexedObjective, _ObjectiveData
+from pyomo.core.base.expression import IndexedExpression, _ExpressionData
 
 from collections.abc import MutableSequence
 
@@ -36,8 +32,8 @@ logger = logging.getLogger('pyomo.core')
 # be implemented on top of these classes.
 #
 
-class ComponentList(MutableSequence):
 
+class ComponentList(MutableSequence):
     def __init__(self, interface_datatype, *args):
         self._interface_datatype = interface_datatype
         self._data = []
@@ -45,16 +41,18 @@ class ComponentList(MutableSequence):
             if len(args) > 1:
                 raise TypeError(
                     "ComponentList expected at most 1 arguments, "
-                    "got %s" % (len(args)))
+                    "got %s" % (len(args))
+                )
             for item in args[0]:
                 self.append(item)
 
     def construct(self, data=None):
         if is_debug_set(logger):
-            logger.debug(   #pragma:nocover
+            logger.debug(  # pragma:nocover
                 "Constructing ComponentList object, name=%s, from data=%s"
-                % (self.name, str(data)))
-        if self._constructed:   #pragma:nocover
+                % (self.name, str(data))
+            )
+        if self._constructed:  # pragma:nocover
             return
         self._constructed = True
 
@@ -68,11 +66,19 @@ class ComponentList(MutableSequence):
     #       iterating. I don't think that would be difficult to do.
     #
 
-    def keys(self): return range(len(self))
+    def keys(self):
+        return range(len(self))
+
     iterkeys = keys
-    def values(self): return list(iter(self))
+
+    def values(self):
+        return list(iter(self))
+
     itervalues = values
-    def items(self): return zip(self.keys(), self.values())
+
+    def items(self):
+        return zip(self.keys(), self.values())
+
     iteritems = items
 
     #
@@ -114,17 +120,14 @@ class ComponentList(MutableSequence):
             raise ValueError(
                 "Invalid component object assignment to ComponentList "
                 "%s at index %s. A parent component has already been "
-                "assigned the object: %s"
-                % (self.name,
-                   i,
-                   item.parent_component().name))
+                "assigned the object: %s" % (self.name, i, item.parent_component().name)
+            )
         # see note about implicit assignment and update
         raise TypeError(
             "ComponentList must be assigned objects "
             "of type %s. Invalid type for key %s: %s"
-            % (self._interface_datatype.__name__,
-               i,
-               type(item)))
+            % (self._interface_datatype.__name__, i, type(item))
+        )
 
     # * Only supports explicit objects. See notes above __setitem__
     #   for more information
@@ -142,17 +145,14 @@ class ComponentList(MutableSequence):
             raise ValueError(
                 "Invalid component object assignment to ComponentList "
                 "%s at index %s. A parent component has already been "
-                "assigned the object: %s"
-                % (self.name,
-                   i,
-                   item.parent_component().name))
+                "assigned the object: %s" % (self.name, i, item.parent_component().name)
+            )
         # see note about implicit assignment and update
         raise TypeError(
             "ComponentList must be assigned objects "
             "of type %s. Invalid type for key %s: %s"
-            % (self._interface_datatype.__name__,
-               i,
-               type(item)))
+            % (self._interface_datatype.__name__, i, type(item))
+        )
 
     # Since we don't currently allow objects to be assigned when their
     # parent component is already set, it would make sense to reset
@@ -167,8 +167,11 @@ class ComponentList(MutableSequence):
         obj._component = None
         del self._data[i]
 
-    def __getitem__(self, i): return self._data[i]
-    def __len__(self): return self._data.__len__()
+    def __getitem__(self, i):
+        return self._data[i]
+
+    def __len__(self):
+        return self._data.__len__()
 
     #
     # Override a few default implementations on MutableSequence
@@ -183,7 +186,7 @@ class ComponentList(MutableSequence):
     def index(self, item, start=0, stop=None):
         '''S.index(value, [start, [stop]]) -> integer -- return first index of value.
 
-           Raises ValueError if the value is not present.
+        Raises ValueError if the value is not present.
         '''
         if start is not None and start < 0:
             start = max(len(self) + start, 0)
@@ -215,58 +218,47 @@ class ComponentList(MutableSequence):
         'S.reverse() -- reverse *IN PLACE*'
         n = len(self)
         data = self._data
-        for i in range(n//2):
-            data[i], data[n-i-1] = data[n-i-1], data[i]
+        for i in range(n // 2):
+            data[i], data[n - i - 1] = data[n - i - 1], data[i]
+
 
 #
 # ComponentList needs to come before IndexedComponent
 # (or subclasses of) so we can override certain methods
 #
 
-class XVarList(ComponentList, IndexedVar):
 
+class XVarList(ComponentList, IndexedVar):
     def __init__(self, *args, **kwds):
         IndexedVar.__init__(self, Any, **kwds)
         # Constructor for ComponentList needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentList.__init__(self,
-                               _VarData,
-                               *args,
-                               **kwds)
+        ComponentList.__init__(self, _VarData, *args, **kwds)
+
 
 class XConstraintList(ComponentList, IndexedConstraint):
-
     def __init__(self, *args, **kwds):
         IndexedConstraint.__init__(self, Any, **kwds)
         # Constructor for ComponentList needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentList.__init__(self,
-                               _ConstraintData,
-                               *args,
-                               **kwds)
+        ComponentList.__init__(self, _ConstraintData, *args, **kwds)
+
 
 class XObjectiveList(ComponentList, IndexedObjective):
-
     def __init__(self, *args, **kwds):
         IndexedObjective.__init__(self, Any, **kwds)
         # Constructor for ComponentList needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentList.__init__(self,
-                               _ObjectiveData,
-                               *args,
-                               **kwds)
+        ComponentList.__init__(self, _ObjectiveData, *args, **kwds)
+
 
 class XExpressionList(ComponentList, IndexedExpression):
-
     def __init__(self, *args, **kwds):
         IndexedExpression.__init__(self, Any, **kwds)
         # Constructor for ComponentList needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentList.__init__(self,
-                               _ExpressionData,
-                               *args,
-                               **kwds)
+        ComponentList.__init__(self, _ExpressionData, *args, **kwds)

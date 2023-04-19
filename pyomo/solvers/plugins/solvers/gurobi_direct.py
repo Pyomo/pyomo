@@ -99,7 +99,6 @@ def _set_options(model_or_env, options):
 
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
-
     _name = None
     _version = 0
     _version_major = 0
@@ -123,7 +122,7 @@ class GurobiDirect(DirectSolver):
         self._max_obj_degree = 2
         self._max_constraint_degree = 2
 
-        # Note: Undefined capabilites default to None
+        # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -794,7 +793,7 @@ class GurobiDirect(DirectSolver):
         # be the case, both in LP and MIP contexts.
         if self._save_results:
             """
-            This code in this if statement is only needed for backwards compatability. It is more efficient to set
+            This code in this if statement is only needed for backwards compatibility. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
             if gprob.SolCount > 0:
@@ -870,7 +869,6 @@ class GurobiDirect(DirectSolver):
                             soln_constraints[name]["Slack"] = val
         elif self._load_solutions:
             if gprob.SolCount > 0:
-
                 self.load_vars()
 
                 if extract_reduced_costs:

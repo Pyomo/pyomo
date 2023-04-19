@@ -19,9 +19,7 @@ from pyomo.contrib.incidence_analysis.interface import (
     get_structural_incidence_matrix,
     _generate_variables_in_constraints,
 )
-from pyomo.contrib.incidence_analysis.connected import (
-    get_independent_submatrices,
-)
+from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
 from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
     make_gas_expansion_model,
     make_dynamic_model,
@@ -36,7 +34,6 @@ if scipy_available:
 @unittest.skipIf(not networkx_available, "NetworkX is not available")
 @unittest.skipIf(not scipy_available, "SciPy is not available")
 class TestIndependentSubmatrices(unittest.TestCase):
-
     def test_decomposable_matrix(self):
         """
         The following matrix decomposes into two independent diagonal
@@ -51,21 +48,14 @@ class TestIndependentSubmatrices(unittest.TestCase):
         col = [0, 0, 1, 2, 3, 3, 4, 4]
         data = [1, 1, 1, 1, 1, 1, 1, 1]
         N = 5
-        coo = sp.sparse.coo_matrix(
-            (data, (row, col)),
-            shape=(N, N),
-        )
+        coo = sp.sparse.coo_matrix((data, (row, col)), shape=(N, N))
         row_blocks, col_blocks = get_independent_submatrices(coo)
         self.assertEqual(len(row_blocks), 2)
         self.assertEqual(len(col_blocks), 2)
 
         # One of the independent submatrices must be the first two rows/cols
-        self.assertTrue(
-            set(row_blocks[0]) == {0, 1} or set(row_blocks[1]) == {0, 1}
-        )
-        self.assertTrue(
-            set(col_blocks[0]) == {0, 1} or set(col_blocks[1]) == {0, 1}
-        )
+        self.assertTrue(set(row_blocks[0]) == {0, 1} or set(row_blocks[1]) == {0, 1})
+        self.assertTrue(set(col_blocks[0]) == {0, 1} or set(col_blocks[1]) == {0, 1})
         # The other independent submatrix must be last three rows/columns
         self.assertTrue(
             set(row_blocks[0]) == {2, 3, 4} or set(row_blocks[1]) == {2, 3, 4}
@@ -90,10 +80,7 @@ class TestIndependentSubmatrices(unittest.TestCase):
 
         row = [row_perm[i] for i in row]
         col = [col_perm[i] for i in col]
-        coo = sp.sparse.coo_matrix(
-            (data, (row, col)),
-            shape=(N, N),
-        )
+        coo = sp.sparse.coo_matrix((data, (row, col)), shape=(N, N))
         row_blocks, col_blocks = get_independent_submatrices(coo)
         self.assertEqual(len(row_blocks), 2)
         self.assertEqual(len(col_blocks), 2)
@@ -119,21 +106,14 @@ class TestIndependentSubmatrices(unittest.TestCase):
     def test_dynamic_model_backward(self):
         m = make_dynamic_model(nfe=5, scheme="BACKWARD")
         m.height[0].fix()
-        constraints = list(
-            m.component_data_objects(pyo.Constraint, active=True)
-        )
+        constraints = list(m.component_data_objects(pyo.Constraint, active=True))
         variables = list(_generate_variables_in_constraints(constraints))
-        con_coord_map = ComponentMap(
-            (con, i) for i, con in enumerate(constraints)
-        )
-        var_coord_map = ComponentMap(
-            (var, i) for i, var in enumerate(variables)
-        )
+        con_coord_map = ComponentMap((con, i) for i, con in enumerate(constraints))
+        var_coord_map = ComponentMap((var, i) for i, var in enumerate(variables))
         coo = get_structural_incidence_matrix(variables, constraints)
         row_blocks, col_blocks = get_independent_submatrices(coo)
         rc_blocks = [
-            (tuple(rows), tuple(cols))
-            for rows, cols in zip(row_blocks, col_blocks)
+            (tuple(rows), tuple(cols)) for rows, cols in zip(row_blocks, col_blocks)
         ]
         self.assertEqual(len(rc_blocks), 2)
         # Want to check that one block contains flow_out_rule and flow_out
@@ -148,10 +128,7 @@ class TestIndependentSubmatrices(unittest.TestCase):
             var_coord_map[m.dhdt[0]],
             var_coord_map[m.flow_in[0]],
         }
-        t0_con_coords = {
-            con_coord_map[m.flow_out_eqn[0]],
-            con_coord_map[m.diff_eqn[0]],
-        }
+        t0_con_coords = {con_coord_map[m.flow_out_eqn[0]], con_coord_map[m.diff_eqn[0]]}
 
         var_blocks = [
             tuple(sorted(t0_var_coords)),
@@ -162,8 +139,7 @@ class TestIndependentSubmatrices(unittest.TestCase):
             tuple(i for i in range(len(constraints)) if i not in t0_con_coords),
         ]
         target_blocks = [
-            (tuple(rows), tuple(cols))
-            for rows, cols in zip(con_blocks, var_blocks)
+            (tuple(rows), tuple(cols)) for rows, cols in zip(con_blocks, var_blocks)
         ]
         target_blocks = list(sorted(target_blocks))
         rc_blocks = list(sorted(rc_blocks))
@@ -172,21 +148,14 @@ class TestIndependentSubmatrices(unittest.TestCase):
     def test_dynamic_model_forward(self):
         m = make_dynamic_model(nfe=5, scheme="FORWARD")
         m.height[0].fix()
-        constraints = list(
-            m.component_data_objects(pyo.Constraint, active=True)
-        )
+        constraints = list(m.component_data_objects(pyo.Constraint, active=True))
         variables = list(_generate_variables_in_constraints(constraints))
-        con_coord_map = ComponentMap(
-            (con, i) for i, con in enumerate(constraints)
-        )
-        var_coord_map = ComponentMap(
-            (var, i) for i, var in enumerate(variables)
-        )
+        con_coord_map = ComponentMap((con, i) for i, con in enumerate(constraints))
+        var_coord_map = ComponentMap((var, i) for i, var in enumerate(variables))
         coo = get_structural_incidence_matrix(variables, constraints)
         row_blocks, col_blocks = get_independent_submatrices(coo)
         rc_blocks = [
-            (tuple(rows), tuple(cols))
-            for rows, cols in zip(row_blocks, col_blocks)
+            (tuple(rows), tuple(cols)) for rows, cols in zip(row_blocks, col_blocks)
         ]
         # With a forward discretization, all variables and constraints
         # are in the same independent block.

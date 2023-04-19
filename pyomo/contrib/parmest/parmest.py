@@ -23,6 +23,7 @@ if use_mpisppy:
         # cause things like doctests to fail.  We will suppress that
         # information here.
         from pyomo.common.tee import capture_output
+
         with capture_output():
             import mpisppy.utils.sputils as sputils
     except ImportError:
@@ -45,9 +46,12 @@ from itertools import combinations
 
 from pyomo.common.dependencies import (
     attempt_import,
-    numpy as np, numpy_available,
-    pandas as pd, pandas_available,
-    scipy, scipy_available,
+    numpy as np,
+    numpy_available,
+    pandas as pd,
+    pandas_available,
+    scipy,
+    scipy_available,
 )
 
 import pyomo.environ as pyo
@@ -62,9 +66,11 @@ from pyomo.dae import ContinuousSet
 parmest_available = numpy_available & pandas_available & scipy_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
-    'pyomo.contrib.interior_point.inverse_reduced_hessian')
+    'pyomo.contrib.interior_point.inverse_reduced_hessian'
+)
 
 logger = logging.getLogger(__name__)
+
 
 def ef_nonants(ef):
     # Wrapper to call someone's ef_nonants
@@ -75,7 +81,9 @@ def ef_nonants(ef):
         return local_ef.ef_nonants(ef)
 
 
-def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_data=None):
+def _experiment_instance_creation_callback(
+    scenario_name, node_names=None, cb_data=None
+):
     """
     This is going to be called by mpi-sppy or the local EF and it will call into
     the user's model's callback.
@@ -101,11 +109,11 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
     ----
     There is flexibility both in how the function is passed and its signature.
     """
-    assert(cb_data is not None)
+    assert cb_data is not None
     outer_cb_data = cb_data
     scen_num_str = re.compile(r'(\d+)$').search(scenario_name).group(1)
     scen_num = int(scen_num_str)
-    basename = scenario_name[:-len(scen_num_str)] # to reconstruct name
+    basename = scenario_name[: -len(scen_num_str)]  # to reconstruct name
 
     CallbackFunction = outer_cb_data["callback"]
 
@@ -115,8 +123,9 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
         cb_name = CallbackFunction
 
         if "CallbackModule" not in outer_cb_data:
-            raise RuntimeError(\
-                "Internal Error: need CallbackModule in parmest callback")
+            raise RuntimeError(
+                "Internal Error: need CallbackModule in parmest callback"
+            )
         else:
             modname = outer_cb_data["CallbackModule"]
 
@@ -131,12 +140,12 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
         try:
             callback = getattr(cb_module, cb_name)
         except:
-            print("Error getting function="+cb_name+" from module="+str(modname))
+            print("Error getting function=" + cb_name + " from module=" + str(modname))
             raise
 
     if "BootList" in outer_cb_data:
         bootlist = outer_cb_data["BootList"]
-        #print("debug in callback: using bootlist=",str(bootlist))
+        # print("debug in callback: using bootlist=",str(bootlist))
         # assuming bootlist itself is zero based
         exp_num = bootlist[scen_num]
     else:
@@ -144,14 +153,16 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
 
     scen_name = basename + str(exp_num)
 
-    cb_data = outer_cb_data["cb_data"] # cb_data might be None.
+    cb_data = outer_cb_data["cb_data"]  # cb_data might be None.
 
     # at least three signatures are supported. The first is preferred
     try:
-        instance = callback(experiment_number = exp_num, cb_data = cb_data)
+        instance = callback(experiment_number=exp_num, cb_data=cb_data)
     except TypeError:
-        raise RuntimeError("Only one callback signature is supported: "
-                           "callback(experiment_number, cb_data) ")
+        raise RuntimeError(
+            "Only one callback signature is supported: "
+            "callback(experiment_number, cb_data) "
+        )
         """
         try:
             instance = callback(scenario_tree_model, scen_name, node_names)
@@ -166,26 +177,33 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
             raise
         """
     if hasattr(instance, "_mpisppy_node_list"):
-        raise RuntimeError (f"scenario for experiment {exp_num} has _mpisppy_node_list")
-    nonant_list = [instance.find_component(vstr) for vstr in\
-                   outer_cb_data["theta_names"]]
+        raise RuntimeError(f"scenario for experiment {exp_num} has _mpisppy_node_list")
+    nonant_list = [
+        instance.find_component(vstr) for vstr in outer_cb_data["theta_names"]
+    ]
     if use_mpisppy:
-        instance._mpisppy_node_list = [scenario_tree.ScenarioNode(
-                                                    name="ROOT",
-                                                    cond_prob=1.0,
-                                                    stage=1,
-                                                    cost_expression=instance.FirstStageCost,
-                                                    nonant_list=nonant_list,
-                                                    scen_model=instance)]
+        instance._mpisppy_node_list = [
+            scenario_tree.ScenarioNode(
+                name="ROOT",
+                cond_prob=1.0,
+                stage=1,
+                cost_expression=instance.FirstStageCost,
+                nonant_list=nonant_list,
+                scen_model=instance,
+            )
+        ]
     else:
-        instance._mpisppy_node_list = [scenario_tree.ScenarioNode(
-                                                name="ROOT",
-                                                cond_prob=1.0,
-                                                stage=1,
-                                                cost_expression=instance.FirstStageCost,
-                                                scen_name_list=None,
-                                                nonant_list=nonant_list,
-                                                scen_model=instance)]
+        instance._mpisppy_node_list = [
+            scenario_tree.ScenarioNode(
+                name="ROOT",
+                cond_prob=1.0,
+                stage=1,
+                cost_expression=instance.FirstStageCost,
+                scen_name_list=None,
+                nonant_list=nonant_list,
+                scen_model=instance,
+            )
+        ]
 
     if "ThetaVals" in outer_cb_data:
         thetavals = outer_cb_data["ThetaVals"]
@@ -195,15 +213,16 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
             theta_cuid = ComponentUID(vstr)
             theta_object = theta_cuid.find_component_on(instance)
             if thetavals[vstr] is not None:
-                #print("Fixing",vstr,"at",str(thetavals[vstr]))
+                # print("Fixing",vstr,"at",str(thetavals[vstr]))
                 theta_object.fix(thetavals[vstr])
             else:
-                #print("Freeing",vstr)
+                # print("Freeing",vstr)
                 theta_object.unfix()
 
     return instance
 
-#=============================================
+
+# =============================================
 def _treemaker(scenlist):
     """
     Makes a scenario tree (avoids dependence on daps)
@@ -218,14 +237,14 @@ def _treemaker(scenlist):
     """
 
     num_scenarios = len(scenlist)
-    m = scenariotree.tree_structure_model.CreateAbstractScenarioTreeModel()
+    m = scenario_tree.tree_structure_model.CreateAbstractScenarioTreeModel()
     m = m.create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')
     for i in scenlist:
-        m.Nodes.add('LeafNode_Experiment'+str(i))
-        m.Scenarios.add('Experiment'+str(i))
+        m.Nodes.add('LeafNode_Experiment' + str(i))
+        m.Scenarios.add('Experiment' + str(i))
     m.NodeStage['RootNode'] = 'Stage1'
     m.ConditionalProbability['RootNode'] = 1.0
     for node in m.Nodes:
@@ -233,8 +252,8 @@ def _treemaker(scenlist):
             m.NodeStage[node] = 'Stage2'
             m.Children['RootNode'].add(node)
             m.Children[node].clear()
-            m.ConditionalProbability[node] = 1.0/num_scenarios
-            m.ScenarioLeafNode[node.replace('LeafNode_','')] = node
+            m.ConditionalProbability[node] = 1.0 / num_scenarios
+            m.ScenarioLeafNode[node.replace('LeafNode_', '')] = node
 
     return m
 
@@ -280,9 +299,11 @@ class _SecondStageCostExpr(object):
     """
     Class to pass objective expression into the Pyomo model
     """
+
     def __init__(self, ssc_function, data):
         self._ssc_function = ssc_function
         self._data = data
+
     def __call__(self, model):
         return self._ssc_function(model, self._data)
 
@@ -314,18 +335,32 @@ class Estimator(object):
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute)
     """
-    def __init__(self, model_function, data, theta_names, obj_function=None,
-                 tee=False, diagnostic_mode=False, solver_options=None):
 
+    def __init__(
+        self,
+        model_function,
+        data,
+        theta_names,
+        obj_function=None,
+        tee=False,
+        diagnostic_mode=False,
+        solver_options=None,
+    ):
         self.model_function = model_function
 
-        assert isinstance(data, (list, pd.DataFrame)), "Data must be a list or DataFrame"
+        assert isinstance(
+            data, (list, pd.DataFrame)
+        ), "Data must be a list or DataFrame"
         # convert dataframe into a list of dataframes, each row = one scenario
         if isinstance(data, pd.DataFrame):
-            self.callback_data = [data.loc[i,:].to_frame().transpose() for i in data.index]
+            self.callback_data = [
+                data.loc[i, :].to_frame().transpose() for i in data.index
+            ]
         else:
             self.callback_data = data
-        assert isinstance(self.callback_data[0], (dict, pd.DataFrame, str)), "The scenarios in data must be a dictionary, DataFrame or filename"
+        assert isinstance(
+            self.callback_data[0], (dict, pd.DataFrame, str)
+        ), "The scenarios in data must be a dictionary, DataFrame or filename"
 
         if len(theta_names) == 0:
             self.theta_names = ['parmest_dummy_var']
@@ -348,9 +383,11 @@ class Estimator(object):
         # if fitted model parameter names differ from theta_names created when Estimator object is created
         if hasattr(self, 'theta_names_updated'):
             return self.theta_names_updated
-            
+
         else:
-            return self.theta_names # default theta_names, created when Estimator object is created
+            return (
+                self.theta_names
+            )  # default theta_names, created when Estimator object is created
 
     def _create_parmest_model(self, data):
         """
@@ -358,37 +395,50 @@ class Estimator(object):
         """
         model = self.model_function(data)
 
-        if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
-            model.parmest_dummy_var = pyo.Var(initialize = 1.0)
-        
+        if (len(self.theta_names) == 1) and (
+            self.theta_names[0] == 'parmest_dummy_var'
+        ):
+            model.parmest_dummy_var = pyo.Var(initialize=1.0)
+
         # Add objective function (optional)
         if self.obj_function:
             for obj in model.component_objects(pyo.Objective):
                 if obj.name in ["Total_Cost_Objective"]:
-                    raise RuntimeError("Parmest will not override the existing model Objective named "+ obj.name)
+                    raise RuntimeError(
+                        "Parmest will not override the existing model Objective named "
+                        + obj.name
+                    )
                 obj.deactivate()
-        
+
             for expr in model.component_data_objects(pyo.Expression):
                 if expr.name in ["FirstStageCost", "SecondStageCost"]:
-                    raise RuntimeError("Parmest will not override the existing model Expression named "+ expr.name)
+                    raise RuntimeError(
+                        "Parmest will not override the existing model Expression named "
+                        + expr.name
+                    )
             model.FirstStageCost = pyo.Expression(expr=0)
-            model.SecondStageCost = pyo.Expression(rule=_SecondStageCostExpr(self.obj_function, data))
-            
+            model.SecondStageCost = pyo.Expression(
+                rule=_SecondStageCostExpr(self.obj_function, data)
+            )
+
             def TotalCost_rule(model):
                 return model.FirstStageCost + model.SecondStageCost
-            model.Total_Cost_Objective = pyo.Objective(rule=TotalCost_rule, sense=pyo.minimize)
-        
+
+            model.Total_Cost_Objective = pyo.Objective(
+                rule=TotalCost_rule, sense=pyo.minimize
+            )
+
         # Convert theta Params to Vars, and unfix theta Vars
         model = utils.convert_params_to_vars(model, self.theta_names)
-        
+
         # Update theta names list to use CUID string representation
         for i, theta in enumerate(self.theta_names):
             var_cuid = ComponentUID(theta)
             var_validate = var_cuid.find_component_on(model)
             if var_validate is None:
                 logger.warning(
-                    "theta_name[%s] (%s) was not found on the model",
-                    (i, theta))
+                    "theta_name[%s] (%s) was not found on the model", (i, theta)
+                )
             else:
                 try:
                     # If the component is not a variable,
@@ -403,16 +453,14 @@ class Estimator(object):
 
         return model
 
-
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
-
         # cb_data is a list of dictionaries, list of dataframes, OR list of json file names
         exp_data = cb_data[experiment_number]
         if isinstance(exp_data, (dict, pd.DataFrame)):
             pass
         elif isinstance(exp_data, str):
             try:
-                with open(exp_data,'r') as infile:
+                with open(exp_data, 'r') as infile:
                     exp_data = json.load(infile)
             except:
                 raise RuntimeError(f'Could not read {exp_data} as json')
@@ -422,15 +470,21 @@ class Estimator(object):
 
         return model
 
-
-    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
-               return_values=[], bootlist=None, calc_cov=False, cov_n=None):
+    def _Q_opt(
+        self,
+        ThetaVals=None,
+        solver="ef_ipopt",
+        return_values=[],
+        bootlist=None,
+        calc_cov=False,
+        cov_n=None,
+    ):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
 
         """
-        if (solver == "k_aug"):
+        if solver == "k_aug":
             raise RuntimeError("k_aug no longer supported.")
 
         # (Bootstrap scenarios will use indirection through the bootlist)
@@ -453,22 +507,25 @@ class Estimator(object):
         options = {"solver": "ipopt"}
         scenario_creator_options = {"cb_data": outer_cb_data}
         if use_mpisppy:
-            ef = sputils.create_EF(scen_names,
-                              _experiment_instance_creation_callback,
-                              EF_name = "_Q_opt",
-                              suppress_warnings=True,
-                              scenario_creator_kwargs=scenario_creator_options)
+            ef = sputils.create_EF(
+                scen_names,
+                _experiment_instance_creation_callback,
+                EF_name="_Q_opt",
+                suppress_warnings=True,
+                scenario_creator_kwargs=scenario_creator_options,
+            )
         else:
-            ef = local_ef.create_EF(scen_names,
-                                    _experiment_instance_creation_callback,
-                                    EF_name = "_Q_opt",
-                                    suppress_warnings=True,
-                                    scenario_creator_kwargs=scenario_creator_options)
+            ef = local_ef.create_EF(
+                scen_names,
+                _experiment_instance_creation_callback,
+                EF_name="_Q_opt",
+                suppress_warnings=True,
+                scenario_creator_kwargs=scenario_creator_options,
+            )
         self.ef_instance = ef
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
@@ -477,12 +534,12 @@ class Estimator(object):
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
 
-                solve_result = solver.solve(self.ef_instance, tee = self.tee)
+                solve_result = solver.solve(self.ef_instance, tee=self.tee)
 
             # The import error will be raised when we attempt to use
             # inv_reduced_hessian_barrier below.
             #
-            #elif not asl_available:
+            # elif not asl_available:
             #    raise ImportError("parmest requires ASL to calculate the "
             #                      "covariance matrix with solver 'ipopt'")
             else:
@@ -491,23 +548,28 @@ class Estimator(object):
                 for ndname, Var, solval in ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
-                solve_result, inv_red_hes = \
-                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                        self.ef_instance,
-                        independent_variables= ind_vars,
-                        solver_options=self.solver_options,
-                        tee=self.tee)
+                (
+                    solve_result,
+                    inv_red_hes,
+                ) = inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                    self.ef_instance,
+                    independent_variables=ind_vars,
+                    solver_options=self.solver_options,
+                    tee=self.tee,
+                )
 
             if self.diagnostic_mode:
-                print('    Solver termination condition = ',
-                       str(solve_result.solver.termination_condition))
+                print(
+                    '    Solver termination condition = ',
+                    str(solve_result.solver.termination_condition),
+                )
 
             # assume all first stage are thetas...
             thetavals = {}
             for ndname, Var, solval in ef_nonants(ef):
                 # process the name
                 # the scenarios are blocks, so strip the scenario name
-                vname  = Var.name[Var.name.find(".")+1:]
+                vname = Var.name[Var.name.find(".") + 1 :]
                 thetavals[vname] = solval
 
             objval = pyo.value(ef.EF_Obj)
@@ -536,21 +598,27 @@ class Estimator(object):
                 expected value.)
                 '''
                 cov = 2 * sse / (n - l) * inv_red_hes
-                cov = pd.DataFrame(cov, index=thetavals.keys(), columns=thetavals.keys())
+                cov = pd.DataFrame(
+                    cov, index=thetavals.keys(), columns=thetavals.keys()
+                )
 
             thetavals = pd.Series(thetavals)
 
             if len(return_values) > 0:
                 var_values = []
                 if len(scen_names) > 1:  # multiple scenarios
-                    block_objects = self.ef_instance.component_objects(Block, descend_into=False)
+                    block_objects = self.ef_instance.component_objects(
+                        Block, descend_into=False
+                    )
                 else:  # single scenario
                     block_objects = [self.ef_instance]
                 for exp_i in block_objects:
                     vals = {}
                     for var in return_values:
                         exp_i_var = exp_i.find_component(str(var))
-                        if exp_i_var is None:  # we might have a block such as _mpisppy_data
+                        if (
+                            exp_i_var is None
+                        ):  # we might have a block such as _mpisppy_data
                             continue
                         # if value to return is ContinuousSet
                         if type(exp_i_var) == ContinuousSet:
@@ -570,14 +638,12 @@ class Estimator(object):
                     return objval, thetavals, var_values
 
             if calc_cov:
-
                 return objval, thetavals, cov
             else:
                 return objval, thetavals
 
         else:
-            raise RuntimeError("Unknown solver in Q_Opt="+solver)
-
+            raise RuntimeError("Unknown solver in Q_Opt=" + solver)
 
     def _Q_at_theta(self, thetavals, initialize_parmest_model=False):
         """
@@ -587,9 +653,9 @@ class Estimator(object):
         ----------
         thetavals: dict
             A dictionary of theta values.
-        
+
         initialize_parmest_model: boolean
-            If True: Solve square problem instance, build extensive form of the model for 
+            If True: Solve square problem instance, build extensive form of the model for
             parameter estimation, and set flag model_initialized to True
 
         Returns
@@ -605,43 +671,46 @@ class Estimator(object):
         """
 
         optimizer = pyo.SolverFactory('ipopt')
-        
-        if len(thetavals) > 0:
-            dummy_cb = {"callback": self._instance_creation_callback,
-                        "ThetaVals": thetavals,
-                        "theta_names": self._return_theta_names(),
-                        "cb_data": self.callback_data}
-        else:
-            dummy_cb = {"callback": self._instance_creation_callback,
-                        "theta_names": self._return_theta_names(),
-                        "cb_data": self.callback_data}
 
+        if len(thetavals) > 0:
+            dummy_cb = {
+                "callback": self._instance_creation_callback,
+                "ThetaVals": thetavals,
+                "theta_names": self._return_theta_names(),
+                "cb_data": self.callback_data,
+            }
+        else:
+            dummy_cb = {
+                "callback": self._instance_creation_callback,
+                "theta_names": self._return_theta_names(),
+                "cb_data": self.callback_data,
+            }
 
         if self.diagnostic_mode:
             if len(thetavals) > 0:
-                print('    Compute objective at theta = ',str(thetavals))
+                print('    Compute objective at theta = ', str(thetavals))
             else:
                 print('    Compute objective at initial theta')
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
         instance = _experiment_instance_creation_callback("FOO0", None, dummy_cb)
-        try: # deal with special problems so Ipopt will not crash
+        try:  # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
             active_constraints = True
         except:
-            active_constraints = False 
+            active_constraints = False
         # end block of code to deal with models with no constraints
 
         WorstStatus = pyo.TerminationCondition.optimal
         totobj = 0
-        senario_numbers = list(range(len(self.callback_data)))
+        scenario_numbers = list(range(len(self.callback_data)))
         if initialize_parmest_model:
             # create dictionary to store pyomo model instances (scenarios)
             scen_dict = dict()
 
-        for snum in senario_numbers:
-            sname = "scenario_NODE"+str(snum)
+        for snum in scenario_numbers:
+            sname = "scenario_NODE" + str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
 
             if initialize_parmest_model:
@@ -650,15 +719,15 @@ class Estimator(object):
                 theta_init_vals = []
                 # use appropriate theta_names member
                 theta_ref = self._return_theta_names()
-                
+
                 for i, theta in enumerate(theta_ref):
                     # Use parser in ComponentUID to locate the component
                     var_cuid = ComponentUID(theta)
                     var_validate = var_cuid.find_component_on(instance)
                     if var_validate is None:
                         logger.warning(
-                            "theta_name %s was not found on the model",
-                            (theta))
+                            "theta_name %s was not found on the model", (theta)
+                        )
                     else:
                         try:
                             if len(thetavals) == 0:
@@ -667,35 +736,62 @@ class Estimator(object):
                                 var_validate.fix(thetavals[theta])
                             theta_init_vals.append(var_validate)
                         except:
-                            logger.warning('Unable to fix model parameter value for %s (not a Pyomo model Var)', 
-                            (theta))
-                
+                            logger.warning(
+                                'Unable to fix model parameter value for %s (not a Pyomo model Var)',
+                                (theta),
+                            )
+
             if active_constraints:
                 if self.diagnostic_mode:
-                    print('      Experiment = ',snum)
+                    print('      Experiment = ', snum)
                     print('     First solve with special diagnostics wrapper')
-                    status_obj, solved, iters, time, regu \
-                        = utils.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
-                    print("   status_obj, solved, iters, time, regularization_stat = ",
-                           str(status_obj), str(solved), str(iters), str(time), str(regu))
+                    (
+                        status_obj,
+                        solved,
+                        iters,
+                        time,
+                        regu,
+                    ) = utils.ipopt_solve_with_stats(
+                        instance, optimizer, max_iter=500, max_cpu_time=120
+                    )
+                    print(
+                        "   status_obj, solved, iters, time, regularization_stat = ",
+                        str(status_obj),
+                        str(solved),
+                        str(iters),
+                        str(time),
+                        str(regu),
+                    )
 
                 results = optimizer.solve(instance)
                 if self.diagnostic_mode:
-                    print('standard solve solver termination condition=',
-                            str(results.solver.termination_condition))
+                    print(
+                        'standard solve solver termination condition=',
+                        str(results.solver.termination_condition),
+                    )
 
-                if results.solver.termination_condition \
-                   != pyo.TerminationCondition.optimal :
+                if (
+                    results.solver.termination_condition
+                    != pyo.TerminationCondition.optimal
+                ):
                     # DLW: Aug2018: not distinguishing "middlish" conditions
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
                     if initialize_parmest_model:
                         if self.diagnostic_mode:
-                            print("Scenario {:d} infeasible with initialized parameter values".format(snum))
+                            print(
+                                "Scenario {:d} infeasible with initialized parameter values".format(
+                                    snum
+                                )
+                            )
                 else:
                     if initialize_parmest_model:
                         if self.diagnostic_mode:
-                            print("Scenario {:d} initialization successful with initial parameter values".format(snum))
+                            print(
+                                "Scenario {:d} initialization successful with initial parameter values".format(
+                                    snum
+                                )
+                            )
                 if initialize_parmest_model:
                     # unfix parameters after initialization
                     for theta in theta_init_vals:
@@ -711,26 +807,27 @@ class Estimator(object):
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
-            
-        retval = totobj / len(senario_numbers) # -1??
-        if initialize_parmest_model and not hasattr(self,'ef_instance'):
+
+        retval = totobj / len(scenario_numbers)  # -1??
+        if initialize_parmest_model and not hasattr(self, 'ef_instance'):
             # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
                 for scen in scen_dict.values():
                     scen._mpisppy_probability = 1 / len(scen_dict)
-            
+
             if use_mpisppy:
-                EF_instance = sputils._create_EF_from_scen_dict(scen_dict,
-                                                EF_name = "_Q_at_theta",
-                                                # suppress_warnings=True
-                                                )
+                EF_instance = sputils._create_EF_from_scen_dict(
+                    scen_dict,
+                    EF_name="_Q_at_theta",
+                    # suppress_warnings=True
+                )
             else:
-                EF_instance = local_ef._create_EF_from_scen_dict(scen_dict,
-                                                        EF_name="_Q_at_theta",
-                                                        nonant_for_fixed_vars=True)
+                EF_instance = local_ef._create_EF_from_scen_dict(
+                    scen_dict, EF_name="_Q_at_theta", nonant_for_fixed_vars=True
+                )
 
             self.ef_instance = EF_instance
-            # set self.model_initialized flag to True to skip extensive form model 
+            # set self.model_initialized flag to True to skip extensive form model
             # creation using theta_est()
             self.model_initialized = True
 
@@ -740,44 +837,49 @@ class Estimator(object):
                 theta_ref = self._return_theta_names()
                 for i, theta in enumerate(theta_ref):
                     thetavals[theta] = theta_init_vals[i]()
-        
+
         return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
-
         samplelist = list()
 
-        senario_numbers = list(range(len(self.callback_data)))
+        scenario_numbers = list(range(len(self.callback_data)))
 
         if num_samples is None:
             # This could get very large
-            for i, l in enumerate(combinations(senario_numbers, samplesize)):
+            for i, l in enumerate(combinations(scenario_numbers, samplesize)):
                 samplelist.append((i, np.sort(l)))
         else:
             for i in range(num_samples):
                 attempts = 0
-                unique_samples = 0 # check for duplicates in each sample
-                duplicate = False # check for duplicates between samples
-                while (unique_samples <= len(self._return_theta_names())) and (not duplicate):
-                    sample = np.random.choice(senario_numbers,
-                                                samplesize,
-                                                replace=replacement)
+                unique_samples = 0  # check for duplicates in each sample
+                duplicate = False  # check for duplicates between samples
+                while (unique_samples <= len(self._return_theta_names())) and (
+                    not duplicate
+                ):
+                    sample = np.random.choice(
+                        scenario_numbers, samplesize, replace=replacement
+                    )
                     sample = np.sort(sample).tolist()
                     unique_samples = len(np.unique(sample))
                     if sample in samplelist:
                         duplicate = True
 
                     attempts += 1
-                    if attempts > num_samples: # arbitrary timeout limit
-                        raise RuntimeError("""Internal error: timeout constructing
+                    if attempts > num_samples:  # arbitrary timeout limit
+                        raise RuntimeError(
+                            """Internal error: timeout constructing
                                            a sample, the dim of theta may be too
-                                           close to the samplesize""")
+                                           close to the samplesize"""
+                        )
 
                 samplelist.append((i, sample))
 
         return samplelist
 
-    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None):
+    def theta_est(
+        self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None
+    ):
         """
         Parameter estimation using all scenarios in the data
 
@@ -808,15 +910,29 @@ class Estimator(object):
         assert isinstance(return_values, list)
         assert isinstance(calc_cov, bool)
         if calc_cov:
-            assert isinstance(cov_n, int), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
-            assert cov_n > len(self._return_theta_names()), "The number of datapoints must be greater than the number of parameters to estimate"
+            assert isinstance(
+                cov_n, int
+            ), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
+            assert cov_n > len(
+                self._return_theta_names()
+            ), "The number of datapoints must be greater than the number of parameters to estimate"
 
-        return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=None, calc_cov=calc_cov, cov_n=cov_n)
+        return self._Q_opt(
+            solver=solver,
+            return_values=return_values,
+            bootlist=None,
+            calc_cov=calc_cov,
+            cov_n=cov_n,
+        )
 
-
-    def theta_est_bootstrap(self, bootstrap_samples, samplesize=None,
-                            replacement=True, seed=None, return_samples=False):
+    def theta_est_bootstrap(
+        self,
+        bootstrap_samples,
+        samplesize=None,
+        replacement=True,
+        seed=None,
+        return_samples=False,
+    ):
         """
         Parameter estimation using bootstrap resampling of the data
 
@@ -852,8 +968,7 @@ class Estimator(object):
         if seed is not None:
             np.random.seed(seed)
 
-        global_list = self._get_sample_list(samplesize, bootstrap_samples,
-                                            replacement)
+        global_list = self._get_sample_list(samplesize, bootstrap_samples, replacement)
 
         task_mgr = utils.ParallelTaskManager(bootstrap_samples)
         local_list = task_mgr.global_to_local_data(global_list)
@@ -872,9 +987,9 @@ class Estimator(object):
 
         return bootstrap_theta
 
-
-    def theta_est_leaveNout(self, lNo, lNo_samples=None, seed=None,
-                            return_samples=False):
+    def theta_est_leaveNout(
+        self, lNo, lNo_samples=None, seed=None, return_samples=False
+    ):
         """
         Parameter estimation where N data points are left out of each sample
 
@@ -901,13 +1016,13 @@ class Estimator(object):
         assert isinstance(seed, (type(None), int))
         assert isinstance(return_samples, bool)
 
-        samplesize = len(self.callback_data)-lNo
+        samplesize = len(self.callback_data) - lNo
 
         if seed is not None:
             np.random.seed(seed)
 
         global_list = self._get_sample_list(samplesize, lNo_samples, replacement=False)
-            
+
         task_mgr = utils.ParallelTaskManager(len(global_list))
         local_list = task_mgr.global_to_local_data(global_list)
 
@@ -926,9 +1041,9 @@ class Estimator(object):
 
         return lNo_theta
 
-
-    def leaveNout_bootstrap_test(self, lNo, lNo_samples, bootstrap_samples,
-                                     distribution, alphas, seed=None):
+    def leaveNout_bootstrap_test(
+        self, lNo, lNo_samples, bootstrap_samples, distribution, alphas, seed=None
+    ):
         """
         Leave-N-out bootstrap test to compare theta values where N data points are
         left out to a bootstrap analysis using the remaining data,
@@ -985,7 +1100,6 @@ class Estimator(object):
 
         results = []
         for idx, sample in global_list:
-
             # Reset callback_data to only include the sample
             self.callback_data = [data[i] for i in sample]
 
@@ -996,9 +1110,12 @@ class Estimator(object):
 
             bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
 
-            training, test = self.confidence_region_test(bootstrap_theta,
-                                    distribution=distribution, alphas=alphas,
-                                    test_theta_values=theta)
+            training, test = self.confidence_region_test(
+                bootstrap_theta,
+                distribution=distribution,
+                alphas=alphas,
+                test_theta_values=theta,
+            )
 
             results.append((sample, test, training))
 
@@ -1007,9 +1124,7 @@ class Estimator(object):
 
         return results
 
-
-    def objective_at_theta(self, theta_values=None,
-                            initialize_parmest_model = False):
+    def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
         """
         Objective value for each theta
 
@@ -1019,7 +1134,7 @@ class Estimator(object):
             Values of theta used to compute the objective
 
         initialize_parmest_model: boolean
-            If True: Solve square problem instance, build extensive form of the model for 
+            If True: Solve square problem instance, build extensive form of the model for
             parameter estimation, and set flag model_initialized to True
 
 
@@ -1030,11 +1145,11 @@ class Estimator(object):
             omitted).
         """
         if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
-            pass # skip assertion if model has no fitted parameters
+            pass  # skip assertion if model has no fitted parameters
         else:
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(self.callback_data[0])
-            model_theta_list = [] # list to store indexed and non-indexed parameters
+            model_theta_list = []  # list to store indexed and non-indexed parameters
             # iterate over original theta_names
             for theta_i in self.theta_names:
                 var_cuid = ComponentUID(theta_i)
@@ -1047,7 +1162,7 @@ class Estimator(object):
                     # in the pyomo model
                     set_validate = set_cuid.find_component_on(model_temp)
                     for s in set_validate:
-                        self_theta_temp = repr(var_cuid)+"["+repr(s)+"]"
+                        self_theta_temp = repr(var_cuid) + "[" + repr(s) + "]"
                         # generate list of theta names
                         model_theta_list.append(self_theta_temp)
                 # if theta is not indexed, copy theta name to list as-is
@@ -1058,13 +1173,15 @@ class Estimator(object):
                     raise
             # if self.theta_names is not the same as temp model_theta_list,
             # create self.theta_names_updated
-            if set(self.theta_names) == set(model_theta_list) and len(self.theta_names) == set(model_theta_list):
+            if set(self.theta_names) == set(model_theta_list) and len(
+                self.theta_names
+            ) == set(model_theta_list):
                 pass
             else:
                 self.theta_names_updated = model_theta_list
-        
-        if theta_values is None:    
-            all_thetas = {} # dictionary to store fitted variables
+
+        if theta_values is None:
+            all_thetas = {}  # dictionary to store fitted variables
             # use appropriate theta names member
             theta_names = self._return_theta_names()
         else:
@@ -1072,32 +1189,40 @@ class Estimator(object):
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
             # # check if theta_names are in model
-            for thta in list(theta_names):
-                theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
+            for theta in list(theta_names):
+                theta_temp = theta.replace("'", "")  # cleaning quotes from theta_names
 
-                assert (theta_temp in [t.replace("'","") for t in model_theta_list]), (
-                "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,model_theta_list)
+                assert theta_temp in [
+                    t.replace("'", "") for t in model_theta_list
+                ], "Theta name {} in 'theta_values' not in 'theta_names' {}".format(
+                    theta_temp, model_theta_list
                 )
-            assert (len(list(theta_names)) == len(model_theta_list))
+            assert len(list(theta_names)) == len(model_theta_list)
 
             all_thetas = theta_values.to_dict('records')
-        
+
         if all_thetas:
             task_mgr = utils.ParallelTaskManager(len(all_thetas))
             local_thetas = task_mgr.global_to_local_data(all_thetas)
         else:
             if initialize_parmest_model:
-                task_mgr = utils.ParallelTaskManager(1) # initialization performed using just 1 set of theta values
+                task_mgr = utils.ParallelTaskManager(
+                    1
+                )  # initialization performed using just 1 set of theta values
         # walk over the mesh, return objective function
         all_obj = list()
         if len(all_thetas) > 0:
             for Theta in local_thetas:
-                obj, thetvals, worststatus = self._Q_at_theta(Theta, initialize_parmest_model=initialize_parmest_model)
+                obj, thetvals, worststatus = self._Q_at_theta(
+                    Theta, initialize_parmest_model=initialize_parmest_model
+                )
                 if worststatus != pyo.TerminationCondition.infeasible:
                     all_obj.append(list(Theta.values()) + [obj])
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
-            obj, thetvals, worststatus = self._Q_at_theta(thetavals={}, initialize_parmest_model=initialize_parmest_model)
+            obj, thetvals, worststatus = self._Q_at_theta(
+                thetavals={}, initialize_parmest_model=initialize_parmest_model
+            )
             if worststatus != pyo.TerminationCondition.infeasible:
                 all_obj.append(list(thetvals.values()) + [obj])
 
@@ -1106,9 +1231,9 @@ class Estimator(object):
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_theta
 
-
-    def likelihood_ratio_test(self, obj_at_theta, obj_value, alphas,
-                              return_thresholds=False):
+    def likelihood_ratio_test(
+        self, obj_at_theta, obj_value, alphas, return_thresholds=False
+    ):
         """
         Likelihood ratio test to identify theta values within a confidence
         region using the :math:`\chi^2` distribution
@@ -1153,8 +1278,9 @@ class Estimator(object):
         else:
             return LR
 
-    def confidence_region_test(self, theta_values, distribution, alphas,
-                               test_theta_values=None):
+    def confidence_region_test(
+        self, theta_values, distribution, alphas, test_theta_values=None
+    ):
         """
         Confidence region test to determine if theta values are within a
         rectangular, multivariate normal, or Gaussian kernel density distribution
@@ -1187,7 +1313,9 @@ class Estimator(object):
         assert isinstance(theta_values, pd.DataFrame)
         assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
-        assert isinstance(test_theta_values, (type(None), dict, pd.Series, pd.DataFrame))
+        assert isinstance(
+            test_theta_values, (type(None), dict, pd.Series, pd.DataFrame)
+        )
 
         if isinstance(test_theta_values, (dict, pd.Series)):
             test_theta_values = pd.Series(test_theta_values).to_frame().transpose()
@@ -1198,38 +1326,39 @@ class Estimator(object):
             test_result = test_theta_values.copy()
 
         for a in alphas:
-
             if distribution == 'Rect':
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
-                training_results[a] = ((theta_values > lb).all(axis=1) & \
-                                  (theta_values < ub).all(axis=1))
+                training_results[a] = (theta_values > lb).all(axis=1) & (
+                    theta_values < ub
+                ).all(axis=1)
 
                 if test_theta_values is not None:
                     # use upper and lower bound from the training set
-                    test_result[a] = ((test_theta_values > lb).all(axis=1) & \
-                                  (test_theta_values < ub).all(axis=1))
+                    test_result[a] = (test_theta_values > lb).all(axis=1) & (
+                        test_theta_values < ub
+                    ).all(axis=1)
 
             elif distribution == 'MVN':
                 dist = graphics.fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
-                score = scipy.stats.scoreatpercentile(Z, (1-a)*100)
-                training_results[a] = (Z >= score)
+                score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
+                training_results[a] = Z >= score
 
                 if test_theta_values is not None:
                     # use score from the training set
                     Z = dist.pdf(test_theta_values)
-                    test_result[a] = (Z >= score)
+                    test_result[a] = Z >= score
 
             elif distribution == 'KDE':
                 dist = graphics.fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
-                score = scipy.stats.scoreatpercentile(Z, (1-a)*100)
-                training_results[a] = (Z >= score)
+                score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
+                training_results[a] = Z >= score
 
                 if test_theta_values is not None:
                     # use score from the training set
                     Z = dist.pdf(test_theta_values.transpose())
-                    test_result[a] = (Z >= score)
+                    test_result[a] = Z >= score
 
         if test_theta_values is not None:
             return training_results, test_result

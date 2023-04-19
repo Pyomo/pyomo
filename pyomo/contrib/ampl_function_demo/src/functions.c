@@ -27,7 +27,7 @@
  *
  * The module defines two functions:
  *   - a demo function demonstrating the use of string arguments and
- *     vairable-length argument lists
+ *     variable-length argument lists
  *   - a "safe" cube root function that avoids infinite derivatives at 0
  *
  * The functaions are registered with the ASL using the funcadd()

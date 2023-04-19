@@ -13,7 +13,6 @@ import os
 import os.path
 import sys
 import glob
-import datetime
 import textwrap
 import logging
 import socket
@@ -125,27 +124,6 @@ def help_writers():
         print(wrapper.fill(WriterFactory.doc(writer)))
 
 
-def help_checkers():
-    import pyomo.environ
-    import pyomo.common.plugin_base
-    from pyomo.checker import IModelChecker
-
-    wrapper = textwrap.TextWrapper()
-    wrapper.initial_indent = '      '
-    wrapper.subsequent_indent = '      '
-    print("")
-    print("Pyomo Model Checkers")
-    print("--------------------")
-    ep = pyomo.common.plugin_base.ExtensionPoint(IModelChecker)
-    tmp = {}
-    for checker in ep.extensions():
-        for alias in getattr(checker, '_factory_aliases', set()):
-            tmp[alias[0]] = alias[1]
-    for key in sorted(tmp.keys()):
-        print("  " + key)
-        print(wrapper.fill(tmp[key]))
-
-
 def help_datamanagers(options):
     import pyomo.environ
     from pyomo.dataportal import DataManagerFactory
@@ -226,7 +204,7 @@ def help_solvers():
 
     print(
         wrapper.fill(
-            "Pyomo uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asyncronously executing solvers either locally or remotely.  The following solver managers are available in Pyomo:"
+            "Pyomo uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asynchronously executing solvers either locally or remotely.  The following solver managers are available in Pyomo:"
         )
     )
     print("")
@@ -385,6 +363,8 @@ def print_components(data):
     """
     Print information about modeling components supported by Pyomo.
     """
+    from pyomo.core.base.component import ModelComponentFactory, GlobalSets
+
     print("")
     print("----------------------------------------------------------------")
     print("Pyomo Model Components:")
@@ -447,13 +427,6 @@ def help_exec(options):
                 "The '--writers' help information is not printed in an asciidoc format."
             )
         help_writers()
-    if options.checkers:
-        flag = True
-        if options.asciidoc:
-            print(
-                "The '--checkers' help information is not printed in an asciidoc format."
-            )
-        help_checkers()
     if not flag:
         help_parser.print_help()
 
@@ -468,13 +441,6 @@ def setup_help_parser(parser):
         action='store_true',
         default=False,
         help="Generate output that is compatible with asciidoc's markup language",
-    )
-    parser.add_argument(
-        "--checkers",
-        dest="checkers",
-        action='store_true',
-        default=False,
-        help="List the available model checkers",
     )
     parser.add_argument(
         "-c",

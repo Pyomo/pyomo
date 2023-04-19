@@ -125,7 +125,7 @@ Note that the element number starts with 1 and not 0:
        None :     1 :    Any :   10 : {3, 5, 7, 9, 11, 13, 15, 17, 19, 21}
 
 Additional information about iterators for set initialization is in the
-[PyomoBookII]_ book.
+[PyomoBookIII]_ book.
 
 .. note::
 

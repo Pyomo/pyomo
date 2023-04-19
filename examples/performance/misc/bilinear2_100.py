@@ -2,7 +2,6 @@ from pyomo.environ import *
 
 
 def create_model(N):
-
     model = ConcreteModel()
 
     model.A = RangeSet(N)

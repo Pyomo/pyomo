@@ -245,7 +245,7 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertRaises(RuntimeError, opt.add_column, m, z, -2, [m.c, z], [1])
 
         m.y = pe.Var()
-        # len(coefficents) == len(constraints)
+        # len(coefficients) == len(constraints)
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1, 2])
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c, z], [1])
 

@@ -34,6 +34,7 @@ model.xMax = Var(model.Sensor, within=NonNegativeReals)
 model.yMax = Var(model.Sensor, within=NonNegativeReals)
 model.Max = Var(within=NonNegativeReals)
 
+
 # Objective
 def CalcDist(M):
     return M.Max

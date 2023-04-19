@@ -61,7 +61,7 @@ class BARONSHELL(SystemCallSolver):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-        # CLH: Coppied from cpxlp.py, the cplex file writer.
+        # CLH: Copied from cpxlp.py, the cplex file writer.
         # Keven Hunter made a nice point about using %.16g in his attachment
         # to ticket #4319. I am adjusting this to %.17g as this mocks the
         # behavior of using %r (i.e., float('%r'%<number>) == <number>) with
@@ -194,7 +194,6 @@ class BARONSHELL(SystemCallSolver):
         return ver
 
     def create_command_line(self, executable, problem_files):
-
         # The solution file is created in the _convert_problem function.
         # The bar file needs the solution filename in the OPTIONS section, but
         # this function is executed after the bar problem file writing.
@@ -210,11 +209,9 @@ class BARONSHELL(SystemCallSolver):
     # automatically be included in the Baron input file
     # (returning True implies the opposite and requires another function)
     def warm_start_capable(self):
-
         return False
 
     def _convert_problem(self, args, problem_format, valid_problem_formats, **kwds):
-
         # Baron needs all solver options and file redirections
         # inside the input file, so we need to input those
         # here through io_options before calling the baron writer
@@ -235,7 +232,7 @@ class BARONSHELL(SystemCallSolver):
 
         #
         # Create options to send through as io_options
-        # containing all relevent info needed in the Baron file
+        # containing all relevant info needed in the Baron file
         #
         solver_options = {}
         solver_options['ResName'] = self._soln_file
@@ -278,7 +275,6 @@ class BARONSHELL(SystemCallSolver):
         )
 
     def process_logfile(self):
-
         results = SolverResults()
 
         #
@@ -414,7 +410,7 @@ class BARONSHELL(SystemCallSolver):
             #     just filled in one termination_message for now
             results.solver.termination_message = (
                 "Insufficient memory to store the number of nodes required "
-                "for this seach tree. Increase physical memory or change "
+                "for this search tree. Increase physical memory or change "
                 "algorithmic options"
             )
         elif solver_status == '3':
@@ -563,7 +559,6 @@ the Pyomo model and BARON version) to the Pyomo Developers."""
             # filled with variable name, number, and value. Also,
             # optionally fill the baron_marginal suffix
             for i, (label, val) in enumerate(zip(var_name, var_value)):
-
                 soln_variable[label] = {"Value": val}
 
                 # Only adds the baron_marginal key it is requested and exists

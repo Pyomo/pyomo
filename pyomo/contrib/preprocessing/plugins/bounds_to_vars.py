@@ -17,16 +17,23 @@ from math import fabs
 import math
 
 from pyomo.core.base.transformation import TransformationFactory
-from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
-                                 add_docstring_list)
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    NonNegativeFloat,
+    document_kwargs_from_configdict,
+)
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 
 
-@TransformationFactory.register('contrib.constraints_to_var_bounds',
-          doc="Change constraints to be a bound on the variable.")
+@TransformationFactory.register(
+    'contrib.constraints_to_var_bounds',
+    doc="Change constraints to be a bound on the variable.",
+)
+@document_kwargs_from_configdict('CONFIG')
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
     """Change constraints to be a bound on the variable.
 
@@ -40,23 +47,30 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     """
 
     CONFIG = ConfigBlock("ConstraintToVarBounds")
-    CONFIG.declare("tolerance", ConfigValue(
-        default=1E-13, domain=NonNegativeFloat,
-        description="tolerance on bound equality (:math:`LB = UB`)"
-    ))
-    CONFIG.declare("detect_fixed", ConfigValue(
-        default=True, domain=bool,
-        description="If True, fix variable when "
-        ":math:`| LB - UB | \\leq tolerance`."
-    ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
+    CONFIG.declare(
+        "tolerance",
+        ConfigValue(
+            default=1e-13,
+            domain=NonNegativeFloat,
+            description="tolerance on bound equality (:math:`LB = UB`)",
+        ),
+    )
+    CONFIG.declare(
+        "detect_fixed",
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="If True, fix variable when "
+            ":math:`| LB - UB | \\leq tolerance`.",
+        ),
+    )
 
     def _apply_to(self, model, **kwds):
         config = self.CONFIG(kwds)
 
         for constr in model.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True):
+            ctype=Constraint, active=True, descend_into=True
+        ):
             # Check if the constraint is k * x + c1 <= c2 or c2 <= k * x + c1
             repn = generate_standard_repn(constr.body)
             if not repn.is_linear() or len(repn.linear_vars) != 1:
@@ -94,11 +108,20 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                 # Make sure that the lb and ub are integral. Use safe
                 # construction if near to integer.
                 if var.has_lb():
-                    var.setlb(int(min(math.ceil(var.lb - config.tolerance),
-                                      math.ceil(var.lb))))
+                    var.setlb(
+                        int(
+                            min(math.ceil(var.lb - config.tolerance), math.ceil(var.lb))
+                        )
+                    )
                 if var.has_ub():
-                    var.setub(int(max(math.floor(var.ub + config.tolerance),
-                                      math.floor(var.ub))))
+                    var.setub(
+                        int(
+                            max(
+                                math.floor(var.ub + config.tolerance),
+                                math.floor(var.ub),
+                            )
+                        )
+                    )
 
             if var is not None and var.value is not None:
                 _adjust_var_value_if_not_feasible(var)

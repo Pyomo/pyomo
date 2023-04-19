@@ -11,4 +11,5 @@
 
 import sys
 from pyomo.core.expr import numvalue
+
 sys.modules[__name__] = numvalue

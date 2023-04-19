@@ -28,7 +28,6 @@ class MOSEKPersistentTests(unittest.TestCase):
         sys.stderr = self.stderr
 
     def test_interface_call(self):
-
         interface_instance = type(pyo.SolverFactory('mosek_persistent'))
         alt_1 = pyo.SolverFactory('mosek', solver_io='persistent')
         self.assertIsInstance(alt_1, interface_instance)

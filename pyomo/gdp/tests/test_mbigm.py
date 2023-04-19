@@ -17,21 +17,33 @@ from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 from pyomo.core.expr.compare import (
-    assertExpressionsEqual, assertExpressionsStructurallyEqual
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual,
 )
 
 from pyomo.environ import (
-    BooleanVar, ConcreteModel, Constraint, LogicalConstraint,
-    NonNegativeIntegers, SolverFactory, Suffix, TransformationFactory,
-    value, Var
+    BooleanVar,
+    ConcreteModel,
+    Constraint,
+    LogicalConstraint,
+    NonNegativeIntegers,
+    SolverFactory,
+    Suffix,
+    TransformationFactory,
+    value,
+    Var,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.tests.common_tests import (
-    check_linear_coef, check_obj_in_active_tree, check_pprint_equal)
+    check_linear_coef,
+    check_obj_in_active_tree,
+    check_pprint_equal,
+)
 from pyomo.repn import generate_standard_repn
 
 gurobi_available = SolverFactory('gurobi').available()
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
+
 
 class LinearModelDecisionTreeExample(unittest.TestCase):
     def make_model(self):
@@ -48,12 +60,12 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         m.d2 = Disjunct()
         m.d2.x1_bounds = Constraint(expr=(0.65, m.x1, 3))
         m.d2.x2_bounds = Constraint(expr=(3, m.x2, 10))
-        m.d2.func = Constraint(expr=2*m.x1 + 4*m.x2 + 7 == m.d)
+        m.d2.func = Constraint(expr=2 * m.x1 + 4 * m.x2 + 7 == m.d)
 
         m.d3 = Disjunct()
         m.d3.x1_bounds = Constraint(expr=(2, m.x1, 10))
         m.d3.x2_bounds = Constraint(expr=(0.55, m.x2, 1))
-        m.d3.func = Constraint(expr=m.x1 - 5*m.x2 - 3 == m.d)
+        m.d3.func = Constraint(expr=m.x1 - 5 * m.x2 - 3 == m.d)
 
         m.disjunction = Disjunction(expr=[m.d1, m.d2, m.d3])
 
@@ -61,29 +73,29 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
 
     def get_Ms(self, m):
         return {
-            (m.d1.x1_bounds, m.d2) : (0.15, 1),
-            (m.d1.x2_bounds, m.d2) : (2.25, 7),
-            (m.d1.x1_bounds, m.d3) : (1.5, 8),
-            (m.d1.x2_bounds, m.d3) : (-0.2, -2),
-            (m.d2.x1_bounds, m.d1) : (-0.15, -1),
-            (m.d2.x2_bounds, m.d1) : (-2.25, -7),
-            (m.d2.x1_bounds, m.d3) : (1.35, 7),
-            (m.d2.x2_bounds, m.d3) : (-2.45, -9),
-            (m.d3.x1_bounds, m.d1) : (-1.5, -8),
-            (m.d3.x2_bounds, m.d1) : (0.2, 2),
-            (m.d3.x1_bounds, m.d2) : (-1.35, -7),
-            (m.d3.x2_bounds, m.d2) : (2.45, 9),
-            (m.d1.func, m.d2) : (-40, -16.65),
-            (m.d1.func, m.d3) : (6.3, 9),
-            (m.d2.func, m.d1) : (9.75, 18),
-            (m.d2.func, m.d3) : (16.95, 29),
-            (m.d3.func, m.d1) : (-21, -7.5),
-            (m.d3.func, m.d2) : (-103, -37.65),
-            }
+            (m.d1.x1_bounds, m.d2): (0.15, 1),
+            (m.d1.x2_bounds, m.d2): (2.25, 7),
+            (m.d1.x1_bounds, m.d3): (1.5, 8),
+            (m.d1.x2_bounds, m.d3): (-0.2, -2),
+            (m.d2.x1_bounds, m.d1): (-0.15, -1),
+            (m.d2.x2_bounds, m.d1): (-2.25, -7),
+            (m.d2.x1_bounds, m.d3): (1.35, 7),
+            (m.d2.x2_bounds, m.d3): (-2.45, -9),
+            (m.d3.x1_bounds, m.d1): (-1.5, -8),
+            (m.d3.x2_bounds, m.d1): (0.2, 2),
+            (m.d3.x1_bounds, m.d2): (-1.35, -7),
+            (m.d3.x2_bounds, m.d2): (2.45, 9),
+            (m.d1.func, m.d2): (-40, -16.65),
+            (m.d1.func, m.d3): (6.3, 9),
+            (m.d2.func, m.d1): (9.75, 18),
+            (m.d2.func, m.d3): (16.95, 29),
+            (m.d3.func, m.d1): (-21, -7.5),
+            (m.d3.func, m.d2): (-103, -37.65),
+        }
 
-    def check_untightened_bounds_constraint(self, cons, var, parent_disj,
-                                            disjunction, Ms, lower=None,
-                                            upper=None):
+    def check_untightened_bounds_constraint(
+        self, cons, var, parent_disj, disjunction, Ms, lower=None, upper=None
+    ):
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 3)
@@ -94,15 +106,17 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
             check_linear_coef(self, repn, var, -1)
             for disj in disjunction.disjuncts:
                 if disj is not parent_disj:
-                    check_linear_coef(self, repn, disj.binary_indicator_var,
-                                      Ms[disj] - lower)
+                    check_linear_coef(
+                        self, repn, disj.binary_indicator_var, Ms[disj] - lower
+                    )
         if upper is not None:
             self.assertEqual(repn.constant, -upper)
             check_linear_coef(self, repn, var, 1)
             for disj in disjunction.disjuncts:
                 if disj is not parent_disj:
-                    check_linear_coef(self, repn, disj.binary_indicator_var,
-                                       - Ms[disj] + upper)
+                    check_linear_coef(
+                        self, repn, disj.binary_indicator_var, -Ms[disj] + upper
+                    )
 
     def check_all_untightened_bounds_constraints(self, m, mbm):
         # d1.x1_bounds
@@ -110,94 +124,88 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.assertEqual(len(cons), 2)
         lower = cons[0]
         check_obj_in_active_tree(self, lower)
-        self.check_untightened_bounds_constraint(lower, m.x1, m.d1,
-                                                 m.disjunction, {m.d2: 0.65,
-                                                                 m.d3: 2},
-                                                 lower=0.5)
+        self.check_untightened_bounds_constraint(
+            lower, m.x1, m.d1, m.disjunction, {m.d2: 0.65, m.d3: 2}, lower=0.5
+        )
         upper = cons[1]
         check_obj_in_active_tree(self, upper)
-        self.check_untightened_bounds_constraint(upper, m.x1, m.d1,
-                                                 m.disjunction, {m.d2: 3, m.d3:
-                                                                 10}, upper=2)
+        self.check_untightened_bounds_constraint(
+            upper, m.x1, m.d1, m.disjunction, {m.d2: 3, m.d3: 10}, upper=2
+        )
 
         # d1.x2_bounds
         cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
         self.assertEqual(len(cons), 2)
         lower = cons[0]
         check_obj_in_active_tree(self, lower)
-        self.check_untightened_bounds_constraint(lower, m.x2, m.d1,
-                                                 m.disjunction, {m.d2: 3,
-                                                                 m.d3: 0.55},
-                                                 lower=0.75)
+        self.check_untightened_bounds_constraint(
+            lower, m.x2, m.d1, m.disjunction, {m.d2: 3, m.d3: 0.55}, lower=0.75
+        )
         upper = cons[1]
         check_obj_in_active_tree(self, upper)
-        self.check_untightened_bounds_constraint(upper, m.x2, m.d1,
-                                                 m.disjunction, {m.d2: 10, m.d3:
-                                                                 1}, upper=3)
+        self.check_untightened_bounds_constraint(
+            upper, m.x2, m.d1, m.disjunction, {m.d2: 10, m.d3: 1}, upper=3
+        )
 
         # d2.x1_bounds
         cons = mbm.get_transformed_constraints(m.d2.x1_bounds)
         self.assertEqual(len(cons), 2)
         lower = cons[0]
         check_obj_in_active_tree(self, lower)
-        self.check_untightened_bounds_constraint(lower, m.x1, m.d2,
-                                                 m.disjunction, {m.d1: 0.5,
-                                                                 m.d3: 2},
-                                                 lower=0.65)
+        self.check_untightened_bounds_constraint(
+            lower, m.x1, m.d2, m.disjunction, {m.d1: 0.5, m.d3: 2}, lower=0.65
+        )
         upper = cons[1]
         check_obj_in_active_tree(self, upper)
-        self.check_untightened_bounds_constraint(upper, m.x1, m.d2,
-                                                 m.disjunction, {m.d1: 2, m.d3:
-                                                                 10}, upper=3)
+        self.check_untightened_bounds_constraint(
+            upper, m.x1, m.d2, m.disjunction, {m.d1: 2, m.d3: 10}, upper=3
+        )
 
-        #d2.x2_bounds
+        # d2.x2_bounds
         cons = mbm.get_transformed_constraints(m.d2.x2_bounds)
         self.assertEqual(len(cons), 2)
         lower = cons[0]
         check_obj_in_active_tree(self, lower)
-        self.check_untightened_bounds_constraint(lower, m.x2, m.d2,
-                                                 m.disjunction, {m.d1: 0.75,
-                                                                 m.d3: 0.55},
-                                                 lower=3)
+        self.check_untightened_bounds_constraint(
+            lower, m.x2, m.d2, m.disjunction, {m.d1: 0.75, m.d3: 0.55}, lower=3
+        )
         upper = cons[1]
-        self.check_untightened_bounds_constraint(upper, m.x2, m.d2,
-                                                 m.disjunction, {m.d1: 3, m.d3:
-                                                                 1}, upper=10)
+        self.check_untightened_bounds_constraint(
+            upper, m.x2, m.d2, m.disjunction, {m.d1: 3, m.d3: 1}, upper=10
+        )
 
         # d3.x1_bounds
         cons = mbm.get_transformed_constraints(m.d3.x1_bounds)
         self.assertEqual(len(cons), 2)
         lower = cons[0]
-        self.check_untightened_bounds_constraint(lower, m.x1, m.d3,
-                                                 m.disjunction, {m.d1: 0.5,
-                                                                 m.d2: 0.65},
-                                                 lower=2)
+        self.check_untightened_bounds_constraint(
+            lower, m.x1, m.d3, m.disjunction, {m.d1: 0.5, m.d2: 0.65}, lower=2
+        )
         upper = cons[1]
         check_obj_in_active_tree(self, upper)
-        self.check_untightened_bounds_constraint(upper, m.x1, m.d3,
-                                                 m.disjunction, {m.d1: 2, m.d2:
-                                                                 3}, upper=10)
+        self.check_untightened_bounds_constraint(
+            upper, m.x1, m.d3, m.disjunction, {m.d1: 2, m.d2: 3}, upper=10
+        )
 
-        #d3.x2_bounds
+        # d3.x2_bounds
         cons = mbm.get_transformed_constraints(m.d3.x2_bounds)
         self.assertEqual(len(cons), 2)
         lower = cons[0]
         check_obj_in_active_tree(self, lower)
-        self.check_untightened_bounds_constraint(lower, m.x2, m.d3,
-                                                 m.disjunction, {m.d1: 0.75,
-                                                                 m.d2: 3},
-                                                 lower=0.55)
+        self.check_untightened_bounds_constraint(
+            lower, m.x2, m.d3, m.disjunction, {m.d1: 0.75, m.d2: 3}, lower=0.55
+        )
         upper = cons[1]
         check_obj_in_active_tree(self, upper)
-        self.check_untightened_bounds_constraint(upper, m.x2, m.d3,
-                                                 m.disjunction, {m.d1: 3, m.d2:
-                                                                 10}, upper=1)
+        self.check_untightened_bounds_constraint(
+            upper, m.x2, m.d3, m.disjunction, {m.d1: 3, m.d2: 10}, upper=1
+        )
 
     def check_linear_func_constraints(self, m, mbm, Ms=None):
         if Ms is None:
             Ms = self.get_Ms(m)
 
-        #d1.func
+        # d1.func
         cons = mbm.get_transformed_constraints(m.d1.func)
         self.assertEqual(len(cons), 2)
         lower = cons[0]
@@ -211,10 +219,8 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.x1, -1)
         check_linear_coef(self, repn, m.x2, -1)
         check_linear_coef(self, repn, m.d, 1)
-        check_linear_coef(self, repn, m.d2.binary_indicator_var, Ms[m.d1.func,
-                                                                    m.d2][0])
-        check_linear_coef(self, repn, m.d3.binary_indicator_var, Ms[m.d1.func,
-                                                                    m.d3][0])
+        check_linear_coef(self, repn, m.d2.binary_indicator_var, Ms[m.d1.func, m.d2][0])
+        check_linear_coef(self, repn, m.d3.binary_indicator_var, Ms[m.d1.func, m.d3][0])
         upper = cons[1]
         check_obj_in_active_tree(self, upper)
         self.assertEqual(value(upper.upper), 0)
@@ -226,12 +232,14 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.x1, 1)
         check_linear_coef(self, repn, m.x2, 1)
         check_linear_coef(self, repn, m.d, -1)
-        check_linear_coef(self, repn, m.d2.binary_indicator_var, -Ms[m.d1.func,
-                                                                     m.d2][1])
-        check_linear_coef(self, repn, m.d3.binary_indicator_var, -Ms[m.d1.func,
-                                                                     m.d3][1])
+        check_linear_coef(
+            self, repn, m.d2.binary_indicator_var, -Ms[m.d1.func, m.d2][1]
+        )
+        check_linear_coef(
+            self, repn, m.d3.binary_indicator_var, -Ms[m.d1.func, m.d3][1]
+        )
 
-        #d2.func
+        # d2.func
         cons = mbm.get_transformed_constraints(m.d2.func)
         self.assertEqual(len(cons), 2)
         lower = cons[0]
@@ -245,10 +253,8 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.x1, -2)
         check_linear_coef(self, repn, m.x2, -4)
         check_linear_coef(self, repn, m.d, 1)
-        check_linear_coef(self, repn, m.d1.binary_indicator_var, Ms[m.d2.func,
-                                                                    m.d1][0])
-        check_linear_coef(self, repn, m.d3.binary_indicator_var, Ms[m.d2.func,
-                                                                    m.d3][0])
+        check_linear_coef(self, repn, m.d1.binary_indicator_var, Ms[m.d2.func, m.d1][0])
+        check_linear_coef(self, repn, m.d3.binary_indicator_var, Ms[m.d2.func, m.d3][0])
         upper = cons[1]
         check_obj_in_active_tree(self, upper)
         self.assertEqual(value(upper.upper), 0)
@@ -260,12 +266,14 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.x1, 2)
         check_linear_coef(self, repn, m.x2, 4)
         check_linear_coef(self, repn, m.d, -1)
-        check_linear_coef(self, repn, m.d1.binary_indicator_var, -Ms[m.d2.func,
-                                                                     m.d1][1])
-        check_linear_coef(self, repn, m.d3.binary_indicator_var, -Ms[m.d2.func,
-                                                                     m.d3][1])
+        check_linear_coef(
+            self, repn, m.d1.binary_indicator_var, -Ms[m.d2.func, m.d1][1]
+        )
+        check_linear_coef(
+            self, repn, m.d3.binary_indicator_var, -Ms[m.d2.func, m.d3][1]
+        )
 
-        #d3.func
+        # d3.func
         cons = mbm.get_transformed_constraints(m.d3.func)
         self.assertEqual(len(cons), 2)
         lower = cons[0]
@@ -279,10 +287,8 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.x1, -1)
         check_linear_coef(self, repn, m.x2, 5)
         check_linear_coef(self, repn, m.d, 1)
-        check_linear_coef(self, repn, m.d1.binary_indicator_var, Ms[m.d3.func,
-                                                                    m.d1][0])
-        check_linear_coef(self, repn, m.d2.binary_indicator_var, Ms[m.d3.func,
-                                                                    m.d2][0])
+        check_linear_coef(self, repn, m.d1.binary_indicator_var, Ms[m.d3.func, m.d1][0])
+        check_linear_coef(self, repn, m.d2.binary_indicator_var, Ms[m.d3.func, m.d2][0])
         upper = cons[1]
         check_obj_in_active_tree(self, upper)
         self.assertEqual(value(upper.upper), 0)
@@ -294,10 +300,12 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.x1, 1)
         check_linear_coef(self, repn, m.x2, -5)
         check_linear_coef(self, repn, m.d, -1)
-        check_linear_coef(self, repn, m.d1.binary_indicator_var, -Ms[m.d3.func,
-                                                                     m.d1][1])
-        check_linear_coef(self, repn, m.d2.binary_indicator_var, -Ms[m.d3.func,
-                                                                     m.d2][1])
+        check_linear_coef(
+            self, repn, m.d1.binary_indicator_var, -Ms[m.d3.func, m.d1][1]
+        )
+        check_linear_coef(
+            self, repn, m.d2.binary_indicator_var, -Ms[m.d3.func, m.d2][1]
+        )
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_calculated_Ms_correct(self):
@@ -310,8 +318,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.check_all_untightened_bounds_constraints(m, mbm)
         self.check_linear_func_constraints(m, mbm)
 
-        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m),
-                                         self.get_Ms(m))
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
 
     def test_transformed_constraints_correct_Ms_specified(self):
         m = self.make_model()
@@ -347,8 +354,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
                 original_cons = disj.component(comp)
                 transformed = mbm.get_transformed_constraints(original_cons)
                 for cons in transformed:
-                    self.assertIn(original_cons,
-                                  mbm.get_src_constraints(cons))
+                    self.assertIn(original_cons, mbm.get_src_constraints(cons))
 
     def test_algebraic_constraints(self):
         m = self.make_model()
@@ -405,11 +411,12 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.assertIs(sameagain[0], cons[0])
         self.assertIs(sameagain[1], cons[1])
 
-        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
-                                                            0.65, m.d3: 2},
-                                            lb=True)
-        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
-                                                            m.d3: 10}, lb=False)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x1, {m.d1: 0.5, m.d2: 0.65, m.d3: 2}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x1, {m.d1: 2, m.d2: 3, m.d3: 10}, lb=False
+        )
 
         cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
         self.assertEqual(len(cons), 2)
@@ -422,11 +429,12 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.assertIs(sameagain[0], cons[0])
         self.assertIs(sameagain[1], cons[1])
 
-        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
-                                                            m.d3: 0.55},
-                                            lb=True)
-        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
-                                                            m.d3: 1}, lb=False)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x2, {m.d1: 0.75, m.d2: 3, m.d3: 0.55}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x2, {m.d1: 3, m.d2: 10, m.d3: 1}, lb=False
+        )
 
     def test_bound_constraints_correct_with_redundant_constraints(self):
         m = self.make_model()
@@ -437,19 +445,21 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
 
         cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
         self.assertEqual(len(cons), 2)
-        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
-                                                            0.65, m.d3: 2},
-                                            lb=True)
-        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
-                                                            m.d3: 10}, lb=False)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x1, {m.d1: 0.5, m.d2: 0.65, m.d3: 2}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x1, {m.d1: 2, m.d2: 3, m.d3: 10}, lb=False
+        )
 
         cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
         self.assertEqual(len(cons), 2)
-        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
-                                                            m.d3: 0.55},
-                                            lb=True)
-        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
-                                                            m.d3: 1}, lb=False)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x2, {m.d1: 0.75, m.d2: 3, m.d3: 0.55}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x2, {m.d1: 3, m.d2: 10, m.d3: 1}, lb=False
+        )
 
     def test_Ms_specified_as_args_honored(self):
         m = self.make_model()
@@ -472,14 +482,12 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         # bound not the value of M. So the logic here is that if we want M to
         # turn out to be -100, we need b - 3 = -100, so we pretend the bound was
         # b=-97. The same logic holds for the next one too.
-        self.check_untightened_bounds_constraint(cons[0], m.x2, m.d2,
-                                                 m.disjunction, {m.d1: 0.75,
-                                                                 m.d3: -97},
-                                                 lower=3)
-        self.check_untightened_bounds_constraint(cons[1], m.x2, m.d2,
-                                                 m.disjunction, {m.d1: 3,
-                                                                 m.d3: 110},
-                                                 upper=10)
+        self.check_untightened_bounds_constraint(
+            cons[0], m.x2, m.d2, m.disjunction, {m.d1: 0.75, m.d3: -97}, lower=3
+        )
+        self.check_untightened_bounds_constraint(
+            cons[1], m.x2, m.d2, m.disjunction, {m.d1: 3, m.d3: 110}, upper=10
+        )
 
     # TODO: If Suffixes allow tuple keys then we can support them and it will
     # look something like this:
@@ -559,21 +567,26 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
             mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=True)
 
         warnings = out.getvalue()
-        self.assertIn("Unused arguments in the bigM map! "
-                      "These arguments were not used by the "
-                      "transformation:", warnings)
-        for (cons, disj) in [(m.d1.x1_bounds, m.d2),
-                             (m.d1.x2_bounds, m.d2),
-                             (m.d1.x1_bounds, m.d3),
-                             (m.d1.x2_bounds, m.d3),
-                             (m.d2.x1_bounds, m.d1),
-                             (m.d2.x2_bounds, m.d1),
-                             (m.d2.x1_bounds, m.d3),
-                             (m.d2.x2_bounds, m.d3),
-                             (m.d3.x1_bounds, m.d1),
-                             (m.d3.x2_bounds, m.d1),
-                             (m.d3.x1_bounds, m.d2),
-                             (m.d3.x2_bounds, m.d2)]:
+        self.assertIn(
+            "Unused arguments in the bigM map! "
+            "These arguments were not used by the "
+            "transformation:",
+            warnings,
+        )
+        for cons, disj in [
+            (m.d1.x1_bounds, m.d2),
+            (m.d1.x2_bounds, m.d2),
+            (m.d1.x1_bounds, m.d3),
+            (m.d1.x2_bounds, m.d3),
+            (m.d2.x1_bounds, m.d1),
+            (m.d2.x2_bounds, m.d1),
+            (m.d2.x1_bounds, m.d3),
+            (m.d2.x2_bounds, m.d3),
+            (m.d3.x1_bounds, m.d1),
+            (m.d3.x2_bounds, m.d1),
+            (m.d3.x1_bounds, m.d2),
+            (m.d3.x2_bounds, m.d2),
+        ]:
             self.assertIn("(%s, %s)" % (cons.name, disj.name), warnings)
 
         # check that the bounds constraints are right
@@ -584,12 +597,12 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.assertEqual(len(sameish), 1)
         self.assertIs(sameish[0], cons[1])
 
-        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
-                                                            m.d3: 10, m.d4: 8},
-                                            lb=False)
-        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
-                                                            0.65, m.d3: 2, m.d4:
-                                                            -10}, lb=True)
+        self.check_pretty_bound_constraints(
+            cons[1], m.x1, {m.d1: 2, m.d2: 3, m.d3: 10, m.d4: 8}, lb=False
+        )
+        self.check_pretty_bound_constraints(
+            cons[0], m.x1, {m.d1: 0.5, m.d2: 0.65, m.d3: 2, m.d4: -10}, lb=True
+        )
 
         # and for x2:
         cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
@@ -598,22 +611,23 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.assertEqual(len(sameish), 1)
         self.assertIs(sameish[0], cons[0])
 
-        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
-                                                            m.d3: 1, m.d4: 20},
-                                            lb=False)
-        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
-                                                            m.d3: 0.55, m.d4:
-                                                            -5}, lb=True)
+        self.check_pretty_bound_constraints(
+            cons[1], m.x2, {m.d1: 3, m.d2: 10, m.d3: 1, m.d4: 20}, lb=False
+        )
+        self.check_pretty_bound_constraints(
+            cons[0], m.x2, {m.d1: 0.75, m.d2: 3, m.d3: 0.55, m.d4: -5}, lb=True
+        )
 
     def test_nested_gdp_error(self):
         m = self.make_model()
         m.d1.disjunction = Disjunction(expr=[m.x1 >= 5, m.x1 <= 4])
         with self.assertRaisesRegex(
-                GDP_Error,
-                "Found nested Disjunction 'd1.disjunction'. The multiple bigm "
-                "transformation does not support nested GDPs. "
-                "Please flatten the model before calling the "
-                "transformation"):
+            GDP_Error,
+            "Found nested Disjunction 'd1.disjunction'. The multiple bigm "
+            "transformation does not support nested GDPs. "
+            "Please flatten the model before calling the "
+            "transformation",
+        ):
             TransformationFactory('gdp.mbigm').apply_to(m)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
@@ -633,7 +647,8 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         # MbigM transformation of: (1 - z1) + (1 - y) + z >= 1
         # (1 - z1) + (1 - y) + z >= 1 - d2.ind_var - d3.ind_var
         transformed = mbm.get_transformed_constraints(
-            m.d1._logical_to_disjunctive.transformed_constraints[1])
+            m.d1._logical_to_disjunctive.transformed_constraints[1]
+        )
         self.assertEqual(len(transformed), 1)
         c = transformed[0]
         check_obj_in_active_tree(self, c)
@@ -642,18 +657,20 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            - m.d2.binary_indicator_var - m.d3.binary_indicator_var + z1 +
-            y - z - 1)
+            -m.d2.binary_indicator_var - m.d3.binary_indicator_var + z1 + y - z - 1,
+        )
 
         # MbigM transformation of: z1 + 1 - (1 - y) >= 1
         # z1 + y >= 1 - d2.ind_var - d3.ind_var
         transformed = mbm.get_transformed_constraints(
-            m.d1._logical_to_disjunctive.transformed_constraints[2])
+            m.d1._logical_to_disjunctive.transformed_constraints[2]
+        )
         self.assertEqual(len(transformed), 1)
         c = transformed[0]
         check_obj_in_active_tree(self, c)
@@ -662,18 +679,20 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            - m.d2.binary_indicator_var - m.d3.binary_indicator_var - y - z1 +
-            1)
+            -m.d2.binary_indicator_var - m.d3.binary_indicator_var - y - z1 + 1,
+        )
 
         # MbigM transformation of: z1 + 1 - z >= 1
         # z1 + 1 - z >= 1 - d2.ind_var - d3.ind_var
         transformed = mbm.get_transformed_constraints(
-            m.d1._logical_to_disjunctive.transformed_constraints[3])
+            m.d1._logical_to_disjunctive.transformed_constraints[3]
+        )
         self.assertEqual(len(transformed), 1)
         c = transformed[0]
         check_obj_in_active_tree(self, c)
@@ -682,20 +701,25 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            - m.d2.binary_indicator_var - m.d3.binary_indicator_var + z - z1)
+            -m.d2.binary_indicator_var - m.d3.binary_indicator_var + z - z1,
+        )
 
     def check_traditionally_bigmed_constraints(self, m, mbm, Ms):
         cons = mbm.get_transformed_constraints(m.d1.func)
         self.assertEqual(len(cons), 2)
         lb = cons[0]
         ub = cons[1]
-        assertExpressionsEqual(self, lb.expr, 0.0 <= m.x1 + m.x2 - m.d -
-                               Ms[m.d1][0]*(1 - m.d1.binary_indicator_var))
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            0.0 <= m.x1 + m.x2 - m.d - Ms[m.d1][0] * (1 - m.d1.binary_indicator_var),
+        )
         # [ESJ 11/23/22]: It's really hard to use assertExpressionsEqual on the
         # ub constraints because SumExpressions are sharing args, I think. So
         # when they get constructed in the transformation (because they come
@@ -707,45 +731,78 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
-        assertExpressionsEqual(self, simplified, m.x1 + m.x2 - m.d +
-                               Ms[m.d1][1]*m.d1.binary_indicator_var -
-                               Ms[m.d1][1])
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
+        assertExpressionsEqual(
+            self,
+            simplified,
+            m.x1 + m.x2 - m.d + Ms[m.d1][1] * m.d1.binary_indicator_var - Ms[m.d1][1],
+        )
 
         cons = mbm.get_transformed_constraints(m.d2.func)
         self.assertEqual(len(cons), 2)
         lb = cons[0]
         ub = cons[1]
-        assertExpressionsEqual(self, lb.expr, 0.0 <= 2*m.x1 + 4*m.x2 + 7 - m.d -
-                               Ms[m.d2][0]*(1 - m.d2.binary_indicator_var))
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            0.0
+            <= 2 * m.x1
+            + 4 * m.x2
+            + 7
+            - m.d
+            - Ms[m.d2][0] * (1 - m.d2.binary_indicator_var),
+        )
         self.assertIsNone(ub.lower)
         self.assertEqual(ub.upper, 0)
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
-        assertExpressionsEqual(self, simplified, 2*m.x1 + 4*m.x2 - m.d +
-                               Ms[m.d2][1]*m.d2.binary_indicator_var -
-                               (Ms[m.d2][1] - 7))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
+        assertExpressionsEqual(
+            self,
+            simplified,
+            2 * m.x1
+            + 4 * m.x2
+            - m.d
+            + Ms[m.d2][1] * m.d2.binary_indicator_var
+            - (Ms[m.d2][1] - 7),
+        )
 
         cons = mbm.get_transformed_constraints(m.d3.func)
         self.assertEqual(len(cons), 2)
         lb = cons[0]
         ub = cons[1]
-        assertExpressionsEqual(self, lb.expr, 0.0 <= m.x1 - 5*m.x2 - 3 - m.d -
-                               Ms[m.d3][0]*(1 - m.d3.binary_indicator_var))
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            0.0
+            <= m.x1
+            - 5 * m.x2
+            - 3
+            - m.d
+            - Ms[m.d3][0] * (1 - m.d3.binary_indicator_var),
+        )
         self.assertIsNone(ub.lower)
         self.assertEqual(ub.upper, 0)
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
-        assertExpressionsEqual(self, simplified, m.x1 - 5*m.x2 - m.d +
-                               Ms[m.d3][1]*m.d3.binary_indicator_var -
-                               (Ms[m.d3][1] + 3))
+            repn.linear_coefs[i] * repn.linear_vars[i]
+            for i in range(len(repn.linear_vars))
+        )
+        assertExpressionsEqual(
+            self,
+            simplified,
+            m.x1
+            - 5 * m.x2
+            - m.d
+            + Ms[m.d3][1] * m.d3.binary_indicator_var
+            - (Ms[m.d3][1] + 3),
+        )
 
     def test_only_multiple_bigm_bound_constraints(self):
         m = self.make_model()
@@ -754,26 +811,27 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
 
         cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
         self.assertEqual(len(cons), 2)
-        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
-                                                            0.65, m.d3: 2},
-                                            lb=True)
-        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
-                                                            m.d3: 10}, lb=False)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x1, {m.d1: 0.5, m.d2: 0.65, m.d3: 2}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x1, {m.d1: 2, m.d2: 3, m.d3: 10}, lb=False
+        )
 
         cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
         self.assertEqual(len(cons), 2)
-        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
-                                                            m.d3: 0.55},
-                                            lb=True)
-        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
-                                                            m.d3: 1}, lb=False)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x2, {m.d1: 0.75, m.d2: 3, m.d3: 0.55}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x2, {m.d1: 3, m.d2: 10, m.d3: 1}, lb=False
+        )
 
         self.check_traditionally_bigmed_constraints(
             m,
             mbm,
-            {m.d1: (-1030.0, 1030.0),
-             m.d2: (-1093.0, 1107.0),
-             m.d3: (-1113.0, 1107.0)})
+            {m.d1: (-1030.0, 1030.0), m.d2: (-1093.0, 1107.0), m.d3: (-1113.0, 1107.0)},
+        )
 
     def test_only_multiple_bigm_bound_constraints_arg_Ms(self):
         m = self.make_model()
@@ -783,23 +841,22 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
 
         cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
         self.assertEqual(len(cons), 2)
-        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
-                                                            0.65, m.d3: 2},
-                                            lb=True)
-        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
-                                                            m.d3: 10}, lb=False)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x1, {m.d1: 0.5, m.d2: 0.65, m.d3: 2}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x1, {m.d1: 2, m.d2: 3, m.d3: 10}, lb=False
+        )
 
         cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
         self.assertEqual(len(cons), 2)
-        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
-                                                            m.d3: 0.55},
-                                            lb=True)
-        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
-                                                            m.d3: 1}, lb=False)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x2, {m.d1: 0.75, m.d2: 3, m.d3: 0.55}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x2, {m.d1: 3, m.d2: 10, m.d3: 1}, lb=False
+        )
 
         self.check_traditionally_bigmed_constraints(
-            m,
-            mbm,
-            {m.d1: (-1050, 1050),
-             m.d2: (-2000, 1200),
-             m.d3: (-4000, 4000)})
+            m, mbm, {m.d1: (-1050, 1050), m.d2: (-2000, 1200), m.d3: (-4000, 4000)}
+        )

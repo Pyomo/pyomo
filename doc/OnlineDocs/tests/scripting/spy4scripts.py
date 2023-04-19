@@ -54,6 +54,7 @@ model.obj1.deactivate()
 model.obj2.activate()
 # @Pass_multiple_objectives_to_solver
 
+
 # @Listing_arguments
 def pyomo_preprocess(options=None):
     if options == None:
@@ -75,6 +76,7 @@ def pyomo_preprocess(**kwds):
 
 
 # @Provide_dictionary_for_arbitrary_keywords
+
 
 # @Pyomo_preprocess_argument
 def pyomo_preprocess(options=None):
@@ -106,6 +108,7 @@ for var in instance.component_data_objects(pyo.Var, active=True):
         var.fixed = True  # fix the current value
 # @Fix_all_integers&values
 
+
 # @Include_definition_in_modelfile
 def pyomo_print_results(options, instance, results):
     for v in instance.component_objects(pyo.Var, active=True):
@@ -123,6 +126,7 @@ for parmobject in instance.component_objects(pyo.Param, active=True):
     for index in parmobject:
         print("   ", index, parmobject[index].value)
 # @Print_parameter_name&value
+
 
 # @Include_definition_output_constraints&duals
 def pyomo_print_results(options, instance, results):

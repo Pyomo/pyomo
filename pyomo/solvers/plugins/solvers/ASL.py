@@ -136,7 +136,7 @@ class ASL(SystemCallSolver):
         if self._soln_file is not None:
             # the solution file can not be redefined
             logger.warning(
-                "The 'soln_file' keyword will be ignored " "for solver=" + self.type
+                "The 'soln_file' keyword will be ignored for solver=" + self.type
             )
         fname = problem_files[0]
         if '.' in fname:

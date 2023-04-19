@@ -14,7 +14,9 @@ from pyomo.contrib.gjh.getGJH import get_gjh
 from pyomo.contrib.gjh.GJH import GJHSolver
 from pyomo.opt.base import SolverFactory
 
+
 def load():
     DownloadFactory.register('gjh')(get_gjh)
-    SolverFactory.register('contrib.gjh',
-                           doc='Interface to the AMPL GJH "solver"')(GJHSolver)
+    SolverFactory.register('contrib.gjh', doc='Interface to the AMPL GJH "solver"')(
+        GJHSolver
+    )

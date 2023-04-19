@@ -78,7 +78,7 @@ Parameter values can be checked by a validation function. In the
 following example, the every value of the parameter ``T`` (indexed by
 ``model.A``) is checked
 to be greater than 3.14159. If a value is provided that is less than
-that, the model instantation will be terminated and an error message
+that, the model instantiation will be terminated and an error message
 issued. The validation function should be written so as to return
 ``True`` if the data is valid and ``False`` otherwise.
 

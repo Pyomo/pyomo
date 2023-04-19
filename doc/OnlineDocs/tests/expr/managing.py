@@ -132,6 +132,7 @@ class SizeofVisitor(EXPR.SimpleExpressionVisitor):
 
 # @visitor1
 
+
 # ---------------------------------------------
 # @visitor2
 def sizeof_expression(expr):
@@ -176,6 +177,7 @@ class CloneVisitor(EXPR.ExpressionValueVisitor):
 
 
 # @visitor3
+
 
 # ---------------------------------------------
 # @visitor4
@@ -226,6 +228,7 @@ class ScalingVisitor(EXPR.ExpressionReplacementVisitor):
 
 
 # @visitor5
+
 
 # ---------------------------------------------
 # @visitor6

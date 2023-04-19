@@ -11,6 +11,7 @@ model.a = Param(model.I, model.J, default=1.0)
 model.x = Var(model.J)
 model.b = Param(model.I, default=1.0)
 
+
 # @Troubleshooting_printed_command
 def ax_constraint_rule(model, i):
     # return the expression for the constraint for i

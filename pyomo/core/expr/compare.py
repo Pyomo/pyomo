@@ -11,14 +11,30 @@
 from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
 from .current import (
-    LinearExpression, MonomialTermExpression, SumExpression, ExpressionBase,
-    ProductExpression, DivisionExpression, PowExpression,
-    NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
-    NPV_ProductExpression, NPV_DivisionExpression, NPV_PowExpression,
-    NPV_SumExpression, NPV_NegationExpression, NPV_UnaryFunctionExpression,
-    NPV_ExternalFunctionExpression, Expr_ifExpression, AbsExpression,
-    NPV_AbsExpression, NumericValue,
-    RangedExpression, InequalityExpression, EqualityExpression,
+    LinearExpression,
+    MonomialTermExpression,
+    SumExpression,
+    ExpressionBase,
+    ProductExpression,
+    DivisionExpression,
+    PowExpression,
+    NegationExpression,
+    UnaryFunctionExpression,
+    ExternalFunctionExpression,
+    NPV_ProductExpression,
+    NPV_DivisionExpression,
+    NPV_PowExpression,
+    NPV_SumExpression,
+    NPV_NegationExpression,
+    NPV_UnaryFunctionExpression,
+    NPV_ExternalFunctionExpression,
+    Expr_ifExpression,
+    AbsExpression,
+    NPV_AbsExpression,
+    NumericValue,
+    RangedExpression,
+    InequalityExpression,
+    EqualityExpression,
 )
 from .template_expr import GetItemExpression
 from typing import List
@@ -28,7 +44,7 @@ from pyomo.common.numeric_types import native_types
 
 
 def handle_linear_expression(node: LinearExpression, pn: List):
-    pn.append((type(node), 2*len(node.linear_vars) + 1))
+    pn.append((type(node), 2 * len(node.linear_vars) + 1))
     pn.append(node.constant)
     pn.extend(node.linear_coefs)
     pn.extend(node.linear_vars)
@@ -43,7 +59,7 @@ def handle_expression(node: ExpressionBase, pn: List):
 def handle_named_expression(node, pn: List, include_named_exprs=True):
     if include_named_exprs:
         pn.append((type(node), 1))
-    return (node.expr, )
+    return (node.expr,)
 
 
 def handle_unary_expression(node: UnaryFunctionExpression, pn: List):
@@ -100,7 +116,12 @@ class PrefixVisitor(StreamBasedExpressionVisitor):
 
         if node.is_expression_type():
             if node.is_named_expression_type():
-                return handle_named_expression(node, self._result, self._include_named_exprs), None
+                return (
+                    handle_named_expression(
+                        node, self._result, self._include_named_exprs
+                    ),
+                    None,
+                )
             else:
                 return handler[ntype](node, self._result), None
         else:
@@ -182,9 +203,11 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
 
     """
     pn1 = convert_expression_to_prefix_notation(
-        expr1, include_named_exprs=include_named_exprs)
+        expr1, include_named_exprs=include_named_exprs
+    )
     pn2 = convert_expression_to_prefix_notation(
-        expr2, include_named_exprs=include_named_exprs)
+        expr2, include_named_exprs=include_named_exprs
+    )
     try:
         res = pn1 == pn2
     except PyomoException:
@@ -192,7 +215,7 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
     return res
 
 
-def assertExpressionsEqual(test, a, b, include_named_exprs=True):
+def assertExpressionsEqual(test, a, b, include_named_exprs=True, places=None):
     """unittest-based assertion for comparing expressions
 
     This converts the expressions `a` and `b` into prefix notation and
@@ -210,6 +233,10 @@ def assertExpressionsEqual(test, a, b, include_named_exprs=True):
     include_named_exprs: bool
        If True (the default), the comparison expands all named
        expressions when generating the prefix notation
+
+    places: Number of decimal places required for equality of floating
+            point numbers in the expression. If None (the default), the
+            expressions must be exactly equal.
     """
     prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
     prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)
@@ -217,13 +244,20 @@ def assertExpressionsEqual(test, a, b, include_named_exprs=True):
         test.assertEqual(len(prefix_a), len(prefix_b))
         for _a, _b in zip(prefix_a, prefix_b):
             test.assertIs(_a.__class__, _b.__class__)
-            test.assertEqual(_a, _b)
+            if places is None:
+                test.assertEqual(_a, _b)
+            else:
+                test.assertAlmostEqual(_a, _b, places=places)
     except (PyomoException, AssertionError):
-        test.fail(f"Expressions not equal:\n\t"
-                  f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")
+        test.fail(
+            f"Expressions not equal:\n\t"
+            f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}"
+        )
 
 
-def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True):
+def assertExpressionsStructurallyEqual(
+    test, a, b, include_named_exprs=True, places=None
+):
     """unittest-based assertion for comparing expressions
 
     This converts the expressions `a` and `b` into prefix notation and
@@ -270,10 +304,14 @@ def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True):
     try:
         test.assertEqual(len(prefix_a), len(prefix_b))
         for _a, _b in zip(prefix_a, prefix_b):
-            if _a.__class__ not in native_types and \
-               _b.__class__ not in native_types:
+            if _a.__class__ not in native_types and _b.__class__ not in native_types:
                 test.assertIs(_a.__class__, _b.__class__)
-            test.assertEqual(_a, _b)
+            if places is None:
+                test.assertEqual(_a, _b)
+            else:
+                test.assertAlmostEqual(_a, _b, places=places)
     except (PyomoException, AssertionError):
-        test.fail(f"Expressions not structurally equal:\n\t"
-                  f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")
+        test.fail(
+            f"Expressions not structurally equal:\n\t"
+            f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}"
+        )

@@ -376,7 +376,7 @@ def create_model(data):
                 suffix = (file).split(".")[-1]
                 if suffix != "dat":
                     msg = (
-                        'When specifiying multiple data files, they must all '
+                        'When specifying multiple data files, they must all '
                         'be *.dat files.  File specified: %s'
                     )
                     raise SystemExit(msg % str(file))
@@ -494,7 +494,6 @@ def create_model(data):
     fname = None
     smap_id = None
     if not data.options.model.save_file is None:
-
         if data.options.runtime.report_timing is True:
             write_start_time = time.time()
 

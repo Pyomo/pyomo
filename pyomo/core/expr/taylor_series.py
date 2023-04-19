@@ -20,7 +20,9 @@ def _loop(derivs, e_vars, diff_mode, ndx_list):
         ndx_list.pop()
 
 
-def taylor_series_expansion(expr, diff_mode=differentiate.Modes.reverse_numeric, order=1):
+def taylor_series_expansion(
+    expr, diff_mode=differentiate.Modes.reverse_numeric, order=1
+):
     """
     Generate a taylor series approximation for expr.
 
@@ -39,16 +41,22 @@ def taylor_series_expansion(expr, diff_mode=differentiate.Modes.reverse_numeric,
     res: pyomo.core.expr.numeric_expr.NumericExpression
     """
     if order < 0:
-        raise ValueError('Cannot compute taylor series expansion of order {0}'.format(str(order)))
+        raise ValueError(
+            'Cannot compute taylor series expansion of order {0}'.format(str(order))
+        )
     if order != 1 and diff_mode is differentiate.Modes.reverse_numeric:
-        logger.warning('taylor_series_expansion can only use symbolic differentiation for orders larger than 1')
+        logger.warning(
+            'taylor_series_expansion can only use symbolic differentiation for orders larger than 1'
+        )
         diff_mode = differentiate.Modes.reverse_symbolic
     e_vars = list(identify_variables(expr=expr, include_fixed=False))
 
     res = value(expr)
     if order >= 1:
         derivs = differentiate(expr=expr, wrt_list=e_vars, mode=diff_mode)
-        res += sum((e_vars[i] - e_vars[i].value) * value(derivs[i]) for i in range(len(e_vars)))
+        res += sum(
+            (e_vars[i] - e_vars[i].value) * value(derivs[i]) for i in range(len(e_vars))
+        )
 
     """
     This last bit of code is just for higher order taylor series expansions.
@@ -63,11 +71,14 @@ def taylor_series_expansion(expr, diff_mode=differentiate.Modes.reverse_numeric,
     """
     if order >= 2:
         for n in range(2, order + 1):
-            coef = 1.0/math.factorial(n)
+            coef = 1.0 / math.factorial(n)
             for ndx_list, _derivs in _loop(derivs, e_vars, diff_mode, list()):
                 tmp = coef
                 for ndx in ndx_list:
-                    tmp *= (e_vars[ndx] - e_vars[ndx].value)
-                res += tmp * sum((e_vars[i] - e_vars[i].value) * value(_derivs[i]) for i in range(len(e_vars)))
+                    tmp *= e_vars[ndx] - e_vars[ndx].value
+                res += tmp * sum(
+                    (e_vars[i] - e_vars[i].value) * value(_derivs[i])
+                    for i in range(len(e_vars))
+                )
 
     return res

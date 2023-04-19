@@ -4,6 +4,7 @@ import pickle
 import sys
 from os.path import dirname, abspath
 
+
 # @preprocess:
 def pyomo_preprocess(options=None):
     print("Here are the options that were provided:")
@@ -12,6 +13,7 @@ def pyomo_preprocess(options=None):
 
 
 # @:preprocess
+
 
 # @create_model:
 def pyomo_create_model(options=None, model_options=None):
@@ -23,6 +25,7 @@ def pyomo_create_model(options=None, model_options=None):
 
 # @:create_model
 
+
 # @create_modeldata:
 def pyomo_create_dataportal(options=None, model=None):
     data = pyo.DataPortal(model=model)
@@ -32,6 +35,7 @@ def pyomo_create_dataportal(options=None, model=None):
 
 # @:create_modeldata
 
+
 # @print_model:
 def pyomo_print_model(options=None, model=None):
     if options['runtime']['logging']:
@@ -39,6 +43,7 @@ def pyomo_print_model(options=None, model=None):
 
 
 # @:print_model
+
 
 # @modify_instance:
 def pyomo_modify_instance(options=None, model=None, instance=None):
@@ -48,6 +53,7 @@ def pyomo_modify_instance(options=None, model=None, instance=None):
 
 # @:modify_instance
 
+
 # @print_instance:
 def pyomo_print_instance(options=None, instance=None):
     if options['runtime']['logging']:
@@ -55,6 +61,7 @@ def pyomo_print_instance(options=None, instance=None):
 
 
 # @:print_instance
+
 
 # @save_instance:
 def pyomo_save_instance(options=None, instance=None):
@@ -65,12 +72,14 @@ def pyomo_save_instance(options=None, instance=None):
 
 # @:save_instance
 
+
 # @print_results:
 def pyomo_print_results(options=None, instance=None, results=None):
     print(results)
 
 
 # @:print_results
+
 
 # @save_results:
 def pyomo_save_results(options=None, instance=None, results=None):
@@ -80,6 +89,7 @@ def pyomo_save_results(options=None, instance=None, results=None):
 
 
 # @:save_results
+
 
 # @postprocess:
 def pyomo_postprocess(options=None, instance=None, results=None):

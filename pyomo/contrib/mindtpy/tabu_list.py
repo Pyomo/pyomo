@@ -6,7 +6,7 @@ class IncumbentCallback_cplex(IncumbentCallback):
 
     def __call__(self):
         """
-        This is an inherent function in LazyConstraintCallback in cplex. 
+        This is an inherent function in LazyConstraintCallback in cplex.
         This callback will be used after each new potential incumbent is found.
         https://www.ibm.com/support/knowledgecenter/SSSA5P_12.10.0/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.IncumbentCallback-class.html
         IncumbentCallback will be activated after Lazyconstraint callback, when the potential incumbent solution is satisfies the lazyconstraints.
@@ -21,8 +21,7 @@ class IncumbentCallback_cplex(IncumbentCallback):
         else:
             temp = []
             for var in solve_data.mip.MindtPy_utils.discrete_variable_list:
-                value = self.get_values(
-                    opt._pyomo_var_to_solver_var_map[var])
+                value = self.get_values(opt._pyomo_var_to_solver_var_map[var])
                 temp.append(int(round(value)))
             integer_var_value = tuple(temp)
 

@@ -19,7 +19,6 @@ import copy
 
 @plugin_factory
 class MySolver(object):
-
     alias('random')
 
     # Declare that this is an IOptSolver plugin

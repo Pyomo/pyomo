@@ -10,12 +10,18 @@
 #  ___________________________________________________________________________
 
 GlobalSets = {}
+
+
 def _get_global_set(name):
     return GlobalSets[name]
+
+
 _get_global_set.__safe_for_unpickling__ = True
+
 
 class GlobalSetBase(object):
     """The base class for all Global sets"""
+
     __slots__ = ()
 
     def __reduce__(self):
@@ -42,13 +48,16 @@ class GlobalSetBase(object):
     def _parent(self, val):
         if val is None:
             return
-        val = val() # dereference the weakref
+        val = val()  # dereference the weakref
         raise RuntimeError(
             "Cannot assign a GlobalSet '%s' to %s '%s'"
-            % (self.global_name,
-               'model' if val.model() is val else 'block',
-               val.name or 'unknown')
+            % (
+                self.global_name,
+                'model' if val.model() is val else 'block',
+                val.name or 'unknown',
+            )
         )
+
 
 # FIXME: This mocks up part of the Set API until we can break up the set
 # module to resolve circular dependencies and can make this a proper
@@ -56,43 +65,60 @@ class GlobalSetBase(object):
 # UnindexedComponent_set, but we would like UnindexedComponent_set to be
 # a proper scalar IndexedComponent).
 #
-#UnindexedComponent_set = set([None])
+# UnindexedComponent_set = set([None])
 class _UnindexedComponent_set(GlobalSetBase):
     local_name = 'UnindexedComponent_set'
+
     def __init__(self, name):
         self.name = name
+
     def __contains__(self, val):
         return val is None
+
     def get(self, value, default):
         if value is None:
             return value
         return default
+
     def __iter__(self):
         return (None,).__iter__()
+
     def subsets(self, expand_all_set_operators=None):
-        return [ self ]
+        return [self]
+
     def construct(self):
         pass
+
     def bounds(self):
         return (None, None)
+
     def get_interval(self):
         return (None, None, None)
+
     def __len__(self):
         return 1
+
     def __eq__(self, other):
         return self is other
+
     def __ne__(self, other):
         return self is not other
+
     @property
     def dimen(self):
         return 0
+
     def isdiscrete(self):
         return True
+
     def isfinite(self):
         return True
+
     def isordered(self):
         # As this set only has a single element, it is implicitly "ordered"
         return True
+
+
 UnindexedComponent_set = _UnindexedComponent_set('UnindexedComponent_set')
 GlobalSets[UnindexedComponent_set.local_name] = UnindexedComponent_set
 
