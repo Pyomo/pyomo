@@ -29,7 +29,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables, calculation_mode
+from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables, calculation_mode
 
 
 def main():
@@ -41,21 +41,21 @@ def main():
 
     # measurement object 
     total_name = ["C"]
-    extra_index = [[["CA", "CB", "CC"]]]
+    non_time_index = [[["CA", "CB", "CC"]]]
     time_index = [t_control] 
 
-    measure_class = Measurements()
-    measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
+    measurements = MeasurementVariables()
+    measurements.add_elements(total_name, non_time_index=non_time_index, time_index = time_index)
 
     # design object 
     total_name = ["CA0", "T"]
-    dtime_index = [[0], t_control] 
-    exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
-    upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700]
-    lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
-    design_gen = DesignVariables()
-    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, upper_bound=upper_bound, lower_bound=lower_bound)
+    exp_design = DesignVariables()
+    exp_design.add_variables(total_name, 
+                             time_index = [[0], t_control] , 
+                             values=[5, 570, 300, 300, 300, 300, 300, 300, 300, 300], 
+                             upper_bounds=[5, 700, 700, 700, 700, 700, 700, 700, 700, 700], 
+                             lower_bounds=[1, 300, 300, 300, 300, 300, 300, 300, 300, 300])
     
     # Design variable ranges as lists 
     design_ranges = [list(np.linspace(1,5,3)), list(np.linspace(300,700,3))]
@@ -66,13 +66,14 @@ def main():
     ## choose from 'sequential_finite', 'direct_kaug'
     sensi_opt = calculation_mode.direct_kaug
 
-    prior_pass = np.zeros((4,4))
-        
-    doe_object = DesignOfExperiments(parameter_dict, design_gen,
-                                 measure_class, create_model,
-                                prior_FIM=prior_pass, discretize_model=disc_for_measure)
+    doe_object = DesignOfExperiments(parameter_dict, 
+                                     exp_design,
+                                    measurements, 
+                                    create_model,
+                                    discretize_model=disc_for_measure)
 
-    all_fim = doe_object.run_grid_search(design_ranges, dv_apply_name, 
+    all_fim = doe_object.run_grid_search(design_ranges, 
+                                         dv_apply_name, 
                                         mode=sensi_opt)
     
     all_fim.extract_criteria()
@@ -84,16 +85,16 @@ def main():
     # Design variable names 
     dv_apply_name = ['CA0[0]','T[0]',['T[0.125]','T[0.25]','T[0.375]','T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]']]
 
-    # Define experiments
-    exp1 = [5, 300, 300, 300, 300, 300, 300, 300, 300, 300]
-
     sensi_opt = calculation_mode.direct_kaug
 
-    doe_object = DesignOfExperiments(parameter_dict, design_gen,
-                                 measure_class, create_model,
-                                prior_FIM=prior_pass, discretize_model=disc_for_measure)
+    doe_object = DesignOfExperiments(parameter_dict, 
+                                     exp_design,
+                                    measurements, 
+                                    create_model,
+                                    discretize_model=disc_for_measure)
 
-    all_fim = doe_object.run_grid_search(design_ranges, dv_apply_name, 
+    all_fim = doe_object.run_grid_search(design_ranges, 
+                                         dv_apply_name, 
                                         mode=sensi_opt)
     
     test = all_fim.extract_criteria()

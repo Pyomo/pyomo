@@ -46,52 +46,46 @@ class SpecialSet:
 
         return self.special_set
 
-    def add_elements(self, var_name, extra_index=None, time_index=None, values=None, 
-                     upper_bound=None, lower_bound=None):
+    def add_variables(self, var_name, indices=None, time_index_position=None, values=None, 
+                     lower_bounds=None, upper_bounds=None):
         """
         Used for generating string names with indexes. 
 
         Parameter 
         ---------
-        var_name: a ``list`` of var names 
-        extra_index: a ``list`` containing extra indexes except for time indexes 
+        var_name: variable name in ``string`` 
+        indices: a ``dict`` containing indexes 
             if default (None), no extra indexes needed for all var in var_name
-            if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
-            they are different multiple sets of indexes for different var_name
-            for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
-        time_index: a ``list`` containing time indexes
-            default choice is None, means this is a model parameter 
-            if it is an algebraic variable, time index should be set up to [0]
-            if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
+            for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}. 
+        time_index_position: an integer indicates which index is the time index  
+            for e.g., 1 is the time index position in the indices example. 
         values: a ``list`` containing values which has the same shape of flattened variables 
             default choice is None, means there is no give nvalues 
-        upper_bound: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
-        lower_bound: a ``list `` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
-
+        lower_bounds: a ``list `` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
+        upper_bounds: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
+        
         Return
         ------
         if not defining values, return a set of variable names 
         if defining values, return a dictionary of variable names and its value 
         """
-        self._names(var_name, extra_index,time_index, values, upper_bound, lower_bound, check_values_bounds=False)
+        num_indices = self._add_variables(var_name, indices=indices, time_index_position=time_index_position)
 
-        self._add_elements(var_name, extra_index=extra_index, time_index=time_index)
-
-        self._names(var_name, extra_index,time_index, values, upper_bound, lower_bound, check_values_bounds=True)
+        self._names(num_indices, indices, time_index_position, values, lower_bounds, upper_bounds)
 
         if values:
             # this dictionary keys are special set, values are its value
             self.special_set_value = self._generate_dict(values)
 
-        if upper_bound:
-            if type(upper_bound) in [int, float]:
-                upper_bound = [upper_bound]*len(self.special_set)
-            self.upper_bound = self._generate_dict(upper_bound)
-            
-        if lower_bound:
-            if type(lower_bound) in [int, float]:
-                lower_bound = [lower_bound]*len(self.special_set)
-            self.lower_bound = self._generate_dict(lower_bound)
+        if lower_bounds:
+            if type(lower_bounds) in [int, float]:
+                lower_bounds = [lower_bounds]*len(self.special_set)
+            self.lower_bounds = self._generate_dict(lower_bounds)
+        
+        if upper_bounds:
+            if type(upper_bounds) in [int, float]:
+                upper_bounds = [upper_bounds]*len(self.special_set)
+            self.upper_bounds = self._generate_dict(upper_bounds)
 
         return self.special_set
     
@@ -118,78 +112,66 @@ class SpecialSet:
         return value_map
 
 
-    def _add_elements(self, var_name, extra_index=None, time_index=None):
+    def _add_variables(self, var_name, indices=None, time_index_position=None):
         """
         Used for generating string names with indexes. 
 
         Parameter 
         ---------
         var_name: a ``list`` of var names 
-        extra_index: a ``list`` containing extra indexes except for time indexes 
+        indices: a ``dict`` containing indexes 
             if default (None), no extra indexes needed for all var in var_name
-            if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
-            they are different multiple sets of indexes for different var_name
-            for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
-        time_index: a ``list`` containing time indexes
-            default choice is None, means this is a model parameter 
-            if it is an algebraic variable, time index should be set up to [0]
-            if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
+            for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}. 
+        time_index_position: an integer indicates which index is the time index  
+            for e.g., 1 is the time index position in the indices example. 
         """
+        # first combine all indexes into a list 
+        all_index_list = [] # contains all index lists
+        if indices:
+            for index_pointer in indices: 
+                all_index_list.append(indices[index_pointer])
 
-        for i, n in enumerate(var_name):
-            name_data = str(n)
+        # all idnex list for one variable, such as ["CA", 10, 1]
+        all_index_for_var = list(itertools.product(*all_index_list))
 
-            # first combine all indexes into a list 
-            all_index_list = [] # contains all index lists
-            if extra_index:
-                for index_list in extra_index[i]: 
-                    all_index_list.append(index_list)
-            if time_index:
-                all_index_list.append(time_index[i])
+        for lst in all_index_for_var:
+            name1 = var_name+"["
+            for i, idx in enumerate(lst):
+                name1 += str(idx)
 
-            # all idnex list for one variable, such as ["CA", 10, 1]
-            all_index_for_var = list(itertools.product(*all_index_list))
+                # if i is the last index, close the []. if not, add a "," for the next index. 
+                if i==len(lst)-1:
+                    name1 += "]"
+                else:
+                    name1 += ","
 
-            for lst in all_index_for_var:
-                name1 = name_data+"["
-                for i, idx in enumerate(lst):
-                    name1 += str(idx)
+            self.special_set.append(name1)
 
-                    # if i is the last index, close the []. if not, add a "," for the next index. 
-                    if i==len(lst)-1:
-                        name1 += "]"
-                    else:
-                        name1 += ","
-
-                self.special_set.append(name1)
+        return len(all_index_for_var)
 
 
-    def _names(self, var_name, extra_index, time_index, values, upper_bound, lower_bound, check_values_bounds=False):
+    def _names(self, len_indices, indices, time_index_position, values, lower_bounds, upper_bounds):
         """
         Check if the measurement information provided are valid to use. 
         """
-        num_var = len(var_name)
         
-        if extra_index and len(extra_index) != num_var: 
-            raise ValueError("Extra_index is of different length with var_name. ")
+        if time_index_position not in indices:
+            raise ValueError("time index cannot be found in indices.")
 
-        if len(time_index) != num_var:
-            raise ValueError("time_index is of different length with var_name.")
-
-        if check_values_bounds:
-            num_name = len(self.special_set)
-
-            if values and len(values) != num_name:
-                raise ValueError("Values is of different length with var_name.")
-            
-            if upper_bound and type(upper_bound)==list and len(upper_bound)!= num_name:
-                raise ValueError("Upperbounds is of different length with var_name.")
-            
-            if lower_bound and type(lower_bound)==list and len(lower_bound)!= num_name:
-                raise ValueError("Lowerbounds is of different length with var_name.")
+        # if given a list, check if bounds have the same length with flattened variable 
+        if values and len(values) != len_indices:
+            raise ValueError("Values is of different length with indices.")
+        
+        if lower_bounds and type(lower_bounds)==list and len(lower_bounds)!= len_indices:
+            raise ValueError("Lowerbounds is of different length with indices.")
+        
+        if upper_bounds and type(upper_bounds)==list and len(upper_bounds)!= len_indices:
+            raise ValueError("Upperbounds is of different length with indices.")
+        
+        
 
     
-class Measurements(SpecialSet):
+class MeasurementVariables(SpecialSet):
     def __init__(self):
         """
         This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
@@ -205,21 +187,18 @@ class Measurements(SpecialSet):
         # generate default variance
         self._use_identity_variance()
 
-    def add_elements(self, var_name, extra_index=None, time_index=[0]):
+    def add_variables(self, var_name, indices=None, time_index_position=None):
         """
         Parameters 
         -----------
-        var_name: a ``list`` of measurement var names 
-            extra_index: a ``list`` containing extra indexes except for time indexes 
-                if default (None), no extra indexes needed for all var in var_name
-                if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
-                they are different multiple sets of indexes for different var_name
-                for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
-            time_index: a ``list`` containing time indexes
-                default choice is [0], means this is an algebraic variable
-                if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
+        var_name: a ``list`` of var names 
+        indices: a ``dict`` containing indexes 
+            if default (None), no extra indexes needed for all var in var_name
+            for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}. 
+        time_index_position: an integer indicates which index is the time index  
+            for e.g., 1 is the time index position in the indices example. 
         """
-        self.name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index)
+        self.name =  super().add_variables(var_name=var_name, indices=indices, time_index_position=time_index_position)
 
         # generate default variance
         self._use_identity_variance()
@@ -271,24 +250,26 @@ class DesignVariables(SpecialSet):
 
         self.name = super().specify(self_define_res)
 
-    def add_elements(self, var_name, extra_index=None, time_index=[0], values=None, 
-                     upper_bound = None, lower_bound = None):
+    def add_variables(self, var_name, indices=None, time_index_position=None, values=None, 
+                     lower_bounds = None, upper_bounds = None):
         """
 
         Parameters
         -----------
-        var_name: a ``list`` of design var names 
-            extra_index: a ``list`` containing extra indexes except for time indexes 
-                if default (None), no extra indexes needed for all var in var_name
-                if it is a nested list, it is a ``list`` of ``list`` of ``list``, 
-                they are different multiple sets of indexes for different var_name
-                for e.g., extra_index[0] are all indexes for var_name[0], extra_index[0][0] are the first index for var_name[0]
-            time_index: a ``list`` containing time indexes
-                default choice is [0], means this is an algebraic variable
-                if it is a nested list, it is a ``list`` of ``lists``, they are different time set for different var in var_name
+        var_name: a ``list`` of var names 
+        indices: a ``dict`` containing indexes 
+            if default (None), no extra indexes needed for all var in var_name
+            for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}. 
+        time_index_position: an integer indicates which index is the time index  
+            for e.g., 1 is the time index position in the indices example. 
+        values: a ``list`` containing values which has the same shape of flattened variables 
+            default choice is None, means there is no give nvalues 
+        lower_bounds: a ``list `` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
+        upper_bounds: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
         """
-        self.name =  super().add_elements(var_name=var_name, extra_index=extra_index, time_index=time_index, values=values, 
-                                          upper_bound = upper_bound, lower_bound = lower_bound)
+        self.name =  super().add_variables(var_name=var_name, indices=indices, time_index_position=time_index_position, 
+                                           values=values,  lower_bounds = lower_bounds, upper_bounds = upper_bounds)
+                            
 
     def update_values(self, values):
         return super().update_values(values)

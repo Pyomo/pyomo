@@ -26,7 +26,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe import Measurements, DesignVariables, ScenarioGenerator, finite_difference_lib, DesignOfExperiments, SpecialSet
+from pyomo.contrib.doe import MeasurementVariables, DesignVariables, ScenarioGenerator, finite_difference_lib, DesignOfExperiments, SpecialSet
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
 import numpy as np
 
@@ -34,15 +34,15 @@ class TestMeasurementError(unittest.TestCase):
     def test(self):
         t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
         t_control2 = [0.2,0.4,0.6,0.8]
-        measure_class=Measurements()
+        measure_class=MeasurementVariables()
 
         # set up measurements 
         total_name = ["C", "T", "A"] # wrong total name
-        extra_index = [[["CA", "CB", "CC"]], [[1,3,5]]]
+        non_time_index = [[["CA", "CB", "CC"]], [[1,3,5]]]
         time_index = [t_control, t_control2]  
 
-        self.assertRaises(ValueError, Measurements.add_elements, measure_class, 
-                          var_name=total_name, extra_index = extra_index, time_index = time_index)
+        self.assertRaises(ValueError, MeasurementVariables.add_elements, measure_class, 
+                          var_name=total_name, non_time_index = non_time_index, time_index = time_index)
         
 class TestDesignError(unittest.TestCase):
     def test(self):
@@ -68,7 +68,7 @@ class TestPriorFIMError(unittest.TestCase):
         # measurement object 
         total_name = ["C"]
         time_index = [t_control] 
-        measure_class = Measurements()
+        measure_class = MeasurementVariables()
         measure_class.add_elements(total_name, time_index = time_index)
 
         # design object 
@@ -104,11 +104,11 @@ class TestMeasurement(unittest.TestCase):
 
         # set up measurements 
         total_name = ["C", "T"]
-        extra_index = [[["CA", "CB", "CC"]], [[1,3,5]]]
+        non_time_index = [[["CA", "CB", "CC"]], [[1,3,5]]]
         time_index = [t_control, t_control2]  
         
-        measure_class = Measurements()
-        measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
+        measure_class = MeasurementVariaables()
+        measure_class.add_elements(total_name, non_time_index=non_time_index, time_index = time_index)
         
         # test names, variance 
         self.assertEqual(measure_class.name[0], 'C[CA,0]')
@@ -138,7 +138,7 @@ class TestMeasurement(unittest.TestCase):
                      'C[CB,0]', 'C[CB,0.125]', 'C[CB,0.25]', 'C[CB,0.375]', 
                      'C[CC,0]', 'C[CC,0.125]', 'C[CC,0.25]', 'C[CC,0.375]']
 
-        measure_class2 = Measurements()
+        measure_class2 = MeasurementVariaables()
         measure_class2.specify(var_names)
 
         self.assertEqual(measure_class2.name[1], 'C[CA,0.125]')

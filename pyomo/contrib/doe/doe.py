@@ -38,9 +38,10 @@ import logging
 from enum import Enum
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
-from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_lib
-from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-
+#from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_lib
+#from pyomo.contrib.doe.result import FisherResults, GridSearchResult
+from scenario import ScenarioGenerator,finite_difference_lib
+from result import FisherResults, GridSearchResult
 
 class calculation_mode(Enum):
     sequential_finite = 1
@@ -86,6 +87,7 @@ class DesignOfExperiments:
             If not specified, default solver is IPOPT MA57.
         prior_FIM:
             A ``list`` of lists containing Fisher information matrix (FIM) for prior experiments.
+            The default None means there is no prior information.
         discretize_model:
             A user-specified ``function`` that discretizes the model. Only use with Pyomo.DAE, default=None
         args:
@@ -115,7 +117,10 @@ class DesignOfExperiments:
         self.discretize_model = discretize_model
 
         # check if there is prior info
-        self.prior_FIM = prior_FIM
+        if prior_FIM is None:
+            self.prior_FIM = np.zeros((len(self.param), len(self.param)))
+        else:
+            self.prior_FIM = prior_FIM
         self._check_inputs()
 
         # if print statements
@@ -491,6 +496,7 @@ class DesignOfExperiments:
                                     scale_constant_value=self.scale_constant_value)
         
         self.jac = jac
+        self.mod = mod
         
         return FIM_analysis
 

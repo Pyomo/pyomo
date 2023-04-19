@@ -30,7 +30,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import DesignOfExperiments, Measurements, calculation_mode, DesignVariables, finite_difference_lib
+from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, calculation_mode, DesignVariables, finite_difference_lib
 
 def main():
     ### Define inputs
@@ -41,31 +41,36 @@ def main():
 
     # measurement object 
     total_name = ["C"]
-    extra_index = [[["CA", "CB", "CC"]]]
+    non_time_index = [[["CA", "CB", "CC"]]]
     time_index = [t_control] 
 
-    measure_class = Measurements()
-    measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
+    measurements = MeasurementVariables()
+    measurements.add_variables(total_name, non_time_index=non_time_index, time_index = time_index)
 
     # design object 
     total_name = ["CA0", "T"]
-    dtime_index = [[0], t_control] 
-    exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
-    upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700]
-    lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
-    design_gen = DesignVariables()
-    design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, upper_bound=upper_bound, lower_bound=lower_bound)
-    
-    # empty prior
-    prior_pass = np.zeros((4,4))
+    exp_design = DesignVariables()
+    exp_design.add_variables(total_name, 
+                             time_index = [[0], t_control] , 
+                             values=[5, 570, 300, 300, 300, 300, 300, 300, 300, 300], 
+                             upper_bounds=[5, 700, 700, 700, 700, 700, 700, 700, 700, 700], 
+                             lower_bounds=[1, 300, 300, 300, 300, 300, 300, 300, 300, 300])                           
+    exp_design = DesignVariables()
+    exp_design.add_variables(total_name, 
+                             time_index = [[0], t_control] , 
+                             values=[5, 570, 300, 300, 300, 300, 300, 300, 300, 300], 
+                             upper_bounds=[5, 700, 700, 700, 700, 700, 700, 700, 700, 700], 
+                             lower_bounds=[1, 300, 300, 300, 300, 300, 300, 300, 300, 300])
     
     ### Test sequential_finite mode
     sensi_opt = calculation_mode.sequential_finite
 
-    doe_object = DesignOfExperiments(parameter_dict, design_gen,
-                                measure_class, create_model,
-                            prior_FIM=prior_pass, discretize_model=disc_for_measure)
+    doe_object = DesignOfExperiments(parameter_dict, 
+                                     exp_design,
+                                    measurements, 
+                                    create_model,
+                                    discretize_model=disc_for_measure)
 
 
     result = doe_object.compute_FIM(mode=sensi_opt,  

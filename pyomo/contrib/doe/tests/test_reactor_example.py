@@ -33,7 +33,7 @@ from pyomo.common.dependencies import (
 )
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe import DesignOfExperiments, Measurements, calculation_mode, DesignVariables, finite_difference_lib, objective_lib
+from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, calculation_mode, DesignVariables, finite_difference_lib, objective_lib
 from pyomo.environ import value, ConcreteModel
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
 from pyomo.opt import SolverFactory
@@ -71,36 +71,34 @@ class Test_doe_object(unittest.TestCase):
 
         # measurement object 
         total_name = ["C"]
-        extra_index = [[["CA", "CB", "CC"]]]
+        non_time_index = [[["CA", "CB", "CC"]]]
         time_index = [t_control] 
 
-        measure_class = Measurements()
-        measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
+        measurements = MeasurementVariables()
+        measurements.add_elements(total_name, non_time_index=non_time_index, time_index = time_index)
 
         # design object 
         total_name = ["CA0", "T"]
-        dtime_index = [[0], t_control] 
-        exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
-        upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700]
-        lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
-        design_gen = DesignVariables()
-        design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, 
-                                upper_bound=upper_bound, lower_bound=lower_bound)
-        
-        # empty prior
-        prior_pass = np.zeros((4,4))
+        exp_design = DesignVariables()
+        exp_design.add_variables(total_name, 
+                                time_index = [[0], t_control] , 
+                                values=[5, 570, 300, 300, 300, 300, 300, 300, 300, 300], 
+                                upper_bounds=[5, 700, 700, 700, 700, 700, 700, 700, 700, 700], 
+                                lower_bounds=[1, 300, 300, 300, 300, 300, 300, 300, 300, 300])
         
         ### Test sequential_finite mode
         sensi_opt = calculation_mode.sequential_finite
 
         exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
 
-        design_gen.update_values(exp1)      
+        exp_design.update_values(exp1)      
 
-        doe_object = DesignOfExperiments(parameter_dict, design_gen,
-                                 measure_class, create_model,
-                                prior_FIM=prior_pass, discretize_model=disc_for_measure)
+        doe_object = DesignOfExperiments(parameter_dict, 
+                                         exp_design,
+                                        measurements, 
+                                        create_model,
+                                        discretize_model=disc_for_measure)
 
 
         result = doe_object.compute_FIM(mode=sensi_opt,  
@@ -119,8 +117,8 @@ class Test_doe_object(unittest.TestCase):
         sub_extra_index = [[["CB", "CC"]]]
         sub_time_index = [[0.125, 0.25, 0.5, 0.75, 0.875]] 
 
-        measure_subset = Measurements()
-        measure_subset.add_elements(sub_name, extra_index=sub_extra_index, time_index=sub_time_index)
+        measure_subset = MeasurementVariables()
+        measure_subset.add_elements(sub_name, non_time_index=sub_extra_index, time_index=sub_time_index)
 
         sub_result = result.subset(measure_subset)
         sub_result.calculate_FIM(doe_object.design_values)
@@ -134,11 +132,13 @@ class Test_doe_object(unittest.TestCase):
         sensi_opt = calculation_mode.direct_kaug
         # Define a new experiment
         exp1 = [5, 570, 400, 300, 300, 300, 300, 300, 300, 300]
-        design_gen.update_values(exp1)
+        exp_design.update_values(exp1)
 
-        doe_object = DesignOfExperiments(parameter_dict, design_gen,
-                                 measure_class, create_model,
-                                prior_FIM=prior_pass, discretize_model=disc_for_measure)
+        doe_object = DesignOfExperiments(parameter_dict, 
+                                         exp_design,
+                                         measurements, 
+                                         create_model,
+                                        discretize_model=disc_for_measure)
 
         result = doe_object.compute_FIM(mode=sensi_opt,  
                                         scale_nominal_param_value=True,
@@ -154,7 +154,7 @@ class Test_doe_object(unittest.TestCase):
         ### Test stochastic_program mode
 
         exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
-        design_gen.update_values(exp1)
+        exp_design.update_values(exp1)
 
         # add a prior information (scaled FIM with T=500 and T=300 experiments)
         prior = np.asarray([[  28.67892806 ,   5.41249739 , -81.73674601 , -24.02377324],
@@ -162,13 +162,18 @@ class Test_doe_object(unittest.TestCase):
         [ -81.73674601 , -12.41816477 , 240.46276004 ,  58.76422806],
         [ -24.02377324 , -139.23992532 ,  58.76422806 , 767.25584508]])
 
-        doe_object2 = DesignOfExperiments(parameter_dict, design_gen,
-                                 measure_class, create_model,
-                                prior_FIM=prior, discretize_model=disc_for_measure)
+        doe_object2 = DesignOfExperiments(parameter_dict, 
+                                          exp_design,
+                                         measurements, 
+                                         create_model,
+                                        prior_FIM=prior, 
+                                        discretize_model=disc_for_measure)
 
-        square_result, optimize_result= doe_object2.stochastic_program(if_optimize=True, if_Cholesky=True, 
-                                                                scale_nominal_param_value=True, objective_option=objective_lib.det, 
-                                                                L_initial=np.linalg.cholesky(prior))
+        square_result, optimize_result= doe_object2.stochastic_program(if_optimize=True, 
+                                                                       if_Cholesky=True, 
+                                                                    scale_nominal_param_value=True, 
+                                                                    objective_option=objective_lib.det, 
+                                                                    L_initial=np.linalg.cholesky(prior))
         
         self.assertAlmostEqual(value(optimize_result.model.CA0[0]), 5.0, places=2)
         self.assertAlmostEqual(value(optimize_result.model.T[0.5]), 300, places=2)
