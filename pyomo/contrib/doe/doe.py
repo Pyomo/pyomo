@@ -59,6 +59,15 @@ class objective_lib(Enum):
     @classmethod
     def has_value(cls, value):
         return value in cls._value2member_map_
+    
+class model_option_lib(Enum):
+    parmest = 1
+    stage1 = 2
+    stage2 = 3
+    
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
 
 class DesignOfExperiments:
     def __init__(self, param_init, design_vars, measurement_vars, create_model, solver=None,
@@ -423,7 +432,7 @@ class DesignOfExperiments:
 
     def _direct_kaug(self):
         # create model
-        mod = self.create_model(model_option="parmest")
+        mod = self.create_model(model_option=model_option_lib.parmest)
 
         # discretize if needed
         if self.discretize_model:
@@ -524,11 +533,11 @@ class DesignOfExperiments:
         mod.scena = pyo.Set(initialize=list(range(len(self.scenario_list))))
 
         # Allow user to self-define complex design variables
-        self.create_model(mod=mod, model_option="global")
+        self.create_model(mod=mod, model_option=model_option_lib.stage1)
 
         def block_build(b,s):
             # create block scenarios
-            self.create_model(mod=b, model_option="block")
+            self.create_model(mod=b, model_option=model_option_lib.stage2)
             
             # fix parameter values to perturbed values
             for par in self.param:
@@ -612,7 +621,7 @@ class DesignOfExperiments:
             jac[p] = jac_para
         return jac
 
-    def run_grid_search(self, design_ranges, design_dimension_names, 
+    def run_grid_search(self, design_ranges, 
                      mode=calculation_mode.sequential_finite, tee_option=False, 
                     scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
                         filename=None, formula=finite_difference_lib.central, step=0.001):
@@ -627,9 +636,8 @@ class DesignOfExperiments:
         Parameters
         -----------
         design_ranges:
-            a ``list`` of design variable values to go over
-        design_dimension_names:
-            a ``list`` of design variable names of each design range
+            a ``dict``, keys are design variable names, 
+            values are a list of design variable values to go over
         mode:
             choose from calculation_mode.sequential_finite, .direct_kaug.
         tee_option:
@@ -668,18 +676,23 @@ class DesignOfExperiments:
         # to store all FIM results
         result_combine = {}
 
+        # all lists of values of each design variable to go over
+        design_ranges_list = list(design_ranges.values())
+        # design variable names to go over 
+        design_dimension_names = list(design_ranges.keys())
+
         # iteration 0
         count = 0
         failed_count = 0
         # how many sets of design variables will be run
         total_count = 1
-        for rng in design_ranges:
+        for rng in design_ranges_list:
             total_count *= len(rng)
 
         time_set = [] # record time for every iteration
 
         # generate combinations of design variable values to go over
-        search_design_set = product(*design_ranges)
+        search_design_set = product(*design_ranges_list)
 
         # loop over design value combinations
         for design_set_iter in search_design_set:
@@ -750,7 +763,7 @@ class DesignOfExperiments:
         self.all_fim = result_combine
 
         # Create figure drawing object
-        figure_draw_object = GridSearchResult(design_ranges, design_dimension_names, result_combine, store_optimality_name=filename)
+        figure_draw_object = GridSearchResult(design_ranges_list, design_dimension_names, result_combine, store_optimality_name=filename)
         
         self.logger.info('Overall wall clock time [s]:  %s', sum(time_set))
 

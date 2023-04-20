@@ -29,20 +29,37 @@
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
 import numpy as np
+from enum import Enum
 
-def disc_for_measure(m, NFE=32, block=True):
+class model_option_lib(Enum):
+    parmest = 1
+    stage1 = 2
+    stage2 = 3
+    
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
+
+def disc_for_measure(m, nfe=32, block=True):
     """Pyomo.DAE discretization
+
+    Arguments 
+    ---------
+    m: Pyomo model 
+    nfe: number of finite elements 
+    block: if True, the input model has blocks
     """
     discretizer = pyo.TransformationFactory('dae.collocation')
     if block:
         for s in range(len(m.block)):
-            discretizer.apply_to(m.block[s], nfe=NFE, ncp=3, wrt=m.block[s].t)
+            discretizer.apply_to(m.block[s], nfe=nfe, ncp=3, wrt=m.block[s].t)
     else:
-        discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
+        discretizer.apply_to(m, nfe=nfe, ncp=3, wrt=m.t)
     return m
 
 
-def create_model(mod=None, model_option="block", control_time=None, control_val=None, 
+def create_model(mod=None, model_option=model_option_lib.stage2, 
+                 control_time=[0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1], control_val=None, 
                      t_range=[0.0,1], CA_init=1, C_init=0.1):
     """
     This is an example user model provided to DoE library. 
@@ -51,8 +68,10 @@ def create_model(mod=None, model_option="block", control_time=None, control_val=
     Arguments
     ---------
     model: Pyomo model. If None, a Pyomo concrete model is created
-    model_option: if "parmest", create a process model. if "global", create the global model. 
-        if "block", add model variables and constriants for block.
+    model_option: choose from the 3 options in model_option 
+        if model_option_lib.parmest, create a process model. 
+        if model_option_lib.stage1, create the global model. 
+        if model_option_lib.stage2, add model variables and constriants for block.
     control_time: time-dependent design (control) variables, a list of control timepoints
     control_val: control design variable values T at corresponding timepoints
     t_range: time range, h 
@@ -66,19 +85,16 @@ def create_model(mod=None, model_option="block", control_time=None, control_val=
 
     theta = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
-    if model_option == "parmest":
+    if model_option == model_option_lib.parmest:
         mod = pyo.ConcreteModel()
         return_m = True
-    elif model_option in ["block", "global"]:
+    elif model_option==model_option_lib.stage1 or model_option==model_option_lib.stage2:
         if not mod:
             raise ValueError("If model option is global or block, a created model needs to be provided.")
         return_m = False
     else:
         raise ValueError("model_option needs to be defined as global, block, or parmest.")
     
-    if not control_time:
-        control_time = [0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1]
-        
     if not control_val:
         control_val = [300]*9
 
@@ -86,24 +102,23 @@ def create_model(mod=None, model_option="block", control_time=None, control_val=
     for i, t in enumerate(control_time):
         controls[t]=control_val[i]
 
-    t_control = control_time
-
-
-    #if model_option == "global":
     mod.t0 = pyo.Set(initialize=[0])
-    mod.t_con = pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
+    mod.t_con = pyo.Set(initialize=control_time)
     mod.CA0 = pyo.Var(mod.t0, initialize = CA_init, bounds=(1.0,5.0), within=pyo.NonNegativeReals) # mol/L
 
-    if model_option=="global":
-        mod.T = pyo.Var(mod.t_con, initialize =controls, bounds=(300, 700), within=pyo.NonNegativeReals)
+    # check if control_time is in time range
+    assert control_time[0]>=t_range[0] and control_time[-1]<=t_range[1], "control time is outside time range."
 
+    if model_option==model_option_lib.stage1: 
+        mod.T = pyo.Var(mod.t_con, initialize =controls, bounds=(300, 700), within=pyo.NonNegativeReals)
+        return 
+    
     else:
         para_list = ['A1', 'A2', 'E1', 'E2']
         
         ### Add variables 
         mod.CA_init = CA_init
         mod.para_list = para_list
-        #t_control = control_time
         
         # timepoints
         mod.t = ContinuousSet(bounds=(t_range[0], t_range[1]))
@@ -119,7 +134,7 @@ def create_model(mod=None, model_option="block", control_time=None, control_val=
                 for t_con in m.t_con:
                     if t>t_con:
                         j+=1
-                neighbour_t = t_control[j]
+                neighbour_t = control_time[j]
                 return controls[neighbour_t]
         
         mod.T = pyo.Var(mod.t, initialize =T_initial, bounds=(300, 700), within=pyo.NonNegativeReals)
@@ -162,7 +177,7 @@ def create_model(mod=None, model_option="block", control_time=None, control_val=
                 for t_con in m.t_con:
                     if t>t_con:
                         j+=1
-                neighbour_t = t_control[j]
+                neighbour_t = control_time[j]
                 return m.T[t] == m.T[neighbour_t]
             
         

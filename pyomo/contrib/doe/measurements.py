@@ -27,13 +27,14 @@
 
 import itertools
 
-class SpecialSet: 
+class VariablesWithIndices: 
     def __init__(self):
-        """This class defines variable names with provided names and indexes.
+        """This class provides utility methods for DesignVariables and MeasurementVariables to create
+        lists of Pyomo variable names with an arbitrary number of indices. 
         """
-        self.special_set = []
+        self.variable_names = []
 
-    def specify(self, self_define_res):
+    def set_variable_name_list(self, self_define_res):
         """
         Used for user to provide defined string names
 
@@ -42,9 +43,9 @@ class SpecialSet:
         self_define_res: a ``list`` of ``string``, containing the variable names with indexs, 
             for e.g. "C['CA', 23, 0]".
         """
-        self.special_set = self_define_res
+        self.variable_names = self_define_res
 
-        return self.special_set
+        return self.variable_names
 
     def add_variables(self, var_name, indices=None, time_index_position=None, values=None, 
                      lower_bounds=None, upper_bounds=None):
@@ -75,19 +76,19 @@ class SpecialSet:
 
         if values:
             # this dictionary keys are special set, values are its value
-            self.special_set_value = self._generate_dict(values)
+            self.variable_names_value = self._generate_dict(values)
 
         if lower_bounds:
             if type(lower_bounds) in [int, float]:
-                lower_bounds = [lower_bounds]*len(self.special_set)
+                lower_bounds = [lower_bounds]*len(self.variable_names)
             self.lower_bounds = self._generate_dict(lower_bounds)
         
         if upper_bounds:
             if type(upper_bounds) in [int, float]:
-                upper_bounds = [upper_bounds]*len(self.special_set)
+                upper_bounds = [upper_bounds]*len(self.variable_names)
             self.upper_bounds = self._generate_dict(upper_bounds)
 
-        return self.special_set
+        return self.variable_names
     
     def update_values(self, values):
         """
@@ -98,7 +99,7 @@ class SpecialSet:
          values: a ``list`` containing values which has the same shape of flattened variables 
             default choice is None, means there is no give nvalues 
         """
-        self.special_set_value = self._generate_dict(values)
+        self.variable_names_value = self._generate_dict(values)
         
 
     def _generate_dict(self, values):
@@ -107,7 +108,7 @@ class SpecialSet:
         """
         value_map = {}
         for i in range(len(values)):
-            value_map[self.special_set[i]] = values[i]
+            value_map[self.variable_names[i]] = values[i]
 
         return value_map
 
@@ -145,7 +146,7 @@ class SpecialSet:
                 else:
                     name1 += ","
 
-            self.special_set.append(name1)
+            self.variable_names.append(name1)
 
         return len(all_index_for_var)
 
@@ -171,7 +172,7 @@ class SpecialSet:
         
 
     
-class MeasurementVariables(SpecialSet):
+class MeasurementVariables(VariablesWithIndices):
     def __init__(self):
         """
         This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
@@ -239,7 +240,7 @@ class MeasurementVariables(SpecialSet):
     
 
 
-class DesignVariables(SpecialSet):
+class DesignVariables(VariablesWithIndices):
     """
     Define design variables 
     """

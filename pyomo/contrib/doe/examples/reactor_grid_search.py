@@ -57,7 +57,7 @@ def main():
                              upper_bounds=[5, 700, 700, 700, 700, 700, 700, 700, 700, 700], 
                              lower_bounds=[1, 300, 300, 300, 300, 300, 300, 300, 300, 300])
     
-    # Design variable ranges as lists 
+    # Design variable ranges as lists
     design_ranges = [list(np.linspace(1,5,3)), list(np.linspace(300,700,3))]
 
     # Design variable names 
@@ -79,7 +79,7 @@ def main():
     all_fim.extract_criteria()
 
     ### 3 design variable example
-    # Define design ranges
+    # Define design ranges, either use linspace or a list to define the list of values
     design_ranges = [list(np.linspace(1,5,2)),  list(np.linspace(300,700,2)), [300,500]]
 
     # Design variable names 
