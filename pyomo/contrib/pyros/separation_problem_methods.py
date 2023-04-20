@@ -819,7 +819,8 @@ def solver_call_separation(
             # errors, etc.)
             config.progress_logger.error(
                 f"Solver {repr(opt)} encountered exception attempting to "
-                f"optimize master problem in iteration {model_data.iteration}"
+                "optimize separation problem in iteration "
+                f"{model_data.iteration}"
             )
             raise
         else:
