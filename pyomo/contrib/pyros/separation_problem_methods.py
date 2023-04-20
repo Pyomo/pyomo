@@ -203,6 +203,7 @@ def get_sep_objective_values(model_data, config, perf_cons):
     """
     Evaluate performance constraint functions at current
     separation solution.
+
     Parameters
     ----------
     model_data : SeparationProblemData
@@ -211,6 +212,7 @@ def get_sep_objective_values(model_data, config, perf_cons):
         PyROS solver settings.
     perf_cons : list of Constraint
         Performance constraints to be evaluated.
+
     Returns
     -------
     violations : ComponentMap
@@ -245,6 +247,7 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
     Get row (constraint) and column (uncertain parameter realization)
     index of PyROS separation problem results list with the
     highest average relative constraint violation.
+
     Parameters
     ----------
     model_data : SeparationProblemData
@@ -255,12 +258,14 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
         Separation problem results for each performance
         constraint (row) and uncertain parameter scenario
         (column).
+
     Returns
     -------
     worst_con_idx, int
         Row (performance constraint) index.
     worst_scenario_idx, int
         Column (uncertain parameter realization) index.
+
     Notes
     -----
     Unless the uncertainty set (``config.uncertainty_set``)
@@ -347,12 +352,14 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
 def solve_separation_problem(model_data, config):
     """
     Solve PyROS separation problems.
+
     Parameters
     ----------
     model_data : SeparationProblemData
         Separation problem data.
     config : ConfigDict
         PyROS solver settings.
+
     Returns
     -------
     solve_data_list : list of list of SeparationResult
@@ -571,6 +578,7 @@ def update_solve_data_violations(
     Also, determine whether the separation solution violates
     the inequality constraint whose body is the model's
     active objective.
+
     Parameters
     ----------
     model_data : SeparationProblemData
@@ -585,12 +593,14 @@ def update_solve_data_violations(
         solution.
         Exactly one of these constraints should be mapped
         to an active Objective in the separation model.
+
     Returns
     -------
     bool
         True if performance constraint mapped to active
         separation model Objective is violated (beyond tolerance),
         False otherwise
+
     Raises
     ------
     ValueError
@@ -754,6 +764,7 @@ def solver_call_separation(
         ):
     """
     Invoke subordinate solver(s) on separation problem.
+
     Parameters
     ----------
     model_data : SeparationProblemData
@@ -769,6 +780,7 @@ def solver_call_separation(
         Performance constraints whose expressions are to be
         evaluated at the separation problem solution
         obtained.
+
     Returns
     -------
     solve_data : SeparationResult
