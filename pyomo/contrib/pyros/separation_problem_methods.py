@@ -876,7 +876,8 @@ def solver_call_separation(
     save_dir = config.subproblem_file_directory
     if save_dir and config.keepfiles:
         objective = str(
-            list(nlp_model.component_data_objects(Objective, active=True))[0].name
+            list(nlp_model.component_data_objects(Objective, active=True))[0]
+            .name
         )
         name = os.path.join(
             save_dir,
