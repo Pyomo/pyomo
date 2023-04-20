@@ -487,12 +487,10 @@ def solve_separation_problem(model_data, config):
                         or (not is_global and all_locally_acceptable)
                     )
                 else:
-                    solve_data = SeparationResult()
-                    exit_separation_loop = solver_call_separation(
+                    solve_data, exit_separation_loop = solver_call_separation(
                         model_data=model_data,
                         config=config,
                         solver=solver,
-                        solve_data=solve_data,
                         is_global=is_global,
                         perf_cons_to_evaluate=perf_constraints,
                     )
@@ -758,7 +756,6 @@ def solver_call_separation(
         model_data,
         config,
         solver,
-        solve_data,
         is_global,
         perf_cons_to_evaluate,
         ):
@@ -773,8 +770,6 @@ def solver_call_separation(
     solver : solver type
         Primary subordinate optimizer with which to solve
         the model.
-    solve_data : SeparationResult
-        Container for separation problem result.
     is_global : bool
         Is separation problem to be solved globally.
     perf_cons_to_evaluate : list of Constraint
@@ -783,7 +778,9 @@ def solver_call_separation(
         obtained.
     Returns
     -------
-    : bool
+    solve_data : SeparationResult
+        Separation problem solve results.
+    termination_ok : bool
         True if separation problem was not solved to an appropriate
         optimality status by any of the solvers available or the
         PyROS elapsed time limit is exceeded, False otherwise.
@@ -800,6 +797,7 @@ def solver_call_separation(
     # === Initialize separation problem; fix first-stage variables
     initialize_separation(model_data, config)
 
+    solve_data = SeparationResult()
     timer = TicTocTimer()
     for opt in backup_solvers:
         orig_setting, custom_setting_present = adjust_solver_time_settings(
@@ -848,7 +846,7 @@ def solver_call_separation(
         if config.time_limit:
             if elapsed >= config.time_limit:
                 solve_data.found_violation = False
-                return True
+                return solve_data, True
 
         # if separation problem solved to optimality, record results
         # and exit
@@ -866,7 +864,7 @@ def solver_call_separation(
                 solve_data,
                 perf_cons_to_evaluate,
             )
-            return False
+            return solve_data, False
 
     # problem not solved successfully, so no violation found
     solve_data.found_violation = False
@@ -901,7 +899,7 @@ def solver_call_separation(
             objective=objective,
             status_dict=solver_status_dict,
         )
-    return True
+    return solve_data, True
 
 
 def discrete_solve(
@@ -914,6 +912,7 @@ def discrete_solve(
     """
     Obtain separation problem solution for each scenario
     of the discrete uncertainty set.
+
     Parameters
     ----------
     model_data : SeparationProblemData
@@ -929,6 +928,7 @@ def discrete_solve(
         Performance constraints whose expressions are to be
         evaluated at the separation problem solution
         obtained.
+
     Returns
     -------
     solve_data_list : list of SeparationResult
@@ -967,12 +967,10 @@ def discrete_solve(
             )
             con.deactivate()
 
-        solve_data = SeparationResult()
-        solver_call_separation(
+        solve_data, _ = solver_call_separation(
             model_data=model_data,
             config=config,
             solver=solver,
-            solve_data=solve_data,
             is_global=is_global,
             perf_cons_to_evaluate=perf_cons_to_evaluate,
         )
