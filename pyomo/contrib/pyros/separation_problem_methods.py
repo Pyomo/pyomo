@@ -7,7 +7,11 @@ from pyomo.core.base import Var, Param
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.pyros.util import ObjectiveType, get_time_from_solver, output_logger
-from pyomo.contrib.pyros.solve_data import SeparationResult
+from pyomo.contrib.pyros.solve_data import (
+    SeparationSolveCallResults,
+    SeparationLoopResults,
+    SeparationResults,
+)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.current import (
     replace_expressions,
@@ -362,26 +366,90 @@ def solve_separation_problem(model_data, config):
 
     Returns
     -------
-    solve_data_list : list of list of SeparationResult
-        Separation problem results.
-    violating_realizations : list of list of float
-        Uncertain parameter realization(s) to be appended to the
-        master problem.
-    violations : list of float
-       Violations of the performance constraints by each of
-       the realizations in `violating_realizations`.
-    is_global : bool
-        Were separation problems solved globally.
-    local_solve_time : float
-        Total time spent by subordinate local solvers on separation
-        problems.
-    global_solve_time : float
-        Total time spent by global solvers on separation problems.
+    pyros.solve_data.SeparationResult
+        Separation problem solve results.
     """
+    run_local = not config.bypass_local_separation
+    run_global = config.bypass_local_separation
 
-    # Timing variables
-    global_solve_time = 0
+    uncertainty_set_is_discrete = (
+        config.uncertainty_set.geometry
+        == Geometry.DISCRETE_SCENARIOS
+    )
+
+    # initialize separation solve times
     local_solve_time = 0
+    global_solve_time = 0
+
+    if run_local:
+        separation_solve_result = perform_separation_loop(
+            model_data=model_data,
+            config=config,
+            solve_globally=False,
+        )
+        run_global = not (
+            separation_solve_result.found_violation
+            or uncertainty_set_is_discrete
+            or separation_solve_result.subsolver_error
+            or separation_solve_result.time_out
+            or config.bypass_global_separation
+        )
+        local_solve_time = separation_solve_result.solve_time
+
+    if run_global:
+        separation_solve_result = perform_separation_loop(
+            model_data=model_data,
+            config=config,
+            solve_globally=True,
+        )
+        global_solve_time = separation_solve_result.solve_time
+
+    robustness_certified = (
+        not separation_solve_result.found_violation
+        and (
+            run_global
+            or config.bypass_global_separation
+            or uncertainty_set_is_discrete
+        )
+        and not separation_solve_result.subsolver_error
+        and not separation_solve_result.time_out
+    )
+
+    return SeparationResults(
+        solve_data_list=separation_solve_result.solve_data_list,
+        violating_param_realization=(
+            separation_solve_result.violating_param_realization
+        ),
+        violations=separation_solve_result.violations,
+        local_solve_time=local_solve_time,
+        global_solve_time=global_solve_time,
+        subsolver_error=separation_solve_result.subsolver_error,
+        time_out=separation_solve_result.time_out,
+        solved_globally=separation_solve_result.solved_globally,
+        robustness_certified=robustness_certified,
+    )
+
+
+def perform_separation_loop(model_data, config, solve_globally):
+    """
+    Loop through, and solve, PyROS separation problems to
+    desired optimality condition.
+
+    Parameters
+    ----------
+    model_data : SeparationProblemData
+        Separation problem data.
+    config : ConfigDict
+        PyROS solver settings.
+    solve_globally : bool
+        True to solve separation problems globally,
+        False to solve separation problems locally.
+
+    Returns
+    -------
+    pyros.solve_data.SeparationLoopResults
+        Separation problem solve results.
+    """
 
     # List of objective functions
     objectives_map = model_data.separation_model.util.map_obj_to_constr
@@ -390,23 +458,25 @@ def solve_separation_problem(model_data, config):
         .separation_model.util.map_new_constraint_list_to_original_con
     )
 
-    # Specify default separation priority for performance constraints
-    # not included in the priority dict
-    # (i.e. performance constraints added from standardization routine
-    #  or for which user did not specify priority)
+    # TODO: move this to pre-processing
+    # group performance constraints by priority
+    separation_priority_groups = dict()
     config_sep_priority_dict = config.separation_priority_order
-    actual_sep_priority_dict = ComponentMap()
     for perf_con in model_data.separation_model.util.performance_constraints:
-        actual_sep_priority_dict[perf_con] = config_sep_priority_dict.get(
-            perf_con.name,
-            0,
+        # by default, priority set to 0
+        priority = config_sep_priority_dict.get(perf_con.name, 0)
+        cons_with_same_priority = separation_priority_groups.setdefault(
+            priority,
+            [],
         )
+        cons_with_same_priority.append(perf_con)
 
-    # Group objectives (performance constraints) by separation priority
-    sorted_unique_priorities = sorted(
-        list(set(actual_sep_priority_dict.values())),
-        reverse=True,
-    )
+    # sort separation priority groups
+    sorted_priority_groups = {
+        priority: perf_cons
+        for priority, perf_cons in
+        sorted(separation_priority_groups.items(), reverse=True)
+    }
 
     # get deterministic model constraints (include epigraph)
     set_of_deterministic_constraints = (
@@ -418,157 +488,132 @@ def solve_separation_problem(model_data, config):
         )
 
     uncertainty_set_is_discrete = (
-        config.uncertainty_set.geometry
-        == Geometry.DISCRETE_SCENARIOS
+        config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
     )
 
-    # Determine whether to solve separation problems globally as well
-    if config.bypass_global_separation:
-        separation_cycle = [False]
-    elif config.bypass_local_separation:
-        separation_cycle = [True]
-    else:
-        separation_cycle = [False, True]
+    acceptable_terminations = (
+        globally_acceptable if solve_globally else locally_acceptable
+    )
 
-    for is_global in separation_cycle:
-        solver = config.global_solver if is_global else config.local_solver
-        solve_data_list = []
-
-        for val in sorted_unique_priorities:
-            # Descending ordered by value
-            # The list of performance constraints with this priority
-            perf_constraints = [
-                constr_name for constr_name, priority
-                in actual_sep_priority_dict.items()
-                if priority == val
-            ]
-
-            # evaluate performance constraint functions at master
-            #   solution block 0.
-            #   Needed for normalizing separation objective values
-            model_data.nom_perf_con_violations = {}
-            for perf_con in perf_constraints:
-                if perf_con in set_of_deterministic_constraints:
-                    nom_constraint = perf_con
-                else:
-                    nom_constraint = constraint_map_to_master[perf_con]
-                nom_violation = value(
-                    model_data.master_nominal_scenario.find_component(
-                        nom_constraint
-                    )
+    solve_data_list = []
+    solve_time = 0
+    for priority, perf_constraints in sorted_priority_groups.items():
+        # evaluate performance constraint functions at master
+        #   solution block (0, 0) (nominal block).
+        #   Needed for normalizing separation objective values
+        model_data.nom_perf_con_violations = {}
+        for perf_con in perf_constraints:
+            if perf_con in set_of_deterministic_constraints:
+                nom_constraint = perf_con
+            else:
+                nom_constraint = constraint_map_to_master[perf_con]
+            nom_violation = value(
+                model_data.master_nominal_scenario.find_component(
+                    nom_constraint
                 )
-                model_data.nom_perf_con_violations[perf_con] = nom_violation
+            )
+            model_data.nom_perf_con_violations[perf_con] = nom_violation
 
-            # now solve separation problems
-            for perf_con in perf_constraints:
-                # config.progress_logger.info(
-                #     f"Separating constraint {perf_con.name}"
-                # )
+        # now solve separation problems
+        for perf_con in perf_constraints:
+            # config.progress_logger.info(
+            #     f"Separating constraint {perf_con.name}"
+            # )
 
-                # retrieve and activate corresponding separation objective
-                separation_obj = objectives_map[perf_con]
-                separation_obj.activate()
+            # retrieve and activate corresponding separation objective
+            separation_obj = objectives_map[perf_con]
+            separation_obj.activate()
 
-                if uncertainty_set_is_discrete:
-                    solve_data_list.append(
-                        discrete_solve(
-                            model_data=model_data,
-                            config=config,
-                            solver=solver,
-                            is_global=is_global,
-                            perf_cons_to_evaluate=perf_constraints,
-                        )
-                    )
-                    all_globally_acceptable = all(
-                        s.termination_condition in globally_acceptable
-                        for sep_soln_list in solve_data_list
-                        for s in sep_soln_list
-                    )
-                    all_locally_acceptable = all(
-                        s.termination_condition in locally_acceptable
-                        for sep_soln_list in solve_data_list
-                        for s in sep_soln_list
-                    )
-                    exit_separation_loop = not (
-                        all_globally_acceptable
-                        or (not is_global and all_locally_acceptable)
-                    )
-                else:
-                    solve_data, exit_separation_loop = solver_call_separation(
+            # solve separation problem
+            if uncertainty_set_is_discrete:
+                solve_call_results_list = discrete_solve(
+                    model_data=model_data,
+                    config=config,
+                    solve_globally=solve_globally,
+                    perf_cons_to_evaluate=perf_constraints,
+                )
+            else:
+                solve_call_results_list = [
+                    solver_call_separation(
                         model_data=model_data,
                         config=config,
-                        solver=solver,
-                        is_global=is_global,
+                        solve_globally=solve_globally,
                         perf_cons_to_evaluate=perf_constraints,
                     )
-                    solve_data_list.append([solve_data])
+                ]
 
-                # === Keep track of total solve times
-                solve_time_increment = sum(
-                    get_time_from_solver(sep_res.results)
-                    for sep_res in solve_data_list[-1]
+            solve_data_list.append(solve_call_results_list)
+
+            # increment solve time accumulator
+            solve_time_increment = sum(
+                get_time_from_solver(solve_res)
+                for sep_res in solve_call_results_list
+                for solve_res in sep_res.results_list
+            )
+            solve_time += solve_time_increment
+
+            # Terminate due to timeout or nonacceptable solve status
+            time_out = any(
+                scall_res.time_out
+                for scall_res in solve_call_results_list
+            )
+            subsolver_error = any(
+                not scall_res.termination_acceptable(acceptable_terminations)
+                for scall_res in solve_call_results_list
+            )
+            if time_out or subsolver_error:
+                return SeparationLoopResults(
+                    solve_data_list=solve_data_list,
+                    violating_param_realization=None,
+                    violations=None,
+                    solve_time=solve_time,
+                    subsolver_error=subsolver_error,
+                    time_out=time_out,
+                    solved_globally=solve_globally,
                 )
 
-                if is_global:
-                    global_solve_time += solve_time_increment
-                else:
-                    local_solve_time += solve_time_increment
+            separation_obj.deactivate()
 
-                # Terminate due to timeout or nonacceptable solve
-                #   status
-                if exit_separation_loop:
-                    return (
-                        solve_data_list,
-                        [],
-                        [],
-                        is_global,
-                        local_solve_time,
-                        global_solve_time,
-                    )
-                separation_obj.deactivate()
-
-        # There may be multiple separation problem solutions
-        # for which a violation was found.
-        # Choose just one for updating next master
-        perf_con_idx, scenario_idx = get_index_of_max_violation(
-            model_data=model_data,
-            config=config,
-            solve_data_list=solve_data_list,
+    # There may be multiple separation problem solutions
+    # for which a violation was found.
+    # Choose just one for updating next master
+    perf_con_idx, scenario_idx = get_index_of_max_violation(
+        model_data=model_data,
+        config=config,
+        solve_data_list=solve_data_list,
+    )
+    if (perf_con_idx, scenario_idx) != (None, None):
+        violating_param_realization = list(
+            solve_data_list[perf_con_idx][scenario_idx]
+            .violating_param_realization
         )
+        violations = (
+            solve_data_list[perf_con_idx][scenario_idx]
+            .list_of_scaled_violations
+        )
+        # violated_con_name = list(objectives_map.keys())[perf_con_idx]
+        # config.progress_logger.info(
+        #     f"Violation found for constraint {violated_con_name} "
+        #     f"under realization {violating_param_realization}"
+        # )
+    else:  # no performance constraints were violated
+        violating_param_realization = None
+        violations = None
 
-        if (perf_con_idx, scenario_idx) != (None, None):
-            violating_realizations = list(
-                solve_data_list[perf_con_idx][scenario_idx]
-                .violating_param_realization
-            )
-            violations = (
-                solve_data_list[perf_con_idx][scenario_idx]
-                .list_of_scaled_violations
-            )
-            # violated_con_name = list(objectives_map.keys())[perf_con_idx]
-            # config.progress_logger.info(
-            #     f"Violation found for constraint {violated_con_name} "
-            #     f"under realization {violating_realizations}"
-            # )
-            break
-        else:  # no performance constraints were violated
-            violating_realizations = []
-            violations = []
-
-    return (
-        solve_data_list,
-        violating_realizations,
-        violations,
-        is_global,
-        local_solve_time,
-        global_solve_time,
+    return SeparationLoopResults(
+        solve_data_list=solve_data_list,
+        violating_param_realization=violating_param_realization,
+        violations=violations,
+        solve_time=solve_time,
+        subsolver_error=False,
+        time_out=False,
+        solved_globally=solve_globally,
     )
 
 
 def update_solve_data_violations(
         model_data,
         config,
-        solve_data,
         perf_cons_to_evaluate,
         ):
     """
@@ -585,8 +630,6 @@ def update_solve_data_violations(
         Object containing the separation model.
     config : ConfigDict
         PyROS solver settings.
-    solve_data : SeparationResult
-        Result for most recent separation problem.
     perf_cons_to_evaluate : list of Constraint
         Performance constraints whose expressions are to
         be evaluated at the current separation problem
@@ -596,7 +639,13 @@ def update_solve_data_violations(
 
     Returns
     -------
-    bool
+    violating_param_realization : list of float
+        Uncertain parameter realization corresponding to maximum
+        constraint violation.
+    scaled_violations : list of float
+        List of values of performance constraint functions at
+        separation problem solution.
+    constraint_violated : bool
         True if performance constraint mapped to active
         separation model Objective is violated (beyond tolerance),
         False otherwise
@@ -623,7 +672,7 @@ def update_solve_data_violations(
     active_perf_con, active_obj = active_perf_cons_and_objs[0]
 
     # parameter realization for current separation problem solution
-    solve_data.violating_param_realization = list(
+    violating_param_realization = list(
         param.value for param in
         model_data.separation_model.util.uncertain_param_vars.values()
     )
@@ -648,9 +697,15 @@ def update_solve_data_violations(
         if perf_con is active_perf_con:
             scaled_active_obj_violation = scaled_violation
 
-    solve_data.list_of_scaled_violations = scaled_violations
+    constraint_violated = (
+        scaled_active_obj_violation > config.robust_feasibility_tolerance
+    )
 
-    return scaled_active_obj_violation > config.robust_feasibility_tolerance
+    return (
+        violating_param_realization,
+        scaled_violations,
+        constraint_violated,
+    )
 
 
 def initialize_separation(model_data, config):
@@ -758,8 +813,7 @@ globally_acceptable = {tc.optimal, tc.globallyOptimal}
 def solver_call_separation(
         model_data,
         config,
-        solver,
-        is_global,
+        solve_globally,
         perf_cons_to_evaluate,
         ):
     """
@@ -771,11 +825,9 @@ def solver_call_separation(
         Separation problem data.
     config : ConfigDict
         PyROS solver settings.
-    solver : solver type
-        Primary subordinate optimizer with which to solve
-        the model.
-    is_global : bool
-        Is separation problem to be solved globally.
+    solve_globally : bool
+        True to solve separation problems globally,
+        False to solve locally.
     perf_cons_to_evaluate : list of Constraint
         Performance constraints whose expressions are to be
         evaluated at the separation problem solution
@@ -783,28 +835,30 @@ def solver_call_separation(
 
     Returns
     -------
-    solve_data : SeparationResult
-        Separation problem solve results.
-    termination_ok : bool
-        True if separation problem was not solved to an appropriate
-        optimality status by any of the solvers available or the
-        PyROS elapsed time limit is exceeded, False otherwise.
+    solve_call_results : pyros.solve_data.SeparationSolveCallResults
+        Solve results for separation problem of interest.
     """
-    if is_global:
-        backup_solvers = deepcopy(config.backup_global_solvers)
-    else:
-        backup_solvers = deepcopy(config.backup_local_solvers)
-    backup_solvers.insert(0, solver)
 
+    if solve_globally:
+        solvers = [config.global_solver] + config.backup_global_solvers
+    else:
+        solvers = [config.local_solver] + config.backup_local_solvers
+
+    # keep track of solver statuses for output logging
     solver_status_dict = {}
     nlp_model = model_data.separation_model
 
     # === Initialize separation problem; fix first-stage variables
     initialize_separation(model_data, config)
 
-    solve_data = SeparationResult()
+    solve_call_results = SeparationSolveCallResults(
+        solved_globally=solve_globally,
+        time_out=False,
+        results_list=[],
+        found_violation=False,
+    )
     timer = TicTocTimer()
-    for opt in backup_solvers:
+    for opt in solvers:
         orig_setting, custom_setting_present = adjust_solver_time_settings(
             model_data.timing,
             opt,
@@ -844,36 +898,35 @@ def solver_call_separation(
 
         # record termination condition for this particular solver
         solver_status_dict[str(opt)] = results.solver.termination_condition
-        solve_data.termination_condition = results.solver.termination_condition
-        solve_data.results = results
+        solve_call_results.results_list.append(results)
 
         # has PyROS time limit been reached?
         elapsed = get_main_elapsed_time(model_data.timing)
         if config.time_limit:
             if elapsed >= config.time_limit:
-                solve_data.found_violation = False
-                return solve_data, True
+                solve_call_results.time_out = True
+                return solve_call_results
 
         # if separation problem solved to optimality, record results
         # and exit
         acceptable_conditions = (
-            globally_acceptable if is_global else locally_acceptable
+            globally_acceptable if solve_globally else locally_acceptable
         )
-        optimal_termination = (
-            solve_data.termination_condition in acceptable_conditions
+        optimal_termination = solve_call_results.termination_acceptable(
+            acceptable_conditions,
         )
         if optimal_termination:
             nlp_model.solutions.load_from(results)
-            solve_data.found_violation = update_solve_data_violations(
+            (
+                solve_call_results.violating_param_realization,
+                solve_call_results.list_of_scaled_violations,
+                solve_call_results.found_violation,
+            ) = update_solve_data_violations(
                 model_data,
                 config,
-                solve_data,
                 perf_cons_to_evaluate,
             )
-            return solve_data, False
-
-    # problem not solved successfully, so no violation found
-    solve_data.found_violation = False
+            return solve_call_results
 
     # All subordinate solvers failed to optimize model to appropriate
     # termination condition. PyROS will terminate with subsolver
@@ -906,14 +959,14 @@ def solver_call_separation(
             objective=objective,
             status_dict=solver_status_dict,
         )
-    return solve_data, True
+
+    return solve_call_results
 
 
 def discrete_solve(
         model_data,
         config,
-        solver,
-        is_global,
+        solve_globally,
         perf_cons_to_evaluate,
         ):
     """
@@ -929,7 +982,7 @@ def discrete_solve(
     solver : solver type
         Primary subordinate optimizer with which to solve
         the model.
-    is_global : bool
+    solve_globally : bool
         Is separation problem to be solved globally.
     perf_cons_to_evaluate : list of Constraint
         Performance constraints whose expressions are to be
@@ -974,11 +1027,10 @@ def discrete_solve(
             )
             con.deactivate()
 
-        solve_data, _ = solver_call_separation(
+        solve_data = solver_call_separation(
             model_data=model_data,
             config=config,
-            solver=solver,
-            is_global=is_global,
+            solve_globally=solve_globally,
             perf_cons_to_evaluate=perf_cons_to_evaluate,
         )
         solve_data_list.append(solve_data)

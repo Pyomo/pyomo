@@ -335,82 +335,57 @@ def ROSolver_iterative_solve(model_data, config):
 
         separation_data.master_model = master_data.master_model
 
-        (
-            separation_solns,
-            violating_realizations,
-            constr_violations,
-            is_global,
-            local_sep_time,
-            global_sep_time,
-        ) = separation_problem_methods.solve_separation_problem(
-            model_data=separation_data, config=config
+        separation_results = (
+            separation_problem_methods.solve_separation_problem(
+                model_data=separation_data,
+                config=config,
+            )
         )
 
-        for sep_soln_list in separation_solns:
-            for s in sep_soln_list:
+        for sep_soln_list in separation_results.solve_data_list:
+            for solver_call_result in sep_soln_list:
                 separation_data.separation_problem_subsolver_statuses.append(
-                    s.termination_condition
+                    solver_call_result
+                    .results_list[-1]
+                    .solver
+                    .termination_condition
                 )
 
-        if is_global:
+        if separation_results.solved_globally:
             separation_data.total_global_separation_solves += 1
 
-        timing_data.total_separation_local_time += local_sep_time
-        timing_data.total_separation_global_time += global_sep_time
+        # make updates based on separation results
+        timing_data.total_separation_local_time += (
+            separation_results.local_solve_time
+        )
+        timing_data.total_separation_global_time += (
+            separation_results.global_solve_time
+        )
+        separation_data.constraint_violations.append(
+            separation_results.violations
+        )
+        separation_data.points_separated = (
+            separation_results.violating_param_realization
+        )
 
-        separation_data.constraint_violations.append(constr_violations)
-
-        if not any(
-            s.found_violation
-            for solve_data_list in separation_solns
-            for s in solve_data_list
-        ):
-            separation_data.points_separated = []
-        else:
-            separation_data.points_separated = violating_realizations
-
-        # === Check if time limit reached
+        # terminate on time limit
         elapsed = get_main_elapsed_time(model_data.timing)
-        if config.time_limit:
-            if elapsed >= config.time_limit:
-                output_logger(config=config, time_out=True, elapsed=elapsed)
-                termination_condition = pyrosTerminationCondition.time_out
-                update_grcs_solve_data(
-                    pyros_soln=model_data,
-                    k=k,
-                    term_cond=termination_condition,
-                    nominal_data=nominal_data,
-                    timing_data=timing_data,
-                    separation_data=separation_data,
-                    master_soln=master_soln,
-                )
-                return model_data, separation_solns
+        if separation_results.time_out:
+            output_logger(config=config, time_out=True, elapsed=elapsed)
+            termination_condition = pyrosTerminationCondition.time_out
+            update_grcs_solve_data(
+                pyros_soln=model_data,
+                k=k,
+                term_cond=termination_condition,
+                nominal_data=nominal_data,
+                timing_data=timing_data,
+                separation_data=separation_data,
+                master_soln=master_soln,
+            )
+            return model_data, separation_results.solve_data_list
 
-        # === Check if we exit due to solver returning unsatisfactory statuses (not in permitted_termination_conditions)
-        local_solve_term_conditions = {
-            TerminationCondition.optimal,
-            TerminationCondition.locallyOptimal,
-            TerminationCondition.globallyOptimal,
-        }
-        global_solve_term_conditions = {
-            TerminationCondition.optimal,
-            TerminationCondition.globallyOptimal,
-        }
-        if (
-            is_global
-            and any(
-                (s.termination_condition not in global_solve_term_conditions)
-                for sep_soln_list in separation_solns
-                for s in sep_soln_list
-            )
-        ) or (
-            not is_global
-            and any(
-                (s.termination_condition not in local_solve_term_conditions)
-                for sep_soln_list in separation_solns
-                for s in sep_soln_list
-            )
-        ):
+        # terminate on separation subsolver error
+        if separation_results.subsolver_error:
             termination_condition = pyrosTerminationCondition.subsolver_error
             update_grcs_solve_data(
                 pyros_soln=model_data,
@@ -421,22 +396,20 @@ def ROSolver_iterative_solve(model_data, config):
                 separation_data=separation_data,
                 master_soln=master_soln,
             )
-            return model_data, separation_solns
+            return model_data, separation_results.solve_data_list
 
         # === Check if we terminate due to robust optimality or feasibility,
         #     or in the event of bypassing global separation, no violations
-        if not any(
-            s.found_violation
-            for sep_soln_list in separation_solns
-            for s in sep_soln_list
-        ) and (is_global or config.bypass_global_separation):
+        if separation_results.robustness_certified:
             output_logger(
-                config=config, bypass_global_separation=config.bypass_global_separation
+                config=config,
+                bypass_global_separation=config.bypass_global_separation,
             )
-            if (
+            robust_optimal = (
                 config.solve_master_globally
                 and config.objective_focus is ObjectiveType.worst_case
-            ):
+            )
+            if robust_optimal:
                 output_logger(config=config, robust_optimal=True)
                 termination_condition = pyrosTerminationCondition.robust_optimal
             else:
@@ -451,16 +424,20 @@ def ROSolver_iterative_solve(model_data, config):
                 separation_data=separation_data,
                 master_soln=master_soln,
             )
-            return model_data, separation_solns
+            return model_data, separation_results.solve_data_list
 
         # === Add block to master at violation
         master_problem_methods.add_scenario_to_master(
-            master_data, violating_realizations
+            model_data=master_data,
+            violations=separation_results.violating_param_realization,
         )
-        separation_data.points_added_to_master.append(violating_realizations)
+        separation_data.points_added_to_master.append(
+            separation_results.violating_param_realization
+        )
 
         k += 1
 
+    # Iteration limit reached
     output_logger(config=config, max_iter=True)
     update_grcs_solve_data(
         pyros_soln=model_data,
@@ -471,6 +448,4 @@ def ROSolver_iterative_solve(model_data, config):
         separation_data=separation_data,
         master_soln=master_soln,
     )
-
-    # === In this case we still return the final solution objects for the last iteration
-    return model_data, separation_solns
+    return model_data, separation_results.solve_data_list
