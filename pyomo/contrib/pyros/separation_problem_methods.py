@@ -934,25 +934,30 @@ def discrete_solve(
     solve_data_list : list of SeparationResult
         Separation problem solve results for each scenario.
     """
-    # Constraint are grouped by dim(uncertain_param)
-    # groups for each scenario in D
-    solve_data_list = []
-
-    # === Remove (skip over) already accounted for violations
-    chunk_size = len(model_data.separation_model.util.uncertain_param_vars)
+    # Deactivate uncertainty set constraints
     conlist = model_data.separation_model.util.uncertainty_set_constraint
     _constraints = list(conlist.values())
-    constraints_to_skip = ComponentSet()
     conlist.deactivate()
 
+    # constraints are clustered by scenario into groups of
+    # size equal to the dimension of the set
+    chunk_size = len(model_data.separation_model.util.uncertain_param_vars)
+
+    # ensure scenarios already in master are skipped from separation
+    constraints_to_skip = ComponentSet()
     for pnt in model_data.points_added_to_master:
         _idx = config.uncertainty_set.scenarios.index(tuple(pnt))
-        skip_index_list = list(range(chunk_size * _idx, chunk_size * _idx + chunk_size))
+        skip_index_list = list(
+            range(chunk_size * _idx, chunk_size * _idx + chunk_size)
+        )
         for _index in range(len(_constraints)):
-            if _index  in skip_index_list:
+            if _index in skip_index_list:
                 constraints_to_skip.add(_constraints[_index])
     constraints = list(c for c in _constraints if c not in constraints_to_skip)
 
+    # solve separation problem for each parameter realization
+    # (i.e. ea. scenario) not already added to master
+    solve_data_list = []
     for i in range(0, len(constraints), chunk_size):
         chunk = list(constraints[i:i + chunk_size])
         for idx, con in enumerate(chunk):
@@ -961,6 +966,7 @@ def discrete_solve(
                 con.lower,
             )
             con.deactivate()
+
         solve_data = SeparationResult()
         solver_call_separation(
             model_data=model_data,
