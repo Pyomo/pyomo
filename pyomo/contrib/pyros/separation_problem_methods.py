@@ -558,13 +558,6 @@ def solve_separation_problem(model_data, config):
     )
 
 
-def get_absolute_tol(model_data, config):
-    nom_value = model_data.master_nominal_scenario_value
-    denom = float(max(1, abs(nom_value)))
-    tol = config.robust_feasibility_tolerance
-    return denom * tol, nom_value
-
-
 def update_solve_data_violations(
         model_data,
         config,
