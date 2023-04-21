@@ -33,19 +33,20 @@ class VariablesWithIndices:
         lists of Pyomo variable names with an arbitrary number of indices. 
         """
         self.variable_names = []
+        self.variable_names_value = {}
+        self.lower_bounds = {}
+        self.upper_bounds = {}
 
     def set_variable_name_list(self, self_define_res):
         """
-        Used for user to provide defined string names
+        Specify variable names with its full name. 
 
         Parameter
         ---------
         self_define_res: a ``list`` of ``string``, containing the variable names with indexs, 
             for e.g. "C['CA', 23, 0]".
         """
-        self.variable_names = self_define_res
-
-        return self.variable_names
+        self.variable_names.extend(self_define_res)
 
     def add_variables(self, var_name, indices=None, time_index_position=None, values=None, 
                      lower_bounds=None, upper_bounds=None):
@@ -70,47 +71,46 @@ class VariablesWithIndices:
         if not defining values, return a set of variable names 
         if defining values, return a dictionary of variable names and its value 
         """
-        num_indices = self._add_variables(var_name, indices=indices, time_index_position=time_index_position)
+        added_names = self._add_variables(var_name, indices=indices, time_index_position=time_index_position)
 
-        self._names(num_indices, indices, time_index_position, values, lower_bounds, upper_bounds)
+        self._check_valid_input(len(added_names), var_name, indices, time_index_position, values, lower_bounds, upper_bounds)
 
         if values:
             # this dictionary keys are special set, values are its value
-            self.variable_names_value = self._generate_dict(values)
+            self._generate_dict(self.variable_names_value, added_names, values)
 
         if lower_bounds:
             if type(lower_bounds) in [int, float]:
-                lower_bounds = [lower_bounds]*len(self.variable_names)
-            self.lower_bounds = self._generate_dict(lower_bounds)
+                lower_bounds = [lower_bounds]*len(added_names)
+            self._generate_dict(self.lower_bounds, added_names, lower_bounds)
         
         if upper_bounds:
             if type(upper_bounds) in [int, float]:
-                upper_bounds = [upper_bounds]*len(self.variable_names)
-            self.upper_bounds = self._generate_dict(upper_bounds)
+                upper_bounds = [upper_bounds]*len(added_names)
+            self._generate_dict(self.upper_bounds, added_names, upper_bounds)
 
-        return self.variable_names
-    
+        return added_names
+
+        
     def update_values(self, values):
         """
-        Used for updating values
+        Update values of variables. Used for defining values for design variables of different experiments.
 
         Parameters
         ---------
          values: a ``list`` containing values which has the same shape of flattened variables 
             default choice is None, means there is no give nvalues 
         """
-        self.variable_names_value = self._generate_dict(values)
+        self._generate_dict(self.variable_names_value, self.variable_names, values)
         
 
-    def _generate_dict(self, values):
+    def _generate_dict(self, dict_name, keys, values):
         """
-        Given a list of values, return a dictionary, keys are special set names. 
+        Given a list of keys and values, add them to a dictionary. 
         """
-        value_map = {}
+        print(keys, values)
         for i in range(len(values)):
-            value_map[self.variable_names[i]] = values[i]
-
-        return value_map
+            dict_name.update({keys[i]: values[i]})
 
 
     def _add_variables(self, var_name, indices=None, time_index_position=None):
@@ -132,30 +132,38 @@ class VariablesWithIndices:
             for index_pointer in indices: 
                 all_index_list.append(indices[index_pointer])
 
-        # all idnex list for one variable, such as ["CA", 10, 1]
-        all_index_for_var = list(itertools.product(*all_index_list))
+        # all index list for one variable, such as ["CA", 10, 1]
+        # exhaustively enumerate over the full product of indices. For e.g., 
+        # {0:["CA", "CB", "CC"], 1: [1,2,3]} 
+        # becomes ["CA", 1], ["CA", 2], ..., ["CC", 2], ["CC", 3]
+        all_variable_indices = list(itertools.product(*all_index_list))
 
-        for lst in all_index_for_var:
-            name1 = var_name+"["
-            for i, idx in enumerate(lst):
-                name1 += str(idx)
+        # list store all names added this time 
+        added_names = []
+        # iterate over index combinations ["CA", 1], ["CA", 2], ..., ["CC", 2], ["CC", 3]
+        for index_instance in all_variable_indices:
+            var_name_index_string = var_name+"["
+            for i, idx in enumerate(index_instance):
+                var_name_index_string += str(idx)
 
                 # if i is the last index, close the []. if not, add a "," for the next index. 
-                if i==len(lst)-1:
-                    name1 += "]"
+                if i==len(index_instance)-1:
+                    var_name_index_string += "]"
                 else:
-                    name1 += ","
+                    var_name_index_string += ","
 
-            self.variable_names.append(name1)
+            self.variable_names.append(var_name_index_string)
+            added_names.append(var_name_index_string)
 
-        return len(all_index_for_var)
+        return added_names
 
 
-    def _names(self, len_indices, indices, time_index_position, values, lower_bounds, upper_bounds):
+    def _check_valid_input(self, len_indices, var_name, indices, time_index_position, values, lower_bounds, upper_bounds):
         """
         Check if the measurement information provided are valid to use. 
         """
-        
+        assert type(var_name) is str, "var_name should be a string."
+
         if time_index_position not in indices:
             raise ValueError("time index cannot be found in indices.")
 
@@ -178,17 +186,28 @@ class MeasurementVariables(VariablesWithIndices):
         This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
         """
         super().__init__()
+        self.variance = {}
 
-    def specify(self, self_define_res):
+    def set_variable_name_list(self, self_define_res, variance=1):
         """
-        User can pass already defined measurement names here
+        Specify variable names with its full name. 
+
+        Parameter
+        ---------
+        self_define_res: a ``list`` of ``string``, containing the variable names with indexs, 
+            for e.g. "C['CA', 23, 0]".
+        variance: a ``list`` of scalar numbers , which is the variance for this measurement.
         """
-        self.name = super().specify(self_define_res)
+        super().specify(self_define_res)
+        self.name = self.variable_names
 
-        # generate default variance
-        self._use_identity_variance()
+        # add variance 
+        if variance is not list: 
+            variance = [variance]*len(self_define_res)
 
-    def add_variables(self, var_name, indices=None, time_index_position=None):
+        super()._generate_dict(self.variance, self_define_res, variance)
+
+    def add_variables(self, var_name, indices=None, time_index_position=None, variance=1):
         """
         Parameters 
         -----------
@@ -198,23 +217,16 @@ class MeasurementVariables(VariablesWithIndices):
             for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}. 
         time_index_position: an integer indicates which index is the time index  
             for e.g., 1 is the time index position in the indices example. 
+        variance: a scalar number, which is the variance for this measurement.  
         """
-        self.name =  super().add_variables(var_name=var_name, indices=indices, time_index_position=time_index_position)
+        added_names = super().add_variables(var_name=var_name, indices=indices, time_index_position=time_index_position)
 
-        # generate default variance
-        self._use_identity_variance()
+        self.name = self.variable_names
 
-    def update_variance(self, variance):
-        """If not using default variance 
-
-        Parameters 
-        ----------
-        variance: 
-            a ``dict``, keys are measurement variable names, values are its variance (a scalar number)
-            For e.g., for the kinetics example, it should be {'CA[0]':10, 'CA[0.125]': 1, ...., 'CC[1]': 2}. 
-            If given None, the default is {'CA[0]':1, 'CA[0.125]': 1, ...., 'CC[1]': 1}
-        """
-        self.variance = variance 
+        # store variance
+        if variance is not list: 
+            variance = [variance]*len(added_names)
+        super()._generate_dict(self.variance, added_names, variance)
 
     def check_subset(self, subset_class):
         """
@@ -228,14 +240,7 @@ class MeasurementVariables(VariablesWithIndices):
             if nam not in self.name:
                 raise ValueError("Measurement not in the set: ", nam)
         
-        return True
-        
-    def _use_identity_variance(self):
-        """Generate the variance dictionary. 
-        """
-        self.variance = {}
-        for name in self.name:
-            self.variance[name] = 1     
+        return True     
 
     
 
@@ -247,9 +252,17 @@ class DesignVariables(VariablesWithIndices):
     def __init__(self):
         super().__init__()
 
-    def specify(self, self_define_res):
+    def set_variable_name_list(self, self_define_res):
+        """
+        Specify variable names with its full name. 
 
-        self.name = super().specify(self_define_res)
+        Parameter
+        ---------
+        self_define_res: a ``list`` of ``string``, containing the variable names with indexs, 
+            for e.g. "C['CA', 23, 0]".
+        """
+        super().specify(self_define_res)
+        self.name = self.variable_names
 
     def add_variables(self, var_name, indices=None, time_index_position=None, values=None, 
                      lower_bounds = None, upper_bounds = None):
@@ -268,9 +281,10 @@ class DesignVariables(VariablesWithIndices):
         lower_bounds: a ``list `` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
         upper_bounds: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
         """
-        self.name =  super().add_variables(var_name=var_name, indices=indices, time_index_position=time_index_position, 
+        super().add_variables(var_name=var_name, indices=indices, time_index_position=time_index_position, 
                                            values=values,  lower_bounds = lower_bounds, upper_bounds = upper_bounds)
-                            
+
+        self.name = self.variable_names                    
 
     def update_values(self, values):
         return super().update_values(values)

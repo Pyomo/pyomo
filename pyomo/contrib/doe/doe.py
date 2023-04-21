@@ -38,9 +38,9 @@ import logging
 from enum import Enum
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
-#from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_lib
+#from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_step
 #from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-from scenario import ScenarioGenerator,finite_difference_lib
+from scenario import ScenarioGenerator,finite_difference_step
 from result import FisherResults, GridSearchResult
 
 class calculation_mode(Enum):
@@ -138,11 +138,7 @@ class DesignOfExperiments:
         
     def _check_inputs(self):
         """
-        Check if inputs are consistent
-
-        Parameters
-        ----------
-        check_mode: check FIM calculation mode
+        Check if the prior FIM is N*N matrix, where N is the number of parameter
         """
         if type(self.prior_FIM)!=type(None):
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
@@ -153,7 +149,7 @@ class DesignOfExperiments:
     def stochastic_program(self,  if_optimize=True, objective_option=objective_lib.det,
                      scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-7, L_initial=None,
                      jac_initial=None, fim_initial=None,
-                     formula=finite_difference_lib.central, step=0.001, tee_opt=True):
+                     formula=finite_difference_step.central, step=0.001, tee_opt=True):
         """
         Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
@@ -167,7 +163,9 @@ class DesignOfExperiments:
         if_optimize:
             if true, continue to do optimization. else, just run square problem with given design variable values
         objective_option:
-            supporting maximizing the 'det' determinant or the 'trace' trace of the FIM in the objective_lib class
+            choose from the objective_lib enum,
+            maximizing the determinant with objective_lib.det,
+            or the trace of the FIM with objective_lib.trace
         scale_nominal_param_value:
             if True, the parameters are scaled by its own nominal value in param_init
         scale_constant_value:
@@ -187,7 +185,7 @@ class DesignOfExperiments:
         fim_initial:
             a matrix used to initialize FIM matrix
         formula:
-            choose from finite_difference_lib.central, .forward, or .backward
+            choose from the Enum finite_difference_step.central, .forward, or .backward
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
@@ -198,7 +196,7 @@ class DesignOfExperiments:
 
         """
         # store inputs in object
-        self.design_values = self.design_vars.special_set_value
+        self.design_values = self.design_vars.variable_names_value
         self.optimize = if_optimize
         self.objective_option = objective_option
         self.scale_nominal_param_value = scale_nominal_param_value
@@ -286,10 +284,10 @@ class DesignOfExperiments:
     def compute_FIM(self, mode=calculation_mode.direct_kaug, FIM_store_name=None, specified_prior=None,
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
                     store_output = None, read_output=None, extract_single_model=None,
-                    formula=finite_difference_lib.central, step=0.001):
+                    formula=finite_difference_step.central, step=0.001):
         """
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
-        It calculates FIM with sensitivity information from two modes:
+        It calculates FIM with sensitivity information from the Enum calculation_mode with two modes:
             1.  sequential_finite: sequentially solve square problems and use finite difference approximation
             2.  direct_kaug: solve a single square problem then extract derivatives using NLP sensitivity theory
 
@@ -316,7 +314,7 @@ class DesignOfExperiments:
             The output file uses the name AB.csv, where string A is store_output input, B is the index of scenario.  
             scenario index is the number of the scenario outputs which is stored.
         formula:
-            choose from finite_difference_lib.central, .forward, or .backward. 
+            choose from the Enum finite_difference_step.central, .forward, or .backward. 
             This option is only used for calculation_mode.sequential_finite mode.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
@@ -327,7 +325,7 @@ class DesignOfExperiments:
         """
         
         # save inputs in object
-        self.design_values = self.design_vars.special_set_value
+        self.design_values = self.design_vars.variable_names_value
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
         self.formula = formula
@@ -556,7 +554,6 @@ class DesignOfExperiments:
             def fix1(mod, s):
                 cuid = pyo.ComponentUID(name)
                 design_var_global = cuid.find_component_on(mod)
-                design_var_global = cuid.find_component_on(mod)
                 design_var = cuid.find_component_on(mod.block[s])
                 return design_var == design_var_global
             
@@ -624,7 +621,7 @@ class DesignOfExperiments:
     def run_grid_search(self, design_ranges, 
                      mode=calculation_mode.sequential_finite, tee_option=False, 
                     scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
-                        filename=None, formula=finite_difference_lib.central, step=0.001):
+                        filename=None, formula=finite_difference_step.central, step=0.001):
         """
         Enumerate through full grid search for any number of design variables;
         solve square problems sequentially to compute FIMs.
@@ -657,7 +654,7 @@ class DesignOfExperiments:
         filename:
             if True, grid search results stored with this file name
         formula:
-            choose from finite_difference_lib.central, .forward, or .backward.
+            choose from finite_difference_step.central, .forward, or .backward.
             This option is only used for calculation_mode.sequential_finite.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
@@ -698,7 +695,7 @@ class DesignOfExperiments:
         for design_set_iter in search_design_set:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_values
-            design_iter = self.design_vars.special_set_value.copy()
+            design_iter = self.design_vars.variable_names_value.copy()
 
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
@@ -710,7 +707,7 @@ class DesignOfExperiments:
                 else:
                     design_iter[names] = list(design_set_iter)[i]
 
-            self.design_vars.special_set_value = design_iter
+            self.design_vars.variable_names_value = design_iter
 
             iter_timer = TicTocTimer()
             self.logger.info('=======Iteration Number: %s =====', count+1)
@@ -733,7 +730,8 @@ class DesignOfExperiments:
                                                 tee_opt=tee_option,
                                                 scale_nominal_param_value=scale_nominal_param_value,
                                                 scale_constant_value = scale_constant_value,
-                                                store_output=store_output_name, read_output=read_input_name,
+                                                store_output=store_output_name, 
+                                                read_output=read_input_name,
                                                 formula=formula, step=step)
 
                 count += 1

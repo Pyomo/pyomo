@@ -30,15 +30,15 @@ import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
 import numpy as np
 from enum import Enum
-
-class model_option_lib(Enum):
-    parmest = 1
-    stage1 = 2
-    stage2 = 3
+from doe import model_option_lib
+#class model_option_lib(Enum):
+#    parmest = 1
+#    stage1 = 2
+#    stage2 = 3
     
-    @classmethod
-    def has_value(cls, value):
-        return value in cls._value2member_map_
+#    @classmethod
+#    def has_value(cls, value):
+#        return value in cls._value2member_map_
 
 def disc_for_measure(m, nfe=32, block=True):
     """Pyomo.DAE discretization
@@ -90,10 +90,10 @@ def create_model(mod=None, model_option=model_option_lib.stage2,
         return_m = True
     elif model_option==model_option_lib.stage1 or model_option==model_option_lib.stage2:
         if not mod:
-            raise ValueError("If model option is global or block, a created model needs to be provided.")
+            raise ValueError("If model option is stage1 or stage2, a created model needs to be provided.")
         return_m = False
     else:
-        raise ValueError("model_option needs to be defined as global, block, or parmest.")
+        raise ValueError("model_option needs to be defined as parmest,stage1, or stage2.")
     
     if not control_val:
         control_val = [300]*9
