@@ -33,9 +33,10 @@ from pyomo.common.dependencies import (
 )
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, calculation_mode, DesignVariables, finite_difference_lib, objective_lib
+from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables,  DesignVariables
+from pyomo.contrib.doe import model_option_lib, calculation_mode,finite_difference_step, objective_lib
 from pyomo.environ import value, ConcreteModel
-from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
+from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
@@ -44,15 +45,15 @@ class Test_example_options(unittest.TestCase):
     """
     def test_setUP(self):
         # parmest option 
-        mod = create_model(model_option='parmest')
+        mod = create_model(model_option=model_option_lib.parmest)
         
         # global and block option
         mod = ConcreteModel()
-        create_model(mod, model_option='global')
-        create_model(mod, model_option='block')
+        create_model(mod, model_option=model_option_lib.stage1)
+        create_model(mod, model_option=model_option_lib.stage2)
         # both options need a given model, or raise errors 
-        self.assertRaises(ValueError, create_model, model_option='global')
-        self.assertRaises(ValueError, create_model, model_option='block')
+        self.assertRaises(ValueError, create_model, model_option=model_option_lib.stage1)
+        self.assertRaises(ValueError, create_model, model_option=model_option_lib.stage2)
 
         self.assertRaises(ValueError, create_model, model_option='NotDefine')
 
@@ -70,22 +71,30 @@ class Test_doe_object(unittest.TestCase):
         parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
         # measurement object 
-        total_name = ["C"]
-        non_time_index = [[["CA", "CB", "CC"]]]
-        time_index = [t_control] 
+        variable_name = "C"
+        indices = {0:['CA', 'CB', 'CC'], 1: t_control}
 
         measurements = MeasurementVariables()
-        measurements.add_elements(total_name, non_time_index=non_time_index, time_index = time_index)
+        measurements.add_variables(variable_name, indices=indices, time_index_position = 1)
 
         # design object 
-        total_name = ["CA0", "T"]
-
         exp_design = DesignVariables()
-        exp_design.add_variables(total_name, 
-                                time_index = [[0], t_control] , 
-                                values=[5, 570, 300, 300, 300, 300, 300, 300, 300, 300], 
-                                upper_bounds=[5, 700, 700, 700, 700, 700, 700, 700, 700, 700], 
-                                lower_bounds=[1, 300, 300, 300, 300, 300, 300, 300, 300, 300])
+        
+        # add CAO as design variable
+        var_C = 'CA0'
+        indices_C = {0:[0]}
+        exp1_C = [5]
+        exp_design.add_variables(var_C, indices = indices_C, time_index_position=0,
+                                values=exp1_C,lower_bounds=1, upper_bounds=5)
+
+        # add T as design variable
+        var_T = 'T'
+        indices_T = {0:t_control}
+        exp1_T = [470, 300, 300, 300, 300, 300, 300, 300, 300]
+
+        exp_design.add_variables(var_T, indices = indices_T, time_index_position=0,
+                                values=exp1_T,lower_bounds=300, upper_bounds=700)
+
         
         ### Test sequential_finite mode
         sensi_opt = calculation_mode.sequential_finite
@@ -103,7 +112,7 @@ class Test_doe_object(unittest.TestCase):
 
         result = doe_object.compute_FIM(mode=sensi_opt,  
                                         scale_nominal_param_value=True,
-                                    formula = finite_difference_lib.central)
+                                    formula = finite_difference_step.central)
 
 
         result.calculate_FIM(doe_object.design_values)
@@ -113,13 +122,11 @@ class Test_doe_object(unittest.TestCase):
         self.assertAlmostEqual(np.log10(result.min_eig), -1.0123, places=2)
 
         ### check subset feature 
-        sub_name = ["C"]
-        sub_extra_index = [[["CB", "CC"]]]
-        sub_time_index = [[0.125, 0.25, 0.5, 0.75, 0.875]] 
+        sub_name = "C"
+        sub_indices = {0: ["CB", "CC"], 1:[0.125, 0.25, 0.5, 0.75, 0.875] }
 
         measure_subset = MeasurementVariables()
-        measure_subset.add_elements(sub_name, non_time_index=sub_extra_index, time_index=sub_time_index)
-
+        measure_subset.add_variables(sub_name, indices = sub_indices, time_index_position=1)
         sub_result = result.subset(measure_subset)
         sub_result.calculate_FIM(doe_object.design_values)
         
@@ -142,7 +149,7 @@ class Test_doe_object(unittest.TestCase):
 
         result = doe_object.compute_FIM(mode=sensi_opt,  
                                         scale_nominal_param_value=True,
-                                    formula = finite_difference_lib.central)
+                                    formula = finite_difference_step.central)
         
         result.calculate_FIM(doe_object.design_values)
         

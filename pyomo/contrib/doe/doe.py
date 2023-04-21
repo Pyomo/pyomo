@@ -38,10 +38,8 @@ import logging
 from enum import Enum
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
-#from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_step
-#from pyomo.contrib.doe.result import FisherResults, GridSearchResult
-from scenario import ScenarioGenerator,finite_difference_step
-from result import FisherResults, GridSearchResult
+from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_step
+from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
 class calculation_mode(Enum):
     sequential_finite = 1
@@ -696,19 +694,17 @@ class DesignOfExperiments:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_values
             design_iter = self.design_vars.variable_names_value.copy()
-
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
                 #names = design_dimension_names[i]
                 # if the element is a list, all design variables in this list share the same values
-                if type(names) is list:
+                if type(names) is list or type(names) is tuple:
                     for n in names:
                         design_iter[n] = list(design_set_iter)[i] 
                 else:
                     design_iter[names] = list(design_set_iter)[i]
 
             self.design_vars.variable_names_value = design_iter
-
             iter_timer = TicTocTimer()
             self.logger.info('=======Iteration Number: %s =====', count+1)
             self.logger.debug('Design variable values of this iteration: %s', design_iter)

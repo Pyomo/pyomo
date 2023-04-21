@@ -28,7 +28,7 @@
 
 import numpy as np
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
+from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
 from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables, calculation_mode
 
 
@@ -40,29 +40,35 @@ def main():
     parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
     # measurement object 
-    total_name = ["C"]
-    non_time_index = [[["CA", "CB", "CC"]]]
-    time_index = [t_control] 
+    variable_name = "C"
+    indices = {0:['CA', 'CB', 'CC'], 1: t_control}
 
     measurements = MeasurementVariables()
-    measurements.add_elements(total_name, non_time_index=non_time_index, time_index = time_index)
+    measurements.add_variables(variable_name, indices=indices, time_index_position = 1)
 
     # design object 
-    total_name = ["CA0", "T"]
-
     exp_design = DesignVariables()
-    exp_design.add_variables(total_name, 
-                             time_index = [[0], t_control] , 
-                             values=[5, 570, 300, 300, 300, 300, 300, 300, 300, 300], 
-                             upper_bounds=[5, 700, 700, 700, 700, 700, 700, 700, 700, 700], 
-                             lower_bounds=[1, 300, 300, 300, 300, 300, 300, 300, 300, 300])
     
-    # Design variable ranges as lists
-    design_ranges = [list(np.linspace(1,5,3)), list(np.linspace(300,700,3))]
+    # add CAO as design variable
+    var_C = 'CA0'
+    indices_C = {0:[0]}
+    exp1_C = [5]
+    exp_design.add_variables(var_C, indices = indices_C, time_index_position=0,
+                            values=exp1_C,lower_bounds=1, upper_bounds=5)
 
-    # Design variable names 
-    dv_apply_name = ['CA0[0]',['T[0]','T[0.125]','T[0.25]','T[0.375]','T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]']]
+    # add T as design variable
+    var_T = 'T'
+    indices_T = {0:t_control}
+    exp1_T = [470, 300, 300, 300, 300, 300, 300, 300, 300]
 
+    exp_design.add_variables(var_T, indices = indices_T, time_index_position=0,
+                            values=exp1_T,lower_bounds=300, upper_bounds=700)
+
+    
+    # Design variable ranges as lists 
+    design_ranges = {'CA0[0]': [1,3,5], 
+                 ('T[0]', 'T[0.125]','T[0.25]','T[0.375]',
+                  'T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]'): [300,500,700]}
     ## choose from 'sequential_finite', 'direct_kaug'
     sensi_opt = calculation_mode.direct_kaug
 
@@ -73,17 +79,15 @@ def main():
                                     discretize_model=disc_for_measure)
 
     all_fim = doe_object.run_grid_search(design_ranges, 
-                                         dv_apply_name, 
                                         mode=sensi_opt)
     
     all_fim.extract_criteria()
 
     ### 3 design variable example
-    # Define design ranges, either use linspace or a list to define the list of values
-    design_ranges = [list(np.linspace(1,5,2)),  list(np.linspace(300,700,2)), [300,500]]
-
-    # Design variable names 
-    dv_apply_name = ['CA0[0]','T[0]',['T[0.125]','T[0.25]','T[0.375]','T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]']]
+    # Define design ranges
+    design_ranges ={'CA0[0]': list(np.linspace(1,5,2)),  
+                'T[0]': list(np.linspace(300,700,2)), 
+                ('T[0.125]','T[0.25]','T[0.375]','T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]'): [300,500]}
 
     sensi_opt = calculation_mode.direct_kaug
 
@@ -94,7 +98,6 @@ def main():
                                     discretize_model=disc_for_measure)
 
     all_fim = doe_object.run_grid_search(design_ranges, 
-                                         dv_apply_name, 
                                         mode=sensi_opt)
     
     test = all_fim.extract_criteria()

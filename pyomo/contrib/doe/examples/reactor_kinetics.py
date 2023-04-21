@@ -30,15 +30,7 @@ import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
 import numpy as np
 from enum import Enum
-from doe import model_option_lib
-#class model_option_lib(Enum):
-#    parmest = 1
-#    stage1 = 2
-#    stage2 = 3
-    
-#    @classmethod
-#    def has_value(cls, value):
-#        return value in cls._value2member_map_
+from pyomo.contrib.doe import model_option_lib
 
 def disc_for_measure(m, nfe=32, block=True):
     """Pyomo.DAE discretization

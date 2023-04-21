@@ -198,7 +198,7 @@ class MeasurementVariables(VariablesWithIndices):
             for e.g. "C['CA', 23, 0]".
         variance: a ``list`` of scalar numbers , which is the variance for this measurement.
         """
-        super().specify(self_define_res)
+        super().set_variable_name_list(self_define_res)
         self.name = self.variable_names
 
         # add variance 
@@ -261,7 +261,7 @@ class DesignVariables(VariablesWithIndices):
         self_define_res: a ``list`` of ``string``, containing the variable names with indexs, 
             for e.g. "C['CA', 23, 0]".
         """
-        super().specify(self_define_res)
+        super().set_variable_name_list(self_define_res)
         self.name = self.variable_names
 
     def add_variables(self, var_name, indices=None, time_index_position=None, values=None, 
