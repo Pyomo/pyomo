@@ -933,9 +933,16 @@ class LinearExpression(NumericExpression):
                     "Cannot specify both args and any of "
                     "{constant, linear_coeffs, or linear_vars}"
                 )
-            if len(args) > 1 and (
-                args[1].__class__ in native_types
-                or not args[1].is_potentially_variable()
+            if (
+                len(args) % 2 == 1
+                and all(
+                    arg.__class__ in native_types or not arg.is_potentially_variable()
+                    for arg in args[: 1 + len(args) // 2]
+                )
+                and not any(
+                    arg.__class__ in native_types or not arg.is_potentially_variable()
+                    for arg in args[1 + len(args) // 2 :]
+                )
             ):
                 deprecation_warning(
                     "LinearExpression has been updated to expect args= to "
@@ -988,22 +995,17 @@ class LinearExpression(NumericExpression):
     @_args_.setter
     def _args_(self, value):
         self._args_cache_ = list(value)
+        self.constant = 0
+        self.linear_coefs = []
+        self.linear_vars = []
         if not self._args_cache_:
-            self.constant = 0
-            self.linear_coefs = []
-            self.linear_vars = []
             return
-        if self._args_cache_[0].__class__ is not MonomialTermExpression:
-            self.constant = value[0]
-            first_var = 1
-        else:
-            self.constant = 0
-            first_var = 0
-        self.linear_coefs, self.linear_vars = zip(
-            *map(attrgetter('args'), value[first_var:])
-        )
-        self.linear_coefs = list(self.linear_coefs)
-        self.linear_vars = list(self.linear_vars)
+        for arg in self._args_cache_:
+            if arg.__class__ is not MonomialTermExpression:
+                self.constant += arg
+            else:
+                self.linear_coefs.append(arg.arg(0))
+                self.linear_vars.append(arg.arg(1))
 
     def create_node_with_local_data(self, args, classtype=None):
         if classtype is not None:
