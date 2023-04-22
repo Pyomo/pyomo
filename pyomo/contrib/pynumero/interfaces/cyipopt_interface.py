@@ -29,17 +29,17 @@ def _cyipopt_importer():
     import cyipopt
 
     # cyipopt before version 1.0.3 called the problem class "Problem"
-    if not hasattr(cyipopt, 'Problem'):
+    if not hasattr(cyipopt, "Problem"):
         cyipopt.Problem = cyipopt.problem
     # cyipopt before version 1.0.3 put the __version__ flag in the ipopt
     # module (which was deprecated starting in 1.0.3)
-    if not hasattr(cyipopt, '__version__'):
+    if not hasattr(cyipopt, "__version__"):
         import ipopt
 
         cyipopt.__version__ = ipopt.__version__
     # Beginning in 1.0.3, STATUS_MESSAGES is in a separate
     # ipopt_wrapper module
-    if not hasattr(cyipopt, 'STATUS_MESSAGES'):
+    if not hasattr(cyipopt, "STATUS_MESSAGES"):
         import ipopt_wrapper
 
         cyipopt.STATUS_MESSAGES = ipopt_wrapper.STATUS_MESSAGES
@@ -47,10 +47,10 @@ def _cyipopt_importer():
 
 
 cyipopt, cyipopt_available = attempt_import(
-    'ipopt',
-    error_message='cyipopt solver relies on the ipopt module from cyipopt. '
-    'See https://github.com/mechmotum/cyipopt.git for cyipopt '
-    'installation instructions.',
+    "ipopt",
+    error_message="cyipopt solver relies on the ipopt module from cyipopt. "
+    "See https://github.com/mechmotum/cyipopt.git for cyipopt "
+    "installation instructions.",
     importer=_cyipopt_importer,
 )
 
@@ -75,6 +75,12 @@ class CyIpoptProblemInterface(cyipopt_Problem, metaclass=abc.ABCMeta):
 
     """
 
+    # Flag used to determine whether the underlying IpoptProblem struct
+    # has been initialized. This is used to prevent segfaults when calling
+    # cyipopt.Problem's solve method if cyipopt.Problem.__init__ hasn't been
+    # called.
+    _problem_initialized = False
+
     def __init__(self):
         """Initialize the problem interface
 
@@ -97,6 +103,38 @@ class CyIpoptProblemInterface(cyipopt_Problem, metaclass=abc.ABCMeta):
         ng = len(gl)
         super(CyIpoptProblemInterface, self).__init__(
             n=nx, m=ng, lb=xl, ub=xu, cl=gl, cu=gu
+        )
+        # Set a flag to indicate that the IpoptProblem struct has been
+        # initialized
+        self._problem_initialized = True
+
+    def solve(self, x, lagrange=None, zl=None, zu=None):
+        """Solve a CyIpopt Problem
+
+        Checks whether __init__ has been called before calling
+        cyipopt.Problem.solve
+
+        """
+        lagrange = [] if lagrange is None else lagrange
+        zl = [] if zl is None else zl
+        zu = [] if zu is None else zu
+        # Check a flag to make sure __init__ has been called. This is to prevent
+        # segfaults if we try to call solve from a subclass that has not called
+        # super().__init__
+        #
+        # Note that we can still segfault if a user overrides solve and does not
+        # call cyipopt.Problem.__init__, but in this case we assume they know what
+        # they are doing.
+        if not self._problem_initialized:
+            raise RuntimeError(
+                "Attempting to call cyipopt.Problem.solve when"
+                " cyipopt.Problem.__init__ has not been called. This can happen"
+                " if a subclass of CyIpoptProblemInterface overrides __init__"
+                " without calling CyIpoptProblemInterface.__init__ or setting"
+                " the CyIpoptProblemInterface._problem_initialized flag."
+            )
+        return super(CyIpoptProblemInterface, self).solve(
+            x, lagrange=lagrange, zl=zl, zu=zu
         )
 
     @abc.abstractmethod
