@@ -6,6 +6,7 @@ from pyomo.core.base import Objective, ConstraintList, Var, Constraint, Block
 from pyomo.opt.results import TerminationCondition
 from pyomo.contrib.pyros import master_problem_methods, separation_problem_methods
 from pyomo.contrib.pyros.solve_data import SeparationProblemData, MasterResult
+from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.contrib.pyros.util import (
     ObjectiveType,
     get_time_from_solver,
@@ -175,6 +176,16 @@ def ROSolver_iterative_solve(model_data, config):
     # === Keep track of subsolver termination statuses from each iteration
     separation_data.separation_problem_subsolver_statuses = []
 
+    # for discrete set types, keep track of scenarios added to master
+    if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS:
+        separation_data.idxs_of_master_scenarios = [
+            config.uncertainty_set.scenarios.index(
+                tuple(config.nominal_uncertain_param_vals)
+            )
+        ]
+    else:
+        separation_data.idxs_of_master_scenarios = None
+
     # === Nominal information
     nominal_data = Block()
     nominal_data.nom_fsv_vals = []
@@ -342,24 +353,20 @@ def ROSolver_iterative_solve(model_data, config):
             )
         )
 
-        for sep_soln_list in separation_results.solve_data_list:
-            for solver_call_result in sep_soln_list:
-                separation_data.separation_problem_subsolver_statuses.append(
-                    solver_call_result
-                    .results_list[-1]
-                    .solver
-                    .termination_condition
-                )
+        separation_data.separation_problem_subsolver_statuses.extend([
+            res.solver.termination_condition
+            for res in separation_results.generate_subsolver_results()
+        ])
 
         if separation_results.solved_globally:
             separation_data.total_global_separation_solves += 1
 
         # make updates based on separation results
         timing_data.total_separation_local_time += (
-            separation_results.local_solve_time
+            separation_results.evaluate_local_solve_time(get_time_from_solver)
         )
         timing_data.total_separation_global_time += (
-            separation_results.global_solve_time
+            separation_results.evaluate_global_solve_time(get_time_from_solver)
         )
         separation_data.constraint_violations.append(
             separation_results.violations
@@ -382,7 +389,7 @@ def ROSolver_iterative_solve(model_data, config):
                 separation_data=separation_data,
                 master_soln=master_soln,
             )
-            return model_data, separation_results.solve_data_list
+            return model_data, separation_results
 
         # terminate on separation subsolver error
         if separation_results.subsolver_error:
@@ -396,11 +403,12 @@ def ROSolver_iterative_solve(model_data, config):
                 separation_data=separation_data,
                 master_soln=master_soln,
             )
-            return model_data, separation_results.solve_data_list
+            return model_data, separation_results
 
         # === Check if we terminate due to robust optimality or feasibility,
         #     or in the event of bypassing global separation, no violations
-        if separation_results.robustness_certified:
+        robustness_certified = separation_results.robustness_certified
+        if robustness_certified:
             output_logger(
                 config=config,
                 bypass_global_separation=config.bypass_global_separation,
@@ -424,7 +432,7 @@ def ROSolver_iterative_solve(model_data, config):
                 separation_data=separation_data,
                 master_soln=master_soln,
             )
-            return model_data, separation_results.solve_data_list
+            return model_data, separation_results
 
         # === Add block to master at violation
         master_problem_methods.add_scenario_to_master(
@@ -448,4 +456,4 @@ def ROSolver_iterative_solve(model_data, config):
         separation_data=separation_data,
         master_soln=master_soln,
     )
-    return model_data, separation_results.solve_data_list
+    return model_data, separation_results

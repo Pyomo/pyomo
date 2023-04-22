@@ -8,6 +8,7 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.pyros.util import ObjectiveType, get_time_from_solver, output_logger
 from pyomo.contrib.pyros.solve_data import (
+    DiscreteSeparationSolveCallResults,
     SeparationSolveCallResults,
     SeparationLoopResults,
     SeparationResults,
@@ -246,89 +247,51 @@ def get_sep_objective_values(model_data, config, perf_cons):
     return violations
 
 
-def get_index_of_max_violation(model_data, config, solve_data_list):
+def get_index_of_max_violation(solver_call_results_list):
     """
-    Get row (constraint) and column (uncertain parameter realization)
-    index of PyROS separation problem results list with the
-    highest average relative constraint violation.
+    Get index of entry of `solver_call_results_list` which contains
+    separation problem solution with maximal sum of performance
+    constraint violations.
 
     Parameters
     ----------
-    model_data : SeparationProblemData
-        Separation problem data.
-    config : ConfigDict
-        Mapping of PyROS solver options.
-    solve_data_list : (M, N) array-like of SeparationResult
-        Separation problem results for each performance
-        constraint (row) and uncertain parameter scenario
-        (column).
+    solver_call_results_list : list of SeparationSolverCallResults
+        Separation solver call results for each performance
+        constraint.
 
     Returns
     -------
-    worst_con_idx, int
-        Row (performance constraint) index.
-    worst_scenario_idx, int
-        Column (uncertain parameter realization) index.
-
-    Notes
-    -----
-    Unless the uncertainty set (``config.uncertainty_set``)
-    is a discrete-type set, `solve_data_list`
-    has only one column, corresponding to the parameter realization
-    for which the maximum violation of the performance constraint
-    was found.
-    Otherwise, each column corresponds to one of the points
-    in the discrete set.
+    worst_con_idx : None or int
+        Index of entry containing maximally violating separation
+        problem solution.
+        If ``found_violation`` attribute of all entries of
+        `solver_call_results_list` is False, then `None` is
+        returned, as this means none of the performance constraints
+        were found to be violated.
     """
-
-    # get indices of performance cons for which violation found,
-    # , and corresponding scenarios for which violation is maximized
-    idxs_of_violated_cons = []
-    con_to_worst_param_idx_map = {}
-    for perf_con_idx, row in enumerate(solve_data_list):
-        results_with_violation_found = {
-            scenario_idx: res
-            for scenario_idx, res in enumerate(row)
-            if res.found_violation
-        }
-        if results_with_violation_found:
-            # get index of scenario corresponding to
-            # highest violation of this performance constraint
-            # use insertion order of uncert param scenarios
-            # for tiebreaks
-            _, worst_case_scenario_idx = max(
-                (perf_con_res.list_of_scaled_violations[perf_con_idx],
-                 scenario_idx,)
-                for scenario_idx, perf_con_res
-                in results_with_violation_found.items()
-            )
-
-            # note this performance constraint was violated
-            idxs_of_violated_cons.append(perf_con_idx)
-
-            # note scenario for which violation is maximized
-            con_to_worst_param_idx_map[perf_con_idx] = worst_case_scenario_idx
+    # get indices of performance constraints for which violation found
+    idxs_of_violated_cons = [
+        perf_con_idx
+        for perf_con_idx, solve_call_res
+        in enumerate(solver_call_results_list)
+        if solve_call_res.found_violation
+    ]
 
     num_violated_cons = len(idxs_of_violated_cons)
+
     if num_violated_cons == 0:
-        # no violating realizations
-        return None, None
+        return None
 
     # assemble square matrix (2D array) of constraint violations.
     # matrix size: number of constraints for which violation was found
     # each row corresponds to a performance constraint
-    # each column corresponds to a violating realization
+    # each column corresponds to a separation problem solution
     violations_arr = np.zeros(shape=(num_violated_cons, num_violated_cons))
     idxs_product = product(
         enumerate(idxs_of_violated_cons),
         enumerate(idxs_of_violated_cons),
     )
     for (row_idx, viol_con_idx), (col_idx, viol_param_idx) in idxs_product:
-        # get (index of) uncert param realization which
-        # maximizes violation of perf constraint indexed by
-        # column
-        scenario_idx = con_to_worst_param_idx_map[viol_param_idx]
-
         violations_arr[row_idx, col_idx] = max(
             0,
             (
@@ -336,21 +299,16 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
                 # by this column's separation solution
                 # if separation problems were solved globally,
                 # then diagonal entries should be the largest in each row
-                solve_data_list[viol_param_idx][scenario_idx]
+                solver_call_results_list[viol_param_idx]
                 .list_of_scaled_violations[viol_con_idx]
             ),
         )
 
-    # determine column index for scenario with max sum of violations
-    # over the violated performance constraints
     worst_con_idx = idxs_of_violated_cons[
         np.argmax(np.sum(violations_arr, axis=0))
     ]
 
-    # get corresponding scenario index
-    worst_scenario_idx = con_to_worst_param_idx_map[worst_con_idx]
-
-    return worst_con_idx, worst_scenario_idx
+    return worst_con_idx
 
 
 def solve_separation_problem(model_data, config):
@@ -366,7 +324,7 @@ def solve_separation_problem(model_data, config):
 
     Returns
     -------
-    pyros.solve_data.SeparationResult
+    pyros.solve_data.SeparationResults
         Separation problem solve results.
     """
     run_local = not config.bypass_local_separation
@@ -377,56 +335,216 @@ def solve_separation_problem(model_data, config):
         == Geometry.DISCRETE_SCENARIOS
     )
 
-    # initialize separation solve times
-    local_solve_time = 0
-    global_solve_time = 0
-
     if run_local:
-        separation_solve_result = perform_separation_loop(
+        local_separation_loop_results = perform_separation_loop(
             model_data=model_data,
             config=config,
             solve_globally=False,
         )
         run_global = not (
-            separation_solve_result.found_violation
+            local_separation_loop_results.found_violation
             or uncertainty_set_is_discrete
-            or separation_solve_result.subsolver_error
-            or separation_solve_result.time_out
+            or local_separation_loop_results.subsolver_error
+            or local_separation_loop_results.time_out
             or config.bypass_global_separation
         )
-        local_solve_time = separation_solve_result.solve_time
+    else:
+        local_separation_loop_results = None
 
     if run_global:
-        separation_solve_result = perform_separation_loop(
+        global_separation_loop_results = perform_separation_loop(
             model_data=model_data,
             config=config,
             solve_globally=True,
         )
-        global_solve_time = separation_solve_result.solve_time
-
-    robustness_certified = (
-        not separation_solve_result.found_violation
-        and (
-            run_global
-            or config.bypass_global_separation
-            or uncertainty_set_is_discrete
-        )
-        and not separation_solve_result.subsolver_error
-        and not separation_solve_result.time_out
-    )
+    else:
+        global_separation_loop_results = None
 
     return SeparationResults(
-        solve_data_list=separation_solve_result.solve_data_list,
-        violating_param_realization=(
-            separation_solve_result.violating_param_realization
+        local_separation_loop_results=local_separation_loop_results,
+        global_separation_loop_results=global_separation_loop_results,
+    )
+
+
+def evaluate_violations_by_nominal_master(model_data, performance_cons):
+    """
+    Evaluate violation of performance constraints by
+    variables in nominal block of most recent master
+    problem.
+
+    Returns
+    -------
+    nom_perf_con_violations : dict
+        Mapping from performance constraint names
+        to floats equal to violations by nominal master
+        problem variables.
+    """
+    constraint_map_to_master = (
+        model_data
+        .separation_model.util.map_new_constraint_list_to_original_con
+    )
+
+    # get deterministic model constraints (include epigraph)
+    set_of_deterministic_constraints = (
+        model_data.separation_model.util.deterministic_constraints
+    )
+    if hasattr(model_data.separation_model, "epigraph_constr"):
+        set_of_deterministic_constraints.add(
+            model_data.separation_model.epigraph_constr
+        )
+    nom_perf_con_violations = {}
+
+    for perf_con in performance_cons:
+        if perf_con in set_of_deterministic_constraints:
+            nom_constraint = perf_con
+        else:
+            nom_constraint = constraint_map_to_master[perf_con]
+        nom_violation = value(
+            model_data.master_nominal_scenario.find_component(
+                nom_constraint
+            )
+        )
+        nom_perf_con_violations[perf_con] = nom_violation
+
+    return nom_perf_con_violations
+
+
+def group_performance_constraints_by_priority(model_data, config):
+    """
+    Group model performance constraints by separation priority.
+
+    Parameters
+    ----------
+    model_data : SeparationProblemData
+        Separation problem data.
+    config : ConfigDict
+        User-specified PyROS solve options.
+
+    Returns
+    -------
+    dict
+        Mapping from an int to a list of performance constraints
+        (Constraint objects),
+        for which the int is equal to the specified priority.
+        Keys are sorted in descending order
+        (i.e. highest priority first).
+    """
+    separation_priority_groups = dict()
+    config_sep_priority_dict = config.separation_priority_order
+    for perf_con in model_data.separation_model.util.performance_constraints:
+        # by default, priority set to 0
+        priority = config_sep_priority_dict.get(perf_con.name, 0)
+        cons_with_same_priority = separation_priority_groups.setdefault(
+            priority,
+            [],
+        )
+        cons_with_same_priority.append(perf_con)
+
+    # sort separation priority groups
+    return {
+        priority: perf_cons
+        for priority, perf_cons in
+        sorted(separation_priority_groups.items(), reverse=True)
+    }
+
+
+def get_worst_discrete_separation_solution(
+        performance_constraint,
+        model_data,
+        config,
+        perf_cons_to_evaluate,
+        discrete_solve_results,
+        ):
+    """
+    Determine separation solution (and therefore worst-case
+    uncertain parameter realization) with maximum violation
+    of specified performance constraint.
+
+    Parameters
+    ----------
+    performance_constraint : Constraint
+        Performance constraint of interest.
+    model_data : SeparationProblemData
+        Separation problem data.
+    config : ConfigDict
+        User-specified PyROS solver settings.
+    perf_cons_to_evaluate : list of Constraint
+        Performance constraints for which to report violations
+        by separation solution.
+    discrete_solve_results : DiscreteSeparationSolveCallResults
+        Separation problem solutions corresponding to the
+        uncertain parameter scenarios listed in
+        ``config.uncertainty_set.scenarios``.
+
+    Returns
+    -------
+    SeparationSolveCallResult
+        Solver call result for performance constraint of interest.
+    """
+    perf_con_index = (
+        model_data.separation_model.util.performance_constraints.index(
+            performance_constraint
+        )
+    )
+
+    # violation of specified performance constraint by separation
+    # problem solutions for all scenarios
+    violations_of_perf_con = [
+        solve_call_res.list_of_scaled_violations[perf_con_index]
+        for solve_call_res in discrete_solve_results.solver_call_results_list
+    ]
+
+    # determine separation solution for which scaled violation of this
+    # performance constraint is the worst
+    worst_case_res = discrete_solve_results.solver_call_results_list[
+        np.argmax(violations_of_perf_con)
+    ]
+    worst_case_violation = np.max(violations_of_perf_con)
+    assert worst_case_violation in worst_case_res.list_of_scaled_violations
+
+    # evaluate violations for specified performance constraints
+    eval_perf_con_scaled_violations = []
+    all_performance_constraints = (
+        model_data.separation_model.util.performance_constraints
+    )
+    for idx, perf_con in enumerate(all_performance_constraints):
+        if perf_con in perf_cons_to_evaluate:
+            eval_perf_con_scaled_violations.append(
+                worst_case_res.list_of_scaled_violations[idx]
+            )
+
+    # discrete separation solutions were obtained by optimizing
+    # just one performance constraint, as an efficiency.
+    # if the constraint passed to this routine is the same as the
+    # constraint used to obtain the solutions, then we bundle
+    # the separation solve call results into a single list.
+    # otherwise, we return an empty list, as we did not need to call
+    # subsolvers for the other performance constraints
+    is_optimized_performance_con = (
+        performance_constraint
+        is discrete_solve_results.performance_constraint
+    )
+    if is_optimized_performance_con:
+        results_list = [
+            res for solve_call_results
+            in discrete_solve_results.solver_call_results_list
+            for res in solve_call_results.results_list
+        ]
+    else:
+        results_list = []
+
+    return SeparationSolveCallResults(
+        solved_globally=worst_case_res.solved_globally,
+        results_list=results_list,
+        list_of_scaled_violations=eval_perf_con_scaled_violations,
+        violating_param_realization=worst_case_res.violating_param_realization,
+        variable_values=worst_case_res.variable_values,
+        found_violation=(
+            worst_case_violation > config.robust_feasibility_tolerance
         ),
-        violations=separation_solve_result.violations,
-        local_solve_time=local_solve_time,
-        global_solve_time=global_solve_time,
-        subsolver_error=separation_solve_result.subsolver_error,
-        time_out=separation_solve_result.time_out,
-        solved_globally=separation_solve_result.solved_globally,
-        robustness_certified=robustness_certified,
+        time_out=False,
+        subsolver_error=False,
+        discrete_set_scenario_index=worst_case_res.discrete_set_scenario_index,
     )
 
 
@@ -450,170 +568,132 @@ def perform_separation_loop(model_data, config, solve_globally):
     pyros.solve_data.SeparationLoopResults
         Separation problem solve results.
     """
-
-    # List of objective functions
-    objectives_map = model_data.separation_model.util.map_obj_to_constr
-    constraint_map_to_master = (
-        model_data
-        .separation_model.util.map_new_constraint_list_to_original_con
+    # needed for normalizing separation solution constraint violations
+    model_data.nom_perf_con_violations = evaluate_violations_by_nominal_master(
+        model_data=model_data,
+        performance_cons=(
+            model_data.separation_model.util.performance_constraints
+        ),
     )
-
-    # TODO: move this to pre-processing
-    # group performance constraints by priority
-    separation_priority_groups = dict()
-    config_sep_priority_dict = config.separation_priority_order
-    for perf_con in model_data.separation_model.util.performance_constraints:
-        # by default, priority set to 0
-        priority = config_sep_priority_dict.get(perf_con.name, 0)
-        cons_with_same_priority = separation_priority_groups.setdefault(
-            priority,
-            [],
-        )
-        cons_with_same_priority.append(perf_con)
-
-    # sort separation priority groups
-    sorted_priority_groups = {
-        priority: perf_cons
-        for priority, perf_cons in
-        sorted(separation_priority_groups.items(), reverse=True)
-    }
-
-    # get deterministic model constraints (include epigraph)
-    set_of_deterministic_constraints = (
-        model_data.separation_model.util.deterministic_constraints
+    sorted_priority_groups = group_performance_constraints_by_priority(
+        model_data,
+        config,
     )
-    if hasattr(model_data.separation_model, "epigraph_constr"):
-        set_of_deterministic_constraints.add(
-            model_data.separation_model.epigraph_constr
-        )
-
     uncertainty_set_is_discrete = (
         config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
     )
 
-    acceptable_terminations = (
-        globally_acceptable if solve_globally else locally_acceptable
-    )
-
-    solve_data_list = []
-    solve_time = 0
-    for priority, perf_constraints in sorted_priority_groups.items():
-        # evaluate performance constraint functions at master
-        #   solution block (0, 0) (nominal block).
-        #   Needed for normalizing separation objective values
-        model_data.nom_perf_con_violations = {}
-        for perf_con in perf_constraints:
-            if perf_con in set_of_deterministic_constraints:
-                nom_constraint = perf_con
-            else:
-                nom_constraint = constraint_map_to_master[perf_con]
-            nom_violation = value(
-                model_data.master_nominal_scenario.find_component(
-                    nom_constraint
-                )
+    if uncertainty_set_is_discrete:
+        all_scenarios_exhausted = (
+            len(model_data.idxs_of_master_scenarios)
+            == len(config.uncertainty_set.scenarios)
+        )
+        if all_scenarios_exhausted:
+            # Entire uncertainty set already accounted for
+            #  in master. No need to solve separation
+            return SeparationLoopResults(
+                solver_call_results_list=[],
+                solved_globally=solve_globally,
+                worst_case_res_idx=None,
             )
-            model_data.nom_perf_con_violations[perf_con] = nom_violation
 
-        # now solve separation problems
+        perf_con_to_maximize = (
+            sorted_priority_groups[max(sorted_priority_groups.keys())][0]
+        )
+
+        # efficiency: evaluate all separation problem solutions in
+        # advance of entering loop
+        discrete_separation_results = discrete_solve(
+            model_data=model_data,
+            config=config,
+            solve_globally=solve_globally,
+            perf_con_to_maximize=perf_con_to_maximize,
+            perf_cons_to_evaluate=(
+                model_data.separation_model.util.performance_constraints
+            ),
+        )
+
+        termination_not_ok = (
+            discrete_separation_results.time_out
+            or discrete_separation_results.subsolver_error
+        )
+        if termination_not_ok:
+            return SeparationLoopResults(
+                solver_call_results_list=[
+                    discrete_separation_results.results_list
+                ],
+                solved_globally=solve_globally,
+                worst_case_res_idx=None,
+            )
+
+    all_solve_call_results = []
+    for priority, perf_constraints in sorted_priority_groups.items():
         for perf_con in perf_constraints:
             # config.progress_logger.info(
             #     f"Separating constraint {perf_con.name}"
             # )
 
-            # retrieve and activate corresponding separation objective
-            separation_obj = objectives_map[perf_con]
-            separation_obj.activate()
-
-            # solve separation problem
+            # solve separation problem for this performance constraint
             if uncertainty_set_is_discrete:
-                solve_call_results_list = discrete_solve(
+                solve_call_results = get_worst_discrete_separation_solution(
+                    perf_con,
+                    model_data,
+                    config,
+                    perf_constraints,
+                    discrete_separation_results,
+                )
+            else:
+                solve_call_results = solver_call_separation(
                     model_data=model_data,
                     config=config,
                     solve_globally=solve_globally,
+                    perf_con_to_maximize=perf_con,
                     perf_cons_to_evaluate=perf_constraints,
                 )
-            else:
-                solve_call_results_list = [
-                    solver_call_separation(
-                        model_data=model_data,
-                        config=config,
-                        solve_globally=solve_globally,
-                        perf_cons_to_evaluate=perf_constraints,
-                    )
-                ]
 
-            solve_data_list.append(solve_call_results_list)
+            all_solve_call_results.append(solve_call_results)
 
-            # increment solve time accumulator
-            solve_time_increment = sum(
-                get_time_from_solver(solve_res)
-                for sep_res in solve_call_results_list
-                for solve_res in sep_res.results_list
+            termination_not_ok = (
+                solve_call_results.time_out
+                or solve_call_results.subsolver_error
             )
-            solve_time += solve_time_increment
-
-            # Terminate due to timeout or nonacceptable solve status
-            time_out = any(
-                scall_res.time_out
-                for scall_res in solve_call_results_list
-            )
-            subsolver_error = any(
-                not scall_res.termination_acceptable(acceptable_terminations)
-                for scall_res in solve_call_results_list
-            )
-            if time_out or subsolver_error:
+            if termination_not_ok:
                 return SeparationLoopResults(
-                    solve_data_list=solve_data_list,
-                    violating_param_realization=None,
-                    violations=None,
-                    solve_time=solve_time,
-                    subsolver_error=subsolver_error,
-                    time_out=time_out,
+                    solver_call_results_list=all_solve_call_results,
                     solved_globally=solve_globally,
+                    worst_case_res_idx=None,
                 )
 
-            separation_obj.deactivate()
-
-    # There may be multiple separation problem solutions
-    # for which a violation was found.
-    # Choose just one for updating next master
-    perf_con_idx, scenario_idx = get_index_of_max_violation(
-        model_data=model_data,
-        config=config,
-        solve_data_list=solve_data_list,
+    # there may be multiple separation problem solutions
+    # found to have violated a performance constraint.
+    # we choose just one for master problem of next iteration
+    worst_case_res_idx = get_index_of_max_violation(
+        solver_call_results_list=all_solve_call_results,
     )
-    if (perf_con_idx, scenario_idx) != (None, None):
-        violating_param_realization = list(
-            solve_data_list[perf_con_idx][scenario_idx]
-            .violating_param_realization
-        )
-        violations = (
-            solve_data_list[perf_con_idx][scenario_idx]
-            .list_of_scaled_violations
-        )
-        # violated_con_name = list(objectives_map.keys())[perf_con_idx]
+    if worst_case_res_idx is not None:
+        worst_case_res = all_solve_call_results[worst_case_res_idx]
+        if uncertainty_set_is_discrete:
+            model_data.idxs_of_master_scenarios.append(
+                worst_case_res.discrete_set_scenario_index
+            )
+        # objectives_map = model_data.separation_model.util.map_obj_to_constr
+        # violated_con_name = list(objectives_map.keys())[worst_case_res_idx]
         # config.progress_logger.info(
         #     f"Violation found for constraint {violated_con_name} "
-        #     f"under realization {violating_param_realization}"
+        #     f"under realization {worst_case_res.violating_param_realization}"
         # )
-    else:  # no performance constraints were violated
-        violating_param_realization = None
-        violations = None
 
     return SeparationLoopResults(
-        solve_data_list=solve_data_list,
-        violating_param_realization=violating_param_realization,
-        violations=violations,
-        solve_time=solve_time,
-        subsolver_error=False,
-        time_out=False,
+        solver_call_results_list=all_solve_call_results,
         solved_globally=solve_globally,
+        worst_case_res_idx=worst_case_res_idx,
     )
 
 
 def update_solve_data_violations(
         model_data,
         config,
+        perf_con_to_maximize,
         perf_cons_to_evaluate,
         ):
     """
@@ -657,20 +737,6 @@ def update_solve_data_violations(
         1 entry which can be mapped to an active Objective
         of ``model_data.separation_model``.
     """
-    objectives_map = model_data.separation_model.util.map_obj_to_constr
-    active_perf_cons_and_objs = [
-        (perf_con, objectives_map[perf_con])
-        for perf_con in perf_cons_to_evaluate
-        if objectives_map[perf_con].active
-    ]
-    if len(active_perf_cons_and_objs) != 1:
-        raise ValueError(
-            f"Exactly one performance constraint in `perf_cons_to_evalaute`"
-            "should be mapped to an active objective of the separation"
-            f"model (found {len(active_perf_cons_and_objs)}) "
-        )
-    active_perf_con, active_obj = active_perf_cons_and_objs[0]
-
     # parameter realization for current separation problem solution
     violating_param_realization = list(
         param.value for param in
@@ -694,7 +760,7 @@ def update_solve_data_violations(
             / max(1, abs(model_data.nom_perf_con_violations[perf_con]))
         )
         scaled_violations.append(scaled_violation)
-        if perf_con is active_perf_con:
+        if perf_con is perf_con_to_maximize:
             scaled_active_obj_violation = scaled_violation
 
     constraint_violated = (
@@ -814,6 +880,7 @@ def solver_call_separation(
         model_data,
         config,
         solve_globally,
+        perf_con_to_maximize,
         perf_cons_to_evaluate,
         ):
     """
@@ -828,6 +895,9 @@ def solver_call_separation(
     solve_globally : bool
         True to solve separation problems globally,
         False to solve locally.
+    perf_con_to_maximize : Constraint
+        Performance constraint for which to solve separation problem.
+        Informs the objective (constraint violation) to maximize.
     perf_cons_to_evaluate : list of Constraint
         Performance constraints whose expressions are to be
         evaluated at the separation problem solution
@@ -838,6 +908,9 @@ def solver_call_separation(
     solve_call_results : pyros.solve_data.SeparationSolveCallResults
         Solve results for separation problem of interest.
     """
+    # objective corresponding to specified performance constraint
+    objectives_map = model_data.separation_model.util.map_obj_to_constr
+    separation_obj = objectives_map[perf_con_to_maximize]
 
     if solve_globally:
         solvers = [config.global_solver] + config.backup_global_solvers
@@ -856,9 +929,11 @@ def solver_call_separation(
         time_out=False,
         results_list=[],
         found_violation=False,
+        subsolver_error=False,
     )
     timer = TicTocTimer()
     for opt in solvers:
+        separation_obj.activate()
         orig_setting, custom_setting_present = adjust_solver_time_settings(
             model_data.timing,
             opt,
@@ -896,6 +971,8 @@ def solver_call_separation(
                 config,
             )
 
+        separation_obj.deactivate()
+
         # record termination condition for this particular solver
         solver_status_dict[str(opt)] = results.solver.termination_condition
         solve_call_results.results_list.append(results)
@@ -917,6 +994,16 @@ def solver_call_separation(
         )
         if optimal_termination:
             nlp_model.solutions.load_from(results)
+
+            # record second-stage and state variable values
+            solve_call_results.variable_values = ComponentMap()
+            for var in nlp_model.util.second_stage_variables:
+                solve_call_results.variable_values[var] = value(var)
+            for var in nlp_model.util.state_vars:
+                solve_call_results.variable_values[var] = value(var)
+
+            # record uncertain parameter realization
+            #   and constraint violations
             (
                 solve_call_results.violating_param_realization,
                 solve_call_results.list_of_scaled_violations,
@@ -924,6 +1011,7 @@ def solver_call_separation(
             ) = update_solve_data_violations(
                 model_data,
                 config,
+                perf_con_to_maximize,
                 perf_cons_to_evaluate,
             )
             return solve_call_results
@@ -931,12 +1019,10 @@ def solver_call_separation(
     # All subordinate solvers failed to optimize model to appropriate
     # termination condition. PyROS will terminate with subsolver
     # error. At this point, export model if desired
+    solve_call_results.subsolver_error = True
     save_dir = config.subproblem_file_directory
     if save_dir and config.keepfiles:
-        objective = str(
-            list(nlp_model.component_data_objects(Objective, active=True))[0]
-            .name
-        )
+        objective = separation_obj.name
         name = os.path.join(
             save_dir,
             (
@@ -967,11 +1053,13 @@ def discrete_solve(
         model_data,
         config,
         solve_globally,
+        perf_con_to_maximize,
         perf_cons_to_evaluate,
         ):
     """
     Obtain separation problem solution for each scenario
-    of the discrete uncertainty set.
+    of the uncertainty set not already added to the most
+    recent master problem.
 
     Parameters
     ----------
@@ -984,57 +1072,78 @@ def discrete_solve(
         the model.
     solve_globally : bool
         Is separation problem to be solved globally.
+    perf_con_to_maximize : Constraint
+        Performance constraint for which to solve separation
+        problem.
     perf_cons_to_evaluate : list of Constraint
         Performance constraints whose expressions are to be
-        evaluated at the separation problem solution
+        evaluated at the each of separation problem solutions
         obtained.
 
     Returns
     -------
-    solve_data_list : list of SeparationResult
-        Separation problem solve results for each scenario.
+    discrete_separation_results : DiscreteSeparationSolveCallResults
+        Separation solver call results on performance constraint
+        of interest for every scenario considered.
+
+    Notes
+    -----
+    Since we assume that models passed to PyROS are such that the DOF
+    variables and uncertain parameter values uniquely define the state
+    variables, this method need be only be invoked once per separation
+    loop. Subject to our assumption, the choice of objective
+    (``perf_con_to_maximize``) should not affect the solutions returned
+    beyond subsolver tolerances. For other performance constraints, the
+    optimal separation problem solution can then be evaluated by simple
+    enumeration of the solutions returned by this function, since for
+    discrete uncertainty sets, the number of feasible separation
+    solutions is, under our assumption, merely equal to the number
+    of scenarios in the uncertainty set.
     """
-    # Deactivate uncertainty set constraints
-    conlist = model_data.separation_model.util.uncertainty_set_constraint
-    _constraints = list(conlist.values())
-    conlist.deactivate()
 
-    # constraints are clustered by scenario into groups of
-    # size equal to the dimension of the set
-    chunk_size = len(model_data.separation_model.util.uncertain_param_vars)
+    # Ensure uncertainty set constraints deactivated
+    model_data.separation_model.util.uncertainty_set_constraint.deactivate()
+    uncertain_param_vars = list(
+        model_data.separation_model.util.uncertain_param_vars.values()
+    )
 
-    # ensure scenarios already in master are skipped from separation
-    constraints_to_skip = ComponentSet()
-    for pnt in model_data.points_added_to_master:
-        _idx = config.uncertainty_set.scenarios.index(tuple(pnt))
-        skip_index_list = list(
-            range(chunk_size * _idx, chunk_size * _idx + chunk_size)
-        )
-        for _index in range(len(_constraints)):
-            if _index in skip_index_list:
-                constraints_to_skip.add(_constraints[_index])
-    constraints = list(c for c in _constraints if c not in constraints_to_skip)
+    # skip scenarios already added to most recent master problem
+    master_scenario_idxs = model_data.idxs_of_master_scenarios
+    scenario_idxs_to_separate = [
+        idx for idx, _ in enumerate(config.uncertainty_set.scenarios)
+        if idx not in master_scenario_idxs
+    ]
 
-    # solve separation problem for each parameter realization
-    # (i.e. ea. scenario) not already added to master
-    solve_data_list = []
-    for i in range(0, len(constraints), chunk_size):
-        chunk = list(constraints[i:i + chunk_size])
-        for idx, con in enumerate(chunk):
-            con.activate()
-            model_data.separation_model.util.uncertain_param_vars[idx].fix(
-                con.lower,
-            )
-            con.deactivate()
+    solve_call_results_list = []
+    for scenario_idx in scenario_idxs_to_separate:
+        # fix uncertain parameters to scenario value
+        # hence, no need to activate uncertainty set constraints
+        scenario = config.uncertainty_set.scenarios[scenario_idx]
+        for param, coord_val in zip(uncertain_param_vars, scenario):
+            param.fix(coord_val)
 
-        solve_data = solver_call_separation(
+        # obtain separation problem solution
+        solve_call_results = solver_call_separation(
             model_data=model_data,
             config=config,
             solve_globally=solve_globally,
+            perf_con_to_maximize=perf_con_to_maximize,
             perf_cons_to_evaluate=perf_cons_to_evaluate,
         )
-        solve_data_list.append(solve_data)
-        for con in chunk:
-            con.deactivate()
+        solve_call_results.discrete_set_scenario_index = scenario_idx
+        solve_call_results_list.append(solve_call_results)
 
-    return solve_data_list
+        # halt at first encounter of unacceptable termination
+        termination_not_ok = (
+            solve_call_results.subsolver_error
+            or solve_call_results.time_out
+        )
+        if termination_not_ok:
+            break
+
+    return DiscreteSeparationSolveCallResults(
+        solved_globally=solve_globally,
+        scenario_indexes=scenario_idxs_to_separate,
+        solver_call_results_list=solve_call_results_list,
+        performance_constraint=perf_con_to_maximize,
+    )
