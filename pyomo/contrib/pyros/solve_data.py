@@ -81,9 +81,10 @@ class SeparationSolveCallResults:
         of entries may be as high as the product of the number of
         subordinate local/global solvers provided (including backup)
         and the number of scenarios in the uncertainty set.
-    list_of_scaled_violations : list of float, optional
-        Normalized violation of each performance constraint considered
-        by the separation problem solution.
+    scaled_violations : ComponentMap, optional
+        Mapping from performance constraints to floats equal
+        to their scaled violations by separation problem solution
+        stored in this result.
     violating_param_realization : list of float, optional
         Uncertain parameter realization for reported separation
         problem solution.
@@ -110,7 +111,7 @@ class SeparationSolveCallResults:
     ----------
     solved_globally
     results_list
-    list_of_scaled_violations
+    scaled_violations
     violating_param_realizations
     variable_values
     found_violation
@@ -123,7 +124,7 @@ class SeparationSolveCallResults:
             self,
             solved_globally,
             results_list=None,
-            list_of_scaled_violations=None,
+            scaled_violations=None,
             violating_param_realization=None,
             variable_values=None,
             found_violation=None,
@@ -136,7 +137,7 @@ class SeparationSolveCallResults:
         """
         self.results_list = results_list
         self.solved_globally = solved_globally
-        self.list_of_scaled_violations = list_of_scaled_violations
+        self.scaled_violations = scaled_violations
         self.violating_param_realization = violating_param_realization
         self.variable_values = variable_values
         self.found_violation = found_violation
@@ -205,14 +206,10 @@ class DiscreteSeparationSolveCallResults:
     solved_globally : bool
         True if separation problems solved to global optimality,
         False otherwise.
-    scenario_indexes : list of int, optional
-        Indexes of uncertain parameter scenarios,
-        as listed in the `scenarios` attribute
-        of the associated ``DiscreteScenarioSet``,
-        for which problem was solved.
-    solver_call_results_list : list of SeparationSolveCallResults
-        Solver call results for separation problem subject to
-        each scenario of the associated discrete set.
+    solver_call_results : dict
+        Mapping from discrete uncertainty set scenario list
+        indexes to solver call results for separation problems
+        subject to the scenarios.
     performance_constraint : Constraint
         Separation problem performance constraint for which
         `self` was generated.
@@ -221,7 +218,7 @@ class DiscreteSeparationSolveCallResults:
     ----------
     solved_globally
     scenario_indexes
-    solver_call_results_list
+    solver_call_results
     performance_constraint
     time_out
     subsolver_error
@@ -230,16 +227,14 @@ class DiscreteSeparationSolveCallResults:
     def __init__(
             self,
             solved_globally,
-            scenario_indexes=None,
-            solver_call_results_list=None,
+            solver_call_results=None,
             performance_constraint=None,
             ):
         """Initialize self (see class docstring).
 
         """
         self.solved_globally = solved_globally
-        self.scenario_indexes = scenario_indexes
-        self.solver_call_results_list = solver_call_results_list
+        self.solver_call_results = solver_call_results
         self.performance_constraint = performance_constraint
 
     @property
@@ -250,7 +245,7 @@ class DiscreteSeparationSolveCallResults:
         False otherwise.
         """
         return any(
-            res.time_out for res in self.solver_call_results_list
+            res.time_out for res in self.solver_call_results.values()
         )
 
     @property
@@ -261,7 +256,7 @@ class DiscreteSeparationSolveCallResults:
         in `self`, False otherwise.
         """
         return any(
-            res.subsolver_error for res in self.solver_call_results_list
+            res.subsolver_error for res in self.solver_call_results.values()
         )
 
     def evaluate_total_solve_time(
@@ -290,7 +285,7 @@ class DiscreteSeparationSolveCallResults:
         """
         return sum(
             solver_call_res.evaluate_total_solve_time(evaluator_func)
-            for solver_call_res in self.solver_call_results_list
+            for solver_call_res in self.solver_call_results.values()
         )
 
 
@@ -304,22 +299,22 @@ class SeparationLoopResults:
     solved_globally : bool
         True if separation problems were solved to global optimality,
         False otherwise.
-    solver_call_results_list : list of SeparationSolveCallResult
-        Solver call results for each separation problem
-        (i.e. each performance constraint).
-    worst_case_res_idx : None or int, optional
-        Index of ``SeparationSolveCallResults`` object
-        in `self` corresponding to maximally violating separation
-        problem solution.
+    solver_call_results : ComponentMap
+        Mapping from performance constraints to corresponding
+        ``SeparationSolveCallResults`` objects.
+    worst_case_perf_con : None or int, optional
+        Performance constraint maped to ``SeparationSolveCallResults``
+        object in `self` corresponding to maximally violating
+        separation problem solution.
 
     Attributes
     ----------
-    solver_call_results_list
+    solver_call_results
     solved_globally
-    worst_case_res_idx
+    worst_case_perf_con
     found_violation
     violating_param_realization
-    violations
+    scaled_violations
     violating_separation_variable_values
     subsolver_error
     time_out
@@ -328,15 +323,15 @@ class SeparationLoopResults:
     def __init__(
             self,
             solved_globally,
-            solver_call_results_list,
-            worst_case_res_idx,
+            solver_call_results,
+            worst_case_perf_con,
             ):
         """Initialize self (see class docstring).
 
         """
-        self.solver_call_results_list = solver_call_results_list
+        self.solver_call_results = solver_call_results
         self.solved_globally = solved_globally
-        self.worst_case_res_idx = worst_case_res_idx
+        self.worst_case_perf_con = worst_case_perf_con
 
     @property
     def found_violation(self):
@@ -348,7 +343,7 @@ class SeparationLoopResults:
         """
         return any(
             solver_call_res.found_violation
-            for solver_call_res in self.solver_call_results_list
+            for solver_call_res in self.solver_call_results.values()
         )
 
     @property
@@ -357,34 +352,34 @@ class SeparationLoopResults:
         None or list of float : Uncertain parameter values for
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_res_idx``.
-        If ``self.worst_case_res_idx`` is not specified,
+        listed in self at index ``self.worst_case_perf_con``.
+        If ``self.worst_case_perf_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_res_idx is not None:
+        if self.worst_case_perf_con is not None:
             return (
                 self
-                .solver_call_results_list[self.worst_case_res_idx]
+                .solver_call_results[self.worst_case_perf_con]
                 .violating_param_realization
             )
         else:
             return None
 
     @property
-    def violations(self):
+    def scaled_violations(self):
         """
-        None or list of float : Performance constraint violations
+        None or ComponentMap : Scaled performance constraint violations
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_res_idx``.
-        If ``self.worst_case_res_idx`` is not specified,
+        listed in self at index ``self.worst_case_perf_con``.
+        If ``self.worst_case_perf_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_res_idx is not None:
+        if self.worst_case_perf_con is not None:
             return (
                 self
-                .solver_call_results_list[self.worst_case_res_idx]
-                .list_of_scaled_violations
+                .solver_call_results[self.worst_case_perf_con]
+                .scaled_violations
             )
         else:
             return None
@@ -392,17 +387,17 @@ class SeparationLoopResults:
     @property
     def violating_separation_variable_values(self):
         """
-        None or ComponentMap : Second-stage and state variable
+        None or ComponentMap : Second-stage and state variable values
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_res_idx``.
-        If ``self.worst_case_res_idx`` is not specified,
+        listed in self at index ``self.worst_case_perf_con``.
+        If ``self.worst_case_perf_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_res_idx is not None:
+        if self.worst_case_perf_con is not None:
             return (
                 self
-                .solver_call_results_list[self.worst_case_res_idx]
+                .solver_call_results[self.worst_case_perf_con]
                 .variable_values
             )
         else:
@@ -417,7 +412,7 @@ class SeparationLoopResults:
         """
         return any(
             solver_call_res.subsolver_error
-            for solver_call_res in self.solver_call_results_list
+            for solver_call_res in self.solver_call_results.values()
         )
 
     @property
@@ -429,7 +424,7 @@ class SeparationLoopResults:
         """
         return any(
             solver_call_res.time_out
-            for solver_call_res in self.solver_call_results_list
+            for solver_call_res in self.solver_call_results.values()
         )
 
     def evaluate_total_solve_time(
@@ -458,7 +453,7 @@ class SeparationLoopResults:
         """
         return sum(
             res.evaluate_total_solve_time(evaluator_func)
-            for res in self.solver_call_results_list
+            for res in self.solver_call_results.values()
         )
 
 
@@ -483,7 +478,7 @@ class SeparationResults:
     solved_globally
     found_violation
     violating_param_realization
-    violations
+    scaled_violations
     violating_separation_variable_values
     robustness_certified
     """
@@ -609,35 +604,35 @@ class SeparationResults:
         None or list of float : Uncertain parameter values
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_res_idx``
+        If no such solution found, (i.e. ``worst_case_perf_con``
         set to None for both local and global loop results),
         then None is returned.
         """
         return self.get_violating_attr("violating_param_realization")
 
     @property
-    def violations(self):
+    def scaled_violations(self):
         """
-        None or list of float : Performance constraint violations
+        None or ComponentMap : Scaled performance constraint violations
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_res_idx``
+        If no such solution found, (i.e. ``worst_case_perf_con``
         set to None for both local and global loop results),
         then None is returned.
         """
-        return self.get_violating_attr("violations")
+        return self.get_violating_attr("scaled_violations")
 
     @property
     def violating_separation_variable_values(self):
         """
-        None or list of float : Separation problem variable values
+        None or ComponentMap : Second-stage and state variable values
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_res_idx``
+        If no such solution found, (i.e. ``worst_case_perf_con``
         set to None for both local and global loop results),
         then None is returned.
         """
-        return self.get_violating_attr("variable_values")
+        return self.get_violating_attr("violating_separation_variable_values")
 
     def evaluate_local_solve_time(
             self,
@@ -753,17 +748,20 @@ class SeparationResults:
         pyomo.opt.SolverResults
         """
         if include_local and self.local_separation_loop_results is not None:
-            local_res_list = (
-                self.local_separation_loop_results.solver_call_results_list
+            all_local_call_results = (
+                self.local_separation_loop_results.solver_call_results.values()
             )
-            for solve_call_res in local_res_list:
+            for solve_call_res in all_local_call_results:
                 for res in solve_call_res.results_list:
                     yield res
 
         if include_global and self.global_separation_loop_results is not None:
-            global_res_list = (
-                self.global_separation_loop_results.solver_call_results_list
+            all_global_call_results = (
+                self
+                .global_separation_loop_results
+                .solver_call_results
+                .values()
             )
-            for solve_call_res in global_res_list:
+            for solve_call_res in all_global_call_results:
                 for res in solve_call_res.results_list:
                     yield res
