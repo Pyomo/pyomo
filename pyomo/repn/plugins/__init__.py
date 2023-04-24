@@ -20,6 +20,18 @@ def load():
 
     from pyomo.opt import WriterFactory
 
+    # Register the "default" versions of writers that have more than one
+    # implementation
     WriterFactory.register('nl', 'Generate the corresponding AMPL NL file.')(
         WriterFactory.get_class('nl_v2')
     )
+    WriterFactory.register('lp', 'Generate the corresponding CPLEX LP file.')(
+        WriterFactory.get_class('lp_v1')
+    )
+
+
+def activate_writer_version(name, ver):
+    """DEBUGGING TOOL to switch the "default" writer implementation"""
+    doc = WriterFactory.doc(name)
+    WriterFactory.unregister(name)
+    WriterFactory.register(name, doc)(WriterFactory.get_class(f'{name}_v{ver}'))

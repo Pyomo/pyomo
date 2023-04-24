@@ -162,13 +162,6 @@ class FileDeterminism(enum.IntEnum):
     SORT_SYMBOLS = 30
 
 
-def _activate_nl_writer_version(n):
-    """DEBUGGING TOOL to switch the "default" NL writer"""
-    doc = WriterFactory.doc('nl')
-    WriterFactory.unregister('nl')
-    WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
-
-
 def _apply_node_operation(node, args):
     try:
         tmp = (_CONSTANT, node._apply_operation(args))

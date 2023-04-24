@@ -52,7 +52,7 @@ def _get_bound(exp):
 
 
 @WriterFactory.register('cpxlp', 'Generate the corresponding CPLEX LP file')
-@WriterFactory.register('lp', 'Generate the corresponding CPLEX LP file')
+@WriterFactory.register('lp_v1', 'Generate the corresponding CPLEX LP file')
 class ProblemWriter_cpxlp(AbstractProblemWriter):
     def __init__(self):
         AbstractProblemWriter.__init__(self, ProblemFormat.cpxlp)
