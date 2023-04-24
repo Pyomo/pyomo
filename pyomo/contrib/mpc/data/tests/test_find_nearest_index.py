@@ -19,7 +19,6 @@ from pyomo.contrib.mpc.data.find_nearest_index import (
 
 
 class TestFindNearestIndex(unittest.TestCase):
-
     def test_two_points(self):
         array = [0, 5]
 
@@ -46,8 +45,8 @@ class TestFindNearestIndex(unittest.TestCase):
         array = []
         for i in range(5):
             i0 = float(i)
-            i1 = round((i + 0.15) * 1e4)/1e4
-            i2 = round((i + 0.64) * 1e4)/1e4
+            i1 = round((i + 0.15) * 1e4) / 1e4
+            i2 = round((i + 0.64) * 1e4) / 1e4
             array.extend([i, i1, i2])
         array.append(5.0)
 
@@ -84,7 +83,6 @@ class TestFindNearestIndex(unittest.TestCase):
 
 
 class TestFindNearestIntervalIndex(unittest.TestCase):
-
     def test_find_interval(self):
         intervals = [(0.0, 0.1), (0.1, 0.5), (0.7, 1.0)]
         target = 0.05
@@ -149,8 +147,8 @@ class TestFindNearestIntervalIndex(unittest.TestCase):
         # the tolerance is not well-defined. Here the computed distance may
         # not be exactly 1e-3 due to roundoff error.
         #
-        #idx = find_nearest_interval_index(intervals, target, tolerance=1e-3)
-        #self.assertEqual(idx, None)
+        # idx = find_nearest_interval_index(intervals, target, tolerance=1e-3)
+        # self.assertEqual(idx, None)
 
         idx = find_nearest_interval_index(intervals, target, tolerance=1e-4)
         self.assertEqual(idx, None)

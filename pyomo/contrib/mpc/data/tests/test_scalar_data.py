@@ -16,7 +16,6 @@ from pyomo.contrib.mpc.data.scalar_data import ScalarData
 
 
 class TestScalarData(unittest.TestCase):
-
     def _make_model(self):
         m = pyo.ConcreteModel()
         m.time = pyo.Set(initialize=[0, 1, 2])
@@ -54,10 +53,7 @@ class TestScalarData(unittest.TestCase):
 
     def test_get_data_from_key(self):
         m = self._make_model()
-        data = ScalarData(
-            {m.var[:, "A"]: 0.5, m.var[:, "B"]: 2.0},
-            time_set=m.time,
-        )
+        data = ScalarData({m.var[:, "A"]: 0.5, m.var[:, "B"]: 2.0}, time_set=m.time)
         val = data.get_data_from_key(m.var[:, "A"])
         self.assertEqual(val, 0.5)
         val = data.get_data_from_key(pyo.Reference(m.var[:, "A"]))
@@ -102,10 +98,7 @@ class TestScalarData(unittest.TestCase):
         m = self._make_model()
         data = ScalarData({m.var[:, "A"]: 0.5, m.var[:, "B"]: 2.0})
         pred_json_dict = {"var[*,A]": 0.5, "var[*,B]": 2.0}
-        self.assertEqual(
-            data.to_serializable(),
-            pred_json_dict,
-        )
+        self.assertEqual(data.to_serializable(), pred_json_dict)
 
     def test_extract_variables(self):
         m = self._make_model()

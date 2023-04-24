@@ -1,6 +1,6 @@
 def NodesIn_init(model, node):
     retval = []
-    for (i, j) in model.Arcs:
+    for i, j in model.Arcs:
         if j == node:
             retval.append(i)
     return retval

@@ -25,12 +25,9 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.indexed_component import (
-    IndexedComponent,
-    UnindexedComponent_set, )
+from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.numvalue import (NumericValue,
-                                      as_numeric)
+from pyomo.core.base.numvalue import NumericValue, as_numeric
 from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')
@@ -66,8 +63,7 @@ class _ExpressionData(NumericValue):
 
     def is_expression_type(self, expression_system=None):
         """A boolean indicating whether this in an expression."""
-        return expression_system is None \
-            or expression_system == self.EXPRESSION_SYSTEM
+        return expression_system is None or expression_system == self.EXPRESSION_SYSTEM
 
     def arg(self, index):
         if index < 0 or index >= 1:
@@ -176,7 +172,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
     def expr(self):
         """Return expression on this expression."""
         return self._expr
-    
+
     @expr.setter
     def expr(self, expr):
         self.set_value(expr)
@@ -191,7 +187,8 @@ class _GeneralExpressionDataImpl(_ExpressionData):
             raise ValueError(
                 f"Cannot assign {expr.__class__.__name__} to "
                 f"'{self.name}': {self.__class__.__name__} components only "
-                "allow numeric expression types.")
+                "allow numeric expression types."
+            )
         # In-place operators will leave self as an argument.  We need to
         # replace that with the current expression in order to avoid
         # loops in the expression tree.
@@ -214,8 +211,8 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         """A boolean indicating whether this expression is fixed."""
         return self._expr is None or self._expr.is_fixed()
 
-class _GeneralExpressionData(_GeneralExpressionDataImpl,
-                             ComponentData):
+
+class _GeneralExpressionData(_GeneralExpressionDataImpl, ComponentData):
     """
     An object that defines an expression that is never cloned
 
@@ -235,13 +232,13 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
     def __init__(self, expr=None, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
         # Inlining ComponentData.__init__
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
+        self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
 
 
 @ModelComponentFactory.register(
-    "Named expressions that can be used in other expressions.")
+    "Named expressions that can be used in other expressions."
+)
 class Expression(IndexedComponent):
     """
     A shared expression container, which may be defined over a index.
@@ -262,18 +259,21 @@ class Expression(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Expression:
             return super(Expression, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             return ScalarExpression.__new__(ScalarExpression)
         else:
             return IndexedExpression.__new__(IndexedExpression)
 
     @overload
-    def __init__(self, *indexes, rule=None, expr=None, initialize=None,
-                 name=None, doc=None): ...
+    def __init__(
+        self, *indexes, rule=None, expr=None, initialize=None, name=None, doc=None
+    ):
+        ...
 
     def __init__(self, *args, **kwds):
         _init = self._pop_from_kwargs(
-            'Expression', kwds, ('rule', 'expr', 'initialize'), None)
+            'Expression', kwds, ('rule', 'expr', 'initialize'), None
+        )
         # Historically, Expression objects were dense (but None):
         # setting arg_not_specified causes Initializer to recognize
         # _init==None as a constant initializer returning None
@@ -288,15 +288,14 @@ class Expression(IndexedComponent):
 
     def _pprint(self):
         return (
-            [('Size', len(self)),
-             ('Index', None if (not self.is_indexed())
-                  else self._index_set)
-             ],
+            [
+                ('Size', len(self)),
+                ('Index', None if (not self.is_indexed()) else self._index_set),
+            ],
             self.items(),
             ("Expression",),
-            lambda k,v: \
-               ["Undefined" if v.expr is None else v.expr]
-            )
+            lambda k, v: ["Undefined" if v.expr is None else v.expr],
+        )
 
     def display(self, prefix="", ostream=None):
         """TODO"""
@@ -304,18 +303,18 @@ class Expression(IndexedComponent):
             return
         if ostream is None:
             ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        ostream.write("Size="+str(len(self)))
+        tab = "    "
+        ostream.write(prefix + self.local_name + " : ")
+        ostream.write("Size=" + str(len(self)))
 
         ostream.write("\n")
         tabular_writer(
             ostream,
-            prefix+tab,
-            ((k,v) for k,v in self._data.items()),
-            ( "Value", ),
-            lambda k, v: \
-               ["Undefined" if v.expr is None else v()])
+            prefix + tab,
+            ((k, v) for k, v in self._data.items()),
+            ("Value",),
+            lambda k, v: ["Undefined" if v.expr is None else v()],
+        )
 
     #
     # A utility to extract all index-value pairs defining this
@@ -324,8 +323,7 @@ class Expression(IndexedComponent):
     # expensive to extract the contents of an expression.
     #
     def extract_values(self):
-        return {key:expression_data.expr
-                for key, expression_data in self.items()}
+        return {key: expression_data.expr for key, expression_data in self.items()}
 
     #
     # takes as input a (index, value) dictionary for updating this
@@ -333,13 +331,12 @@ class Expression(IndexedComponent):
     # checked through the __getitem__ method of this class.
     #
     def store_values(self, new_values):
-
-        if (self.is_indexed() is False) and \
-           (not None in new_values):
+        if (self.is_indexed() is False) and (not None in new_values):
             raise KeyError(
                 "Cannot store value for scalar Expression"
-                "="+self.name+"; no value with index "
-                "None in input new values map.")
+                "=" + self.name + "; no value with index "
+                "None in input new values map."
+            )
 
         for index, new_value in new_values.items():
             self._data[index].set_value(new_value)
@@ -351,7 +348,7 @@ class Expression(IndexedComponent):
             # an Expression if it was not originally defined, but I am less
             # convinced that implicitly creating an Expression (like what
             # works with a Var) makes sense.  [JDS 25 Nov 17]
-            #raise KeyError(idx)
+            # raise KeyError(idx)
         else:
             _init = self._rule(self.parent_block(), idx)
             if _init is Expression.Skip:
@@ -359,7 +356,7 @@ class Expression(IndexedComponent):
         return self._setitem_when_not_present(idx, _init)
 
     def construct(self, data=None):
-        """ Apply the rule to construct values in this set """
+        """Apply the rule to construct values in this set"""
         if self._constructed:
             return
         self._constructed = True
@@ -368,7 +365,8 @@ class Expression(IndexedComponent):
         if is_debug_set(logger):
             logger.debug(
                 "Constructing Expression, name=%s, from data=%s"
-                % (self.name, str(data)))
+                % (self.name, str(data))
+            )
 
         try:
             # We do not (currently) accept data for constructing Constraints
@@ -379,7 +377,6 @@ class Expression(IndexedComponent):
 
 
 class ScalarExpression(_GeneralExpressionData, Expression):
-
     def __init__(self, *args, **kwds):
         _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
@@ -398,8 +395,9 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         raise ValueError(
             "Accessing the expression of expression '%s' "
             "before the Expression has been constructed (there "
-            "is currently no value to return)."
-            % (self.name))
+            "is currently no value to return)." % (self.name)
+        )
+
     @expr.setter
     def expr(self, expr):
         """Set the expression on this expression."""
@@ -415,8 +413,8 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         raise ValueError(
             "Setting the expression of expression '%s' "
             "before the Expression has been constructed (there "
-            "is currently no object to set)."
-            % (self.name))
+            "is currently no object to set)." % (self.name)
+        )
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
@@ -425,8 +423,8 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         raise ValueError(
             "Accessing the is_constant flag of expression '%s' "
             "before the Expression has been constructed (there "
-            "is currently no value to return)."
-            % (self.name))
+            "is currently no value to return)." % (self.name)
+        )
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
@@ -435,8 +433,8 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         raise ValueError(
             "Accessing the is_fixed flag of expression '%s' "
             "before the Expression has been constructed (there "
-            "is currently no value to return)."
-            % (self.name))
+            "is currently no value to return)." % (self.name)
+        )
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -447,14 +445,13 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         if index is not None:
             raise KeyError(
                 "ScalarExpression object '%s' does not accept "
-                "index values other than None. Invalid value: %s"
-                % (self.name, index))
-        if (type(expr) is tuple) and \
-           (expr == Expression.Skip):
+                "index values other than None. Invalid value: %s" % (self.name, index)
+            )
+        if (type(expr) is tuple) and (expr == Expression.Skip):
             raise ValueError(
                 "Expression.Skip can not be assigned "
-                "to an Expression that is not indexed: %s"
-                % (self.name))
+                "to an Expression that is not indexed: %s" % (self.name)
+            )
         self.set_value(expr)
         return self
 
@@ -465,7 +462,6 @@ class SimpleExpression(metaclass=RenamedClass):
 
 
 class IndexedExpression(Expression):
-
     #
     # Leaving this method for backward compatibility reasons
     # Note: It allows adding members outside of self._index_set.
@@ -475,10 +471,8 @@ class IndexedExpression(Expression):
     #
     def add(self, index, expr):
         """Add an expression with a given index."""
-        if (type(expr) is tuple) and \
-           (expr == Expression.Skip):
+        if (type(expr) is tuple) and (expr == Expression.Skip):
             return None
         cdata = _GeneralExpressionData(expr, component=self)
         self._data[index] = cdata
         return cdata
-

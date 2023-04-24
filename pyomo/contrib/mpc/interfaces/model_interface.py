@@ -33,9 +33,7 @@ from pyomo.contrib.mpc.modeling.cost_expressions import (
     get_penalty_from_constant_target,
     get_penalty_from_target,
 )
-from pyomo.contrib.mpc.modeling.constraints import (
-    get_piecewise_constant_constraints,
-)
+from pyomo.contrib.mpc.modeling.constraints import get_piecewise_constant_constraints
 
 iterable_scalars = (str, bytes)
 
@@ -142,10 +140,12 @@ class DynamicModelInterface(object):
                 for cuid, var in zip(self._dae_var_cuids, self._dae_vars)
             }
             if include_expr:
-                data.update({
-                    cuid: [pyo_value(expr[t]) for t in time]
-                    for cuid, expr in zip(self._dae_expr_cuids, self._dae_expr)
-                })
+                data.update(
+                    {
+                        cuid: [pyo_value(expr[t]) for t in time]
+                        for cuid, expr in zip(self._dae_expr_cuids, self._dae_expr)
+                    }
+                )
             # Return a TimeSeriesData object
             return TimeSeriesData(data, time_list, time_set=self.time)
         else:
@@ -155,10 +155,12 @@ class DynamicModelInterface(object):
                 for cuid, var in zip(self._dae_var_cuids, self._dae_vars)
             }
             if include_expr:
-                data.update({
-                    cuid: pyo_value(expr[time])
-                    for cuid, expr in zip(self._dae_expr_cuids, self._dae_expr)
-                })
+                data.update(
+                    {
+                        cuid: pyo_value(expr[time])
+                        for cuid, expr in zip(self._dae_expr_cuids, self._dae_expr)
+                    }
+                )
             # Return ScalarData object
             return ScalarData(data)
 
@@ -193,6 +195,7 @@ class DynamicModelInterface(object):
         if time_points is None:
             time_points = self.time
         data = _process_to_dynamic_data(data, time_set=self.time)
+
         def _error_if_used(prefer_left, excl_left, excl_right, dtype):
             if any(a is not None for a in (prefer_left, excl_left, excl_right)):
                 raise RuntimeError(
@@ -202,6 +205,7 @@ class DynamicModelInterface(object):
                     " exclude_right_endpoint=%s while loading data of type %s"
                     % (prefer_left, excl_left, excl_right, dtype)
                 )
+
         excl_left = exclude_left_endpoint
         excl_right = exclude_right_endpoint
         if isinstance(data, ScalarData):
@@ -211,9 +215,7 @@ class DynamicModelInterface(object):
             load_data_from_scalar(data, self.model, time_points)
         elif isinstance(data, TimeSeriesData):
             _error_if_used(prefer_left, excl_left, excl_right, type(data))
-            load_data_from_series(
-                data, self.model, time_points, tolerance=tolerance
-            )
+            load_data_from_series(data, self.model, time_points, tolerance=tolerance)
         elif isinstance(data, IntervalData):
             prefer_left = True if prefer_left is None else prefer_left
             excl_left = prefer_left if excl_left is None else excl_left
@@ -245,12 +247,7 @@ class DynamicModelInterface(object):
             source_time = self.time.first()
         if target_time is None:
             target_time = self.time
-        copy_values_at_time(
-            self._dae_vars,
-            self._dae_vars,
-            source_time,
-            target_time,
-        )
+        copy_values_at_time(self._dae_vars, self._dae_vars, source_time, target_time)
 
     def shift_values_by_time(self, dt):
         """
@@ -314,7 +311,7 @@ class DynamicModelInterface(object):
             Holds the weights to use in the tracking cost for each variable
         variable_set: Set (optional)
             A set indexing the list of provided variables, if one already
-            exists. 
+            exists.
         tolerance: Float (optional)
             Tolerance for checking inclusion in an interval. Only may be
             provided if IntervalData is provided for target_data. In this
@@ -343,8 +340,7 @@ class DynamicModelInterface(object):
             # Should these data structures use OrderedDicts internally
             # to enforce an order here?
             variables = [
-                self.model.find_component(key)
-                for key in target_data.get_data().keys()
+                self.model.find_component(key) for key in target_data.get_data().keys()
             ]
         else:
             # Variables were provided. These could be anything. Process them
@@ -393,22 +389,15 @@ class DynamicModelInterface(object):
             equality constraints.
 
         """
-        cuids = [
-            get_indexed_cuid(var, (self.time,))
-            for var in variables
-        ]
+        cuids = [get_indexed_cuid(var, (self.time,)) for var in variables]
         variables = [self.model.find_component(cuid) for cuid in cuids]
         time_list = list(self.time)
         # Make sure that sample points exist (within tolerance) in the time
         # set.
         sample_point_indices = [
-            find_nearest_index(time_list, t, tolerance=tolerance)
-            for t in sample_points
+            find_nearest_index(time_list, t, tolerance=tolerance) for t in sample_points
         ]
         sample_points = [time_list[i] for i in sample_point_indices]
         return get_piecewise_constant_constraints(
-            variables,
-            self.time,
-            sample_points,
-            use_next=use_next,
+            variables, self.time, sample_points, use_next=use_next
         )

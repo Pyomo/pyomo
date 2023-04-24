@@ -19,6 +19,7 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.trustregion.filter import Filter, FilterElement
 
+
 class TestFilter(unittest.TestCase):
     def setUp(self):
         self.objective = 1.0
@@ -42,9 +43,7 @@ class TestFilter(unittest.TestCase):
     def test_isAcceptable(self):
         fe = FilterElement(0.5, 0.25)
         # A sufficiently feasible element
-        self.assertTrue(self.tmpFilter.isAcceptable(fe,
-                                                    self.theta_max))
+        self.assertTrue(self.tmpFilter.isAcceptable(fe, self.theta_max))
         fe = FilterElement(10.0, 15.0)
         # A sufficiently infeasible element
-        self.assertFalse(self.tmpFilter.isAcceptable(fe,
-                                                     self.theta_max))
+        self.assertFalse(self.tmpFilter.isAcceptable(fe, self.theta_max))

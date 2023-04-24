@@ -9,8 +9,10 @@ from pyomo.contrib.appsi.cmodel import cmodel_available
 class TestCmodelImport(unittest.TestCase):
     def test_import(self):
         pyomo_config_dir = os.path.join(
-            PYOMO_CONFIG_DIR, "lib", "python%s.%s" % sys.version_info[:2],
-            "site-packages"
+            PYOMO_CONFIG_DIR,
+            "lib",
+            "python%s.%s" % sys.version_info[:2],
+            "site-packages",
         )
         cmodel_dir = this_file_dir()
         cmodel_dir = os.path.join(cmodel_dir, os.pardir)

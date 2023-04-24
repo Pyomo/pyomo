@@ -8,36 +8,39 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #
-#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation 
-#  Initiative (CCSI), and is copyright (c) 2022 by the software owners: 
-#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC., 
-#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,  
+#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
+#  Initiative (CCSI), and is copyright (c) 2022 by the software owners:
+#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
+#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
 #  Battelle Memorial Institute, University of Notre Dame,
-#  The University of Pittsburgh, The University of Texas at Austin, 
+#  The University of Pittsburgh, The University of Texas at Austin,
 #  University of Toledo, West Virginia University, et al. All rights reserved.
-# 
-#  NOTICE. This Software was developed under funding from the 
-#  U.S. Department of Energy and the U.S. Government consequently retains 
+#
+#  NOTICE. This Software was developed under funding from the
+#  U.S. Department of Energy and the U.S. Government consequently retains
 #  certain rights. As such, the U.S. Government has been granted for itself
-#  and others acting on its behalf a paid-up, nonexclusive, irrevocable, 
-#  worldwide license in the Software to reproduce, distribute copies to the 
+#  and others acting on its behalf a paid-up, nonexclusive, irrevocable,
+#  worldwide license in the Software to reproduce, distribute copies to the
 #  public, prepare derivative works, and perform publicly and display
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
 
 from pyomo.common.dependencies import (
-    numpy as np, numpy_available,
-    pandas as pd, pandas_available,
-    matplotlib as plt, matplotlib_available,
+    numpy as np,
+    numpy_available,
+    pandas as pd,
+    pandas_available,
+    matplotlib as plt,
+    matplotlib_available,
 )
 
 
 class Measurements:
     def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
         """
-        This class stores information on which algebraic and differential 
-        variables in the Pyomo model are considered measurements. 
+        This class stores information on which algebraic and differential
+        variables in the Pyomo model are considered measurements.
 
         This includes the functionality to specify indices for these
         measurement variables.  For example, with a partial differential
@@ -49,11 +52,11 @@ class Measurements:
         Parameters
         ----------
         measurement_index_time:
-            a ``dict``, keys are measurement variable names, 
+            a ``dict``, keys are measurement variable names,
 
             * if there are extra indices, for e.g., Var[scenario, extra_index, time]:
-              values are a dictionary, keys are its extra index, values are its 
-              measuring time points. 
+              values are a dictionary, keys are its extra index, values are its
+              measuring time points.
             * if there are no extra indices, for e.g., Var[scenario, time]:
               values are a list of measuring time point.
 
@@ -67,7 +70,7 @@ class Measurements:
         ind_string:
             a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
             For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
-        
+
         """
         self.measurement_all_info = measurement_index_time
         self.ind_string = ind_string
@@ -76,8 +79,12 @@ class Measurements:
         # begin flatten
         self._name_and_index_generator(self.measurement_all_info)
         self._generate_flatten_name(self.name_and_index)
-        self._generate_variance(self.flatten_measure_name, variance, self.name_and_index)
-        self._generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
+        self._generate_variance(
+            self.flatten_measure_name, variance, self.name_and_index
+        )
+        self._generate_flatten_timeset(
+            self.measurement_all_info, self.flatten_measure_name, self.name_and_index
+        )
         self._model_measure_name()
 
         # generate the overall measurement time points set, including the measurement time for all measurements
@@ -87,7 +94,6 @@ class Measurements:
             overall_time += i
             timepoint_overall_set = list(set(overall_time))
         self.timepoint_overall_set = timepoint_overall_set
-
 
     def _name_and_index_generator(self, all_info):
         """
@@ -100,7 +106,7 @@ class Measurements:
             values are a dictionary, keys are its extra index, values are its measuring time points
             values are a list of measuring time point if there is no extra index for this measurement
             Note: all_info can be the self.measurement_all_info, but does not have to be it.
-        
+
         """
         measurement_name = list(all_info.keys())
         # a list of measurement extra indexes
@@ -130,7 +136,7 @@ class Measurements:
         """
         flatten_names = []
         for j in measure_name_and_index.keys():
-            if measure_name_and_index[j] is not None: # if it has extra index
+            if measure_name_and_index[j] is not None:  # if it has extra index
                 for ind in measure_name_and_index[j]:
                     flatten_name = j + self.ind_string + str(ind)
                     flatten_names.append(flatten_name)
@@ -145,7 +151,7 @@ class Measurements:
 
         Parameters
         ----------
-        flatten_measure_name: flattened measurement names. For e.g., flattenning {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
+        flatten_measure_name: flattened measurement names. For e.g., flattening {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
         variance:
             a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index name,
             values are its variance as a scalar number.
@@ -154,7 +160,7 @@ class Measurements:
             If there is no extra index, it is a dict, keys are measurement variable names, values are its variance as a scalar number.
         name_and_index:
             a dictionary, keys are measurement names, values are a list of extra indexes.
-        
+
         """
         flatten_variance = {}
         for i in flatten_measure_name:
@@ -172,7 +178,7 @@ class Measurements:
                     flatten_variance[i] = variance[i]
         self.flatten_variance = flatten_variance
 
-    def _generate_flatten_timeset(self, all_info, flatten_measure_name,name_and_index):
+    def _generate_flatten_timeset(self, all_info, flatten_measure_name, name_and_index):
         """
         Generate flatten variables timeset. Return a dict where keys are the flattened variable names,
         values are a list of measurement time.
@@ -192,8 +198,7 @@ class Measurements:
         self.flatten_measure_timeset = flatten_measure_timeset
 
     def _model_measure_name(self):
-        """Return pyomo string name
-        """
+        """Return pyomo string name"""
         # store pyomo string name
         measurement_names = []
         # loop over measurement name
@@ -204,7 +209,9 @@ class Measurements:
                 measure_index = mname.split(self.ind_string)[1]
                 for tim in self.flatten_measure_timeset[mname]:
                     # get the measurement name in the model
-                    measurement_name = measure_name + '[0,' + measure_index + ',' + str(tim) + ']'
+                    measurement_name = (
+                        measure_name + '[0,' + measure_index + ',' + str(tim) + ']'
+                    )
                     measurement_names.append(measurement_name)
             else:
                 for tim in self.flatten_measure_timeset[mname]:
@@ -213,26 +220,28 @@ class Measurements:
                     measurement_names.append(measurement_name)
         self.model_measure_name = measurement_names
 
-    def SP_measure_name(self, j, t,scenario_all=None, p=None, mode='sequential_finite', legal_t=True):
+    def SP_measure_name(
+        self, j, t, scenario_all=None, p=None, mode='sequential_finite', legal_t=True
+    ):
         """Return pyomo string name for different modes
 
         Arguments
         ---------
         j: flatten measurement name
-        t: time 
+        t: time
         scenario_all: all scenario object, only needed for simultaneous finite mode
         p: parameter, only needed for simultaneous finite mode
         mode: mode name, can be 'simultaneous_finite' or 'sequential_finite'
         legal_t: if the time point is legal for this measurement. default is True
-        
+
         Returns
         -------
         up_C, lo_C: two measurement pyomo string names for simultaneous mode
-        legal_t: if the time point is legal for this measurement 
-        string_name: one measurement pyomo string name for sequential 
+        legal_t: if the time point is legal for this measurement
+        string_name: one measurement pyomo string name for sequential
 
         """
-        if mode=='simultaneous_finite':
+        if mode == 'simultaneous_finite':
             # check extra index
             if self.ind_string in j:
                 measure_name = j.split(self.ind_string)[0]
@@ -240,16 +249,52 @@ class Measurements:
                 if type(self.name_and_index[measure_name][0]) is str:
                     measure_index = '"' + measure_index + '"'
                 if t in self.flatten_measure_timeset[j]:
-                    up_C = 'm.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index + ',' + str(t) + ']'
-                    lo_C = 'm.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index + ',' + str(t) + ']'
+                    up_C = (
+                        'm.'
+                        + measure_name
+                        + '['
+                        + str(scenario_all['jac-index'][p][0])
+                        + ','
+                        + measure_index
+                        + ','
+                        + str(t)
+                        + ']'
+                    )
+                    lo_C = (
+                        'm.'
+                        + measure_name
+                        + '['
+                        + str(scenario_all['jac-index'][p][1])
+                        + ','
+                        + measure_index
+                        + ','
+                        + str(t)
+                        + ']'
+                    )
                 else:
                     legal_t = False
             else:
-                up_C = 'm.' + j + '[' + str(scenario_all['jac-index'][p][0]) + ',' + str(t) + ']'
-                lo_C = 'm.' + j + '[' + str(scenario_all['jac-index'][p][1]) + ',' + str(t) + ']'
+                up_C = (
+                    'm.'
+                    + j
+                    + '['
+                    + str(scenario_all['jac-index'][p][0])
+                    + ','
+                    + str(t)
+                    + ']'
+                )
+                lo_C = (
+                    'm.'
+                    + j
+                    + '['
+                    + str(scenario_all['jac-index'][p][1])
+                    + ','
+                    + str(t)
+                    + ']'
+                )
 
             return up_C, lo_C, legal_t
-        
+
         elif mode == 'sequential_finite':
             if self.ind_string in j:
                 measure_name = j.split(self.ind_string)[0]
@@ -257,14 +302,21 @@ class Measurements:
                 if type(self.name_and_index[measure_name][0]) is str:
                     measure_index = '"' + measure_index + '"'
                 if t in self.flatten_measure_timeset[j]:
-                    string_name = 'mod.' + measure_name + '[0,' + str((measure_index)) + ',' + str(t) + ']'
+                    string_name = (
+                        'mod.'
+                        + measure_name
+                        + '[0,'
+                        + str((measure_index))
+                        + ','
+                        + str(t)
+                        + ']'
+                    )
             else:
                 string_name = 'mod.' + j + '[0,' + str(t) + ']'
 
             return string_name
 
-
-    def check_subset(self,subset, throw_error=True, valid_subset=True):
+    def check_subset(self, subset, throw_error=True, valid_subset=True):
         """
         Check if the subset is correctly defined with right name, index and time.
 
@@ -283,12 +335,18 @@ class Measurements:
             if i not in self.flatten_measure_name:
                 valid_subset = False
                 if throw_error:
-                    raise ValueError('This is not a legal subset of the measurement overall set!')
+                    raise ValueError(
+                        'This is not a legal subset of the measurement overall set!'
+                    )
             else:
                 # check if subset measurement timepoints are in the overall measurement timepoints
                 for t in flatten_timeset[i]:
                     if t not in self.flatten_measure_timeset[i]:
                         valid_subset = False
                         if throw_error:
-                            raise ValueError('The time of {} is not included as measurements before.'.format(t))
+                            raise ValueError(
+                                'The time of {} is not included as measurements before.'.format(
+                                    t
+                                )
+                            )
         return valid_subset

@@ -10,26 +10,21 @@
 #  ___________________________________________________________________________
 
 import logging
+
 logger = logging.getLogger('pyomo.core')
 
 from pyomo.common import deprecated
-from pyomo.core.base import (
-    Transformation,
-    TransformationFactory,
-    Var,
-    Suffix,
-    Reals,
-)
+from pyomo.core.base import Transformation, TransformationFactory, Var, Suffix, Reals
+
 
 #
 # This transformation relaxes integer ranges to their continuous
 # counterparts
 #
 @TransformationFactory.register(
-    'core.relax_integer_vars',
-    doc="Relax integer variables to continuous counterparts" )
+    'core.relax_integer_vars', doc="Relax integer variables to continuous counterparts"
+)
 class RelaxIntegerVars(Transformation):
-
     def __init__(self):
         super(RelaxIntegerVars, self).__init__()
 
@@ -44,14 +39,17 @@ class RelaxIntegerVars(Transformation):
             model.del_component("_relaxed_integer_vars")
             return
         # True by default, you can specify False if you want
-        descend = kwds.get('transform_deactivated_blocks',
-                           options.get('transform_deactivated_blocks', True))
+        descend = kwds.get(
+            'transform_deactivated_blocks',
+            options.get('transform_deactivated_blocks', True),
+        )
         active = None if descend else True
 
         # Relax the model
         relaxed_vars = {}
         _base_model_vars = model.component_data_objects(
-            Var, active=active, descend_into=True )
+            Var, active=active, descend_into=True
+        )
         for var in _base_model_vars:
             if not var.is_integer():
                 continue
@@ -81,10 +79,11 @@ class RelaxIntegerVars(Transformation):
 
 @TransformationFactory.register(
     'core.relax_discrete',
-    doc="[DEPRECATED] Relax integer variables to continuous counterparts" )
+    doc="[DEPRECATED] Relax integer variables to continuous counterparts",
+)
 @deprecated(
-    "core.relax_discrete is deprecated.  Use core.relax_integer_vars",
-    version='5.7')
+    "core.relax_discrete is deprecated.  Use core.relax_integer_vars", version='5.7'
+)
 class RelaxDiscreteVars(RelaxIntegerVars):
     """
     This plugin relaxes integrality in a Pyomo model.
@@ -98,10 +97,9 @@ class RelaxDiscreteVars(RelaxIntegerVars):
 # This transformation fixes known discrete domains to their current values
 #
 @TransformationFactory.register(
-    'core.fix_integer_vars',
-    doc="Fix all integer variables to their current values")
+    'core.fix_integer_vars', doc="Fix all integer variables to their current values"
+)
 class FixIntegerVars(Transformation):
-
     def __init__(self):
         super(FixIntegerVars, self).__init__()
 
@@ -115,7 +113,8 @@ class FixIntegerVars(Transformation):
 
         fixed_vars = []
         _base_model_vars = model.component_data_objects(
-            Var, active=True, descend_into=True)
+            Var, active=True, descend_into=True
+        )
         for var in _base_model_vars:
             # Instead of checking against
             # `_integer_relaxation_map.keys()` we just check the item
@@ -130,10 +129,11 @@ class FixIntegerVars(Transformation):
 
 @TransformationFactory.register(
     'core.fix_discrete',
-    doc="[DEPRECATED] Fix all integer variables to their current values")
+    doc="[DEPRECATED] Fix all integer variables to their current values",
+)
 @deprecated(
-    "core.fix_discrete is deprecated.  Use core.fix_integer_vars",
-    version='5.7')
+    "core.fix_discrete is deprecated.  Use core.fix_integer_vars", version='5.7'
+)
 class FixDiscreteVars(FixIntegerVars):
     def __init__(self, **kwds):
         super(FixDiscreteVars, self).__init__(**kwds)

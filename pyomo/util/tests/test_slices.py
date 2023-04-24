@@ -25,7 +25,6 @@ from pyomo.util.slices import (
 
 
 class TestGetComponentCallStack(unittest.TestCase):
-
     get_attribute = IndexedComponent_slice.get_attribute
     get_item = IndexedComponent_slice.get_item
 
@@ -39,7 +38,6 @@ class TestGetComponentCallStack(unittest.TestCase):
         self.assertSameStack(pred_stack, act_stack)
 
     def model(self):
-
         m = pyo.ConcreteModel()
         m.s1 = pyo.Set(initialize=[1, 2, 3])
         m.s2 = pyo.Set(initialize=[('a', 1), ('b', 2)])
@@ -171,7 +169,6 @@ class TestGetComponentCallStack(unittest.TestCase):
         self.assertEqual(len(act_stack), 0)
 
     def test_from_blockdata(self):
-
         m = self.model()
 
         context = m.b.b1[3].b.b2[2, 'b', 2]
@@ -195,7 +192,6 @@ class TestGetComponentCallStack(unittest.TestCase):
 
 class TestGetLocationAndReplacement(unittest.TestCase):
     def model(self):
-
         m = pyo.ConcreteModel()
 
         m.time = pyo.Set(initialize=[1, 2, 3])

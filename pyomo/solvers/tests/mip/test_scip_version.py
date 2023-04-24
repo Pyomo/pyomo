@@ -91,7 +91,6 @@ class Test(unittest.TestCase):
         return stdout.format(version)
 
     def set_solvers(self, scip=(8, 0, 0, 0), scipampl=(7, 0, 3, 0), fail=True):
-
         executables = {"scip": scip, "scipampl": scipampl}
 
         def get_executable(*args, **kwargs):

@@ -12,9 +12,12 @@
 from pyomo.core.base import Transformation, TransformationFactory
 import pyomo.gdp.plugins.multiple_bigm
 
-@TransformationFactory.register('contrib.piecewise.convex_combination',
-                                doc="Convert piecewise-linear model to a GDP "
-                                "to 'Convex Combination' MIP formulation.")
+
+@TransformationFactory.register(
+    'contrib.piecewise.convex_combination',
+    doc="Convert piecewise-linear model to a GDP "
+    "to 'Convex Combination' MIP formulation.",
+)
 class ConvexCombinationTransformation(Transformation):
     """
     Converts a model containing PiecewiseLinearFunctions to a an equivalent
@@ -29,9 +32,11 @@ class ConvexCombinationTransformation(Transformation):
         and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
         2010.
     """
+
     def _apply_to(self, instance, **kwds):
-        TransformationFactory(
-            'contrib.piecewise.reduced_inner_repn_gdp').apply_to(instance)
+        TransformationFactory('contrib.piecewise.reduced_inner_repn_gdp').apply_to(
+            instance
+        )
         TransformationFactory('gdp.mbigm').apply_to(
-            instance,
-            reduce_bound_constraints=True)
+            instance, reduce_bound_constraints=True
+        )

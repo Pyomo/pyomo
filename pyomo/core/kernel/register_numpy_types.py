@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.deprecation import deprecation_warning
+
 deprecation_warning(
     "pyomo.core.kernel.register_numpy_types is deprecated.  NumPy type "
     "registration is handled automatically by pyomo.common.dependencies.numpy",
@@ -17,8 +18,12 @@ deprecation_warning(
 )
 
 from pyomo.core.expr.numvalue import (
-    RegisterNumericType, RegisterIntegerType, RegisterBooleanType,
-    native_numeric_types, native_integer_types, native_boolean_types,
+    RegisterNumericType,
+    RegisterIntegerType,
+    RegisterBooleanType,
+    native_numeric_types,
+    native_integer_types,
+    native_boolean_types,
 )
 
 from pyomo.common.dependencies import numpy, numpy_available as _has_numpy
@@ -66,7 +71,5 @@ if _has_numpy:
         try:
             _type = getattr(numpy, _type_name)
             numpy_complex.append(_type)
-        except:     #pragma:nocover
+        except:  # pragma:nocover
             pass
-
-

@@ -124,6 +124,7 @@ def build_eight_process_flowsheet():
     CONSTANT = m.constant = Param(initialize=122.0)
 
     """Constraint definitions"""
+
     # INPUT-OUTPUT RELATIONS FOR process units 1 through 8
     @m.Disjunct(m.units)
     def use_unit(disj, unit):

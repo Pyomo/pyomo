@@ -23,6 +23,7 @@ from pyomo.common.dependencies import (
     networkx as nx,
     networkx_available,
 )
+
 if scipy_available:
     sps = scipy.sparse
 if networkx_available:
@@ -34,7 +35,6 @@ import pyomo.common.unittest as unittest
 @unittest.skipUnless(networkx_available, "networkx is not available")
 @unittest.skipUnless(scipy_available, "scipy is not available")
 class TestGetSCCOfProjection(unittest.TestCase):
-
     def test_graph_decomposable_tridiagonal_shuffled(self):
         """
         This is the same graph as in test_decomposable_tridiagonal_shuffled
@@ -60,13 +60,13 @@ class TestGetSCCOfProjection(unittest.TestCase):
 
         # Below diagonal
         row.extend(range(1, N))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         # Above diagonal
-        row.extend(i for i in range(N-1) if not i%2)
-        col.extend(i+1 for i in range(N-1) if not i%2)
-        data.extend(1 for i in range(N-1) if not i%2)
+        row.extend(i for i in range(N - 1) if not i % 2)
+        col.extend(i + 1 for i in range(N - 1) if not i % 2)
+        data.extend(1 for i in range(N - 1) if not i % 2)
 
         # Same results hold after applying a random permutation.
         row_perm = list(range(N))
@@ -82,19 +82,19 @@ class TestGetSCCOfProjection(unittest.TestCase):
         row_nodes = list(range(N))
         sccs = get_scc_of_projection(graph, row_nodes)
 
-        self.assertEqual(len(sccs), (N+1)//2)
+        self.assertEqual(len(sccs), (N + 1) // 2)
 
-        for i in range((N+1)//2):
+        for i in range((N + 1) // 2):
             # Note that these rows and cols are in the permuted space
             rows = set(r for r, _ in sccs[i])
-            cols = set(c-N for _, c in sccs[i])
+            cols = set(c - N for _, c in sccs[i])
 
-            pred_rows = {row_perm[2*i]}
-            pred_cols = {col_perm[2*i]}
+            pred_rows = {row_perm[2 * i]}
+            pred_cols = {col_perm[2 * i]}
 
-            if 2*i+1 < N:
-                pred_rows.add(row_perm[2*i+1])
-                pred_cols.add(col_perm[2*i+1])
+            if 2 * i + 1 < N:
+                pred_rows.add(row_perm[2 * i + 1])
+                pred_cols.add(col_perm[2 * i + 1])
 
             self.assertEqual(pred_rows, rows)
             self.assertEqual(pred_cols, cols)
@@ -130,9 +130,9 @@ class TestGetSCCOfProjection(unittest.TestCase):
 class TestTriangularize(unittest.TestCase):
     def test_low_rank_exception(self):
         N = 5
-        row = list(range(N-1))
-        col = list(range(N-1))
-        data = [1 for _ in range(N-1)]
+        row = list(range(N - 1))
+        col = list(range(N - 1))
+        data = [1 for _ in range(N - 1)]
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
@@ -142,11 +142,11 @@ class TestTriangularize(unittest.TestCase):
 
     def test_non_square_exception(self):
         N = 5
-        row = list(range(N-1))
-        col = list(range(N-1))
-        data = [1 for _ in range(N-1)]
+        row = list(range(N - 1))
+        col = list(range(N - 1))
+        data = [1 for _ in range(N - 1)]
 
-        matrix = sps.coo_matrix((data, (row, col)), shape=(N, N-1))
+        matrix = sps.coo_matrix((data, (row, col)), shape=(N, N - 1))
 
         with self.assertRaises(ValueError) as exc:
             row_block_map, col_block_map = block_triangularize(matrix)
@@ -160,7 +160,7 @@ class TestTriangularize(unittest.TestCase):
         col_values = set(row_block_map.values())
 
         # For a (block) diagonal matrix, the order of diagonal
-        # blocks is arbitary, so we can't perform any strong
+        # blocks is arbitrary, so we can't perform any strong
         # checks here.
         #
         # Perfect matching is unique, but order of strongly
@@ -199,15 +199,15 @@ class TestTriangularize(unittest.TestCase):
 
         # Below diagonal
         row.extend(range(1, N))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
         row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
-        
+
         self.assertEqual(len(row_values), N)
         self.assertEqual(len(col_values), N)
 
@@ -236,16 +236,16 @@ class TestTriangularize(unittest.TestCase):
         data.extend(1 for _ in range(N))
 
         # Below diagonal
-        row.extend(range(N-1))
+        row.extend(range(N - 1))
         col.extend(range(1, N))
-        data.extend(1 for _ in range(N-1))
+        data.extend(1 for _ in range(N - 1))
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
         row_block_map, col_block_map = map_coords_to_block_triangular_indices(matrix)
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
-        
+
         self.assertEqual(len(row_values), N)
         self.assertEqual(len(col_values), N)
 
@@ -253,8 +253,8 @@ class TestTriangularize(unittest.TestCase):
             # The block_triangularize function permutes
             # to lower triangular form, so rows and
             # columns are transposed to assemble the blocks.
-            self.assertEqual(row_block_map[i], N-1-i)
-            self.assertEqual(col_block_map[i], N-1-i)
+            self.assertEqual(row_block_map[i], N - 1 - i)
+            self.assertEqual(col_block_map[i], N - 1 - i)
 
     def test_bordered(self):
         """
@@ -270,19 +270,19 @@ class TestTriangularize(unittest.TestCase):
         col = []
         data = []
         # Diagonal
-        row.extend(range(N-1))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        row.extend(range(N - 1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         # Bottom row
-        row.extend(N-1 for _ in range(N-1))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        row.extend(N - 1 for _ in range(N - 1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         # Right column
-        row.extend(range(N-1))
-        col.extend(N-1 for _ in range(N-1))
-        data.extend(1 for _ in range(N-1))
+        row.extend(range(N - 1))
+        col.extend(N - 1 for _ in range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
@@ -307,25 +307,25 @@ class TestTriangularize(unittest.TestCase):
         |x x x x  |
         """
         N = 5
-        half = N//2
+        half = N // 2
         row = []
         col = []
         data = []
 
         # Diagonal
-        row.extend(range(N-1))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        row.extend(range(N - 1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         # Bottom row
-        row.extend(N-1 for _ in range(N-1))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        row.extend(N - 1 for _ in range(N - 1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         # Right column
-        row.extend(range(half, N-1))
-        col.extend(N-1 for _ in range(half, N-1))
-        data.extend(1 for _ in range(half, N-1))
+        row.extend(range(half, N - 1))
+        col.extend(N - 1 for _ in range(half, N - 1))
+        data.extend(1 for _ in range(half, N - 1))
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
@@ -333,8 +333,8 @@ class TestTriangularize(unittest.TestCase):
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
 
-        self.assertEqual(len(row_values), half+1)
-        self.assertEqual(len(col_values), half+1)
+        self.assertEqual(len(row_values), half + 1)
+        self.assertEqual(len(col_values), half + 1)
 
         first_half_set = set(range(half))
         for i in range(N):
@@ -367,13 +367,13 @@ class TestTriangularize(unittest.TestCase):
 
         # Below diagonal
         row.extend(range(1, N))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         # Above diagonal
-        row.extend(i for i in range(N-1) if not i%2)
-        col.extend(i+1 for i in range(N-1) if not i%2)
-        data.extend(1 for i in range(N-1) if not i%2)
+        row.extend(i for i in range(N - 1) if not i % 2)
+        col.extend(i + 1 for i in range(N - 1) if not i % 2)
+        data.extend(1 for i in range(N - 1) if not i % 2)
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
@@ -381,16 +381,16 @@ class TestTriangularize(unittest.TestCase):
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
 
-        self.assertEqual(len(row_values), (N+1)//2)
-        self.assertEqual(len(col_values), (N+1)//2)
+        self.assertEqual(len(row_values), (N + 1) // 2)
+        self.assertEqual(len(col_values), (N + 1) // 2)
 
-        for i in range((N+1)//2):
-            self.assertEqual(row_block_map[2*i], i)
-            self.assertEqual(col_block_map[2*i], i)
+        for i in range((N + 1) // 2):
+            self.assertEqual(row_block_map[2 * i], i)
+            self.assertEqual(col_block_map[2 * i], i)
 
-            if 2*i+1 < N:
-                self.assertEqual(row_block_map[2*i+1], i)
-                self.assertEqual(col_block_map[2*i+1], i)
+            if 2 * i + 1 < N:
+                self.assertEqual(row_block_map[2 * i + 1], i)
+                self.assertEqual(col_block_map[2 * i + 1], i)
 
     def test_decomposable_tridiagonal_shuffled(self):
         """
@@ -413,13 +413,13 @@ class TestTriangularize(unittest.TestCase):
 
         # Below diagonal
         row.extend(range(1, N))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         # Above diagonal
-        row.extend(i for i in range(N-1) if not i%2)
-        col.extend(i+1 for i in range(N-1) if not i%2)
-        data.extend(1 for i in range(N-1) if not i%2)
+        row.extend(i for i in range(N - 1) if not i % 2)
+        col.extend(i + 1 for i in range(N - 1) if not i % 2)
+        data.extend(1 for i in range(N - 1) if not i % 2)
 
         # Same results hold after applying a random permutation.
         row_perm = list(range(N))
@@ -436,18 +436,18 @@ class TestTriangularize(unittest.TestCase):
         row_values = set(row_block_map.values())
         col_values = set(row_block_map.values())
 
-        self.assertEqual(len(row_values), (N+1)//2)
-        self.assertEqual(len(col_values), (N+1)//2)
+        self.assertEqual(len(row_values), (N + 1) // 2)
+        self.assertEqual(len(col_values), (N + 1) // 2)
 
-        for i in range((N+1)//2):
-            row_idx = row_perm[2*i]
-            col_idx = col_perm[2*i]
+        for i in range((N + 1) // 2):
+            row_idx = row_perm[2 * i]
+            col_idx = col_perm[2 * i]
             self.assertEqual(row_block_map[row_idx], i)
             self.assertEqual(col_block_map[col_idx], i)
 
-            if 2*i+1 < N:
-                row_idx = row_perm[2*i+1]
-                col_idx = col_perm[2*i+1]
+            if 2 * i + 1 < N:
+                row_idx = row_perm[2 * i + 1]
+                col_idx = col_perm[2 * i + 1]
                 self.assertEqual(row_block_map[row_idx], i)
                 self.assertEqual(col_block_map[col_idx], i)
 
@@ -472,31 +472,31 @@ class TestTriangularize(unittest.TestCase):
 
         # Below diagonal
         row.extend(range(1, N))
-        col.extend(range(N-1))
-        data.extend(1 for _ in range(N-1))
+        col.extend(range(N - 1))
+        data.extend(1 for _ in range(N - 1))
 
         # Above diagonal
-        row.extend(i for i in range(N-1) if not i%2)
-        col.extend(i+1 for i in range(N-1) if not i%2)
-        data.extend(1 for i in range(N-1) if not i%2)
+        row.extend(i for i in range(N - 1) if not i % 2)
+        col.extend(i + 1 for i in range(N - 1) if not i % 2)
+        data.extend(1 for i in range(N - 1) if not i % 2)
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
         row_blocks, col_blocks = get_diagonal_blocks(matrix)
 
-        self.assertEqual(len(row_blocks), (N+1)//2)
-        self.assertEqual(len(col_blocks), (N+1)//2)
+        self.assertEqual(len(row_blocks), (N + 1) // 2)
+        self.assertEqual(len(col_blocks), (N + 1) // 2)
 
-        for i in range((N+1)//2):
+        for i in range((N + 1) // 2):
             rows = row_blocks[i]
             cols = col_blocks[i]
-            
-            if 2*i+1 < N:
-                self.assertEqual(set(rows), {2*i, 2*i+1})
-                self.assertEqual(set(cols), {2*i, 2*i+1})
+
+            if 2 * i + 1 < N:
+                self.assertEqual(set(rows), {2 * i, 2 * i + 1})
+                self.assertEqual(set(cols), {2 * i, 2 * i + 1})
             else:
-                self.assertEqual(set(rows), {2*i})
-                self.assertEqual(set(cols), {2*i})
+                self.assertEqual(set(rows), {2 * i})
+                self.assertEqual(set(cols), {2 * i})
 
 
 if __name__ == "__main__":

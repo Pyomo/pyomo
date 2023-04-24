@@ -17,7 +17,6 @@ from pyomo.environ import *
 
 
 def pyomo_create_model(options, model_options):
-
     model = ConcreteModel()
     model.x1 = Var(within=NonNegativeReals)
     model.x2 = Var(within=NonNegativeReals)

@@ -11,16 +11,20 @@
 
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
-    PiecewiseLinearToGDP)
+    PiecewiseLinearToGDP,
+)
 from pyomo.core import Constraint, NonNegativeIntegers, Suffix, Var
 from pyomo.core.base import TransformationFactory
 from pyomo.gdp import Disjunct, Disjunction
 
-@TransformationFactory.register('contrib.piecewise.inner_repn_gdp',
-                                doc="Convert piecewise-linear model to a GDP "
-                                "using an inner representation of the "
-                                "simplices that are the domains of the linear "
-                                "functions.")
+
+@TransformationFactory.register(
+    'contrib.piecewise.inner_repn_gdp',
+    doc="Convert piecewise-linear model to a GDP "
+    "using an inner representation of the "
+    "simplices that are the domains of the linear "
+    "functions.",
+)
 class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
     """
     Convert a model involving piecewise linear expressions into a GDP by
@@ -44,45 +48,47 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
            parent Block as the component owning their parent expression. In
            this mode, targets must be Blocks, Constraints, and/or Objectives.
     """
+
     CONFIG = PiecewiseLinearToGDP.CONFIG()
     _transformation_name = 'pw_linear_inner_repn'
 
-    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func,
-                                  transformation_block):
+    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
         transBlock = transformation_block.transformed_functions[
-            len(transformation_block.transformed_functions)]
+            len(transformation_block.transformed_functions)
+        ]
 
         # get the PiecewiseLinearFunctionExpression
         dimension = pw_expr.nargs()
         transBlock.disjuncts = Disjunct(NonNegativeIntegers)
         substitute_var = transBlock.substitute_var = Var()
-        pw_linear_func.map_transformation_var(pw_expr,
-                                              substitute_var)
+        pw_linear_func.map_transformation_var(pw_expr, substitute_var)
         substitute_var_lb = float('inf')
         substitute_var_ub = -float('inf')
-        for simplex, linear_func in zip(pw_linear_func._simplices,
-                                        pw_linear_func._linear_functions):
+        for simplex, linear_func in zip(
+            pw_linear_func._simplices, pw_linear_func._linear_functions
+        ):
             disj = transBlock.disjuncts[len(transBlock.disjuncts)]
-            disj.lambdas = Var(NonNegativeIntegers, dense=False,
-                               bounds=(0,1))
+            disj.lambdas = Var(NonNegativeIntegers, dense=False, bounds=(0, 1))
             extreme_pts = []
             for idx in simplex:
                 extreme_pts.append(pw_linear_func._points[idx])
 
             disj.convex_combo = Constraint(
-                expr=sum(disj.lambdas[i] for i in range(len(extreme_pts))) == 1)
+                expr=sum(disj.lambdas[i] for i in range(len(extreme_pts))) == 1
+            )
             linear_func_expr = linear_func(*pw_expr.args)
-            disj.set_substitute = Constraint(expr=substitute_var ==
-                                             linear_func_expr)
+            disj.set_substitute = Constraint(expr=substitute_var == linear_func_expr)
             (lb, ub) = compute_bounds_on_expr(linear_func_expr)
             if lb is not None and lb < substitute_var_lb:
                 substitute_var_lb = lb
             if ub is not None and ub > substitute_var_ub:
                 substitute_var_ub = ub
+
             @disj.Constraint(range(dimension))
             def linear_combo(disj, i):
-                return pw_expr.args[i] == sum(disj.lambdas[j]*pt[i] for j, pt in
-                                              enumerate(extreme_pts))
+                return pw_expr.args[i] == sum(
+                    disj.lambdas[j] * pt[i] for j, pt in enumerate(extreme_pts)
+                )
 
             # Mark the lambdas as local so that we don't do anything silly in
             # the hull transformation.
@@ -94,6 +100,7 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         if substitute_var_ub > -float('inf'):
             transBlock.substitute_var.setub(substitute_var_ub)
         transBlock.pick_a_piece = Disjunction(
-            expr=[d for d in transBlock.disjuncts.values()])
+            expr=[d for d in transBlock.disjuncts.values()]
+        )
 
         return transBlock.substitute_var

@@ -14,5 +14,3 @@
 #
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-

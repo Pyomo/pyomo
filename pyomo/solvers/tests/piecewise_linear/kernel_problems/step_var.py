@@ -25,7 +25,6 @@ values = [0, 0, 1, 1, 2]
 
 
 def define_model(**kwds):
-
     sense = kwds.pop("sense")
 
     m = block()

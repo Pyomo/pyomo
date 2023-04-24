@@ -17,18 +17,30 @@ import os
 import io
 import sys
 from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
+
+currdir = dirname(abspath(__file__)) + os.sep
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Param, Constraint, inequality, display
+from pyomo.environ import (
+    AbstractModel,
+    ConcreteModel,
+    Set,
+    Var,
+    Param,
+    Constraint,
+    inequality,
+    display,
+)
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.relational_expr import (
-    InequalityExpression, EqualityExpression, RangedExpression,
+    InequalityExpression,
+    EqualityExpression,
+    RangedExpression,
 )
 
-class TestGenerate_RelationalExpression(unittest.TestCase):
 
+class TestGenerate_RelationalExpression(unittest.TestCase):
     def setUp(self):
         m = AbstractModel()
         m.I = Set()
@@ -64,22 +76,28 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #    / \
         #   a   b
         with self.assertRaisesRegex(
-                TypeError, "Attempting to use a non-numeric type "
-                r"\(EqualityExpression\) in a numeric expression context."):
+            TypeError,
+            "Attempting to use a non-numeric type "
+            r"\(EqualityExpression\) in a numeric expression context.",
+        ):
             e == m.a
         with self.assertRaisesRegex(
-                TypeError, "Attempting to use a non-numeric type "
-                r"\(EqualityExpression\) in a numeric expression context."):
+            TypeError,
+            "Attempting to use a non-numeric type "
+            r"\(EqualityExpression\) in a numeric expression context.",
+        ):
             m.a == e
 
         #
         # Test expression with an indexed variable
         #
         with self.assertRaisesRegex(
-                TypeError, "Argument .* is an indexed numeric value"):
+            TypeError, "Argument .* is an indexed numeric value"
+        ):
             m.x == m.a
         with self.assertRaisesRegex(
-                TypeError, "Argument .* is an indexed numeric value"):
+            TypeError, "Argument .* is an indexed numeric value"
+        ):
             m.a == m.x
 
     def test_simpleInequality1(self):
@@ -95,7 +113,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
-        #self.assertEqual(len(e._strict), 1)
+        # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, True)
 
         #    <=
@@ -106,7 +124,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
-        #self.assertEqual(len(e._strict), 1)
+        # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, False)
 
         #    >
@@ -117,7 +135,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1), m.a)
-        #self.assertEqual(len(e._strict), 1)
+        # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, True)
 
         #    >=
@@ -128,7 +146,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1), m.a)
-        #self.assertEqual(len(e._strict), 1)
+        # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, False)
 
     def test_simpleInequality2(self):
@@ -144,7 +162,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
-        #self.assertEqual(len(e._strict), 1)
+        # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, True)
 
         #    <=
@@ -155,7 +173,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
-        #self.assertEqual(len(e._strict), 1)
+        # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, False)
 
         #    >
@@ -166,7 +184,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1), m.a)
-        #self.assertEqual(len(e._strict), 1)
+        # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, True)
 
         #    >=
@@ -178,7 +196,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1), m.a)
-        #self.assertEqual(len(e._strict), 1)
+        # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, False)
 
         try:
@@ -195,7 +213,6 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
 
 
 class TestGenerate_RangedExpression(unittest.TestCase):
-
     def setUp(self):
         m = AbstractModel()
         m.I = Set()
@@ -221,7 +238,7 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
         self.assertIs(e.arg(2), m.c)
-        #self.assertEqual(len(e._strict), 2)
+        # self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], True)
         self.assertEqual(e._strict[1], True)
 
@@ -236,7 +253,7 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
         self.assertIs(e.arg(2), m.c)
-        #self.assertEqual(len(e._strict), 2)
+        # self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], False)
 
@@ -251,7 +268,7 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         self.assertIs(e.arg(2), m.c)
         self.assertIs(e.arg(1), m.b)
         self.assertIs(e.arg(0), m.a)
-        #self.assertEqual(len(e._strict), 2)
+        # self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], True)
         self.assertEqual(e._strict[1], True)
 
@@ -266,7 +283,7 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         self.assertIs(e.arg(2), m.c)
         self.assertIs(e.arg(1), m.b)
         self.assertIs(e.arg(0), m.a)
-        #self.assertEqual(len(e._strict), 2)
+        # self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], False)
 
@@ -281,7 +298,7 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         self.assertIs(e.arg(2), 0)
         self.assertIs(e.arg(1), m.a)
         self.assertIs(e.arg(0), 0)
-        #self.assertEqual(len(e._strict), 2)
+        # self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], False)
 
@@ -296,7 +313,7 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         self.assertIs(e.arg(2), 0)
         self.assertIs(e.arg(1), m.a)
         self.assertIs(e.arg(0), 0)
-        #self.assertEqual(len(e._strict), 2)
+        # self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], True)
         self.assertEqual(e._strict[1], True)
 
@@ -329,12 +346,12 @@ class TestGenerate_RangedExpression(unittest.TestCase):
 # PotentiallyVariable - Expr contains one or more variables
 #
 class TestIsFixedIsConstant(unittest.TestCase):
-
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
 
         def d_fn(model):
-            return model.c+model.c
+            return model.c + model.c
+
         self.model = AbstractModel()
         self.model.a = Var(initialize=1.0)
         self.model.b = Var(initialize=2.0)
@@ -412,27 +429,27 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
 
 class TestMultiArgumentExpressions(unittest.TestCase):
-
     def test_double_sided_ineq(self):
         m = ConcreteModel()
-        m.s = Set(initialize=[1.0,2.0,3.0,4.0,5.0])
+        m.s = Set(initialize=[1.0, 2.0, 3.0, 4.0, 5.0])
 
-        m.vmin = Param(m.s, initialize=lambda m,i: i)
-        m.vmax = Param(m.s, initialize=lambda m,i: i**2)
+        m.vmin = Param(m.s, initialize=lambda m, i: i)
+        m.vmax = Param(m.s, initialize=lambda m, i: i**2)
 
         m.v = Var(m.s)
 
         def _con(m, i):
-            return inequality(m.vmin[i]**2, m.v[i], m.vmax[i]**2)
+            return inequality(m.vmin[i] ** 2, m.v[i], m.vmax[i] ** 2)
+
         m.con = Constraint(m.s, rule=_con)
 
         OUT = io.StringIO()
         for i in m.s:
-            OUT.write(str(_con(m,i)))
+            OUT.write(str(_con(m, i)))
             OUT.write("\n")
         display(m.con, ostream=OUT)
 
-        reference="""1.0  <=  v[1.0]  <=  1.0
+        reference = """1.0  <=  v[1.0]  <=  1.0
 4.0  <=  v[2.0]  <=  16.0
 9.0  <=  v[3.0]  <=  81.0
 16.0  <=  v[4.0]  <=  256.0
@@ -452,8 +469,6 @@ con : Size=5
 # Test pickle logic
 #
 class Test_pickle(unittest.TestCase):
-
-
     def test_ineq(self):
         M = ConcreteModel()
         M.v = Var()

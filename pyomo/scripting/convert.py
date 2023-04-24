@@ -52,7 +52,6 @@ def convert(options=Bunch(), parser=None, model_format=None):
 
         model_data.options = options
     except:
-
         # TBD: I should be able to call this function in the case of
         #      an exception to perform cleanup. However, as it stands
         #      calling finalize with its default keyword value for
@@ -64,7 +63,6 @@ def convert(options=Bunch(), parser=None, model_format=None):
         raise
 
     else:
-
         pyomo.scripting.util.finalize(data, model=model_data.model)
 
     return model_data

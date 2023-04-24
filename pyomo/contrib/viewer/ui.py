@@ -52,6 +52,7 @@ try:
     _MainWindowUI, _MainWindow = myqt.uic.loadUiType(os.path.join(_mypath, "main.ui"))
 except:
     _log.exception("Failed to load UI files.")
+
     # This lets the file still be imported, but you won't be able to use it
     # Allowing this to be imported will let some basic tests pass without PyQt
     class _MainWindowUI(object):

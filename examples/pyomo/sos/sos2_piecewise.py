@@ -30,6 +30,7 @@ F = {1: [1, 4, 9], 2: [1, 4, 9]}
 # Update the return value for constraint2_rule if
 # F is defined using the function above
 
+
 # Indexing set required for the SOSConstraint declaration
 def SOS_indices_init(model, t):
     return [(t, i) for i in range(len(DOMAIN_PTS[t]))]

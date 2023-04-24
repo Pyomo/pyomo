@@ -19,6 +19,7 @@
 import enum
 import logging
 import math
+import re
 import sys
 from io import StringIO
 
@@ -34,8 +35,10 @@ from pyomo.common.tee import capture_output
 
 from unittest import mock
 
+
 def _defaultFormatter(msg, default):
     return msg or default
+
 
 def _floatOrCall(val):
     """Cast the value to float, if that fails call it and then cast.
@@ -52,13 +55,20 @@ def _floatOrCall(val):
     except TypeError:
         return float(val())
 
-def assertStructuredAlmostEqual(first, second,
-                                places=None, msg=None, delta=None,
-                                reltol=None, abstol=None,
-                                allow_second_superset=False,
-                                item_callback=_floatOrCall,
-                                exception=ValueError,
-                                formatter=_defaultFormatter):
+
+def assertStructuredAlmostEqual(
+    first,
+    second,
+    places=None,
+    msg=None,
+    delta=None,
+    reltol=None,
+    abstol=None,
+    allow_second_superset=False,
+    item_callback=_floatOrCall,
+    exception=ValueError,
+    formatter=_defaultFormatter,
+):
     """Test that first and second are equal up to a tolerance
 
     This compares first and second using both an absolute (`abstol`) and
@@ -87,7 +97,7 @@ def assertStructuredAlmostEqual(first, second,
         `abs(first - second) / max(abs(first), abs(second))`,
     only when first != second (thereby avoiding divide-by-zero errors).
 
-    Items (entries other than Sequence / Mapping containters, matching
+    Items (entries other than Sequence / Mapping containers, matching
     strings, and items that satisfy `first is second`) are passed to the
     `item_callback` before testing equality and relative tolerances.
 
@@ -132,11 +142,10 @@ def assertStructuredAlmostEqual(first, second,
 
     """
     if sum(1 for _ in (places, delta, abstol) if _ is not None) > 1:
-        raise ValueError("Cannot specify more than one of "
-                         "{places, delta, abstol}")
+        raise ValueError("Cannot specify more than one of {places, delta, abstol}")
 
     if places is not None:
-        abstol = 10**(-places)
+        abstol = 10 ** (-places)
     if delta is not None:
         abstol = delta
     if abstol is None and reltol is None:
@@ -145,28 +154,36 @@ def assertStructuredAlmostEqual(first, second,
     fail = None
     try:
         _assertStructuredAlmostEqual(
-            first, second, abstol, reltol, not allow_second_superset,
-            item_callback, exception)
+            first,
+            second,
+            abstol,
+            reltol,
+            not allow_second_superset,
+            item_callback,
+            exception,
+        )
     except exception as e:
         fail = formatter(
             msg,
             "%s\n    Found when comparing with tolerance "
             "(abs=%s, rel=%s):\n"
-            "        first=%s\n        second=%s" % (
+            "        first=%s\n        second=%s"
+            % (
                 str(e),
                 abstol,
                 reltol,
                 _unittest.case.safe_repr(first),
                 _unittest.case.safe_repr(second),
-            ))
+            ),
+        )
 
     if fail:
         raise exception(fail)
 
 
-def _assertStructuredAlmostEqual(first, second,
-                                 abstol, reltol, exact,
-                                 item_callback, exception):
+def _assertStructuredAlmostEqual(
+    first, second, abstol, reltol, exact, item_callback, exception
+):
     """Recursive implementation of assertStructuredAlmostEqual"""
 
     args = (first, second)
@@ -174,46 +191,49 @@ def _assertStructuredAlmostEqual(first, second,
     if all(isinstance(_, Mapping) for _ in args):
         if exact and len(first) != len(second):
             raise exception(
-                "mappings are different sizes (%s != %s)" % (
-                    len(first),
-                    len(second),
-                ))
+                "mappings are different sizes (%s != %s)" % (len(first), len(second))
+            )
         for key in first:
             if key not in second:
                 raise exception(
-                    "key (%s) from first not found in second" % (
-                        _unittest.case.safe_repr(key),
-                    ))
+                    "key (%s) from first not found in second"
+                    % (_unittest.case.safe_repr(key),)
+                )
             try:
                 _assertStructuredAlmostEqual(
-                    first[key], second[key], abstol, reltol, exact,
-                    item_callback, exception)
+                    first[key],
+                    second[key],
+                    abstol,
+                    reltol,
+                    exact,
+                    item_callback,
+                    exception,
+                )
             except exception as e:
                 raise exception(
-                    "%s\n    Found when comparing key %s" % (
-                        str(e), _unittest.case.safe_repr(key)))
-        return # PASS!
+                    "%s\n    Found when comparing key %s"
+                    % (str(e), _unittest.case.safe_repr(key))
+                )
+        return  # PASS!
 
     elif any(isinstance(_, str) for _ in args):
         if first == second:
-            return # PASS!
+            return  # PASS!
 
     elif all(isinstance(_, Sequence) for _ in args):
         # Note that Sequence includes strings
         if exact and len(first) != len(second):
             raise exception(
-                "sequences are different sizes (%s != %s)" % (
-                    len(first),
-                    len(second),
-                ))
+                "sequences are different sizes (%s != %s)" % (len(first), len(second))
+            )
         for i, (f, s) in enumerate(zip(first, second)):
             try:
                 _assertStructuredAlmostEqual(
-                    f, s, abstol, reltol, exact, item_callback, exception)
+                    f, s, abstol, reltol, exact, item_callback, exception
+                )
             except exception as e:
-                raise exception(
-                    "%s\n    Found at position %s" % (str(e), i))
-        return # PASS!
+                raise exception("%s\n    Found at position %s" % (str(e), i))
+        return  # PASS!
 
     else:
         # Catch things like None, which may cause problems for the
@@ -224,7 +244,7 @@ def _assertStructuredAlmostEqual(first, second,
         # the values to be comparable.
         try:
             if first is second or first == second:
-                return # PASS!
+                return  # PASS!
         except:
             pass
         try:
@@ -234,11 +254,11 @@ def _assertStructuredAlmostEqual(first, second,
                 return
             diff = abs(f - s)
             if abstol is not None and diff <= abstol:
-                return # PASS!
+                return  # PASS!
             if reltol is not None and diff / max(abs(f), abs(s)) <= reltol:
-                return # PASS!
+                return  # PASS!
             if math.isnan(f) and math.isnan(s):
-                return # PASS! (we will treat NaN as equal)
+                return  # PASS! (we will treat NaN as equal)
         except:
             pass
 
@@ -254,6 +274,7 @@ def _assertStructuredAlmostEqual(first, second,
         )
     raise exception(msg)
 
+
 def _runner(q, qualname):
     "Utility wrapper for running functions, used by timeout()"
     resultType = _RunnerResult.call
@@ -262,11 +283,13 @@ def _runner(q, qualname):
     elif isinstance(qualname, str):
         # Use unittest to instantiate the TestCase and run it
         resultType = _RunnerResult.unittest
+
         def fcn():
             s = _unittest.TestLoader().loadTestsFromName(qualname)
             r = _unittest.TestResult()
             s.run(r)
             return r.errors + r.failures, r.skipped
+
         args = ()
         kwargs = {}
     else:
@@ -279,17 +302,21 @@ def _runner(q, qualname):
         q.put((resultType, result, OUT.getvalue()))
     except:
         import traceback
+
         etype, e, tb = sys.exc_info()
         if not isinstance(e, AssertionError):
-            e = etype("%s\nOriginal traceback:\n%s" % (
-                e, ''.join(traceback.format_tb(tb))))
+            e = etype(
+                "%s\nOriginal traceback:\n%s" % (e, ''.join(traceback.format_tb(tb)))
+            )
         q.put((_RunnerResult.exception, e, OUT.getvalue()))
     finally:
         _runner.data.pop(qualname)
 
+
 # Data structure for passing functions/arguments to the _runner
 # without forcing them to be pickled / unpickled
 _runner.data = {}
+
 
 class _RunnerResult(enum.Enum):
     exception = 0
@@ -347,6 +374,7 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
     import functools
     import multiprocessing
     import queue
+
     def timeout_decorator(fcn):
         @functools.wraps(fcn)
         def test_timer(*args, **kwargs):
@@ -354,8 +382,7 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
             if qualname in _runner.data:
                 return fcn(*args, **kwargs)
             if require_fork and multiprocessing.get_start_method() != 'fork':
-                raise _unittest.SkipTest(
-                    "timeout requires unavailable fork interface")
+                raise _unittest.SkipTest("timeout requires unavailable fork interface")
 
             q = multiprocessing.Queue()
             if multiprocessing.get_start_method() == 'fork':
@@ -364,8 +391,11 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
                 # wrapped function operates in the same environment.
                 _runner.data[q] = (fcn, args, kwargs)
                 runner_args = (q, qualname)
-            elif (args and fcn.__name__.startswith('test')
-                  and _unittest.case.TestCase in args[0].__class__.__mro__):
+            elif (
+                args
+                and fcn.__name__.startswith('test')
+                and _unittest.case.TestCase in args[0].__class__.__mro__
+            ):
                 # Option 2: this is wrapping a unittest.  Re-run
                 # unittest in the child process with this function as
                 # the sole target.  This ensures that things like setUp
@@ -378,8 +408,7 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
                 # environment configuration that it does not set up
                 # itself.
                 runner_args = (q, (qualname, test_timer, args, kwargs))
-            test_proc = multiprocessing.Process(
-                target=_runner, args=runner_args)
+            test_proc = multiprocessing.Process(target=_runner, args=runner_args)
             test_proc.daemon = True
             try:
                 test_proc.start()
@@ -389,14 +418,16 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
                         "Exception raised spawning timeout subprocess "
                         "on a platform that does not support 'fork'.  "
                         "It is likely that either the wrapped function or "
-                        "one of its arguments is not serializable")
+                        "one of its arguments is not serializable"
+                    )
                 raise
             try:
                 resultType, result, stdout = q.get(True, seconds)
             except queue.Empty:
                 test_proc.terminate()
                 raise timeout_raises(
-                    "test timed out after %s seconds" % (seconds,)) from None
+                    "test timed out after %s seconds" % (seconds,)
+                ) from None
             finally:
                 _runner.data.pop(q, None)
             sys.stdout.write(stdout)
@@ -412,8 +443,28 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
                         args[0].skipTest(msg)
             else:
                 raise result
+
         return test_timer
+
     return timeout_decorator
+
+
+class _AssertRaisesContext_NormalizeWhitespace(_unittest.case._AssertRaisesContext):
+    def __exit__(self, exc_type, exc_value, tb):
+        try:
+            _save_re = self.expected_regex
+            self.expected_regex = None
+            if not super().__exit__(exc_type, exc_value, tb):
+                return False
+        finally:
+            self.expected_regex = _save_re
+
+        exc_value = re.sub('(?s)\s+', ' ', str(exc_value))
+        if not _save_re.search(exc_value):
+            self._raiseFailure(
+                '"{}" does not match "{}"'.format(_save_re.pattern, exc_value)
+            )
+        return True
 
 
 class TestCase(_unittest.TestCase):
@@ -427,13 +478,21 @@ class TestCase(_unittest.TestCase):
     unittest.TestCase documentation
     -------------------------------
     """
+
     __doc__ += _unittest.TestCase.__doc__
 
-    def assertStructuredAlmostEqual(self, first, second,
-                                    places=None, msg=None, delta=None,
-                                    reltol=None, abstol=None,
-                                    allow_second_superset=False,
-                                    item_callback=_floatOrCall):
+    def assertStructuredAlmostEqual(
+        self,
+        first,
+        second,
+        places=None,
+        msg=None,
+        delta=None,
+        reltol=None,
+        abstol=None,
+        allow_second_superset=False,
+        item_callback=_floatOrCall,
+    ):
         assertStructuredAlmostEqual(
             first=first,
             second=second,
@@ -447,3 +506,34 @@ class TestCase(_unittest.TestCase):
             exception=self.failureException,
             formatter=self._formatMessage,
         )
+
+    def assertRaisesRegex(self, expected_exception, expected_regex, *args, **kwargs):
+        """Asserts that the message in a raised exception matches a regex.
+
+        This is a light weight wrapper around
+        :py:meth:`unittest.TestCase.assertRaisesRegex` that adds
+        handling of a `normalize_whitespace` keyword argument that
+        normalizes all consecutive whitespace in the exception message
+        to a single space before checking the regular expression.
+
+        Args:
+            expected_exception: Exception class expected to be raised.
+            expected_regex: Regex (re.Pattern object or string) expected
+                    to be found in error message.
+            args: Function to be called and extra positional args.
+            kwargs: Extra kwargs.
+            msg: Optional message used in case of failure. Can only be used
+                    when assertRaisesRegex is used as a context manager.
+            normalize_whitespace: Optional bool that, if True, collapses
+                    consecutive whitespace (including newlines) into a
+                    single space before checking against the regular
+                    expression
+
+        """
+        normalize_whitespace = kwargs.pop('normalize_whitespace', False)
+        if normalize_whitespace:
+            contextClass = _AssertRaisesContext_NormalizeWhitespace
+        else:
+            contextClass = _unittest.case._AssertRaisesContext
+        context = contextClass(expected_exception, self, expected_regex)
+        return context.handle('assertRaisesRegex', args, kwargs)

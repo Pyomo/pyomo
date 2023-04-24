@@ -1,5 +1,6 @@
 # functions.py
 
+
 # @all:
 def Apply(f, a):
     r = []

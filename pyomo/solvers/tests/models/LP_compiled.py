@@ -226,7 +226,6 @@ if has_numpy and has_scipy:
             return A, lb, ub, eq_index
 
         def _generate_base_model(self):
-
             self.model = pmo.block()
             model = self.model
             model._name = self.description

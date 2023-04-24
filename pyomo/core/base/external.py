@@ -15,23 +15,39 @@ import weakref
 from pyomo.common.pyomo_typing import overload
 
 from ctypes import (
-    Structure, POINTER, CFUNCTYPE, cdll, byref,
-    c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
+    Structure,
+    POINTER,
+    CFUNCTYPE,
+    cdll,
+    byref,
+    c_int,
+    c_long,
+    c_ulong,
+    c_double,
+    c_byte,
+    c_char_p,
+    c_void_p,
+)
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.fileutils import find_library
 from pyomo.core.expr.numvalue import (
-    native_types, native_numeric_types, pyomo_constant_types,
-    NonNumericValue, NumericConstant, value
+    native_types,
+    native_numeric_types,
+    pyomo_constant_types,
+    NonNumericValue,
+    NumericConstant,
+    value,
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
 from pyomo.core.base.units_container import units
 
-__all__  = ( 'ExternalFunction', )
+__all__ = ('ExternalFunction',)
 
 logger = logging.getLogger('pyomo.core')
 nan = float('nan')
+
 
 class ExternalFunction(Component):
     """Interface to an external (non-algebraic) function.
@@ -51,23 +67,26 @@ class ExternalFunction(Component):
        :class:`AMPLExternalFunction` interface.
 
     """
+
     def __new__(cls, *args, **kwargs):
         if cls is not ExternalFunction:
             return super().__new__(cls)
         elif args:
             return super().__new__(PythonCallbackFunction)
         elif 'library' not in kwargs and any(
-                kw in kwargs for kw in ('function', 'fgh')):
+            kw in kwargs for kw in ('function', 'fgh')
+        ):
             return super().__new__(PythonCallbackFunction)
         else:
             return super().__new__(AMPLExternalFunction)
 
     @overload
-    def __init__(self, function=None, gradient=None, hessian=None,
-                 *, fgh=None): ...
+    def __init__(self, function=None, gradient=None, hessian=None, *, fgh=None):
+        ...
 
     @overload
-    def __init__(self, *, library: str, function: str): ...
+    def __init__(self, *, library: str, function: str):
+        ...
 
     def __init__(self, *args, **kwargs):
         """Construct a reference to an external function.
@@ -180,7 +199,7 @@ class ExternalFunction(Component):
         #   2. See if we have a potentially variable argument
         #
         pv = False
-        for i,arg in enumerate(args_):
+        for i, arg in enumerate(args_):
             try:
                 # Q: Is there a better way to test if a value is an object
                 #    not in native_types and not a standard expression type?
@@ -196,7 +215,6 @@ class ExternalFunction(Component):
         return EXPR.NPV_ExternalFunctionExpression(args_, self)
 
     def evaluate(self, args):
-
         """Return the value of the function given the specified arguments
 
         Parameters
@@ -211,8 +229,7 @@ class ExternalFunction(Component):
         float
             The return value of the function evaluated at `args`
         """
-        args_ = [arg if arg.__class__ in native_types else value(arg)
-                 for arg in args]
+        args_ = [arg if arg.__class__ in native_types else value(arg) for arg in args]
         return self._evaluate(args_, None, 0)[0]
 
     def evaluate_fgh(self, args, fixed=None, fgh=2):
@@ -258,8 +275,7 @@ class ExternalFunction(Component):
             :math:`h[i + j*(j + 1)/2] == H_{i,j}`.
 
         """
-        args_ = [arg if arg.__class__ in native_types else value(arg)
-                 for arg in args]
+        args_ = [arg if arg.__class__ in native_types else value(arg) for arg in args]
         # Note: this is passed-by-reference, and the args_ list may be
         # changed by _evaluate (e.g., for PythonCallbackFunction).
         # Remember the original length of the list.
@@ -268,11 +284,12 @@ class ExternalFunction(Component):
         # Guarantee the return value behavior documented in the docstring
         if fgh == 2:
             n = N - 1
-            if len(h) - 1 != n + n*(n+1)//2:
+            if len(h) - 1 != n + n * (n + 1) // 2:
                 raise RuntimeError(
                     f"External function '{self.name}' returned an invalid "
                     f"Hessian matrix (expected {n + n*(n+1)//2 + 1}, "
-                    f"received {len(h)})")
+                    f"received {len(h)})"
+                )
         else:
             h = None
         if fgh >= 1:
@@ -280,7 +297,8 @@ class ExternalFunction(Component):
                 raise RuntimeError(
                     f"External function '{self.name}' returned an invalid "
                     f"derivative vector (expected {N}, "
-                    f"received {len(g)})")
+                    f"received {len(g)})"
+                )
         else:
             g = None
         # Note: the ASL does not require clients to honor the fixed flag
@@ -299,9 +317,9 @@ class ExternalFunction(Component):
                         continue
                     for j in range(N):
                         if i <= j:
-                            h[i + (j*(j + 1))//2] = 0
+                            h[i + (j * (j + 1)) // 2] = 0
                         else:
-                            h[j + (i*(i + 1))//2] = 0
+                            h[j + (i * (i + 1)) // 2] = 0
         return f, g, h
 
     def _evaluate(self, args, fixed, fgh):
@@ -312,12 +330,10 @@ class ExternalFunction(Component):
         to concrete values (it will not have Pyomo components or
         expressions).
         """
-        raise NotImplementedError(
-            f"{type(self)} did not implement _evaluate()" )
+        raise NotImplementedError(f"{type(self)} did not implement _evaluate()")
 
 
 class AMPLExternalFunction(ExternalFunction):
-
     __autoslot_mappers__ = {
         # Remove reference to loaded library (they are not copyable or
         # picklable)
@@ -329,7 +345,8 @@ class AMPLExternalFunction(ExternalFunction):
         if args:
             raise ValueError(
                 "AMPLExternalFunction constructor does not support "
-                "positional arguments" )
+                "positional arguments"
+            )
         self._library = kwargs.pop('library', None)
         self._function = kwargs.pop('function', None)
         self._known_functions = None
@@ -343,7 +360,8 @@ class AMPLExternalFunction(ExternalFunction):
             else:
                 logger.warning(
                     'Defining AMPL external function, but cannot locate '
-                    f'specified library "{self._library}"')
+                    f'specified library "{self._library}"'
+                )
         ExternalFunction.__init__(self, *args, **kwargs)
 
     def _evaluate(self, args, fixed, fgh):
@@ -353,15 +371,19 @@ class AMPLExternalFunction(ExternalFunction):
             raise RuntimeError(
                 "Error: external function '%s' was not registered within "
                 "external library %s.\n\tAvailable functions: (%s)"
-                % ( self._function, self._library,
-                    ', '.join(self._known_functions.keys()) ) )
+                % (
+                    self._function,
+                    self._library,
+                    ', '.join(self._known_functions.keys()),
+                )
+            )
         #
         N = len(args)
         arglist = _ARGLIST(args, fgh, fixed)
         fcn = self._known_functions[self._function][0]
         f = fcn(byref(arglist))
         if fgh >= 1:
-            g = [nan]*N
+            g = [nan] * N
             for i in range(N):
                 if arglist.at[i] < 0:
                     continue
@@ -369,16 +391,16 @@ class AMPLExternalFunction(ExternalFunction):
         else:
             g = None
         if fgh >= 2:
-            h = [nan]*((N + N**2)//2)
+            h = [nan] * ((N + N**2) // 2)
             for j in range(N):
                 j_r = arglist.at[j]
                 if j_r < 0:
                     continue
-                for i in range(j+1):
+                for i in range(j + 1):
                     i_r = arglist.at[i]
                     if i_r < 0:
                         continue
-                    h[i + j*(j + 1)//2] = arglist.hes[i_r + j_r*(j_r + 1)//2]
+                    h[i + j * (j + 1) // 2] = arglist.hes[i_r + j_r * (j_r + 1) // 2]
         else:
             h = None
         return f, g, h
@@ -399,36 +421,50 @@ class AMPLExternalFunction(ExternalFunction):
         self._known_functions = {}
         AE = _AMPLEXPORTS()
         AE.ASLdate = 20160307
+
         def addfunc(name, f, _type, nargs, funcinfo, ae):
             # trap for Python 3, where the name comes in as bytes() and
             # not a string
             if not isinstance(name, str):
                 name = name.decode()
             self._known_functions[str(name)] = (f, _type, nargs, funcinfo, ae)
+
         AE.Addfunc = _AMPLEXPORTS.ADDFUNC(addfunc)
+
         def addrandinit(ae, rss, v):
             # TODO: This should support the randinit ASL option
             rss(v, 1)
+
         AE.Addrandinit = _AMPLEXPORTS.ADDRANDINIT(addrandinit)
+
         def atreset(ae, a, b):
             logger.warning(
                 "AMPL External function: ignoring AtReset call in external "
                 "library.  This may result in a memory leak or other "
-                "undesirable behavior.")
+                "undesirable behavior."
+            )
+
         AE.AtReset = _AMPLEXPORTS.ATRESET(atreset)
 
-        FUNCADD = CFUNCTYPE( None, POINTER(_AMPLEXPORTS) )
+        FUNCADD = CFUNCTYPE(None, POINTER(_AMPLEXPORTS))
         FUNCADD(('funcadd_ASL', self._so))(byref(AE))
 
     def _pprint(self):
         return (
-            [ ('function', self._function),
-              ('library', self._library),
-              ('units', str(self._units)),
-              ('arg_units', [ str(u) for u in self._arg_units ]
-               if self._arg_units is not None else None),
+            [
+                ('function', self._function),
+                ('library', self._library),
+                ('units', str(self._units)),
+                (
+                    'arg_units',
+                    [str(u) for u in self._arg_units]
+                    if self._arg_units is not None
+                    else None,
+                ),
             ],
-            (), None, None
+            (),
+            None,
+            None,
         )
 
 
@@ -448,12 +484,14 @@ class _PythonCallbackFunctionID(NumericConstant):
     model.clone()).
 
     """
+
     __slots__ = ()
     __autoslot_mappers__ = {'value': _python_callback_fid_mapper}
 
     def is_constant(self):
         # Return False so this object is not simplified out of expressions
         return False
+
 
 pyomo_constant_types.add(_PythonCallbackFunctionID)
 
@@ -488,20 +526,22 @@ class PythonCallbackFunction(ExternalFunction):
             if kw in kwargs:
                 raise ValueError(
                     "Duplicate definition of external function through "
-                    f"positional and keyword ('{kw}=') arguments")
+                    f"positional and keyword ('{kw}=') arguments"
+                )
             kwargs[kw] = args[i]
         if len(args) > 3:
             raise ValueError(
                 "PythonCallbackFunction constructor only supports "
-                "0 - 3 positional arguments" )
+                "0 - 3 positional arguments"
+            )
         self._fcn = kwargs.pop('function', None)
         self._grad = kwargs.pop('gradient', None)
         self._hess = kwargs.pop('hessian', None)
         self._fgh = kwargs.pop('fgh', None)
         if self._fgh is not None and any((self._fcn, self._grad, self._hess)):
             raise ValueError(
-                "Cannot specify 'fgh' with any of "
-                "{'function', 'gradient', hessian'}")
+                "Cannot specify 'fgh' with any of {'function', 'gradient', hessian'}"
+            )
 
         # There is an implicit first argument (the function pointer), we
         # need to add that to the arg_units
@@ -529,8 +569,7 @@ class PythonCallbackFunction(ExternalFunction):
         if fixed is not None:
             fixed = fixed[:-1]
         if _id != self._fcn_id:
-            raise RuntimeError(
-                "PythonCallbackFunction called with invalid Global ID" )
+            raise RuntimeError("PythonCallbackFunction called with invalid Global ID")
         if self._fgh is not None:
             f, g, h = self._fgh(args, fgh, fixed)
         else:
@@ -540,7 +579,8 @@ class PythonCallbackFunction(ExternalFunction):
                     raise RuntimeError(
                         f"ExternalFunction '{self.name}' was not defined "
                         "with a gradient callback.  Cannot evaluate the "
-                        "derivative of the function")
+                        "derivative of the function"
+                    )
                 g = self._grad(args, fixed)
             else:
                 g = None
@@ -549,7 +589,8 @@ class PythonCallbackFunction(ExternalFunction):
                     raise RuntimeError(
                         f"ExternalFunction '{self.name}' was not defined "
                         "with a Hessian callback.  Cannot evaluate the "
-                        "second derivative of the function")
+                        "second derivative of the function"
+                    )
                 h = self._hess(args, fixed)
             else:
                 h = None
@@ -558,17 +599,24 @@ class PythonCallbackFunction(ExternalFunction):
         if g is not None:
             g.append(0)
         if h is not None:
-            h.extend([0]*(len(args)+1))
+            h.extend([0] * (len(args) + 1))
         return f, g, h
 
     def _pprint(self):
         return (
-            [ ('function', self._fcn.__qualname__),
-              ('units', str(self._units)),
-              ('arg_units', [ str(u) for u in self._arg_units[:-1] ]
-               if self._arg_units is not None else None),
+            [
+                ('function', self._fcn.__qualname__),
+                ('units', str(self._units)),
+                (
+                    'arg_units',
+                    [str(u) for u in self._arg_units[:-1]]
+                    if self._arg_units is not None
+                    else None,
+                ),
             ],
-            (), None, None
+            (),
+            None,
+            None,
         )
 
 
@@ -581,47 +629,43 @@ class _ARGLIST(Structure):
     """
 
     _fields_ = [
-        ('n', c_int),     # number of args
-        ('nr', c_int),    # number of real input args
+        ('n', c_int),  # number of args
+        ('nr', c_int),  # number of real input args
         ('at', POINTER(c_int)),  # argument types -- see DISCUSSION below
         ('ra', POINTER(c_double)),  # pure real args (IN, OUT, and INOUT)
         ('sa', POINTER(c_char_p)),  # symbolic IN args
         ('derivs', POINTER(c_double)),  # for partial derivatives (if nonzero)
         ('hes', POINTER(c_double)),  # for second partials (if nonzero)
-        ('dig', POINTER(c_byte)),   # if (dig && dig[i]) { partials w.r.t.
-                                    #	ra[i] will not be used }
+        # if (dig && dig[i]) { partials w.r.t. ra[i] will not be used }
+        ('dig', POINTER(c_byte)),
         ('funcinfo', c_char_p),  # for use by the function (if desired)
-        ('AE', c_void_p), # functions made visible (via #defines below)
+        ('AE', c_void_p),  # functions made visible (via #defines below)
         ('f', c_void_p),  # for internal use by AMPL
         ('tva', c_void_p),  # for internal use by AMPL
         ('Errmsg', c_char_p),  # To indicate an error, set this to a
-			     # description of the error.  When derivs
-                             # is nonzero and the error is that first
-			     # derivatives cannot or are not computed,
-			     # a single quote character (') should be
-			     # the first character in the text assigned
-			     # to Errmsg, followed by the actual error
-			     # message.  Similarly, if hes is nonzero
-                             # and the error is that second derivatives
-			     # are not or cannot be computed, a double
-			     # quote character (") should be the first
-			     # character in Errmsg, followed by the
-			     # actual error message text.
-        ('TMI', c_void_p),     # used in Tempmem calls
-        ('Private', c_char_p), # The following fields are relevant
-			     # only when imported functions are called
-			     # by AMPL commands (not declarations).
-        ('nin', c_int),   # number of input (IN and INOUT) args
+        # description of the error.  When derivs is nonzero and the
+        # error is that first derivatives cannot or are not computed, a
+        # single quote character (') should be the first character in
+        # the text assigned to Errmsg, followed by the actual error
+        # message.  Similarly, if hes is nonzero and the error is that
+        # second derivatives are not or cannot be computed, a double
+        # quote character (") should be the first character in Errmsg,
+        # followed by the actual error message text.
+        ('TMI', c_void_p),  # used in Tempmem calls
+        ('Private', c_char_p),
+        # The following fields are relevant only when imported functions
+        # are called by AMPL commands (not declarations).
+        ('nin', c_int),  # number of input (IN and INOUT) args
         ('nout', c_int),  # number of output (OUT and INOUT) args
         ('nsin', c_int),  # number of symbolic input arguments
-        ('nsout', c_int), # number of symbolic OUT and INOUT args
-        ]
+        ('nsout', c_int),  # number of symbolic OUT and INOUT args
+    ]
 
     def __init__(self, args, fgh=0, fixed=None):
         super().__init__()
         self._encoded_strings = []
         self.n = len(args)
-        self.at = (c_int*self.n)()
+        self.at = (c_int * self.n)()
         _reals = []
         _strings = []
         nr = 0
@@ -649,22 +693,24 @@ class _ARGLIST(Structure):
             else:
                 raise RuntimeError(
                     f"Unknown data type, {type(arg).__name__}, passed as "
-                    f"argument {i} for an ASL ExternalFunction")
+                    f"argument {i} for an ASL ExternalFunction"
+                )
         self.nr = nr
-        self.ra = (c_double*nr)(*_reals)
-        self.sa = (c_char_p*ns)(*_strings)
+        self.ra = (c_double * nr)(*_reals)
+        self.sa = (c_char_p * ns)(*_strings)
         if fgh >= 1:
-            self.derivs = (c_double*nr)(0.)
+            self.derivs = (c_double * nr)(0.0)
         if fgh >= 2:
-            self.hes = (c_double*((nr + nr*nr)//2))(0.)
+            self.hes = (c_double * ((nr + nr * nr) // 2))(0.0)
 
         if fixed:
-            self.dig = (c_byte*nr)(0)
+            self.dig = (c_byte * nr)(0)
             for i, v in enumerate(fixed):
                 if v:
                     r_idx = self.at[i]
                     if r_idx >= 0:
                         self.dig[r_idx] = 1
+
 
 # The following "fake" class resolves a circular reference issue in the
 # _AMPLEXPORTS datastructure
@@ -674,6 +720,7 @@ class _ARGLIST(Structure):
 # to define AMPLExPORTS) will succeed.
 class _AMPLEXPORTS(Structure):
     pass
+
 
 class _AMPLEXPORTS(Structure):
     """Mock up the AmplExports structure from AMPL's funcadd.h
@@ -685,84 +732,77 @@ class _AMPLEXPORTS(Structure):
     trickier than it sounds, and at least so far is completely unneeded.
     """
 
-    AMPLFUNC = CFUNCTYPE( c_double, POINTER(_ARGLIST) )
+    AMPLFUNC = CFUNCTYPE(c_double, POINTER(_ARGLIST))
 
     ADDFUNC = CFUNCTYPE(
-        None,
-        c_char_p, AMPLFUNC, c_int, c_int, c_void_p,
-        POINTER(_AMPLEXPORTS) )
+        None, c_char_p, AMPLFUNC, c_int, c_int, c_void_p, POINTER(_AMPLEXPORTS)
+    )
 
-    RANDSEEDSETTER = CFUNCTYPE(
-        None,
-        c_void_p, c_ulong )
+    RANDSEEDSETTER = CFUNCTYPE(None, c_void_p, c_ulong)
 
-    ADDRANDINIT = CFUNCTYPE(
-        None,
-        POINTER(_AMPLEXPORTS), RANDSEEDSETTER, c_void_p )
+    ADDRANDINIT = CFUNCTYPE(None, POINTER(_AMPLEXPORTS), RANDSEEDSETTER, c_void_p)
 
-    ATRESET = CFUNCTYPE(
-        None,
-        POINTER(_AMPLEXPORTS), c_void_p, c_void_p )
+    ATRESET = CFUNCTYPE(None, POINTER(_AMPLEXPORTS), c_void_p, c_void_p)
 
     _fields_ = [
-	('StdErr', c_void_p),
-	('Addfunc', ADDFUNC),
-	('ASLdate', c_long),
-	('FprintF', c_void_p),
-	('PrintF', c_void_p),
-	('SprintF', c_void_p),
-	('VfprintF', c_void_p),
-	('VsprintF', c_void_p),
-	('Strtod', c_void_p),
-	('Crypto', c_void_p),
-	('asl', c_char_p),
-	('AtExit', c_void_p),
-	('AtReset', ATRESET),
-	('Tempmem', c_void_p),
-	('Add_table_handler', c_void_p),
-	('Private', c_char_p),
-	('Qsortv', c_void_p),
-	#/* More stuff for stdio in DLLs... */
-	('StdIn', c_void_p),
-	('StdOut', c_void_p),
-	('Clearerr', c_void_p),
-	('Fclose', c_void_p),
-	('Fdopen', c_void_p),
-	('Feof', c_void_p),
-	('Ferror', c_void_p),
-	('Fflush', c_void_p),
-	('Fgetc', c_void_p),
-	('Fgets', c_void_p),
-	('Fileno', c_void_p),
-	('Fopen', c_void_p),
-	('Fputc', c_void_p),
-	('Fputs', c_void_p),
-	('Fread', c_void_p),
-	('Freopen', c_void_p),
-	('Fscanf', c_void_p),
-	('Fseek', c_void_p),
-	('Ftell', c_void_p),
-	('Fwrite', c_void_p),
-	('Pclose', c_void_p),
-	('Perror', c_void_p),
-	('Popen', c_void_p),
-	('Puts', c_void_p),
-	('Rewind', c_void_p),
-	('Scanf', c_void_p),
-	('Setbuf', c_void_p),
-	('Setvbuf', c_void_p),
-	('Sscanf', c_void_p),
-	('Tempnam', c_void_p),
-	('Tmpfile', c_void_p),
-	('Tmpnam', c_void_p),
-	('Ungetc', c_void_p),
-	('AI', c_void_p),
-	('Getenv', c_void_p),
-	('Breakfunc', c_void_p),
-	('Breakarg', c_char_p),
-	#/* Items available with ASLdate >= 20020501 start here. */
-	('SnprintF', c_void_p),
-	('VsnprintF', c_void_p),
-	('Addrand', c_void_p),
-	('Addrandinit', ADDRANDINIT),
-	]
+        ('StdErr', c_void_p),
+        ('Addfunc', ADDFUNC),
+        ('ASLdate', c_long),
+        ('FprintF', c_void_p),
+        ('PrintF', c_void_p),
+        ('SprintF', c_void_p),
+        ('VfprintF', c_void_p),
+        ('VsprintF', c_void_p),
+        ('Strtod', c_void_p),
+        ('Crypto', c_void_p),
+        ('asl', c_char_p),
+        ('AtExit', c_void_p),
+        ('AtReset', ATRESET),
+        ('Tempmem', c_void_p),
+        ('Add_table_handler', c_void_p),
+        ('Private', c_char_p),
+        ('Qsortv', c_void_p),
+        # /* More stuff for stdio in DLLs... */
+        ('StdIn', c_void_p),
+        ('StdOut', c_void_p),
+        ('Clearerr', c_void_p),
+        ('Fclose', c_void_p),
+        ('Fdopen', c_void_p),
+        ('Feof', c_void_p),
+        ('Ferror', c_void_p),
+        ('Fflush', c_void_p),
+        ('Fgetc', c_void_p),
+        ('Fgets', c_void_p),
+        ('Fileno', c_void_p),
+        ('Fopen', c_void_p),
+        ('Fputc', c_void_p),
+        ('Fputs', c_void_p),
+        ('Fread', c_void_p),
+        ('Freopen', c_void_p),
+        ('Fscanf', c_void_p),
+        ('Fseek', c_void_p),
+        ('Ftell', c_void_p),
+        ('Fwrite', c_void_p),
+        ('Pclose', c_void_p),
+        ('Perror', c_void_p),
+        ('Popen', c_void_p),
+        ('Puts', c_void_p),
+        ('Rewind', c_void_p),
+        ('Scanf', c_void_p),
+        ('Setbuf', c_void_p),
+        ('Setvbuf', c_void_p),
+        ('Sscanf', c_void_p),
+        ('Tempnam', c_void_p),
+        ('Tmpfile', c_void_p),
+        ('Tmpnam', c_void_p),
+        ('Ungetc', c_void_p),
+        ('AI', c_void_p),
+        ('Getenv', c_void_p),
+        ('Breakfunc', c_void_p),
+        ('Breakarg', c_char_p),
+        # /* Items available with ASLdate >= 20020501 start here. */
+        ('SnprintF', c_void_p),
+        ('VsnprintF', c_void_p),
+        ('Addrand', c_void_p),
+        ('Addrandinit', ADDRANDINIT),
+    ]

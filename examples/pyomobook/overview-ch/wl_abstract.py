@@ -22,6 +22,7 @@ def obj_rule(model):
 
 model.obj = pyo.Objective(rule=obj_rule)
 
+
 # @deliver:
 def one_per_cust_rule(model, m):
     return sum(model.x[n, m] for n in model.N) == 1

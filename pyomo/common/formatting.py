@@ -22,6 +22,7 @@ import re
 import types
 from pyomo.common.sorting import sorted_robust
 
+
 def tostr(value, quote_str=False):
     """Convert a value to a string
 
@@ -55,7 +56,7 @@ def tostr(value, quote_str=False):
     """
     # Override the generation of str(list), but only if the object is
     # using the default implementation of list.__str__.  Note that the
-    # default implemention of __str__ (in CPython) is to call __repr__,
+    # default implementation of __str__ (in CPython) is to call __repr__,
     # so we will test both.  This is particularly important for
     # collections.namedtuple, which reimplements __repr__ but not
     # __str__.
@@ -65,37 +66,38 @@ def tostr(value, quote_str=False):
         # in particular instances:
         tostr.handlers[_type] = tostr.handlers[None]
         if isinstance(value, list):
-            if ( _type.__str__ is list.__str__ and
-                 _type.__repr__ is list.__repr__ ):
+            if _type.__str__ is list.__str__ and _type.__repr__ is list.__repr__:
                 tostr.handlers[_type] = tostr.handlers[list]
         elif isinstance(value, tuple):
-            if ( _type.__str__ is tuple.__str__ and
-                 _type.__repr__ is tuple.__repr__ ):
+            if _type.__str__ is tuple.__str__ and _type.__repr__ is tuple.__repr__:
                 tostr.handlers[_type] = tostr.handlers[tuple]
         elif isinstance(value, dict):
-            if ( _type.__str__ is dict.__str__ and
-                 _type.__repr__ is dict.__repr__ ):
+            if _type.__str__ is dict.__str__ and _type.__repr__ is dict.__repr__:
                 tostr.handlers[_type] = tostr.handlers[dict]
         elif isinstance(value, str):
             tostr.handlers[_type] = tostr.handlers[str]
 
     return tostr.handlers[_type](value, quote_str)
 
+
 tostr.handlers = {
     list: lambda value, quote_str: (
         "[%s]" % (', '.join(tostr(v, True) for v in value))
     ),
     dict: lambda value, quote_str: (
-        "{%s}" % (', '.join('%s: %s' % (tostr(k, True), tostr(v, True))
-                            for k, v in value.items()))
+        "{%s}"
+        % (
+            ', '.join(
+                '%s: %s' % (tostr(k, True), tostr(v, True)) for k, v in value.items()
+            )
+        )
     ),
     tuple: lambda value, quote_str: (
-        "(%s,)" % (tostr(value[0], True),) if len(value) == 1
+        "(%s,)" % (tostr(value[0], True),)
+        if len(value) == 1
         else "(%s)" % (', '.join(tostr(v, True) for v in value))
     ),
-    str: lambda value, quote_str: (
-        repr(value) if quote_str else value
-    ),
+    str: lambda value, quote_str: (repr(value) if quote_str else value),
     None: lambda value, quote_str: str(value),
 }
 
@@ -144,19 +146,20 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
             # A ValueError can be raised when row_generator is called
             # (if it is a function), or when it is exhausted generating
             # the list (if it is a generator)
-            _minWidth = 4 # Ensure columns are wide enough to output "None"
+            _minWidth = 4  # Ensure columns are wide enough to output "None"
             _rows[_key] = None
             continue
 
         _rows[_key] = [
             ((tostr("" if i else _key),) if header else ())
             + tuple(tostr(x) for x in _r)
-            for i, _r in enumerate(_rowSet) ]
+            for i, _r in enumerate(_rowSet)
+        ]
 
         if not _rows[_key]:
             _minWidth = 4
         elif not _width:
-            _width = [0]*len(_rows[_key][0])
+            _width = [0] * len(_rows[_key][0])
         for _row in _rows[_key]:
             for col, x in enumerate(_row):
                 _width[col] = max(_width[col], len(x), col and _minWidth)
@@ -166,10 +169,11 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
         # Note: do not right-pad the last header with unnecessary spaces
         tmp = _width[-1]
         _width[-1] = 0
-        ostream.write(prefix
-                      + " : ".join( "%%-%ds" % _width[i] % x
-                                    for i,x in enumerate(header) )
-                      + "\n")
+        ostream.write(
+            prefix
+            + " : ".join("%%-%ds" % _width[i] % x for i, x in enumerate(header))
+            + "\n"
+        )
         _width[-1] = tmp
 
     # If there is no data, we are done...
@@ -178,21 +182,18 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
 
     # right-justify data, except for the last column if there are spaces
     # in the data (probably an expression or vector)
-    _width = ["%"+str(i)+"s" for i in _width]
+    _width = ["%" + str(i) + "s" for i in _width]
 
-    if any( ' ' in r[-1]
-            for x in _rows.values() if x is not None
-            for r in x  ):
+    if any(' ' in r[-1] for x in _rows.values() if x is not None for r in x):
         _width[-1] = '%s'
     for _key in sorted_robust(_rows):
         _rowSet = _rows[_key]
         if not _rowSet:
-            _rowSet = [ [_key] + [None]*(len(_width)-1) ]
+            _rowSet = [[_key] + [None] * (len(_width) - 1)]
         for _data in _rowSet:
             ostream.write(
-                prefix
-                + " : ".join( _width[i] % x for i,x in enumerate(_data) )
-                + "\n")
+                prefix + " : ".join(_width[i] % x for i, x in enumerate(_data)) + "\n"
+            )
 
 
 class StreamIndenter(object):
@@ -203,7 +204,7 @@ class StreamIndenter(object):
     StreamIndenter objects may be arbitrarily nested.
     """
 
-    def __init__(self, ostream, indent=' '*4):
+    def __init__(self, ostream, indent=' ' * 4):
         self.os = ostream
         self.indent = indent
         self.stripped_indent = indent.rstrip()
@@ -218,7 +219,7 @@ class StreamIndenter(object):
         lines = data.split('\n')
         if self.newline:
             if lines[0]:
-                self.os.write(self.indent+lines[0])
+                self.os.write(self.indent + lines[0])
             else:
                 self.os.write(self.stripped_indent)
         else:
@@ -228,11 +229,11 @@ class StreamIndenter(object):
             return
         for line in lines[1:-1]:
             if line:
-                self.os.write("\n"+self.indent+line)
+                self.os.write("\n" + self.indent + line)
             else:
-                self.os.write("\n"+self.stripped_indent)
+                self.os.write("\n" + self.stripped_indent)
         if lines[-1]:
-            self.os.write("\n"+self.indent+lines[-1])
+            self.os.write("\n" + self.indent + lines[-1])
             self.newline = False
         else:
             self.os.write("\n")
@@ -245,19 +246,18 @@ class StreamIndenter(object):
 
 _indentation_re = re.compile(r'\s*')
 _bullet_re = re.compile(
-    r'([-+*] +)' # bulleted lists
-    r'|(\(?[0-9]+[\)\.] +)' # enumerated lists (arabic numerals)
-    r'|(\(?[ivxlcdm]+[\)\.] +)' # enumerated lists (roman numerals)
-    r'|(\(?[IVXLCDM]+[\)\.] +)' # enumerated lists (roman numerals)
-    r'|(\(?[a-zA-Z][\)\.] +)' # enumerated lists (letters)
-    r'|(\(?\#[\)\.] +)' # auto enumerated lists
-    r'|([a-zA-Z0-9_ ]+ +: +)' # definitions
-    r'|(:[a-zA-Z0-9_ ]+: +)' # field name
-    r'|(?:\[\s*[A-Za-z0-9\.]+\s*\] +)' # [PASS]|[FAIL]|[ OK ]
+    r'([-+*] +)'  # bulleted lists
+    r'|(\(?[0-9]+[\)\.] +)'  # enumerated lists (arabic numerals)
+    r'|(\(?[ivxlcdm]+[\)\.] +)'  # enumerated lists (roman numerals)
+    r'|(\(?[IVXLCDM]+[\)\.] +)'  # enumerated lists (roman numerals)
+    r'|(\(?[a-zA-Z][\)\.] +)'  # enumerated lists (letters)
+    r'|(\(?\#[\)\.] +)'  # auto enumerated lists
+    r'|([a-zA-Z0-9_ ]+ +: +)'  # definitions
+    r'|(:[a-zA-Z0-9_ ]+: +)'  # field name
+    r'|(?:\[\s*[A-Za-z0-9\.]+\s*\] +)'  # [PASS]|[FAIL]|[ OK ]
 )
 _verbatim_line_start = re.compile(
-    r'(\| )' # line blocks
-    r'|(\+((-{3,})|(={3,}))\+)' # grid table
+    r'(\| )' r'|(\+((-{3,})|(={3,}))\+)'  # line blocks  # grid table
 )
 _verbatim_line = re.compile(
     r'(={3,}[ =]+)'  # simple tables, ======== sections
@@ -311,8 +311,8 @@ def wrap_reStructuredText(docstr, wrapper):
                     paragraphs.append((None, None, line))
                     continue
                 elif (
-                        len(literal_block[1]) == len(leading)
-                        and content[0] in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
+                    len(literal_block[1]) == len(leading)
+                    and content[0] in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
                 ):
                     # quoted literal block
                     literal_block = 2, leading
@@ -347,11 +347,10 @@ def wrap_reStructuredText(docstr, wrapper):
             if matchBullet:
                 # Handle things that look like bullet lists specially
                 hang = matchBullet.group()
-                paragraphs.append(
-                    (leading, leading + ' '*len(hang), [content]))
+                paragraphs.append((leading, leading + ' ' * len(hang), [content]))
             elif paragraphs[-1][1] == leading:
                 # Continuing a text block
-                paragraphs[-1][2].append( content )
+                paragraphs[-1][2].append(content)
             else:
                 # Beginning a new text block
                 paragraphs.append((leading, leading, [content]))

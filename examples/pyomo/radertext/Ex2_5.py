@@ -38,6 +38,7 @@ model.ProdBound = Param(within=NonNegativeIntegers)
 model.Produce = Var(model.EngineType, model.Month, within=NonNegativeIntegers)
 model.Inventory = Var(model.EngineType, model.Month, within=NonNegativeIntegers)
 
+
 # Objective
 def CalcCost(M):
     return sum(
@@ -46,6 +47,7 @@ def CalcCost(M):
 
 
 model.TotalCost = Objective(rule=CalcCost, sense=minimize)
+
 
 # Constraints
 def EnsureBalance(M, e, t):

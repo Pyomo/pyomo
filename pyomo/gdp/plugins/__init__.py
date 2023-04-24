@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 def load():
     import pyomo.gdp.plugins.bigm
     import pyomo.gdp.plugins.hull

@@ -76,9 +76,18 @@ class NLWriter(PersistentBase):
             set_name = False
             symbol_map = None
             labeler = None
-        cmodel.process_pyomo_vars(self._expr_types, variables, self._pyomo_var_to_solver_var_map,
-                                  self._pyomo_param_to_solver_param_map, self._vars,
-                                  self._solver_var_to_pyomo_var_map, set_name, symbol_map, labeler, False)
+        cmodel.process_pyomo_vars(
+            self._expr_types,
+            variables,
+            self._pyomo_var_to_solver_var_map,
+            self._pyomo_param_to_solver_param_map,
+            self._vars,
+            self._solver_var_to_pyomo_var_map,
+            set_name,
+            symbol_map,
+            labeler,
+            False,
+        )
 
     def _add_params(self, params: List[_ParamData]):
         cparams = cmodel.create_params(len(params))
@@ -92,14 +101,16 @@ class NLWriter(PersistentBase):
                 cp.name = self._symbol_map.getSymbol(p, self._param_labeler)
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
-        cmodel.process_nl_constraints(self._writer,
-                                      self._expr_types,
-                                      cons,
-                                      self._pyomo_var_to_solver_var_map,
-                                      self._pyomo_param_to_solver_param_map,
-                                      self._active_constraints,
-                                      self._pyomo_con_to_solver_con_map,
-                                      self._solver_con_to_pyomo_con_map)
+        cmodel.process_nl_constraints(
+            self._writer,
+            self._expr_types,
+            cons,
+            self._pyomo_var_to_solver_var_map,
+            self._pyomo_param_to_solver_param_map,
+            self._active_constraints,
+            self._pyomo_con_to_solver_con_map,
+            self._solver_con_to_pyomo_con_map,
+        )
         if self.config.symbolic_solver_labels:
             for c, cc in self._pyomo_con_to_solver_con_map.items():
                 cc.name = self._symbol_map.getSymbol(c, self._con_labeler)
@@ -140,9 +151,18 @@ class NLWriter(PersistentBase):
             del self._pyomo_param_to_solver_param_map[id(p)]
 
     def _update_variables(self, variables: List[_GeneralVarData]):
-        cmodel.process_pyomo_vars(self._expr_types, variables, self._pyomo_var_to_solver_var_map,
-                                  self._pyomo_param_to_solver_param_map, self._vars,
-                                  self._solver_var_to_pyomo_var_map, False, None, None, True)
+        cmodel.process_pyomo_vars(
+            self._expr_types,
+            variables,
+            self._pyomo_var_to_solver_var_map,
+            self._pyomo_param_to_solver_param_map,
+            self._vars,
+            self._solver_var_to_pyomo_var_map,
+            False,
+            None,
+            None,
+            True,
+        )
 
     def update_params(self):
         for p_id, p in self._params.items():
@@ -158,26 +178,41 @@ class NLWriter(PersistentBase):
             sense = 0
         else:
             pyomo_expr_types = cmodel.PyomoExprTypes()
-            repn = generate_standard_repn(obj.expr, compute_values=False, quadratic=False)
-            const = cmodel.appsi_expr_from_pyomo_expr(repn.constant,
-                                                      self._pyomo_var_to_solver_var_map,
-                                                      self._pyomo_param_to_solver_param_map,
-                                                      pyomo_expr_types)
-            lin_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars]
-            lin_coef = [cmodel.appsi_expr_from_pyomo_expr(i,
-                                                          self._pyomo_var_to_solver_var_map,
-                                                          self._pyomo_param_to_solver_param_map,
-                                                          pyomo_expr_types) for i in repn.linear_coefs]
+            repn = generate_standard_repn(
+                obj.expr, compute_values=False, quadratic=False
+            )
+            const = cmodel.appsi_expr_from_pyomo_expr(
+                repn.constant,
+                self._pyomo_var_to_solver_var_map,
+                self._pyomo_param_to_solver_param_map,
+                pyomo_expr_types,
+            )
+            lin_vars = [
+                self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars
+            ]
+            lin_coef = [
+                cmodel.appsi_expr_from_pyomo_expr(
+                    i,
+                    self._pyomo_var_to_solver_var_map,
+                    self._pyomo_param_to_solver_param_map,
+                    pyomo_expr_types,
+                )
+                for i in repn.linear_coefs
+            ]
             if repn.nonlinear_expr is None:
-                nonlin = cmodel.appsi_expr_from_pyomo_expr(0,
-                                                           self._pyomo_var_to_solver_var_map,
-                                                           self._pyomo_param_to_solver_param_map,
-                                                           pyomo_expr_types)
+                nonlin = cmodel.appsi_expr_from_pyomo_expr(
+                    0,
+                    self._pyomo_var_to_solver_var_map,
+                    self._pyomo_param_to_solver_param_map,
+                    pyomo_expr_types,
+                )
             else:
-                nonlin = cmodel.appsi_expr_from_pyomo_expr(repn.nonlinear_expr,
-                                                           self._pyomo_var_to_solver_var_map,
-                                                           self._pyomo_param_to_solver_param_map,
-                                                           pyomo_expr_types)
+                nonlin = cmodel.appsi_expr_from_pyomo_expr(
+                    repn.nonlinear_expr,
+                    self._pyomo_var_to_solver_var_map,
+                    self._pyomo_param_to_solver_param_map,
+                    pyomo_expr_types,
+                )
             if obj.sense is minimize:
                 sense = 0
             else:
@@ -209,10 +244,14 @@ class NLWriter(PersistentBase):
         self._set_pyomo_amplfunc_env()
 
     def get_ordered_vars(self):
-        return [self._solver_var_to_pyomo_var_map[i] for i in self._writer.get_solve_vars()]
+        return [
+            self._solver_var_to_pyomo_var_map[i] for i in self._writer.get_solve_vars()
+        ]
 
     def get_ordered_cons(self):
-        return [self._solver_con_to_pyomo_con_map[i] for i in self._writer.get_solve_cons()]
+        return [
+            self._solver_con_to_pyomo_con_map[i] for i in self._writer.get_solve_cons()
+        ]
 
     def get_active_objective(self):
         return self._objective

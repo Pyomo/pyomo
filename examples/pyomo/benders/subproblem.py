@@ -28,6 +28,7 @@ model.PROD = Set()
 # number of weeks
 model.T = Param(within=PositiveIntegers)
 
+
 # derived set containing all valid week indices and subsets of interest.
 def weeks_rule(model):
     return list(sequence(model.T()))
@@ -67,6 +68,7 @@ model.invcost = Param(model.PROD, within=NonNegativeReals)
 # projected revenue/ton
 model.revenue = Param(model.PROD, model.WEEKS, within=NonNegativeReals)
 
+
 # scenario probability
 def unit_interval_validate(model, value):
     return (value >= 0.0) and (value <= 1.0)
@@ -82,6 +84,7 @@ model.Make = Var(model.PROD, model.TWOPLUSWEEKS, domain=NonNegativeReals)
 
 # tons inventoried
 model.Inv = Var(model.PROD, model.TWOPLUSWEEKS, domain=NonNegativeReals)
+
 
 # tons sold
 def sell_bounds(model, p, t):
@@ -120,6 +123,7 @@ def balance_rule(model, p, t):
 
 
 model.Balance = Constraint(model.PROD, model.THREEPLUSWEEKS, rule=balance_rule)
+
 
 # the manual distribution of model.prob is ugly, but at the moment necessary; Pyomo
 # expression simplification will be significantly improved in the near-term future.

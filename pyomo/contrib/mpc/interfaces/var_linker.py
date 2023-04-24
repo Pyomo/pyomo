@@ -22,12 +22,9 @@ class DynamicVarLinker(object):
 
     """
 
-    def __init__(self, 
-            source_variables,
-            target_variables,
-            source_time=None,
-            target_time=None,
-            ):
+    def __init__(
+        self, source_variables, target_variables, source_time=None, target_time=None
+    ):
         # Right now all the transfers I can think of only happen
         # in one direction
         if len(source_variables) != len(target_variables):
@@ -57,8 +54,5 @@ class DynamicVarLinker(object):
         elif t_target is None:
             t_target = self._target_time
         copy_values_at_time(
-            self._source_variables,
-            self._target_variables,
-            t_source,
-            t_target,
+            self._source_variables, self._target_variables, t_source, t_target
         )

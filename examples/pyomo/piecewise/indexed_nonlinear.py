@@ -15,6 +15,7 @@
 from pyomo.core import *
 from indexed import model, f
 
+
 # Reuse the rule from example4 to define the
 # nonlinear constraint
 def nonlinear_con_rule(model, i, j):

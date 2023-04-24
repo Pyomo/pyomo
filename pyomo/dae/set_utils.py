@@ -21,7 +21,7 @@ def index_warning(name, index):
 
 def is_explicitly_indexed_by(comp, *sets, **kwargs):
     """
-    Function for determining whether a pyomo component is indexed by a 
+    Function for determining whether a pyomo component is indexed by a
     set or group of sets.
 
     Args:
@@ -37,8 +37,7 @@ def is_explicitly_indexed_by(comp, *sets, **kwargs):
         return False
     for s in sets:
         if isinstance(s, SetProduct):
-            msg = ('Checking for explicit indexing by a SetProduct '
-                  'is not supported')
+            msg = 'Checking for explicit indexing by a SetProduct is not supported'
             raise TypeError(msg)
 
     expand_all_set_operators = kwargs.pop('expand_all_set_operators', False)
@@ -46,11 +45,12 @@ def is_explicitly_indexed_by(comp, *sets, **kwargs):
         keys = kwargs.keys()
         raise ValueError('Unrecognized keyword arguments: %s' % str(keys))
 
-    projected_subsets = comp.index_set().subsets(expand_all_set_operators=
-                                                 expand_all_set_operators)
+    projected_subsets = comp.index_set().subsets(
+        expand_all_set_operators=expand_all_set_operators
+    )
     # Expanding all set operators here can be dangerous because it will not
     # distinguish between operators that contain their operands (e.g. union,
-    # where you might consider the component to be considered indexed by 
+    # where you might consider the component to be considered indexed by
     # the operands) and operators that don't.
     # Ideally would like to check for containment by inclusion and containment
     # by product in one search of the set operators.
@@ -61,15 +61,15 @@ def is_explicitly_indexed_by(comp, *sets, **kwargs):
 
 def is_in_block_indexed_by(comp, s, stop_at=None):
     """
-    Function for determining whether a component is contained in a 
+    Function for determining whether a component is contained in a
     block that is indexed by a particular set.
 
-    Args: 
+    Args:
         comp : Component whose parent blocks are checked
         s : Set for which indices are checked
         stop_at : Block at which to stop searching if reached, regardless
                   of whether or not it is indexed by s
-                  
+
     Returns:
         Bool that is true if comp is contained in a block indexed by s
     """
@@ -110,8 +110,10 @@ def get_indices_of_projection(index_set, *sets):
     try:
         total_s_dim = sum([s.dimen for s in sets])
     except TypeError:
-        msg = ('get_indices_of_projection does not support sets with '
-              'dimen == None, including those with inconsistent dimen')
+        msg = (
+            'get_indices_of_projection does not support sets with '
+            'dimen == None, including those with inconsistent dimen'
+        )
         raise TypeError(msg)
 
     subset_set = ComponentSet(index_set.subsets())
@@ -149,9 +151,9 @@ def get_indices_of_projection(index_set, *sets):
         location = {0: 0}
         other_ind_sets = []
 
-    if index_set.dimen == total_s_dim: 
+    if index_set.dimen == total_s_dim:
         # comp indexed by all sets and having this dimension
-        # is sufficient to know that comp is only indexed by 
+        # is sufficient to know that comp is only indexed by
         # Sets in *sets
 
         # In this case, return the trivial set_except and index_getter
@@ -162,9 +164,11 @@ def get_indices_of_projection(index_set, *sets):
         info['set_except'] = [None]
         # index_getter returns an index corresponding to the values passed to
         # it, re-ordered according to order of indexing sets in component.
-        info['index_getter'] = (lambda incomplete_index, *newvals:
-                newvals[0] if len(newvals) <= 1 else
-                tuple([newvals[location[i]] for i in location]))
+        info['index_getter'] = (
+            lambda incomplete_index, *newvals: newvals[0]
+            if len(newvals) <= 1
+            else tuple([newvals[location[i]] for i in location])
+        )
         return info
 
     # Now may assume other_ind_sets is nonempty.
@@ -175,8 +179,9 @@ def get_indices_of_projection(index_set, *sets):
     else:
         raise ValueError('Did not expect this to happen')
 
-    index_getter = (lambda incomplete_index, *newvals:
-            _complete_index(location, incomplete_index, *newvals))
+    index_getter = lambda incomplete_index, *newvals: _complete_index(
+        location, incomplete_index, *newvals
+    )
 
     info['set_except'] = set_except
     info['index_getter'] = index_getter
@@ -184,10 +189,10 @@ def get_indices_of_projection(index_set, *sets):
 
 
 def get_index_set_except(comp, *sets):
-    """ 
+    """
     Function for getting indices of a component over a product of its
-    indexing sets other than those specified. Indices for the specified 
-    sets can be used to construct indices of the proper dimension for the 
+    indexing sets other than those specified. Indices for the specified
+    sets can be used to construct indices of the proper dimension for the
     original component via the index_getter function.
 
     Args:
@@ -203,8 +208,11 @@ def get_index_set_except(comp, *sets):
         in the same order their Sets were provided in the sets argument.
     """
     if not is_explicitly_indexed_by(comp, *sets):
-        msg = (comp.name + ' is not indexed by at least one of ' +
-                str([s.name for s in sets]))
+        msg = (
+            comp.name
+            + ' is not indexed by at least one of '
+            + str([s.name for s in sets])
+        )
         raise ValueError(msg)
 
     return get_indices_of_projection(comp.index_set(), *sets)
@@ -213,7 +221,7 @@ def get_index_set_except(comp, *sets):
 def _complete_index(loc, index, *newvals):
     """
     Function for inserting new values into a partial index.
-    Used by get_index_set_except function to construct the 
+    Used by get_index_set_except function to construct the
     index_getter function for completing indices of a particular
     component with particular sets excluded.
 
@@ -225,7 +233,7 @@ def _complete_index(loc, index, *newvals):
                   or tuples (for higher-dimension sets)
 
     Returns:
-        An index (tuple) with values from newvals inserted in 
+        An index (tuple) with values from newvals inserted in
         locations specified by loc
     """
     if type(index) is not tuple:
@@ -241,12 +249,11 @@ def _complete_index(loc, index, *newvals):
     return index
 
 
-def deactivate_model_at(b, cset, pts, allow_skip=True, 
-        suppress_warnings=False):
+def deactivate_model_at(b, cset, pts, allow_skip=True, suppress_warnings=False):
     """
-    Finds any block or constraint in block b, indexed explicitly (and not 
-    implicitly) by cset, and deactivates it at points specified. 
-    Implicitly indexed components are excluded because one of their parent 
+    Finds any block or constraint in block b, indexed explicitly (and not
+    implicitly) by cset, and deactivates it at points specified.
+    Implicitly indexed components are excluded because one of their parent
     blocks will be deactivated, so deactivating them too would be redundant.
 
     Args:
@@ -274,8 +281,9 @@ def deactivate_model_at(b, cset, pts, allow_skip=True,
             continue
         visited.add(id(comp))
 
-        if (is_explicitly_indexed_by(comp, cset) and
-                not is_in_block_indexed_by(comp, cset)):
+        if is_explicitly_indexed_by(comp, cset) and not is_in_block_indexed_by(
+            comp, cset
+        ):
             info = get_index_set_except(comp, cset)
             non_cset_set = info['set_except']
             index_getter = info['index_getter']

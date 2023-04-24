@@ -22,44 +22,58 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
-    Var, ConcreteModel, Reals, ExternalFunction,
-    Objective, Constraint, sqrt, sin, cos, SolverFactory, value
-    )
+    Var,
+    ConcreteModel,
+    Reals,
+    ExternalFunction,
+    Objective,
+    Constraint,
+    sqrt,
+    sin,
+    cos,
+    SolverFactory,
+    value,
+)
 from pyomo.contrib.trustregion.TRF import trust_region_method, _trf_config
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
-@unittest.skipIf(not SolverFactory('ipopt').available(False),
-                 "The IPOPT solver is not available")
+
+@unittest.skipIf(
+    not SolverFactory('ipopt').available(False), "The IPOPT solver is not available"
+)
 class TestTrustRegionConfig(unittest.TestCase):
-
     def setUp(self):
-
         self.m = ConcreteModel()
-        self.m.z = Var(range(3), domain=Reals, initialize=2.)
-        self.m.x = Var(range(2), initialize=2.)
+        self.m.z = Var(range(3), domain=Reals, initialize=2.0)
+        self.m.x = Var(range(2), initialize=2.0)
         self.m.x[1] = 1.0
 
         def blackbox(a, b):
             return sin(a - b)
+
         def grad_blackbox(args, fixed):
             a, b = args[:2]
-            return [ cos(a - b), -cos(a - b) ]
+            return [cos(a - b), -cos(a - b)]
 
         self.m.bb = ExternalFunction(blackbox, grad_blackbox)
 
         self.m.obj = Objective(
-            expr=(self.m.z[0]-1.0)**2 + (self.m.z[0]-self.m.z[1])**2
-            + (self.m.z[2]-1.0)**2 + (self.m.x[0]-1.0)**4
-            + (self.m.x[1]-1.0)**6
+            expr=(self.m.z[0] - 1.0) ** 2
+            + (self.m.z[0] - self.m.z[1]) ** 2
+            + (self.m.z[2] - 1.0) ** 2
+            + (self.m.x[0] - 1.0) ** 4
+            + (self.m.x[1] - 1.0) ** 6
         )
         self.m.c1 = Constraint(
-            expr=(self.m.x[0] * self.m.z[0]**2
-                  + self.m.bb(self.m.x[0], self.m.x[1])
-                  == 2*sqrt(2.0))
+            expr=(
+                self.m.x[0] * self.m.z[0] ** 2 + self.m.bb(self.m.x[0], self.m.x[1])
+                == 2 * sqrt(2.0)
             )
+        )
         self.m.c2 = Constraint(
-            expr=self.m.z[2]**4 * self.m.z[1]**2 + self.m.z[1] == 8+sqrt(2.0))
+            expr=self.m.z[2] ** 4 * self.m.z[1] ** 2 + self.m.z[1] == 8 + sqrt(2.0)
+        )
         self.decision_variables = [self.m.z[0], self.m.z[1], self.m.z[2]]
 
     def maprule(self, a, b):
@@ -163,39 +177,43 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
 
 
-@unittest.skipIf(not SolverFactory('ipopt').available(False),
-                 "The IPOPT solver is not available")
+@unittest.skipIf(
+    not SolverFactory('ipopt').available(False), "The IPOPT solver is not available"
+)
 class TestTrustRegionMethod(unittest.TestCase):
-
     def setUp(self):
-
         self.m = ConcreteModel()
-        self.m.z = Var(range(3), domain=Reals, initialize=2.)
-        self.m.x = Var(range(2), initialize=2.)
+        self.m.z = Var(range(3), domain=Reals, initialize=2.0)
+        self.m.x = Var(range(2), initialize=2.0)
         self.m.x[1] = 1.0
 
         def blackbox(a, b):
             return sin(a - b)
+
         def grad_blackbox(args, fixed):
             a, b = args[:2]
-            return [ cos(a - b), -cos(a - b) ]
+            return [cos(a - b), -cos(a - b)]
 
         self.m.bb = ExternalFunction(blackbox, grad_blackbox)
 
         self.m.obj = Objective(
-            expr=(self.m.z[0]-1.0)**2 + (self.m.z[0]-self.m.z[1])**2
-            + (self.m.z[2]-1.0)**2 + (self.m.x[0]-1.0)**4
-            + (self.m.x[1]-1.0)**6
+            expr=(self.m.z[0] - 1.0) ** 2
+            + (self.m.z[0] - self.m.z[1]) ** 2
+            + (self.m.z[2] - 1.0) ** 2
+            + (self.m.x[0] - 1.0) ** 4
+            + (self.m.x[1] - 1.0) ** 6
         )
         self.m.c1 = Constraint(
-            expr=(self.m.x[0] * self.m.z[0]**2
-                  + self.m.bb(self.m.x[0], self.m.x[1])
-                  == 2*sqrt(2.0))
+            expr=(
+                self.m.x[0] * self.m.z[0] ** 2 + self.m.bb(self.m.x[0], self.m.x[1])
+                == 2 * sqrt(2.0)
             )
+        )
         self.m.c2 = Constraint(
-            expr=self.m.z[2]**4 * self.m.z[1]**2 + self.m.z[1] == 8+sqrt(2.0))
+            expr=self.m.z[2] ** 4 * self.m.z[1] ** 2 + self.m.z[1] == 8 + sqrt(2.0)
+        )
         self.config = _trf_config()
-        self.ext_fcn_surrogate_map_rule = lambda comp,ef: 0
+        self.ext_fcn_surrogate_map_rule = lambda comp, ef: 0
         self.decision_variables = [self.m.z[0], self.m.z[1], self.m.z[2]]
 
     def test_solver(self):
@@ -204,18 +222,18 @@ class TestTrustRegionMethod(unittest.TestCase):
         # Check the printed contents
         print_OUTPUT = StringIO()
         sys.stdout = print_OUTPUT
-        with LoggingIntercept(log_OUTPUT,
-                              'pyomo.contrib.trustregion', logging.INFO):
-            result = trust_region_method(self.m,
-                            self.decision_variables,
-                            self.ext_fcn_surrogate_map_rule,
-                            self.config)
+        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+            result = trust_region_method(
+                self.m,
+                self.decision_variables,
+                self.ext_fcn_surrogate_map_rule,
+                self.config,
+            )
         sys.stdout = sys.__stdout__
         # Check the log to make sure it is capturing
         self.assertIn('Iteration 0', log_OUTPUT.getvalue())
         # Check the printed output
-        self.assertIn('EXIT: Optimal solution found.',
-                      print_OUTPUT.getvalue())
+        self.assertIn('EXIT: Optimal solution found.', print_OUTPUT.getvalue())
         # The names of both models should be the same
         self.assertEqual(result.name, self.m.name)
         # The values should not be the same

@@ -526,8 +526,7 @@ class GAMSDirect(_GAMSSolver):
 
         soln.gap = abs(results.problem.upper_bound - results.problem.lower_bound)
 
-        for sym, ref in symbolMap.bySymbol.items():
-            obj = ref()
+        for sym, obj in symbolMap.bySymbol.items():
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
                 if obj.ctype is IObjective:
@@ -866,7 +865,7 @@ class GAMSShell(_GAMSSolver):
         command = [exe, output, "o=" + lst, "curdir=" + tmpdir]
         if tee and not logfile:
             # default behaviour of gams is to print to console, for
-            # compatability with windows and *nix we want to explicitly log to
+            # compatibility with windows and *nix we want to explicitly log to
             # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
             command.append("lo=3")
         elif not tee and not logfile:
@@ -1090,8 +1089,7 @@ class GAMSShell(_GAMSSolver):
         soln.gap = abs(results.problem.upper_bound - results.problem.lower_bound)
 
         has_rc_info = True
-        for sym, ref in symbolMap.bySymbol.items():
-            obj = ref()
+        for sym, obj in symbolMap.bySymbol.items():
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
                 if obj.ctype is IObjective:
