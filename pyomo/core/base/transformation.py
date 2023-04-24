@@ -72,8 +72,10 @@ class Transformation(object):
         timer = TransformationTimer(self, 'in-place')
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
-        self._apply_to(model, **kwds)
+        reverse_token = self._apply_to(model, **kwds)
         timer.report()
+
+        return reverse_token
 
     def create_using(self, model, **kwds):
         """
@@ -103,20 +105,6 @@ class Transformation(object):
         delattr(instance, name)
         self._apply_to(instance, **kwds)
         return instance
-
-
-class ReversibleTransformation(Transformation):
-    def apply_to(self, model, **kwds):
-        """
-        Apply the transformation to the given model.
-        """
-        timer = TransformationTimer(self, 'in-place')
-        if not hasattr(model, '_transformation_data'):
-            model._transformation_data = TransformationData()
-        reverse_token = self._apply_to(model, **kwds)
-        timer.report()
-
-        return reverse_token
 
 
 TransformationFactory = Factory('transformation type')

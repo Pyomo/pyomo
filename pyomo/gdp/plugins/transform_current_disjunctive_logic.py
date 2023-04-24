@@ -12,12 +12,7 @@
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.core.base import (
-    Block,
-    SortComponents,
-    ReversibleTransformation,
-    TransformationFactory,
-)
+from pyomo.core.base import Block, SortComponents, Transformation, TransformationFactory
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 
@@ -29,7 +24,7 @@ from pyomo.gdp import Disjunct, Disjunction
     logic is fixed to determine which Disjunct(s) will be selected.
     """,
 )
-class TransformCurrentDisjunctiveLogic(ReversibleTransformation):
+class TransformCurrentDisjunctiveLogic(Transformation):
     """This transformation finds disjunctive logic (indicator_vars values)
     in the given GDP, and, for any Disjunction, when the logic fully
     determines what Disjunct will be selected, it reclassifies all the Disjuncts
