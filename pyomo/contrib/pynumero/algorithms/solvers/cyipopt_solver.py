@@ -90,7 +90,7 @@ _cyipopt_status_enum = [
         b"infeasible."
     ),
     "Search_Direction_Becomes_Too_Small",
-    (b"Algorithm proceeds with very " b"little progress."),
+    (b"Algorithm proceeds with very little progress."),
     "Diverging_Iterates",
     b"It seems that the iterates diverge.",
     "User_Requested_Stop",
@@ -103,9 +103,9 @@ _cyipopt_status_enum = [
     "Feasible_Point_Found",
     b"Feasible point for square problem found.",
     "Maximum_Iterations_Exceeded",
-    (b"Maximum number of iterations exceeded " b"(can be specified by an option)."),
+    (b"Maximum number of iterations exceeded (can be specified by an option)."),
     "Restoration_Failed",
-    (b"Restoration phase failed, algorithm doesn't know " b"how to proceed."),
+    (b"Restoration phase failed, algorithm doesn't know how to proceed."),
     "Error_In_Step_Computation",
     (
         b"An unrecoverable error occurred while Ipopt "
@@ -285,7 +285,7 @@ class PyomoCyIpoptSolver(object):
         "intermediate_callback",
         ConfigValue(
             default=None,
-            description="Set the function that will be called each" " iteration.",
+            description="Set the function that will be called each iteration.",
         ),
     )
 
@@ -316,7 +316,7 @@ class PyomoCyIpoptSolver(object):
 
         if not isinstance(model, Block):
             raise ValueError(
-                "PyomoCyIpoptSolver.solve(model): model " "must be a Pyomo Block"
+                "PyomoCyIpoptSolver.solve(model): model must be a Pyomo Block"
             )
 
         # If this is a Pyomo model / block, then we need to create
