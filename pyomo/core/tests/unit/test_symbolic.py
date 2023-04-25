@@ -397,14 +397,16 @@ class SymbolicDerivatives(unittest.TestCase):
 
         class bogus(object):
             def __init__(self):
-                self._args = (obj_map.getSympySymbol(m.x),)
+                self.args = (obj_map.getSympySymbol(m.x),)
+                self.func = type(self)
 
         self.assertRaisesRegex(
             DeveloperError,
-            "sympy expression .* not found in the operator map",
+            "sympy expression .*bogus'> not found in the operator map",
             sympy2pyomo_expression,
             bogus(),
             obj_map,
+            normalize_whitespace=True,
         )
 
 

@@ -231,7 +231,9 @@ class TestDisableMethods(unittest.TestCase):
 
     def test_bad_api(self):
         with self.assertRaisesRegex(
-            DeveloperError, r"Cannot disable method not_there on " r"<class '.*\.foo'>"
+            DeveloperError,
+            r"Cannot disable method not_there on <class '.*\.foo'>",
+            normalize_whitespace=True,
         ):
 
             @disable_methods(('a', 'not_there'))
