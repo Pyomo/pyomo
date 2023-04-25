@@ -1062,6 +1062,7 @@ ZeroConstant = as_numeric(0)
 # that the numpy types are registered if numpy is in fact available
 #
 
+
 class NumericNDArray(np.ndarray if numpy_available else object):
     """An ndarray subclass that stores Pyomo numeric expressions"""
 
