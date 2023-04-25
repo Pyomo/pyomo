@@ -32,8 +32,8 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run CyIpoptSolver tests"
     )
 
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver,
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
     CyIpoptNLP,
     cyipopt_available,
 )
