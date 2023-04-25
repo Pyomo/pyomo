@@ -80,9 +80,7 @@ class GurobiParameterTests(GurobiBase):
         # can only work with a managed env.
 
         with SolverFactory(
-            "gurobi_direct",
-            manage_env=True,
-            options={"ComputeServer": "my-cs-url"},
+            "gurobi_direct", manage_env=True, options={"ComputeServer": "my-cs-url"}
         ) as opt:
             # Check that the error comes from an attempted connection, (i.e. error
             # message reports the hostname) and not from setting the parameter after
@@ -252,9 +250,8 @@ class GurobiEnvironmentTests(GurobiBase):
     def test_managed_env(self):
         # Test that manage_env=True explicitly creates and closes an environment
 
-        with (
-            gp.Env(params={"TimeLimit": 0.0}) as use_env,
-            patch("gurobipy.Env", return_value=use_env),
+        with gp.Env(params={"TimeLimit": 0.0}) as use_env, patch(
+            "gurobipy.Env", return_value=use_env
         ):
             # On the patched environment, solve times out due to parameter setting
             with SolverFactory("gurobi_direct", manage_env=True) as opt:

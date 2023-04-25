@@ -15,6 +15,7 @@ from pyomo.core.expr.taylor_series import taylor_series_expansion
 
 try:
     import gurobipy
+
     with gurobipy.Env():
         pass
 

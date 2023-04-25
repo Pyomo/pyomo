@@ -172,10 +172,10 @@ class GurobiDirect(DirectSolver):
             logger.warning(msg)
             raise ApplicationError(
                 "Could not create Model for %s solver plugin - gurobi message=%s"
-                % (type(self), msg))
+                % (type(self), msg)
+            )
         else:
             return False
-
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
@@ -193,7 +193,8 @@ class GurobiDirect(DirectSolver):
         # Only pass along changed parameters to the model
         if self._env_options:
             new_options = {
-                key: option for key, option in self.options.items()
+                key: option
+                for key, option in self.options.items()
                 if key not in self._env_options or self._env_options[key] != option
             }
         else:
