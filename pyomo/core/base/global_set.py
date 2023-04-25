@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.pyomoobject import PyomoObject
+
 GlobalSets = {}
 
 
@@ -19,7 +21,7 @@ def _get_global_set(name):
 _get_global_set.__safe_for_unpickling__ = True
 
 
-class GlobalSetBase(object):
+class GlobalSetBase(PyomoObject):
     """The base class for all Global sets"""
 
     __slots__ = ()

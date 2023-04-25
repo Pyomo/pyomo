@@ -569,7 +569,7 @@ You can silence this warning by one of three ways:
                 obj = _NotFound
 
         if obj is _NotFound:
-            if index.__class__ is EXPR.GetItemExpression:
+            if isinstance(index, EXPR.GetItemExpression):
                 return index
             validated_index = self._validate_index(index)
             if validated_index is not index:

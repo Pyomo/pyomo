@@ -45,7 +45,10 @@ class PyomoObject(AutoSlots.Mixin):
         return False
 
     def is_logical_type(self):
-        """Return True if this class is a Pyomo Boolean value, variable, or expression."""
+        """Return True if this class is a Pyomo Boolean object.
+
+        Boolean objects include constants, variables, or logical expressions.
+        """
         return False
 
     def is_reference(self):
