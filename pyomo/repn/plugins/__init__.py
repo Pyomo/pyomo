@@ -16,6 +16,7 @@ def load():
     import pyomo.repn.plugins.baron_writer
     import pyomo.repn.plugins.mps
     import pyomo.repn.plugins.gams_writer
+    import pyomo.repn.plugins.lp_writer
     import pyomo.repn.plugins.nl_writer
 
     from pyomo.opt import WriterFactory
