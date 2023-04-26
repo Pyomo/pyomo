@@ -426,7 +426,7 @@ def _before_var(visitor, child):
         visitor.var_map[_id] = child
         visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
-    ans[_id] = 1
+    ans.linear[_id] = 1
     return False, (_LINEAR, ans)
 
 
@@ -488,7 +488,7 @@ def _before_monomial(visitor, child):
         visitor.var_map[_id] = arg2
         visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
-    ans[_id] = arg1
+    ans.linear[_id] = arg1
     return False, (_LINEAR, ans)
 
 
@@ -625,7 +625,7 @@ def _register_new_before_child_dispatcher(visitor, child):
             ]
             for args, fcn in visitor.exit_node_handlers[child_type].items():
                 visitor.exit_node_dispatcher[(child_type, *args)] = fcn
-    elif id(child) in self.subexpression_cache or issubclass(
+    elif id(child) in visitor.subexpression_cache or issubclass(
         child_type, _GeneralExpressionData
     ):
         dispatcher[child_type] = _before_named_expression

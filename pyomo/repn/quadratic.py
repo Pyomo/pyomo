@@ -59,11 +59,11 @@ class QuadraticRepn(object):
 
     def walker_exitNode(self):
         if self.nonlinear is not None:
-            return _GENERAL, data
+            return _GENERAL, self
         elif self.quadratic:
-            return _QUADRATIC, data
+            return _QUADRATIC, self
         elif self.linear:
-            return _LINEAR, data
+            return _LINEAR, self
         else:
             return _CONSTANT, self.multiplier * self.constant
 
@@ -121,7 +121,7 @@ class QuadraticRepn(object):
         # assert self.multiplier == 1
         _type, other = other
         if _type is _CONSTANT:
-            self.constant += other[1]
+            self.constant += other
             return
 
         mult = other.multiplier
