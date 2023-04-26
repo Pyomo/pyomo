@@ -93,11 +93,6 @@ def make_separation_objective_functions(model, config):
     model.util.separation_objectives = []
     map_obj_to_constr = ComponentMap()
 
-    if len(model.util.performance_constraints) == 0:
-        raise ValueError(
-            "No performance constraints identified for the postulated robust optimization problem."
-        )
-
     for idx, c in enumerate(performance_constraints):
         # Separation objective constraints standardized to be MAXIMIZATION of <= constraints
         c.deactivate()
@@ -572,6 +567,14 @@ def perform_separation_loop(model_data, config, solve_globally):
     all_performance_constraints = (
         model_data.separation_model.util.performance_constraints
     )
+    if not all_performance_constraints:
+        # robustness certified: no separation problems to solve
+        return SeparationLoopResults(
+            solver_call_results=ComponentMap(),
+            solved_globally=solve_globally,
+            worst_case_perf_con=None,
+        )
+
     # needed for normalizing separation solution constraint violations
     model_data.nom_perf_con_violations = evaluate_violations_by_nominal_master(
         model_data=model_data,
