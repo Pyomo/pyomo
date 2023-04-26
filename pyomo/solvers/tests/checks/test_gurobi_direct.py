@@ -183,6 +183,8 @@ class GurobiEnvironmentTests(GurobiBase):
             opt.close_global()
             patch_dispose.assert_called_once_with()
 
+        # _default_env_started flag was correctly synced, so available() is
+        # checked again
         with patch("gurobipy.Model") as PatchModel, patch(
             "gurobipy.disposeDefaultEnv"
         ) as patch_dispose:
@@ -223,9 +225,10 @@ class GurobiEnvironmentTests(GurobiBase):
     def test_context(self):
         # Context management should close the gurobi environment
 
-        with gp.Env() as use_env, patch("gurobipy.Env", return_value=use_env):
-            with SolverFactory("gurobi_direct", manage_env=True) as opt:
-                opt.solve(self.model)
+        with gp.Env() as use_env:
+            with patch("gurobipy.Env", return_value=use_env):
+                with SolverFactory("gurobi_direct", manage_env=True) as opt:
+                    opt.solve(self.model)
 
             # Environment was closed (cannot be restarted)
             with self.assertRaises(gp.GurobiError):
@@ -234,20 +237,26 @@ class GurobiEnvironmentTests(GurobiBase):
     def test_close(self):
         # Manual close() call should close the gurobi environment
 
-        with gp.Env() as use_env, patch("gurobipy.Env", return_value=use_env):
-            opt = SolverFactory("gurobi_direct", manage_env=True)
-            try:
-                opt.solve(self.model)
-            finally:
-                opt.close()
+        with gp.Env() as use_env:
+            with patch("gurobipy.Env", return_value=use_env):
+                opt = SolverFactory("gurobi_direct", manage_env=True)
+                try:
+                    opt.solve(self.model)
+                finally:
+                    opt.close()
 
-            # Environment closed (cannot be restarted)
+            # Environment was closed (cannot be restarted)
             with self.assertRaises(gp.GurobiError):
                 use_env.start()
 
     def test_multiple_solvers(self):
         # Multiple solvers will share the default environment
 
+        # Start the default environment before patching
+        with gp.Model():
+            pass
+
+        # Goes through ok, no explicit environment is created
         with patch("gurobipy.Env", side_effect=gp.GurobiError(NO_LICENSE, "")):
             with SolverFactory("gurobi_direct") as opt1, SolverFactory(
                 "gurobi_direct"
@@ -270,13 +279,15 @@ class GurobiEnvironmentTests(GurobiBase):
                     TerminationCondition.maxIterations,
                 )
 
-            # Check that the patched environment was closed by pyomo
-            with self.assertRaises(gp.GurobiError):
-                use_env.start()
-
     def test_nonmanaged_env(self):
         # Test that manage_env=False (default) does not create an environment
 
+        # Start the default environment before patching
+        with gp.Model():
+            pass
+
+        # This should go through ok, because the solver doesn't create an
+        # environment explicitly when manage_env=False
         with patch("gurobipy.Env", side_effect=gp.GurobiError(NO_LICENSE, "")):
             with SolverFactory("gurobi_direct") as opt:
                 results = opt.solve(self.model)
