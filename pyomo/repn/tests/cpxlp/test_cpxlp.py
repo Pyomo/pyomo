@@ -15,7 +15,8 @@
 import os
 import random
 
-from filecmp import cmp
+from .lp_diff import load_and_compare_lp_baseline
+
 import pyomo.common.unittest as unittest
 
 from pyomo.common.log import LoggingIntercept
@@ -41,12 +42,11 @@ class TestCPXLPOrdering(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         io_options = {"symbolic_solver_labels": True}
         io_options.update(kwds)
-        model.write(test_fname, format="lp", io_options=io_options)
-        self.assertTrue(
-            cmp(test_fname, baseline_fname),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname),
-        )
-        self._cleanup(test_fname)
+        try:
+            model.write(test_fname, format="lp", io_options=io_options)
+            self.assertEqual(*load_and_compare_lp_baseline(baseline_fname, test_fname))
+        finally:
+            self._cleanup(test_fname)
 
     # generates an expression in a randomized way so that
     # we can test for consistent ordering of expressions
@@ -247,9 +247,8 @@ class TestCPXLP_writer(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         model.write(test_fname, format='lp')
-        self.assertTrue(
-            cmp(test_fname, baseline_fname),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname),
+        self.assertEqual(
+            *load_and_compare_lp_baseline(baseline_fname, test_fname)
         )
 
     def test_var_on_nonblock(self):
