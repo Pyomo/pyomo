@@ -44,6 +44,7 @@ _CONSTANT = ExprType.CONSTANT
 _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
 
+
 def _merge_dict(mult, self_dict, other_dict):
     if mult == 1:
         for vid, coef in other_dict.items():
@@ -58,13 +59,9 @@ def _merge_dict(mult, self_dict, other_dict):
             else:
                 self_dict[vid] = mult * coef
 
+
 class LinearRepn(object):
-    __slots__ = (
-        "multiplier",
-        "constant",
-        "linear",
-        "nonlinear",
-    )
+    __slots__ = ("multiplier", "constant", "linear", "nonlinear")
 
     def __init__(self):
         self.multiplier = 1
@@ -568,9 +565,7 @@ def _before_expr_if(visitor, child):
         except:
             return True, None
         subexpr = LinearRepnVisitor(
-            self.subexpression_cache,
-            self.var_map,
-            self.var_order,
+            self.subexpression_cache, self.var_map, self.var_order
         ).walk_expression(t if test else f)
         if subexpr.nonlinear:
             return False, (_GENERAL, subexpr)
@@ -683,12 +678,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
     exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = _initialize_exit_node_dispatcher(_exit_node_handlers)
 
-    def __init__(
-        self,
-        subexpression_cache,
-        var_map,
-        var_order,
-    ):
+    def __init__(self, subexpression_cache, var_map, var_order):
         super().__init__()
         self.subexpression_cache = subexpression_cache
         self.var_map = var_map

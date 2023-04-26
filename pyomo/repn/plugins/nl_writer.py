@@ -70,7 +70,12 @@ import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
 
-from pyomo.repn.util import ExprType, FileDeterminism, apply_node_operation, categorize_valid_components
+from pyomo.repn.util import (
+    ExprType,
+    FileDeterminism,
+    apply_node_operation,
+    categorize_valid_components,
+)
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
 ### FIXME: Remove the following as soon as non-active components no

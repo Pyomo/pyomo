@@ -48,6 +48,7 @@ from pyomo.network import Port
 
 logger = logging.getLogger(__name__)
 
+
 # TODO: make a proper base class
 class LPWriterInfo(object):
     """Return type for LPWriter.write()
@@ -283,7 +284,7 @@ class _LPWriter_impl(object):
                 )
             )
 
-        ONE_VAR_CONSTANT = Var(name='ONE_VAR_CONSTANT', bounds=(1,1))
+        ONE_VAR_CONSTANT = Var(name='ONE_VAR_CONSTANT', bounds=(1, 1))
         ONE_VAR_CONSTANT.construct()
 
         if self.config.column_order == True:
@@ -314,11 +315,24 @@ class _LPWriter_impl(object):
                 elif not var.fixed:
                     var_map[id(var)] = var
             self.var_order = {_id: i for i, _id in enumerate(var_map)}
- 
+
         objective_visitor = (
-            QuadraticRepnVisitor if self.config.allow_quadratic_objective else LinearRepnVisitor)({}, var_map, self.var_order)
+            QuadraticRepnVisitor
+            if self.config.allow_quadratic_objective
+            else LinearRepnVisitor
+        )({}, var_map, self.var_order)
         constraint_visitor = (
-            QuadraticRepnVisitor if self.config.allow_quadratic_constraint else LinearRepnVisitor)(objective_visitor.subexpression_cache if self.config.allow_quadratic_objective == self.config.allow_quadratic_constraint else {}, var_map, self.var_order)
+            QuadraticRepnVisitor
+            if self.config.allow_quadratic_constraint
+            else LinearRepnVisitor
+        )(
+            objective_visitor.subexpression_cache
+            if self.config.allow_quadratic_objective
+            == self.config.allow_quadratic_constraint
+            else {},
+            var_map,
+            self.var_order,
+        )
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -331,7 +345,9 @@ class _LPWriter_impl(object):
         else:
             objectives = []
             for blk in component_map[Objective]:
-                objectives.extend(blk.component_data_objects(Objective, active=True, sort=sorter))
+                objectives.extend(
+                    blk.component_data_objects(Objective, active=True, sort=sorter)
+                )
         if len(objectives) > 1:
             raise ValueError(
                 "More than one active objective defined for input model '%s'; "
@@ -395,9 +411,9 @@ class _LPWriter_impl(object):
                 have_nontrivial = True
             else:
                 if (
-                        skip_trivial_constraints
-                        and (not con.has_lb() or con.lb() <= repn.const)
-                        and (not con.has_ub() or con.ub() >= repn.const)
+                    skip_trivial_constraints
+                    and (not con.has_lb() or con.lb() <= repn.const)
+                    and (not con.has_ub() or con.ub() >= repn.const)
                 ):
                     continue
                 # Add a dummy (fixed) variable to the constraint,
@@ -447,7 +463,7 @@ class _LPWriter_impl(object):
                 ostream.write(label + ':\n')
                 self.write_expression(ostream, repn, False)
                 ostream.write('<= %r\n\n' % (con.ub - offset))
-           
+
         if with_debug_timing:
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
@@ -455,9 +471,9 @@ class _LPWriter_impl(object):
             logger.warning(
                 'Empty constraint block written in LP format - solver may error'
             )
-        
+
         ostream.write("bounds")
-        
+
         # Track the number of integer and binary variables, so you can
         # output their status later.
         integer_vars = []
@@ -497,7 +513,6 @@ class _LPWriter_impl(object):
         timer.toc("Generated NL representation", delta=False)
         return info
 
-
     def write_expression(self, ostream, expr, is_objective):
         assert not expr.constant
         getSymbol = self.symbol_map.getSymbol
@@ -505,7 +520,9 @@ class _LPWriter_impl(object):
         getVar = self.var_map.__getitem__
 
         if expr.linear:
-            for vid, coef in sorted(expr.linear.items(), key=lambda x: getVarOrder(x[0])):
+            for vid, coef in sorted(
+                expr.linear.items(), key=lambda x: getVarOrder(x[0])
+            ):
                 if coef < 0:
                     ostream.write(f'{coef!r} {getSymbol(getVar(vid))}\n')
                 else:
@@ -513,6 +530,7 @@ class _LPWriter_impl(object):
 
         quadratic = getattr(expr, 'quadratic', None)
         if quadratic:
+
             def _normalize_constraint(vids, coef):
                 vid1, vid2 = vids
                 c1 = getVarOrder(vid1)
@@ -540,15 +558,14 @@ class _LPWriter_impl(object):
                 # Ref: ILog CPlex 8.0 User's Manual, p197.
                 #
                 def _normalize_objective(vids, coef):
-                    return _normalize_constraint(vids, 2*coef)
+                    return _normalize_constraint(vids, 2 * coef)
+
                 _normalize = _normalize_objective
             else:
                 _normalize = _normalize_constraint
 
             ostream.write('+ [\n')
-            quadratic = sorted(map(
-                _normalize,
-                _quadratic.items()), key=itemgetter(0))
+            quadratic = sorted(map(_normalize, _quadratic.items()), key=itemgetter(0))
             ostream.write(''.join(map(itemgetter(1), quadratic)))
             if is_objective:
                 ostream.write("] / 2\n")

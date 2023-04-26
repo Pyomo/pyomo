@@ -33,7 +33,9 @@ class ExprType(enum.IntEnum):
     QUADRATIC = 30
     GENERAL = 40
 
+
 _CONSTANT = ExprType.CONSTANT
+
 
 class FileDeterminism(enum.IntEnum):
     NONE = 0
@@ -43,7 +45,7 @@ class FileDeterminism(enum.IntEnum):
     SORT_INDICES = 20
     SORT_SYMBOLS = 30
 
-    
+
 def apply_node_operation(node, args):
     try:
         tmp = node._apply_operation(args)

@@ -27,18 +27,13 @@ _CONSTANT = linear._CONSTANT
 _LINEAR = linear._LINEAR
 _GENERAL = linear._GENERAL
 
+
 class _QUADRATIC(object):
     pass
 
 
 class QuadraticRepn(object):
-    __slots__ = (
-        "multiplier",
-        "constant",
-        "linear",
-        "quadratic",
-        "nonlinear",
-    )
+    __slots__ = ("multiplier", "constant", "linear", "quadratic", "nonlinear")
 
     def __init__(self):
         self.multiplier = 1
@@ -181,7 +176,7 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
         linear._merge_dict(arg1.constant, arg1.linear, arg2.linear)
     # Finally, the constant and multipliers
     arg1.constant *= arg2.constant
-    arg1.multiplier *=  arg2.multiplier
+    arg1.multiplier *= arg2.multiplier
     return _QUADRATIC, arg1
 
 
