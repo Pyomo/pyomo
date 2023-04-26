@@ -4362,6 +4362,51 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
+        baron_license_is_valid,
+        "Global NLP solver is not available and licensed."
+    )
+    def test_pyros_math_domain_error(self):
+        """
+        Test PyROS on a two-stage problem, discrete
+        set type with a math domain error evaluating
+        performance constraint expressions in separation.
+        """
+        m = ConcreteModel()
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+        m.x2 = Var(initialize=2, bounds=(-m.q, log(m.q)))
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        box_set = BoxSet(bounds=[[0, 1]])
+
+        local_solver = SolverFactory("baron")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        with self.assertRaisesRegex(
+            expected_exception=ArithmeticError,
+            expected_regex=(
+                "Evaluation of performance constraint.*math domain error.*"
+            ),
+            msg="ValueError arising from math domain error not raised",
+        ):
+            # should raise math domain error:
+            # (1) lower bounding constraint on x2 solved first
+            #     in separation, q = 0 in worst case
+            # (2) now tries to evaluate log(q), but q = 0
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.q],
+                uncertainty_set=box_set,
+                local_solver=local_solver,
+                global_solver=global_solver,
+                decision_rule_order=1,
+                tee=True,
+            )
+
+    @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_nominal_focus_robust_feasible(self):
