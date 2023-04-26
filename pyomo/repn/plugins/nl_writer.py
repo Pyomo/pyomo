@@ -495,10 +495,8 @@ class _NLWriter_impl(object):
                 Var,
                 Param,
                 Expression,
-                ExternalFunction,
-                Suffix,
-                SOSConstraint,
                 # FIXME: Non-active components should not report as Active
+                ExternalFunction,
                 Set,
                 RangeSet,
                 Port,
