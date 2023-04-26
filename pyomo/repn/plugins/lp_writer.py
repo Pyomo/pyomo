@@ -319,20 +319,13 @@ class _LPWriter_impl(object):
                     var_map[id(var)] = var
             self.var_order = {_id: i for i, _id in enumerate(var_map)}
 
-        objective_visitor = (
-            QuadraticRepnVisitor
-            if self.config.allow_quadratic_objective
-            else LinearRepnVisitor
-        )({}, var_map, self.var_order)
-        constraint_visitor = (
-            QuadraticRepnVisitor
-            if self.config.allow_quadratic_constraint
-            else LinearRepnVisitor
-        )(
-            objective_visitor.subexpression_cache
-            if self.config.allow_quadratic_objective
-            == self.config.allow_quadratic_constraint
-            else {},
+        _qp = self.config.allow_quadratic_objective
+        _qc = self.config.allow_quadratic_constraint
+        objective_visitor = (QuadraticRepnVisitor if _qp else LinearRepnVisitor)(
+            {}, var_map, self.var_order
+        )
+        constraint_visitor = (QuadraticRepnVisitor if _qc else LinearRepnVisitor)(
+            objective_visitor.subexpression_cache if _qp == _qc else {},
             var_map,
             self.var_order,
         )
