@@ -18,6 +18,7 @@ import pyomo.core.expr.current as EXPR
 
 _strip_comment = re.compile(r'\s*\\.*')
 
+
 def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
     base = base.split()
     test = test.split()
@@ -38,10 +39,12 @@ def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
         return False
     return True
 
+
 def _update_subsets(subset, base, test):
     for i, j in zip(*subset):
         if _compare_floats(base[i], test[j]):
             base[i] = test[j]
+
 
 def _preprocess_data(data):
     for line in data.splitlines():
@@ -53,6 +56,7 @@ def _preprocess_data(data):
             except:
                 pass
         yield ' '.join(fields)
+
 
 def lp_diff(base, test, baseline='baseline', testfile='testfile'):
     if test == base:
@@ -83,6 +87,7 @@ def lp_diff(base, test, baseline='baseline', testfile='testfile'):
         )
     )
     return base, test
+
 
 def load_lp_baseline(baseline, testfile, version='lp'):
     with open(testfile, 'r') as FILE:

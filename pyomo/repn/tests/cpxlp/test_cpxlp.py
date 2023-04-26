@@ -247,9 +247,7 @@ class TestCPXLP_writer(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         model.write(test_fname, format='lp')
-        self.assertEqual(
-            *load_and_compare_lp_baseline(baseline_fname, test_fname)
-        )
+        self.assertEqual(*load_and_compare_lp_baseline(baseline_fname, test_fname))
 
     def test_var_on_nonblock(self):
         class Foo(Block().__class__):
