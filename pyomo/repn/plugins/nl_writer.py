@@ -548,6 +548,8 @@ class _NLWriter_impl(object):
                 elif not var.fixed:
                     var_map[id(var)] = var
 
+        timer.toc('Initialized column order', level=logging.DEBUG)
+
         #
         # Tabulate the model expressions
         #
