@@ -336,6 +336,8 @@ class _LPWriter_impl(object):
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
+        ostream.write(f"\\* Source Pyomo model name={model.name} *\\\n\n")
+
         #
         # Process objective
         #
@@ -495,7 +497,7 @@ class _LPWriter_impl(object):
             lb, ub = v.bounds
             lb = '-inf' if lb is None else repr(lb)
             ub = '+inf' if ub is None else repr(ub)
-            ostream.write(f"\n{lb} <= {v_symbol} <= {ub}")
+            ostream.write(f"\n   {lb} <= {v_symbol} <= {ub}")
 
         if integer_vars:
             ostream.write("\ngeneral\n  ")
