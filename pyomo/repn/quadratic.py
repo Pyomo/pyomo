@@ -153,10 +153,11 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
     _, arg1 = arg1
     _, arg2 = arg2
     # Quadratic first, because we will update linear in a minute
+    varOrder = visitor.var_order.__getitem__
     quadratic = arg1.quadratic = {}
     for vid1, coef1 in arg1.linear.items():
         for vid2, coef2 in arg2.linear.items():
-            if vid1 < vid2:
+            if varOrder(vid1) < varOrder(vid2):
                 key = vid1, vid2
             else:
                 key = vid2, vid1
