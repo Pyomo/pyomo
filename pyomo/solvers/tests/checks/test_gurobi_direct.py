@@ -161,6 +161,12 @@ class GurobiParameterTests(GurobiBase):
 class GurobiEnvironmentTests(GurobiBase):
     # Test handling of gurobi environments
 
+    def assert_optimal_result(self, results):
+        self.assertEqual(results.solver.status, SolverStatus.ok)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
+
     def test_init_default_env(self):
         # available() calls with the default env shouldn't need a repeat check
         with patch("gurobipy.Model") as PatchModel:
@@ -180,6 +186,7 @@ class GurobiEnvironmentTests(GurobiBase):
                 PatchModel.assert_called_once_with()
             patch_dispose.assert_not_called()
 
+            # close default environment
             opt.close_global()
             patch_dispose.assert_called_once_with()
 
@@ -203,11 +210,11 @@ class GurobiEnvironmentTests(GurobiBase):
         ):
             with SolverFactory("gurobi_direct") as opt:
                 with self.assertRaisesRegex(ApplicationError, "nolicense"):
-                    results = opt.solve(self.model)
+                    opt.solve(self.model)
 
         with SolverFactory("gurobi_direct") as opt:
             results = opt.solve(self.model)
-            self.assertEqual(results.solver.status, SolverStatus.ok)
+            self.assert_optimal_result(results)
 
     def test_persisted_license_failure_managed(self):
         # Gurobi error message should come through in the exception
@@ -216,10 +223,11 @@ class GurobiEnvironmentTests(GurobiBase):
         with patch("gurobipy.Env", side_effect=gp.GurobiError(NO_LICENSE, "nolicense")):
             with SolverFactory("gurobi_direct", manage_env=True) as opt:
                 with self.assertRaisesRegex(ApplicationError, "nolicense"):
-                    results = opt.solve(self.model)
+                    opt.solve(self.model)
 
         with SolverFactory("gurobi_direct", manage_env=True) as opt:
             results = opt.solve(self.model)
+            self.assert_optimal_result(results)
             self.assertEqual(results.solver.status, SolverStatus.ok)
 
     def test_context(self):
@@ -228,7 +236,8 @@ class GurobiEnvironmentTests(GurobiBase):
         with gp.Env() as use_env:
             with patch("gurobipy.Env", return_value=use_env):
                 with SolverFactory("gurobi_direct", manage_env=True) as opt:
-                    opt.solve(self.model)
+                    results = opt.solve(self.model)
+                    self.assert_optimal_result(results)
 
             # Environment was closed (cannot be restarted)
             with self.assertRaises(gp.GurobiError):
@@ -241,7 +250,8 @@ class GurobiEnvironmentTests(GurobiBase):
             with patch("gurobipy.Env", return_value=use_env):
                 opt = SolverFactory("gurobi_direct", manage_env=True)
                 try:
-                    opt.solve(self.model)
+                    results = opt.solve(self.model)
+                    self.assert_optimal_result(results)
                 finally:
                     opt.close()
 
@@ -249,30 +259,42 @@ class GurobiEnvironmentTests(GurobiBase):
             with self.assertRaises(gp.GurobiError):
                 use_env.start()
 
-    def test_multiple_solvers(self):
+    @unittest.skipIf(single_use_license(), reason="test requires multi-use license")
+    def test_multiple_solvers_managed(self):
+        # Multiple managed solvers will create their own envs
+
+        with SolverFactory("gurobi_direct", manage_env=True) as opt1, SolverFactory(
+            "gurobi_direct", manage_env=True
+        ) as opt2:
+            results1 = opt1.solve(self.model)
+            self.assert_optimal_result(results1)
+            results2 = opt2.solve(self.model)
+            self.assert_optimal_result(results2)
+
+    def test_multiple_solvers_nonmanaged(self):
         # Multiple solvers will share the default environment
 
-        # Start the default environment before patching
-        with gp.Model():
-            pass
+        with SolverFactory("gurobi_direct") as opt1, SolverFactory(
+            "gurobi_direct"
+        ) as opt2:
+            results1 = opt1.solve(self.model)
+            self.assert_optimal_result(results1)
+            results2 = opt2.solve(self.model)
+            self.assert_optimal_result(results2)
 
-        # Goes through ok, no explicit environment is created
-        with patch("gurobipy.Env", side_effect=gp.GurobiError(NO_LICENSE, "")):
-            with SolverFactory("gurobi_direct") as opt1, SolverFactory(
-                "gurobi_direct"
-            ) as opt2:
-                opt1.solve(self.model)
-                opt2.solve(self.model)
-
+    @unittest.skipIf(single_use_license(), reason="test requires multi-use license")
     def test_managed_env(self):
-        # Test that manage_env=True explicitly creates and closes an environment
+        # Test that manage_env=True creates its own environment
 
+        # Set parameters on the default environment
+        gp.setParam("IterationLimit", 100)
+
+        # On the patched environment, solve times out due to parameter setting
         with gp.Env(params={"IterationLimit": 0, "Presolve": 0}) as use_env, patch(
             "gurobipy.Env", return_value=use_env
         ):
-            # On the patched environment, solve times out due to parameter setting
             with SolverFactory("gurobi_direct", manage_env=True) as opt:
-                results = opt.solve(self.model, tee=True)
+                results = opt.solve(self.model)
                 self.assertEqual(results.solver.status, SolverStatus.aborted)
                 self.assertEqual(
                     results.solver.termination_condition,
@@ -280,21 +302,19 @@ class GurobiEnvironmentTests(GurobiBase):
                 )
 
     def test_nonmanaged_env(self):
-        # Test that manage_env=False (default) does not create an environment
+        # Test that manage_env=False (default) uses the default environment
 
-        # Start the default environment before patching
-        with gp.Model():
-            pass
+        # Set parameters on the default environment
+        gp.setParam("IterationLimit", 0)
+        gp.setParam("Presolve", 0)
 
-        # This should go through ok, because the solver doesn't create an
-        # environment explicitly when manage_env=False
-        with patch("gurobipy.Env", side_effect=gp.GurobiError(NO_LICENSE, "")):
-            with SolverFactory("gurobi_direct") as opt:
-                results = opt.solve(self.model)
-                self.assertEqual(results.solver.status, SolverStatus.ok)
-                self.assertEqual(
-                    results.solver.termination_condition, TerminationCondition.optimal
-                )
+        # Using the default env, solve times out due to parameter setting
+        with SolverFactory("gurobi_direct") as opt:
+            results = opt.solve(self.model)
+            self.assertEqual(results.solver.status, SolverStatus.aborted)
+            self.assertEqual(
+                results.solver.termination_condition, TerminationCondition.maxIterations
+            )
 
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
