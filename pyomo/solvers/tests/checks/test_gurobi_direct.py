@@ -6,6 +6,7 @@ and are skipped if this isn't the case.
 import gc
 from unittest.mock import patch
 
+import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 from pyomo.common.errors import ApplicationError
 from pyomo.environ import SolverFactory, ConcreteModel
@@ -54,7 +55,14 @@ class GurobiBase(unittest.TestCase):
 
     def setUp(self):
         clean_up_global_state()
-        self.model = ConcreteModel()
+
+        # A simple model to solve
+        model = ConcreteModel()
+        model.x = pyo.Var([1, 2], domain=pyo.NonNegativeReals)
+        model.OBJ = pyo.Objective(expr=model.x[1] + model.x[2], sense=pyo.maximize)
+        model.Constraint1 = pyo.Constraint(expr=2 * model.x[1] + model.x[2] <= 1)
+        model.Constraint2 = pyo.Constraint(expr=model.x[1] + 2 * model.x[2] <= 1)
+        self.model = model
 
     def tearDown(self):
         clean_up_global_state()
@@ -250,16 +258,16 @@ class GurobiEnvironmentTests(GurobiBase):
     def test_managed_env(self):
         # Test that manage_env=True explicitly creates and closes an environment
 
-        with gp.Env(params={"TimeLimit": 0.0}) as use_env, patch(
+        with gp.Env(params={"IterationLimit": 0, "Presolve": 0}) as use_env, patch(
             "gurobipy.Env", return_value=use_env
         ):
             # On the patched environment, solve times out due to parameter setting
             with SolverFactory("gurobi_direct", manage_env=True) as opt:
-                results = opt.solve(self.model)
+                results = opt.solve(self.model, tee=True)
                 self.assertEqual(results.solver.status, SolverStatus.aborted)
                 self.assertEqual(
                     results.solver.termination_condition,
-                    TerminationCondition.maxTimeLimit,
+                    TerminationCondition.maxIterations,
                 )
 
             # Check that the patched environment was closed by pyomo
