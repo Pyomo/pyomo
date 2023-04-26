@@ -594,8 +594,8 @@ def perform_separation_loop(model_data, config, solve_globally):
             == len(config.uncertainty_set.scenarios)
         )
         if all_scenarios_exhausted:
-            # Entire uncertainty set already accounted for
-            #  in master. No need to solve separation
+            # robustness certified: entire uncertainty set already
+            # accounted for in master
             return SeparationLoopResults(
                 solver_call_results=ComponentMap(),
                 solved_globally=solve_globally,
