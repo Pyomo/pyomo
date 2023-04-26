@@ -523,7 +523,7 @@ def _before_linear(visitor, child):
                 var_order[_id] = next_i
                 next_i += 1
                 linear[_id] = arg1
-            elif _id in ans.linear:
+            elif _id in linear:
                 linear[_id] += arg1
             else:
                 linear[_id] = arg1
