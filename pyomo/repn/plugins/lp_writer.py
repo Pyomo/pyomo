@@ -558,19 +558,18 @@ class _LPWriter_impl(object):
                 c1 = getVarOrder(vid1)
                 c2 = getVarOrder(vid2)
                 if c2 < c1:
-                    op = " * "
                     col = c2, c1
-                    sym1 = getSymbol(getVar(vid2))
-                    sym2 = getSymbol(getVar(vid1))
+                    sym = f' {getSymbol(getVar(vid2))} * {getSymbol(getVar(vid1))}\n'
+                elif c1 == c2:
+                    col = c1, c1
+                    sym = f' {getSymbol(getVar(vid2))} ^ 2\n'
                 else:
-                    op = " ^ " if c1 == c2 else " * "
                     col = c1, c2
-                    sym1 = getSymbol(getVar(vid1))
-                    sym2 = getSymbol(getVar(vid2))
+                    sym = f' {getSymbol(getVar(vid2))} * {getSymbol(getVar(vid1))}\n'
                 if coef < 0:
-                    return col, f'{coef!r} {sym1}{op}{sym2}\n'
+                    return col, repr(coef) + sym
                 else:
-                    return col, f'+{coef!r} {sym1}{op}{sym2}\n'
+                    return col, '+' + repr(coef) + sym
 
             if is_objective:
                 #
