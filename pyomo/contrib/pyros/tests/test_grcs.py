@@ -4407,6 +4407,42 @@ class RegressionTest(unittest.TestCase):
             )
 
     @unittest.skipUnless(
+        baron_license_is_valid,
+        "Global NLP solver is not available and licensed."
+    )
+    def test_pyros_no_perf_cons(self):
+        """
+        Ensure PyROS properly accommodates models with no
+        performance constraints (such as effectively deterministic
+        models).
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.q = Param(mutable=True, initialize=1)
+
+        m.obj = Objective(expr=m.x * m.q)
+
+        pyros_solver = SolverFactory("pyros")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet(bounds=[[0, 1]]),
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            solve_master_globally=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg=(
+                f"Returned termination condition for separation error"
+                "test is not {pyrosTerminationCondition.subsolver_error}.",
+            ),
+        )
+
+    @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_nominal_focus_robust_feasible(self):
