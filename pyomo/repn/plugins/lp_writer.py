@@ -478,6 +478,28 @@ class _LPWriter_impl(object):
                 'Empty constraint block written in LP format - solver may error'
             )
 
+        #
+        # Tabulate SOS constraints
+        #
+        if component_map[SOSConstraint]:
+            sos = []
+            for blk in component_map[Objective]:
+                sos.extend(
+                    blk.component_data_objects(SOSConstraint, active=True, sort=sorter)
+                )
+            if self.config.row_order:
+                # sorted() is stable (per Python docs), so we can let
+                # all unspecified rows have a row number one bigger than
+                # the number of rows specified by the user ordering.
+                _n = len(row_order)
+                sos.sort(key=lambda x: _row_getter(x, _n))
+
+            ostream.write("\nSOS\n")
+            for soscon in sos:
+                ostream.write(f'\n{getSymbol(soscon)}: S{soscon.level}::\n')
+                for v, w in getattr(soscon, 'get_items', soscon.items)():
+                    ostream.write("  {getSymbol(v)}:{w!r}\n")
+
         ostream.write("\nbounds")
 
         # Track the number of integer and binary variables, so you can
