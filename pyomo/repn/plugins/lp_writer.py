@@ -431,14 +431,16 @@ class _LPWriter_impl(object):
             repn.constant = 0
 
             symbol = labeler(con)
-            if con.equality:
+            lb = con.lb
+            ub = con.ub
+            if lb == ub and lb is not None:
                 label = f'c_e_{symbol}_'
                 addSymbol(con, label)
                 ostream.write(label + ':\n')
                 self.write_expression(ostream, repn, False)
-                ostream.write('= %r\n\n' % (con.lb - offset))
-            elif con.has_lb():
-                if con.has_ub():
+                ostream.write(f'= {(lb - offset)!r}\n')
+            elif lb is not None:
+                if ub is not None:
                     # We will need the constraint body twice.  Generate
                     # in a buffer so we only have to do that once.
                     buf = StringIO()
@@ -449,24 +451,24 @@ class _LPWriter_impl(object):
                     addSymbol(con, label)
                     ostream.write(label + ':\n')
                     ostream.write(buf)
-                    ostream.write('>= %r\n\n' % (con.lb - offset))
+                    ostream.write(f'>= {(lb - offset)!r}\n')
                     label = f'r_u_{symbol}_'
                     aliasSymbol(con, label)
                     ostream.write(label + ':\n')
                     ostream.write(buf)
-                    ostream.write('<= %r\n\n' % (con.ub - offset))
+                    ostream.write(f'<= {(ub - offset)!r}\n')
                 else:
                     label = f'c_l_{symbol}_'
                     addSymbol(con, label)
                     ostream.write(label + ':\n')
                     self.write_expression(ostream, repn, False)
-                    ostream.write('>= %r\n\n' % (con.lb - offset))
-            else:
+                    ostream.write(f'>= {(lb - offset)!r}\n')
+            elif ub is not None:
                 label = f'c_u_{symbol}_'
                 aliasSymbol(con, label)
                 ostream.write(label + ':\n')
                 self.write_expression(ostream, repn, False)
-                ostream.write('<= %r\n\n' % (con.ub - offset))
+                ostream.write(f'<= {(ub - offset)!r}\n')
 
         if with_debug_timing:
             # report the last constraint
