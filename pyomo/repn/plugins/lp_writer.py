@@ -395,7 +395,7 @@ class _LPWriter_impl(object):
             # number of rows specified by the user ordering.
             _n = len(row_order)
             _row_getter = row_order.get
-            constraints = sorted(constriants, key=lambda x: _row_getter(x, _n))
+            constraints = sorted(constraints, key=lambda x: _row_getter(x, _n))
 
         skip_trivial_constraints = self.config.skip_trivial_constraints
         have_nontrivial = False
