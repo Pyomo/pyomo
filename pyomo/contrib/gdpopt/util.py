@@ -31,6 +31,7 @@ from pyomo.core import (
     value,
     Var,
 )
+from pyomo.core.expr.numvalue import native_types
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import _parent_disjunct
 from pyomo.opt import SolverFactory
@@ -92,7 +93,7 @@ def solve_continuous_problem(m, config):
     if any(
         c.body.polynomial_degree() not in (1, 0)
         for c in m.component_data_objects(Constraint, active=True, descend_into=Block)
-    ) or obj.expr.polynomial_degree() not in (1, 0):
+    ) or obj.polynomial_degree() not in (1, 0):
         logger.info(
             "Your model is an NLP (nonlinear program). "
             "Using NLP solver %s to solve." % config.nlp_solver
@@ -113,48 +114,47 @@ def move_nonlinear_objective_to_constraints(util_block, logger):
     discrete_obj = next(
         m.component_data_objects(Objective, descend_into=True, active=True)
     )
+    if discrete_obj.polynomial_degree() in (1, 0):
+        # Nothing to move
+        return None
 
     # Move the objective to the constraints if it is nonlinear
-    if discrete_obj.expr.polynomial_degree() not in (1, 0):
-        logger.info("Objective is nonlinear. Moving it to constraint set.")
+    logger.info("Objective is nonlinear. Moving it to constraint set.")
 
-        util_block.objective_value = Var(domain=Reals, initialize=0)
-        if mcpp_available():
-            mc_obj = McCormick(discrete_obj.expr)
-            util_block.objective_value.setub(mc_obj.upper())
-            util_block.objective_value.setlb(mc_obj.lower())
-        else:
-            # Use Pyomo's contrib.fbbt package
-            lb, ub = compute_bounds_on_expr(discrete_obj.expr)
-            if discrete_obj.sense == minimize:
-                util_block.objective_value.setlb(lb)
-            else:
-                util_block.objective_value.setub(ub)
-
+    util_block.objective_value = Var(domain=Reals, initialize=0)
+    if mcpp_available():
+        mc_obj = McCormick(discrete_obj.expr)
+        util_block.objective_value.setub(mc_obj.upper())
+        util_block.objective_value.setlb(mc_obj.lower())
+    else:
+        # Use Pyomo's contrib.fbbt package
+        lb, ub = compute_bounds_on_expr(discrete_obj.expr)
         if discrete_obj.sense == minimize:
-            util_block.objective_constr = Constraint(
-                expr=util_block.objective_value >= discrete_obj.expr
-            )
+            util_block.objective_value.setlb(lb)
         else:
-            util_block.objective_constr = Constraint(
-                expr=util_block.objective_value <= discrete_obj.expr
-            )
-        # Deactivate the original objective and add this new one.
-        discrete_obj.deactivate()
-        util_block.objective = Objective(
-            expr=util_block.objective_value, sense=discrete_obj.sense
-        )
+            util_block.objective_value.setub(ub)
 
-        # Add the new variable and constraint to the working lists
-        if discrete_obj.expr.polynomial_degree() not in (1, 0):
-            util_block.algebraic_variable_list.append(util_block.objective_value)
-            if hasattr(util_block, 'constraint_list'):
-                util_block.constraint_list.append(util_block.objective_constr)
-        # If we moved the objective, return the original in case we want to
-        # restore it later
-        return discrete_obj
-    # Nothing was moved
-    return None
+    if discrete_obj.sense == minimize:
+        util_block.objective_constr = Constraint(
+            expr=util_block.objective_value >= discrete_obj.expr
+        )
+    else:
+        util_block.objective_constr = Constraint(
+            expr=util_block.objective_value <= discrete_obj.expr
+        )
+    # Deactivate the original objective and add this new one.
+    discrete_obj.deactivate()
+    util_block.objective = Objective(
+        expr=util_block.objective_value, sense=discrete_obj.sense
+    )
+
+    # Add the new variable and constraint to the working lists
+    util_block.algebraic_variable_list.append(util_block.objective_value)
+    if hasattr(util_block, 'constraint_list'):
+        util_block.constraint_list.append(util_block.objective_constr)
+    # If we moved the objective, return the original in case we want to
+    # restore it later
+    return discrete_obj
 
 
 def a_logger(str_or_logger):

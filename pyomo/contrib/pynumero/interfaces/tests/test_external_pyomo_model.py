@@ -39,10 +39,8 @@ from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
     PyomoNLPWithGreyBoxBlocks,
 )
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptNLP,
-    CyIpoptSolver,
-)
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import CyIpoptNLP
 
 if not pyo.SolverFactory("ipopt").available():
     raise unittest.SkipTest("Need IPOPT to run ExternalPyomoModel tests")
@@ -1082,6 +1080,7 @@ class TestScaling(unittest.TestCase):
         nlp_sf = nlp.get_constraints_scaling()
         np.testing.assert_array_equal(scaling_factors, nlp_sf)
 
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
     def test_cyipopt_nlp(self):
         m = self.make_model()
         scaling_factors = [1e-4, 1e4]
