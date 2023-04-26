@@ -16,6 +16,7 @@ import io
 import math
 import os
 
+import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
 from pyomo.repn.tests.ampl.nl_diff import nl_diff
 
@@ -345,9 +346,9 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.p = Param(mutable=True, initialize=0)
         m.x = Var()
 
-        nl_writer.HALT_ON_EVALUATION_ERROR, tmp = (
+        repn_util.HALT_ON_EVALUATION_ERROR, tmp = (
             True,
-            nl_writer.HALT_ON_EVALUATION_ERROR,
+            repn_util.HALT_ON_EVALUATION_ERROR,
         )
         try:
             info = INFO()
@@ -390,7 +391,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
                 "\texpression: x**2/p\n",
             )
         finally:
-            nl_writer.HALT_ON_EVALUATION_ERROR = tmp
+            repn_util.HALT_ON_EVALUATION_ERROR = tmp
 
     def test_errors_negative_frac_pow(self):
         m = ConcreteModel()

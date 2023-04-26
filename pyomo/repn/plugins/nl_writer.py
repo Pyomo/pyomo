@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import enum
 import logging
 import os
 import sys
@@ -71,6 +70,7 @@ import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
 
+from pyomo.repn.util import ExprType, FileDeterminism, apply_node_operation, categorize_valid_components
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
 ### FIXME: Remove the following as soon as non-active components no
@@ -88,19 +88,10 @@ inf = float('inf')
 minus_inf = -inf
 nan = float('nan')
 
-HALT_ON_EVALUATION_ERROR = False
 
-
-class _CONSTANT(object):
-    pass
-
-
-class _MONOMIAL(object):
-    pass
-
-
-class _GENERAL(object):
-    pass
+_CONSTANT = ExprType.CONSTANT
+_MONOMIAL = ExprType.MONOMIAL
+_GENERAL = ExprType.GENERAL
 
 
 # TODO: make a proper base class
@@ -151,67 +142,6 @@ class NLWriterInfo(object):
         self.external_function_libraries = extlib
         self.row_labels = row_lbl
         self.column_labels = col_lbl
-
-
-class FileDeterminism(enum.IntEnum):
-    NONE = 0
-    DEPRECATED_KEYS = 1
-    DEPRECATED_KEYS_AND_NAMES = 2
-    ORDERED = 10
-    SORT_INDICES = 20
-    SORT_SYMBOLS = 30
-
-
-def _apply_node_operation(node, args):
-    try:
-        tmp = (_CONSTANT, node._apply_operation(args))
-        if tmp[1].__class__ is complex:
-            raise ValueError('Pyomo does not support complex numbers')
-        return tmp
-    except:
-        logger.warning(
-            "Exception encountered evaluating expression "
-            "'%s(%s)'\n\tmessage: %s\n\texpression: %s"
-            % (node.name, ", ".join(map(str, args)), str(sys.exc_info()[1]), node)
-        )
-        if HALT_ON_EVALUATION_ERROR:
-            raise
-        return (_CONSTANT, nan)
-
-
-def categorize_valid_components(
-    model, active=True, sort=None, valid=set(), targets=set()
-):
-    assert active in (True, None)
-    unrecognized = {}
-    component_map = {k: [] for k in targets}
-    for block in model.block_data_objects(active=active, descend_into=True, sort=sort):
-        local_ctypes = block.collect_ctypes(active=None, descend_into=False)
-        for ctype in local_ctypes:
-            if ctype in kernel.base._kernel_ctype_backmap:
-                ctype = kernel.base._kernel_ctype_backmap[ctype]
-            if ctype in targets:
-                component_map[ctype].append(block)
-                continue
-            if ctype in valid:
-                continue
-            # TODO: we should rethink the definition of "active" for
-            # Components that are not subclasses of ActiveComponent
-            if not issubclass(ctype, ActiveComponent) and not issubclass(
-                ctype, kernel.base.ICategorizedObject
-            ):
-                continue
-            if ctype not in unrecognized:
-                unrecognized[ctype] = []
-            unrecognized[ctype].extend(
-                block.component_data_objects(
-                    ctype=ctype,
-                    active=active,
-                    descend_into=False,
-                    sort=SortComponents.unsorted,
-                )
-            )
-    return component_map, {k: v for k, v in unrecognized.items() if v}
 
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
@@ -2034,20 +1964,20 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            tmp = _apply_node_operation(node, (arg1[2], div))
+            tmp = apply_node_operation(node, (arg1[2], div))
             if tmp[1] != tmp[1]:
                 # This catches if the coefficient division results in nan
                 return tmp
             return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
-            tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
+            tmp = apply_node_operation(node, (arg1[1].mult, div))[1]
             if tmp != tmp:
                 # This catches if the multiplier division results in nan
                 return _CONSTANT, tmp
             arg1[1].mult = tmp
             return arg1
         elif arg1[0] is _CONSTANT:
-            return _apply_node_operation(node, (arg1[1], div))
+            return apply_node_operation(node, (arg1[1], div))
     elif arg1[0] is _CONSTANT and not arg1[1]:
         return _CONSTANT, 0
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
@@ -2060,7 +1990,7 @@ def handle_division_node(visitor, node, arg1, arg2):
 def handle_pow_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         if arg1[0] is _CONSTANT:
-            return _apply_node_operation(node, (arg1[1], arg2[1]))
+            return apply_node_operation(node, (arg1[1], arg2[1]))
         elif not arg2[1]:
             return _CONSTANT, 1
         elif arg2[1] == 1:
@@ -2079,7 +2009,7 @@ def handle_abs_node(visitor, node, arg1):
 
 def handle_unary_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
-        return _apply_node_operation(node, (arg1[1],))
+        return apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name]
     )
@@ -2276,7 +2206,7 @@ def handle_external_function_node(visitor, node, *args):
         for arg in args
     ):
         arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const for arg in args]
-        return _apply_node_operation(node, arg_list)
+        return apply_node_operation(node, arg_list)
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:
             raise RuntimeError(

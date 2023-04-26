@@ -9,14 +9,101 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import enum
+import logging
+
+from pyomo.common.errors import DeveloperError
 from pyomo.core.base import Var, Param, Expression, Objective, Block, Constraint, Suffix
 from pyomo.core.expr.numvalue import native_numeric_types, is_fixed, value
-import logging
+import pyomo.core.kernel as kernel
 
 logger = logging.getLogger('pyomo.core')
 
 valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
 valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
+
+
+HALT_ON_EVALUATION_ERROR = False
+
+
+class ExprType(enum.IntEnum):
+    CONSTANT = 0
+    MONOMIAL = 10
+    LINEAR = 20
+    QUADRATIC = 30
+    GENERAL = 40
+
+_CONSTANT = ExprType.CONSTANT
+
+class FileDeterminism(enum.IntEnum):
+    NONE = 0
+    DEPRECATED_KEYS = 1
+    DEPRECATED_KEYS_AND_NAMES = 2
+    ORDERED = 10
+    SORT_INDICES = 20
+    SORT_SYMBOLS = 30
+
+    
+def apply_node_operation(node, args):
+    try:
+        tmp = node._apply_operation(args)
+        if tmp.__class__ is complex:
+            raise ValueError('Pyomo does not support complex numbers')
+        return _CONSTANT, tmp
+    except:
+        logger.warning(
+            "Exception encountered evaluating expression "
+            "'%s(%s)'\n\tmessage: %s\n\texpression: %s"
+            % (node.name, ", ".join(map(str, args)), str(sys.exc_info()[1]), node)
+        )
+        if HALT_ON_EVALUATION_ERROR:
+            raise
+        return _CONSTANT, nan
+
+
+def categorize_valid_components(
+    model, active=True, sort=None, valid=set(), targets=set()
+):
+    assert active in (True, None)
+    # Note: we assume every target component is valid but that we expect
+    # there to be far mode valid components than target components.
+    # Generate an error if a target is in the valid set (because the
+    # valid set will preclude recording the block in the component_map)
+    if any(ctype in valid for ctype in targets):
+        raise DeveloperError(
+            "categorize_valid_components: Cannot have component in both the "
+            "`valid` and `targets` sets"
+        )
+    unrecognized = {}
+    component_map = {k: [] for k in targets}
+    for block in model.block_data_objects(active=active, descend_into=True, sort=sort):
+        local_ctypes = block.collect_ctypes(active=None, descend_into=False)
+        for ctype in local_ctypes:
+            if ctype in kernel.base._kernel_ctype_backmap:
+                ctype = kernel.base._kernel_ctype_backmap[ctype]
+            if ctype in valid:
+                continue
+            if ctype in targets:
+                component_map[ctype].append(block)
+                continue
+            # TODO: we should rethink the definition of "active" for
+            # Components that are not subclasses of ActiveComponent
+            if not issubclass(ctype, ActiveComponent) and not issubclass(
+                ctype, kernel.base.ICategorizedObject
+            ):
+                continue
+            if ctype not in unrecognized:
+                unrecognized[ctype] = []
+            unrecognized[ctype].extend(
+                block.component_data_objects(
+                    ctype=ctype,
+                    active=active,
+                    descend_into=False,
+                    sort=SortComponents.unsorted,
+                )
+            )
+    return component_map, {k: v for k, v in unrecognized.items() if v}
+
 
 # Copied from cpxlp.py:
 # Keven Hunter made a nice point about using %.16g in his attachment

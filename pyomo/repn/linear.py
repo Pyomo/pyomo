@@ -34,41 +34,15 @@ from pyomo.core.expr import is_fixed
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
 import pyomo.core.kernel as kernel
+from pyomo.repn.util import ExprType, apply_node_operation
 
 logger = logging.getLogger(__name__)
 
 nan = float("nan")
 
-HALT_ON_EVALUATION_ERROR = False
-
-
-class _CONSTANT(object):
-    pass
-
-
-class _LINEAR(object):
-    pass
-
-
-class _GENERAL(object):
-    pass
-
-
-def _apply_node_operation(node, args):
-    try:
-        tmp = node._apply_operation(args)
-        if tmp.__class__ is complex:
-            raise ValueError("Pyomo does not support complex numbers")
-        return _CONSTANT, tmp
-    except:
-        logger.warning(
-            "Exception encountered evaluating expression "
-            "'%s(%s)'\n\tmessage: %s\n\texpression: %s"
-            % (node.name, ", ".join(map(str, args)), str(sys.exc_info()[1]), node)
-        )
-        if HALT_ON_EVALUATION_ERROR:
-            raise
-        return _CONSTANT, nan
+_CONSTANT = ExprType.CONSTANT
+_LINEAR = ExprType.LINEAR
+_GENERAL = ExprType.GENERAL
 
 def _merge_dict(mult, self_dict, other_dict):
     if mult == 1:
@@ -314,7 +288,7 @@ _exit_node_handlers[DivisionExpression] = {
 
 
 def _handle_pow_constant_constant(visitor, node, *args):
-    return _CONSTANT, _apply_node_operation(node, args)
+    return _CONSTANT, apply_node_operation(node, args)
 
 
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
@@ -350,7 +324,7 @@ _exit_node_handlers[PowExpression] = {
 
 
 def _handle_unary_constant(visitor, node, arg):
-    return _apply_node_operation(node, (arg[1],))
+    return apply_node_operation(node, (arg[1],))
 
 
 def _handle_unary_nonlinear(visitor, node, arg):
