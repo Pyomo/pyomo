@@ -10,6 +10,8 @@
 #  ___________________________________________________________________________
 
 import logging
+from io import StringIO
+from operator import itemgetter, attrgetter
 
 from pyomo.common.config import (
     ConfigBlock,
@@ -33,7 +35,6 @@ from pyomo.core.base import (
     SymbolMap,
     minimize,
 )
-from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.label import LPFileLabeler, NumericLabeler
 from pyomo.opt import WriterFactory

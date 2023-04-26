@@ -11,7 +11,6 @@
 
 import logging
 import os
-import sys
 from collections import deque
 from operator import itemgetter, attrgetter, setitem
 
@@ -62,7 +61,6 @@ from pyomo.core.base import (
     SortComponents,
     minimize,
 )
-from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
