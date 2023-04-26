@@ -10,6 +10,7 @@ PyROS 1.2.7    26 Apr 2023
 - Ensure implementation of separation scenario selection heuristic
   is consistent with original intent
 - Fix local and global separation solve time accumulators
+- Prefer TicTocTimer for solve time accumulators
 
 
 -------------------------------------------------------------------------------
