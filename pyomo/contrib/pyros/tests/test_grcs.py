@@ -4356,8 +4356,54 @@ class RegressionTest(unittest.TestCase):
             res.pyros_termination_condition,
             pyrosTerminationCondition.subsolver_error,
             msg=(
-                f"Returned termination condition for separation error"
-                "test is not {pyrosTerminationCondition.subsolver_error}.",
+                "Returned termination condition for separation error"
+                f"test is not {pyrosTerminationCondition.subsolver_error}."
+            ),
+        )
+
+    @unittest.skipUnless(
+        baron_license_is_valid,
+        "Global NLP solver is not available and licensed."
+    )
+    def test_discrete_separation_subsolver_error(self):
+        """
+        Test PyROS for two-stage problem with discrete type set,
+        subsolver error status.
+        """
+        m = ConcreteModel()
+
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+
+        # upper bound induces subsolver error: separation
+        # max(x2 - log(m.q)) will force subsolver to q = 0
+        m.x2 = Var(initialize=2, bounds=(None, log(m.q)))
+
+        m.obj = Objective(expr=m.x1 + m.x2, sense=maximize)
+
+        discrete_set = DiscreteScenarioSet(scenarios=[(1,), (0,)])
+
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=discrete_set,
+            local_solver=local_solver,
+            global_solver=global_solver,
+            decision_rule_order=1,
+            tee=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.subsolver_error,
+            msg=(
+                "Returned termination condition for separation error"
+                f"test is not {pyrosTerminationCondition.subsolver_error}."
             ),
         )
 
