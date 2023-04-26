@@ -14,8 +14,9 @@
 
 import os
 from os.path import abspath, dirname
-pyomodir = dirname(abspath(__file__))+"/../.."
-currdir = dirname(abspath(__file__))+os.sep
+
+pyomodir = dirname(abspath(__file__)) + "/../.."
+currdir = dirname(abspath(__file__)) + os.sep
 
 import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
@@ -26,15 +27,13 @@ old_tempdir = TempfileManager.tempdir
 
 
 class MockSolver1(pyomo.opt.OptSolver):
-
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
         kwds['doc'] = 'MockSolver1 Documentation'
-        pyomo.opt.OptSolver.__init__(self,**kwds)
+        pyomo.opt.OptSolver.__init__(self, **kwds)
 
 
 class OptSolverDebug(unittest.TestCase):
-
     def setUp(self):
         pyomo.opt.SolverFactory.register('stest1')(MockSolver1)
         TempfileManager.tempdir = currdir
@@ -43,7 +42,6 @@ class OptSolverDebug(unittest.TestCase):
         pyomo.opt.SolverFactory.unregister('stest1')
         TempfileManager.clear_tempfiles()
         TempfileManager.tempdir = old_tempdir
-
 
     def test_solver_init1(self):
         """
@@ -99,7 +97,9 @@ class OptSolverDebug(unittest.TestCase):
         except ValueError:
             pass
         else:
-            self.fail("Should not be able to set the problem format undless it's declared as valid.")
+            self.fail(
+                "Should not be able to set the problem format undless it's declared as valid."
+            )
         opt._valid_problem_formats = ['a']
         self.assertEqual(opt.results_format(), None)
         opt.set_problem_format('a')
@@ -109,15 +109,17 @@ class OptSolverDebug(unittest.TestCase):
     def test_set_results_format(self):
         opt = pyomo.opt.SolverFactory("stest1")
         opt._valid_problem_formats = ['a']
-        opt._valid_results_formats = {'a':'b'}
+        opt._valid_results_formats = {'a': 'b'}
         self.assertEqual(opt.problem_format(), None)
         try:
             opt.set_results_format('b')
         except ValueError:
             pass
         else:
-            self.fail("Should not be able to set the results format unless it's "\
-                      "declared as valid for the current problem format.")
+            self.fail(
+                "Should not be able to set the results format unless it's "
+                "declared as valid for the current problem format."
+            )
         opt.set_problem_format('a')
         self.assertEqual(opt.problem_format(), 'a')
         opt.set_results_format('b')

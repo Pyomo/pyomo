@@ -124,7 +124,6 @@ class DirectSolver(DirectOrPersistentSolver):
             self._options_string_to_dict(kwds.pop('options_string', ''))
         )
         try:
-
             # we're good to go.
             initial_time = time.time()
 
@@ -168,7 +167,7 @@ class DirectSolver(DirectOrPersistentSolver):
 
             result = self._postsolve()
             # ***********************************************************
-            # The following code is only needed for backwards compatability of load_solutions=False.
+            # The following code is only needed for backwards compatibility of load_solutions=False.
             # If we ever only want to support the load_vars, load_duals, etc. methods, then this can be deleted.
             if self._save_results:
                 result._smap_id = self._smap_id

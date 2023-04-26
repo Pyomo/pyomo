@@ -43,6 +43,7 @@ def build_model():
 
     # Total Makespan (this will be the objective)
     model.ms = Var()
+
     # Start time of each job
     def t_bounds(model, I):
         return (0, sum(value(model.tau[idx]) for idx in model.tau))

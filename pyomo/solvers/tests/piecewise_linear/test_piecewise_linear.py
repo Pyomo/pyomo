@@ -57,7 +57,6 @@ for _solver, _io in test_solver_cases():
 
 def createMethod(pName, problem, solver, writer, kwds):
     def Method(obj):
-
         if not testing_solvers[solver, writer]:
             obj.skipTest("Solver %s (interface=%s) is not available" % (solver, writer))
 

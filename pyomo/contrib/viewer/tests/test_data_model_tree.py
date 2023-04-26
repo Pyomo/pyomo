@@ -119,7 +119,7 @@ class TestDataModel(unittest.TestCase):
         #   0. Model
         #     0. y
         #       0. y[0], False
-        #       1. y[1], Flase
+        #       1. y[1], False
         #       2. y[2], False
         #     1. z
         #       0. z[0], 2

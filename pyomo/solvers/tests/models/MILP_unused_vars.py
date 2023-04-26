@@ -49,41 +49,41 @@ class MILP_unused_vars(_BaseTestModel):
         model.x_unused = Var(within=Integers)
         model.x_unused.stale = False
 
-        model.x_unused_initialy_stale = Var(within=Integers)
-        model.x_unused_initialy_stale.stale = True
+        model.x_unused_initially_stale = Var(within=Integers)
+        model.x_unused_initially_stale.stale = True
 
         model.X_unused = Var(model.s, within=Integers)
-        model.X_unused_initialy_stale = Var(model.s, within=Integers)
+        model.X_unused_initially_stale = Var(model.s, within=Integers)
         for i in model.s:
             model.X_unused[i].stale = False
-            model.X_unused_initialy_stale[i].stale = True
+            model.X_unused_initially_stale[i].stale = True
 
         model.x = Var(within=RangeSet(None, None))
         model.x.stale = False
 
-        model.x_initialy_stale = Var(within=Integers)
-        model.x_initialy_stale.stale = True
+        model.x_initially_stale = Var(within=Integers)
+        model.x_initially_stale.stale = True
 
         model.X = Var(model.s, within=Integers)
-        model.X_initialy_stale = Var(model.s, within=Integers)
+        model.X_initially_stale = Var(model.s, within=Integers)
         for i in model.s:
             model.X[i].stale = False
-            model.X_initialy_stale[i].stale = True
+            model.X_initially_stale[i].stale = True
 
         model.obj = Objective(
             expr=model.x
-            + model.x_initialy_stale
+            + model.x_initially_stale
             + sum_product(model.X)
-            + sum_product(model.X_initialy_stale)
+            + sum_product(model.X_initially_stale)
         )
 
         model.c = ConstraintList()
         model.c.add(model.x >= 1)
-        model.c.add(model.x_initialy_stale >= 1)
+        model.c.add(model.x_initially_stale >= 1)
         model.c.add(model.X[1] >= 0)
         model.c.add(model.X[2] >= 1)
-        model.c.add(model.X_initialy_stale[1] >= 0)
-        model.c.add(model.X_initialy_stale[2] >= 1)
+        model.c.add(model.X_initially_stale[1] >= 0)
+        model.c.add(model.X_initially_stale[2] >= 1)
 
         # Test that stale flags get set
         # on inactive blocks (where "inactive blocks" mean blocks
@@ -112,20 +112,20 @@ class MILP_unused_vars(_BaseTestModel):
         assert self.model is not None
         model = self.model
         model.x_unused.value = -1
-        model.x_unused_initialy_stale.value = -1
-        model.x_unused_initialy_stale.stale = True
+        model.x_unused_initially_stale.value = -1
+        model.x_unused_initially_stale.stale = True
         for i in model.s:
             model.X_unused[i].value = -1
-            model.X_unused_initialy_stale[i].value = -1
-            model.X_unused_initialy_stale[i].stale = True
+            model.X_unused_initially_stale[i].value = -1
+            model.X_unused_initially_stale[i].stale = True
 
         model.x.value = -1
-        model.x_initialy_stale.value = -1
-        model.x_initialy_stale.stale = True
+        model.x_initially_stale.value = -1
+        model.x_initially_stale.stale = True
         for i in model.s:
             model.X[i].value = -1
-            model.X_initialy_stale[i].value = -1
-            model.X_initialy_stale[i].stale = True
+            model.X_initially_stale[i].value = -1
+            model.X_initially_stale[i].stale = True
 
 
 @register_model
@@ -140,49 +140,49 @@ class MILP_unused_vars_kernel(MILP_unused_vars):
         model.x_unused = pmo.variable(domain=pmo.IntegerSet)
         model.x_unused.stale = False
 
-        model.x_unused_initialy_stale = pmo.variable(domain=pmo.IntegerSet)
-        model.x_unused_initialy_stale.stale = True
+        model.x_unused_initially_stale = pmo.variable(domain=pmo.IntegerSet)
+        model.x_unused_initially_stale.stale = True
 
         model.X_unused = pmo.variable_dict(
             (i, pmo.variable(domain=pmo.IntegerSet)) for i in model.s
         )
-        model.X_unused_initialy_stale = pmo.variable_dict(
+        model.X_unused_initially_stale = pmo.variable_dict(
             (i, pmo.variable(domain=pmo.IntegerSet)) for i in model.s
         )
         for i in model.s:
             model.X_unused[i].stale = False
-            model.X_unused_initialy_stale[i].stale = True
+            model.X_unused_initially_stale[i].stale = True
 
         model.x = pmo.variable(domain=RangeSet(None, None))
         model.x.stale = False
 
-        model.x_initialy_stale = pmo.variable(domain=pmo.IntegerSet)
-        model.x_initialy_stale.stale = True
+        model.x_initially_stale = pmo.variable(domain=pmo.IntegerSet)
+        model.x_initially_stale.stale = True
 
         model.X = pmo.variable_dict(
             (i, pmo.variable(domain=pmo.IntegerSet)) for i in model.s
         )
-        model.X_initialy_stale = pmo.variable_dict(
+        model.X_initially_stale = pmo.variable_dict(
             (i, pmo.variable(domain=pmo.IntegerSet)) for i in model.s
         )
         for i in model.s:
             model.X[i].stale = False
-            model.X_initialy_stale[i].stale = True
+            model.X_initially_stale[i].stale = True
 
         model.obj = pmo.objective(
             model.x
-            + model.x_initialy_stale
+            + model.x_initially_stale
             + sum(model.X.values())
-            + sum(model.X_initialy_stale.values())
+            + sum(model.X_initially_stale.values())
         )
 
         model.c = pmo.constraint_dict()
         model.c[1] = pmo.constraint(model.x >= 1)
-        model.c[2] = pmo.constraint(model.x_initialy_stale >= 1)
+        model.c[2] = pmo.constraint(model.x_initially_stale >= 1)
         model.c[3] = pmo.constraint(model.X[1] >= 0)
         model.c[4] = pmo.constraint(model.X[2] >= 1)
-        model.c[5] = pmo.constraint(model.X_initialy_stale[1] >= 0)
-        model.c[6] = pmo.constraint(model.X_initialy_stale[2] >= 1)
+        model.c[5] = pmo.constraint(model.X_initially_stale[1] >= 0)
+        model.c[6] = pmo.constraint(model.X_initially_stale[2] >= 1)
 
         # Test that stale flags do not get updated
         # on inactive blocks (where "inactive blocks" mean blocks

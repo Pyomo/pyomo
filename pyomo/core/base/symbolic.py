@@ -15,10 +15,14 @@ from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 from pyomo.common.errors import NondifferentiableError
 
 
-@deprecated(msg=('The differentiate function in pyomo.core.base.symbolic has been deprecated. Please use the ' +
-                 'differentiate function in pyomo.core.expr.'),
-            version='5.6.7',
-            remove_in='5.7')
+@deprecated(
+    msg=(
+        'The differentiate function in pyomo.core.base.symbolic has been deprecated. Please use the '
+        + 'differentiate function in pyomo.core.expr.'
+    ),
+    version='5.6.7',
+    remove_in='5.7',
+)
 def differentiate(expr, wrt=None, wrt_list=None):
     """Return derivative of expression.
 
@@ -35,4 +39,6 @@ def differentiate(expr, wrt=None, wrt_list=None):
         Expression or list of Expression objects
 
     """
-    return diff_core.differentiate(expr=expr, wrt=wrt, wrt_list=wrt_list, mode=diff_core.Modes.sympy)
+    return diff_core.differentiate(
+        expr=expr, wrt=wrt, wrt_list=wrt_list, mode=diff_core.Modes.sympy
+    )

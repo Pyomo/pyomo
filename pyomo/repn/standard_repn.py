@@ -200,6 +200,8 @@ class StandardRepn(object):
         for i, v in lvars:
             c = self.linear_coefs[i]
             if c.__class__ in native_numeric_types:
+                if not c:
+                    pass
                 if isclose_const(c, 1.0):
                     expr += v
                 elif isclose_const(c, -1.0):
@@ -251,6 +253,8 @@ representations be temporary.  They should be used to interface
 to a solver and then be deleted.
 
 """
+
+
 # @profile
 def generate_standard_repn(
     expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None
@@ -300,56 +304,60 @@ def generate_standard_repn(
         # The expression is linear
         #
         elif expr.__class__ is EXPR.LinearExpression:
+            linear_coefs = {}
+            linear_vars = {}
+            C_ = 0
             if compute_values:
-                C_ = EXPR.evaluate_expression(expr.constant)
-            else:
-                C_ = expr.constant
-            if compute_values:
-                linear_coefs = {}
-                for c, v in zip(expr.linear_coefs, expr.linear_vars):
-                    if c.__class__ in native_numeric_types:
-                        cval = c
-                    elif c.is_expression_type():
-                        cval = EXPR.evaluate_expression(c)
-                    else:
-                        cval = value(c)
-                    if v.fixed:
-                        C_ += cval * v.value
-                    else:
+                for arg in expr.args:
+                    if arg.__class__ is EXPR.MonomialTermExpression:
+                        c, v = arg.args
+                        if c.__class__ not in native_numeric_types:
+                            c = EXPR.evaluate_expression(c)
+                        if v.fixed:
+                            C_ += c * v.value
+                            continue
                         id_ = id(v)
-                        if not id_ in idMap[None]:
-                            key = len(idMap) - 1
-                            idMap[None][id_] = key
-                            idMap[key] = v
+                        if id_ in linear_coefs:
+                            linear_coefs[id_] += c
                         else:
-                            key = idMap[None][id_]
-                        if key in linear_coefs:
-                            linear_coefs[key] += cval
-                        else:
-                            linear_coefs[key] = cval
-                keys = list(linear_coefs.keys())
-                repn.linear_vars = tuple(idMap[key] for key in keys)
-                repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
-            else:
-                linear_coefs = {}
-                for c, v in zip(expr.linear_coefs, expr.linear_vars):
-                    if v.fixed:
-                        C_ += c * v
+                            linear_coefs[id_] = c
+                            linear_vars[id_] = v
+                    elif arg.__class__ in native_numeric_types:
+                        C_ += arg
                     else:
+                        C_ += EXPR.evaluate_expression(arg)
+            else:  # compute_values == False
+                for arg in expr.args:
+                    if arg.__class__ is EXPR.MonomialTermExpression:
+                        c, v = arg.args
+                        if v.fixed:
+                            C_ += c * v
+                            continue
                         id_ = id(v)
-                        if not id_ in idMap[None]:
-                            key = len(idMap) - 1
-                            idMap[None][id_] = key
-                            idMap[key] = v
+                        if id_ in linear_coefs:
+                            linear_coefs[id_] += c
                         else:
-                            key = idMap[None][id_]
-                        if key in linear_coefs:
-                            linear_coefs[key] += c
-                        else:
-                            linear_coefs[key] = c
-                keys = list(linear_coefs.keys())
-                repn.linear_vars = tuple(idMap[key] for key in keys)
-                repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
+                            linear_coefs[id_] = c
+                            linear_vars[id_] = v
+                    else:
+                        C_ += arg
+
+            vars_ = []
+            coef_ = []
+            for id_, coef in linear_coefs.items():
+                if coef.__class__ in native_numeric_types and not coef:
+                    continue
+                if id_ not in idMap[None]:
+                    key = len(idMap) - 1
+                    idMap[None][id_] = key
+                    idMap[key] = linear_vars[id_]
+                else:
+                    key = idMap[None][id_]
+                vars_.append(idMap[key])
+                coef_.append(coef)
+
+            repn.linear_vars = tuple(vars_)
+            repn.linear_coefs = tuple(coef_)
             repn.constant = C_
             return repn
 
@@ -447,9 +455,14 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
     for e_ in itertools.islice(exp._args_, exp.nargs()):
         if e_.__class__ is EXPR.MonomialTermExpression:
-            lhs, v = e_._args_
-            if compute_values and not lhs.__class__ in native_numeric_types:
+            lhs, v = e_.args
+            if lhs.__class__ in native_numeric_types:
+                if not lhs:
+                    continue
+            elif compute_values:
                 lhs = value(lhs)
+                if not lhs:
+                    continue
             if v.fixed:
                 if compute_values:
                     ans.constant += multiplier * lhs * value(v)
@@ -502,8 +515,8 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             ans.constant += res_.constant
             if not (res_.nonl.__class__ in native_numeric_types and res_.nonl == 0):
                 nonl.append(res_.nonl)
-            for i in res_.linear:
-                ans.linear[i] = ans.linear.get(i, 0) + res_.linear[i]
+            for i, v in res_.linear.items():
+                ans.linear[i] = ans.linear.get(i, 0) + v
             if quadratic:
                 for i in res_.quadratic:
                     ans.quadratic[i] = ans.quadratic.get(i, 0) + res_.quadratic[i]
@@ -513,6 +526,13 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             ans.nonl = nonl[0]
         else:
             ans.nonl = EXPR.SumExpression(nonl)
+    zero_coef = [
+        k
+        for k, coef in ans.linear.items()
+        if coef.__class__ in native_numeric_types and not coef
+    ]
+    for k in zero_coef:
+        ans.linear.pop(k)
     return ans
 
 
@@ -646,7 +666,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     lhs = _collect_standard_repn(
         exp._args_[0], 1, idMap, compute_values, verbose, quadratic
     )
-    lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and lhs.nonl == 0
+    lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and not lhs.nonl
     #
     # LHS is potentially variable, but it turns out to be a constant
     # because the variables were fixed.
@@ -685,7 +705,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     rhs = _collect_standard_repn(
         exp._args_[1], 1, idMap, compute_values, verbose, quadratic
     )
-    rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and rhs.nonl == 0
+    rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and not rhs.nonl
     #
     # If RHS is zero, then return an empty results
     #
@@ -743,18 +763,33 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.quadratic[ndx] = multiplier * lcoef * rcoef
         # TODO - Use quicksum here?
         el_linear = multiplier * sum(
-            coef * idMap[key] for key, coef in lhs.linear.items()
+            coef * idMap[key]
+            for key, coef in lhs.linear.items()
+            if coef.__class__ not in native_numeric_types or coef
         )
         er_linear = multiplier * sum(
-            coef * idMap[key] for key, coef in rhs.linear.items()
+            coef * idMap[key]
+            for key, coef in rhs.linear.items()
+            if coef.__class__ not in native_numeric_types or coef
         )
         el_quadratic = multiplier * sum(
-            coef * idMap[key[0]] * idMap[key[1]] for key, coef in lhs.quadratic.items()
+            coef * idMap[key[0]] * idMap[key[1]]
+            for key, coef in lhs.quadratic.items()
+            if coef.__class__ not in native_numeric_types or coef
         )
         er_quadratic = multiplier * sum(
-            coef * idMap[key[0]] * idMap[key[1]] for key, coef in rhs.quadratic.items()
+            coef * idMap[key[0]] * idMap[key[1]]
+            for key, coef in rhs.quadratic.items()
+            if coef.__class__ not in native_numeric_types or coef
         )
-        ans.nonl += el_linear * er_quadratic + el_quadratic * er_linear
+        if (el_linear.__class__ not in native_numeric_types or el_linear) and (
+            er_quadratic.__class__ not in native_numeric_types or er_quadratic
+        ):
+            ans.nonl += el_linear * er_quadratic
+        if (er_linear.__class__ not in native_numeric_types or er_linear) and (
+            el_quadratic.__class__ not in native_numeric_types or el_quadratic
+        ):
+            ans.nonl += er_linear * el_quadratic
 
     return ans
 
@@ -933,17 +968,16 @@ def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic
 
 
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._if.__class__ in native_numeric_types:  # TODO: coverage?
-        if_val = exp._if
-    elif not exp._if.is_potentially_variable():
+    _if, _then, _else = exp.args
+    if _if.__class__ in native_numeric_types:  # TODO: coverage?
+        if_val = _if
+    elif not _if.is_potentially_variable():
         if compute_values:
-            if_val = value(exp._if)
+            if_val = value(_if)
         else:
             return Results(nonl=multiplier * exp)
     else:
-        res = _collect_standard_repn(
-            exp._if, 1, idMap, compute_values, verbose, quadratic
-        )
+        res = _collect_standard_repn(_if, 1, idMap, compute_values, verbose, quadratic)
         if (
             not (res.nonl.__class__ in native_numeric_types and res.nonl == 0)
             or len(res.linear) > 0
@@ -955,16 +989,16 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
         else:
             return Results(constant=multiplier * exp)
     if if_val:
-        if exp._then.__class__ in native_numeric_types:
-            return Results(constant=multiplier * exp._then)
+        if _then.__class__ in native_numeric_types:
+            return Results(constant=multiplier * _then)
         return _collect_standard_repn(
-            exp._then, multiplier, idMap, compute_values, verbose, quadratic
+            _then, multiplier, idMap, compute_values, verbose, quadratic
         )
     else:
-        if exp._else.__class__ in native_numeric_types:
-            return Results(constant=multiplier * exp._else)
+        if _else.__class__ in native_numeric_types:
+            return Results(constant=multiplier * _else)
         return _collect_standard_repn(
-            exp._else, multiplier, idMap, compute_values, verbose, quadratic
+            _else, multiplier, idMap, compute_values, verbose, quadratic
         )
 
 
@@ -1020,6 +1054,8 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
     else:
         ans.constant = multiplier * exp.constant
 
+    linear = {}
+    linear_vars = {}
     for c, v in zip(exp.linear_coefs, exp.linear_vars):
         if v.fixed:
             if compute_values:
@@ -1027,23 +1063,29 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
             else:
                 ans.constant += multiplier * c * v
         else:
-            id_ = id(v)
-            if id_ in idMap[None]:
-                key = idMap[None][id_]
-            else:
-                key = len(idMap) - 1
-                idMap[None][id_] = key
-                idMap[key] = v
+            key = id(v)
             if compute_values:
-                if key in ans.linear:
-                    ans.linear[key] += multiplier * value(c)
+                if key in linear:
+                    linear[key] += multiplier * value(c)
                 else:
-                    ans.linear[key] = multiplier * value(c)
+                    linear[key] = multiplier * value(c)
+                    linear_vars[key] = v
             else:
-                if key in ans.linear:
-                    ans.linear[key] += multiplier * c
+                if key in linear:
+                    linear[key] += multiplier * c
                 else:
-                    ans.linear[key] = multiplier * c
+                    linear[key] = multiplier * c
+                    linear_vars[key] = v
+    for id_, coef in linear.items():
+        if coef.__class__ in native_numeric_types and not coef:
+            continue
+        if id_ in idMap[None]:
+            key = idMap[None][id_]
+        else:
+            key = len(idMap) - 1
+            idMap[None][id_] = key
+            idMap[key] = linear_vars[id_]
+        ans.linear[key] = coef
     return ans
 
 
@@ -1150,16 +1192,15 @@ def _generate_standard_repn(
     #
     v = []
     c = []
-    for key in ans.linear:
-        val = ans.linear[key]
+    for key, val in ans.linear.items():
         if val.__class__ in native_numeric_types:
-            if val == 0:
+            if not val:
                 continue
         elif val.is_constant():  # TODO: coverage?
             if value(val) == 0:
                 continue
         v.append(idMap[key])
-        c.append(ans.linear[key])
+        c.append(val)
     repn.linear_vars = tuple(v)
     repn.linear_coefs = tuple(c)
 
@@ -1553,7 +1594,6 @@ def _generate_linear_standard_repn(expr, idMap=None, compute_values=True, verbos
 
 
 def preprocess_block_objectives(block, idMap=None):
-
     # Get/Create the ComponentMap for the repn
     if not hasattr(block, '_repn'):
         block._repn = ComponentMap()
@@ -1562,7 +1602,6 @@ def preprocess_block_objectives(block, idMap=None):
     for objective_data in block.component_data_objects(
         Objective, active=True, descend_into=False
     ):
-
         if objective_data.expr is None:
             raise ValueError(
                 "No expression has been defined for objective %s"
@@ -1583,7 +1622,6 @@ def preprocess_block_objectives(block, idMap=None):
 
 
 def preprocess_block_constraints(block, idMap=None):
-
     # Get/Create the ComponentMap for the repn
     if not hasattr(block, '_repn'):
         block._repn = ComponentMap()
@@ -1592,12 +1630,10 @@ def preprocess_block_constraints(block, idMap=None):
     for constraint in block.component_objects(
         Constraint, active=True, descend_into=False
     ):
-
         preprocess_constraint(block, constraint, idMap=idMap, block_repn=block_repn)
 
 
 def preprocess_constraint(block, constraint, idMap=None, block_repn=None):
-
     from pyomo.repn.beta.matrix import MatrixConstraint
 
     if isinstance(constraint, MatrixConstraint):
@@ -1609,7 +1645,6 @@ def preprocess_constraint(block, constraint, idMap=None, block_repn=None):
     block_repn = block._repn
 
     for index, constraint_data in constraint.items():
-
         if not constraint_data.active:
             continue
 
@@ -1633,7 +1668,6 @@ def preprocess_constraint(block, constraint, idMap=None, block_repn=None):
 
 
 def preprocess_constraint_data(block, constraint_data, idMap=None, block_repn=None):
-
     # Get/Create the ComponentMap for the repn
     if not hasattr(block, '_repn'):
         block._repn = ComponentMap()

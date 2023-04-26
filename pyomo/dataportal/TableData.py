@@ -25,8 +25,8 @@ class TableData(object):
         """
         Constructor
         """
-        self._info=None
-        self._data=None
+        self._info = None
+        self._data = None
         self.options = Bunch()
         self.options.ncolumns = 1
 
@@ -54,25 +54,25 @@ class TableData(object):
         """
         self.options.update(kwds)
 
-    def open(self):                        #pragma:nocover
+    def open(self):  # pragma:nocover
         """
         Open the data manager.
         """
         pass
 
-    def read(self):                         #pragma:nocover
+    def read(self):  # pragma:nocover
         """
         Read data from the data manager.
         """
         return False
 
-    def write(self, data):                  #pragma:nocover
+    def write(self, data):  # pragma:nocover
         """
         Write data to the data manager.
         """
         return False
 
-    def close(self):                        #pragma:nocover
+    def close(self):  # pragma:nocover
         """
         Close the data manager.
         """
@@ -88,15 +88,16 @@ class TableData(object):
         if not self.options.namespace in data:
             data[self.options.namespace] = {}
         return _process_data(
-          self._info,
-          model,
-          data[self.options.namespace],
-          default,
-          self.filename,
-          index=self.options.index,
-          set=self.options.set,
-          param=self.options.param,
-          ncolumns = self.options.ncolumns)
+            self._info,
+            model,
+            data[self.options.namespace],
+            default,
+            self.filename,
+            index=self.options.index,
+            set=self.options.set,
+            param=self.options.param,
+            ncolumns=self.options.ncolumns,
+        )
 
     def clear(self):
         """
@@ -117,7 +118,10 @@ class TableData(object):
                 try:
                     header_index.append(headers.index(str(i)))
                 except:
-                    print("Model declaration '%s' not found in returned query columns" %str(i))
+                    print(
+                        "Model declaration '%s' not found in returned query columns"
+                        % str(i)
+                    )
                     raise
         self.options.ncolumns = len(headers)
 
@@ -167,7 +171,7 @@ class TableData(object):
                 msg = "Cannot specify index for data with the 'set' format: %s"
                 raise IOError(msg % str(self.options.index))
 
-            self._info = ["set",self.options.set,":="]
+            self._info = ["set", self.options.set, ":="]
             for row in rows:
                 if self.options.ncolumns > 1:
                     self._info.append(tuple(row))
@@ -176,25 +180,24 @@ class TableData(object):
 
         elif self.options.format == 'set_array':
             if not self.options.index is None:
-                msg = "Cannot specify index for data with the 'set_array' "   \
-                      'format: %s'
+                msg = "Cannot specify index for data with the 'set_array' format: %s"
                 raise IOError(msg % str(self.options.index))
 
-            self._info = ["set",self.options.set, ":"]
+            self._info = ["set", self.options.set, ":"]
             self._info.extend(headers[1:])
             self._info.append(":=")
             for row in rows:
                 self._info.extend(row)
 
         elif self.options.format == 'transposed_array':
-            self._info = ["param",self.options.param[0],"(tr)",":"]
+            self._info = ["param", self.options.param[0], "(tr)", ":"]
             self._info.extend(headers[1:])
             self._info.append(":=")
             for row in rows:
                 self._info.extend(row)
 
         elif self.options.format == 'array':
-            self._info = ["param",self.options.param[0],":"]
+            self._info = ["param", self.options.param[0], ":"]
             self._info.extend(headers[1:])
             self._info.append(":=")
             for row in rows:
@@ -202,9 +205,9 @@ class TableData(object):
 
         elif self.options.format == 'table':
             if self.options.index is not None:
-                self._info = ["param",":",self.options.index,":"]
+                self._info = ["param", ":", self.options.index, ":"]
             else:
-                self._info = ["param",":"]
+                self._info = ["param", ":"]
             for param in self.options.param:
                 self._info.append(param)
             self._info.append(":=")
@@ -227,7 +230,7 @@ class TableData(object):
             if self.options.columns is None:
                 cols = []
                 for i in range(self.options.set.dimen):
-                    cols.append(self.options.set.local_name+str(i))
+                    cols.append(self.options.set.local_name + str(i))
                 tmp.append(cols)
             # Get rows
             if self.options.sort is not None:
@@ -243,7 +246,7 @@ class TableData(object):
                     else:
                         tmp.append([data])
         elif self.options.param is not None:
-            if type(self.options.param) in (list,tuple):
+            if type(self.options.param) in (list, tuple):
                 _param = self.options.param
             else:
                 _param = [self.options.param]
@@ -251,7 +254,7 @@ class TableData(object):
             for index in _param[0]:
                 if index is None:
                     row = []
-                elif type(index) in (list,tuple):
+                elif type(index) in (list, tuple):
                     row = list(index)
                 else:
                     row = [index]
@@ -261,9 +264,9 @@ class TableData(object):
             # Create column names
             if self.options.columns is None:
                 cols = []
-                for i in range(len(tmp[0])-len(_param)):
-                    cols.append('I'+str(i))
+                for i in range(len(tmp[0]) - len(_param)):
+                    cols.append('I' + str(i))
                 for param in _param:
                     cols.append(param)
-                tmp.insert(0,cols)
+                tmp.insert(0, cols)
         return tmp

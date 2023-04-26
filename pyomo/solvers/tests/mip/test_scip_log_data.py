@@ -26,7 +26,6 @@ def optimise(
     solver_abs_mip_gap,
     print_solver_output: bool = False,
 ):
-
     # config
 
     options_dict_format = {
@@ -38,7 +37,6 @@ def optimise(
     opt = pyo.SolverFactory('scip')
 
     for key, value in options_dict_format.items():
-
         opt.options[key] = value
 
     # solve
@@ -55,7 +53,6 @@ def optimise(
 
 
 def problem_lp_optimal():
-
     model = pyo.ConcreteModel('lp_optimal')
 
     model.x = pyo.Var([1, 2], domain=pyo.NonNegativeReals)
@@ -68,7 +65,6 @@ def problem_lp_optimal():
 
 
 def problem_lp_infeasible():
-
     model = pyo.ConcreteModel('lp_infeasible')
 
     model.x = pyo.Var([1, 2], domain=pyo.NonNegativeReals)
@@ -81,7 +77,6 @@ def problem_lp_infeasible():
 
 
 def problem_lp_unbounded():
-
     model = pyo.ConcreteModel('lp_unbounded')
 
     model.x = pyo.Var([1, 2], domain=pyo.NonNegativeReals)
@@ -94,7 +89,6 @@ def problem_lp_unbounded():
 
 
 def problem_milp_optimal():
-
     model = pyo.ConcreteModel('milp_optimal')
 
     model.x = pyo.Var([1, 2], domain=pyo.Binary)
@@ -107,7 +101,6 @@ def problem_milp_optimal():
 
 
 def problem_milp_infeasible():
-
     model = pyo.ConcreteModel('milp_infeasible')
 
     model.x = pyo.Var([1, 2], domain=pyo.Binary)
@@ -120,7 +113,6 @@ def problem_milp_infeasible():
 
 
 def problem_milp_unbounded():
-
     model = pyo.ConcreteModel('milp_unbounded')
 
     model.x = pyo.Var([1, 2], domain=pyo.NonNegativeReals)
@@ -137,7 +129,6 @@ def problem_milp_unbounded():
 
 
 def problem_milp_feasible():
-
     model = pyo.ConcreteModel('milp_feasible')
 
     random.seed(6254)
@@ -181,7 +172,6 @@ def problem_milp_feasible():
 
 @unittest.skipIf(not scip_available, "SCIP solver is not available.")
 def test_scip_some_more():
-
     # list of problems
 
     list_concrete_models = [
@@ -219,7 +209,6 @@ def test_scip_some_more():
     # **************************************************************************
 
     for problem_index, problem in enumerate(list_concrete_models):
-
         print('******************************')
         print('******************************')
 
@@ -245,7 +234,6 @@ def test_scip_some_more():
         version = opt._known_versions[executable]
 
         if version < (8, 0, 0, 0):
-
             # if older and untested, skip tests
 
             continue
@@ -253,7 +241,6 @@ def test_scip_some_more():
         # for each new attribute expected
 
         for log_file_attr in list_extra_data_expected[problem_index]:
-
             # check that it is part of the results object
 
             assert log_file_attr in results['Solver'][0]

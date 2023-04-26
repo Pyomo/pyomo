@@ -10,13 +10,13 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import (
-    numpy, numpy_available as has_numpy,
-    scipy, scipy_available as has_scipy,
+    numpy,
+    numpy_available as has_numpy,
+    scipy,
+    scipy_available as has_scipy,
 )
 from pyomo.core.expr.numvalue import NumericValue, value
-from pyomo.core.kernel.constraint import \
-    (IConstraint,
-     constraint_tuple)
+from pyomo.core.kernel.constraint import IConstraint, constraint_tuple
 
 _noarg = object()
 
@@ -25,18 +25,17 @@ _noarg = object()
 #       change or it may go away.
 #
 
+
 class _MatrixConstraintData(IConstraint):
     """
     A placeholder object for linear constraints in a
     matrix_constraint container. A user should not
     directly instantiate this class.
     """
+
     _ctype = IConstraint
     _linear_canonical_form = True
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "__weakref__")
+    __slots__ = ("_parent", "_storage_key", "_active", "__weakref__")
 
     def __init__(self, index):
         assert index >= 0
@@ -56,15 +55,15 @@ class _MatrixConstraintData(IConstraint):
         parent = self.parent
         x = parent.x
         if x is None:
-            raise ValueError(
-                "No variable order has been assigned")
+            raise ValueError("No variable order has been assigned")
         A = parent._A
         if parent._sparse:
-            for k in range(A.indptr[self._storage_key],
-                           A.indptr[self._storage_key+1]):
+            for k in range(
+                A.indptr[self._storage_key], A.indptr[self._storage_key + 1]
+            ):
                 yield x[A.indices[k]], A.data[k]
         else:
-            for item in zip(x, A[self._storage_key,:].tolist()):
+            for item in zip(x, A[self._storage_key, :].tolist()):
                 yield item
 
     #
@@ -76,10 +75,9 @@ class _MatrixConstraintData(IConstraint):
         # don't mask an exception in the terms
         # property method
         if self.parent.x is None:
-            raise ValueError(
-                "No variable order has been assigned")
+            raise ValueError("No variable order has been assigned")
         try:
-            return sum(c*v() for v,c in self.terms)
+            return sum(c * v() for v, c in self.terms)
         except (ValueError, TypeError):
             if exception:
                 raise
@@ -98,42 +96,43 @@ class _MatrixConstraintData(IConstraint):
     def lower(self):
         """The expression for the lower bound of the constraint"""
         return self.parent.lb[self._storage_key]
+
     @lower.setter
     def lower(self, lb):
         if self.equality:
             raise ValueError(
                 "The lower property can not be set "
-                "when the equality property is True.")
+                "when the equality property is True."
+            )
         if lb is None:
             lb = -numpy.inf
         elif isinstance(lb, NumericValue):
-            raise ValueError("lb must be set to "
-                             "a simple numeric type "
-                             "or None")
+            raise ValueError("lb must be set to a simple numeric type or None")
         self.parent.lb[self._storage_key] = lb
 
     @property
     def upper(self):
         """The expression for the upper bound of the constraint"""
         return self.parent.ub[self._storage_key]
+
     @upper.setter
     def upper(self, ub):
         if self.equality:
             raise ValueError(
                 "The upper property can not be set "
-                "when the equality property is True.")
+                "when the equality property is True."
+            )
         if ub is None:
             ub = numpy.inf
         elif isinstance(ub, NumericValue):
-            raise ValueError("ub must be set to "
-                             "a simple numeric type "
-                             "or None")
+            raise ValueError("ub must be set to a simple numeric type or None")
         self.parent.ub[self._storage_key] = ub
 
     @property
     def lb(self):
         """The value of the lower bound of the constraint"""
         return value(self.lower)
+
     @lb.setter
     def lb(self, lb):
         self.lower = lb
@@ -142,6 +141,7 @@ class _MatrixConstraintData(IConstraint):
     def ub(self):
         """The value of the upper bound of the constraint"""
         return value(self.upper)
+
     @ub.setter
     def ub(self, ub):
         self.upper = ub
@@ -156,8 +156,10 @@ class _MatrixConstraintData(IConstraint):
         if not self.equality:
             raise ValueError(
                 "The rhs property can not be read "
-                "when the equality property is False.")
+                "when the equality property is False."
+            )
         return self.parent.lb[self._storage_key]
+
     @rhs.setter
     def rhs(self, rhs):
         if rhs is None:
@@ -165,12 +167,10 @@ class _MatrixConstraintData(IConstraint):
             # context (lb or ub), so there is no way to
             # interpret this
             raise ValueError(
-                "Constraint right-hand side can not "
-                "be assigned a value of None.")
+                "Constraint right-hand side can not be assigned a value of None."
+            )
         elif isinstance(rhs, NumericValue):
-            raise ValueError("rhs must be set to "
-                             "a simple numeric type "
-                             "or None")
+            raise ValueError("rhs must be set to a simple numeric type or None")
         self.parent.lb[self._storage_key] = rhs
         self.parent.ub[self._storage_key] = rhs
         self.parent.equality[self._storage_key] = True
@@ -178,8 +178,8 @@ class _MatrixConstraintData(IConstraint):
     @property
     def bounds(self):
         """The bounds of the constraint as a tuple (lb, ub)"""
-        return (self.parent.lb[self._storage_key],
-                self.parent.ub[self._storage_key])
+        return (self.parent.lb[self._storage_key], self.parent.ub[self._storage_key])
+
     @bounds.setter
     def bounds(self, bounds_tuple):
         self.lb, self.ub = bounds_tuple
@@ -193,6 +193,7 @@ class _MatrixConstraintData(IConstraint):
         :const:`False`. Equality can only be activated by
         assigning a value to the .rhs property."""
         return self.parent.equality[self._storage_key]
+
     @equality.setter
     def equality(self, equality):
         if equality:
@@ -200,7 +201,8 @@ class _MatrixConstraintData(IConstraint):
                 "The constraint equality flag can "
                 "only be set to True by assigning "
                 "a value to the rhs property "
-                "(e.g., con.rhs = con.lb).")
+                "(e.g., con.rhs = con.lb)."
+            )
         assert not equality
         self.parent.equality[self._storage_key] = False
 
@@ -213,6 +215,7 @@ class _MatrixConstraintData(IConstraint):
         """Build a canonical representation of the body of
         this constraints"""
         from pyomo.repn.standard_repn import StandardRepn
+
         variables = []
         coefficients = []
         constant = 0
@@ -232,6 +235,7 @@ class _MatrixConstraintData(IConstraint):
         repn.linear_coefs = tuple(coefficients)
         repn.constant = constant
         return repn
+
 
 class matrix_constraint(constraint_tuple):
     """
@@ -255,42 +259,28 @@ class matrix_constraint(constraint_tuple):
             format) should be used to store A. Default is
             :const:`True`.
     """
-    __slots__ = ("_A",
-                 "_sparse",
-                 "_lb",
-                 "_ub",
-                 "_equality",
-                 "_x")
-    def __init__(self,
-                 A,
-                 lb=None,
-                 ub=None,
-                 rhs=None,
-                 x=None,
-                 sparse=True):
-        if (not has_numpy) or (not has_scipy):     #pragma:nocover
+
+    __slots__ = ("_A", "_sparse", "_lb", "_ub", "_equality", "_x")
+
+    def __init__(self, A, lb=None, ub=None, rhs=None, x=None, sparse=True):
+        if (not has_numpy) or (not has_scipy):  # pragma:nocover
             raise ValueError("This class requires numpy and scipy")
 
         m, n = A.shape
         assert m > 0
         assert n > 0
-        cons = (_MatrixConstraintData(i)
-                for i in range(m))
+        cons = (_MatrixConstraintData(i) for i in range(m))
         super(matrix_constraint, self).__init__(cons)
 
         if sparse:
             self._sparse = True
-            self._A = scipy.sparse.csr_matrix(A,
-                                              dtype=float,
-                                              copy=True)
+            self._A = scipy.sparse.csr_matrix(A, dtype=float, copy=True)
             self._A.data.setflags(write=False)
             self._A.indices.setflags(write=False)
             self._A.indptr.setflags(write=False)
         else:
             self._sparse = False
-            self._A = numpy.array(A,
-                                  dtype=float,
-                                  copy=True)
+            self._A = numpy.array(A, dtype=float, copy=True)
             self._A.setflags(write=False)
         self._lb = numpy.ndarray(m, dtype=float)
         self._ub = numpy.ndarray(m, dtype=float)
@@ -303,12 +293,13 @@ class matrix_constraint(constraint_tuple):
             self.lb = lb
             self.ub = ub
         else:
-            if ((lb is not None) or \
-                (ub is not None)):
-                raise ValueError("The 'rhs' keyword can not "
-                                 "be used with the 'lb' or "
-                                 "'ub' keywords to initialize"
-                                 " a constraint.")
+            if (lb is not None) or (ub is not None):
+                raise ValueError(
+                    "The 'rhs' keyword can not "
+                    "be used with the 'lb' or "
+                    "'ub' keywords to initialize"
+                    " a constraint."
+                )
             self.rhs = rhs
 
     @property
@@ -321,8 +312,7 @@ class matrix_constraint(constraint_tuple):
     def A(self):
         """A read-only view of the constraint matrix"""
         if self._sparse:
-            return scipy.sparse.csr_matrix(self._A,
-                                           copy=False)
+            return scipy.sparse.csr_matrix(self._A, copy=False)
         else:
             return self._A.view()
 
@@ -331,38 +321,37 @@ class matrix_constraint(constraint_tuple):
         """The list of variables associated with the columns
         of the constraint matrix"""
         return self._x
+
     @x.setter
     def x(self, x):
         if x is None:
             self._x = None
         else:
             x = tuple(x)
-            m,n = self._A.shape
+            m, n = self._A.shape
             if len(x) != n:
-                raise ValueError(
-                    "Argument length must be %s "
-                    "not %s" % (n, len(x)))
+                raise ValueError("Argument length must be %s not %s" % (n, len(x)))
             self._x = x
 
     @property
     def lb(self):
         """The array of constraint lower bounds"""
         return self._lb.view()
+
     @lb.setter
     def lb(self, lb):
         if self.equality.any():
             raise ValueError(
                 "The lb array can not be set "
                 "when there are indices of the "
-                "equality array that are True")
+                "equality array that are True"
+            )
         if lb is None:
             lb = -numpy.inf
         if isinstance(lb, numpy.ndarray):
             numpy.copyto(self._lb, lb)
         elif isinstance(lb, NumericValue):
-            raise ValueError("lb must be set to "
-                             "a simple numeric type "
-                             "or a numpy array")
+            raise ValueError("lb must be set to a simple numeric type or a numpy array")
         else:
             self._lb.fill(lb)
 
@@ -370,21 +359,21 @@ class matrix_constraint(constraint_tuple):
     def ub(self):
         """The array of constraint upper bounds"""
         return self._ub.view()
+
     @ub.setter
     def ub(self, ub):
         if self.equality.any():
             raise ValueError(
                 "The ub array can not be set "
                 "when there are indices of the "
-                "equality array that are True")
+                "equality array that are True"
+            )
         if ub is None:
             ub = numpy.inf
         if isinstance(ub, numpy.ndarray):
             numpy.copyto(self._ub, ub)
         elif isinstance(ub, NumericValue):
-            raise ValueError("ub must be set to "
-                             "a simple numeric type "
-                             "or a numpy array")
+            raise ValueError("ub must be set to a simple numeric type or a numpy array")
         else:
             self._ub.fill(ub)
 
@@ -401,8 +390,10 @@ class matrix_constraint(constraint_tuple):
             raise ValueError(
                 "The rhs array can not be read when "
                 "there are indices of the equality array "
-                "that are False.")
+                "that are False."
+            )
         return self._lb.view()
+
     @rhs.setter
     def rhs(self, rhs):
         if rhs is None:
@@ -410,12 +401,12 @@ class matrix_constraint(constraint_tuple):
             # context (lb or ub), so there is no way to
             # interpret this
             raise ValueError(
-                "Constraint right-hand side can not "
-                "be assigned a value of None.")
+                "Constraint right-hand side can not be assigned a value of None."
+            )
         elif isinstance(rhs, NumericValue):
-            raise ValueError("rhs must be set to "
-                             "a simple numeric type "
-                             "or a numpy array")
+            raise ValueError(
+                "rhs must be set to a simple numeric type or a numpy array"
+            )
         elif isinstance(rhs, numpy.ndarray):
             numpy.copyto(self._lb, rhs)
             numpy.copyto(self._ub, rhs)
@@ -429,6 +420,7 @@ class matrix_constraint(constraint_tuple):
         """The array of boolean entries indicating the
         indices that are equality constraints"""
         return self._equality.view()
+
     @equality.setter
     def equality(self, equality):
         if equality:
@@ -436,21 +428,19 @@ class matrix_constraint(constraint_tuple):
                 "The constraint equality flag can "
                 "only be set to True by assigning "
                 "an expression to the rhs property "
-                "(e.g., con.rhs = con.lb).")
+                "(e.g., con.rhs = con.lb)."
+            )
         assert not equality
         self._equality.fill(False)
 
     def __call__(self, exception=True):
         """Compute the value of the body of this constraint"""
         if self.x is None:
-            raise ValueError(
-                "No variable order has been assigned")
-        values = numpy.array([v.value for v in self.x],
-                             dtype=float)
+            raise ValueError("No variable order has been assigned")
+        values = numpy.array([v.value for v in self.x], dtype=float)
         if numpy.isnan(values).any():
             if exception:
-                raise ValueError("One or more variables "
-                                 "do not have a value")
+                raise ValueError("One or more variables do not have a value")
             return None
         return self._A.dot(values)
 

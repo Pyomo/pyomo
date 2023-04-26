@@ -98,7 +98,8 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
         if wrt is not None:
             if wrt_list is not None:
                 raise ValueError(
-                    'differentiate(): Cannot specify both wrt and wrt_list.')
+                    'differentiate(): Cannot specify both wrt and wrt_list.'
+                )
             if wrt in res:
                 res = res[wrt]
             else:

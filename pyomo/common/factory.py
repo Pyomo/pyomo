@@ -58,10 +58,11 @@ class Factory(object):
         if name in self._cls:
             del self._cls[name]
             del self._doc[name]
-    
+
     def register(self, name, doc=None):
         def fn(cls):
             self._cls[name] = cls
             self._doc[name] = doc
             return cls
+
         return fn

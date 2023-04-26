@@ -13,6 +13,7 @@ import numpy as np
 np.random.seed(0)
 # @:imports
 
+
 # @model_func:
 def create_warehouse_model(num_locations=50, num_customers=50):
     N = list(range(num_locations))  # warehouse locations
@@ -54,6 +55,7 @@ def create_warehouse_model(num_locations=50, num_customers=50):
 
 
 # @:model_func
+
 
 # @model_linear_expr:
 def create_warehouse_linear_expr(num_locations=50, num_customers=50):
@@ -100,6 +102,7 @@ def create_warehouse_linear_expr(num_locations=50, num_customers=50):
 
 # @:model_linear_expr
 
+
 # @print_c_profiler:
 def print_c_profiler(pr, lines_to_print=15):
     s = io.StringIO()
@@ -114,6 +117,7 @@ def print_c_profiler(pr, lines_to_print=15):
 
 # @:print_c_profiler
 
+
 # @solve_warehouse_location:
 def solve_warehouse_location(m):
     opt = pyo.SolverFactory('gurobi')
@@ -122,6 +126,7 @@ def solve_warehouse_location(m):
 
 
 # @:solve_warehouse_location
+
 
 # @solve_parametric:
 def solve_parametric():
@@ -137,6 +142,7 @@ def solve_parametric():
 
 
 # @:solve_parametric
+
 
 # @parametric_persistent:
 def solve_parametric_persistent():

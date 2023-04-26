@@ -9,9 +9,7 @@
 # This software is distributed under the 3-clause BSD License
 # ______________________________________________________________________________
 import os
-from pyomo.environ import (
-        SolverFactory,
-        )
+from pyomo.environ import SolverFactory
 from pyomo.common.tempfiles import TempfileManager
 
 
@@ -21,20 +19,19 @@ gjh_dir = "GJH"
 # or dot_sens. Other files generated will still be deleted,
 # but not saved on the K_augInterface object.
 known_files = [
-        "dsdp_in_.in",
-        "conorder.txt",
-        "timings_k_aug_dsdp.txt",
-        "dot_out.out",
-        "delta_p.out",
-        "timings_dot_driver_dsdp.txt",
-        os.path.join(debug_dir, "kkt.in"),
-        os.path.join(gjh_dir, "gradient_f_print.txt"),
-        os.path.join(gjh_dir, "A_print.txt"),
-        ]
+    "dsdp_in_.in",
+    "conorder.txt",
+    "timings_k_aug_dsdp.txt",
+    "dot_out.out",
+    "delta_p.out",
+    "timings_dot_driver_dsdp.txt",
+    os.path.join(debug_dir, "kkt.in"),
+    os.path.join(gjh_dir, "gradient_f_print.txt"),
+    os.path.join(gjh_dir, "A_print.txt"),
+]
 
 
 class InTempDir(object):
-
     def __init__(self, suffix=None, prefix=None, dir=None):
         self._suffix = suffix
         self._prefix = prefix
@@ -46,10 +43,8 @@ class InTempDir(object):
         TempfileManager.push()
         # Create a new tempdir in this context
         self._tempdir = TempfileManager.create_tempdir(
-                suffix=self._suffix,
-                prefix=self._prefix,
-                dir=self._dir,
-                )
+            suffix=self._suffix, prefix=self._prefix, dir=self._dir
+        )
         os.chdir(self._tempdir)
 
     def __exit__(self, ex_type, ex_val, ex_bt):
@@ -61,7 +56,7 @@ class K_augInterface(object):
     """
     k_aug and dot_sens store information in the user's filesystem,
     some of which is mandatory for subsequent calls.
-    This class ensures that calls to these executables happen in 
+    This class ensures that calls to these executables happen in
     temporary directories. The resulting files are immediately read
     and cached as attributes of this object, and the temporary
     directories deleted. If we have cached files that can be used

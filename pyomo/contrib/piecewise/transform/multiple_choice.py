@@ -12,10 +12,13 @@
 from pyomo.core.base import Transformation, TransformationFactory
 import pyomo.gdp.plugins.hull
 
-@TransformationFactory.register('contrib.piecewise.multiple_choice',
-                                doc="Convert piecewise-linear model to a GDP "
-                                "to 'Multiple Choice' MIP "
-                                "formulation.")
+
+@TransformationFactory.register(
+    'contrib.piecewise.multiple_choice',
+    doc="Convert piecewise-linear model to a GDP "
+    "to 'Multiple Choice' MIP "
+    "formulation.",
+)
 class MultipleChoiceTransformation(Transformation):
     """
     Converts a model containing PiecewiseLinearFunctions to a an equivalent
@@ -34,7 +37,7 @@ class MultipleChoiceTransformation(Transformation):
         and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
         2010.
     """
+
     def _apply_to(self, instance, **kwds):
-        TransformationFactory('contrib.piecewise.outer_repn_gdp').apply_to(
-            instance)
+        TransformationFactory('contrib.piecewise.outer_repn_gdp').apply_to(instance)
         TransformationFactory('gdp.hull').apply_to(instance)

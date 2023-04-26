@@ -38,6 +38,8 @@ from collections.abc import Sequence
 logger = logging.getLogger('pyomo.core')
 
 sequence_types = {tuple, list}
+
+
 def normalize_index(x):
     """Normalize a component index.
 
@@ -72,7 +74,7 @@ def normalize_index(x):
             x_len += len(x[i]) - 1
             # Note that casting a tuple to a tuple is cheap (no copy, no
             # new object)
-            x = x[:i] + tuple(x[i]) + x[i + 1:]
+            x = x[:i] + tuple(x[i]) + x[i + 1 :]
         elif issubclass(_xi_class, Sequence):
             if issubclass(_xi_class, str):
                 # This is very difficult to get to: it would require a
@@ -82,7 +84,7 @@ def normalize_index(x):
             else:
                 sequence_types.add(_xi_class)
                 x_len += len(x[i]) - 1
-                x = x[:i] + tuple(x[i]) + x[i + 1:]
+                x = x[:i] + tuple(x[i]) + x[i + 1 :]
         else:
             i += 1
 
@@ -90,14 +92,18 @@ def normalize_index(x):
         return x[0]
     return x
 
+
 # Pyomo will normalize indices by default
 normalize_index.flatten = True
 
 
 class _NotFound(object):
     pass
+
+
 class _NotSpecified(object):
     pass
+
 
 #
 # Get the fully-qualified name for this index.  If there isn't anything
@@ -126,7 +132,8 @@ def _get_indexed_component_data_name(component, index):
         for i in range(5):
             try:
                 component._data[index] = component._ComponentDataClass(
-                    *((None,)*i), component=component)
+                    *((None,) * i), component=component
+                )
                 i = None
                 break
             except:
@@ -134,8 +141,7 @@ def _get_indexed_component_data_name(component, index):
         if i is not None:
             # None of the generic positional arguments worked; raise an
             # exception
-            component._data[index] = component._ComponentDataClass(
-                component=component)
+            component._data[index] = component._ComponentDataClass(component=component)
         try:
             ans = component._data[index].name
         except:
@@ -144,12 +150,14 @@ def _get_indexed_component_data_name(component, index):
             del component._data[index]
     return ans
 
+
 _rule_returned_none_error = """%s '%s': rule returned None.
 
 %s rules must return either a valid expression, numeric value, or
 %s.Skip.  The most common cause of this error is forgetting to
 include the "return" statement at the end of your rule.
 """
+
 
 def rule_result_substituter(result_map):
     _map = result_map
@@ -166,7 +174,7 @@ def rule_result_substituter(result_map):
             # Otherwise, the argument is a functor, so call it to
             # generate the rule result.
             #
-            value = rule( *args, **kwargs )
+            value = rule(*args, **kwargs)
         #
         # Map the returned value:
         #
@@ -176,13 +184,14 @@ def rule_result_substituter(result_map):
 
     return rule_result_substituter_impl
 
-_map_rule_funcdef = \
-"""def wrapper_function%s:
+
+_map_rule_funcdef = """def wrapper_function%s:
     args, varargs, kwds, local_env = inspect.getargvalues(
         inspect.currentframe())
     args = tuple(local_env[_] for _ in args) + (varargs or ())
     return wrapping_fcn(rule, *args, **(kwds or {}))
 """
+
 
 def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
     """Wrap a rule with another function
@@ -220,8 +229,7 @@ def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
     rule_sig = inspect.signature(rule)
     if positional_arg_map is not None:
         param = list(rule_sig.parameters.values())
-        rule_sig = rule_sig.replace(
-            parameters=(param[i] for i in positional_arg_map))
+        rule_sig = rule_sig.replace(parameters=(param[i] for i in positional_arg_map))
     _funcdef = _map_rule_funcdef % (str(rule_sig),)
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.
@@ -259,10 +267,11 @@ class IndexedComponent(Component):
                                 component data objects
         _index_set              The set of valid indices
         _implicit_subsets   A temporary data element that stores
-                                sets that are transfered to the model
+                                sets that are transferred to the model
     """
 
-    class Skip(object): pass
+    class Skip(object):
+        pass
 
     #
     # If an index is supplied for which there is not a _data entry
@@ -275,14 +284,14 @@ class IndexedComponent(Component):
 
     def __init__(self, *args, **kwds):
         from pyomo.core.base.set import process_setarg
+
         #
         kwds.pop('noruleinit', None)
         Component.__init__(self, **kwds)
         #
         self._data = {}
         #
-        if len(args) == 0 or (len(args) == 1 and
-                              args[0] is UnindexedComponent_set):
+        if len(args) == 0 or (len(args) == 1 and args[0] is UnindexedComponent_set):
             #
             # If no indexing sets are provided, generate a dummy index
             #
@@ -334,8 +343,9 @@ class IndexedComponent(Component):
                 _src = self._data
                 memo[id(_src)] = _new._data = _data = _src.__class__()
                 for idx, obj in _src.items():
-                    _data[fast_deepcopy(idx, memo)] \
-                        = obj._create_objects_for_deepcopy(memo, component_list)
+                    _data[fast_deepcopy(idx, memo)] = obj._create_objects_for_deepcopy(
+                        memo, component_list
+                    )
 
         return _ans
 
@@ -357,7 +367,8 @@ class IndexedComponent(Component):
         else:
             raise DeveloperError(
                 "Derived scalar component %s failed to define clear()."
-                % (self.__class__.__name__,))
+                % (self.__class__.__name__,)
+            )
 
     def index_set(self):
         """Return the index set"""
@@ -436,10 +447,9 @@ class IndexedComponent(Component):
                 # As this iterator is ordered, we do not need to sort it
                 sort_needed = False
         else:
-            if not self._data and self._index_set and \
-               PyomoOptions.paranoia_level:
+            if not self._data and self._index_set and PyomoOptions.paranoia_level:
                 logger.warning(
-"""Iterating over a Component (%s)
+                    """Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have
 actually been added to the Component.  The iterator will be empty.
 This is usually caused by Concrete models where you declare the
@@ -456,7 +466,9 @@ You can silence this warning by one of three ways:
     3) If you intend to iterate over a component that may be empty, test
        if the component is empty first and avoid iteration in the case
        where it is empty.
-""" % (self.name,) )
+"""
+                    % (self.name,)
+                )
 
             if not self._index_set.isordered():
                 #
@@ -507,22 +519,21 @@ You can silence this warning by one of three ways:
             ordering is used.  Otherwise, the items are sorted using
             :py:func:`sorted_robust`.
         """
-        return((s, self[s]) for s in self.keys(ordered))
+        return ((s, self[s]) for s in self.keys(ordered))
 
-    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='6.0')
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
     def iterkeys(self):
         """Return a list of keys in the dictionary"""
         return self.keys()
 
-    @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='6.0')
+    @deprecated(
+        'The itervalues method is deprecated. Use dict.values().', version='6.0'
+    )
     def itervalues(self):
         """Return a list of the component data objects in the dictionary"""
         return self.values()
 
-    @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='6.0')
+    @deprecated('The iteritems method is deprecated. Use dict.items().', version='6.0')
     def iteritems(self):
         """Return a list (index,data) tuples from the dictionary"""
         return self.items()
@@ -558,7 +569,7 @@ You can silence this warning by one of three ways:
                 obj = _NotFound
 
         if obj is _NotFound:
-            if index.__class__ is EXPR.GetItemExpression:
+            if isinstance(index, EXPR.GetItemExpression):
                 return index
             validated_index = self._validate_index(index)
             if validated_index is not index:
@@ -664,8 +675,11 @@ You can silence this warning by one of three ways:
             del self._data[index]
 
     def _pop_from_kwargs(self, name, kwargs, namelist, notset=None):
-        args = [arg for arg in (kwargs.pop(name, notset) for name in namelist)
-                if arg is not notset]
+        args = [
+            arg
+            for arg in (kwargs.pop(name, notset) for name in namelist)
+            if arg is not notset
+        ]
         if len(args) == 1:
             return args[0]
         elif not args:
@@ -674,11 +688,12 @@ You can silence this warning by one of three ways:
             argnames = "%s%s '%s='" % (
                 ', '.join("'%s='" % _ for _ in namelist[:-1]),
                 ',' if len(namelist) > 2 else '',
-                namelist[-1]
+                namelist[-1],
             )
             raise ValueError(
-                "Duplicate initialization: %s() only accepts one of %s" %
-                (name, argnames))
+                "Duplicate initialization: %s() only accepts one of %s"
+                % (name, argnames)
+            )
 
     def _construct_from_rule_using_setitem(self):
         if self._rule is None:
@@ -695,7 +710,7 @@ You can silence this warning by one of three ways:
                 self._rule = rule = Initializer(
                     rule(block, None),
                     treat_sequences_as_mappings=False,
-                    arg_not_specified=NOTSET
+                    arg_not_specified=NOTSET,
                 )
 
             if rule.contains_indices():
@@ -722,11 +737,8 @@ You can silence this warning by one of three ways:
             err = sys.exc_info()[1]
             logger.error(
                 "Rule failed for %s '%s' with index %s:\n%s: %s"
-                % (self.ctype.__name__,
-                   self.name,
-                   str(index),
-                   type(err).__name__,
-                   err))
+                % (self.ctype.__name__, self.name, str(index), type(err).__name__, err)
+            )
             raise
 
     def _not_constructed_error(self, idx):
@@ -739,7 +751,8 @@ You can silence this warning by one of three ways:
             idx_str = "[" + str(idx) + "]"
         raise ValueError(
             "Error retrieving component %s%s: The component has "
-            "not been constructed." % (self.name, idx_str,))
+            "not been constructed." % (self.name, idx_str)
+        )
 
     def _validate_index(self, idx):
         if not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
@@ -781,13 +794,14 @@ You can silence this warning by one of three ways:
         if not self.is_indexed():
             raise KeyError(
                 "Cannot treat the scalar component '%s' "
-                "as an indexed component" % ( self.name, ))
+                "as an indexed component" % (self.name,)
+            )
         #
         # Raise an exception
         #
         raise KeyError(
-            "Index '%s' is not valid for indexed component '%s'"
-            % ( idx, self.name, ))
+            "Index '%s' is not valid for indexed component '%s'" % (idx, self.name)
+        )
 
     def _processUnhashableIndex(self, idx):
         """Process a call to __getitem__ with unhashable elements
@@ -814,18 +828,22 @@ You can silence this warning by one of three ways:
         if idx.__class__ is not tuple:
             idx = (idx,)
 
-        for i,val in enumerate(idx):
+        for i, val in enumerate(idx):
             if type(val) is slice:
-                if val.start is not None or val.stop is not None \
-                   or val.step is not None:
+                if (
+                    val.start is not None
+                    or val.stop is not None
+                    or val.step is not None
+                ):
                     raise IndexError(
                         "Indexed components can only be indexed with simple "
-                        "slices: start and stop values are not allowed.")
+                        "slices: start and stop values are not allowed."
+                    )
                 else:
                     if ellipsis is None:
                         sliced[i] = val
                     else:
-                        sliced[i-len(idx)] = val
+                        sliced[i - len(idx)] = val
                     continue
 
             if val is Ellipsis:
@@ -833,7 +851,8 @@ You can silence this warning by one of three ways:
                     raise IndexError(
                         "Indexed components can only be indexed with simple "
                         "slices: the Pyomo wildcard slice (Ellipsis; "
-                        "e.g., '...') can only appear once")
+                        "e.g., '...') can only appear once"
+                    )
                 ellipsis = i
                 continue
 
@@ -856,24 +875,28 @@ You can silence this warning by one of three ways:
                     # The expression contains an unfixed variable
                     #
                     raise RuntimeError(
-"""Error retrieving the value of an indexed item %s:
+                        """Error retrieving the value of an indexed item %s:
 index %s is not a constant value.  This is likely not what you meant to
 do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
-the value() function.""" % ( self.name, i ))
+the value() function."""
+                        % (self.name, i)
+                    )
 
                 except EXPR.FixedExpressionError:
                     #
                     # The expression contains a fixed variable
                     #
                     raise RuntimeError(
-"""Error retrieving the value of an indexed item %s:
+                        """Error retrieving the value of an indexed item %s:
 index %s is a fixed but not constant value.  This is likely not what you
 meant to do, as if you later change the fixed value of the object this
 lookup will not change.  If you understand the implications of using
 fixed but not constant values, you can get the current value using the
-value() function.""" % ( self.name, i ))
+value() function."""
+                        % (self.name, i)
+                    )
                 #
                 # There are other ways we could get an exception such as
                 # evaluating a Param / Var that is not initialized.
@@ -903,7 +926,7 @@ value() function.""" % ( self.name, i ))
             if slice_dim == set_dim or set_dim is None:
                 structurally_valid = True
             elif type(set_dim) is type:
-                pass # UnknownSetDimen
+                pass  # UnknownSetDimen
             elif ellipsis is not None and slice_dim < set_dim:
                 structurally_valid = True
             elif set_dim == 0 and idx == (slice(None),):
@@ -917,33 +940,47 @@ value() function.""" % ( self.name, i ))
                 structurally_valid = True
 
             if not structurally_valid:
-                msg = ("Index %s contains an invalid number of entries for "
-                       "component '%s'. Expected %s, got %s.")
+                msg = (
+                    "Index %s contains an invalid number of entries for "
+                    "component '%s'. Expected %s, got %s."
+                )
                 if type(set_dim) is type:
                     set_dim = set_dim.__name__
                     msg += '\n    ' + '\n    '.join(
-                        textwrap.wrap(textwrap.dedent("""
-                        Slicing components relies on knowing the
-                        underlying set dimensionality (even if the
-                        dimensionality is None).  The underlying
-                        component set ('%s') dimensionality has not been
-                        determined (likely because it is an empty Set).
-                        You can avoid this error by specifying the Set
-                        dimensionality (with the 'dimen=' keyword).""" % (
-                            self.index_set(), )).strip()))
-                raise IndexError(msg % (
-                    IndexedComponent_slice._getitem_args_to_str(list(idx)),
-                    self.name, set_dim, slice_dim))
+                        textwrap.wrap(
+                            textwrap.dedent(
+                                """
+                                Slicing components relies on knowing the
+                                underlying set dimensionality (even if the
+                                dimensionality is None).  The underlying
+                                component set ('%s') dimensionality has not been
+                                determined (likely because it is an empty Set).
+                                You can avoid this error by specifying the Set
+                                dimensionality (with the 'dimen=' keyword)."""
+                                % (self.index_set(),)
+                            ).strip()
+                        )
+                    )
+                raise IndexError(
+                    msg
+                    % (
+                        IndexedComponent_slice._getitem_args_to_str(list(idx)),
+                        self.name,
+                        set_dim,
+                        slice_dim,
+                    )
+                )
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif len(idx) == len(fixed):
             if len(idx) == 1:
                 return fixed[0]
             else:
-                return tuple( fixed[i] for i in range(len(idx)) )
+                return tuple(fixed[i] for i in range(len(idx)))
         else:
             raise DeveloperError(
                 "Unknown problem encountered when trying to retrieve "
-                f"index '{orig_idx}' for component '{self.name}'")
+                f"index '{orig_idx}' for component '{self.name}'"
+            )
 
     def _getitem_when_not_present(self, index):
         """Returns/initializes a value when the index is not in the _data dict.
@@ -1012,23 +1049,25 @@ value() function.""" % ( self.name, i ))
             raise ValueError(
                 "Cannot set the value for the indexed component '%s' "
                 "without specifying an index value.\n"
-                "\tFor example, model.%s[i] = value"
-                % (self.name, self.name))
+                "\tFor example, model.%s[i] = value" % (self.name, self.name)
+            )
         else:
             raise DeveloperError(
                 "Derived component %s failed to define set_value() "
-                "for scalar instances."
-                % (self.__class__.__name__,))
+                "for scalar instances." % (self.__class__.__name__,)
+            )
 
     def _pprint(self):
         """Print component information."""
-        return ( [("Size", len(self)),
-                  ("Index", self._index_set if self.is_indexed() else None),
-                  ],
-                 self._data.items(),
-                 ( "Object",),
-                 lambda k, v: [ type(v) ]
-                 )
+        return (
+            [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+            ],
+            self._data.items(),
+            ("Object",),
+            lambda k, v: [type(v)],
+        )
 
     def id_index_map(self):
         """
@@ -1097,21 +1136,22 @@ class IndexedComponent_NDArrayMixin(object):
         if _dim is None:
             raise TypeError(
                 "Cannot convert a non-dimensioned Pyomo IndexedComponent "
-                "(%s) into a numpy array" % (self,))
+                "(%s) into a numpy array" % (self,)
+            )
         bounds = self.index_set().bounds()
         if not isinstance(bounds[0], Sequence):
             bounds = ((bounds[0],), (bounds[1],))
         if any(b != 0 for b in bounds[0]):
             raise TypeError(
                 "Cannot convert a Pyomo IndexedComponent "
-                "(%s) with bounds [%s, %s] into a numpy array" % (
-                    self, bounds[0], bounds[1]))
-        shape = tuple(b+1 for b in bounds[1])
+                "(%s) with bounds [%s, %s] into a numpy array"
+                % (self, bounds[0], bounds[1])
+            )
+        shape = tuple(b + 1 for b in bounds[1])
         ans = NumericNDArray(shape=shape, dtype=object)
         for k, v in self.items():
             ans[k] = v
         return ans
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        return NumericNDArray.__array_ufunc__(
-            None, ufunc, method, *inputs, **kwargs)
+        return NumericNDArray.__array_ufunc__(None, ufunc, method, *inputs, **kwargs)

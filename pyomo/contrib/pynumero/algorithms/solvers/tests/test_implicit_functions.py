@@ -26,9 +26,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
     DecomposedImplicitFunctionBase,
     SccImplicitFunctionSolver,
 )
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    cyipopt_available,
-)
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import cyipopt_available
 
 if not scipy_available or not numpy_available:
     # SciPy is only really necessary as it is a dependency of AmplInterface.
@@ -40,13 +38,11 @@ if not AmplInterface.available():
     # AmplInterface is not theoretically necessary for these solvers,
     # however it is the only AD backend implemented for PyomoNLP.
     raise unittest.SkipTest(
-        "PyNumero ASL extension is necessary to test implicit"
-        " function solvers"
+        "PyNumero ASL extension is necessary to test implicit function solvers"
     )
 
 
 class ImplicitFunction1(object):
-
     def __init__(self):
         self._model = self._make_model()
 
@@ -59,15 +55,11 @@ class ImplicitFunction1(object):
         # Note that this system of constraints decomposes. First con1
         # and con3 are used to solve for x[2] and x[3], then con2
         # is used to solve for x[1]
-        m.con1 = pyo.Constraint(
-            expr=m.x[2]**2 + m.x[3]**2 == m.p[1]
-        )
+        m.con1 = pyo.Constraint(expr=m.x[2] ** 2 + m.x[3] ** 2 == m.p[1])
         m.con2 = pyo.Constraint(
-            expr=2*m.x[1] + 3*m.x[2] - 4*m.x[3] == m.p[1]**2 - m.p[2]
+            expr=2 * m.x[1] + 3 * m.x[2] - 4 * m.x[3] == m.p[1] ** 2 - m.p[2]
         )
-        m.con3 = pyo.Constraint(
-            expr=m.p[2]**1.5 == 2*pyo.exp(m.x[2]/m.x[3])
-        )
+        m.con3 = pyo.Constraint(expr=m.p[2] ** 1.5 == 2 * pyo.exp(m.x[2] / m.x[3]))
         m.obj = pyo.Objective(expr=0.0)
         return m
 
@@ -134,14 +126,12 @@ class ImplicitFunctionWithExtraVariables(ImplicitFunction1):
         m.const[2].set_value(2.0)
         m.const[3].set_value(1.5)
 
-        m.con1 = pyo.Constraint(
-            expr=m.const[1]*m.x[2]**2 + m.x[3]**2 == m.p[1]
-        )
+        m.con1 = pyo.Constraint(expr=m.const[1] * m.x[2] ** 2 + m.x[3] ** 2 == m.p[1])
         m.con2 = pyo.Constraint(
-            expr=m.const[2]*m.x[1] + 3*m.x[2] - 4*m.x[3] == m.p[1]**2 - m.p[2]
+            expr=m.const[2] * m.x[1] + 3 * m.x[2] - 4 * m.x[3] == m.p[1] ** 2 - m.p[2]
         )
         m.con3 = pyo.Constraint(
-            expr=m.p[2]**m.const[3] == 2*pyo.exp(m.x[2]/m.x[3])
+            expr=m.p[2] ** m.const[3] == 2 * pyo.exp(m.x[2] / m.x[3])
         )
         m.obj = pyo.Objective(expr=0.0)
         return m
@@ -153,6 +143,7 @@ class ImplicitFunctionInputsDontAppear(object):
     function (i.e. the function is constant).
 
     """
+
     def __init__(self):
         self._model = self._make_model()
 
@@ -162,15 +153,9 @@ class ImplicitFunctionInputsDontAppear(object):
         m.J = pyo.Set(initialize=[1, 2])
         m.x = pyo.Var(m.I, initialize=1.0)
         m.p = pyo.Var(m.J, initialize=1.0)
-        m.con1 = pyo.Constraint(
-            expr=m.x[2]**2 + m.x[3]**2 == 1.0
-        )
-        m.con2 = pyo.Constraint(
-            expr=2*m.x[1] + 3*m.x[2] - 4*m.x[3] == 0.0
-        )
-        m.con3 = pyo.Constraint(
-            expr=1.0 == 2*pyo.exp(m.x[2]/m.x[3])
-        )
+        m.con1 = pyo.Constraint(expr=m.x[2] ** 2 + m.x[3] ** 2 == 1.0)
+        m.con2 = pyo.Constraint(expr=2 * m.x[1] + 3 * m.x[2] - 4 * m.x[3] == 0.0)
+        m.con3 = pyo.Constraint(expr=1.0 == 2 * pyo.exp(m.x[2] / m.x[3]))
         m.obj = pyo.Objective(expr=0.0)
         return m
 
@@ -206,6 +191,7 @@ class ImplicitFunctionNoInputs(ImplicitFunctionInputsDontAppear):
     inputs are not provided to the implicit function solver
 
     """
+
     def get_parameters(self):
         return []
 
@@ -213,7 +199,7 @@ class ImplicitFunctionNoInputs(ImplicitFunctionInputsDontAppear):
         inputs = [()]
         outputs = [
             # Outputs computed by solving system with Ipopt
-            (2.498253, -0.569676, 0.821869),
+            (2.498253, -0.569676, 0.821869)
         ]
         return list(zip(inputs, outputs))
 
@@ -256,9 +242,7 @@ class _TestSolver(unittest.TestCase):
 
             solver.update_pyomo_model()
             for i, var in enumerate(variables):
-                self.assertAlmostEqual(
-                    var.value, pred_outputs[i], delta=1e-5
-                )
+                self.assertAlmostEqual(var.value, pred_outputs[i], delta=1e-5)
 
     def _test_implicit_function_1(self, **kwds):
         self._test_implicit_function(ImplicitFunction1, **kwds)
@@ -274,16 +258,13 @@ class _TestSolver(unittest.TestCase):
 
 
 class TestImplicitFunctionSolver(_TestSolver):
-
     def get_solver_class(self):
         return ImplicitFunctionSolver
 
     def test_bad_option(self):
         msg = "Option.*is invalid"
         with self.assertRaisesRegex(ValueError, msg):
-            self._test_implicit_function_1(
-                solver_options=dict(bad_option=None)
-            )
+            self._test_implicit_function_1(solver_options=dict(bad_option=None))
 
     def test_implicit_function_1(self):
         self._test_implicit_function_1()
@@ -304,7 +285,6 @@ class TestImplicitFunctionSolver(_TestSolver):
 
 @unittest.skipUnless(networkx_available, "NetworkX is not available")
 class TestSccImplicitFunctionSolver(_TestSolver):
-
     def get_solver_class(self):
         return SccImplicitFunctionSolver
 
@@ -315,9 +295,7 @@ class TestSccImplicitFunctionSolver(_TestSolver):
         equations = fcn.get_equations()
         msg = "has not implemented"
         with self.assertRaisesRegex(NotImplementedError, msg):
-            solver = DecomposedImplicitFunctionBase(
-                variables, equations, parameters
-            )
+            solver = DecomposedImplicitFunctionBase(variables, equations, parameters)
 
     def test_n_subsystems(self):
         SolverClass = self.get_solver_class()
@@ -339,8 +317,7 @@ class TestSccImplicitFunctionSolver(_TestSolver):
 
     def test_implicit_function_1_no_calc_var(self):
         self._test_implicit_function_1(
-            use_calc_var=False,
-            solver_options={"maxfev": 20},
+            use_calc_var=False, solver_options={"maxfev": 20}
         )
 
     def test_implicit_function_inputs_dont_appear(self):
@@ -355,6 +332,7 @@ class TestSccImplicitFunctionSolver(_TestSolver):
 
 def _solve_with_ipopt():
     from pyomo.util.subsystems import TemporarySubsystemManager
+
     ipopt = pyo.SolverFactory("ipopt")
     fcn = ImplicitFunctionInputsDontAppear()
     m = fcn._model
@@ -382,5 +360,5 @@ def _solve_with_ipopt():
 
 
 if __name__ == "__main__":
-    #unittest.main()
+    # unittest.main()
     _solve_with_ipopt()

@@ -13,6 +13,7 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.core.expr.numeric_expr import NumericExpression
 from weakref import ref as weakref_ref
 
+
 class PiecewiseLinearExpression(NumericExpression):
     """
     A numeric expression node representing a specific instantiation of a
@@ -23,6 +24,7 @@ class PiecewiseLinearExpression(NumericExpression):
         pw_linear_function (PiecewiseLinearFunction): piece-wise linear function
             of which this node is an instance.
     """
+
     __slots__ = ('_pw_linear_function',)
     __autoslot_mappers__ = {'_pw_linear_function': AutoSlots.weakref_mapper}
 

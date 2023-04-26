@@ -31,6 +31,7 @@ from .external_grey_box import ExternalGreyBoxBlock
 
 __all__ = ['PyomoNLP']
 
+
 # TODO: There are todos in the code below
 class PyomoNLP(AslNLP):
     def __init__(self, pyomo_model, nl_file_options=None):
@@ -45,8 +46,7 @@ class PyomoNLP(AslNLP):
         TempfileManager.push()
         try:
             # get the temp file names for the nl file
-            nl_file = TempfileManager.create_tempfile(
-                suffix='pynumero.nl')
+            nl_file = TempfileManager.create_tempfile(suffix='pynumero.nl')
 
             # The current AmplInterface code only supports a single
             # objective function Therefore, we throw an error if there
@@ -59,22 +59,27 @@ class PyomoNLP(AslNLP):
             # handle this
             #
             # This currently addresses issue #1217
-            objectives = list(pyomo_model.component_data_objects(
-                ctype=pyo.Objective, active=True, descend_into=True))
+            objectives = list(
+                pyomo_model.component_data_objects(
+                    ctype=pyo.Objective, active=True, descend_into=True
+                )
+            )
             if len(objectives) != 1:
                 raise NotImplementedError(
                     'The ASL interface and PyomoNLP in PyNumero currently '
                     'only support single objective problems. Deactivate '
                     'any extra objectives you may have, or add a dummy '
                     'objective (f(x)=0) if you have a square problem '
-                    '(found %s objectives).' % (len(objectives),))
+                    '(found %s objectives).' % (len(objectives),)
+                )
             self._objective = objectives[0]
 
             # write the nl file for the Pyomo model and get the symbolMap
             if nl_file_options is None:
                 nl_file_options = dict()
             fname, symbolMap = WriterFactory('nl')(
-                pyomo_model, nl_file, lambda x:True, nl_file_options)
+                pyomo_model, nl_file, lambda x: True, nl_file_options
+            )
 
             # create component maps from vardata to idx and condata to idx
             self._vardata_to_idx = vdidx = ComponentMap()
@@ -83,17 +88,22 @@ class PyomoNLP(AslNLP):
             # TODO: Are these names totally consistent?
             for name, obj in symbolMap.bySymbol.items():
                 if name[0] == 'v':
-                    vdidx[obj()] = int(name[1:])
+                    vdidx[obj] = int(name[1:])
                 elif name[0] == 'c':
-                    cdidx[obj()] = int(name[1:])
+                    cdidx[obj] = int(name[1:])
 
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it
             # with any preexisting AMPLFUNC definitions
-            amplfunc = "\n".join(filter(None, (
-                os.environ.get('AMPLFUNC', None),
-                os.environ.get('PYOMO_AMPLFUNC', None),
-            )))
+            amplfunc = "\n".join(
+                filter(
+                    None,
+                    (
+                        os.environ.get('AMPLFUNC', None),
+                        os.environ.get('PYOMO_AMPLFUNC', None),
+                    ),
+                )
+            )
             with CtypesEnviron(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
 
@@ -105,22 +115,21 @@ class PyomoNLP(AslNLP):
             full_to_equality = self._con_full_eq_map
             equality_mask = self._con_full_eq_mask
             self._condata_to_eq_idx = ComponentMap(
-                    (con, full_to_equality[i])
-                    for con, i in self._condata_to_idx.items()
-                    if equality_mask[i]
-                    )
+                (con, full_to_equality[i])
+                for con, i in self._condata_to_idx.items()
+                if equality_mask[i]
+            )
             full_to_inequality = self._con_full_ineq_map
             inequality_mask = self._con_full_ineq_mask
             self._condata_to_ineq_idx = ComponentMap(
-                    (con, full_to_inequality[i])
-                    for con, i in self._condata_to_idx.items()
-                    if inequality_mask[i]
-                    )
+                (con, full_to_inequality[i])
+                for con, i in self._condata_to_idx.items()
+                if inequality_mask[i]
+            )
 
         finally:
             # delete the nl file
             TempfileManager.pop()
-
 
     def pyomo_model(self):
         """
@@ -141,7 +150,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the primals
         """
         # ToDo: is there a more efficient way to do this
-        idx_to_vardata = {i:v for v,i in self._vardata_to_idx.items()}
+        idx_to_vardata = {i: v for v, i in self._vardata_to_idx.items()}
         return [idx_to_vardata[i] for i in range(len(idx_to_vardata))]
 
     def get_pyomo_constraints(self):
@@ -150,7 +159,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the primals
         """
         # ToDo: is there a more efficient way to do this
-        idx_to_condata = {i:v for v,i in self._condata_to_idx.items()}
+        idx_to_condata = {i: v for v, i in self._condata_to_idx.items()}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
     def get_pyomo_equality_constraints(self):
@@ -158,8 +167,7 @@ class PyomoNLP(AslNLP):
         Return an ordered list of the Pyomo ConData objects in
         the order corresponding to the equality constraints.
         """
-        idx_to_condata = {i: c for c, i in
-                self._condata_to_eq_idx.items()}
+        idx_to_condata = {i: c for c, i in self._condata_to_eq_idx.items()}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
     def get_pyomo_inequality_constraints(self):
@@ -167,11 +175,14 @@ class PyomoNLP(AslNLP):
         Return an ordered list of the Pyomo ConData objects in
         the order corresponding to the inequality constraints.
         """
-        idx_to_condata = {i: c for c, i in
-                self._condata_to_ineq_idx.items()}
+        idx_to_condata = {i: c for c, i in self._condata_to_ineq_idx.items()}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
-    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
+    @deprecated(
+        msg='This method has been replaced with primals_names',
+        version='6.0.0.dev0',
+        remove_in='6.0',
+    )
     def variable_names(self):
         return self.primals_names()
 
@@ -181,10 +192,7 @@ class PyomoNLP(AslNLP):
         names in the order corresponding to the primals
         """
         pyomo_variables = self.get_pyomo_variables()
-        return [
-            v.getname(fully_qualified=True)
-            for v in pyomo_variables
-        ]
+        return [v.getname(fully_qualified=True) for v in pyomo_variables]
 
     def constraint_names(self):
         """
@@ -192,10 +200,7 @@ class PyomoNLP(AslNLP):
         names in the order corresponding to internal constraint order
         """
         pyomo_constraints = self.get_pyomo_constraints()
-        return [
-            v.getname(fully_qualified=True)
-            for v in pyomo_constraints
-        ]
+        return [v.getname(fully_qualified=True) for v in pyomo_constraints]
 
     def equality_constraint_names(self):
         """
@@ -203,10 +208,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the equality constraints.
         """
         equality_constraints = self.get_pyomo_equality_constraints()
-        return [
-            v.getname(fully_qualified=True)
-            for v in equality_constraints
-        ]
+        return [v.getname(fully_qualified=True) for v in equality_constraints]
 
     def inequality_constraint_names(self):
         """
@@ -214,10 +216,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the inequality constraints.
         """
         inequality_constraints = self.get_pyomo_inequality_constraints()
-        return [
-            v.getname(fully_qualified=True)
-            for v in inequality_constraints
-        ]
+        return [v.getname(fully_qualified=True) for v in inequality_constraints]
 
     def get_primal_indices(self, pyomo_variables):
         """
@@ -316,7 +315,7 @@ class PyomoNLP(AslNLP):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
         if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             primals_scaling = np.ones(self.n_primals())
-            for i,v in enumerate(self.get_pyomo_variables()):
+            for i, v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
                     primals_scaling[i] = scaling_suffix[v]
             return primals_scaling
@@ -327,7 +326,7 @@ class PyomoNLP(AslNLP):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
         if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             constraints_scaling = np.ones(self.n_constraints())
-            for i,c in enumerate(self.get_pyomo_constraints()):
+            for i, c in enumerate(self.get_pyomo_constraints()):
                 if c in scaling_suffix:
                     constraints_scaling[i] = scaling_suffix[c]
             return constraints_scaling
@@ -377,15 +376,18 @@ class PyomoNLP(AslNLP):
         submatrix_data = np.compress(submatrix_mask, jac.data)
 
         # ToDo: this is expensive - have to think about how to do this with numpy
-        row_submatrix_map = {j:i for i,j in enumerate(constraint_indices)}
+        row_submatrix_map = {j: i for i, j in enumerate(constraint_indices)}
         for i, v in enumerate(submatrix_irows):
             submatrix_irows[i] = row_submatrix_map[v]
 
-        col_submatrix_map = {j:i for i,j in enumerate(primal_indices)}
+        col_submatrix_map = {j: i for i, j in enumerate(primal_indices)}
         for i, v in enumerate(submatrix_jcols):
             submatrix_jcols[i] = col_submatrix_map[v]
 
-        return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(constraint_indices), len(primal_indices)))
+        return coo_matrix(
+            (submatrix_data, (submatrix_irows, submatrix_jcols)),
+            shape=(len(constraint_indices), len(primal_indices)),
+        )
 
     def extract_submatrix_hessian_lag(self, pyomo_variables_rows, pyomo_variables_cols):
         """
@@ -410,15 +412,18 @@ class PyomoNLP(AslNLP):
         submatrix_data = np.compress(submatrix_mask, hess_lag.data)
 
         # ToDo: this is expensive - have to think about how to do this with numpy
-        submatrix_map = {j:i for i,j in enumerate(primal_indices_rows)}
+        submatrix_map = {j: i for i, j in enumerate(primal_indices_rows)}
         for i, v in enumerate(submatrix_irows):
             submatrix_irows[i] = submatrix_map[v]
 
-        submatrix_map = {j:i for i,j in enumerate(primal_indices_cols)}
+        submatrix_map = {j: i for i, j in enumerate(primal_indices_cols)}
         for i, v in enumerate(submatrix_jcols):
             submatrix_jcols[i] = submatrix_map[v]
 
-        return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(primal_indices_rows), len(primal_indices_cols)))
+        return coo_matrix(
+            (submatrix_data, (submatrix_irows, submatrix_jcols)),
+            shape=(len(primal_indices_rows), len(primal_indices_cols)),
+        )
 
     def load_state_into_pyomo(self, bound_multipliers=None):
         primals = self.get_primals()
@@ -426,24 +431,25 @@ class PyomoNLP(AslNLP):
         for var, val in zip(variables, primals):
             var.set_value(val)
         m = self.pyomo_model()
-        model_suffixes = dict(
-            pyo.suffix.active_import_suffix_generator(m))
+        model_suffixes = dict(pyo.suffix.active_import_suffix_generator(m))
         if 'dual' in model_suffixes:
             duals = self.get_duals()
             constraints = self.get_pyomo_constraints()
             model_suffixes['dual'].clear()
-            model_suffixes['dual'].update(
-                zip(constraints, duals))
+            model_suffixes['dual'].update(zip(constraints, duals))
         if 'ipopt_zL_out' in model_suffixes:
             model_suffixes['ipopt_zL_out'].clear()
             if bound_multipliers is not None:
                 model_suffixes['ipopt_zL_out'].update(
-                    zip(variables, bound_multipliers[0]))
+                    zip(variables, bound_multipliers[0])
+                )
         if 'ipopt_zU_out' in model_suffixes:
             model_suffixes['ipopt_zU_out'].clear()
             if bound_multipliers is not None:
                 model_suffixes['ipopt_zU_out'].update(
-                    zip(variables, bound_multipliers[1]))
+                    zip(variables, bound_multipliers[1])
+                )
+
 
 # TODO: look for the [:-i] when i might be zero
 class PyomoGreyBoxNLP(NLP):
@@ -456,9 +462,9 @@ class PyomoGreyBoxNLP(NLP):
             # before calling the NL writer so that the attached Vars get
             # picked up by the writer.
             for greybox in pyomo_model.component_objects(
-                    ExternalGreyBoxBlock, descend_into=True):
-                greybox.parent_block().reclassify_component_type(
-                    greybox, pyo.Block)
+                ExternalGreyBoxBlock, descend_into=True
+            ):
+                greybox.parent_block().reclassify_component_type(greybox, pyo.Block)
                 greybox_components.append(greybox)
 
             self._pyomo_model = pyomo_model
@@ -468,25 +474,28 @@ class PyomoGreyBoxNLP(NLP):
             # Restore the ctypes of the ExternalGreyBoxBlock components
             for greybox in greybox_components:
                 greybox.parent_block().reclassify_component_type(
-                    greybox, ExternalGreyBoxBlock)
+                    greybox, ExternalGreyBoxBlock
+                )
 
         # get the greybox block data objects
         greybox_data = []
         for greybox in greybox_components:
-            greybox_data.extend(data for data in greybox.values()
-                                if data.active)
+            greybox_data.extend(data for data in greybox.values() if data.active)
 
         if len(greybox_data) > 1:
-            raise NotImplementedError("The PyomoGreyBoxModel interface has not"
-                                      " been tested with Pyomo models that contain"
-                                      " more than one ExternalGreyBoxBlock. Currently,"
-                                      " only a single block is supported.")
+            raise NotImplementedError(
+                "The PyomoGreyBoxModel interface has not"
+                " been tested with Pyomo models that contain"
+                " more than one ExternalGreyBoxBlock. Currently,"
+                " only a single block is supported."
+            )
 
         if self._pyomo_nlp.n_primals() == 0:
             raise ValueError(
                 "No variables were found in the Pyomo part of the model."
                 " PyomoGreyBoxModel requires at least one variable"
-                " to be active in a Pyomo objective or constraint")
+                " to be active in a Pyomo objective or constraint"
+            )
 
         # check that the greybox model supports what we would expect
         # TODO: add support for models that do not provide jacobians
@@ -520,22 +529,28 @@ class PyomoGreyBoxNLP(NLP):
             # check that none of the inputs / outputs are fixed
             for v in data.inputs.values():
                 if v.fixed:
-                    raise NotImplementedError('Found a grey box model input that is fixed: {}.'
-                                              ' This interface does not currently support fixed'
-                                              ' variables. Please add a constraint instead.'
-                                              ''.format(v.getname(fully_qualified=True)))
+                    raise NotImplementedError(
+                        'Found a grey box model input that is fixed: {}.'
+                        ' This interface does not currently support fixed'
+                        ' variables. Please add a constraint instead.'
+                        ''.format(v.getname(fully_qualified=True))
+                    )
             for v in data.outputs.values():
                 if v.fixed:
-                    raise NotImplementedError('Found a grey box model output that is fixed: {}.'
-                                              ' This interface does not currently support fixed'
-                                              ' variables. Please add a constraint instead.'
-                                              ''.format(v.getname(fully_qualified=True)))
+                    raise NotImplementedError(
+                        'Found a grey box model output that is fixed: {}.'
+                        ' This interface does not currently support fixed'
+                        ' variables. Please add a constraint instead.'
+                        ''.format(v.getname(fully_qualified=True))
+                    )
 
             block_name = data.getname()
             for nm in data._ex_model.equality_constraint_names():
                 self._greybox_constraints_names.append('{}.{}'.format(block_name, nm))
             for nm in data._ex_model.output_names():
-                self._greybox_constraints_names.append('{}.{}_con'.format(block_name, nm))
+                self._greybox_constraints_names.append(
+                    '{}.{}_con'.format(block_name, nm)
+                )
 
             for var in data.component_data_objects(pyo.Var):
                 if var not in self._vardata_to_idx:
@@ -544,7 +559,9 @@ class PyomoGreyBoxNLP(NLP):
                     self._vardata_to_idx[var] = n_primals
                     n_primals += 1
                     greybox_primals.append(var)
-                    self._greybox_primals_names.append(var.getname(fully_qualified=True))
+                    self._greybox_primals_names.append(
+                        var.getname(fully_qualified=True)
+                    )
         self._n_greybox_primals = len(greybox_primals)
         self._greybox_primal_variables = greybox_primals
 
@@ -598,7 +615,7 @@ class PyomoGreyBoxNLP(NLP):
         scaling_suffix = self._pyomo_nlp._pyomo_model.component('scaling_factor')
         if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             need_scaling = True
-            for i,v in enumerate(self.get_pyomo_variables()):
+            for i, v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
                     self._primals_scaling[i] = scaling_suffix[v]
 
@@ -685,51 +702,45 @@ class PyomoGreyBoxNLP(NLP):
 
     # overloaded from NLP
     def primals_lb(self):
-        return np.concatenate((self._pyomo_nlp.primals_lb(),
-            self._greybox_primals_lb,
-        ))
+        return np.concatenate((self._pyomo_nlp.primals_lb(), self._greybox_primals_lb))
 
     # overloaded from NLP
     def primals_ub(self):
-        return np.concatenate((
-            self._pyomo_nlp.primals_ub(),
-            self._greybox_primals_ub,
-        ))
+        return np.concatenate((self._pyomo_nlp.primals_ub(), self._greybox_primals_ub))
 
     # overloaded from NLP
     def constraints_lb(self):
-        return np.concatenate((
-            self._pyomo_nlp.constraints_lb(),
-            np.zeros(self._n_greybox_constraints, dtype=np.float64),
-        ))
+        return np.concatenate(
+            (
+                self._pyomo_nlp.constraints_lb(),
+                np.zeros(self._n_greybox_constraints, dtype=np.float64),
+            )
+        )
 
     # overloaded from NLP
     def constraints_ub(self):
-        return np.concatenate((
-            self._pyomo_nlp.constraints_ub(),
-            np.zeros(self._n_greybox_constraints, dtype=np.float64),
-        ))
+        return np.concatenate(
+            (
+                self._pyomo_nlp.constraints_ub(),
+                np.zeros(self._n_greybox_constraints, dtype=np.float64),
+            )
+        )
 
     # overloaded from NLP
     def init_primals(self):
-        return np.concatenate((
-            self._pyomo_nlp.init_primals(),
-            self._init_greybox_primals,
-        ))
+        return np.concatenate(
+            (self._pyomo_nlp.init_primals(), self._init_greybox_primals)
+        )
 
     # overloaded from NLP
     def init_duals(self):
-        return np.concatenate((
-            self._pyomo_nlp.init_duals(),
-            self._init_greybox_duals,
-        ))
+        return np.concatenate((self._pyomo_nlp.init_duals(), self._init_greybox_duals))
 
     # overloaded from ExtendedNLP
     def init_duals_eq(self):
-        return np.concatenate((
-            self._pyomo_nlp.init_duals_eq(),
-            self._init_greybox_duals,
-        ))
+        return np.concatenate(
+            (self._pyomo_nlp.init_duals_eq(), self._init_greybox_duals)
+        )
 
     # overloaded from NLP / Extended NLP
     def create_new_vector(self, vector_type):
@@ -749,11 +760,10 @@ class PyomoGreyBoxNLP(NLP):
         self._invalidate_greybox_primals_cache()
 
         # set the primals on the "pyomo" part of the nlp
-        self._pyomo_nlp.set_primals(
-            primals[:self._pyomo_nlp.n_primals()])
+        self._pyomo_nlp.set_primals(primals[: self._pyomo_nlp.n_primals()])
 
         # copy the values for the greybox primals
-        np.copyto(self._greybox_primals, primals[self._pyomo_nlp.n_primals():])
+        np.copyto(self._greybox_primals, primals[self._pyomo_nlp.n_primals() :])
 
         for external in self._external_greybox_helpers:
             external.set_primals(primals)
@@ -763,21 +773,17 @@ class PyomoGreyBoxNLP(NLP):
         # return the value of the primals that the pyomo
         # part knows about as well as any extra values that
         # are only in the greybox part
-        return np.concatenate((
-            self._pyomo_nlp.get_primals(),
-            self._greybox_primals,
-        ))
+        return np.concatenate((self._pyomo_nlp.get_primals(), self._greybox_primals))
 
     # overloaded from NLP
     def set_duals(self, duals):
         self._invalidate_greybox_duals_cache()
 
         # set the duals for the pyomo part of the nlp
-        self._pyomo_nlp.set_duals(
-            duals[:self._pyomo_nlp.n_constraints()])
+        self._pyomo_nlp.set_duals(duals[: self._pyomo_nlp.n_constraints()])
 
         # set the duals for the greybox part of the nlp
-        np.copyto(self._greybox_duals, duals[self._pyomo_nlp.n_constraints():])
+        np.copyto(self._greybox_duals, duals[self._pyomo_nlp.n_constraints() :])
 
         # set the duals in the helpers for the hessian computation
         for h in self._external_greybox_helpers:
@@ -787,10 +793,7 @@ class PyomoGreyBoxNLP(NLP):
     def get_duals(self):
         # return the duals for the pyomo part of the nlp
         # concatenated with the greybox part
-        return np.concatenate((
-            self._pyomo_nlp.get_duals(),
-            self._greybox_duals,
-        ))
+        return np.concatenate((self._pyomo_nlp.get_duals(), self._greybox_duals))
 
     # overloaded from ExtendedNLP
     def set_duals_eq(self, duals):
@@ -854,17 +857,23 @@ class PyomoGreyBoxNLP(NLP):
     # overloaded from NLP
     def evaluate_grad_objective(self, out=None):
         # objective is owned by the pyomo model
-        return np.concatenate((
-            self._pyomo_nlp.evaluate_grad_objective(out),
-            np.zeros(self._n_greybox_primals)))
+        return np.concatenate(
+            (
+                self._pyomo_nlp.evaluate_grad_objective(out),
+                np.zeros(self._n_greybox_primals),
+            )
+        )
 
     def _evaluate_greybox_constraints_and_cache_if_necessary(self):
         if self._greybox_constraints_cached:
             return
 
-        self._cached_greybox_constraints = np.concatenate(tuple(
-            external.evaluate_residuals()
-            for external in self._external_greybox_helpers))
+        self._cached_greybox_constraints = np.concatenate(
+            tuple(
+                external.evaluate_residuals()
+                for external in self._external_greybox_helpers
+            )
+        )
         self._greybox_constraints_cached = True
 
     # overloaded from NLP
@@ -872,28 +881,30 @@ class PyomoGreyBoxNLP(NLP):
         self._evaluate_greybox_constraints_and_cache_if_necessary()
 
         if out is not None:
-            if not isinstance(out, np.ndarray) \
-               or out.size != self.n_constraints():
+            if not isinstance(out, np.ndarray) or out.size != self.n_constraints():
                 raise RuntimeError(
                     'Called evaluate_constraints with an invalid'
                     ' "out" argument - should take an ndarray of '
-                    'size {}'.format(self.n_constraints()))
+                    'size {}'.format(self.n_constraints())
+                )
 
             # call on the pyomo part of the nlp
-            self._pyomo_nlp.evaluate_constraints(
-                out[:-self._n_greybox_constraints])
+            self._pyomo_nlp.evaluate_constraints(out[: -self._n_greybox_constraints])
 
             # call on the greybox part of the nlp
-            np.copyto(out[-self._n_greybox_constraints:],
-                      self._cached_greybox_constraints)
+            np.copyto(
+                out[-self._n_greybox_constraints :], self._cached_greybox_constraints
+            )
             return out
 
         else:
             # concatenate the pyomo and external constraint residuals
-            return np.concatenate((
-                self._pyomo_nlp.evaluate_constraints(),
-                self._cached_greybox_constraints,
-            ))
+            return np.concatenate(
+                (
+                    self._pyomo_nlp.evaluate_constraints(),
+                    self._cached_greybox_constraints,
+                )
+            )
 
     # overloaded from ExtendedNLP
     def evaluate_eq_constraints(self, out=None):
@@ -934,44 +945,55 @@ class PyomoGreyBoxNLP(NLP):
         self._evaluate_greybox_jacobians_and_cache_if_necessary()
 
         if out is not None:
-            if ( not isinstance(out, coo_matrix)
-                 or out.shape[0] != self.n_constraints()
-                 or out.shape[1] != self.n_primals()
-                 or out.nnz != self.nnz_jacobian() ):
+            if (
+                not isinstance(out, coo_matrix)
+                or out.shape[0] != self.n_constraints()
+                or out.shape[1] != self.n_primals()
+                or out.nnz != self.nnz_jacobian()
+            ):
                 raise RuntimeError(
                     'evaluate_jacobian called with an "out" argument'
                     ' that is invalid. This should be a coo_matrix with'
-                    ' shape=({},{}) and nnz={}'
-                    .format(self.n_constraints(), self.n_primals(),
-                            self.nnz_jacobian()))
+                    ' shape=({},{}) and nnz={}'.format(
+                        self.n_constraints(), self.n_primals(), self.nnz_jacobian()
+                    )
+                )
             n_pyomo_constraints = self.n_constraints() - self._n_greybox_constraints
 
             # to avoid an additional copy, we pass in a slice (numpy view) of the underlying
             # data, row, and col that we were handed to be populated in evaluate_jacobian
             self._pyomo_nlp.evaluate_jacobian(
-                out=coo_matrix((out.data[:-self._nnz_greybox_jac],
-                                (out.row[:-self._nnz_greybox_jac],
-                                 out.col[:-self._nnz_greybox_jac])),
-                               shape=(n_pyomo_constraints, self._pyomo_nlp.n_primals())))
-            np.copyto(out.data[-self._nnz_greybox_jac:],
-                      self._cached_greybox_jac.data)
+                out=coo_matrix(
+                    (
+                        out.data[: -self._nnz_greybox_jac],
+                        (
+                            out.row[: -self._nnz_greybox_jac],
+                            out.col[: -self._nnz_greybox_jac],
+                        ),
+                    ),
+                    shape=(n_pyomo_constraints, self._pyomo_nlp.n_primals()),
+                )
+            )
+            np.copyto(out.data[-self._nnz_greybox_jac :], self._cached_greybox_jac.data)
             return out
         else:
             base = self._pyomo_nlp.evaluate_jacobian()
-            base = coo_matrix((base.data, (base.row, base.col)),
-                              shape=(base.shape[0], self.n_primals()))
+            base = coo_matrix(
+                (base.data, (base.row, base.col)),
+                shape=(base.shape[0], self.n_primals()),
+            )
 
-            jac = BlockMatrix(2,1)
+            jac = BlockMatrix(2, 1)
             jac.set_block(0, 0, base)
             jac.set_block(1, 0, self._cached_greybox_jac)
             return jac.tocoo()
 
             # TODO: Doesn't this need a "shape" specification?
-            #return coo_matrix((
+            # return coo_matrix((
             #    np.concatenate((base.data, self._cached_greybox_jac.data)),
             #    ( np.concatenate((base.row, self._cached_greybox_jac.row)),
             #      np.concatenate((base.col, self._cached_greybox_jac.col)) )
-            #))
+            # ))
 
     # overloaded from ExtendedNLP
     """
@@ -1026,46 +1048,65 @@ class PyomoGreyBoxNLP(NLP):
         irow = np.concatenate(irow)
         jcol = np.concatenate(jcol)
 
-        self._cached_greybox_hess = coo_matrix( (data, (irow,jcol)), shape=(self.n_primals(), self.n_primals()))
+        self._cached_greybox_hess = coo_matrix(
+            (data, (irow, jcol)), shape=(self.n_primals(), self.n_primals())
+        )
         self._greybox_hess_cached = True
 
     def evaluate_hessian_lag(self, out=None):
         self._evaluate_greybox_hessians_and_cache_if_necessary()
         if out is not None:
-            if ( not isinstance(out, coo_matrix)
-                 or out.shape[0] != self.n_primals()
-                 or out.shape[1] != self.n_primals()
-                 or out.nnz != self.nnz_hessian_lag() ):
+            if (
+                not isinstance(out, coo_matrix)
+                or out.shape[0] != self.n_primals()
+                or out.shape[1] != self.n_primals()
+                or out.nnz != self.nnz_hessian_lag()
+            ):
                 raise RuntimeError(
                     'evaluate_hessian_lag called with an "out" argument'
                     ' that is invalid. This should be a coo_matrix with'
-                    ' shape=({},{}) and nnz={}'
-                    .format(self.n_primals(), self.n_primals(),
-                            self.nnz_hessian()))
+                    ' shape=({},{}) and nnz={}'.format(
+                        self.n_primals(), self.n_primals(), self.nnz_hessian()
+                    )
+                )
             # to avoid an additional copy, we pass in a slice (numpy view) of the underlying
             # data, row, and col that we were handed to be populated in evaluate_hessian_lag
             # the coo_matrix is simply a holder of the data, row, and col structures
             self._pyomo_nlp.evaluate_hessian_lag(
-                out=coo_matrix((out.data[:-self._nnz_greybox_hess],
-                                (out.row[:-self._nnz_greybox_hess],
-                                 out.col[:-self._nnz_greybox_hess])),
-                               shape=(self._pyomo_nlp.n_primals(), self._pyomo_nlp.n_primals())))
-            np.copyto(out.data[-self._nnz_greybox_hess:],
-                      self._cached_greybox_hess.data)
+                out=coo_matrix(
+                    (
+                        out.data[: -self._nnz_greybox_hess],
+                        (
+                            out.row[: -self._nnz_greybox_hess],
+                            out.col[: -self._nnz_greybox_hess],
+                        ),
+                    ),
+                    shape=(self._pyomo_nlp.n_primals(), self._pyomo_nlp.n_primals()),
+                )
+            )
+            np.copyto(
+                out.data[-self._nnz_greybox_hess :], self._cached_greybox_hess.data
+            )
             return out
         else:
             hess = self._pyomo_nlp.evaluate_hessian_lag()
             data = np.concatenate((hess.data, self._cached_greybox_hess.data))
             row = np.concatenate((hess.row, self._cached_greybox_hess.row))
             col = np.concatenate((hess.col, self._cached_greybox_hess.col))
-            hess = coo_matrix((data, (row, col)), shape=(self.n_primals(), self.n_primals()))
+            hess = coo_matrix(
+                (data, (row, col)), shape=(self.n_primals(), self.n_primals())
+            )
             return hess
 
     # overloaded from NLP
     def report_solver_status(self, status_code, status_message):
         raise NotImplementedError('Todo: implement this')
 
-    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
+    @deprecated(
+        msg='This method has been replaced with primals_names',
+        version='6.0.0.dev0',
+        remove_in='6.0',
+    )
     def variable_names(self):
         return self.primals_names()
 
@@ -1097,8 +1138,7 @@ class PyomoGreyBoxNLP(NLP):
         Return an ordered list of the Pyomo VarData objects in
         the order corresponding to the primals
         """
-        return self._pyomo_nlp.get_pyomo_variables() + \
-            self._greybox_primal_variables
+        return self._pyomo_nlp.get_pyomo_variables() + self._greybox_primal_variables
 
     def get_pyomo_constraints(self):
         """
@@ -1108,8 +1148,8 @@ class PyomoGreyBoxNLP(NLP):
         # FIXME: what do we return for the external block constraints?
         # return self._pyomo_nlp.get_pyomo_constraints()
         raise NotImplementedError(
-            "returning list of all constraints when using an external "
-            "model is TBD")
+            "returning list of all constraints when using an external model is TBD"
+        )
 
     def load_state_into_pyomo(self, bound_multipliers=None):
         primals = self.get_primals()
@@ -1117,8 +1157,7 @@ class PyomoGreyBoxNLP(NLP):
         for var, val in zip(variables, primals):
             var.set_value(val)
         m = self.pyomo_model()
-        model_suffixes = dict(
-            pyo.suffix.active_import_suffix_generator(m))
+        model_suffixes = dict(pyo.suffix.active_import_suffix_generator(m))
         if 'dual' in model_suffixes:
             model_suffixes['dual'].clear()
             # Until we sort out how to return the duals for the external
@@ -1132,12 +1171,14 @@ class PyomoGreyBoxNLP(NLP):
             model_suffixes['ipopt_zL_out'].clear()
             if bound_multipliers is not None:
                 model_suffixes['ipopt_zL_out'].update(
-                    zip(variables, bound_multipliers[0]))
+                    zip(variables, bound_multipliers[0])
+                )
         if 'ipopt_zU_out' in model_suffixes:
             model_suffixes['ipopt_zU_out'].clear()
             if bound_multipliers is not None:
                 model_suffixes['ipopt_zU_out'].update(
-                    zip(variables, bound_multipliers[1]))
+                    zip(variables, bound_multipliers[1])
+                )
 
 
 class _ExternalGreyBoxModelHelper(object):
@@ -1176,29 +1217,41 @@ class _ExternalGreyBoxModelHelper(object):
         # the indices in the full primals vector
         self._inputs_to_primals_map = np.fromiter(
             (vardata_to_idx[v] for v in self._block.inputs.values()),
-            dtype=np.int64, count=n_inputs)
+            dtype=np.int64,
+            count=n_inputs,
+        )
 
         # store the map of output indices (0 .. n_outputs) to
         # the indices in the full primals vector
         self._outputs_to_primals_map = np.fromiter(
             (vardata_to_idx[v] for v in self._block.outputs.values()),
-            dtype=np.int64, count=n_outputs)
+            dtype=np.int64,
+            count=n_outputs,
+        )
 
-        if self._ex_model.n_outputs() == 0 and \
-           self._ex_model.n_equality_constraints() == 0:
+        if (
+            self._ex_model.n_outputs() == 0
+            and self._ex_model.n_equality_constraints() == 0
+        ):
             raise ValueError(
                 'ExternalGreyBoxModel has no equality constraints '
-                'or outputs. It must have at least one or both.')
+                'or outputs. It must have at least one or both.'
+            )
 
         self._ex_eq_duals_to_full_map = None
         if n_eq_constraints > 0:
-            self._ex_eq_duals_to_full_map = \
-                list(range(con_offset, con_offset + n_eq_constraints))
+            self._ex_eq_duals_to_full_map = list(
+                range(con_offset, con_offset + n_eq_constraints)
+            )
 
         self._ex_output_duals_to_full_map = None
         if n_outputs > 0:
-            self._ex_output_duals_to_full_map = \
-                list(range(con_offset + n_eq_constraints, con_offset + n_eq_constraints + n_outputs))
+            self._ex_output_duals_to_full_map = list(
+                range(
+                    con_offset + n_eq_constraints,
+                    con_offset + n_eq_constraints + n_outputs,
+                )
+            )
 
         # we need to change the column indices in the jacobian
         # from the 0..n_inputs provided by the external model
@@ -1238,8 +1291,7 @@ class _ExternalGreyBoxModelHelper(object):
             self._ex_model.set_output_constraint_multipliers(duals_outputs)
 
     def n_residuals(self):
-        return self._ex_model.n_equality_constraints() \
-            + self._ex_model.n_outputs()
+        return self._ex_model.n_equality_constraints() + self._ex_model.n_outputs()
 
     def get_residual_scaling(self):
         eq_scaling = self._ex_model.get_equality_constraint_scaling_factors()
@@ -1251,12 +1303,10 @@ class _ExternalGreyBoxModelHelper(object):
         if output_con_scaling is None:
             output_con_scaling = np.ones(self._ex_model.n_outputs())
 
-        return np.concatenate((
-            eq_scaling,
-            output_con_scaling))
+        return np.concatenate((eq_scaling, output_con_scaling))
 
     def evaluate_residuals(self):
-        # evalute the equality constraints and the output equations
+        # evaluate the equality constraints and the output equations
         # and return a single vector of residuals
         # returns residual for h(x)=0, where h(x) = [h_eq(x); h_o(x)-o]
         resid_list = []
@@ -1282,12 +1332,12 @@ class _ExternalGreyBoxModelHelper(object):
                 # The first time through, we won't have created the
                 # mapping of external primals ('u') to the full space
                 # primals ('x')
-                self._eq_jac_primal_jcol = self._inputs_to_primals_map[
-                    eq_jac.col]
+                self._eq_jac_primal_jcol = self._inputs_to_primals_map[eq_jac.col]
             # map the columns from the inputs "u" back to the full primals "x"
             eq_jac = coo_matrix(
                 (eq_jac.data, (eq_jac.row, self._eq_jac_primal_jcol)),
-                (eq_jac.shape[0], self._n_primals))
+                (eq_jac.shape[0], self._n_primals),
+            )
 
         outputs_jac = None
         if self._ex_model.n_outputs() > 0:
@@ -1300,13 +1350,18 @@ class _ExternalGreyBoxModelHelper(object):
                 # mapping of external outputs ('o') to the full space
                 # primals ('x')
                 self._outputs_jac_primal_jcol = self._inputs_to_primals_map[
-                    outputs_jac.col]
-                
+                    outputs_jac.col
+                ]
+
                 # We also need tocreate the irow, jcol, nnz structure for the
                 # output variable portion of h(u)-o=0
-                self._additional_output_entries_irow = np.asarray(range(self._ex_model.n_outputs()))
+                self._additional_output_entries_irow = np.asarray(
+                    range(self._ex_model.n_outputs())
+                )
                 self._additional_output_entries_jcol = self._outputs_to_primals_map
-                self._additional_output_entries_data = -1.0*np.ones(self._ex_model.n_outputs())
+                self._additional_output_entries_data = -1.0 * np.ones(
+                    self._ex_model.n_outputs()
+                )
 
             col = self._outputs_jac_primal_jcol
             data = outputs_jac.data
@@ -1314,19 +1369,19 @@ class _ExternalGreyBoxModelHelper(object):
             # add the additional entries for the -Po*x portion of the jacobian
             row = np.concatenate((row, self._additional_output_entries_irow))
             col = np.concatenate((col, self._additional_output_entries_jcol))
-            data  = np.concatenate((data, self._additional_output_entries_data))
+            data = np.concatenate((data, self._additional_output_entries_data))
             outputs_jac = coo_matrix(
-                (data, (row, col)),
-                shape=(outputs_jac.shape[0], self._n_primals))
+                (data, (row, col)), shape=(outputs_jac.shape[0], self._n_primals)
+            )
 
         jac = None
         if eq_jac is not None:
             if outputs_jac is not None:
                 # create a jacobian with both Jw_eq and Jw_o
-                jac = BlockMatrix(2,1)
+                jac = BlockMatrix(2, 1)
                 jac.name = 'external model jacobian'
-                jac.set_block(0,0,eq_jac)
-                jac.set_block(1,0,outputs_jac)
+                jac.set_block(0, 0, eq_jac)
+                jac.set_block(1, 0, outputs_jac)
             else:
                 assert self._ex_model.n_outputs() == 0
                 assert self._ex_model.n_equality_constraints() > 0
@@ -1358,8 +1413,10 @@ class _ExternalGreyBoxModelHelper(object):
             if self._eq_hess_jcol is None:
                 # first time through, let's also check that it is lower triangular
                 if np.any(eq_hess.row < eq_hess.col):
-                    raise ValueError('ExternalGreyBoxModel must return lower '
-                                     'triangular portion of the Hessian only')
+                    raise ValueError(
+                        'ExternalGreyBoxModel must return lower '
+                        'triangular portion of the Hessian only'
+                    )
 
                 # The first time through, we won't have created the
                 # mapping of external primals ('u') to the full space
@@ -1380,14 +1437,20 @@ class _ExternalGreyBoxModelHelper(object):
             if self._output_hess_irow is None:
                 # first time through, let's also check that it is lower triangular
                 if np.any(output_hess.row < output_hess.col):
-                    raise ValueError('ExternalGreyBoxModel must return lower '
-                                     'triangular portion of the Hessian only')
+                    raise ValueError(
+                        'ExternalGreyBoxModel must return lower '
+                        'triangular portion of the Hessian only'
+                    )
 
                 # The first time through, we won't have created the
                 # mapping of external outputs ('o') to the full space
                 # primals ('x')
-                self._output_hess_irow = row = self._inputs_to_primals_map[output_hess.row]
-                self._output_hess_jcol = col = self._inputs_to_primals_map[output_hess.col]
+                self._output_hess_irow = row = self._inputs_to_primals_map[
+                    output_hess.row
+                ]
+                self._output_hess_jcol = col = self._inputs_to_primals_map[
+                    output_hess.col
+                ]
 
                 # mapping may have made this not lower triangular
                 mask = col > row
@@ -1400,7 +1463,6 @@ class _ExternalGreyBoxModelHelper(object):
         data = np.concatenate(data_list)
         irow = np.concatenate(irow_list)
         jcol = np.concatenate(jcol_list)
-        hess = coo_matrix( (data, (irow, jcol)), (self._n_primals, self._n_primals) )
+        hess = coo_matrix((data, (irow, jcol)), (self._n_primals, self._n_primals))
 
         return hess
-

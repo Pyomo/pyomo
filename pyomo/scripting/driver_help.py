@@ -204,7 +204,7 @@ def help_solvers():
 
     print(
         wrapper.fill(
-            "Pyomo uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asyncronously executing solvers either locally or remotely.  The following solver managers are available in Pyomo:"
+            "Pyomo uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asynchronously executing solvers either locally or remotely.  The following solver managers are available in Pyomo:"
         )
     )
     print("")
@@ -364,6 +364,7 @@ def print_components(data):
     Print information about modeling components supported by Pyomo.
     """
     from pyomo.core.base.component import ModelComponentFactory, GlobalSets
+
     print("")
     print("----------------------------------------------------------------")
     print("Pyomo Model Components:")

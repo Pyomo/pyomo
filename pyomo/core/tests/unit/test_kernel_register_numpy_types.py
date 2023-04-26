@@ -38,7 +38,6 @@ if numpy_available:
     numpy_float_names.append('float16')
     numpy_float_names.append('float32')
     numpy_float_names.append('float64')
-    numpy_float_names.append('ndarray')
 # Complex
 numpy_complex_names = []
 if numpy_available:
@@ -53,12 +52,9 @@ class TestNumpyRegistration(unittest.TestCase):
             import pyomo.core.kernel.register_numpy_types as rnt
         self.assertRegex(
             LOG.getvalue(),
-            "DEPRECATED: pyomo.core.kernel.register_numpy_types is deprecated.")
-        self.assertEqual(sorted(rnt.numpy_bool_names),
-                         sorted(numpy_bool_names))
-        self.assertEqual(sorted(rnt.numpy_int_names),
-                         sorted(numpy_int_names))
-        self.assertEqual(sorted(rnt.numpy_float_names),
-                         sorted(numpy_float_names))
-        self.assertEqual(sorted(rnt.numpy_complex_names),
-                         sorted(numpy_complex_names))
+            "DEPRECATED: pyomo.core.kernel.register_numpy_types is deprecated.",
+        )
+        self.assertEqual(sorted(rnt.numpy_bool_names), sorted(numpy_bool_names))
+        self.assertEqual(sorted(rnt.numpy_int_names), sorted(numpy_int_names))
+        self.assertEqual(sorted(rnt.numpy_float_names), sorted(numpy_float_names))
+        self.assertEqual(sorted(rnt.numpy_complex_names), sorted(numpy_complex_names))

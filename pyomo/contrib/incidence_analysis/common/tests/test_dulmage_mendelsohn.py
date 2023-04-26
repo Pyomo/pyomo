@@ -10,13 +10,10 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.common.dependencies import (
-    networkx as nx,
-    networkx_available,
-    )
+from pyomo.common.dependencies import networkx as nx, networkx_available
 from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
     dulmage_mendelsohn,
-    )
+)
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available")
@@ -36,39 +33,39 @@ class TestPothenFanExample(unittest.TestCase):
         bg.add_nodes_from([n_l + i for i in right_nodes], bipartite=1)
 
         paper_edges = [
-                (1, 1),
-                (1, 2),
-                (1, 3),
-                (1, 4),
-                (1, 5),
-                (1, 6),
-                (2, 4),
-                (2, 5),
-                (2, 7),
-                (2, 8),
-                (2, 10),
-                (3, 1),
-                (3, 3),
-                (3, 5),
-                (4, 6),
-                (4, 7),
-                (4, 11),
-                (5, 6),
-                (5, 7),
-                (5, 9),
-                (6, 8),
-                (6, 9),
-                (7, 8),
-                (7, 9),
-                (7, 10),
-                (8, 10),
-                (8, 11),
-                (9, 11),
-                (10, 10),
-                (11, 10),
-                (11, 11),
-                (12, 11),
-                ]
+            (1, 1),
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (1, 5),
+            (1, 6),
+            (2, 4),
+            (2, 5),
+            (2, 7),
+            (2, 8),
+            (2, 10),
+            (3, 1),
+            (3, 3),
+            (3, 5),
+            (4, 6),
+            (4, 7),
+            (4, 11),
+            (5, 6),
+            (5, 7),
+            (5, 9),
+            (6, 8),
+            (6, 9),
+            (7, 8),
+            (7, 9),
+            (7, 10),
+            (8, 10),
+            (8, 11),
+            (9, 11),
+            (10, 10),
+            (11, 10),
+            (11, 11),
+            (12, 11),
+        ]
 
         edges = [(i - 1, j - 1 + n_l) for i, j in paper_edges]
         bg.add_edges_from(edges)
@@ -131,27 +128,27 @@ class TestDisconnectedModel(unittest.TestCase):
         """
         N = 7
         top_nodes = list(range(N))
-        bot_nodes = list(range(N, 2*N))
+        bot_nodes = list(range(N, 2 * N))
 
         graph = nx.Graph()
         graph.add_nodes_from(top_nodes, bipartite=0)
         graph.add_nodes_from(bot_nodes, bipartite=1)
 
         edges = [
-                (0, 0),
-                (0, 1),
-                (0, 6),
-                (1, 0),
-                (1, 2),
-                (2, 3),
-                (2, 5),
-                (3, 4),
-                (3, 5),
-                (4, 3),
-                (4, 4),
-                (5, 6),
-                (6, 6),
-                ]
+            (0, 0),
+            (0, 1),
+            (0, 6),
+            (1, 0),
+            (1, 2),
+            (2, 3),
+            (2, 5),
+            (3, 4),
+            (3, 5),
+            (4, 3),
+            (4, 4),
+            (5, 6),
+            (6, 6),
+        ]
         edges = [(i, j + N) for i, j in edges]
         graph.add_edges_from(edges)
         return graph, top_nodes
@@ -165,7 +162,7 @@ class TestDisconnectedModel(unittest.TestCase):
         top_dmp, bot_dmp = dulmage_mendelsohn(graph, top_nodes=top_nodes)
 
         self.assertFalse(nx.is_connected(graph))
-        
+
         underconstrained_top = {0, 1}
         underconstrained_bot = {7, 8, 9}
         self.assertEqual(underconstrained_top, set(top_dmp[2]))

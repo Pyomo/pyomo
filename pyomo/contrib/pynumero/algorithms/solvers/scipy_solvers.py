@@ -18,44 +18,49 @@ from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     DenseSquareNlpSolver,
     ScalarDenseSquareNlpSolver,
 )
-from pyomo.opt import (
-    SolverResults,
-    TerminationCondition,
-)
+from pyomo.opt import SolverResults, TerminationCondition
 from pyomo.common.dependencies import (
     attempt_import,
-    numpy as np, numpy_available,
-    scipy as sp, scipy_available,
+    numpy as np,
+    numpy_available,
+    scipy as sp,
+    scipy_available,
 )
+
 # Use attempt_import here so that we can register the solver even if SciPy is
 # not available.
 pyomo_nlp, _ = attempt_import("pyomo.contrib.pynumero.interfaces.pyomo_nlp")
 
 
 class FsolveNlpSolver(DenseSquareNlpSolver):
-
     OPTIONS = DenseSquareNlpSolver.OPTIONS(
-        description="Options for SciPy fsolve wrapper",
+        description="Options for SciPy fsolve wrapper"
     )
-    OPTIONS.declare("xtol", ConfigValue(
-        default=1e-8,
-        domain=float,
-        description="Tolerance for convergence of variable vector",
-    ))
-    OPTIONS.declare("maxfev", ConfigValue(
-        default=100,
-        domain=int,
-        description="Maximum number of function evaluations per solve",
-    ))
-    OPTIONS.declare("tol", ConfigValue(
-        default=None,
-        domain=float,
-        description="Tolerance for convergence of function residual",
-    ))
-    OPTIONS.declare("full_output", ConfigValue(
-        default=True,
-        domain=bool
-    ))
+    OPTIONS.declare(
+        "xtol",
+        ConfigValue(
+            default=1e-8,
+            domain=float,
+            description="Tolerance for convergence of variable vector",
+        ),
+    )
+    OPTIONS.declare(
+        "maxfev",
+        ConfigValue(
+            default=100,
+            domain=int,
+            description="Maximum number of function evaluations per solve",
+        ),
+    )
+    OPTIONS.declare(
+        "tol",
+        ConfigValue(
+            default=None,
+            domain=float,
+            description="Tolerance for convergence of function residual",
+        ),
+    )
+    OPTIONS.declare("full_output", ConfigValue(default=True, domain=bool))
 
     def solve(self, x0=None):
         if x0 is None:
@@ -97,26 +102,27 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
 
 
 class RootNlpSolver(DenseSquareNlpSolver):
-
     OPTIONS = DenseSquareNlpSolver.OPTIONS(
-        description="Options for SciPy fsolve wrapper",
+        description="Options for SciPy fsolve wrapper"
     )
-    OPTIONS.declare("tol", ConfigValue(
-        default=1e-8,
-        domain=float,
-        description="Convergence tolerance",
-    ))
-    OPTIONS.declare("method", ConfigValue(
-        default="hybr",
-        domain=In({"hybr", "lm"}),
-        description="Method used to solve for the function root",
-        doc=(
-            """The 'method' argument in the scipy.optimize.root function.
+    OPTIONS.declare(
+        "tol",
+        ConfigValue(default=1e-8, domain=float, description="Convergence tolerance"),
+    )
+    OPTIONS.declare(
+        "method",
+        ConfigValue(
+            default="hybr",
+            domain=In({"hybr", "lm"}),
+            description="Method used to solve for the function root",
+            doc=(
+                """The 'method' argument in the scipy.optimize.root function.
             For now only 'hybr' (Powell hybrid method from MINPACK) and
             'lm' (Levenberg-Marquardt from MINPACK) are supported.
             """
+            ),
         ),
-    ))
+    )
 
     def solve(self, x0=None):
         if x0 is None:
@@ -133,33 +139,39 @@ class RootNlpSolver(DenseSquareNlpSolver):
 
 
 class NewtonNlpSolver(ScalarDenseSquareNlpSolver):
-    """A wrapper around the SciPy scalar Newton solver for NLP objects
-
-    """
+    """A wrapper around the SciPy scalar Newton solver for NLP objects"""
 
     OPTIONS = ScalarDenseSquareNlpSolver.OPTIONS(
-        description="Options for SciPy newton wrapper",
+        description="Options for SciPy newton wrapper"
     )
-    OPTIONS.declare("tol", ConfigValue(
-        default=1e-8,
-        domain=float,
-        description="Convergence tolerance",
-    ))
-    OPTIONS.declare("secant", ConfigValue(
-        default=False,
-        domain=bool,
-        description="Whether to use SciPy's secant method",
-    ))
-    OPTIONS.declare("full_output", ConfigValue(
-        default=True,
-        domain=bool,
-        description="Whether underlying solver should return its full output",
-    ))
-    OPTIONS.declare("maxiter", ConfigValue(
-        default=50,
-        domain=int,
-        description="Maximum number of function evaluations per solve",
-    ))
+    OPTIONS.declare(
+        "tol",
+        ConfigValue(default=1e-8, domain=float, description="Convergence tolerance"),
+    )
+    OPTIONS.declare(
+        "secant",
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="Whether to use SciPy's secant method",
+        ),
+    )
+    OPTIONS.declare(
+        "full_output",
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="Whether underlying solver should return its full output",
+        ),
+    )
+    OPTIONS.declare(
+        "maxiter",
+        ConfigValue(
+            default=50,
+            domain=int,
+            description="Maximum number of function evaluations per solve",
+        ),
+    )
 
     def solve(self, x0=None):
         if x0 is None:
@@ -189,26 +201,27 @@ class SecantNewtonNlpSolver(NewtonNlpSolver):
 
     """
 
-    OPTIONS = ConfigBlock(
-        description="Options for the SciPy Newton-secant hybrid",
-    )
-    OPTIONS.declare_from(
-        NewtonNlpSolver.OPTIONS,
-        skip={"maxiter", "secant"},
-    )
-    OPTIONS.declare("secant_iter", ConfigValue(
-        default=2,
-        domain=int,
-        description=(
-            "Number of secant iterations to perform before switching"
-            " to Newton's method."
+    OPTIONS = ConfigBlock(description="Options for the SciPy Newton-secant hybrid")
+    OPTIONS.declare_from(NewtonNlpSolver.OPTIONS, skip={"maxiter", "secant"})
+    OPTIONS.declare(
+        "secant_iter",
+        ConfigValue(
+            default=2,
+            domain=int,
+            description=(
+                "Number of secant iterations to perform before switching"
+                " to Newton's method."
+            ),
         ),
-    ))
-    OPTIONS.declare("newton_iter", ConfigValue(
-        default=50,
-        domain=int,
-        description="Maximum iterations for the Newton solve",
-    ))
+    )
+    OPTIONS.declare(
+        "newton_iter",
+        ConfigValue(
+            default=50,
+            domain=int,
+            description="Maximum iterations for the Newton solve",
+        ),
+    )
 
     def __init__(self, nlp, timer=None, options=None):
         super().__init__(nlp, timer=timer, options=options)
@@ -243,7 +256,6 @@ class SecantNewtonNlpSolver(NewtonNlpSolver):
 
 
 class PyomoScipySolver(object):
-
     def __init__(self, options=None):
         if options is None:
             options = {}
@@ -321,14 +333,12 @@ class PyomoScipySolver(object):
 
     def create_nlp_solver(self, **kwds):
         raise NotImplementedError(
-            "%s has not implemented the create_nlp_solver method"
-            % self.__class__
+            "%s has not implemented the create_nlp_solver method" % self.__class__
         )
 
     def get_pyomo_results(self, model, scipy_results):
         raise NotImplementedError(
-            "%s has not implemented the get_results method"
-            % self.__class__
+            "%s has not implemented the get_results method" % self.__class__
         )
 
     #
@@ -342,16 +352,13 @@ class PyomoScipySolver(object):
 
 
 class PyomoFsolveSolver(PyomoScipySolver):
-
     # Note that scipy.optimize.fsolve does not return a
     # scipy.optimize.OptimizeResult object (as of SciPy 1.9.3).
     # To assess convergence, we must check the integer flag "ier"
     # that is the third (or second if full_output=False) entry
     # of the returned tuple. This dict maps documented "ier" values
     # to Pyomo termination conditions.
-    _term_cond = {
-        1: TerminationCondition.feasible,
-    }
+    _term_cond = {1: TerminationCondition.feasible}
 
     def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
@@ -392,7 +399,6 @@ class PyomoFsolveSolver(PyomoScipySolver):
 
 
 class PyomoRootSolver(PyomoScipySolver):
-
     def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
         solver = RootNlpSolver(nlp, **kwds)
@@ -429,7 +435,7 @@ class PyomoRootSolver(PyomoScipySolver):
         )
         # This attribute is in the SciPy documentation but appears not to
         # be implemented for "hybr" or "lm" solvers...
-        #results.solver.number_of_iterations = scipy_results.nit
+        # results.solver.number_of_iterations = scipy_results.nit
         results.solver.number_of_function_evaluations = scipy_results.nfev
         results.solver.number_of_gradient_evaluations = scipy_results.njev
 
@@ -437,7 +443,6 @@ class PyomoRootSolver(PyomoScipySolver):
 
 
 class PyomoNewtonSolver(PyomoScipySolver):
-
     _solver_name = "scipy.newton"
 
     def create_nlp_solver(self, **kwds):
@@ -489,7 +494,6 @@ class PyomoNewtonSolver(PyomoScipySolver):
 
 
 class PyomoSecantNewtonSolver(PyomoNewtonSolver):
-
     _solver_name = "scipy.secant-newton"
 
     def converged_with_secant(self):

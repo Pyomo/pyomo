@@ -13,12 +13,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.set import Set
 
 
-def get_piecewise_constant_constraints(
-    inputs,
-    time,
-    sample_points,
-    use_next=True,
-):
+def get_piecewise_constant_constraints(inputs, time, sample_points, use_next=True):
     """Returns an IndexedConstraint that constrains the provided variables
     to be constant between the provided sample points
 
@@ -44,6 +39,7 @@ def get_piecewise_constant_constraints(
     """
     input_set = Set(initialize=range(len(inputs)))
     sample_point_set = set(sample_points)
+
     def piecewise_constant_rule(m, i, t):
         if t in sample_point_set:
             return Constraint.Skip
@@ -61,5 +57,6 @@ def get_piecewise_constant_constraints(
             else:
                 t_prev = time.prev(t)
                 return var[t_prev] - var[t] == 0
+
     pwc_con = Constraint(input_set, time, rule=piecewise_constant_rule)
     return input_set, pwc_con

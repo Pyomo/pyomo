@@ -4,7 +4,7 @@ A panda is about to give birth at the zoo!  Officials anticipate that attendance
 
 [[Image(MaxFlow.png)]]
 
-This is another kind of network flow problem, called a maximum flow problem.  Here, what we're concerned about is the upper bound on the amount of people that can move through the system.  This is a special case of network flow problems, but it's also one of the most relevent and easily applicable kinds of problems.  Unlike previous examples, we're not trying to minimize cost; instead we're trying to find the maximum amount of flow, which is defined by the number of objects moving thrugh the system.  In this case, our flow is how many people can travel from the zoo to Home.
+This is another kind of network flow problem, called a maximum flow problem.  Here, what we're concerned about is the upper bound on the amount of people that can move through the system.  This is a special case of network flow problems, but it's also one of the most relevant and easily applicable kinds of problems.  Unlike previous examples, we're not trying to minimize cost; instead we're trying to find the maximum amount of flow, which is defined by the number of objects moving thrugh the system.  In this case, our flow is how many people can travel from the zoo to Home.
 
 Before we begin the implementation, it's worth briefly covering some key points of a network.  Typically, the locations we're looking at are called "nodes" and the paths between them are "arcs," which should be familiar to anyone who has with graph theory.  Additionally, nodes that have an excess supply are called "sources" while nodes with an excess of demand are "sinks."  All other nodes should have a net change of zero--anything that flows in should also flow out.  In this example, our source is the zoo and our sink is Home, while all the locations between the two should not supply any people and no people should stop at them.
 
@@ -79,7 +79,7 @@ def totalRule(model):
 model.maxFlow = Objective(rule=totalRule, sense=maximize)
 }}}
 
-Another important element of this model is the maximum amount that can travel on each route.  Without that, the max flow problem would be trivial: the answer is always infinity!  To avoid this situation, we need to ensure that the amount traveling along each arc is less than or equal to the upper bound of how much can move along the arc.  One part that deserves note is that we give the constraint the set of arcs as an argument, but in defining the rule we give it two arguements: arcIn and arcOut.  The reason for this is because the set of arcs is itself a set of tuples, so when we feed it in as an argument we're actually supplying two arguements.  The final result will be this:
+Another important element of this model is the maximum amount that can travel on each route.  Without that, the max flow problem would be trivial: the answer is always infinity!  To avoid this situation, we need to ensure that the amount traveling along each arc is less than or equal to the upper bound of how much can move along the arc.  One part that deserves note is that we give the constraint the set of arcs as an argument, but in defining the rule we give it two arguments: arcIn and arcOut.  The reason for this is because the set of arcs is itself a set of tuples, so when we feed it in as an argument we're actually supplying two arguments.  The final result will be this:
 
 {{{
 #!python
@@ -212,7 +212,7 @@ set sources := Zoo;
 set sinks := Home;
 }}}
 
-We also need to define the supply and demand parameters.  These are especially easy because the sets they're over only have one element.  Remember, for this example the supply is abitrarily large and demand is zero so we won't accidentally create an infeasible model.
+We also need to define the supply and demand parameters.  These are especially easy because the sets they're over only have one element.  Remember, for this example the supply is arbitrarily large and demand is zero so we won't accidentally create an infeasible model.
 
 {{{
 param: supply :=
@@ -222,7 +222,7 @@ param: demand :=
 Home 0;
 }}}
 
-Finally, we create the upper bound parameter.  This, is a paramater over tuples, but we must omit the parentheses and commas that usually denote such a tuple.  Otherwise, it's formated the same way as the above parameters.
+Finally, we create the upper bound parameter.  This, is a parameter over tuples, but we must omit the parentheses and commas that usually denote such a tuple.  Otherwise, it's formatted the same way as the above parameters.
 
 {{{
 param: upperBound :=

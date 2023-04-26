@@ -4,6 +4,7 @@ import scont
 
 model = scont.model
 
+
 # @action:
 def transform_gdp(m):
     xfrm = pyo.TransformationFactory('gdp.bigm')

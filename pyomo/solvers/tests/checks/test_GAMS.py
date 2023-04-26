@@ -43,7 +43,6 @@ class GAMSTests(unittest.TestCase):
     )
     def test_check_expr_eval_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.e = Expression(expr=log10(m.x) + 5)
@@ -55,7 +54,6 @@ class GAMSTests(unittest.TestCase):
     @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
     def test_check_expr_eval_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.e = Expression(expr=log10(m.x) + 5)
@@ -69,7 +67,6 @@ class GAMSTests(unittest.TestCase):
     )
     def test_file_removal_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.c = Constraint(expr=m.x >= 10)
@@ -93,7 +90,6 @@ class GAMSTests(unittest.TestCase):
     @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
     def test_file_removal_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.c = Constraint(expr=m.x >= 10)
@@ -120,7 +116,6 @@ class GAMSTests(unittest.TestCase):
     )
     def test_keepfiles_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.c = Constraint(expr=m.x >= 10)
@@ -141,7 +136,6 @@ class GAMSTests(unittest.TestCase):
     @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
     def test_keepfiles_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.c = Constraint(expr=m.x >= 10)
@@ -170,7 +164,6 @@ class GAMSTests(unittest.TestCase):
     )
     def test_fixed_var_sign_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.y = Var()
@@ -192,7 +185,6 @@ class GAMSTests(unittest.TestCase):
     @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
     def test_fixed_var_sign_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.y = Var()
@@ -216,7 +208,6 @@ class GAMSTests(unittest.TestCase):
     )
     def test_long_var_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
-
             m = ConcreteModel()
             x = (
                 m.a23456789012345678901234567890123456789012345678901234567890123
@@ -241,7 +232,6 @@ class GAMSTests(unittest.TestCase):
     @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
     def test_long_var_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-
             m = ConcreteModel()
             x = (
                 m.a23456789012345678901234567890123456789012345678901234567890123
@@ -286,7 +276,6 @@ class GAMSTests(unittest.TestCase):
     )
     def test_options_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.c = Constraint(expr=m.x >= 10)
@@ -301,7 +290,6 @@ class GAMSTests(unittest.TestCase):
     @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
     def test_options_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.c = Constraint(expr=m.x >= 10)

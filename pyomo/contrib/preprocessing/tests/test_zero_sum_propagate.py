@@ -1,7 +1,14 @@
 """Tests the zero sum propagation module."""
 import pyomo.common.unittest as unittest
-from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
-                           Var, NonNegativeReals, NonPositiveReals, Binary)
+from pyomo.environ import (
+    ConcreteModel,
+    Constraint,
+    TransformationFactory,
+    Var,
+    NonNegativeReals,
+    NonPositiveReals,
+    Binary,
+)
 
 
 class TestZeroSumPropagate(unittest.TestCase):

@@ -25,16 +25,18 @@ with high-fidelity and surrogate reactor models under trust region strategies.
 AIChE J. 2021; 67:e17054. https://doi.org/10.1002/aic.17054
 """
 
-from pyomo.environ import (
-    ConcreteModel, Var, ExternalFunction, Objective)
+from pyomo.environ import ConcreteModel, Var, ExternalFunction, Objective
 from pyomo.opt import SolverFactory
+
 
 def ext_fcn(a, b):
     return a**2 + b**2
 
+
 def grad_ext_fcn(args, fixed):
     a, b = args[:2]
-    return [ 2*a, 2*b ]
+    return [2 * a, 2 * b]
+
 
 def create_model():
     m = ConcreteModel()
@@ -47,17 +49,16 @@ def create_model():
 
     @m.Constraint()
     def con(m):
-        return 2*m.x1 + m.x2 + 10.0 == m.EF(m.x1, m.x2)
+        return 2 * m.x1 + m.x2 + 10.0 == m.EF(m.x1, m.x2)
 
-    m.obj = Objective(
-        expr = (m.x1 - 1)**2 + (m.x2 - 3)**2 + m.EF(m.x1, m.x2)**2
-    )
+    m.obj = Objective(expr=(m.x1 - 1) ** 2 + (m.x2 - 3) ** 2 + m.EF(m.x1, m.x2) ** 2)
     return m
+
 
 def basis_rule(component, ef_expr):
     x = ef_expr.arg(0)
     y = ef_expr.arg(1)
-    return x**2 - y # This is the low fidelity model
+    return x**2 - y  # This is the low fidelity model
 
 
 # This problem takes more than the default maximum iterations (50) to solve.
@@ -65,10 +66,9 @@ def basis_rule(component, ef_expr):
 # it took 70 iterations.
 def main():
     m = create_model()
-    optTRF = SolverFactory('trustregion',
-                           maximum_iterations=100,
-                           verbose=True)
+    optTRF = SolverFactory('trustregion', maximum_iterations=100, verbose=True)
     optTRF.solve(m, [m.x1], ext_fcn_surrogate_map_rule=basis_rule)
+
 
 if __name__ == '__main__':
     main()

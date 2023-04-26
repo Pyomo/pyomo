@@ -17,6 +17,7 @@ def x_bounds(m, i):
 
 model.x = pyo.Var(A, bounds=x_bounds)
 
+
 # @obj:
 def obj_rule(model):
     return sum(h[i] * (1 - u[i] / d[i] ** 2) * model.x[i] for i in A)

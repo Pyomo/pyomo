@@ -20,5 +20,6 @@ import logging
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
+
 def load():
     from pyomo.contrib.trustregion.TRF import TrustRegionSolver

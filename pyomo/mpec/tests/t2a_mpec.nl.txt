@@ -26,8 +26,8 @@
 
         3 Constraint Declarations
             bc : Size=1, Index=None, Active=True
-                Key  : Lower : Body             : Upper : Active
-                None :   0.0 : cc.bv + (y + x2) :   0.0 :   True
+                Key  : Lower : Body           : Upper : Active
+                None :   0.0 : y + x2 + cc.bv :   0.0 :   True
             c : Size=1, Index=None, Active=True
                 Key  : Lower : Body  : Upper : Active
                 None :   0.0 : cc.bv :  +Inf :   True

@@ -12,10 +12,13 @@
 from pyomo.core.base import Transformation, TransformationFactory
 import pyomo.gdp.plugins.hull
 
-@TransformationFactory.register('contrib.piecewise.disaggregated_convex_combination',
-                                doc="Convert piecewise-linear model to a GDP "
-                                "to 'Disaggregated Convex Combination' MIP "
-                                "formulation.")
+
+@TransformationFactory.register(
+    'contrib.piecewise.disaggregated_convex_combination',
+    doc="Convert piecewise-linear model to a GDP "
+    "to 'Disaggregated Convex Combination' MIP "
+    "formulation.",
+)
 class DisaggregatedConvexCombinationTransformation(Transformation):
     """
     Converts a model containing PiecewiseLinearFunctions to a an equivalent
@@ -30,6 +33,7 @@ class DisaggregatedConvexCombinationTransformation(Transformation):
         and extensions," Operations Research, vol. 58, no. 2, pp. 305-315,
         2010.
     """
+
     def _apply_to(self, instance, **kwds):
         TransformationFactory('contrib.piecewise.inner_repn_gdp').apply_to(instance)
         TransformationFactory('gdp.hull').apply_to(instance)

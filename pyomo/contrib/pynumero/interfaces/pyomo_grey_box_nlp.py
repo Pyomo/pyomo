@@ -25,14 +25,18 @@ from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.utils import make_lower_triangular_full, CondensedSparseSummation
+from pyomo.contrib.pynumero.interfaces.utils import (
+    make_lower_triangular_full,
+    CondensedSparseSummation,
+)
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.nlp_projections import ProjectedNLP
+
 
 # Todo: make some of the numpy arise not writable from __init__
 class PyomoNLPWithGreyBoxBlocks(NLP):
     def __init__(self, pyomo_model):
-        super(PyomoNLPWithGreyBoxBlocks,self).__init__()
+        super(PyomoNLPWithGreyBoxBlocks, self).__init__()
 
         # get the list of all grey box blocks and build _ExternalGreyBoxAsNLP objects
         greybox_components = []
@@ -47,9 +51,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             # PyomoNLP object to expose any variables on the block to
             # the underlying Pyomo machinery
             for greybox in pyomo_model.component_objects(
-                    ExternalGreyBoxBlock, descend_into=True):
-                greybox.parent_block().reclassify_component_type(
-                    greybox, pyo.Block)
+                ExternalGreyBoxBlock, descend_into=True
+            ):
+                greybox.parent_block().reclassify_component_type(greybox, pyo.Block)
                 greybox_components.append(greybox)
 
             # store the pyomo model
@@ -58,17 +62,13 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             # part of the model only)
             self._pyomo_nlp = PyomoNLP(pyomo_model)
             self._pyomo_model_var_names_to_datas = {
-                v.getname(
-                    fully_qualified=True
-                ): v
+                v.getname(fully_qualified=True): v
                 for v in pyomo_model.component_data_objects(
                     ctype=pyo.Var, descend_into=True
                 )
             }
             self._pyomo_model_constraint_names_to_datas = {
-                c.getname(
-                    fully_qualified=True
-                ): c 
+                c.getname(fully_qualified=True): c
                 for c in pyomo_model.component_data_objects(
                     ctype=pyo.Constraint, descend_into=True
                 )
@@ -78,13 +78,15 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             # Restore the ctypes of the ExternalGreyBoxBlock components
             for greybox in greybox_components:
                 greybox.parent_block().reclassify_component_type(
-                    greybox, ExternalGreyBoxBlock)
+                    greybox, ExternalGreyBoxBlock
+                )
 
         if self._pyomo_nlp.n_primals() == 0:
             raise ValueError(
                 "No variables were found in the Pyomo part of the model."
                 " PyomoGreyBoxModel requires at least one variable"
-                " to be active in a Pyomo objective or constraint")
+                " to be active in a Pyomo objective or constraint"
+            )
 
         # build the list of NLP wrappers for the greybox objects
         greybox_nlps = []
@@ -100,12 +102,15 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     greybox_nlps.append(greybox_nlp)
 
         if fixed_vars:
-            logging.getLogger(__name__).error('PyomoNLPWithGreyBoxBlocks found fixed variables for the'
-                                              ' inputs and/or outputs of an ExternalGreyBoxBlock. This'
-                                              ' is not currently supported. The fixed variables were:\n\t'
-                                              + '\n\t'.join(f.getname(fully_qualified=True) for f in fixed_vars)
-                                              )
-            raise NotImplementedError('PyomoNLPWithGreyBoxBlocks does not support fixed inputs or outputs')
+            logging.getLogger(__name__).error(
+                'PyomoNLPWithGreyBoxBlocks found fixed variables for the'
+                ' inputs and/or outputs of an ExternalGreyBoxBlock. This'
+                ' is not currently supported. The fixed variables were:\n\t'
+                + '\n\t'.join(f.getname(fully_qualified=True) for f in fixed_vars)
+            )
+            raise NotImplementedError(
+                'PyomoNLPWithGreyBoxBlocks does not support fixed inputs or outputs'
+            )
 
         # let's build up the union of all the primal variables names
         # RBP: Why use names here? Why not just ComponentSet of all
@@ -117,14 +122,21 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         # sort the names for consistency run to run
         self._n_primals = len(primals_names)
         self._primals_names = primals_names = sorted(primals_names)
-        self._pyomo_model_var_datas = [self._pyomo_model_var_names_to_datas[nm] for nm in self._primals_names]
+        self._pyomo_model_var_datas = [
+            self._pyomo_model_var_names_to_datas[nm] for nm in self._primals_names
+        ]
 
         # get the names of all the constraints
         self._constraint_names = list(self._pyomo_nlp.constraint_names())
-        self._constraint_datas = [self._pyomo_model_constraint_names_to_datas.get(nm) for nm in self._constraint_names]
+        self._constraint_datas = [
+            self._pyomo_model_constraint_names_to_datas.get(nm)
+            for nm in self._constraint_names
+        ]
         for gbnlp in greybox_nlps:
             self._constraint_names.extend(gbnlp.constraint_names())
-            self._constraint_datas.extend([(gbnlp._block, nm) for nm in gbnlp.constraint_names()])
+            self._constraint_datas.extend(
+                [(gbnlp._block, nm) for nm in gbnlp.constraint_names()]
+            )
         self._n_constraints = len(self._constraint_names)
 
         self._has_hessian_support = True
@@ -134,7 +146,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
         # wrap all the nlp objects with projected nlp objects
         self._pyomo_nlp = ProjectedNLP(self._pyomo_nlp, primals_names)
-        for i,gbnlp in enumerate(greybox_nlps):
+        for i, gbnlp in enumerate(greybox_nlps):
             greybox_nlps[i] = ProjectedNLP(greybox_nlps[i], primals_names)
 
         # build a list of all the nlps in order
@@ -159,33 +171,43 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             self._primals_ub[mask] = np.minimum(self._primals_ub[mask], local[mask])
 
         # all the nan's should be gone (every primal should be initialized)
-        if np.any(np.isnan(self._init_primals)) \
-           or np.any(np.isnan(self._primals_lb)) \
-           or np.any(np.isnan(self._primals_ub)):
-            raise ValueError('NaN values found in initialization of primals or'
-                             ' primals_lb or primals_ub in _PyomoNLPWithGreyBoxBlocks.')
+        if (
+            np.any(np.isnan(self._init_primals))
+            or np.any(np.isnan(self._primals_lb))
+            or np.any(np.isnan(self._primals_ub))
+        ):
+            raise ValueError(
+                'NaN values found in initialization of primals or'
+                ' primals_lb or primals_ub in _PyomoNLPWithGreyBoxBlocks.'
+            )
 
         self._init_duals = BlockVector(len(nlps))
         self._dual_values_blockvector = BlockVector(len(nlps))
         self._constraints_lb = BlockVector(len(nlps))
         self._constraints_ub = BlockVector(len(nlps))
-        for i,nlp in enumerate(nlps):
+        for i, nlp in enumerate(nlps):
             self._init_duals.set_block(i, nlp.init_duals())
             self._constraints_lb.set_block(i, nlp.constraints_lb())
             self._constraints_ub.set_block(i, nlp.constraints_ub())
-            self._dual_values_blockvector.set_block(i, np.nan*np.zeros(nlp.n_constraints()))
+            self._dual_values_blockvector.set_block(
+                i, np.nan * np.zeros(nlp.n_constraints())
+            )
         self._init_duals = self._init_duals.flatten()
         self._constraints_lb = self._constraints_lb.flatten()
         self._constraints_ub = self._constraints_ub.flatten()
         # verify that there are no nans in the init_duals
-        if np.any(np.isnan(self._init_duals)) \
-           or np.any(np.isnan(self._constraints_lb)) \
-           or np.any(np.isnan(self._constraints_ub)):
-            raise ValueError('NaN values found in initialization of duals or'
-                             ' constraints_lb or constraints_ub in'
-                             ' _PyomoNLPWithGreyBoxBlocks.')
+        if (
+            np.any(np.isnan(self._init_duals))
+            or np.any(np.isnan(self._constraints_lb))
+            or np.any(np.isnan(self._constraints_ub))
+        ):
+            raise ValueError(
+                'NaN values found in initialization of duals or'
+                ' constraints_lb or constraints_ub in'
+                ' _PyomoNLPWithGreyBoxBlocks.'
+            )
 
-        self._primal_values = np.nan*np.ones(self._n_primals)
+        self._primal_values = np.nan * np.ones(self._n_primals)
         # set the values of the primals and duals to make sure initial
         # values get all the way through to the underlying models
         self.set_primals(self._init_primals)
@@ -208,12 +230,12 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         scaling_suffix = pyomo_model.component('scaling_factor')
         if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             need_scaling = True
-            for i,v in enumerate(self._pyomo_model_var_datas):
+            for i, v in enumerate(self._pyomo_model_var_datas):
                 if v in scaling_suffix:
                     self._primals_scaling[i] = scaling_suffix[v]
 
         self._constraints_scaling = BlockVector(len(nlps))
-        for i,nlp in enumerate(nlps):
+        for i, nlp in enumerate(nlps):
             local_constraints_scaling = nlp.get_constraints_scaling()
             if local_constraints_scaling is None:
                 self._constraints_scaling.set_block(i, np.ones(nlp.n_constraints()))
@@ -307,7 +329,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     # overloaded from NLP
     def set_duals(self, duals):
         self._dual_values_blockvector.copyfrom(duals)
-        for i,nlp in enumerate(self._nlps):
+        for i, nlp in enumerate(self._nlps):
             nlp.set_duals(self._dual_values_blockvector.get_block(i))
 
     # overloaded from NLP
@@ -349,7 +371,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     def evaluate_constraints(self, out=None):
         # todo: implement the "out" version more efficiently
         ret = BlockVector(len(self._nlps))
-        for i,nlp in enumerate(self._nlps):
+        for i, nlp in enumerate(self._nlps):
             ret.set_block(i, nlp.evaluate_constraints())
 
         if out is not None:
@@ -360,8 +382,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
     # overloaded from NLP
     def evaluate_jacobian(self, out=None):
-        ret = BlockMatrix(len(self._nlps),1)
-        for i,nlp in enumerate(self._nlps):
+        ret = BlockMatrix(len(self._nlps), 1)
+        for i, nlp in enumerate(self._nlps):
             ret.set_block(i, 0, nlp.evaluate_jacobian())
         ret = ret.tocoo()
 
@@ -393,13 +415,12 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     def load_state_into_pyomo(self, bound_multipliers=None):
         # load the values of the primals into the pyomo
         primals = self.get_primals()
-        for value,vardata in zip(primals, self._pyomo_model_var_datas):
+        for value, vardata in zip(primals, self._pyomo_model_var_datas):
             vardata.set_value(value)
 
         # get the active suffixes
         m = self._pyomo_model
-        model_suffixes = dict(
-            pyo.suffix.active_import_suffix_generator(m))
+        model_suffixes = dict(pyo.suffix.active_import_suffix_generator(m))
 
         # we need to correct the sign of the multipliers based on whether or
         # not we are minimizing or maximizing - this is done in the ASL interface
@@ -413,28 +434,34 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         if 'dual' in model_suffixes:
             model_suffixes['dual'].clear()
             dual_values = self._dual_values_blockvector.flatten()
-            for value,t in zip(dual_values, self._constraint_datas):
+            for value, t in zip(dual_values, self._constraint_datas):
                 if type(t) is tuple:
-                    model_suffixes['dual'].setdefault(t[0], {})[t[1]] = -obj_sign*value
+                    model_suffixes['dual'].setdefault(t[0], {})[t[1]] = (
+                        -obj_sign * value
+                    )
                 else:
                     # t is a constraint data
-                    model_suffixes['dual'][t] = -obj_sign*value
+                    model_suffixes['dual'][t] = -obj_sign * value
 
         if 'ipopt_zL_out' in model_suffixes:
             model_suffixes['ipopt_zL_out'].clear()
             if bound_multipliers is not None:
                 model_suffixes['ipopt_zL_out'].update(
-                    zip(self._pyomo_model_var_datas, obj_sign*bound_multipliers[0]))
+                    zip(self._pyomo_model_var_datas, obj_sign * bound_multipliers[0])
+                )
         if 'ipopt_zU_out' in model_suffixes:
             model_suffixes['ipopt_zU_out'].clear()
             if bound_multipliers is not None:
                 model_suffixes['ipopt_zU_out'].update(
-                    zip(self._pyomo_model_var_datas, -obj_sign*bound_multipliers[1]))
+                    zip(self._pyomo_model_var_datas, -obj_sign * bound_multipliers[1])
+                )
+
 
 def _default_if_none(value, default):
     if value is None:
         return default
     return value
+
 
 class _ExternalGreyBoxAsNLP(NLP):
     """
@@ -443,6 +470,7 @@ class _ExternalGreyBoxAsNLP(NLP):
     the ExternalGreyBoxModel supports constraints only (no objective),
     so some of the methods are not appropriate and raise exceptions
     """
+
     def __init__(self, external_grey_box_block):
         self._block = external_grey_box_block
         self._ex_model = external_grey_box_block.get_external_model()
@@ -452,68 +480,69 @@ class _ExternalGreyBoxAsNLP(NLP):
         n_outputs = len(self._block.outputs)
         assert n_outputs == self._ex_model.n_outputs()
 
-        if self._ex_model.n_outputs() == 0 and \
-           self._ex_model.n_equality_constraints() == 0:
+        if (
+            self._ex_model.n_outputs() == 0
+            and self._ex_model.n_equality_constraints() == 0
+        ):
             raise ValueError(
                 'ExternalGreyBoxModel has no equality constraints '
                 'or outputs. To use _ExternalGreyBoxAsNLP, it must'
-                ' have at least one or both.')
+                ' have at least one or both.'
+            )
 
         # create the list of primals and constraint names
         # primals will be ordered inputs, followed by outputs
         self._primals_names = [
-            self._block.inputs[k].getname(
-                fully_qualified=True
-            ) for k in self._block.inputs
+            self._block.inputs[k].getname(fully_qualified=True)
+            for k in self._block.inputs
         ]
         self._primals_names.extend(
-            self._block.outputs[k].getname(
-                fully_qualified=True
-            )
+            self._block.outputs[k].getname(fully_qualified=True)
             for k in self._block.outputs
         )
         n_primals = len(self._primals_names)
 
-        prefix = self._block.getname(
-            fully_qualified=True
-        )
-        self._constraint_names = \
-            ['{}.{}'.format(prefix, nm) \
-             for nm in self._ex_model.equality_constraint_names()]
+        prefix = self._block.getname(fully_qualified=True)
+        self._constraint_names = [
+            '{}.{}'.format(prefix, nm)
+            for nm in self._ex_model.equality_constraint_names()
+        ]
         output_var_names = [
-            self._block.outputs[k].getname(
-                fully_qualified=False
-            ) for k in self._block.outputs
+            self._block.outputs[k].getname(fully_qualified=False)
+            for k in self._block.outputs
         ]
         self._constraint_names.extend(
-            ['{}.output_constraints[{}]'.format(prefix, nm) \
-             for nm in self._ex_model.output_names()])
+            [
+                '{}.output_constraints[{}]'.format(prefix, nm)
+                for nm in self._ex_model.output_names()
+            ]
+        )
 
         # create the numpy arrays of bounds on the primals
         self._primals_lb = BlockVector(2)
         self._primals_ub = BlockVector(2)
         self._init_primals = BlockVector(2)
-        lb = np.nan*np.zeros(n_inputs)
-        ub = np.nan*np.zeros(n_inputs)
-        init_primals = np.nan*np.zeros(n_inputs)
-        for i,k in enumerate(self._block.inputs):
+        lb = np.nan * np.zeros(n_inputs)
+        ub = np.nan * np.zeros(n_inputs)
+        init_primals = np.nan * np.zeros(n_inputs)
+        for i, k in enumerate(self._block.inputs):
             lb[i] = _default_if_none(self._block.inputs[k].lb, -np.inf)
             ub[i] = _default_if_none(self._block.inputs[k].ub, np.inf)
             init_primals[i] = _default_if_none(self._block.inputs[k].value, 0.0)
-        self._primals_lb.set_block(0,lb)
-        self._primals_ub.set_block(0,ub)
+        self._primals_lb.set_block(0, lb)
+        self._primals_ub.set_block(0, ub)
         self._init_primals.set_block(0, init_primals)
 
-        lb = np.nan*np.zeros(n_outputs)
-        ub = np.nan*np.zeros(n_outputs)
-        init_primals = np.nan*np.zeros(n_outputs)
-        for i,k in enumerate(self._block.outputs):
+        lb = np.nan * np.zeros(n_outputs)
+        ub = np.nan * np.zeros(n_outputs)
+        init_primals = np.nan * np.zeros(n_outputs)
+        for i, k in enumerate(self._block.outputs):
             lb[i] = _default_if_none(self._block.outputs[k].lb, -np.inf)
             ub[i] = _default_if_none(self._block.outputs[k].ub, np.inf)
             init_primals[i] = _default_if_none(self._block.outputs[k].value, 0.0)
-        self._primals_lb.set_block(1,lb)
-        self._primals_ub.set_block(1,ub)
-        self._init_primals.set_block(1,init_primals)
+        self._primals_lb.set_block(1, lb)
+        self._primals_ub.set_block(1, ub)
+        self._init_primals.set_block(1, init_primals)
         self._primals_lb = self._primals_lb.flatten()
         self._primals_ub = self._primals_ub.flatten()
         self._init_primals = self._init_primals.flatten()
@@ -538,11 +567,13 @@ class _ExternalGreyBoxAsNLP(NLP):
 
         # do we have hessian support
         self._has_hessian_support = True
-        if self._ex_model.n_equality_constraints() > 0 \
-           and not hasattr(self._ex_model, 'evaluate_hessian_equality_constraints'):
+        if self._ex_model.n_equality_constraints() > 0 and not hasattr(
+            self._ex_model, 'evaluate_hessian_equality_constraints'
+        ):
             self._has_hessian_support = False
-        if self._ex_model.n_outputs() > 0 \
-           and not hasattr(self._ex_model, 'evaluate_hessian_outputs'):
+        if self._ex_model.n_outputs() > 0 and not hasattr(
+            self._ex_model, 'evaluate_hessian_outputs'
+        ):
             self._has_hessian_support = False
 
         self._nnz_jacobian = None
@@ -608,7 +639,7 @@ class _ExternalGreyBoxAsNLP(NLP):
         self._cache_invalidate_primals()
         assert len(primals) == self.n_primals()
         np.copyto(self._primal_values, primals)
-        self._ex_model.set_input_values(primals[:self._ex_model.n_inputs()])
+        self._ex_model.set_input_values(primals[: self._ex_model.n_inputs()])
 
     def get_primals(self):
         return np.copy(self._primal_values)
@@ -622,12 +653,12 @@ class _ExternalGreyBoxAsNLP(NLP):
         np.copyto(self._dual_values, duals)
         if self._ex_model.n_equality_constraints() > 0:
             self._ex_model.set_equality_constraint_multipliers(
-                self._dual_values[:self._ex_model.n_equality_constraints()]
-                )
+                self._dual_values[: self._ex_model.n_equality_constraints()]
+            )
         if self._ex_model.n_outputs() > 0:
             self._ex_model.set_output_constraint_multipliers(
-                self._dual_values[self._ex_model.n_equality_constraints():]
-                )
+                self._dual_values[self._ex_model.n_equality_constraints() :]
+            )
 
     def get_duals(self):
         return np.copy(self._dual_values)
@@ -646,7 +677,7 @@ class _ExternalGreyBoxAsNLP(NLP):
             '_ExternalGreyBoxAsNLP does not support scaling of primals '
             'directly. This should be handled at a higher level using '
             'suffixes on the Pyomo variables.'
-            )
+        )
 
     def get_constraints_scaling(self):
         # todo: would this be better with block vectors
@@ -655,12 +686,12 @@ class _ExternalGreyBoxAsNLP(NLP):
         if self._ex_model.n_equality_constraints() > 0:
             eq_scaling = self._ex_model.get_equality_constraint_scaling_factors()
             if eq_scaling is not None:
-                scaling[:self._ex_model.n_equality_constraints()] = eq_scaling
+                scaling[: self._ex_model.n_equality_constraints()] = eq_scaling
                 scaled = True
         if self._ex_model.n_outputs() > 0:
             output_scaling = self._ex_model.get_output_constraint_scaling_factors()
             if output_scaling is not None:
-                scaling[self._ex_model.n_equality_constraints():] = output_scaling
+                scaling[self._ex_model.n_equality_constraints() :] = output_scaling
                 scaled = True
         if scaled:
             return scaling
@@ -682,10 +713,10 @@ class _ExternalGreyBoxAsNLP(NLP):
             else:
                 c.set_block(0, np.zeros(0, dtype=np.float64))
             if self._ex_model.n_outputs() > 0:
-                output_values = self._primal_values[self._ex_model.n_inputs():]
+                output_values = self._primal_values[self._ex_model.n_inputs() :]
                 c.set_block(1, self._ex_model.evaluate_outputs() - output_values)
             else:
-                c.set_block(1,np.zeros(0, dtype=np.float64))
+                c.set_block(1, np.zeros(0, dtype=np.float64))
             self._cached_constraint_residuals = c.flatten()
 
     def evaluate_constraints(self, out=None):
@@ -699,17 +730,19 @@ class _ExternalGreyBoxAsNLP(NLP):
 
     def _evaluate_jacobian_if_necessary_and_cache(self):
         if self._cached_jacobian is None:
-            jac = BlockMatrix(2,2)
-            jac.set_row_size(0,self._ex_model.n_equality_constraints())
-            jac.set_row_size(1,self._ex_model.n_outputs())
-            jac.set_col_size(0,self._ex_model.n_inputs())
-            jac.set_col_size(1,self._ex_model.n_outputs())
-            
+            jac = BlockMatrix(2, 2)
+            jac.set_row_size(0, self._ex_model.n_equality_constraints())
+            jac.set_row_size(1, self._ex_model.n_outputs())
+            jac.set_col_size(0, self._ex_model.n_inputs())
+            jac.set_col_size(1, self._ex_model.n_outputs())
+
             if self._ex_model.n_equality_constraints() > 0:
-                jac.set_block(0,0,self._ex_model.evaluate_jacobian_equality_constraints())
+                jac.set_block(
+                    0, 0, self._ex_model.evaluate_jacobian_equality_constraints()
+                )
             if self._ex_model.n_outputs() > 0:
-                jac.set_block(1,0,self._ex_model.evaluate_jacobian_outputs())
-                jac.set_block(1,1,-1.0*identity(self._ex_model.n_outputs()))
+                jac.set_block(1, 0, self._ex_model.evaluate_jacobian_outputs())
+                jac.set_block(1, 1, -1.0 * identity(self._ex_model.n_outputs()))
 
             self._cached_jacobian = jac.tocoo()
 
@@ -721,16 +754,16 @@ class _ExternalGreyBoxAsNLP(NLP):
             assert np.array_equal(jac.col, out.col)
             np.copyto(out.data, jac.data)
             return out
-        
+
         return self._cached_jacobian.copy()
 
     def _evaluate_hessian_if_necessary_and_cache(self):
         if self._cached_hessian is None:
-            hess = BlockMatrix(2,2)
-            hess.set_row_size(0,self._ex_model.n_inputs())
-            hess.set_row_size(1,self._ex_model.n_outputs())
-            hess.set_col_size(0,self._ex_model.n_inputs())
-            hess.set_col_size(1,self._ex_model.n_outputs())
+            hess = BlockMatrix(2, 2)
+            hess.set_row_size(0, self._ex_model.n_inputs())
+            hess.set_row_size(1, self._ex_model.n_outputs())
+            hess.set_col_size(0, self._ex_model.n_inputs())
+            hess.set_col_size(1, self._ex_model.n_outputs())
 
             # get the hessian w.r.t. the equality constraints
             eq_hess = None
@@ -738,8 +771,10 @@ class _ExternalGreyBoxAsNLP(NLP):
                 eq_hess = self._ex_model.evaluate_hessian_equality_constraints()
                 # let's check that it is lower triangular
                 if np.any(eq_hess.row < eq_hess.col):
-                    raise ValueError('ExternalGreyBoxModel must return lower '
-                                     'triangular portion of the Hessian only')
+                    raise ValueError(
+                        'ExternalGreyBoxModel must return lower '
+                        'triangular portion of the Hessian only'
+                    )
 
                 eq_hess = make_lower_triangular_full(eq_hess)
 
@@ -748,8 +783,10 @@ class _ExternalGreyBoxAsNLP(NLP):
                 output_hess = self._ex_model.evaluate_hessian_outputs()
                 # let's check that it is lower triangular
                 if np.any(output_hess.row < output_hess.col):
-                    raise ValueError('ExternalGreyBoxModel must return lower '
-                                     'triangular portion of the Hessian only')
+                    raise ValueError(
+                        'ExternalGreyBoxModel must return lower '
+                        'triangular portion of the Hessian only'
+                    )
 
                 output_hess = make_lower_triangular_full(output_hess)
 
@@ -761,14 +798,14 @@ class _ExternalGreyBoxAsNLP(NLP):
                 data = np.concatenate((eq_hess.data, output_hess.data))
 
                 assert eq_hess.shape == output_hess.shape
-                input_hess = coo_matrix( (data, (row,col)), shape=eq_hess.shape)
+                input_hess = coo_matrix((data, (row, col)), shape=eq_hess.shape)
             elif eq_hess is not None:
                 input_hess = eq_hess
             elif output_hess is not None:
                 input_hess = output_hess
-            assert input_hess is not None # need equality or outputs or both
+            assert input_hess is not None  # need equality or outputs or both
 
-            hess.set_block(0,0,input_hess)
+            hess.set_block(0, 0, input_hess)
             self._cached_hessian = hess.tocoo()
 
     def has_hessian_support(self):
@@ -779,7 +816,7 @@ class _ExternalGreyBoxAsNLP(NLP):
             raise NotImplementedError(
                 'Hessians not supported for all of the external grey box'
                 ' models. Therefore, Hessians are not supported overall.'
-                )
+            )
 
         self._evaluate_hessian_if_necessary_and_cache()
         if out is not None:
@@ -788,7 +825,7 @@ class _ExternalGreyBoxAsNLP(NLP):
             assert np.array_equal(hess.col, out.col)
             np.copyto(out.data, hess.data)
             return out
-        
+
         return self._cached_hessian.copy()
 
     def report_solver_status(self, status_code, status_message):

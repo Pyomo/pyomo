@@ -17,10 +17,7 @@ from pyomo.core.base import Block, Reference
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.block import SubclassOf
 from pyomo.core.base.set import SetProduct
-from pyomo.core.base.indexed_component import (
-    UnindexedComponent_set,
-    normalize_index,
-)
+from pyomo.core.base.indexed_component import UnindexedComponent_set, normalize_index
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from collections import OrderedDict
@@ -37,7 +34,7 @@ def get_slice_for_set(s):
             if s.dimen is not None:
                 # We will arrive here and fail for sets of dimension
                 # UnknownSetDimen.
-                return (slice(None),)*s.dimen
+                return (slice(None),) * s.dimen
             else:
                 return (Ellipsis,)
     else:
@@ -47,11 +44,12 @@ def get_slice_for_set(s):
 
 
 class _NotAnIndex(object):
-    """ 
-    `None` is a valid index, so we use a dummy class to 
+    """
+    `None` is a valid index, so we use a dummy class to
     denote a slot that needs to get filled with indices
     from our product.
     """
+
     pass
 
 
@@ -78,7 +76,7 @@ def _fill_indices(filled_index, index):
 
 
 def _fill_indices_from_product(partial_index_list, product):
-    """ 
+    """
     `partial_index_list` is a list of indices, each corresponding to a
     set. If an entry in `partial_index_list` is `_NotAnIndex`, that
     slot will get filled in by an entry from `product`.
@@ -129,9 +127,7 @@ def _fill_indices_from_product(partial_index_list, product):
         normalize_index.flatten = _normalize_index_flatten
 
 
-def slice_component_along_sets(
-    component, sets, context_slice=None, normalize=None,
-):
+def slice_component_along_sets(component, sets, context_slice=None, normalize=None):
     """This function generates all possible slices of the provided component
     along the provided sets. That is, it will iterate over the component's
     other indexing sets and, for each index, yield a slice along the
@@ -161,8 +157,7 @@ def slice_component_along_sets(
     """
     set_set = ComponentSet(sets)
     subsets = list(component.index_set().subsets())
-    temp_idx = [get_slice_for_set(s) if s in set_set else _NotAnIndex
-            for s in subsets]
+    temp_idx = [get_slice_for_set(s) if s in set_set else _NotAnIndex for s in subsets]
     other_sets = [s for s in subsets if s not in set_set]
 
     if context_slice is None:
@@ -184,10 +179,7 @@ def slice_component_along_sets(
             # singleton to work in the embedded call to _fill_indices.
             cross_prod = [tuple()]
 
-        for prod_index, new_index in _fill_indices_from_product(
-                temp_idx,
-                cross_prod,
-                ):
+        for prod_index, new_index in _fill_indices_from_product(temp_idx, cross_prod):
             try:
                 if normalize_index.flatten:
                     # This index is always normalized if normalize_index.flatten
@@ -210,14 +202,13 @@ def slice_component_along_sets(
                     # We enter this loop even if no sets need slicing.
                     temp_slice = c_slice.duplicate()
                     next(iter(temp_slice))
-                if ((normalize is None and normalize_index.flatten)
-                        or normalize):
+                if (normalize is None and normalize_index.flatten) or normalize:
                     # Most users probably want this index to be normalized,
                     # so they can more conveniently use it as a key in a
                     # mapping. (E.g. they will get "a" as opposed to ("a",).)
                     # However, to use it in the calling routine
                     # generate_sliced_components, we need this index to not
-                    # have been normalized, so that indices are tuples, 
+                    # have been normalized, so that indices are tuples,
                     # partitioned according to their "factor sets."
                     # This is why we allow the argument normalize=False to
                     # override normalize_index.flatten.
@@ -240,17 +231,11 @@ def slice_component_along_sets(
 
 
 def generate_sliced_components(
-    b,
-    index_stack,
-    slice_,
-    sets,
-    ctype,
-    index_map,
-    active=None,
+    b, index_stack, slice_, sets, ctype, index_map, active=None
 ):
     """Recursively generate slices of the specified ctype along the
     specified sets
-    
+
     Parameters
     ----------
 
@@ -258,7 +243,7 @@ def generate_sliced_components(
         Block whose components will be sliced
 
     index_stack: list
-        Sets above ``b`` in the block hierachy, including on its parent
+        Sets above ``b`` in the block hierarchy, including on its parent
         component, that have been sliced. This is necessary to return the
         sets that have been sliced.
 
@@ -284,7 +269,7 @@ def generate_sliced_components(
 
     Yields
     ------
-    
+
     Tuple of Sets and an IndexedComponent_slice or ComponentData
         The sets indexing the returned component or slice. If the component
         is indexed, an IndexedComponent_slice is returned. Otherwise, a
@@ -337,9 +322,10 @@ def generate_sliced_components(
                 # or (b) we have not sliced and data object activity matches
                 or (not sliced_sets and new_slice.active == c_active)
                 # or (c) we did slice and *any* data object activity matches
-                or (sliced_sets and any(
-                    data.active == c_active for data in new_slice.duplicate()
-                ))
+                or (
+                    sliced_sets
+                    and any(data.active == c_active for data in new_slice.duplicate())
+                )
             ):
                 yield sliced_sets, new_slice
 
@@ -578,9 +564,7 @@ def flatten_dae_components(model, time, ctype, indices=None, active=None):
     for sets, comps in zip(sets_list, comps_list):
         if len(sets) == 1 and sets[0] is time:
             dae_comps = comps
-        elif len(sets) == 0 or (
-            len(sets) == 1 and sets[0] is UnindexedComponent_set
-        ):
+        elif len(sets) == 0 or (len(sets) == 1 and sets[0] is UnindexedComponent_set):
             scalar_comps = comps
         else:
             raise RuntimeError(

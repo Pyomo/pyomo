@@ -14,6 +14,7 @@ __all__ = ['add_subparser', 'get_parser', 'subparsers']
 import argparse
 import sys
 
+
 #
 # Sort sub_parser names, since these are inserted throughout Pyomo
 #
@@ -107,7 +108,7 @@ def add_subparser(name, **args):
 
 def get_parser():
     """
-    Return the parser used by the 'pyomo' commmand.
+    Return the parser used by the 'pyomo' command.
     """
     global _pyomo_parser
     if _pyomo_parser is None:

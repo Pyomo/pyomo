@@ -38,7 +38,7 @@ Parameter estimation via `Parmest <https://pyomo.readthedocs.io/en/stable/contri
 If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
 Otherwise, Pyomo.DoE recommends the best next set of experimental conditions to generate new data.
 
-Below is an overview of the type of optimization models Pyomo.DoE can accomodate:
+Below is an overview of the type of optimization models Pyomo.DoE can accommodate:
 
 * Pyomo.DoE is suitable for optimization models of **continuous** variables
 * Pyomo.DoE can handle **equality constraints** defining state variables
@@ -78,7 +78,7 @@ where:
     * Create model function should take scenarios as the first argument of this function.
     * Design variables are defined with and only with a time index.
 
-Pyomo.DoE solves the following DAE-constrainted optimization problem:
+Pyomo.DoE solves the following DAE-constrained optimization problem:
 
 .. math::
     \begin{equation}
@@ -405,7 +405,7 @@ Step 5: Gradient-based optimization
 
 Pyomo.DoE formulates a two-stage stochastic_program to compute A- and D-optimality designs.
 
-This function solves twice to ensure reliable intialization: first, Pyomo.DoE solves a square problem. Next, Pyomo.DoE unfixes the design variables (adds degrees of freedom) and solves again.
+This function solves twice to ensure reliable initialization: first, Pyomo.DoE solves a square problem. Next, Pyomo.DoE unfixes the design variables (adds degrees of freedom) and solves again.
 
 .. doctest::
 

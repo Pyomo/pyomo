@@ -5,9 +5,18 @@ import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentSet
 from pyomo.common.modeling import unique_component_name
-from pyomo.core.base import (Constraint, Var, ConstraintList,
-                             Objective, minimize, Expression,
-                             ConcreteModel, maximize, Block, Param)
+from pyomo.core.base import (
+    Constraint,
+    Var,
+    ConstraintList,
+    Objective,
+    minimize,
+    Expression,
+    ConcreteModel,
+    maximize,
+    Block,
+    Param,
+)
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
@@ -15,7 +24,11 @@ from pyomo.core.expr import value
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, replace_expressions
+from pyomo.core.expr.visitor import (
+    identify_variables,
+    identify_mutable_parameters,
+    replace_expressions,
+)
 from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.vars_from_expressions import get_vars_from_components
@@ -39,7 +52,9 @@ ABS_CON_CHECK_FEAS_TOL = 1e-5
 TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
 
 
-'''Code borrowed from gdpopt: time_code, get_main_ellapsed_time, a_logger.'''
+'''Code borrowed from gdpopt: time_code, get_main_elapsed_time, a_logger.'''
+
+
 @contextmanager
 def time_code(timing_data_obj, code_block_name, is_main_timer=False):
     """Starts timer at entry, stores elapsed time at exit
@@ -64,7 +79,7 @@ def get_main_elapsed_time(timing_data_obj):
         return current_time - timing_data_obj.main_timer_start_time
     except AttributeError as e:
         if 'main_timer_start_time' in str(e):
-           raise AttributeError(
+            raise AttributeError(
                 "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
             )
 
@@ -114,9 +129,7 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
         by an inordinate margin.)
     """
     if config.time_limit is not None:
-        time_remaining = (
-            config.time_limit - get_main_elapsed_time(timing_data_obj)
-        )
+        time_remaining = config.time_limit - get_main_elapsed_time(timing_data_obj)
         if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
             original_max_time_setting = solver.options["add_options"]
             custom_setting_present = "add_options" in solver.options
@@ -157,11 +170,8 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
 
 
 def revert_solver_max_time_adjustment(
-        solver,
-        original_max_time_setting,
-        custom_setting_present,
-        config,
-        ):
+    solver, original_max_time_setting, custom_setting_present, config
+):
     """
     Revert solver `options` attribute to its state prior to a
     time limit adjustment performed via
@@ -225,11 +235,17 @@ def ValidEnum(enum_class):
     '''
     Python 3 dependent format string
     '''
+
     def fcn(obj):
         if obj not in enum_class:
-            raise ValueError("Expected an {0} object, "
-                             "instead recieved {1}".format(enum_class.__name__, obj.__class__.__name__))
+            raise ValueError(
+                "Expected an {0} object, "
+                "instead received {1}".format(
+                    enum_class.__name__, obj.__class__.__name__
+                )
+            )
         return obj
+
     return fcn
 
 
@@ -297,10 +313,7 @@ def model_is_valid(model):
     Assess whether model is valid on basis of the number of active
     Objectives. A valid model must contain exactly one active Objective.
     """
-    return (
-        len(list(model.component_data_objects(Objective, active=True)))
-        == 1
-    )
+    return len(list(model.component_data_objects(Objective, active=True))) == 1
 
 
 def turn_bounds_to_constraints(variable, model, config=None):
@@ -329,8 +342,7 @@ def turn_bounds_to_constraints(variable, model, config=None):
     for arg in lb_args:
         if arg is not None:
             name = unique_component_name(
-                model,
-                variable.name + f"_lower_bound_con_{count}",
+                model, variable.name + f"_lower_bound_con_{count}"
             )
             model.add_component(name, Constraint(expr=arg - variable <= 0))
             count += 1
@@ -340,8 +352,7 @@ def turn_bounds_to_constraints(variable, model, config=None):
     for arg in ub_args:
         if arg is not None:
             name = unique_component_name(
-                model,
-                variable.name + f"_upper_bound_con_{count}",
+                model, variable.name + f"_upper_bound_con_{count}"
             )
             model.add_component(name, Constraint(expr=variable - arg <= 0))
             count += 1
@@ -375,10 +386,7 @@ def get_time_from_solver(results):
     solver_name = getattr(results.solver, "name", None)
 
     # is this sufficient to confirm GAMS solver used?
-    from_gams = (
-        solver_name is not None
-        and str(solver_name).startswith("GAMS ")
-    )
+    from_gams = solver_name is not None and str(solver_name).startswith("GAMS ")
     time_attr_name = "user_time" if from_gams else "time"
     for attr_name in [time_attr_name, TIC_TOC_SOLVE_TIME_ATTR]:
         solve_time = getattr(results.solver, attr_name, None)
@@ -400,17 +408,25 @@ def validate_uncertainty_set(config):
 
     # === Non-zero number of uncertain parameters
     if len(uncertain_params) == 0:
-        raise AttributeError("Must provide uncertain params, uncertain_params list length is 0.")
+        raise AttributeError(
+            "Must provide uncertain params, uncertain_params list length is 0."
+        )
     # === No duplicate parameters
     if len(uncertain_params) != len(ComponentSet(uncertain_params)):
         raise AttributeError("No duplicates allowed for uncertain param objects.")
     # === Ensure nominal point is in the set
-    if not config.uncertainty_set.point_in_set(point=config.nominal_uncertain_param_vals):
-        raise AttributeError("Nominal point for uncertain parameters must be in the uncertainty set.")
+    if not config.uncertainty_set.point_in_set(
+        point=config.nominal_uncertain_param_vals
+    ):
+        raise AttributeError(
+            "Nominal point for uncertain parameters must be in the uncertainty set."
+        )
     # === Check set validity via boundedness and non-emptiness
     if not config.uncertainty_set.is_valid(config=config):
-        raise AttributeError("Invalid uncertainty set detected. Check the uncertainty set object to "
-                             "ensure non-emptiness and boundedness.")
+        raise AttributeError(
+            "Invalid uncertainty set detected. Check the uncertainty set object to "
+            "ensure non-emptiness and boundedness."
+        )
 
     return
 
@@ -428,20 +444,32 @@ def add_bounds_for_uncertain_parameters(model, config):
     uncertain_param_bounds = []
     bounding_model = ConcreteModel()
     bounding_model.util = Block()
-    bounding_model.util.uncertain_param_vars = IndexedVar(model.util.uncertain_param_vars.index_set())
+    bounding_model.util.uncertain_param_vars = IndexedVar(
+        model.util.uncertain_param_vars.index_set()
+    )
     for tup in model.util.uncertain_param_vars.items():
         bounding_model.util.uncertain_param_vars[tup[0]].set_value(
-            tup[1].value, skip_validation=True)
+            tup[1].value, skip_validation=True
+        )
 
-    bounding_model.add_component("uncertainty_set_constraint",
-                                 config.uncertainty_set.set_as_constraint(
-                                     uncertain_params=bounding_model.util.uncertain_param_vars, model=bounding_model,
-                                     config=config
-                                 ))
+    bounding_model.add_component(
+        "uncertainty_set_constraint",
+        config.uncertainty_set.set_as_constraint(
+            uncertain_params=bounding_model.util.uncertain_param_vars,
+            model=bounding_model,
+            config=config,
+        ),
+    )
 
-    for idx, param in enumerate(list(bounding_model.util.uncertain_param_vars.values())):
-        bounding_model.add_component("lb_obj_" + str(idx), Objective(expr=param, sense=minimize))
-        bounding_model.add_component("ub_obj_" + str(idx), Objective(expr=param, sense=maximize))
+    for idx, param in enumerate(
+        list(bounding_model.util.uncertain_param_vars.values())
+    ):
+        bounding_model.add_component(
+            "lb_obj_" + str(idx), Objective(expr=param, sense=minimize)
+        )
+        bounding_model.add_component(
+            "ub_obj_" + str(idx), Objective(expr=param, sense=maximize)
+        )
 
     for o in bounding_model.component_data_objects(Objective):
         o.deactivate()
@@ -485,8 +513,9 @@ def transform_to_standard_form(model):
     # Note: because we will be adding / modifying the number of
     # constraints, we want to resolve the generator to a list before
     # starting.
-    cons = list(model.component_data_objects(
-        Constraint, descend_into=True, active=True))
+    cons = list(
+        model.component_data_objects(Constraint, descend_into=True, active=True)
+    )
     for con in cons:
         if not con.equality:
             has_lb = con.lower is not None
@@ -500,8 +529,7 @@ def transform_to_standard_form(model):
                     # range inequality; split into two Constraints.
                     uniq_name = unique_component_name(model, con.name + '_lb')
                     model.add_component(
-                        uniq_name,
-                        Constraint(expr=con.lower - con.body <= 0)
+                        uniq_name, Constraint(expr=con.lower - con.body <= 0)
                     )
                     con.set_value(con.body - con.upper <= 0)
             elif has_lb:
@@ -529,8 +557,7 @@ def get_vars_from_component(block, ctype):
 
     """
 
-    return get_vars_from_components(block, ctype, active=True,
-                                    descend_into=True)
+    return get_vars_from_components(block, ctype, active=True, descend_into=True)
 
 
 def replace_uncertain_bounds_with_constraints(model, uncertain_params):
@@ -548,9 +575,10 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
 
     # component for explicit inequality constraints
     uncertain_var_bound_constrs = ConstraintList()
-    model.add_component(unique_component_name(model,
-                                              'uncertain_var_bound_cons'),
-                        uncertain_var_bound_constrs)
+    model.add_component(
+        unique_component_name(model, 'uncertain_var_bound_cons'),
+        uncertain_var_bound_constrs,
+    )
 
     # get all variables in active objective and constraint expression(s)
     vars_in_cons = ComponentSet(get_vars_from_component(model, Constraint))
@@ -600,52 +628,81 @@ def validate_kwarg_inputs(model, config):
 
     if not config.first_stage_variables and not config.second_stage_variables:
         # Must have non-zero DOF
-        raise ValueError("first_stage_variables and "
-                         "second_stage_variables cannot both be empty lists.")
+        raise ValueError(
+            "first_stage_variables and "
+            "second_stage_variables cannot both be empty lists."
+        )
 
-    if ComponentSet(first_stage_variables) != ComponentSet(config.first_stage_variables):
-        raise ValueError("All elements in first_stage_variables must be Var members of the model object.")
+    if ComponentSet(first_stage_variables) != ComponentSet(
+        config.first_stage_variables
+    ):
+        raise ValueError(
+            "All elements in first_stage_variables must be Var members of the model object."
+        )
 
-    if ComponentSet(second_stage_variables) != ComponentSet(config.second_stage_variables):
-        raise ValueError("All elements in second_stage_variables must be Var members of the model object.")
+    if ComponentSet(second_stage_variables) != ComponentSet(
+        config.second_stage_variables
+    ):
+        raise ValueError(
+            "All elements in second_stage_variables must be Var members of the model object."
+        )
 
-    if any(v in ComponentSet(second_stage_variables) for v in ComponentSet(first_stage_variables)):
-        raise ValueError("No common elements allowed between first_stage_variables and second_stage_variables.")
+    if any(
+        v in ComponentSet(second_stage_variables)
+        for v in ComponentSet(first_stage_variables)
+    ):
+        raise ValueError(
+            "No common elements allowed between first_stage_variables and second_stage_variables."
+        )
 
     if ComponentSet(uncertain_params) != ComponentSet(config.uncertain_params):
-        raise ValueError("uncertain_params must be mutable Param members of the model object.")
+        raise ValueError(
+            "uncertain_params must be mutable Param members of the model object."
+        )
 
     if not config.uncertainty_set:
-        raise ValueError("An UncertaintySet object must be provided to the PyROS solver.")
+        raise ValueError(
+            "An UncertaintySet object must be provided to the PyROS solver."
+        )
 
     non_mutable_params = []
     for p in config.uncertain_params:
-        if not (not p.is_constant() and p.is_fixed() and not p.is_potentially_variable()):
+        if not (
+            not p.is_constant() and p.is_fixed() and not p.is_potentially_variable()
+        ):
             non_mutable_params.append(p)
         if non_mutable_params:
-            raise ValueError("Param objects which are uncertain must have attribute mutable=True. "
-                             "Offending Params: %s" % [p.name for p in non_mutable_params])
+            raise ValueError(
+                "Param objects which are uncertain must have attribute mutable=True. "
+                "Offending Params: %s" % [p.name for p in non_mutable_params]
+            )
 
     # === Solvers provided check
     if not config.local_solver or not config.global_solver:
-        raise ValueError("User must designate both a local and global optimization solver via the local_solver"
-                         " and global_solver options.")
+        raise ValueError(
+            "User must designate both a local and global optimization solver via the local_solver"
+            " and global_solver options."
+        )
 
     if config.bypass_local_separation and config.bypass_global_separation:
-        raise ValueError("User cannot simultaneously enable options "
-                         "'bypass_local_separation' and "
-                         "'bypass_global_separation'.")
+        raise ValueError(
+            "User cannot simultaneously enable options "
+            "'bypass_local_separation' and "
+            "'bypass_global_separation'."
+        )
 
     # === Degrees of freedom provided check
     if len(config.first_stage_variables) + len(config.second_stage_variables) == 0:
-        raise ValueError("User must designate at least one first- and/or second-stage variable.")
+        raise ValueError(
+            "User must designate at least one first- and/or second-stage variable."
+        )
 
     # === Uncertain params provided check
     if len(config.uncertain_params) == 0:
         raise ValueError("User must designate at least one uncertain parameter.")
 
-
     return
+
 
 def substitute_ssv_in_dr_constraints(model, constraint):
     '''
@@ -665,30 +722,40 @@ def substitute_ssv_in_dr_constraints(model, constraint):
     for eqn in dr_eqns:
         repn = generate_standard_repn(eqn.body, compute_values=False)
         new_expression = 0
-        map_linear_coeff_to_var = [x for x in zip(repn.linear_coefs, repn.linear_vars) if x[1] in ComponentSet(fsv)]
-        map_quad_coeff_to_var = [x for x in zip(repn.quadratic_coefs, repn.quadratic_vars) if x[1] in ComponentSet(fsv)]
+        map_linear_coeff_to_var = [
+            x
+            for x in zip(repn.linear_coefs, repn.linear_vars)
+            if x[1] in ComponentSet(fsv)
+        ]
+        map_quad_coeff_to_var = [
+            x
+            for x in zip(repn.quadratic_coefs, repn.quadratic_vars)
+            if x[1] in ComponentSet(fsv)
+        ]
         if repn.linear_coefs:
             for coeff, var in map_linear_coeff_to_var:
                 new_expression += coeff * var
         if repn.quadratic_coefs:
             for coeff, var in map_quad_coeff_to_var:
-                new_expression += coeff * var[0] * var[1] # var here is a 2-tuple
+                new_expression += coeff * var[0] * var[1]  # var here is a 2-tuple
 
         model.no_ssv_dr_expr = Expression(expr=new_expression)
         substitution_map = {}
         substitution_map[id(repn.linear_vars[-1])] = model.no_ssv_dr_expr.expr
 
     model.dr_substituted_constraints.add(
-            replace_expressions(expr=constraint.lower,
-                                     substitution_map=substitution_map) ==
-            replace_expressions(expr=constraint.body,
-                                     substitution_map=substitution_map))
+        replace_expressions(expr=constraint.lower, substitution_map=substitution_map)
+        == replace_expressions(expr=constraint.body, substitution_map=substitution_map)
+    )
 
     # === Delete the original constraint
     model.del_component(constraint.name)
     model.del_component("no_ssv_dr_expr")
 
-    return model.dr_substituted_constraints[max(model.dr_substituted_constraints.keys())]
+    return model.dr_substituted_constraints[
+        max(model.dr_substituted_constraints.keys())
+    ]
+
 
 def is_certain_parameter(uncertain_param_index, config):
     '''
@@ -700,10 +767,15 @@ def is_certain_parameter(uncertain_param_index, config):
     '''
     if config.uncertainty_set.parameter_bounds:
         param_bounds = config.uncertainty_set.parameter_bounds[uncertain_param_index]
-        return math.isclose(a=param_bounds[0], b=param_bounds[1],
-                            rel_tol=PARAM_IS_CERTAIN_REL_TOL, abs_tol=PARAM_IS_CERTAIN_ABS_TOL)
+        return math.isclose(
+            a=param_bounds[0],
+            b=param_bounds[1],
+            rel_tol=PARAM_IS_CERTAIN_REL_TOL,
+            abs_tol=PARAM_IS_CERTAIN_ABS_TOL,
+        )
     else:
-        return False # cannot be determined without bounds
+        return False  # cannot be determined without bounds
+
 
 def coefficient_matching(model, constraint, uncertain_params, config):
     '''
@@ -738,21 +810,28 @@ def coefficient_matching(model, constraint, uncertain_params, config):
 
     # === Determine if we need to do DR expression/ssv substitution to
     #     make h(x,z,q) == 0 into h(x,d,q) == 0 (which is just h(x,q) == 0)
-    if all(v in ComponentSet(first_stage_variables) for v in variables_in_constraint) and \
-            any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
+    if all(
+        v in ComponentSet(first_stage_variables) for v in variables_in_constraint
+    ) and any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
         # h(x, q) == 0
         pass
-    elif all(v in ComponentSet(first_stage_variables + second_stage_variables) for v in variables_in_constraint) and \
-            any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
-        constraint = substitute_ssv_in_dr_constraints(model=model, constraint=constraint)
+    elif all(
+        v in ComponentSet(first_stage_variables + second_stage_variables)
+        for v in variables_in_constraint
+    ) and any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
+        constraint = substitute_ssv_in_dr_constraints(
+            model=model, constraint=constraint
+        )
         variables_in_constraint = ComponentSet(identify_variables(constraint.expr))
-        params_in_constraint = ComponentSet(identify_mutable_parameters(constraint.expr))
+        params_in_constraint = ComponentSet(
+            identify_mutable_parameters(constraint.expr)
+        )
     else:
         pass
 
-    if all(v in ComponentSet(first_stage_variables) for v in variables_in_constraint) and \
-            any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
-
+    if all(
+        v in ComponentSet(first_stage_variables) for v in variables_in_constraint
+    ) and any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
         # Swap param objects for variable objects in this constraint
         model.param_set = []
         for i in range(len(list(variables_in_constraint))):
@@ -765,8 +844,12 @@ def coefficient_matching(model, constraint, uncertain_params, config):
             model.add_component("x_%s" % i, Var(initialize=1))
             model.variable_set.append(getattr(model, "x_%s" % i))
 
-        original_var_to_param_map = list(zip(list(variables_in_constraint), model.param_set))
-        original_param_to_vap_map = list(zip(list(actual_uncertain_params), model.variable_set))
+        original_var_to_param_map = list(
+            zip(list(variables_in_constraint), model.param_set)
+        )
+        original_param_to_vap_map = list(
+            zip(list(actual_uncertain_params), model.variable_set)
+        )
 
         var_to_param_substitution_map_forward = {}
         # Separation problem initialized to nominal uncertain parameter values
@@ -790,13 +873,20 @@ def coefficient_matching(model, constraint, uncertain_params, config):
 
         model.swapped_constraints.add(
             replace_expressions(
-                expr=replace_expressions(expr=constraint.lower,
-                                         substitution_map=param_to_var_substitution_map_forward),
-                substitution_map=var_to_param_substitution_map_forward) ==
-            replace_expressions(
-                expr=replace_expressions(expr=constraint.body,
-                                         substitution_map=param_to_var_substitution_map_forward),
-                substitution_map=var_to_param_substitution_map_forward))
+                expr=replace_expressions(
+                    expr=constraint.lower,
+                    substitution_map=param_to_var_substitution_map_forward,
+                ),
+                substitution_map=var_to_param_substitution_map_forward,
+            )
+            == replace_expressions(
+                expr=replace_expressions(
+                    expr=constraint.body,
+                    substitution_map=param_to_var_substitution_map_forward,
+                ),
+                substitution_map=var_to_param_substitution_map_forward,
+            )
+        )
 
         swapped = model.swapped_constraints[max(model.swapped_constraints.keys())]
 
@@ -804,15 +894,31 @@ def coefficient_matching(model, constraint, uncertain_params, config):
 
         if val.constant is not None:
             if type(val.constant) not in native_types:
-                temp_expr = replace_expressions(val.constant, substitution_map=var_to_param_substitution_map_reverse)
-                if temp_expr.is_potentially_variable():
+                temp_expr = replace_expressions(
+                    val.constant, substitution_map=var_to_param_substitution_map_reverse
+                )
+                # We will use generate_standard_repn to generate a
+                # simplified expression (in particular, to remove any
+                # "0*..." terms)
+                temp_expr = generate_standard_repn(temp_expr).to_expression()
+                if temp_expr.__class__ not in native_types:
                     model.coefficient_matching_constraints.add(expr=temp_expr == 0)
-                elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                elif math.isclose(
+                    value(temp_expr),
+                    0,
+                    rel_tol=COEFF_MATCH_REL_TOL,
+                    abs_tol=COEFF_MATCH_ABS_TOL,
+                ):
                     pass
                 else:
                     successful_matching = False
                     robust_infeasible = True
-            elif math.isclose(value(val.constant), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+            elif math.isclose(
+                value(val.constant),
+                0,
+                rel_tol=COEFF_MATCH_REL_TOL,
+                abs_tol=COEFF_MATCH_ABS_TOL,
+            ):
                 pass
             else:
                 successful_matching = False
@@ -820,15 +926,31 @@ def coefficient_matching(model, constraint, uncertain_params, config):
         if val.linear_coefs is not None:
             for coeff in val.linear_coefs:
                 if type(coeff) not in native_types:
-                    temp_expr = replace_expressions(coeff, substitution_map=var_to_param_substitution_map_reverse)
-                    if temp_expr.is_potentially_variable():
+                    temp_expr = replace_expressions(
+                        coeff, substitution_map=var_to_param_substitution_map_reverse
+                    )
+                    # We will use generate_standard_repn to generate a
+                    # simplified expression (in particular, to remove any
+                    # "0*..." terms)
+                    temp_expr = generate_standard_repn(temp_expr).to_expression()
+                    if temp_expr.__class__ not in native_types:
                         model.coefficient_matching_constraints.add(expr=temp_expr == 0)
-                    elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                    elif math.isclose(
+                        value(temp_expr),
+                        0,
+                        rel_tol=COEFF_MATCH_REL_TOL,
+                        abs_tol=COEFF_MATCH_ABS_TOL,
+                    ):
                         pass
                     else:
                         successful_matching = False
                         robust_infeasible = True
-                elif math.isclose(value(coeff), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                elif math.isclose(
+                    value(coeff),
+                    0,
+                    rel_tol=COEFF_MATCH_REL_TOL,
+                    abs_tol=COEFF_MATCH_ABS_TOL,
+                ):
                     pass
                 else:
                     successful_matching = False
@@ -836,15 +958,31 @@ def coefficient_matching(model, constraint, uncertain_params, config):
         if val.quadratic_coefs:
             for coeff in val.quadratic_coefs:
                 if type(coeff) not in native_types:
-                    temp_expr = replace_expressions(coeff, substitution_map=var_to_param_substitution_map_reverse)
-                    if temp_expr.is_potentially_variable():
+                    temp_expr = replace_expressions(
+                        coeff, substitution_map=var_to_param_substitution_map_reverse
+                    )
+                    # We will use generate_standard_repn to generate a
+                    # simplified expression (in particular, to remove any
+                    # "0*..." terms)
+                    temp_expr = generate_standard_repn(temp_expr).to_expression()
+                    if temp_expr.__class__ not in native_types:
                         model.coefficient_matching_constraints.add(expr=temp_expr == 0)
-                    elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                    elif math.isclose(
+                        value(temp_expr),
+                        0,
+                        rel_tol=COEFF_MATCH_REL_TOL,
+                        abs_tol=COEFF_MATCH_ABS_TOL,
+                    ):
                         pass
                     else:
                         successful_matching = False
                         robust_infeasible = True
-                elif math.isclose(value(coeff), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                elif math.isclose(
+                    value(coeff),
+                    0,
+                    rel_tol=COEFF_MATCH_REL_TOL,
+                    abs_tol=COEFF_MATCH_ABS_TOL,
+                ):
                     pass
                 else:
                     successful_matching = False
@@ -875,9 +1013,7 @@ def selective_clone(block, first_stage_vars):
     :param first_stage_vars: the variables which should not be cloned
     :return:
     """
-    memo = {
-        '__block_scope__': {id(block): True, id(None): False}
-    }
+    memo = {'__block_scope__': {id(block): True, id(None): False}}
     for v in first_stage_vars:
         memo[id(v)] = v
     new_block = copy.deepcopy(block, memo)
@@ -904,43 +1040,80 @@ def add_decision_rule_variables(model_data, config):
     if degree == 0:
         for i in range(len(second_stage_variables)):
             model_data.working_model.add_component(
-                    "decision_rule_var_" + str(i),
-                    Var(initialize=value(second_stage_variables[i], exception=False),
-                        bounds=bounds,domain=Reals)
+                "decision_rule_var_" + str(i),
+                Var(
+                    initialize=value(second_stage_variables[i], exception=False),
+                    bounds=bounds,
+                    domain=Reals,
+                ),
             )
-            first_stage_variables.extend(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
-            decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
+            first_stage_variables.extend(
+                getattr(
+                    model_data.working_model, "decision_rule_var_" + str(i)
+                ).values()
+            )
+            decision_rule_vars.append(
+                getattr(model_data.working_model, "decision_rule_var_" + str(i))
+            )
     elif degree == 1:
         for i in range(len(second_stage_variables)):
             index_set = list(range(len(uncertain_params) + 1))
-            model_data.working_model.add_component("decision_rule_var_" + str(i),
-                    Var(index_set,
-                        initialize=0,
-                        bounds=bounds,
-                        domain=Reals))
+            model_data.working_model.add_component(
+                "decision_rule_var_" + str(i),
+                Var(index_set, initialize=0, bounds=bounds, domain=Reals),
+            )
             # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
-            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].set_value(value(second_stage_variables[i], exception=False), skip_validation=True)
-            first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
-            decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
+            getattr(model_data.working_model, "decision_rule_var_" + str(i))[
+                0
+            ].set_value(
+                value(second_stage_variables[i], exception=False), skip_validation=True
+            )
+            first_stage_variables.extend(
+                list(
+                    getattr(
+                        model_data.working_model, "decision_rule_var_" + str(i)
+                    ).values()
+                )
+            )
+            decision_rule_vars.append(
+                getattr(model_data.working_model, "decision_rule_var_" + str(i))
+            )
     elif degree == 2 or degree == 3 or degree == 4:
         for i in range(len(second_stage_variables)):
             num_vars = int(sp.special.comb(N=len(uncertain_params) + degree, k=degree))
             dict_init = {}
             for r in range(num_vars):
                 if r == 0:
-                    dict_init.update({r: value(second_stage_variables[i], exception=False)})
+                    dict_init.update(
+                        {r: value(second_stage_variables[i], exception=False)}
+                    )
                 else:
                     dict_init.update({r: 0})
-            model_data.working_model.add_component("decision_rule_var_" + str(i),
-                                                   Var(list(range(num_vars)), initialize=dict_init, bounds=bounds,
-                                                       domain=Reals))
+            model_data.working_model.add_component(
+                "decision_rule_var_" + str(i),
+                Var(
+                    list(range(num_vars)),
+                    initialize=dict_init,
+                    bounds=bounds,
+                    domain=Reals,
+                ),
+            )
             first_stage_variables.extend(
-                list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
-            decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
+                list(
+                    getattr(
+                        model_data.working_model, "decision_rule_var_" + str(i)
+                    ).values()
+                )
+            )
+            decision_rule_vars.append(
+                getattr(model_data.working_model, "decision_rule_var_" + str(i))
+            )
     else:
         raise ValueError(
-            "Decision rule order " + str(config.decision_rule_order) +
-            " is not yet supported. PyROS supports polynomials of degree 0 (static approximation), 1, 2.")
+            "Decision rule order "
+            + str(config.decision_rule_order)
+            + " is not yet supported. PyROS supports polynomials of degree 0 (static approximation), 1, 2."
+        )
     model_data.working_model.util.decision_rule_vars = decision_rule_vars
 
 
@@ -965,8 +1138,9 @@ def partition_powers(n, v):
         # of the list.  The degree for each variable is 1 less than the
         # difference of sequential starting points (to account for the
         # variable itself)
-        starts = (0,) + starts + (n+v,)
-        yield [starts[i+1] - starts[i] - 1 for i in range(v)]
+        starts = (0,) + starts + (n + v,)
+        yield [starts[i + 1] - starts[i] - 1 for i in range(v)]
+
 
 def sort_partitioned_powers(powers_list):
     powers_list = sorted(powers_list, reverse=True)
@@ -988,26 +1162,58 @@ def add_decision_rule_constraints(model_data, config):
     degree = config.decision_rule_order
     if degree == 0:
         for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component("decision_rule_eqn_" + str(i),
-                    Constraint(expr=getattr(model_data.working_model, "decision_rule_var_" + str(i)) == second_stage_variables[i]))
-            decision_rule_eqns.append(getattr(model_data.working_model, "decision_rule_eqn_" + str(i)))
+            model_data.working_model.add_component(
+                "decision_rule_eqn_" + str(i),
+                Constraint(
+                    expr=getattr(
+                        model_data.working_model, "decision_rule_var_" + str(i)
+                    )
+                    == second_stage_variables[i]
+                ),
+            )
+            decision_rule_eqns.append(
+                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
+            )
     elif degree == 1:
         for i in range(len(second_stage_variables)):
             expr = 0
-            for j in range(len(getattr(model_data.working_model, "decision_rule_var_" + str(i)))):
+            for j in range(
+                len(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
+            ):
                 if j == 0:
-                    expr += getattr(model_data.working_model, "decision_rule_var_" + str(i))[j]
+                    expr += getattr(
+                        model_data.working_model, "decision_rule_var_" + str(i)
+                    )[j]
                 else:
-                    expr += getattr(model_data.working_model, "decision_rule_var_" + str(i))[j] * uncertain_params[j - 1]
-            model_data.working_model.add_component("decision_rule_eqn_" + str(i), Constraint(expr= expr == second_stage_variables[i]))
-            decision_rule_eqns.append(getattr(model_data.working_model, "decision_rule_eqn_" + str(i)))
+                    expr += (
+                        getattr(
+                            model_data.working_model, "decision_rule_var_" + str(i)
+                        )[j]
+                        * uncertain_params[j - 1]
+                    )
+            model_data.working_model.add_component(
+                "decision_rule_eqn_" + str(i),
+                Constraint(expr=expr == second_stage_variables[i]),
+            )
+            decision_rule_eqns.append(
+                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
+            )
     elif degree >= 2:
         # Using bars and stars groupings of variable powers, construct x1^a * .... * xn^b terms for all c <= a+...+b = degree
         all_powers = []
-        for n in range(1, degree+1):
-            all_powers.append(sort_partitioned_powers(list(partition_powers(n, len(uncertain_params)))))
+        for n in range(1, degree + 1):
+            all_powers.append(
+                sort_partitioned_powers(
+                    list(partition_powers(n, len(uncertain_params)))
+                )
+            )
         for i in range(len(second_stage_variables)):
-            Z = list(z for z in getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
+            Z = list(
+                z
+                for z in getattr(
+                    model_data.working_model, "decision_rule_var_" + str(i)
+                ).values()
+            )
             e = Z.pop(0)
             for degree_param_powers in all_powers:
                 for param_powers in degree_param_powers:
@@ -1016,14 +1222,20 @@ def add_decision_rule_constraints(model_data, config):
                         if power == 0:
                             pass
                         else:
-                            product = product * uncertain_params[idx]**power
+                            product = product * uncertain_params[idx] ** power
                     e += Z.pop(0) * product
-            model_data.working_model.add_component("decision_rule_eqn_" + str(i),
-                                                       Constraint(expr=e == second_stage_variables[i]))
-            decision_rule_eqns.append(getattr(model_data.working_model, "decision_rule_eqn_" + str(i)))
+            model_data.working_model.add_component(
+                "decision_rule_eqn_" + str(i),
+                Constraint(expr=e == second_stage_variables[i]),
+            )
+            decision_rule_eqns.append(
+                getattr(model_data.working_model, "decision_rule_eqn_" + str(i))
+            )
             if len(Z) != 0:
-                raise RuntimeError("Construction of the decision rule functions did not work correctly! "
-                                   "Did not use all coefficient terms.")
+                raise RuntimeError(
+                    "Construction of the decision rule functions did not work correctly! "
+                    "Did not use all coefficient terms."
+                )
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
 
 
@@ -1063,11 +1275,11 @@ def identify_objective_functions(model, objective):
 
     for term in obj_args:
         non_first_stage_vars_in_term = ComponentSet(
-            v for v in identify_variables(term)
-            if v not in first_stage_var_set
+            v for v in identify_variables(term) if v not in first_stage_var_set
         )
         uncertain_params_in_term = ComponentSet(
-            param for param in identify_mutable_parameters(term)
+            param
+            for param in identify_mutable_parameters(term)
             if param in uncertain_param_set
         )
 
@@ -1093,8 +1305,13 @@ def load_final_solution(model_data, master_soln, config):
     elif config.objective_focus == ObjectiveType.worst_case:
         model = model_data.original_model
         indices = range(len(master_soln.master_model.scenarios))
-        k = max(indices, key=lambda i: value(master_soln.master_model.scenarios[i, 0].first_stage_objective +
-                                             master_soln.master_model.scenarios[i, 0].second_stage_objective))
+        k = max(
+            indices,
+            key=lambda i: value(
+                master_soln.master_model.scenarios[i, 0].first_stage_objective
+                + master_soln.master_model.scenarios[i, 0].second_stage_objective
+            ),
+        )
         soln = master_soln.master_model.scenarios[k, 0]
 
     src_vars = getattr(model, 'tmp_var_list')
@@ -1117,11 +1334,24 @@ def process_termination_condition_master_problem(config, results):
     locally_acceptable = [tc.optimal, tc.locallyOptimal, tc.globallyOptimal]
     globally_acceptable = [tc.optimal, tc.globallyOptimal]
     robust_infeasible = [tc.infeasible]
-    try_backups = [tc.feasible, tc.maxTimeLimit, tc.maxIterations, tc.maxEvaluations,
-               tc.minStepLength, tc.minFunctionValue, tc.other, tc.solverFailure,
-               tc.internalSolverError, tc.error,
-               tc.unbounded, tc.infeasibleOrUnbounded, tc.invalidProblem, tc.intermediateNonInteger,
-               tc.noSolution, tc.unknown]
+    try_backups = [
+        tc.feasible,
+        tc.maxTimeLimit,
+        tc.maxIterations,
+        tc.maxEvaluations,
+        tc.minStepLength,
+        tc.minFunctionValue,
+        tc.other,
+        tc.solverFailure,
+        tc.internalSolverError,
+        tc.error,
+        tc.unbounded,
+        tc.infeasibleOrUnbounded,
+        tc.invalidProblem,
+        tc.intermediateNonInteger,
+        tc.noSolution,
+        tc.unknown,
+    ]
 
     termination_condition = results.solver.termination_condition
     if config.solve_master_globally == False:
@@ -1132,8 +1362,10 @@ def process_termination_condition_master_problem(config, results):
         elif termination_condition in try_backups:
             return (True, None)
         else:
-            raise NotImplementedError("This solver return termination condition (%s) "
-                                      "is currently not supported by PyROS." % termination_condition)
+            raise NotImplementedError(
+                "This solver return termination condition (%s) "
+                "is currently not supported by PyROS." % termination_condition
+            )
     else:
         if termination_condition in globally_acceptable:
             return (False, None)
@@ -1142,8 +1374,10 @@ def process_termination_condition_master_problem(config, results):
         elif termination_condition in try_backups:
             return (True, None)
         else:
-            raise NotImplementedError("This solver return termination condition (%s) "
-                                      "is currently not supported by PyROS." % termination_condition)
+            raise NotImplementedError(
+                "This solver return termination condition (%s) "
+                "is currently not supported by PyROS." % termination_condition
+            )
 
 
 def output_logger(config, **kwargs):
@@ -1159,43 +1393,51 @@ def output_logger(config, **kwargs):
     if "preamble" in kwargs:
         if kwargs["preamble"]:
             version = str(kwargs["version"])
-            preamble = "===========================================================================================\n" \
-                       "PyROS: Pyomo Robust Optimization Solver v.%s \n" \
-                       "Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1), \n"\
-                       "              John D. Siirola (2), Chrysanthos E. Gounaris (1) \n" \
-                       "(1) Carnegie Mellon University, Department of Chemical Engineering \n" \
-                       "(2) Sandia National Laboratories, Center for Computing Research\n\n" \
-                       "The developers gratefully acknowledge support from the U.S. Department of Energy's \n" \
-                       "Institute for the Design of Advanced Energy Systems (IDAES) \n" \
-                       "===========================================================================================" % version
+            preamble = (
+                "===========================================================================================\n"
+                "PyROS: Pyomo Robust Optimization Solver v.%s \n"
+                "Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1), \n"
+                "              John D. Siirola (2), Chrysanthos E. Gounaris (1) \n"
+                "(1) Carnegie Mellon University, Department of Chemical Engineering \n"
+                "(2) Sandia National Laboratories, Center for Computing Research\n\n"
+                "The developers gratefully acknowledge support from the U.S. Department of Energy's \n"
+                "Institute for the Design of Advanced Energy Systems (IDAES) \n"
+                "==========================================================================================="
+                % version
+            )
             print(preamble)
     # === DISCLAIMER
     if "disclaimer" in kwargs:
         if kwargs["disclaimer"]:
-           print("======================================== DISCLAIMER =======================================\n"
-                    "PyROS is still under development. \n"
-                    "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
-                    "===========================================================================================\n")
+            print(
+                "======================================== DISCLAIMER =======================================\n"
+                "PyROS is still under development. \n"
+                "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
+                "===========================================================================================\n"
+            )
     # === ALL LOGGER RETURN MESSAGES
     if "bypass_global_separation" in kwargs:
         if kwargs["bypass_global_separation"]:
             config.progress_logger.info(
-                    "NOTE: Option to bypass global separation was chosen. "
-                    "Robust feasibility and optimality of the reported "
-                    "solution are not guaranteed."
-                    )
+                "NOTE: Option to bypass global separation was chosen. "
+                "Robust feasibility and optimality of the reported "
+                "solution are not guaranteed."
+            )
     if "robust_optimal" in kwargs:
         if kwargs["robust_optimal"]:
-            config.progress_logger.info('Robust optimal solution identified. Exiting PyROS.')
+            config.progress_logger.info(
+                'Robust optimal solution identified. Exiting PyROS.'
+            )
 
     if "robust_feasible" in kwargs:
         if kwargs["robust_feasible"]:
-            config.progress_logger.info('Robust feasible solution identified. Exiting PyROS.')
+            config.progress_logger.info(
+                'Robust feasible solution identified. Exiting PyROS.'
+            )
 
     if "robust_infeasible" in kwargs:
         if kwargs["robust_infeasible"]:
             config.progress_logger.info('Robust infeasible problem. Exiting PyROS.')
-
 
     if "time_out" in kwargs:
         if kwargs["time_out"]:
@@ -1203,7 +1445,8 @@ def output_logger(config, **kwargs):
                 'PyROS was unable to identify robust solution '
                 'before exceeding time limit of %s seconds. '
                 'Consider increasing the time limit via option time_limit.'
-                 % config.time_limit)
+                % config.time_limit
+            )
 
     if "max_iter" in kwargs:
         if kwargs["max_iter"]:
@@ -1211,23 +1454,26 @@ def output_logger(config, **kwargs):
                 'PyROS was unable to identify robust solution '
                 'within %s iterations of the GRCS algorithm. '
                 'Consider increasing the iteration limit via option max_iter.'
-                % config.max_iter)
+                % config.max_iter
+            )
 
     if "master_error" in kwargs:
         if kwargs["master_error"]:
             status_dict = kwargs["status_dict"]
             filename = kwargs["filename"]  # solver name to solver termination condition
             if kwargs["iteration"] == 0:
-                raise AttributeError("User-supplied solver(s) could not solve the deterministic model. "
-                                     "Returned termination conditions were: %s"
-                                     "Please ensure deterministic model is solvable by at least one of the supplied solvers. "
-                                     "Exiting PyROS." % pprint(status_dict, width=1))
+                raise AttributeError(
+                    "User-supplied solver(s) could not solve the deterministic model. "
+                    "Returned termination conditions were: %s"
+                    "Please ensure deterministic model is solvable by at least one of the supplied solvers. "
+                    "Exiting PyROS." % pprint(status_dict, width=1)
+                )
             config.progress_logger.info(
                 "User-supplied solver(s) could not solve the master model at iteration %s.\n"
                 "Returned termination conditions were: %s\n"
-                "For debugging, this problem has been written to a GAMS file titled %s. Exiting PyROS." % (kwargs["iteration"],
-                                                                                                           pprint(status_dict),
-                                                                                                           filename))
+                "For debugging, this problem has been written to a GAMS file titled %s. Exiting PyROS."
+                % (kwargs["iteration"], pprint(status_dict), filename)
+            )
     if "separation_error" in kwargs:
         if kwargs["separation_error"]:
             status_dict = kwargs["status_dict"]
@@ -1237,9 +1483,8 @@ def output_logger(config, **kwargs):
             config.progress_logger.info(
                 "User-supplied solver(s) could not solve the separation problem at iteration %s under separation objective %s.\n"
                 "Returned termination conditions were: %s\n"
-                "For debugging, this problem has been written to a GAMS file titled %s. Exiting PyROS." % (iteration,
-                                                                                                           obj,
-                                                                                                           pprint(status_dict, width=1),
-                                                                                                           filename))
+                "For debugging, this problem has been written to a GAMS file titled %s. Exiting PyROS."
+                % (iteration, obj, pprint(status_dict, width=1), filename)
+            )
 
     return

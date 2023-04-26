@@ -10,9 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from collections.abc import (
-    MutableMapping, MutableSet, Mapping, Set, Sequence
-)
+from collections.abc import MutableMapping, MutableSet, Mapping, Set, Sequence
 from collections import UserDict
 
 from .orderedset import OrderedDict, OrderedSet

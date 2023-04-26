@@ -30,7 +30,23 @@ class TestInterval(IntervalTestBase, unittest.TestCase):
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestCInterval(unittest.TestCase):
     def test_pow_with_inf(self):
-        x_list = [0, -math.inf, math.inf, -3, 3, -2, 2, -1, 1, -2.5, 2.5, -0.5, 0.5, -1.5, 1.5]
+        x_list = [
+            0,
+            -math.inf,
+            math.inf,
+            -3,
+            3,
+            -2,
+            2,
+            -1,
+            1,
+            -2.5,
+            2.5,
+            -0.5,
+            0.5,
+            -1.5,
+            1.5,
+        ]
         y_list = list(x_list)
         for x in x_list:
             for y in y_list:

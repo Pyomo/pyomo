@@ -177,7 +177,7 @@ this warning (and an exception from the converter):
       ...
    TypeError: Cannot create a Set from data that does not support __contains__...
    ERROR (E2001): 5 is not a valid domain. Variable domains must be an instance
-       of a Pyomo Set or convertable to a Pyomo Set.
+       of a Pyomo Set or convertible to a Pyomo Set.
        See also https://pyomo.readthedocs.io/en/stable/errors.html#e2001
 
 

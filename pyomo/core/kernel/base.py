@@ -13,29 +13,33 @@ import copy
 import weakref
 from pyomo.common.autoslots import AutoSlots
 
+
 def _not_implemented(*args, **kwds):
-    raise NotImplementedError("This property is abstract")     #pragma:nocover
+    raise NotImplementedError("This property is abstract")  # pragma:nocover
+
 
 def _abstract_readwrite_property(**kwds):
-    p = property(fget=_not_implemented,
-                 fset=_not_implemented,
-                 **kwds)
+    p = property(fget=_not_implemented, fset=_not_implemented, **kwds)
     return p
 
+
 def _abstract_readonly_property(**kwds):
-    p = property(fget=_not_implemented,
-                 **kwds)
+    p = property(fget=_not_implemented, **kwds)
     return p
+
 
 class _no_ctype(object):
     """The default argument for methods that accept a ctype."""
+
     pass
+
 
 # This will be populated outside of core.kernel. It will map
 # AML classes (which are the ctypes used by all of the
 # solver interfaces) to Kernel classes
 _convert_ctype = {}
 _kernel_ctype_backmap = {}
+
 
 def _convert_descend_into(value):
     """Converts the descend_into keyword to a function"""
@@ -45,8 +49,11 @@ def _convert_descend_into(value):
         return _convert_descend_into._true
     else:
         return _convert_descend_into._false
+
+
 _convert_descend_into._true = lambda x: True
 _convert_descend_into._false = lambda x: False
+
 
 class ICategorizedObject(AutoSlots.Mixin):
     """
@@ -68,6 +75,7 @@ class ICategorizedObject(AutoSlots.Mixin):
         _active (bool): Stores the active status of this
             object.
     """
+
     __slots__ = ()
     __autoslot_mappers__ = {'_parent': AutoSlots.weakref_mapper}
 
@@ -108,11 +116,10 @@ class ICategorizedObject(AutoSlots.Mixin):
     def active(self):
         """The active status of this object."""
         return self._active
+
     @active.setter
     def active(self, value):
-        raise AttributeError(
-            "Assignment not allowed. Use the "
-            "(de)activate method")
+        raise AttributeError("Assignment not allowed. Use the (de)activate method")
 
     ### The following group of methods use object.__setattr__
     ### to update the _parent, _storage_key, and _active flags.
@@ -134,13 +141,16 @@ class ICategorizedObject(AutoSlots.Mixin):
     def deactivate(self):
         """Deactivate this object."""
         object.__setattr__(self, "_active", False)
+
     ###
 
-    def getname(self,
-                fully_qualified=False,
-                name_buffer={}, # HACK: ignored (required to work with some solver interfaces, but that code should change soon)
-                convert=str,
-                relative_to=None):
+    def getname(
+        self,
+        fully_qualified=False,
+        name_buffer={},  # HACK: ignored (required to work with some solver interfaces, but that code should change soon)
+        convert=str,
+        relative_to=None,
+    ):
         """
         Dynamically generates a name for this object.
 
@@ -162,8 +172,7 @@ class ICategorizedObject(AutoSlots.Mixin):
             context of its parent; otherwise (if no parent
             exists), this method returns :const:`None`.
         """
-        assert fully_qualified or \
-            (relative_to is None)
+        assert fully_qualified or (relative_to is None)
         parent = self.parent
         if parent is None:
             return None
@@ -171,14 +180,11 @@ class ICategorizedObject(AutoSlots.Mixin):
         key = self.storage_key
         name = parent._child_storage_entry_string % convert(key)
         if fully_qualified:
-            parent_name = parent.getname(fully_qualified=True,
-                                         relative_to=relative_to)
-            if (parent_name is not None) and \
-               ((relative_to is None) or \
-                (parent is not relative_to)):
-                return (parent_name +
-                        parent._child_storage_delimiter_string +
-                        name)
+            parent_name = parent.getname(fully_qualified=True, relative_to=relative_to)
+            if (parent_name is not None) and (
+                (relative_to is None) or (parent is not relative_to)
+            ):
+                return parent_name + parent._child_storage_delimiter_string + name
             else:
                 return name
         else:
@@ -205,7 +211,7 @@ class ICategorizedObject(AutoSlots.Mixin):
         name is returned."""
         name = self.name
         if name is None:
-            return "<"+self.__class__.__name__+">"
+            return "<" + self.__class__.__name__ + ">"
         else:
             return name
 
@@ -222,9 +228,10 @@ class ICategorizedObject(AutoSlots.Mixin):
         save_parent = self._parent
         object.__setattr__(self, "_parent", None)
         try:
-            new_block = copy.deepcopy(self,
-                                      {'__categorized_object_scope__':
-                                       {id(self): True, id(None): False}})
+            new_block = copy.deepcopy(
+                self,
+                {'__categorized_object_scope__': {id(self): True, id(None): False}},
+            )
         finally:
             object.__setattr__(self, "_parent", save_parent)
         return new_block
@@ -237,8 +244,10 @@ class ICategorizedObject(AutoSlots.Mixin):
     #
 
     def __deepcopy__(self, memo):
-        if '__categorized_object_scope__' in memo and \
-                id(self) not in memo['__categorized_object_scope__']:
+        if (
+            '__categorized_object_scope__' in memo
+            and id(self) not in memo['__categorized_object_scope__']
+        ):
             _known = memo['__categorized_object_scope__']
             _new = []
             tmp = self.parent
@@ -269,6 +278,7 @@ class ICategorizedObjectContainer(ICategorizedObject):
     Interface for categorized containers of categorized
     objects.
     """
+
     _is_container = True
     _child_storage_delimiter_string = None
     _child_storage_entry_string = None
@@ -301,13 +311,13 @@ class ICategorizedObjectContainer(ICategorizedObject):
     def child(self, *args, **kwds):
         """Returns a child of this container given a storage
         key."""
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     def children(self, *args, **kwds):
         """A generator over the children of this container."""
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover
 
     def components(self, *args, **kwds):
         """A generator over the set of components stored
         under this container."""
-        raise NotImplementedError     #pragma:nocover
+        raise NotImplementedError  # pragma:nocover

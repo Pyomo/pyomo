@@ -6,8 +6,13 @@ from pyomo.core.expr.current import identify_variables
 from pyomo.contrib.community_detection.event_log import _event_log
 
 
-def generate_model_graph(model, type_of_graph, with_objective=True, weighted_graph=True,
-                         use_only_active_components=True):
+def generate_model_graph(
+    model,
+    type_of_graph,
+    with_objective=True,
+    weighted_graph=True,
+    use_only_active_components=True,
+):
     """
     Creates a networkX graph of nodes and edges based on a Pyomo optimization model
 
@@ -53,44 +58,73 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     # without edge weights, because edge weights are not useful for this bipartite graph)
     edge_set = set()
 
-    bipartite_model_graph = nx.Graph()  # Initialize NetworkX graph for the bipartite graph
-    constraint_variable_map = {}  # Initialize map of the variables in constraint equations
+    bipartite_model_graph = (
+        nx.Graph()
+    )  # Initialize NetworkX graph for the bipartite graph
+    constraint_variable_map = (
+        {}
+    )  # Initialize map of the variables in constraint equations
 
     # Make a dict of all the components we need for the NetworkX graph (since we cannot use the components directly
     # in the NetworkX graph)
     if with_objective:
-        component_number_map = ComponentMap((component, number) for number, component in enumerate(
-            model.component_data_objects(ctype=(Constraint, Var, Objective), active=use_only_active_components,
-                                         descend_into=True,
-                                         sort=SortComponents.deterministic)))
+        component_number_map = ComponentMap(
+            (component, number)
+            for number, component in enumerate(
+                model.component_data_objects(
+                    ctype=(Constraint, Var, Objective),
+                    active=use_only_active_components,
+                    descend_into=True,
+                    sort=SortComponents.deterministic,
+                )
+            )
+        )
     else:
-        component_number_map = ComponentMap((component, number) for number, component in enumerate(
-            model.component_data_objects(ctype=(Constraint, Var), active=use_only_active_components, descend_into=True,
-                                         sort=SortComponents.deterministic)))
+        component_number_map = ComponentMap(
+            (component, number)
+            for number, component in enumerate(
+                model.component_data_objects(
+                    ctype=(Constraint, Var),
+                    active=use_only_active_components,
+                    descend_into=True,
+                    sort=SortComponents.deterministic,
+                )
+            )
+        )
 
     # Create the reverse of component_number_map, which will be used in detect_communities to convert the node numbers
     # to their corresponding Pyomo modeling components
-    number_component_map = dict((number, comp) for comp, number in component_number_map.items())
+    number_component_map = dict(
+        (number, comp) for comp, number in component_number_map.items()
+    )
 
     # Add the components as nodes to the bipartite graph
-    bipartite_model_graph.add_nodes_from([node_number for node_number in range(len(component_number_map))])
+    bipartite_model_graph.add_nodes_from(
+        [node_number for node_number in range(len(component_number_map))]
+    )
 
     # Loop through all constraints in the Pyomo model to determine what edges need to be created
-    for model_constraint in model.component_data_objects(ctype=Constraint, active=use_only_active_components,
-                                                         descend_into=True):
+    for model_constraint in model.component_data_objects(
+        ctype=Constraint, active=use_only_active_components, descend_into=True
+    ):
         numbered_constraint = component_number_map[model_constraint]
 
         # Create a list of the variable numbers that occur in the given constraint equation
-        numbered_variables_in_constraint_equation = [component_number_map[constraint_variable]
-                                                     for constraint_variable in
-                                                     identify_variables(model_constraint.body)]
+        numbered_variables_in_constraint_equation = [
+            component_number_map[constraint_variable]
+            for constraint_variable in identify_variables(model_constraint.body)
+        ]
 
         # Update constraint_variable_map
-        constraint_variable_map[numbered_constraint] = numbered_variables_in_constraint_equation
+        constraint_variable_map[
+            numbered_constraint
+        ] = numbered_variables_in_constraint_equation
 
         # Create a list of all the edges that need to be created based on the variables in this constraint equation
-        edges_between_nodes = [(numbered_constraint, numbered_variable_in_constraint)
-                               for numbered_variable_in_constraint in numbered_variables_in_constraint_equation]
+        edges_between_nodes = [
+            (numbered_constraint, numbered_variable_in_constraint)
+            for numbered_variable_in_constraint in numbered_variables_in_constraint_equation
+        ]
 
         # Update edge_set based on the determined edges between nodes
         edge_set.update(edges_between_nodes)
@@ -98,22 +132,28 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     # This if statement will be executed if the user chooses to include the objective function as a node in
     # the model graph
     if with_objective:
-
         # Use a loop to account for the possibility of multiple objective functions
-        for objective_function in model.component_data_objects(ctype=Objective, active=use_only_active_components,
-                                                               descend_into=True):
+        for objective_function in model.component_data_objects(
+            ctype=Objective, active=use_only_active_components, descend_into=True
+        ):
             numbered_objective = component_number_map[objective_function]
 
             # Create a list of the variable numbers that occur in the given objective function
-            numbered_variables_in_objective = [component_number_map[objective_variable]
-                                               for objective_variable in identify_variables(objective_function)]
+            numbered_variables_in_objective = [
+                component_number_map[objective_variable]
+                for objective_variable in identify_variables(objective_function)
+            ]
 
             # Update constraint_variable_map
-            constraint_variable_map[numbered_objective] = numbered_variables_in_objective
+            constraint_variable_map[
+                numbered_objective
+            ] = numbered_variables_in_objective
 
             # Create a list of all the edges that need to be created based on the variables in the objective function
-            edges_between_nodes = [(numbered_objective, numbered_variable_in_objective)
-                                   for numbered_variable_in_objective in numbered_variables_in_objective]
+            edges_between_nodes = [
+                (numbered_objective, numbered_variable_in_objective)
+                for numbered_variable_in_objective in numbered_variables_in_objective
+            ]
 
             # Update edge_set based on the determined edges between nodes
             edge_set.update(edges_between_nodes)
@@ -122,9 +162,17 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     # sorting prevents any unpredictable changes)
     bipartite_model_graph.add_edges_from(sorted(edge_set))
 
-    if type_of_graph == 'bipartite':  # This is the case where the user wants a bipartite graph, which we made above
+    if (
+        type_of_graph == 'bipartite'
+    ):  # This is the case where the user wants a bipartite graph, which we made above
         # Log important information with the following logger function
-        _event_log(model, bipartite_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
+        _event_log(
+            model,
+            bipartite_model_graph,
+            set(constraint_variable_map),
+            type_of_graph,
+            with_objective,
+        )
 
         # Return the bipartite NetworkX graph, the dictionary of node numbers mapped to their respective Pyomo
         # components, and the map of constraints to the variables they contain
@@ -142,9 +190,13 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
 
     try:
         if weighted_graph:
-            projected_model_graph = nx.bipartite.weighted_projected_graph(bipartite_model_graph, graph_nodes)
+            projected_model_graph = nx.bipartite.weighted_projected_graph(
+                bipartite_model_graph, graph_nodes
+            )
         else:
-            projected_model_graph = nx.bipartite.projected_graph(bipartite_model_graph, graph_nodes)
+            projected_model_graph = nx.bipartite.projected_graph(
+                bipartite_model_graph, graph_nodes
+            )
     except nx.exception.NetworkXAlgorithmError:
         # See Pyomo #2413: networkx now raises exceptions for invalid
         # projections.  This restores the (probably invalid) previous
@@ -152,7 +204,13 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
         projected_model_graph = nx.Graph()
 
     # Log important information with the following logger function
-    _event_log(model, projected_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
+    _event_log(
+        model,
+        projected_model_graph,
+        set(constraint_variable_map),
+        type_of_graph,
+        with_objective,
+    )
 
     # Return the projected NetworkX graph, the dictionary of node numbers mapped to their respective Pyomo
     # components, and the map of constraints to the variables they contain

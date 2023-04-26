@@ -23,10 +23,23 @@ from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.environ import (
-    land, atleast, atmost, BooleanConstant, BooleanVarList, ComponentMap, equivalent, exactly, implies, lor, RangeSet,
+    land,
+    atleast,
+    atmost,
+    BooleanConstant,
+    BooleanVarList,
+    ComponentMap,
+    equivalent,
+    exactly,
+    implies,
+    lor,
+    RangeSet,
     value,
-    ConcreteModel, BooleanVar,
-    lnot, xor, )
+    ConcreteModel,
+    BooleanVar,
+    lnot,
+    xor,
+)
 
 
 def _generate_possible_truth_inputs(nargs):
@@ -44,7 +57,6 @@ def _check_equivalent(assert_handle, expr_1, expr_2):
 
 
 class TestLogicalClasses(unittest.TestCase):
-
     def test_BooleanVar(self):
         """
         Simple construction and value setting
@@ -189,7 +201,9 @@ class TestLogicalClasses(unittest.TestCase):
             for ntrue in range(nargs + 1):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) == ntrue
-                self.assertEqual(value(exactly(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEqual(
+                    value(exactly(ntrue, *(m.Y[i] for i in m.s))), correct_value
+                )
                 self.assertEqual(value(exactly(ntrue, m.Y)), correct_value)
 
     def test_nary_atmost(self):
@@ -201,7 +215,9 @@ class TestLogicalClasses(unittest.TestCase):
             for ntrue in range(nargs + 1):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) <= ntrue
-                self.assertEqual(value(atmost(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEqual(
+                    value(atmost(ntrue, *(m.Y[i] for i in m.s))), correct_value
+                )
                 self.assertEqual(value(atmost(ntrue, m.Y)), correct_value)
 
     def test_nary_atleast(self):
@@ -213,7 +229,9 @@ class TestLogicalClasses(unittest.TestCase):
             for ntrue in range(nargs + 1):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) >= ntrue
-                self.assertEqual(value(atleast(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEqual(
+                    value(atleast(ntrue, *(m.Y[i] for i in m.s))), correct_value
+                )
                 self.assertEqual(value(atleast(ntrue, m.Y)), correct_value)
 
     def test_to_string(self):
@@ -263,7 +281,9 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: 0 / m.Y2
             yield lambda: 0**m.Y2
 
-        numeric_error_msg = "(?:(?:unsupported operand type)|(?:operands do not support))"
+        numeric_error_msg = (
+            "(?:(?:unsupported operand type)|(?:operands do not support))"
+        )
         for invalid_expr_fcn in invalid_expression_generator():
             with self.assertRaisesRegex(TypeError, numeric_error_msg):
                 _ = invalid_expr_fcn()
@@ -273,8 +293,11 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: +m.Y1
 
         for invalid_expr_fcn in invalid_unary_expression_generator():
-            with self.assertRaisesRegex(TypeError, "(?:(?:bad operand type for unary)"
-                                                   "|(?:unsupported operand type for unary))"):
+            with self.assertRaisesRegex(
+                TypeError,
+                "(?:(?:bad operand type for unary)"
+                "|(?:unsupported operand type for unary))",
+            ):
                 _ = invalid_expr_fcn()
 
         def invalid_comparison_generator():
@@ -284,7 +307,9 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: m.Y1 < 0
 
         # These errors differ between python versions, regrettably
-        comparison_error_msg = "(?:(?:unorderable types)|(?:not supported between instances of))"
+        comparison_error_msg = (
+            "(?:(?:unorderable types)|(?:not supported between instances of))"
+        )
         for invalid_expr_fcn in invalid_comparison_generator():
             with self.assertRaisesRegex(TypeError, comparison_error_msg):
                 _ = invalid_expr_fcn()
@@ -294,12 +319,14 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
 
         with self.assertRaisesRegex(
-                TypeError, r"argument must be a string or a(.*) number"):
+            TypeError, r"argument must be a string or a(.*) number"
+        ):
             float(m.Y1)
 
         with self.assertRaisesRegex(
-                TypeError, r"argument must be a string"
-                           r"(?:, a bytes-like object)? or a(.*) number"):
+            TypeError,
+            r"argument must be a string" r"(?:, a bytes-like object)? or a(.*) number",
+        ):
             int(m.Y1)
 
 

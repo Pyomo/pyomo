@@ -100,7 +100,6 @@ def _handle_AbsExpression(visitor, node, values):
 # that is compatible with the GAMS syntax.
 #
 class ToGamsVisitor(EXPR._ToStringVisitor):
-
     _expression_handlers = {
         EXPR.PowExpression: _handle_PowExpression,
         EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,
@@ -179,12 +178,12 @@ class ToGamsVisitor(EXPR._ToStringVisitor):
         return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
-        iter_ = iter(node.args)
-        values = []
-        if node.constant:
-            next(iter_)
-            values.append(ftoa(node.constant, True))
-        values.extend(map(self._monomial_to_string, iter_))
+        values = [
+            self._monomial_to_string(arg)
+            if arg.__class__ is EXPR.MonomialTermExpression
+            else ftoa(arg)
+            for arg in node.args
+        ]
         return node._to_string(values, False, self.smap)
 
 
@@ -601,7 +600,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # encountered will be added to the var_list due to the labeler
         # defined above.
         for con in model.component_data_objects(Constraint, active=True, sort=sort):
-
             if not con.has_lb() and not con.has_ub():
                 assert not con.equality
                 continue  # non-binding, so skip
@@ -649,7 +647,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             )
         obj = obj[0]
         if linear:
-            if obj.expr.polynomial_degree() not in linear_degree:
+            if obj.polynomial_degree() not in linear_degree:
                 linear = False
         obj_expr_str, obj_discontinuous = expression_to_string(
             obj.expr, tc, smap=symbolMap, output_fixed_variables=output_fixed_variables
@@ -807,9 +805,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write("MODELSTAT = %s.modelstat;\n" % model_name)
         output_file.write("SOLVESTAT = %s.solvestat;\n\n" % model_name)
 
-        output_file.write(
-            "Scalar OBJEST 'best objective', OBJVAL 'objective value';\n"
-        )
+        output_file.write("Scalar OBJEST 'best objective', OBJVAL 'objective value';\n")
         output_file.write("OBJEST = %s.objest;\n" % model_name)
         output_file.write("OBJVAL = %s.objval;\n\n" % model_name)
 

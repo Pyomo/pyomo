@@ -17,8 +17,20 @@ from pyomo.common.fileutils import import_file
 from pyomo.contrib.satsolver.satsolver import satisfiable, z3_available
 from pyomo.core.base.set_types import PositiveIntegers, NonNegativeReals, Binary
 from pyomo.environ import (
-    ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt, log,
-    minimize)
+    ConcreteModel,
+    Var,
+    Constraint,
+    Objective,
+    sin,
+    cos,
+    tan,
+    asin,
+    acos,
+    atan,
+    sqrt,
+    log,
+    minimize,
+)
 from pyomo.gdp import Disjunct, Disjunction
 
 currdir = dirname(abspath(__file__))
@@ -27,7 +39,6 @@ exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 
 @unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")
 class SatSolverTests(unittest.TestCase):
-
     def test_simple_sat_model(self):
         m = ConcreteModel()
         m.x = Var()
@@ -218,28 +229,24 @@ class SatSolverTests(unittest.TestCase):
         self.assertFalse(satisfiable(m))
 
     def test_8PP(self):
-        exfile = import_file(
-            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        exfile = import_file(join(exdir, 'eight_process', 'eight_proc_model.py'))
         m = exfile.build_eight_process_flowsheet()
         self.assertTrue(satisfiable(m) is not False)
 
-    def test_8PP_deactive(self):
-        exfile = import_file(
-            join(exdir, 'eight_process', 'eight_proc_model.py'))
+    def test_8PP_deactivate(self):
+        exfile = import_file(join(exdir, 'eight_process', 'eight_proc_model.py'))
         m = exfile.build_eight_process_flowsheet()
         for djn in m.component_data_objects(ctype=Disjunction):
             djn.deactivate()
         self.assertTrue(satisfiable(m) is not False)
 
     def test_strip_pack(self):
-        exfile = import_file(
-            join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
+        exfile = import_file(join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         m = exfile.build_rect_strip_packing_model()
         self.assertTrue(satisfiable(m))
 
     def test_constrained_layout(self):
-        exfile = import_file(
-            join(exdir, 'constrained_layout', 'cons_layout_model.py'))
+        exfile = import_file(join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         m = exfile.build_constrained_layout_model()
         self.assertTrue(satisfiable(m) is not False)
 

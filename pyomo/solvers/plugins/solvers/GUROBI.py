@@ -193,7 +193,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
-
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
         TempfileManager.push()
@@ -234,7 +233,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # symbol_map is actually constructed!
 
         if (len(args) > 0) and (not isinstance(args[0], str)):
-
             if len(args) != 1:
                 raise ValueError(
                     "GUROBI _presolve method can only handle a single "
@@ -543,7 +541,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             results.solution.insert(soln)
 
     def _postsolve(self):
-
         # take care of the annoying GUROBI log file in the current
         # directory.  this approach doesn't seem overly efficient, but
         # python os module functions doesn't accept regular expression

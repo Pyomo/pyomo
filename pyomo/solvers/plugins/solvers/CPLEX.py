@@ -305,7 +305,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
-
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
         TempfileManager.push()
@@ -358,7 +357,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # symbol_map is actually constructed!
 
         if (len(args) > 0) and (not isinstance(args[0], str)):
-
             if len(args) != 1:
                 raise ValueError(
                     "CPLEX _presolve method can only handle a "
@@ -368,7 +366,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             # write the warm-start file - currently only supports MIPs.
             # we only know how to deal with a single problem instance.
             if self._warm_start_solve and (not user_warmstart):
-
                 start_time = time.time()
                 self._warm_start(args[0])
                 end_time = time.time()
@@ -415,7 +412,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
-
         #
         # Define log file
         # The log file in CPLEX contains the solution trace, but the solver status can be found in the solution file.
@@ -699,7 +695,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         return results
 
     def process_soln_file(self, results):
-
         # the only suffixes that we extract from CPLEX are
         # constraint duals, constraint slacks, and variable
         # reduced-costs. scan through the solver suffix list
@@ -1014,7 +1009,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         INPUT.close()
 
     def _postsolve(self):
-
         # take care of the annoying (and empty) CPLEX temporary files in the current directory.
         # this approach doesn't seem overly efficient, but python os module functions don't
         # accept regular expression directly.

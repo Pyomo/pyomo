@@ -15,20 +15,31 @@ from pyomo.common.fileutils import Executable
 from pyomo.contrib.cp import IntervalVar, Pulse, Step, AlwaysIn
 from pyomo.contrib.cp.repn.docplex_writer import LogicalToDoCplex
 from pyomo.environ import (
-    ConcreteModel, Set, Var, Integers, LogicalConstraint, implies, value,
-    TerminationCondition, Constraint, PositiveIntegers, maximize, minimize,
-    Objective
+    ConcreteModel,
+    Set,
+    Var,
+    Integers,
+    LogicalConstraint,
+    implies,
+    value,
+    TerminationCondition,
+    Constraint,
+    PositiveIntegers,
+    maximize,
+    minimize,
+    Objective,
 )
-from pyomo.opt import (
-    WriterFactory, SolverFactory
-)
+from pyomo.opt import WriterFactory, SolverFactory
+
 try:
     import docplex.cp.model as cp
+
     docplex_available = True
 except:
     docplex_available = False
 
 cpoptimizer_available = Executable('cpoptimizer').available()
+
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 class TestWriteModel(unittest.TestCase):
@@ -95,17 +106,22 @@ class TestWriteModel(unittest.TestCase):
         self.assertIs(variables[1], i2)
         self.assertIs(variables[2], i1)
 
-        self.assertTrue(exprs[3][0].equals(
-            cp.element([cp.presence_of(i1), cp.presence_of(i2)],
-                       0 + 1 * (x - 1) // 1) == True))
+        self.assertTrue(
+            exprs[3][0].equals(
+                cp.element(
+                    [cp.presence_of(i1), cp.presence_of(i2)], 0 + 1 * (x - 1) // 1
+                )
+                == True
+            )
+        )
+
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 @unittest.skipIf(not cpoptimizer_available, "CP optimizer is not available")
 class TestSolveModel(unittest.TestCase):
     def test_solve_scheduling_problem(self):
         m = ConcreteModel()
-        m.eat_cookie = IntervalVar([0, 1], length=8, end=(0, 24),
-                                   optional=False)
+        m.eat_cookie = IntervalVar([0, 1], length=8, end=(0, 24), optional=False)
         m.eat_cookie[0].start_time.bounds = (0, 4)
         m.eat_cookie[1].start_time.bounds = (5, 20)
 
@@ -116,31 +132,38 @@ class TestSolveModel(unittest.TestCase):
         m.num_crumbs = Var(domain=Integers, bounds=(0, 100))
 
         ## Precedence
-        m.cookies = LogicalConstraint(expr=m.eat_cookie[1].start_time.after(
-            m.eat_cookie[0].end_time))
+        m.cookies = LogicalConstraint(
+            expr=m.eat_cookie[1].start_time.after(m.eat_cookie[0].end_time)
+        )
         m.cookies_imply_crumbs = LogicalConstraint(
-            expr=m.eat_cookie[0].is_present.implies(m.num_crumbs == 5))
-        m.good_mouse = LogicalConstraint(expr=implies(
-            m.num_crumbs >= 3, m.sweep_crumbs.is_present))
-        m.sweep_after = LogicalConstraint(expr=m.sweep_crumbs.start_time.after(
-            m.eat_cookie[1].end_time))
+            expr=m.eat_cookie[0].is_present.implies(m.num_crumbs == 5)
+        )
+        m.good_mouse = LogicalConstraint(
+            expr=implies(m.num_crumbs >= 3, m.sweep_crumbs.is_present)
+        )
+        m.sweep_after = LogicalConstraint(
+            expr=m.sweep_crumbs.start_time.after(m.eat_cookie[1].end_time)
+        )
 
-        m.mice_occupied = sum(Pulse((m.eat_cookie[i], 1)) for i in range(2)) + \
-                          Step(m.read_story.start_time, 1) + \
-                          Pulse((m.sweep_crumbs, 1)) - Pulse((m.do_dishes, 1))
+        m.mice_occupied = (
+            sum(Pulse((m.eat_cookie[i], 1)) for i in range(2))
+            + Step(m.read_story.start_time, 1)
+            + Pulse((m.sweep_crumbs, 1))
+            - Pulse((m.do_dishes, 1))
+        )
 
         # Must keep exactly one mouse occupied for a 25-hour day
         m.treat_your_mouse_well = LogicalConstraint(
-            expr=AlwaysIn(cumul_func=m.mice_occupied, bounds=(1, 1),
-                          times=(0, 24)))
+            expr=AlwaysIn(cumul_func=m.mice_occupied, bounds=(1, 1), times=(0, 24))
+        )
 
         results = SolverFactory('cp_optimizer').solve(
-            m,
-            symbolic_solver_labels=True,
-            tee=True)
+            m, symbolic_solver_labels=True, tee=True
+        )
 
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.feasible)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.feasible
+        )
 
         # check solution
         self.assertTrue(value(m.eat_cookie[0].is_present))
@@ -181,8 +204,9 @@ class TestSolveModel(unittest.TestCase):
         m.c = Constraint(expr=m.x == 0)
 
         result = SolverFactory('cp_optimizer').solve(m)
-        self.assertEqual(result.solver.termination_condition,
-                         TerminationCondition.infeasible)
+        self.assertEqual(
+            result.solver.termination_condition, TerminationCondition.infeasible
+        )
 
         self.assertIsNone(m.x.value)
 
@@ -195,8 +219,9 @@ class TestSolveModel(unittest.TestCase):
 
         results = SolverFactory('cp_optimizer').solve(m)
 
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertEqual(value(m.cookies), 9)
 
         self.assertEqual(results.problem.number_of_objectives, 1)
@@ -210,15 +235,18 @@ class TestSolveModel(unittest.TestCase):
         m.y = Var(within=[1, 2, 3])
 
         m.c1 = Constraint(expr=m.y >= 2.5)
+
         @m.Constraint([1, 2, 3])
         def x_bounds(m, i):
-            return m.x[i] >= 3*(i - 1)
+            return m.x[i] >= 3 * (i - 1)
+
         m.obj = Objective(expr=m.x[m.y])
 
         results = SolverFactory('cp_optimizer').solve(m)
 
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertEqual(value(m.x[3]), 6)
         self.assertEqual(value(m.y), 3)
 
