@@ -14,7 +14,16 @@ import logging
 import sys
 
 from pyomo.common.errors import DeveloperError
-from pyomo.core.base import Var, Param, Expression, Objective, Block, Constraint, Suffix, SortComponents
+from pyomo.core.base import (
+    Var,
+    Param,
+    Expression,
+    Objective,
+    Block,
+    Constraint,
+    Suffix,
+    SortComponents,
+)
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.expr.numvalue import native_numeric_types, is_fixed, value
 import pyomo.core.kernel as kernel

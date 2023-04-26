@@ -89,7 +89,6 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
-nan = float('nan')
 
 
 _CONSTANT = ExprType.CONSTANT
