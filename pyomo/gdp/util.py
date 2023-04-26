@@ -121,7 +121,7 @@ class GDPTree:
     own.
     """
     def __init__(self):
-        self._adjacency_list = {}
+        self._children = {}
         self._in_degrees = {}
         # Every node has exactly one or 0 parents.
         self._parent = {}
@@ -153,6 +153,15 @@ class GDPTree:
         else:
             return None
 
+    def parent_disjunct(self, u):
+        """Returns the parent Disjunct of us, or None if u is the 
+        closest-to-root Disjunct in the forest.
+
+        Arg:
+            u : A node in the forest
+        """
+        return self.parent(self.parent(u))
+
     def root_disjunct(self, u):
         """Returns the highest parent Disjunct in the hierarchy, or None if
         the component is not nested.
@@ -169,19 +178,22 @@ class GDPTree:
                 rootmost_disjunct = parent
             parent = self.parent(parent)
 
+    def add_node(self, u):
+        if u not in self._children:
+            self._children[u] = OrderedSet()
+        self._vertices.add(u)
+
     def add_edge(self, u, v):
-        if u not in self._adjacency_list:
-            self._adjacency_list[u] = OrderedSet()
-        self._adjacency_list[u].add(v)
+        self.add_node(u)
+        self.add_node(v)
+        self._children[u].add(v)
         if v in self._parent and self._parent[v] is not u:
             _raise_disjunct_in_multiple_disjunctions_error(v, u)
         self._parent[v] = u
-        self._vertices.add(u)
-        self._vertices.add(v)
 
     def _visit_vertex(self, u, leaf_to_root):
-        if u in self._adjacency_list:
-            for v in self._adjacency_list[u]:
+        if u in self._children:
+            for v in self._children[u]:
                 if v not in leaf_to_root:
                     self._visit_vertex(v, leaf_to_root)
         # we're done--we've been to all its children
@@ -208,6 +220,16 @@ class GDPTree:
             return 0
         return 1
 
+    def is_leaf(self, u):
+        if len(self._children[u]) == 0:
+            return True
+        return False
+
+    @property
+    def leaves(self):
+        for u, children in self._children.items():
+            if len(children) == 0:
+                yield u
 
 def _parent_disjunct(obj):
     parent = obj.parent_block()

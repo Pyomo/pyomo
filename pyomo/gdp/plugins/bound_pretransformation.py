@@ -13,18 +13,18 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
-    Block, Constraint, NonNegativeIntegers, SortComponents, value, Var
+    Any, Block, Constraint, NonNegativeIntegers, SortComponents, value, Var
 )
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.util import target_list
-from pyomo.gdp import Disjunct, Disjunction
-from pyomo.gdp.util import get_gdp_tree
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.util import is_child_of, get_gdp_tree
 import logging
 
 ## debug
 from pytest import set_trace
 
-logger = logging.getLogger('pyomo.gdp.common_constraint_body')
+logger = logging.getLogger(__name__)
 
 @TransformationFactory.register(
     'gdp.common_constraint_body',
@@ -89,26 +89,57 @@ class CommonLHSTransformation(Transformation):
             targets = (instance,)
 
         transformation_blocks = {}
+        knownBlocks = {}
         for t in targets:
-            gdp_forest = get_gdp_tree([t,], instance)
-            # we have to go from leaf to root because we pass bound information
-            # upwards--the innermost disjuncts should restrict it the most. If
-            # that's not true, they're useless, and if there are contradictions,
-            # we'll catch them.
-            bound_dict = ComponentMap()
-            for d in gdp_forest.reverse_topological_sort():
-                if d.ctype is Disjunct:
-                    # TODO: This is a mess because you're overwriting for all
-                    # the Disjuncts in a Disjunction. Need to keep a dict for
-                    # each root Disjunct, at least, but I need to think about it
-                    # a little more
-                    self._update_bounds_from_constraints(d, bound_dict)
-                elif d.ctype is Disjunction and gdp_forest.parent(d) is None:
-                    # we're at a root, finish the transformation
-                    self._transform_disjunction(d, bound_dict,
+            # first check it's not insane, that is, it is at least on the
+            # instance
+            if not is_child_of(parent=instance, child=t,
+                               knownBlocks=knownBlocks):
+                raise GDP_Error(
+                    "Target '%s' is not a component on instance "
+                    "'%s'!" % (t.name, instance.name)
+                )
+            # Blocks, Disjuncts, and their ilk
+            if isinstance(t, Block):
+                for disjunction in t.component_data_objects(
+                        Disjunction,
+                        descend_into=Block,
+                        sort=SortComponents.deterministic,
+                        active=True):
+                    self._transform_disjunction(disjunction, instance,
+                                                transformation_blocks)
+            elif t.ctype is Disjunction:
+                self._transform_disjunction(disjunction, instance,
+                                            transformation_blocks)
+            else:
+               raise GDP_Error(
+                   "Target '%s' was not a Block, Disjunct, or Disjunction. "
+                   "It was of type %s and can't be transformed." % 
+                   (t.name, type(t))
+               )
+
+    def _transform_disjunction(self, disjunction, instance,
+                               transformation_blocks):
+        gdp_forest = get_gdp_tree([disjunction,], instance)
+        # we have to go from leaf to root because we pass bound information
+        # upwards--the innermost disjuncts should restrict it the most. If
+        # that's not true, they're useless, and if there are contradictions,
+        # we'll catch them.
+        bound_dict = ComponentMap()
+        disjunctions_to_transform = set()
+        for d in gdp_forest.topological_sort():
+            if d.ctype is Disjunct:
+                # TODO: This is a mess because you're overwriting for all
+                # the Disjuncts in a Disjunction. Need to keep a dict for
+                # each root Disjunct, at least, but I need to think about it
+                # a little more
+                self._update_bounds_from_constraints(d, bound_dict,
+                                                     gdp_forest)
+        self._create_transformation_constraints(disjunction, bound_dict,
+                                                gdp_forest,
                                                 transformation_blocks)
 
-    def _update_bounds_from_constraints(self, disjunct, bound_dict):
+    def _update_bounds_from_constraints(self, disjunct, bound_dict, gdp_forest):
         for constraint in disjunct.component_data_objects(
                 Constraint,
                 active=True,
@@ -118,48 +149,114 @@ class CommonLHSTransformation(Transformation):
                 and constraint.body.ctype is Var):
                 v = constraint.body
                 # Then this is a bound or an equality 
-                current_bounds = bound_dict.get(v)
-                if current_bounds is None:
-                    # TODO: These need to be values, I think. We can't guarantee
-                    # this is right when mutable stuff changes...
-                    bound_dict[v] = (constraint.lower, constraint.upper,
-                                     disjunct.binary_indicator_var,
-                                     disjunct.binary_indicator_var)
-                else:
-                    self._update_bounds_dict(bound_dict, v, constraint,
-                                             disjunct.binary_indicator_var,
-                                             current_bounds)
+                v_bounds = bound_dict.get(v)
+                if v_bounds is None:
+                    v_bounds = bound_dict[v] = {None: (v.lb, v.ub),
+                                                'to_deactivate': set()}
+                self._update_bounds_dict(v_bounds, constraint, disjunct,
+                                         gdp_forest.parent_disjunct(disjunct))
+                # We won't know til the end if we're *really* transforming this
+                # constraint, so we just cache the fact that it is a constraint
+                # on v and wait for later
+                v_bounds['to_deactivate'].add(constraint)
 
-    def _update_bounds_dict(self, bound_dict, variable, cons, indicator_var,
-                            current_bounds):
-        (lb, ub, lb_indicator_var, ub_indicator_var) = current_bounds
+    def _update_bounds_dict(self, v_bounds, cons, disjunct, parent):
+        (lb, ub) = v_bounds[parent]
         lower = value(cons.lower)
         if lower is not None:
-            if lb is None or (lb is not None and lower <= lb):
-                # This GDP is more constrained higher in the tree. If lb wasn't
-                # None, this is a bit surprising since it means the descendent
-                # constraint is useless, but we just replace what we will put in
-                # the final constraint. If lb was None, this is just the first
-                # time we've found a real bound.
+            if lb is None or (lb is not None and lower > lb):
+                # This GDP is more constrained here than it was in the parent
+                # Disjunct (what we would expect, usually. If it's looser, we're
+                # essentially just ignoring it...)
                 lb = cons.lower
-                lb_indicator_var = indicator_var
         upper = value(cons.upper)
         if upper is not None:
-            if ub is None or (ub is not None and upper <= ub):
+            if ub is None or (ub is not None and upper < ub):
                 # Same case as above in the UB
                 ub = cons.upper
-                ub_indicator_var = indicator_var
-        # In all other cases, there is nothing to do... The lower gives more
-        # information and all the logical stuff will be filled in later by a
-        # "full" transformation to MIP.
-        bound_dict[variable] = (lb, ub, lb_indicator_var, ub_indicator_var)
+        # In all other cases, there is nothing to do... The parent gives more
+        # information, so we just propogate that down
+        v_bounds[disjunct] = (lb, ub)
 
-    def _transform_disjunction(self, disjunction, bound_dict,
-                               transformation_blocks):
+    def _create_transformation_constraints(self, disjunction, bound_dict,
+                                           gdp_forest, transformation_blocks):
         trans_block = self._add_transformation_block(disjunction,
                                                      transformation_blocks)
-        for v, (lb, ub, lb_indicator_var, ub_indicator_var) in bound_dict.items():
-            set_trace()
+        if self.transformation_name not in disjunction._transformation_map:
+            disjunction._transformation_map[
+                self.transformation_name] = ComponentMap()
+        trans_map = disjunction._transformation_map[self.transformation_name]
+        print("It's the moment, transforming Disjunction...")
+        unique_id = len(trans_block.transformed_bound_constraints)
+        lb_expr = 0
+        ub_expr = 0
+        for v, v_bounds in bound_dict.items():
+            print(v)
+            all_lbs = True
+            all_ubs = True
+            for disjunct in gdp_forest.leaves:
+                print(disjunct)
+                indicator_var = disjunct.binary_indicator_var
+                need_lb = True
+                need_ub = True
+                while need_lb or need_ub:
+                    if disjunct in v_bounds:
+                        (lb, ub) = v_bounds[disjunct]
+                        print(lb, ub)
+                        need_lb = lb is None
+                        need_ub = ub is None
+                        if not need_lb:
+                            lb_expr += lb*indicator_var
+                        if not need_ub:
+                            ub_expr += ub*indicator_var
+                    if disjunct is None:
+                        break
+                    disjunct = gdp_forest.parent_disjunct(disjunct)
+                if need_lb:
+                    all_lbs = False
+                if need_ub:
+                    all_ubs = False
+            deactivate_lower = set()
+            deactivate_upper = set()
+            if all_lbs:
+                idx = (v.local_name + '_lb', unique_id)
+                trans_block.transformed_bound_constraints[idx] = lb_expr <= v
+                trans_map[v] = [trans_block.transformed_bound_constraints[idx]]
+                for c in v_bounds['to_deactivate']:
+                    if c.upper is None:
+                        c.deactivate()
+                    else:
+                        deactivate_lower.add(c)
+                disjunction._transformation_map
+            if all_ubs:
+                idx = (v.local_name + '_ub', unique_id + 1)
+                trans_block.transformed_bound_constraints[idx] = ub_expr <= v
+                if v in trans_map:
+                    trans_map[v].append(
+                        trans_block.transformed_bound_constraints[idx])
+                else:
+                    trans_map[v] = [
+                        trans_block.transformed_bound_constraints[idx]]
+                for c in v_bounds['to_deactivate']:
+                    if c.lower is None or c in deactivate_lower:
+                        c.deactivate()
+                        deactivate_lower.discard(c)
+                    else:
+                        deactivate_upper.add(c)
+            # Now we mess up the user's model, if we are only deactivating the
+            # lower or upper part of a constraint that has both
+            for c in deactivate_lower:
+                c.deactivate()
+                c.parent_block().add_component(
+                    unique_component_name(c.parent_block(),
+                                          c.local_name + '_ub'),
+                    Constraint(expr=v <= c.upper))
+            for c in deactivate_upper:
+                c.deactivate()
+                c.parent_block().add_component(
+                    unique_component_name(c.parent_block(),
+                                          c.local_name + '_lb'),
+                    Constraint(expr=v >= c.lower))
 
     def _add_transformation_block(self, disjunction, transformation_blocks):
         to_block = disjunction.parent_block()
@@ -174,6 +271,22 @@ class CommonLHSTransformation(Transformation):
         to_block.add_component(trans_block_name, trans_block)
 
         trans_block.transformed_bound_constraints = Constraint(
-            NonNegativeIntegers)
+            Any*NonNegativeIntegers)
         
         return trans_block
+
+    def get_transformed_constraints(self, v, disjunction):
+        if self.transformation_name not in disjunction._transformation_map:
+            logger.debug(
+                "No variable on Disjunction '%s' was transformed with the "
+                "gdp.%s transformation" % (disjunction.name,
+                                           self.transformation_name))
+            return []
+        trans_map = disjunction._transformation_map[self.transformation_name]
+        if v not in trans_map:
+            logger.debug(
+                "Constraint bounding variable '%s' on Disjunction '%s' were "
+                "not transformed by the 'gdp.%s' transformation" % 
+                (v.name, disjunction.name, self.transformation_name))
+            return []
+        return trans_map[v]

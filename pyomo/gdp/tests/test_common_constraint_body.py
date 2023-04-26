@@ -31,7 +31,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.outer_d1.inner_d1 = Disjunct()
         m.outer_d1.inner_d1.c = Constraint(expr=m.x <= 3)
         m.outer_d1.inner_d2 = Disjunct()
-        m.outer_d1.inner_d2.c = Constraint(expr=m.x >= -17)
+        m.outer_d1.inner_d2.c = Constraint(expr=m.x >= -7)
         m.outer_d1.inner = Disjunction(expr=[m.outer_d1.inner_d1,
                                              m.outer_d1.inner_d2])
         m.outer_d2 = Disjunct()
@@ -45,7 +45,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
 
         TransformationFactory('gdp.common_constraint_body').apply_to(m)
 
-        # All we need is actually: -17w_2 <= x <= 3w_1
+        # All we need is actually: -7w_2 <= x <= 3w_1
 
         m.pprint()
         self.assertTrue(False)
