@@ -378,7 +378,7 @@ class _LPWriter_impl(object):
         if with_debug_timing and obj.parent_component() is not last_parent:
             timer.toc('Objective %s', obj, level=logging.DEBUG)
 
-        ostream.write("\ns.t.\n\n")
+        ostream.write("\ns.t.\n")
 
         #
         # Tabulate constraints
@@ -436,7 +436,7 @@ class _LPWriter_impl(object):
             if lb == ub and lb is not None:
                 label = f'c_e_{symbol}_'
                 addSymbol(con, label)
-                ostream.write(label + ':\n')
+                ostream.write(f'\n{label}:\n')
                 self.write_expression(ostream, repn, False)
                 ostream.write(f'= {(lb - offset)!r}\n')
             elif lb is not None:
@@ -449,24 +449,24 @@ class _LPWriter_impl(object):
                     #
                     label = f'r_l_{symbol}_'
                     addSymbol(con, label)
-                    ostream.write(label + ':\n')
+                    ostream.write(f'\n{label}:\n')
                     ostream.write(buf)
                     ostream.write(f'>= {(lb - offset)!r}\n')
                     label = f'r_u_{symbol}_'
                     aliasSymbol(con, label)
-                    ostream.write(label + ':\n')
+                    ostream.write(f'\n{label}:\n')
                     ostream.write(buf)
                     ostream.write(f'<= {(ub - offset)!r}\n')
                 else:
                     label = f'c_l_{symbol}_'
                     addSymbol(con, label)
-                    ostream.write(label + ':\n')
+                    ostream.write(f'\n{label}:\n')
                     self.write_expression(ostream, repn, False)
                     ostream.write(f'>= {(lb - offset)!r}\n')
             elif ub is not None:
                 label = f'c_u_{symbol}_'
                 aliasSymbol(con, label)
-                ostream.write(label + ':\n')
+                ostream.write(f'\n{label}:\n')
                 self.write_expression(ostream, repn, False)
                 ostream.write(f'<= {(ub - offset)!r}\n')
 
@@ -478,7 +478,7 @@ class _LPWriter_impl(object):
                 'Empty constraint block written in LP format - solver may error'
             )
 
-        ostream.write("bounds")
+        ostream.write("\nbounds")
 
         # Track the number of integer and binary variables, so you can
         # output their status later.
