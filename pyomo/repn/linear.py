@@ -94,7 +94,7 @@ class LinearRepn(object):
         ans.nonlinear = self.nonlinear
         return ans
 
-    def to_expression(visitor):
+    def to_expression(self, visitor):
         if self.linear:
             ans = (
                 LinearExpression(
@@ -708,7 +708,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         # General expressions...
         #
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
-            visitor, node, *data
+            self, node, *data
         )
 
     def finalizeResult(self, result):

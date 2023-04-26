@@ -2348,7 +2348,7 @@ def _before_monomial(visitor, child):
                 version='6.4.3',
             )
             _prod = 0
-        return (_CONSTANT, _prod)
+        return False, (_CONSTANT, _prod)
 
     # Trap multiplication by 0.
     if not arg1:

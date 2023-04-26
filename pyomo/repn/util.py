@@ -24,8 +24,8 @@ logger = logging.getLogger('pyomo.core')
 valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
 valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
 
-
 HALT_ON_EVALUATION_ERROR = False
+nan = float('nan')
 
 
 class ExprType(enum.IntEnum):
