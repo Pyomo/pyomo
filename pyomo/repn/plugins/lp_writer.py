@@ -181,6 +181,8 @@ class LPWriter(object):
         if filename is None:
             filename = model.name + ".lp"
 
+        # Duplicate io_options to avoid side-effects
+        io_options = dict(io_options)
         # Map old solver capabilities to new writer options
         qp = solver_capability('quadratic_objective')
         if 'allow_quadratic_objective' not in io_options:
@@ -489,10 +491,10 @@ class _LPWriter_impl(object):
             v_symbol = getSymbolByObjectID(vid, None)
             if not v_symbol:
                 continue
-            if v.is_integer():
-                integer_vars.append(v_symbol)
-            elif v.is_binary():
+            if v.is_binary():
                 binary_vars.append(v_symbol)
+            elif v.is_integer():
+                integer_vars.append(v_symbol)
 
             lb, ub = v.bounds
             lb = '-inf' if lb is None else repr(lb)
