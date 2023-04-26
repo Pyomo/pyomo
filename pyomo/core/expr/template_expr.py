@@ -15,7 +15,17 @@ import logging
 import sys
 import builtins
 
+from pyomo.common.backports import nullcontext
+from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.core.expr.logical_expr import BooleanExpression
+from pyomo.core.expr.numeric_expr import (
+    NumericExpression,
+    SumExpression,
+    Numeric_NPV_Mixin,
+    register_arg_type,
+    ARG_TYPE,
+)
 from pyomo.core.expr.numvalue import (
     NumericValue,
     native_types,
@@ -24,7 +34,6 @@ from pyomo.core.expr.numvalue import (
     value,
     is_constant,
 )
-from pyomo.core.expr.numeric_expr import NumericExpression, SumExpression
 from pyomo.core.expr.visitor import (
     ExpressionReplacementVisitor,
     StreamBasedExpressionVisitor,
@@ -37,19 +46,44 @@ class _NotSpecified(object):
     pass
 
 
-class GetItemExpression(NumericExpression):
+class GetItemExpression(ExpressionBase):
     """
     Expression to call :func:`__getitem__` on the base object.
     """
 
+    __slots__ = ()
     PRECEDENCE = 1
 
-    def __init__(self, args):
-        """Construct an expression with an operation and a set of arguments"""
-        self._args_ = args
-
-    def nargs(self):
-        return len(self._args_)
+    def __new__(cls, args=()):
+        if cls is not GetItemExpression:
+            return super().__new__(cls)
+        npv_args = not any(
+            hasattr(arg, 'is_potentially_variable') and arg.is_potentially_variable()
+            for arg in args
+        )
+        try:
+            component = _reduce_template_to_component(args[0])
+            cdata = component._ComponentDataClass(component)
+            if cdata.is_numeric_type():
+                if npv_args and not cdata.is_potentially_variable():
+                    return super().__new__(NPV_Numeric_GetItemExpression)
+                else:
+                    return super().__new__(Numeric_GetItemExpression)
+            if cdata.is_logical_type():
+                if npv_args and not cdata.is_potentially_variable():
+                    return super().__new__(NPV_Boolean_GetItemExpression)
+                else:
+                    return super().__new__(Boolean_GetItemExpression)
+        except (AttributeError, TypeError):
+            # TypeError: error reducing to a component (usually due to
+            #     unbounded domain on a Var used in a GetItemExpression)
+            # AttributeError: resolved component did not support the
+            #     PyomoObject API
+            pass
+        if npv_args:
+            return super().__new__(NPV_Structural_GetItemExpression)
+        else:
+            return super().__new__(Structural_GetItemExpression)
 
     def __getattr__(self, attr):
         if attr.startswith('__') and attr.endswith('__'):
@@ -65,40 +99,39 @@ class GetItemExpression(NumericExpression):
     def getname(self, *args, **kwds):
         return self._args_[0].getname(*args, **kwds)
 
-    def is_potentially_variable(self):
-        _false = lambda: False
-        if any(
-            getattr(arg, 'is_potentially_variable', _false)() for arg in self._args_
-        ):
-            return True
-        base = self._args_[0]
-        if base.is_expression_type():
-            base = value(base)
-        # TODO: fix value iteration when generating templates
-        #
-        # There is a nasty problem here: we want to iterate over all the
-        # members of the base and see if *any* of them are potentially
-        # variable.  Unfortunately, this method is called during
-        # expression generation, and we *could* be generating a
-        # template.  When that occurs, iterating over the base will
-        # yield a new IndexTemplate (which will in turn raise an
-        # exception because IndexTemplates are not constant).  The real
-        # solution is probably to re-think how we define
-        # is_potentially_variable, but for now we will only handle
-        # members that are explicitly stored in the _data dict.  Not
-        # general (because a Component could implement a non-standard
-        # storage scheme), but as of now [30 Apr 20], there are no known
-        # Components where this assumption will cause problems.
-        return any(
-            getattr(x, 'is_potentially_variable', _false)()
-            for x in getattr(base, '_data', {}).values()
-        )
+    def nargs(self):
+        return len(self._args_)
 
     def _is_fixed(self, values):
         if not all(values[1:]):
             return False
         _true = lambda: True
         return all(getattr(x, 'is_fixed', _true)() for x in values[0].values())
+
+    def _to_string(self, values, verbose, smap):
+        values = tuple(_[1:-1] if _[0] == '(' and _[-1] == ')' else _ for _ in values)
+        if verbose:
+            return "getitem(%s, %s)" % (values[0], ', '.join(values[1:]))
+        return "%s[%s]" % (values[0], ','.join(values[1:]))
+
+    def _resolve_template(self, args):
+        return args[0].__getitem__(tuple(args[1:]))
+
+    def _apply_operation(self, result):
+        args = tuple(
+            arg
+            if arg.__class__ in native_types or not arg.is_numeric_type()
+            else value(arg)
+            for arg in result[1:]
+        )
+        return result[0].__getitem__(tuple(result[1:]))
+
+
+class Numeric_GetItemExpression(GetItemExpression, NumericExpression):
+    __slots__ = ()
+
+    def nargs(self):
+        return len(self._args_)
 
     def _compute_polynomial_degree(self, result):
         if any(x != 0 for x in result[1:]):
@@ -116,26 +149,28 @@ class GetItemExpression(NumericExpression):
                 ans = tmp
         return ans
 
-    def _apply_operation(self, result):
-        args = tuple(
-            arg
-            if arg.__class__ in native_types or not arg.is_numeric_type()
-            else value(arg)
-            for arg in result[1:]
-        )
-        return result[0].__getitem__(tuple(result[1:]))
 
-    def _to_string(self, values, verbose, smap):
-        values = tuple(_[1:-1] if _[0] == '(' and _[-1] == ')' else _ for _ in values)
-        if verbose:
-            return "getitem(%s, %s)" % (values[0], ', '.join(values[1:]))
-        return "%s[%s]" % (values[0], ','.join(values[1:]))
-
-    def _resolve_template(self, args):
-        return args[0].__getitem__(tuple(args[1:]))
+class NPV_Numeric_GetItemExpression(Numeric_NPV_Mixin, Numeric_GetItemExpression):
+    __slots__ = ()
 
 
-class GetAttrExpression(NumericExpression):
+class Boolean_GetItemExpression(GetItemExpression, BooleanExpression):
+    __slots__ = ()
+
+
+class NPV_Boolean_GetItemExpression(NPV_Mixin, Boolean_GetItemExpression):
+    __slots__ = ()
+
+
+class Structural_GetItemExpression(ExpressionArgs_Mixin, GetItemExpression):
+    __slots__ = ()
+
+
+class NPV_Structural_GetItemExpression(NPV_Mixin, Structural_GetItemExpression):
+    __slots__ = ()
+
+
+class GetAttrExpression(ExpressionBase):
     """
     Expression to call :func:`__getattr__` on the base object.
     """
@@ -143,8 +178,34 @@ class GetAttrExpression(NumericExpression):
     __slots__ = ()
     PRECEDENCE = 1
 
-    def nargs(self):
-        return len(self._args_)
+    def __new__(cls, args=()):
+        if cls is not GetAttrExpression:
+            return super().__new__(cls)
+        # Ironically, we need to actually create this object in order to
+        # determine what the class for this object should be.
+        if args[0].is_potentially_variable():
+            self = Structural_GetAttrExpression(args)
+        else:
+            self = NPV_Structural_GetAttrExpression(args)
+        try:
+            attr = _reduce_template_to_component(self)
+            if attr.is_numeric_type():
+                if attr.is_potentially_variable() or self.is_potentially_variable():
+                    return super().__new__(Numeric_GetAttrExpression)
+                else:
+                    return super().__new__(NPV_Numeric_GetAttrExpression)
+            elif attr.is_logical_type():
+                if attr.is_potentially_variable() or self.is_potentially_variable():
+                    return super().__new__(Boolean_GetAttrExpression)
+                else:
+                    return super().__new__(NPV_Boolean_GetAttrExpression)
+        except (AttributeError, TypeError):
+            # TypeError: error reducing to a component (usually due to
+            #     unbounded domain on a Var used in a GetItemExpression)
+            # AttributeError: resolved component did not support the
+            #     PyomoObject API
+            pass
+        return self
 
     def __getattr__(self, attr):
         if attr.startswith('__') and attr.endswith('__'):
@@ -168,13 +229,18 @@ class GetAttrExpression(NumericExpression):
         #
         # TODO: deprecate (then remove) evaluating expressions by
         # "calling" them.
-        if not args:
-            if not kwargs:
-                return super().__call__()
-            elif len(kwargs) == 1 and 'exception' in kwargs:
-                return super().__call__(**kwargs)
-        elif not kwargs and len(args) == 1 and (args[0] is True or args[0] is False):
-            return super().__call__(*args)
+        try:
+            if not args:
+                if not kwargs:
+                    return super().__call__()
+                elif len(kwargs) == 1 and 'exception' in kwargs:
+                    return super().__call__(**kwargs)
+            elif (
+                not kwargs and len(args) == 1 and (args[0] is True or args[0] is False)
+            ):
+                return super().__call__(*args)
+        except TemplateExpressionError:
+            pass
         # Note: the only time we will implicitly create a CallExpression
         # node is directly after a GetAttrExpression: that is, someone
         # got the attribute (method) and is now calling it.
@@ -185,10 +251,8 @@ class GetAttrExpression(NumericExpression):
     def getname(self, *args, **kwds):
         return 'getattr'
 
-    def _compute_polynomial_degree(self, result):
-        if result[1] != 0:
-            return None
-        return result[0]
+    def nargs(self):
+        return 2
 
     def _apply_operation(self, result):
         assert len(result) == 2
@@ -207,6 +271,35 @@ class GetAttrExpression(NumericExpression):
 
     def _resolve_template(self, args):
         return getattr(*tuple(args))
+
+
+class Numeric_GetAttrExpression(GetAttrExpression, NumericExpression):
+    __slots__ = ()
+
+    def _compute_polynomial_degree(self, result):
+        if result[1] != 0:
+            return None
+        return result[0]
+
+
+class NPV_Numeric_GetAttrExpression(Numeric_NPV_Mixin, Numeric_GetAttrExpression):
+    __slots__ = ()
+
+
+class Boolean_GetAttrExpression(GetAttrExpression, BooleanExpression):
+    __slots__ = ()
+
+
+class NPV_Boolean_GetAttrExpression(NPV_Mixin, Boolean_GetAttrExpression):
+    __slots__ = ()
+
+
+class Structural_GetAttrExpression(ExpressionArgs_Mixin, GetAttrExpression):
+    __slots__ = ()
+
+
+class NPV_Structural_GetAttrExpression(NPV_Mixin, Structural_GetAttrExpression):
+    __slots__ = ()
 
 
 class CallExpression(NumericExpression):
@@ -443,13 +536,14 @@ class IndexTemplate(NumericValue):
        _set: the Set from which this IndexTemplate can take values
     """
 
-    __slots__ = ('_set', '_value', '_index', '_id', '_lock')
+    __slots__ = ('_set', '_value', '_index', '_id', '_group', '_lock')
 
-    def __init__(self, _set, index=0, _id=None):
+    def __init__(self, _set, index=0, _id=None, _group=None):
         self._set = _set
         self._value = _NotSpecified
         self._index = index
         self._id = _id
+        self._group = _group
         self._lock = None
 
     def __deepcopy__(self, memo):
@@ -536,10 +630,7 @@ class IndexTemplate(NumericValue):
             if len(values) == 1:
                 self._value = values[0]
             else:
-                raise ValueError(
-                    "Passed multiple values %s to a scalar "
-                    "IndexTemplate %s" % (values, self)
-                )
+                self._value = values[self._index]
         else:
             self._value = values
 
@@ -553,6 +644,11 @@ class IndexTemplate(NumericValue):
         self._lock = None
 
 
+# Instead of special-casing _categorize_arg_type for this class, we
+# will directly register that it should be treated as an NPV arg
+register_arg_type(IndexTemplate, ARG_TYPE.NPV)
+
+
 def resolve_template(expr):
     """Resolve a template into a concrete expression
 
@@ -562,10 +658,15 @@ def resolve_template(expr):
     GetAttrExpression, and TemplateSumExpression expression nodes.
 
     """
+    wildcards = []
+    wildcard_groups = {}
+    level = -1
 
     def beforeChild(node, child, child_idx):
         # Efficiency: do not descend into leaf nodes.
-        if type(child) in native_types or not child.is_expression_type():
+        if type(child) in native_types:
+            return False, child
+        elif not child.is_expression_type():
             if hasattr(child, '_resolve_template'):
                 return False, child._resolve_template(())
             return False, child
@@ -582,15 +683,160 @@ def resolve_template(expr):
         else:
             return node.create_node_with_local_data(args)
 
-    return StreamBasedExpressionVisitor(
+    walker = StreamBasedExpressionVisitor(
         initializeWalker=lambda x: beforeChild(None, x, None),
         beforeChild=beforeChild,
         exitNode=exitNode,
-    ).walk_expression(expr)
+    )
+    return walker.walk_expression(expr)
+
+
+class _wildcard_info(object):
+    __slots__ = ('iter', 'source', 'value', 'original_value', 'objects')
+
+    def __init__(self, src, obj):
+        self.source = src
+        self.original_value = obj._value
+        self.objects = [obj]
+        self.reset()
+        if self.original_value in (None, _NotSpecified):
+            self.advance()
+
+    def advance(self):
+        with _TemplateIterManager.pause():
+            self.value = next(self.iter)
+        for obj in self.objects:
+            obj.set_value(self.value)
+
+    def reset(self):
+        # Because we want to actually iterate over the underlying
+        # template expression, we will temporarily pause our overrides
+        # of sum() and the set iters
+        with _TemplateIterManager.pause():
+            self.iter = iter(self.source)
+
+    def restore(self):
+        for obj in self.objects:
+            obj.set_value(self.original_value)
+
+
+def _reduce_template_to_component(expr):
+    """Resolve a template into a concrete component
+
+    This takes a template expression and returns the concrete equivalent
+    by substituting the current values of all IndexTemplate objects and
+    resolving (evaluating and removing) all GetItemExpression,
+    GetAttrExpression, and TemplateSumExpression expression nodes.
+
+    """
+    import pyomo.core.base.set
+
+    # wildcards holds lists of
+    #   [iterator, source, value, orig_value, object0, ...]
+    # 'iterator' iterates over 'source' to provide 'value's for each of
+    # the 1 or more 'objects'.  Objects can be IndexTemplate objects or
+    # (discrete) Variables
+    wildcards = []
+    wildcard_groups = {}
+    level = -1
+
+    def beforeChild(node, child, child_idx):
+        # Efficiency: do not descend into leaf nodes.
+        if type(child) in native_types:
+            return False, child
+        elif not child.is_expression_type():
+            if hasattr(child, '_resolve_template'):
+                try:
+                    ans = child._resolve_template(())
+                except TemplateExpressionError:
+                    # We are attempting "loose" template resolution: for
+                    # every unset IndexTemplate, search the underlying
+                    # set to find *any* valid match.
+                    if child._group not in wildcard_groups:
+                        wildcard_groups[child._group] = len(wildcards)
+                        info = _wildcard_info(child._set, child)
+                        wildcards.append(info)
+                    else:
+                        info = wildcards[wildcard_groups[child._group]]
+                        info.objects.append(child)
+                        child.set_value(info.value)
+                    ans = child._resolve_template(())
+                return False, ans
+            if child.is_variable_type():
+                from pyomo.core.base.set import RangeSet
+
+                if child.domain.isdiscrete():
+                    domain = child.domain
+                    bounds = child.bounds
+                    if bounds != (None, None):
+                        try:
+                            bounds = pyomo.core.base.set.RangeSet(*bounds, 0)
+                            domain = domain & bounds
+                        except:
+                            pass
+                    info = _wildcard_info(domain, child)
+                    wildcards.append(info)
+                return False, value(child)
+            return False, child
+        else:
+            return True, None
+
+    def exitNode(node, args):
+        if hasattr(node, '_resolve_template'):
+            return node._resolve_template(args)
+        if len(args) == node.nargs() and all(a is b for a, b in zip(node.args, args)):
+            return node
+        if all(map(is_constant, args)):
+            return node._apply_operation(args)
+        else:
+            return node.create_node_with_local_data(args)
+
+    walker = StreamBasedExpressionVisitor(
+        initializeWalker=lambda x: beforeChild(None, x, None),
+        beforeChild=beforeChild,
+        exitNode=exitNode,
+    )
+    while 1:
+        try:
+            with _TemplateIterManager.pause():
+                ans = walker.walk_expression(expr)
+            break
+        except (KeyError, AttributeError):
+            # We are attempting "loose" template resolution: for every
+            # unset IndexTemplate, search the underlying set to find
+            # *any* valid match.
+            level = len(wildcards) - 1
+            while level >= 0:
+                info = wildcards[level]
+                try:
+                    info.advance()
+                    break
+                except StopIteration:
+                    # Because we want to actually iterate over the
+                    # underlying template expression, we will
+                    # temporarily pause our overrides of sum() and the
+                    # set iters
+                    info.reset()
+                    info.advance()
+                    level -= 1
+            if level < 0:
+                for info in wildcards:
+                    info.restore()
+                raise
+    for info in wildcards:
+        info.restore()
+    return ans
 
 
 class ReplaceTemplateExpression(ExpressionReplacementVisitor):
-    template_types = {GetItemExpression, IndexTemplate}
+    template_types = {
+        IndexTemplate,
+        GetItemExpression,
+        Numeric_GetItemExpression,
+        NPV_Numeric_GetItemExpression,
+        Boolean_GetItemExpression,
+        NPV_Boolean_GetItemExpression,
+    }
 
     def __init__(self, substituter, *args, **kwargs):
         kwargs.setdefault('remove_named_expressions', True)
@@ -609,7 +855,7 @@ def substitute_template_expression(expr, substituter, *args, **kwargs):
 
     This is a general utility function for walking the expression tree
     and substituting all occurrences of IndexTemplate and
-    _GetItemExpression nodes.
+    GetItemExpression nodes.
 
     Args:
         substituter: method taking (expression, *args) and returning
@@ -681,7 +927,7 @@ class _GetItemIndexer(object):
 def substitute_getitem_with_param(expr, _map):
     """A simple substituter to replace _GetItem nodes with mutable Params.
 
-    This substituter will replace all _GetItemExpression nodes with a
+    This substituter will replace all GetItemExpression nodes with a
     new Param.  For example, this method will create expressions
     suitable for passing to DAE integrators
     """
@@ -701,7 +947,7 @@ def substitute_getitem_with_param(expr, _map):
 def substitute_template_with_value(expr):
     """A simple substituter to expand expression for current template
 
-    This substituter will replace all _GetItemExpression / IndexTemplate
+    This substituter will replace all GetItemExpression / IndexTemplate
     nodes with the actual _ComponentData based on the current value of
     the IndexTemplate(s)
 
@@ -737,11 +983,17 @@ class _set_iterator_template_generator(object):
         context, self.context = self.context, None
 
         _set = self._set
-        d = _set.dimen
-        if d is None or type(d) is not int:
-            idx = (IndexTemplate(_set, None, context.next_id()),)
+        if _set.is_expression_type():
+            d = _reduce_template_to_component(_set).dimen
         else:
-            idx = tuple(IndexTemplate(_set, i, context.next_id()) for i in range(d))
+            d = _set.dimen
+        grp = context.next_group()
+        if d is None or type(d) is not int:
+            idx = (IndexTemplate(_set, None, context.next_id(), grp),)
+        else:
+            idx = tuple(
+                IndexTemplate(_set, i, context.next_id(), grp) for i in range(d)
+            )
         context.cache.append(idx)
         if len(idx) == 1:
             return idx[0]
@@ -765,6 +1017,7 @@ class _template_iter_context(object):
     def __init__(self):
         self.cache = []
         self._id = 0
+        self._group = 0
 
     def get_iter(self, _set):
         return _set_iterator_template_generator(_set, self)
@@ -778,6 +1031,10 @@ class _template_iter_context(object):
         self._id += 1
         return self._id
 
+    def next_group(self):
+        self._group += 1
+        return self._group
+
     def sum_template(self, generator):
         init_cache = len(self.cache)
         expr = next(generator)
@@ -785,60 +1042,126 @@ class _template_iter_context(object):
         return TemplateSumExpression((expr,), self.npop_cache(final_cache - init_cache))
 
 
+class _template_iter_manager(object):
+    class _iter_wrapper(object):
+        __slots__ = ('_class', '_iter', '_old_iter')
+
+        def __init__(self, cls, context):
+            def _iter_fcn(obj):
+                return context.get_iter(obj)
+
+            self._class = cls
+            self._old_iter = cls.__iter__
+            self._iter = _iter_fcn
+
+        def acquire(self):
+            self._class.__iter__ = self._iter
+
+        def release(self):
+            self._class.__iter__ = self._old_iter
+
+    class _pause_template_iter_manager(object):
+        __slots__ = ('iter_manager',)
+
+        def __init__(self, iter_manager):
+            self.iter_manager = iter_manager
+
+        def __enter__(self):
+            self.iter_manager.release()
+            return self
+
+        def __exit__(self, et, ev, tb):
+            self.iter_manager.acquire()
+
+    def __init__(self):
+        self.paused = True
+        self.context = None
+        self.iters = None
+        self.builtin_sum = builtins.sum
+
+    def init(self, context, *iter_fcns):
+        assert self.context is None
+        self.context = context
+        self.iters = [self._iter_wrapper(it, context) for it in iter_fcns]
+        return self
+
+    def acquire(self):
+        assert self.paused
+        self.paused = False
+        builtins.sum = self.context.sum_template
+        for it in self.iters:
+            it.acquire()
+
+    def release(self):
+        assert not self.paused
+        self.paused = True
+        builtins.sum = self.builtin_sum
+        for it in self.iters:
+            it.release()
+
+    def __enter__(self):
+        assert self.context
+        self.acquire()
+        return self
+
+    def __exit__(self, et, ev, tb):
+        self.release()
+        self.context = None
+        self.iters = None
+
+    def pause(self):
+        if self.paused:
+            return nullcontext()
+        else:
+            return self._pause_template_iter_manager(self)
+
+
+# Global manager for coordinating overriding set iteration
+_TemplateIterManager = _template_iter_manager()
+
+
 def templatize_rule(block, rule, index_set):
     import pyomo.core.base.set
 
     context = _template_iter_context()
     internal_error = None
-    _old_iters = (
-        pyomo.core.base.set._FiniteSetMixin.__iter__,
-        GetItemExpression.__iter__,
-        GetAttrExpression.__iter__,
-    )
-    _old_sum = builtins.sum
     try:
         # Override Set iteration to return IndexTemplates
-        pyomo.core.base.set._FiniteSetMixin.__iter__ = (
-            GetItemExpression.__iter__
-        ) = GetAttrExpression.__iter__ = lambda x: context.get_iter(x).__iter__()
-        # Override sum with our sum
-        builtins.sum = context.sum_template
-        # Get the index templates needed for calling the rule
-        if index_set is not None:
-            # Note, do not rely on the __iter__ overload, as non-finite
-            # Sets don't have an __iter__.
-            indices = next(iter(context.get_iter(index_set)))
-            try:
-                context.cache.pop()
-            except IndexError:
-                assert indices is None
+        with _TemplateIterManager.init(
+            context,
+            pyomo.core.base.set._FiniteSetMixin,
+            GetItemExpression,
+            GetAttrExpression,
+        ):
+            # Get the index templates needed for calling the rule
+            if index_set is not None:
+                # Note, do not rely on the __iter__ overload, as non-finite
+                # Sets don't have an __iter__.
+                indices = next(iter(context.get_iter(index_set)))
+                try:
+                    context.cache.pop()
+                except IndexError:
+                    assert indices is None
+                    indices = ()
+            else:
                 indices = ()
-        else:
-            indices = ()
-        if type(indices) is not tuple:
-            indices = (indices,)
-        # Call the rule, returning the template expression and the
-        # top-level IndexTemplate(s) generated when calling the rule.
-        #
-        # TBD: Should this just return a "FORALL()" expression node that
-        # behaves similarly to the GetItemExpression node?
-        return rule(block, indices), indices
+            if type(indices) is not tuple:
+                indices = (indices,)
+            # Call the rule, returning the template expression and the
+            # top-level IndexTemplate(s) generated when calling the rule.
+            #
+            # TBD: Should this just return a "FORALL()" expression node that
+            # behaves similarly to the GetItemExpression node?
+            return rule(block, indices), indices
     except:
         internal_error = sys.exc_info()
         raise
     finally:
-        (
-            pyomo.core.base.set._FiniteSetMixin.__iter__,
-            GetItemExpression.__iter__,
-            GetAttrExpression.__iter__,
-        ) = _old_iters
-        builtins.sum = _old_sum
         if len(context.cache):
             if internal_error is not None:
                 logger.error(
                     "The following exception was raised when "
-                    "templatizing the rule '%s':\n\t%s"
-                    % (rule.__name__, internal_error[1])
+                    "templatizing the rule '%s':\n\t%s" % (rule.name, internal_error[1])
                 )
             raise TemplateExpressionError(
                 None,

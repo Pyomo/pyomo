@@ -178,12 +178,12 @@ class ToGamsVisitor(EXPR._ToStringVisitor):
         return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
-        iter_ = iter(node.args)
-        values = []
-        if node.constant:
-            next(iter_)
-            values.append(ftoa(node.constant, True))
-        values.extend(map(self._monomial_to_string, iter_))
+        values = [
+            self._monomial_to_string(arg)
+            if arg.__class__ is EXPR.MonomialTermExpression
+            else ftoa(arg)
+            for arg in node.args
+        ]
         return node._to_string(values, False, self.smap)
 
 
@@ -647,7 +647,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             )
         obj = obj[0]
         if linear:
-            if obj.expr.polynomial_degree() not in linear_degree:
+            if obj.polynomial_degree() not in linear_degree:
                 linear = False
         obj_expr_str, obj_discontinuous = expression_to_string(
             obj.expr, tc, smap=symbolMap, output_fixed_variables=output_fixed_variables

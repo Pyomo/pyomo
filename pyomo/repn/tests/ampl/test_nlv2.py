@@ -182,7 +182,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 3*x/p\n",
+            "\texpression: 3/p\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -465,7 +465,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 3*x/p\n",
+            "\texpression: 3/p\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
