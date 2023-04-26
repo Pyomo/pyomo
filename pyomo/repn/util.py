@@ -36,9 +36,6 @@ class ExprType(enum.IntEnum):
     GENERAL = 40
 
 
-_CONSTANT = ExprType.CONSTANT
-
-
 class FileDeterminism(enum.IntEnum):
     NONE = 0
     DEPRECATED_KEYS = 1
@@ -53,7 +50,7 @@ def apply_node_operation(node, args):
         tmp = node._apply_operation(args)
         if tmp.__class__ is complex:
             raise ValueError('Pyomo does not support complex numbers')
-        return _CONSTANT, tmp
+        return tmp
     except:
         logger.warning(
             "Exception encountered evaluating expression "
@@ -62,7 +59,7 @@ def apply_node_operation(node, args):
         )
         if HALT_ON_EVALUATION_ERROR:
             raise
-        return _CONSTANT, nan
+        return nan
 
 
 def categorize_valid_components(

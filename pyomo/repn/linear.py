@@ -321,7 +321,7 @@ _exit_node_handlers[PowExpression] = {
 
 
 def _handle_unary_constant(visitor, node, arg):
-    return apply_node_operation(node, (arg[1],))
+    return _CONSTANT, apply_node_operation(node, (arg[1],))
 
 
 def _handle_unary_nonlinear(visitor, node, arg):
