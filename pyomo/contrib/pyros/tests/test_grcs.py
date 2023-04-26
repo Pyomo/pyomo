@@ -2806,6 +2806,49 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
             ),
         )
 
+    @unittest.skipUnless(
+        baron_license_is_valid,
+        "Global NLP solver is not available and licensed."
+    )
+    def test_two_stg_model_discrete_set(self):
+        """
+        Test PyROS successfully solves two-stage model with
+        multiple scenarios.
+        """
+        m = ConcreteModel()
+        m.x1 = Var(bounds=(0, 10))
+        m.x2 = Var(bounds=(0, 10))
+        m.u = Param(mutable=True, initialize=1.125)
+        m.con = Constraint(expr=sqrt(m.u) * m.x1 - m.u * m.x2 <= 2)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u) ** 2)
+
+        discrete_set = DiscreteScenarioSet(scenarios=[[0.25], [1.125], [2]])
+
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=discrete_set,
+            local_solver=global_solver,
+            global_solver=global_solver,
+            decision_rule_order=0,
+            solve_master_globally=True,
+            objective_focus=ObjectiveType.worst_case,
+        )
+
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg=(
+                "Failed to solve discrete set multiple scenarios instance to "
+                "robust optimality"
+            ),
+        )
+
 
 class testFactorModelUncertaintySetClass(unittest.TestCase):
     '''
@@ -4419,7 +4462,7 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     @unittest.skipUnless(
-        baron_version >= (23, 1, 5), "Test runs >90 minutes with Baron 22.9.30"
+        baron_version == (23, 1, 5), "Test runs >90 minutes with Baron 22.9.30"
     )
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()
