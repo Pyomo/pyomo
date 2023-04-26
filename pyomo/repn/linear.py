@@ -424,6 +424,7 @@ def _before_var(visitor, child):
         if child.fixed:
             return False, (_CONSTANT, child())
         visitor.var_map[_id] = child
+        visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
     ans[_id] = 1
     return False, (_LINEAR, ans)
@@ -485,6 +486,7 @@ def _before_monomial(visitor, child):
         if arg2.fixed:
             return (_CONSTANT, arg1 * arg2())
         visitor.var_map[_id] = arg2
+        visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
     ans[_id] = arg1
     return False, (_LINEAR, ans)
@@ -492,6 +494,8 @@ def _before_monomial(visitor, child):
 
 def _before_linear(visitor, child):
     var_map = visitor.var_map
+    var_order = visitor.var_order
+    next_i = len(var_order)
     ans = visitor.Result()
     const = 0
     linear = ans.linear
@@ -519,6 +523,8 @@ def _before_linear(visitor, child):
                     const += arg1 * arg2()
                     continue
                 var_map[_id] = arg2
+                var_order[_id] = next_i
+                next_i += 1
                 linear[_id] = arg1
             elif _id in ans.linear:
                 linear[_id] += arg1
@@ -564,6 +570,7 @@ def _before_expr_if(visitor, child):
         subexpr = LinearRepnVisitor(
             self.subexpression_cache,
             self.var_map,
+            self.var_order,
         ).walk_expression(t if test else f)
         if subexpr.nonlinear:
             return False, (_GENERAL, subexpr)
@@ -680,10 +687,12 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         self,
         subexpression_cache,
         var_map,
+        var_order,
     ):
         super().__init__()
         self.subexpression_cache = subexpression_cache
         self.var_map = var_map
+        self.var_order = var_order
 
     def initializeWalker(self, expr):
         walk, result = self.beforeChild(None, expr, 0)
