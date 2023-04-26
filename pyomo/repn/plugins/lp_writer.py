@@ -553,8 +553,8 @@ class _LPWriter_impl(object):
         quadratic = getattr(expr, 'quadratic', None)
         if quadratic:
 
-            def _normalize_constraint(vids, coef):
-                vid1, vid2 = vids
+            def _normalize_constraint(data):
+                (vid1, vid2), coef = data
                 c1 = getVarOrder(vid1)
                 c2 = getVarOrder(vid2)
                 if c2 < c1:
@@ -579,15 +579,16 @@ class _LPWriter_impl(object):
                 # the last bit through trial and error.
                 # Ref: ILog CPlex 8.0 User's Manual, p197.
                 #
-                def _normalize_objective(vids, coef):
-                    return _normalize_constraint(vids, 2 * coef)
+                def _normalize_objective(data):
+                    vids, coef = data
+                    return _normalize_constraint((vids, 2 * coef))
 
                 _normalize = _normalize_objective
             else:
                 _normalize = _normalize_constraint
 
             ostream.write('+ [\n')
-            quadratic = sorted(map(_normalize, _quadratic.items()), key=itemgetter(0))
+            quadratic = sorted(map(_normalize, quadratic.items()), key=itemgetter(0))
             ostream.write(''.join(map(itemgetter(1), quadratic)))
             if is_objective:
                 ostream.write("] / 2\n")
