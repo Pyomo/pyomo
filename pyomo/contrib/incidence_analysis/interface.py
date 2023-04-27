@@ -29,10 +29,7 @@ from pyomo.contrib.incidence_analysis.visitor import (
     AMPLRepnVisitor,
     text_nl_template,
 )
-from pyomo.util.subsystems import (
-    create_subsystem_block,
-    TemporarySubsystemManager,
-)
+from pyomo.util.subsystems import create_subsystem_block, TemporarySubsystemManager
 from pyomo.common.backports import nullcontext
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import (

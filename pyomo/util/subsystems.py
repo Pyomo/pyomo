@@ -148,7 +148,8 @@ class TemporarySubsystemManager(object):
 
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         to_fix=None,
         to_deactivate=None,
         to_reset=None,
