@@ -367,7 +367,13 @@ class _LPWriter_impl(object):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
-            if skip_trivial_constraints and not (con.has_lb() or con.has_ub()):
+            lb = con.lb
+            ub = con.ub
+            if lb is None and ub is None:
+                # Note: you *cannot* output trivial (unbounded)
+                # constraints in LP format.  I suppose we could add a
+                # slack variable if skip_trivial_constraints is False,
+                # but that seems rather silly.
                 continue
             repn = constraint_visitor.walk_expression(con.body)
             if repn.nonlinear is not None:
@@ -379,8 +385,6 @@ class _LPWriter_impl(object):
             # Pull out the constant: we will move it to the bounds
             offset = repn.constant
             repn.constant = 0
-            lb = con.lb
-            ub = con.ub
 
             if repn.linear or getattr(repn, 'quadratic', None):
                 have_nontrivial = True
@@ -461,7 +465,7 @@ class _LPWriter_impl(object):
                     )
                 )
             if self.config.row_order:
-                # sorted() is stable (per Python docs), so we can let
+                # sort() is stable (per Python docs), so we can let
                 # all unspecified rows have a row number one bigger than
                 # the number of rows specified by the user ordering.
                 _n = len(row_order)
