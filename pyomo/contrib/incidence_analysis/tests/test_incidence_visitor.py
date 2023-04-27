@@ -11,16 +11,15 @@
 
 import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
-from pyomo.contrib.incidence_analysis.interface import identify_variables_via_nl
+from pyomo.contrib.incidence_analysis.interface import get_incident_variables
 
 
 class TestUninitialized(unittest.TestCase):
     def test_product_one_fixed(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2])
-        m.eq = pyo.Constraint(expr=m.x[1] * m.x[2] == 1)
         m.x[1].fix()
-        variables = identify_variables_via_nl(m.eq)
+        variables = get_incident_variables(m.x[1]*m.x[2])
         self.assertEqual(len(variables), 1)
 
 

@@ -24,11 +24,7 @@ from pyomo.core.base.expression import Expression
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.current import EqualityExpression
-from pyomo.contrib.incidence_analysis.visitor import (
-    AMPLRepn,
-    AMPLRepnVisitor,
-    text_nl_template,
-)
+from pyomo.contrib.incidence_analysis.visitor import get_incident_variables
 from pyomo.util.subsystems import create_subsystem_block, TemporarySubsystemManager
 from pyomo.common.backports import nullcontext
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -121,7 +117,8 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
 
     with context:
         for i, con in enumerate(constraints):
-            for var in identify_variables_via_nl(con):
+            # NOTE: passing con.expr is not supported here atm
+            for var in get_incident_variables(con.body):
                 if var in var_node_map:
                     graph.add_edge(i, var_node_map[var])
     return graph
@@ -190,72 +187,6 @@ def _generate_variables_in_constraints(constraints, include_fixed=False):
             if var not in known_vars:
                 known_vars.add(var)
                 yield var
-
-
-def _get_ampl_expr(comp):
-    template = text_nl_template
-    subexpression_cache = {}
-    subexpression_order = []
-    external_functions = {}
-    var_map = dict()
-    used_named_expressions = set()
-    symbolic_solver_labels = False
-    export_defined_variables = False
-    visitor = AMPLRepnVisitor(
-        template,
-        subexpression_cache,
-        subexpression_order,
-        external_functions,
-        var_map,
-        used_named_expressions,
-        symbolic_solver_labels,
-        export_defined_variables,
-    )
-    if comp.ctype is Constraint:
-        expr = comp.body
-    elif comp.ctype in {Objective, Expression}:
-        expr = comp.expr
-    else:
-        raise RuntimeError(
-            f"Invalid component type. Expected Constraint, Objective, or"
-            " Expression but got {comp.ctype}"
-        )
-    AMPLRepn.ActiveVisitor = visitor
-    try:
-        # Why is the component necessary for this function? If it wasn't, this
-        # function could simply accept the expression.
-        ampl_expr = visitor.walk_expression((expr, comp, None))
-    finally:
-        AMPLRepn.ActiveVisitor = None
-    return ampl_expr, var_map
-
-
-def identify_variables_via_nl(con, linear_only=False, filter_zeros=True):
-    expr, var_map = _get_ampl_expr(con)
-
-    if expr.linear is None:
-        linear_var_ids = []
-    elif filter_zeros:
-        linear_var_ids = [v_id for v_id, coef in expr.linear.items() if coef != 0.0]
-    else:
-        linear_var_ids = list(expr.linear.keys())
-
-    if expr.nonlinear is None:
-        nonlinear_var_ids = []
-    else:
-        _, nonlinear_var_ids = expr.nonlinear
-
-    if linear_only:
-        return [var_map[v_id] for v_id in linear_var_ids]
-    else:
-        var_ids = linear_var_ids + nonlinear_var_ids
-        unique_var_ids = []
-        seen_var_ids = set()
-        for v_id in var_ids:
-            if v_id not in seen_var_ids:
-                seen_var_ids.add(v_id)
-                unique_var_ids.append(v_id)
-        return [var_map[v_id] for v_id in unique_var_ids]
 
 
 def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
