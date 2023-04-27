@@ -13,6 +13,7 @@ import enum
 import logging
 import sys
 
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.core.base import (
     Var,
@@ -45,13 +46,37 @@ class ExprType(enum.IntEnum):
     GENERAL = 40
 
 
+_FileDeterminism_deprecation = {
+    1: 20,
+    2: 30,
+    'DEPRECATED_KEYS': 20,
+    'DEPRECATED_KEYS_AND_NAMES': 30,
+}
+
+
 class FileDeterminism(enum.IntEnum):
     NONE = 0
-    DEPRECATED_KEYS = 1
-    DEPRECATED_KEYS_AND_NAMES = 2
+    # DEPRECATED_KEYS = 1
+    # DEPRECATED_KEYS_AND_NAMES = 2
     ORDERED = 10
     SORT_INDICES = 20
     SORT_SYMBOLS = 30
+
+    @classmethod
+    def _missing_(cls, value):
+        # This is not a perfect deprecation path, as the old attributes
+        # are no longer valid.  However, as the previous implementation
+        # was a pure int and not an Enum, this is sufficient for our
+        # needs.
+        if value in _FileDeterminism_deprecation:
+            new = FileDeterminism(_FileDeterminism_deprecation[value])
+            deprecation_warning(
+                f'FileDeterminism({value}) is deprecated.  '
+                f'Please use {str(new)} ({int(new)})',
+                version='6.5.0',
+            )
+            return new
+        return super()._missing_(value)
 
 
 def apply_node_operation(node, args):
