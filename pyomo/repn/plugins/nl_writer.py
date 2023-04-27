@@ -71,8 +71,11 @@ from pyomo.opt import WriterFactory
 from pyomo.repn.util import (
     ExprType,
     FileDeterminism,
+    FileDeterminism_to_SortComponents,
     apply_node_operation,
     categorize_valid_components,
+    initialize_var_map_from_column_order,
+    ordered_active_constraints,
 )
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
@@ -448,19 +451,6 @@ class _NLWriter_impl(object):
         self.next_V_line_id = 0
         self.pause_gc = None
 
-        if config.file_determinism in (
-            FileDeterminism.DEPRECATED_KEYS,
-            FileDeterminism.DEPRECATED_KEYS_AND_NAMES,
-        ):
-            old = config.file_determinism
-            config.file_determinism = 10 * (old + 1)
-            new = config.file_determinism
-            deprecation_warning(
-                f'{str(old)} ({int(old)}) is deprecated.  '
-                f'Please use {str(new)} ({int(new)})',
-                version='6.5.0',
-            )
-
     def __enter__(self):
         assert AMPLRepn.ActiveVisitor is None
         AMPLRepn.ActiveVisitor = self.visitor
@@ -480,12 +470,7 @@ class _NLWriter_impl(object):
             timing_logger.isEnabledFor(logging.DEBUG) and timing_logger.hasHandlers()
         )
 
-        sorter = SortComponents.unsorted
-        if self.config.file_determinism >= FileDeterminism.SORT_INDICES:
-            sorter = sorter | SortComponents.indices
-            if self.config.file_determinism >= FileDeterminism.SORT_SYMBOLS:
-                sorter = sorter | SortComponents.alphabetical
-
+        sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
         component_map, unknown = categorize_valid_components(
             model,
             active=True,
@@ -523,33 +508,9 @@ class _NLWriter_impl(object):
         symbolic_solver_labels = self.symbolic_solver_labels
         visitor = self.visitor
         ostream = self.ostream
+
         var_map = self.var_map
-
-        if self.config.column_order == True:
-            self.config.column_order = list(
-                model.component_data_objects(Var, descend_into=True, sort=sorter)
-            )
-        elif self.config.file_determinism > FileDeterminism.ORDERED:
-            # We will pre-gather the variables so that their order
-            # matches the file_determinism flag.  This is a little
-            # cumbersome, but is implemented this way for consistency
-            # with the original NL writer.
-            if self.config.column_order is None:
-                self.config.column_order = []
-            self.config.column_order.extend(
-                model.component_data_objects(Var, descend_into=True, sort=sorter)
-            )
-        if self.config.column_order is not None:
-            # Note that Vars that appear twice (e.g., through a
-            # Reference) will be sorted with the FIRST occurrence.
-            for var in self.config.column_order:
-                if var.is_indexed():
-                    for _v in var.values():
-                        if not _v.fixed:
-                            var_map[id(_v)] = _v
-                elif not var.fixed:
-                    var_map[id(var)] = var
-
+        initialize_var_map_from_column_order(model, self.config, var_map)
         timer.toc('Initialized column order', level=logging.DEBUG)
 
         #
@@ -590,7 +551,7 @@ class _NLWriter_impl(object):
         # required for solvers like PATH.
         n_complementarity_range = 0
         n_complementarity_nz_var_lb = 0
-        for con in model.component_data_objects(Constraint, active=True, sort=sorter):
+        for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
@@ -657,33 +618,14 @@ class _NLWriter_impl(object):
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
 
-        if self.config.row_order:
-            # Note: this relies on two things: 1) dict are ordered, and
-            # 2) updating an entry in a dict does not change its
-            # ordering.
-            row_order = {}
-            for con in self.config.row_order:
-                if con.is_indexed():
-                    for c in con.values():
-                        row_order[id(c)] = c
-                else:
-                    row_order[id(con)] = con
-            for c in constraints:
-                row_order[id(c)] = c
-            for c in linear_cons:
-                row_order[id(c)] = c
-            # map the implicit dict ordering to an explicit 0..n ordering
-            row_order = {_id: i for i, _id in enumerate(row_order.keys())}
-            constraints.sort(key=itemgetter(row_order))
-            linear_cons.sort(key=itemgetter(row_order))
-        else:
-            row_order = {}
-
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
         n_nonlinear_cons = len(constraints)
         constraints.extend(linear_cons)
         n_cons = len(constraints)
+
+        # initialize an empty row order, to be populated later if we need it
+        row_order = {}
 
         #
         # Collect constraints and objectives into the groupings

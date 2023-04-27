@@ -40,7 +40,13 @@ from pyomo.core.base.label import LPFileLabeler, NumericLabeler
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.quadratic import QuadraticRepnVisitor
-from pyomo.repn.util import FileDeterminism, categorize_valid_components
+from pyomo.repn.util import (
+    FileDeterminism,
+    FileDeterminism_to_SortComponents,
+    categorize_valid_components,
+    initialize_var_map_from_column_order,
+    ordered_active_constraints,
+)
 
 ### FIXME: Remove the following as soon as non-active components no
 ### longer report active==True
@@ -249,12 +255,7 @@ class _LPWriter_impl(object):
         aliasSymbol = self.symbol_map.alias
         getSymbol = self.symbol_map.getSymbol
 
-        sorter = SortComponents.unsorted
-        if self.config.file_determinism >= FileDeterminism.SORT_INDICES:
-            sorter = sorter | SortComponents.indices
-            if self.config.file_determinism >= FileDeterminism.SORT_SYMBOLS:
-                sorter = sorter | SortComponents.alphabetical
-
+        sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
         component_map, unknown = categorize_valid_components(
             model,
             active=True,
@@ -290,32 +291,8 @@ class _LPWriter_impl(object):
         ONE_VAR_CONSTANT = Var(name='ONE_VAR_CONSTANT', bounds=(1, 1))
         ONE_VAR_CONSTANT.construct()
 
-        if self.config.column_order == True:
-            self.config.column_order = list(
-                model.component_data_objects(Var, descend_into=True, sort=sorter)
-            )
-        elif self.config.file_determinism > FileDeterminism.ORDERED:
-            # We will pre-gather the variables so that their order
-            # matches the file_determinism flag.  This is a little
-            # cumbersome, but is implemented this way for consistency
-            # with the original LP writer.
-            if self.config.column_order is None:
-                self.config.column_order = []
-            self.config.column_order.extend(
-                model.component_data_objects(Var, descend_into=True, sort=sorter)
-            )
-
         self.var_map = var_map = {id(ONE_VAR_CONSTANT): ONE_VAR_CONSTANT}
-        if self.config.column_order is not None:
-            # Note that Vars that appear twice (e.g., through a
-            # Reference) will be sorted with the FIRST occurrence.
-            for var in self.config.column_order:
-                if var.is_indexed():
-                    for _v in var.values():
-                        if not _v.fixed:
-                            var_map[id(_v)] = _v
-                elif not var.fixed:
-                    var_map[id(var)] = var
+        initialize_var_map_from_column_order(model, self.config, var_map)
         self.var_order = {_id: i for i, _id in enumerate(var_map)}
 
         _qp = self.config.allow_quadratic_objective
@@ -381,28 +358,10 @@ class _LPWriter_impl(object):
         #
         # Tabulate constraints
         #
-        constraints = model.component_data_objects(Constraint, active=True, sort=sorter)
-        if self.config.row_order:
-            row_order = {}
-            for con in self.config.row_order:
-                if con.is_indexed():
-                    for c in con.values():
-                        row_order[id(c)] = c
-                else:
-                    row_order[id(con)] = con
-            # map the implicit dict ordering to an explicit 0..n ordering
-            row_order = {_id: i for i, _id in enumerate(row_order.keys())}
-            # sorted() is stable (per Python docs), so we can let all
-            # unspecified rows have a row number one bigger than the
-            # number of rows specified by the user ordering.
-            _n = len(row_order)
-            _row_getter = row_order.get
-            constraints = sorted(constraints, key=lambda x: _row_getter(x, _n))
-
         skip_trivial_constraints = self.config.skip_trivial_constraints
         have_nontrivial = False
         last_parent = None
-        for con in constraints:
+        for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()

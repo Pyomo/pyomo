@@ -13,6 +13,7 @@ import enum
 import logging
 import sys
 
+from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.core.base import (
@@ -138,6 +139,80 @@ def categorize_valid_components(
                 )
             )
     return component_map, {k: v for k, v in unrecognized.items() if v}
+
+
+def FileDeterminism_to_SortComponents(file_determinism):
+    sorter = SortComponents.unsorted
+    if file_determinism >= FileDeterminism.SORT_INDICES:
+        sorter = sorter | SortComponents.indices
+        if file_determinism >= FileDeterminism.SORT_SYMBOLS:
+            sorter = sorter | SortComponents.alphabetical
+    return sorter
+
+
+def initialize_var_map_from_column_order(model, config, var_map):
+    column_order = config.column_order
+    sorter = FileDeterminism_to_SortComponents(config.file_determinism)
+
+    if isinstance(column_order, Mapping):
+        # The column order has historically has supported a ComponentMap of
+        # component to position in addition to the simple list of
+        # components.  Convert it to the simple list
+        column_order = sorted(column_order, key=column_order.__getitem__)
+
+    if column_order == True:
+        column_order = model.component_data_objects(Var, descend_into=True, sort=sorter)
+    elif config.file_determinism > FileDeterminism.ORDERED:
+        # We will pre-gather the variables so that their order
+        # matches the file_determinism flag.  This is a little
+        # cumbersome, but is implemented this way for consistency
+        # with the original NL writer.
+        if column_order is None:
+            column_order = []
+        column_order.extend(
+            model.component_data_objects(Var, descend_into=True, sort=sorter)
+        )
+    if column_order:
+        # Note that Vars that appear twice (e.g., through a
+        # Reference) will be sorted with the FIRST occurrence.
+        for var in column_order:
+            if var.is_indexed():
+                for _v in var.values():
+                    if not _v.fixed:
+                        var_map[id(_v)] = _v
+            elif not var.fixed:
+                var_map[id(var)] = var
+    return var_map
+
+
+def ordered_active_constraints(model, config):
+    sorter = FileDeterminism_to_SortComponents(config.file_determinism)
+    constraints = model.component_data_objects(Constraint, active=True, sort=sorter)
+
+    row_order = config.row_order
+    if isinstance(row_order, Mapping):
+        # The row order has historically also supported a ComponentMap of
+        # component to position in addition to the simple list of
+        # components.  Convert it to the simple list
+        row_order = sorted(row_order, key=row_order.__getitem__)
+
+    if row_order:
+        row_map = {}
+        for con in row_order:
+            if con.is_indexed():
+                for c in con.values():
+                    row_map[id(c)] = c
+            else:
+                row_map[id(con)] = con
+        # map the implicit dict ordering to an explicit 0..n ordering
+        row_map = {_id: i for i, _id in enumerate(row_map)}
+        # sorted() is stable (per Python docs), so we can let all
+        # unspecified rows have a row number one bigger than the
+        # number of rows specified by the user ordering.
+        _n = len(row_map)
+        _row_getter = row_map.get
+        constraints = sorted(constraints, key=lambda x: _row_getter(id(x), _n))
+    return constraints
 
 
 # Copied from cpxlp.py:
