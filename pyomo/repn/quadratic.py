@@ -192,6 +192,7 @@ _exit_node_handlers[ProductExpression].update(
         (_QUADRATIC, _CONSTANT): linear._handle_product_ANY_constant,
         (_QUADRATIC, _LINEAR): linear._handle_product_nonlinear,
         (_QUADRATIC, _GENERAL): linear._handle_product_nonlinear,
+        # Replace handler from the linear walker
         (_LINEAR, _LINEAR): _handle_product_linear_linear,
     }
 )
@@ -214,6 +215,14 @@ _exit_node_handlers[DivisionExpression].update(
 #
 # EXPONENTIATION
 #
+def _handle_pow_linear_constant(visitor, node, arg1, arg2):
+    if arg2[1] == 2:
+        return _handle_product_linear_linear(visitor, node, arg1, arg1)
+    elif arg2[1] == 1:
+        return arg1
+    else:
+        return _handle_pow_nonlinear(visitor, node, arg1, arg2)
+
 _exit_node_handlers[PowExpression].update(
     {
         (_CONSTANT, _QUADRATIC): linear._handle_pow_nonlinear,
@@ -223,6 +232,8 @@ _exit_node_handlers[PowExpression].update(
         (_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant,
         (_QUADRATIC, _LINEAR): linear._handle_pow_nonlinear,
         (_QUADRATIC, _GENERAL): linear._handle_pow_nonlinear,
+        # Replace handler from the linear walker
+        (_LINEAR, _CONSTANT): _handle_pow_linear_constant,
     }
 )
 
