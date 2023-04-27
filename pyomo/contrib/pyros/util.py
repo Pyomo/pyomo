@@ -389,10 +389,7 @@ def get_time_from_solver(results):
     solver_name = getattr(results.solver, "name", None)
 
     # is this sufficient to confirm GAMS solver used?
-    from_gams = (
-        solver_name is not None
-        and str(solver_name).startswith("GAMS ")
-    )
+    from_gams = solver_name is not None and str(solver_name).startswith("GAMS ")
     time_attr_name = "user_time" if from_gams else "time"
     for attr_name in [TIC_TOC_SOLVE_TIME_ATTR, time_attr_name]:
         solve_time = getattr(results.solver, attr_name, None)

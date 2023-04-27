@@ -271,13 +271,11 @@ def get_argmax_sum_violations(solver_call_results_map, perf_cons_to_evaluate):
     """
     # get indices of performance constraints for which violation found
     idx_to_perf_con_map = {
-        idx: perf_con
-        for idx, perf_con in enumerate(solver_call_results_map)
+        idx: perf_con for idx, perf_con in enumerate(solver_call_results_map)
     }
     idxs_of_violated_cons = [
         idx
-        for idx, perf_con
-        in idx_to_perf_con_map.items()
+        for idx, perf_con in idx_to_perf_con_map.items()
         if solver_call_results_map[perf_con].found_violation
     ]
 
@@ -292,8 +290,7 @@ def get_argmax_sum_violations(solver_call_results_map, perf_cons_to_evaluate):
     # each column corresponds to a separation problem solution
     violations_arr = np.zeros(shape=(num_violated_cons, num_violated_cons))
     idxs_product = product(
-        enumerate(idxs_of_violated_cons),
-        enumerate(idxs_of_violated_cons),
+        enumerate(idxs_of_violated_cons), enumerate(idxs_of_violated_cons)
     )
     for (row_idx, viol_con_idx), (col_idx, viol_param_idx) in idxs_product:
         violations_arr[row_idx, col_idx] = max(
@@ -303,8 +300,9 @@ def get_argmax_sum_violations(solver_call_results_map, perf_cons_to_evaluate):
                 # by this column's separation solution
                 # if separation problems were solved globally,
                 # then diagonal entries should be the largest in each row
-                solver_call_results_map[idx_to_perf_con_map[viol_param_idx]]
-                .scaled_violations[idx_to_perf_con_map[viol_con_idx]]
+                solver_call_results_map[
+                    idx_to_perf_con_map[viol_param_idx]
+                ].scaled_violations[idx_to_perf_con_map[viol_con_idx]]
             ),
         )
 
@@ -333,15 +331,12 @@ def solve_separation_problem(model_data, config):
     run_global = config.bypass_local_separation
 
     uncertainty_set_is_discrete = (
-        config.uncertainty_set.geometry
-        == Geometry.DISCRETE_SCENARIOS
+        config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
     )
 
     if run_local:
         local_separation_loop_results = perform_separation_loop(
-            model_data=model_data,
-            config=config,
-            solve_globally=False,
+            model_data=model_data, config=config, solve_globally=False
         )
         run_global = not (
             local_separation_loop_results.found_violation
@@ -355,9 +350,7 @@ def solve_separation_problem(model_data, config):
 
     if run_global:
         global_separation_loop_results = perform_separation_loop(
-            model_data=model_data,
-            config=config,
-            solve_globally=True,
+            model_data=model_data, config=config, solve_globally=True
         )
     else:
         global_separation_loop_results = None
@@ -382,8 +375,7 @@ def evaluate_violations_by_nominal_master(model_data, performance_cons):
         problem variables.
     """
     constraint_map_to_master = (
-        model_data
-        .separation_model.util.map_new_constraint_list_to_original_con
+        model_data.separation_model.util.map_new_constraint_list_to_original_con
     )
 
     # get deterministic model constraints (include epigraph)
@@ -402,9 +394,7 @@ def evaluate_violations_by_nominal_master(model_data, performance_cons):
         else:
             nom_constraint = constraint_map_to_master[perf_con]
         nom_violation = value(
-            model_data.master_nominal_scenario.find_component(
-                nom_constraint
-            )
+            model_data.master_nominal_scenario.find_component(nom_constraint)
         )
         nom_perf_con_violations[perf_con] = nom_violation
 
@@ -436,27 +426,25 @@ def group_performance_constraints_by_priority(model_data, config):
     for perf_con in model_data.separation_model.util.performance_constraints:
         # by default, priority set to 0
         priority = config_sep_priority_dict.get(perf_con.name, 0)
-        cons_with_same_priority = separation_priority_groups.setdefault(
-            priority,
-            [],
-        )
+        cons_with_same_priority = separation_priority_groups.setdefault(priority, [])
         cons_with_same_priority.append(perf_con)
 
     # sort separation priority groups
     return {
         priority: perf_cons
-        for priority, perf_cons in
-        sorted(separation_priority_groups.items(), reverse=True)
+        for priority, perf_cons in sorted(
+            separation_priority_groups.items(), reverse=True
+        )
     }
 
 
 def get_worst_discrete_separation_solution(
-        performance_constraint,
-        model_data,
-        config,
-        perf_cons_to_evaluate,
-        discrete_solve_results,
-        ):
+    performance_constraint,
+    model_data,
+    config,
+    perf_cons_to_evaluate,
+    discrete_solve_results,
+):
     """
     Determine separation solution (and therefore worst-case
     uncertain parameter realization) with maximum violation
@@ -487,13 +475,10 @@ def get_worst_discrete_separation_solution(
     # problem solutions for all scenarios
     violations_of_perf_con = [
         solve_call_res.scaled_violations[performance_constraint]
-        for solve_call_res
-        in discrete_solve_results.solver_call_results.values()
+        for solve_call_res in discrete_solve_results.solver_call_results.values()
     ]
 
-    list_of_scenario_idxs = list(
-        discrete_solve_results.solver_call_results.keys()
-    )
+    list_of_scenario_idxs = list(discrete_solve_results.solver_call_results.keys())
 
     # determine separation solution for which scaled violation of this
     # performance constraint is the worst
@@ -517,13 +502,12 @@ def get_worst_discrete_separation_solution(
     # otherwise, we return an empty list, as we did not need to call
     # subsolvers for the other performance constraints
     is_optimized_performance_con = (
-        performance_constraint
-        is discrete_solve_results.performance_constraint
+        performance_constraint is discrete_solve_results.performance_constraint
     )
     if is_optimized_performance_con:
         results_list = [
-            res for solve_call_results
-            in discrete_solve_results.solver_call_results.values()
+            res
+            for solve_call_results in discrete_solve_results.solver_call_results.values()
             for res in solve_call_results.results_list
         ]
     else:
@@ -535,9 +519,7 @@ def get_worst_discrete_separation_solution(
         scaled_violations=eval_perf_con_scaled_violations,
         violating_param_realization=worst_case_res.violating_param_realization,
         variable_values=worst_case_res.variable_values,
-        found_violation=(
-            worst_case_violation > config.robust_feasibility_tolerance
-        ),
+        found_violation=(worst_case_violation > config.robust_feasibility_tolerance),
         time_out=False,
         subsolver_error=False,
         discrete_set_scenario_index=worst_case_res.discrete_set_scenario_index,
@@ -577,21 +559,18 @@ def perform_separation_loop(model_data, config, solve_globally):
 
     # needed for normalizing separation solution constraint violations
     model_data.nom_perf_con_violations = evaluate_violations_by_nominal_master(
-        model_data=model_data,
-        performance_cons=all_performance_constraints,
+        model_data=model_data, performance_cons=all_performance_constraints
     )
     sorted_priority_groups = group_performance_constraints_by_priority(
-        model_data,
-        config,
+        model_data, config
     )
     uncertainty_set_is_discrete = (
         config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
     )
 
     if uncertainty_set_is_discrete:
-        all_scenarios_exhausted = (
-            len(model_data.idxs_of_master_scenarios)
-            == len(config.uncertainty_set.scenarios)
+        all_scenarios_exhausted = len(model_data.idxs_of_master_scenarios) == len(
+            config.uncertainty_set.scenarios
         )
         if all_scenarios_exhausted:
             # robustness certified: entire uncertainty set already
@@ -602,9 +581,9 @@ def perform_separation_loop(model_data, config, solve_globally):
                 worst_case_perf_con=None,
             )
 
-        perf_con_to_maximize = (
-            sorted_priority_groups[max(sorted_priority_groups.keys())][0]
-        )
+        perf_con_to_maximize = sorted_priority_groups[
+            max(sorted_priority_groups.keys())
+        ][0]
 
         # efficiency: evaluate all separation problem solutions in
         # advance of entering loop
@@ -617,14 +596,13 @@ def perform_separation_loop(model_data, config, solve_globally):
         )
 
         termination_not_ok = (
-            discrete_sep_results.time_out
-            or discrete_sep_results.subsolver_error
+            discrete_sep_results.time_out or discrete_sep_results.subsolver_error
         )
         if termination_not_ok:
             single_solver_call_res = ComponentMap()
             results_list = [
-                res for solve_call_results
-                in discrete_sep_results.solver_call_results.values()
+                res
+                for solve_call_results in discrete_sep_results.solver_call_results.values()
                 for res in solve_call_results.results_list
             ]
             single_solver_call_res[perf_con_to_maximize] = (
@@ -673,13 +651,10 @@ def perform_separation_loop(model_data, config, solve_globally):
             priority_group_solve_call_results[perf_con] = solve_call_results
 
             termination_not_ok = (
-                solve_call_results.time_out
-                or solve_call_results.subsolver_error
+                solve_call_results.time_out or solve_call_results.subsolver_error
             )
             if termination_not_ok:
-                all_solve_call_results.update(
-                    priority_group_solve_call_results
-                )
+                all_solve_call_results.update(priority_group_solve_call_results)
                 return SeparationLoopResults(
                     solver_call_results=all_solve_call_results,
                     solved_globally=solve_globally,
@@ -728,11 +703,8 @@ def perform_separation_loop(model_data, config, solve_globally):
 
 
 def evaluate_performance_constraint_violations(
-        model_data,
-        config,
-        perf_con_to_maximize,
-        perf_cons_to_evaluate,
-        ):
+    model_data, config, perf_con_to_maximize, perf_cons_to_evaluate
+):
     """
     Evaluate the inequality constraint function violations
     of the current separation model solution, and store the
@@ -776,15 +748,13 @@ def evaluate_performance_constraint_violations(
     """
     # parameter realization for current separation problem solution
     violating_param_realization = list(
-        param.value for param in
-        model_data.separation_model.util.uncertain_param_vars.values()
+        param.value
+        for param in model_data.separation_model.util.uncertain_param_vars.values()
     )
 
     # evaluate violations for all performance constraints provided
     violations_by_sep_solution = get_sep_objective_values(
-        model_data=model_data,
-        config=config,
-        perf_cons=perf_cons_to_evaluate,
+        model_data=model_data, config=config, perf_cons=perf_cons_to_evaluate
     )
 
     # normalize constraint violation: i.e. divide by
@@ -792,9 +762,8 @@ def evaluate_performance_constraint_violations(
     # nominal master solution (if expression value is large enough)
     scaled_violations = ComponentMap()
     for perf_con, sep_sol_violation in violations_by_sep_solution.items():
-        scaled_violation = (
-            sep_sol_violation
-            / max(1, abs(model_data.nom_perf_con_violations[perf_con]))
+        scaled_violation = sep_sol_violation / max(
+            1, abs(model_data.nom_perf_con_violations[perf_con])
         )
         scaled_violations[perf_con] = scaled_violation
         if perf_con is perf_con_to_maximize:
@@ -804,11 +773,7 @@ def evaluate_performance_constraint_violations(
         scaled_active_obj_violation > config.robust_feasibility_tolerance
     )
 
-    return (
-        violating_param_realization,
-        scaled_violations,
-        constraint_violated,
-    )
+    return (violating_param_realization, scaled_violations, constraint_violated)
 
 
 def initialize_separation(model_data, config):
@@ -914,12 +879,8 @@ globally_acceptable = {tc.optimal, tc.globallyOptimal}
 
 
 def solver_call_separation(
-        model_data,
-        config,
-        solve_globally,
-        perf_con_to_maximize,
-        perf_cons_to_evaluate,
-        ):
+    model_data, config, solve_globally, perf_con_to_maximize, perf_cons_to_evaluate
+):
     """
     Invoke subordinate solver(s) on separation problem.
 
@@ -972,9 +933,7 @@ def solver_call_separation(
     for opt in solvers:
         separation_obj.activate()
         orig_setting, custom_setting_present = adjust_solver_time_settings(
-            model_data.timing,
-            opt,
-            config,
+            model_data.timing, opt, config
         )
         timer.tic(msg=None)
         try:
@@ -995,17 +954,10 @@ def solver_call_separation(
             )
             raise
         else:
-            setattr(
-                results.solver,
-                TIC_TOC_SOLVE_TIME_ATTR,
-                timer.toc(msg=None),
-            )
+            setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
         finally:
             revert_solver_max_time_adjustment(
-                opt,
-                orig_setting,
-                custom_setting_present,
-                config,
+                opt, orig_setting, custom_setting_present, config
             )
 
         separation_obj.deactivate()
@@ -1027,7 +979,7 @@ def solver_call_separation(
             globally_acceptable if solve_globally else locally_acceptable
         )
         optimal_termination = solve_call_results.termination_acceptable(
-            acceptable_conditions,
+            acceptable_conditions
         )
         if optimal_termination:
             nlp_model.solutions.load_from(results)
@@ -1046,10 +998,7 @@ def solver_call_separation(
                 solve_call_results.scaled_violations,
                 solve_call_results.found_violation,
             ) = evaluate_performance_constraint_violations(
-                model_data,
-                config,
-                perf_con_to_maximize,
-                perf_cons_to_evaluate,
+                model_data, config, perf_con_to_maximize, perf_cons_to_evaluate
             )
             return solve_call_results
 
@@ -1087,12 +1036,8 @@ def solver_call_separation(
 
 
 def discrete_solve(
-        model_data,
-        config,
-        solve_globally,
-        perf_con_to_maximize,
-        perf_cons_to_evaluate,
-        ):
+    model_data, config, solve_globally, perf_con_to_maximize, perf_cons_to_evaluate
+):
     """
     Obtain separation problem solution for each scenario
     of the uncertainty set not already added to the most
@@ -1147,7 +1092,8 @@ def discrete_solve(
     # skip scenarios already added to most recent master problem
     master_scenario_idxs = model_data.idxs_of_master_scenarios
     scenario_idxs_to_separate = [
-        idx for idx, _ in enumerate(config.uncertainty_set.scenarios)
+        idx
+        for idx, _ in enumerate(config.uncertainty_set.scenarios)
         if idx not in master_scenario_idxs
     ]
 
@@ -1172,8 +1118,7 @@ def discrete_solve(
 
         # halt at first encounter of unacceptable termination
         termination_not_ok = (
-            solve_call_results.subsolver_error
-            or solve_call_results.time_out
+            solve_call_results.subsolver_error or solve_call_results.time_out
         )
         if termination_not_ok:
             break

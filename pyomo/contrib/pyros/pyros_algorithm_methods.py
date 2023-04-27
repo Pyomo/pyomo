@@ -346,17 +346,16 @@ def ROSolver_iterative_solve(model_data, config):
 
         separation_data.master_model = master_data.master_model
 
-        separation_results = (
-            separation_problem_methods.solve_separation_problem(
-                model_data=separation_data,
-                config=config,
-            )
+        separation_results = separation_problem_methods.solve_separation_problem(
+            model_data=separation_data, config=config
         )
 
-        separation_data.separation_problem_subsolver_statuses.extend([
-            res.solver.termination_condition
-            for res in separation_results.generate_subsolver_results()
-        ])
+        separation_data.separation_problem_subsolver_statuses.extend(
+            [
+                res.solver.termination_condition
+                for res in separation_results.generate_subsolver_results()
+            ]
+        )
 
         if separation_results.solved_globally:
             separation_data.total_global_separation_solves += 1
@@ -411,8 +410,7 @@ def ROSolver_iterative_solve(model_data, config):
         robustness_certified = separation_results.robustness_certified
         if robustness_certified:
             output_logger(
-                config=config,
-                bypass_global_separation=config.bypass_global_separation,
+                config=config, bypass_global_separation=config.bypass_global_separation
             )
             robust_optimal = (
                 config.solve_master_globally

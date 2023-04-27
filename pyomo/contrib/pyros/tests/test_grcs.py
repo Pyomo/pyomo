@@ -2807,8 +2807,7 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        baron_license_is_valid,
-        "Global NLP solver is not available and licensed."
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_two_stg_model_discrete_set(self):
         """
@@ -4362,8 +4361,7 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        baron_license_is_valid,
-        "Global NLP solver is not available and licensed."
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_discrete_separation_subsolver_error(self):
         """
@@ -4408,8 +4406,7 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        baron_license_is_valid,
-        "Global NLP solver is not available and licensed."
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_pyros_math_domain_error(self):
         """
@@ -4453,8 +4450,7 @@ class RegressionTest(unittest.TestCase):
             )
 
     @unittest.skipUnless(
-        baron_license_is_valid,
-        "Global NLP solver is not available and licensed."
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_pyros_no_perf_cons(self):
         """

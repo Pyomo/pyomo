@@ -121,20 +121,18 @@ class SeparationSolveCallResults:
     """
 
     def __init__(
-            self,
-            solved_globally,
-            results_list=None,
-            scaled_violations=None,
-            violating_param_realization=None,
-            variable_values=None,
-            found_violation=None,
-            time_out=None,
-            subsolver_error=None,
-            discrete_set_scenario_index=None,
-            ):
-        """Initialize self (see class docstring).
-
-        """
+        self,
+        solved_globally,
+        results_list=None,
+        scaled_violations=None,
+        violating_param_realization=None,
+        variable_values=None,
+        found_violation=None,
+        time_out=None,
+        subsolver_error=None,
+        discrete_set_scenario_index=None,
+    ):
+        """Initialize self (see class docstring)."""
         self.results_list = results_list
         self.solved_globally = solved_globally
         self.scaled_violations = scaled_violations
@@ -165,11 +163,7 @@ class SeparationSolveCallResults:
             for res in self.results_list
         )
 
-    def evaluate_total_solve_time(
-            self,
-            evaluator_func,
-            **evaluator_func_kwargs,
-            ):
+    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
         """
         Evaluate total time required by subordinate solvers
         for separation problem of interest, according to Pyomo
@@ -191,8 +185,7 @@ class SeparationSolveCallResults:
             Total time spent by solvers.
         """
         return sum(
-            evaluator_func(res, **evaluator_func_kwargs)
-            for res in self.results_list
+            evaluator_func(res, **evaluator_func_kwargs) for res in self.results_list
         )
 
 
@@ -225,14 +218,9 @@ class DiscreteSeparationSolveCallResults:
     """
 
     def __init__(
-            self,
-            solved_globally,
-            solver_call_results=None,
-            performance_constraint=None,
-            ):
-        """Initialize self (see class docstring).
-
-        """
+        self, solved_globally, solver_call_results=None, performance_constraint=None
+    ):
+        """Initialize self (see class docstring)."""
         self.solved_globally = solved_globally
         self.solver_call_results = solver_call_results
         self.performance_constraint = performance_constraint
@@ -244,9 +232,7 @@ class DiscreteSeparationSolveCallResults:
         the ``SeparationSolveCallResults`` objects listed in `self`,
         False otherwise.
         """
-        return any(
-            res.time_out for res in self.solver_call_results.values()
-        )
+        return any(res.time_out for res in self.solver_call_results.values())
 
     @property
     def subsolver_error(self):
@@ -255,15 +241,9 @@ class DiscreteSeparationSolveCallResults:
         one of the the ``SeparationSolveCallResults`` objects listed
         in `self`, False otherwise.
         """
-        return any(
-            res.subsolver_error for res in self.solver_call_results.values()
-        )
+        return any(res.subsolver_error for res in self.solver_call_results.values())
 
-    def evaluate_total_solve_time(
-            self,
-            evaluator_func,
-            **evaluator_func_kwargs,
-            ):
+    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
         """
         Evaluate total time required by subordinate solvers
         for separation problem of interest.
@@ -303,7 +283,7 @@ class SeparationLoopResults:
         Mapping from performance constraints to corresponding
         ``SeparationSolveCallResults`` objects.
     worst_case_perf_con : None or int, optional
-        Performance constraint maped to ``SeparationSolveCallResults``
+        Performance constraint mapped to ``SeparationSolveCallResults``
         object in `self` corresponding to maximally violating
         separation problem solution.
 
@@ -320,15 +300,8 @@ class SeparationLoopResults:
     time_out
     """
 
-    def __init__(
-            self,
-            solved_globally,
-            solver_call_results,
-            worst_case_perf_con,
-            ):
-        """Initialize self (see class docstring).
-
-        """
+    def __init__(self, solved_globally, solver_call_results, worst_case_perf_con):
+        """Initialize self (see class docstring)."""
         self.solver_call_results = solver_call_results
         self.solved_globally = solved_globally
         self.worst_case_perf_con = worst_case_perf_con
@@ -357,11 +330,9 @@ class SeparationLoopResults:
         then None is returned.
         """
         if self.worst_case_perf_con is not None:
-            return (
-                self
-                .solver_call_results[self.worst_case_perf_con]
-                .violating_param_realization
-            )
+            return self.solver_call_results[
+                self.worst_case_perf_con
+            ].violating_param_realization
         else:
             return None
 
@@ -376,11 +347,7 @@ class SeparationLoopResults:
         then None is returned.
         """
         if self.worst_case_perf_con is not None:
-            return (
-                self
-                .solver_call_results[self.worst_case_perf_con]
-                .scaled_violations
-            )
+            return self.solver_call_results[self.worst_case_perf_con].scaled_violations
         else:
             return None
 
@@ -395,11 +362,7 @@ class SeparationLoopResults:
         then None is returned.
         """
         if self.worst_case_perf_con is not None:
-            return (
-                self
-                .solver_call_results[self.worst_case_perf_con]
-                .variable_values
-            )
+            return self.solver_call_results[self.worst_case_perf_con].variable_values
         else:
             return None
 
@@ -427,11 +390,7 @@ class SeparationLoopResults:
             for solver_call_res in self.solver_call_results.values()
         )
 
-    def evaluate_total_solve_time(
-            self,
-            evaluator_func,
-            **evaluator_func_kwargs,
-            ):
+    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
         """
         Evaluate total time required by subordinate solvers
         for separation problem of interest.
@@ -483,14 +442,8 @@ class SeparationResults:
     robustness_certified
     """
 
-    def __init__(
-            self,
-            local_separation_loop_results,
-            global_separation_loop_results,
-            ):
-        """Initialize self (see class docstring).
-
-        """
+    def __init__(self, local_separation_loop_results, global_separation_loop_results):
+        """Initialize self (see class docstring)."""
         self.local_separation_loop_results = local_separation_loop_results
         self.global_separation_loop_results = global_separation_loop_results
 
@@ -501,12 +454,10 @@ class SeparationResults:
         separation loop, False otherwise.
         """
         local_time_out = (
-            self.solved_locally
-            and self.local_separation_loop_results.time_out
+            self.solved_locally and self.local_separation_loop_results.time_out
         )
         global_time_out = (
-            self.solved_globally
-            and self.global_separation_loop_results.time_out
+            self.solved_globally and self.global_separation_loop_results.time_out
         )
         return local_time_out or global_time_out
 
@@ -517,12 +468,10 @@ class SeparationResults:
         separation loop, False otherwise.
         """
         local_subsolver_error = (
-            self.solved_locally
-            and self.local_separation_loop_results.subsolver_error
+            self.solved_locally and self.local_separation_loop_results.subsolver_error
         )
         global_subsolver_error = (
-            self.solved_globally
-            and self.global_separation_loop_results.subsolver_error
+            self.solved_globally and self.global_separation_loop_results.subsolver_error
         )
         return local_subsolver_error or global_subsolver_error
 
@@ -566,10 +515,7 @@ class SeparationResults:
             Attribute value.
         """
         if self.solved_locally:
-            local_loop_val = getattr(
-                self.local_separation_loop_results,
-                attr_name,
-            )
+            local_loop_val = getattr(self.local_separation_loop_results, attr_name)
         else:
             local_loop_val = None
 
@@ -577,10 +523,7 @@ class SeparationResults:
             attr_val = local_loop_val
         else:
             if self.solved_globally:
-                attr_val = getattr(
-                    self.global_separation_loop_results,
-                    attr_name,
-                )
+                attr_val = getattr(self.global_separation_loop_results, attr_name)
             else:
                 attr_val = None
 
@@ -634,11 +577,7 @@ class SeparationResults:
         """
         return self.get_violating_attr("violating_separation_variable_values")
 
-    def evaluate_local_solve_time(
-            self,
-            evaluator_func,
-            **evaluator_func_kwargs,
-            ):
+    def evaluate_local_solve_time(self, evaluator_func, **evaluator_func_kwargs):
         """
         Evaluate total time required by local subordinate solvers
         for separation problem of interest.
@@ -659,20 +598,13 @@ class SeparationResults:
             Total time spent by local solvers.
         """
         if self.solved_locally:
-            return (
-                self.local_separation_loop_results.evaluate_total_solve_time(
-                    evaluator_func,
-                    **evaluator_func_kwargs,
-                )
+            return self.local_separation_loop_results.evaluate_total_solve_time(
+                evaluator_func, **evaluator_func_kwargs
             )
         else:
             return 0
 
-    def evaluate_global_solve_time(
-            self,
-            evaluator_func,
-            **evaluator_func_kwargs,
-            ):
+    def evaluate_global_solve_time(self, evaluator_func, **evaluator_func_kwargs):
         """
         Evaluate total time required by global subordinate solvers
         for separation problem of interest.
@@ -693,11 +625,8 @@ class SeparationResults:
             Total time spent by global solvers.
         """
         if self.solved_globally:
-            return (
-                self.global_separation_loop_results.evaluate_total_solve_time(
-                    evaluator_func,
-                    **evaluator_func_kwargs,
-                )
+            return self.global_separation_loop_results.evaluate_total_solve_time(
+                evaluator_func, **evaluator_func_kwargs
             )
         else:
             return 0
@@ -721,9 +650,7 @@ class SeparationResults:
             heuristically_robust = None
 
         if self.solved_globally:
-            is_robust = (
-                not self.global_separation_loop_results.found_violation
-            )
+            is_robust = not self.global_separation_loop_results.found_violation
         else:
             # global separation bypassed, either
             # because uncertainty set is discrete
@@ -732,11 +659,7 @@ class SeparationResults:
 
         return is_robust
 
-    def generate_subsolver_results(
-            self,
-            include_local=True,
-            include_global=True,
-            ):
+    def generate_subsolver_results(self, include_local=True, include_global=True):
         """
         Generate flattened sequence all Pyomo SolverResults objects
         for all ``SeparationSolveCallResults`` objects listed in
@@ -757,10 +680,7 @@ class SeparationResults:
 
         if include_global and self.global_separation_loop_results is not None:
             all_global_call_results = (
-                self
-                .global_separation_loop_results
-                .solver_call_results
-                .values()
+                self.global_separation_loop_results.solver_call_results.values()
             )
             for solve_call_res in all_global_call_results:
                 for res in solve_call_res.results_list:
