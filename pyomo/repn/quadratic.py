@@ -19,6 +19,8 @@ from pyomo.core.expr.current import (
     AbsExpression,
     UnaryFunctionExpression,
     Expr_ifExpression,
+    LinearExpression,
+    MonomialTermExpression,
 )
 from pyomo.core.base.expression import ScalarExpression
 from . import linear
@@ -72,7 +74,7 @@ class QuadraticRepn(object):
         ans.nonlinear = self.nonlinear
         return ans
 
-    def to_expression(visitor):
+    def to_expression(self, visitor):
         var_map = visitor.var_map
         if self.linear:
             ans = (
