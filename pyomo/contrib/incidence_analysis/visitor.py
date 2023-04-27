@@ -220,10 +220,15 @@ class AMPLRepn(object):
             # from the expression.  Note that the args are accumulated
             # by side-effect, which prevents iterating over the linear
             # terms twice.
+            #
+            # Is filtering the 0*x terms safe here? I think so, as we are just
+            # filtering them from linear sub-expressions. Maybe this could
+            # cause us to end up with something like 0/x, where filtering could
+            # mask a divide-by-zero error?
             nl_sum = ''.join(
                 args.append(v) or (_v_template if c == 1 else _m_template % c)
                 for v, c in self.linear.items()
-                if c
+                if c != 0
             )
             nterms += len(args)
         else:
@@ -568,7 +573,7 @@ def handle_pow_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         if arg1[0] is _CONSTANT:
             return _apply_node_operation(node, (arg1[1], arg2[1]))
-        elif not arg2[1]:
+        elif arg2[1] == 0:
             return _CONSTANT, 1
         elif arg2[1] == 1:
             return arg1
