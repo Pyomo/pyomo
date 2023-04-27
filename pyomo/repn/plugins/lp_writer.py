@@ -359,6 +359,11 @@ class _LPWriter_impl(object):
             % (getSymbol(obj, labeler),)
         )
         repn = objective_visitor.walk_expression(obj.expr)
+        if repn.nonlinear is not None:
+            raise ValueError(
+                f"Model objective ({obj.name}) contains nonlinear terms that "
+                "cannot be written to LP format"
+            )
         if repn.constant:
             # Older versions of CPLEX (including 12.6) and all versions
             # of GLPK (through 5.0) do not support constants in the
@@ -405,6 +410,11 @@ class _LPWriter_impl(object):
             if skip_trivial_constraints and not (con.has_lb() or con.has_ub()):
                 continue
             repn = constraint_visitor.walk_expression(con.body)
+            if repn.nonlinear is not None:
+                raise ValueError(
+                    f"Model constraint ({con.name}) contains nonlinear terms that "
+                    "cannot be written to LP format"
+                )
             if repn.linear or getattr(repn, 'quadratic', None):
                 have_nontrivial = True
             else:
