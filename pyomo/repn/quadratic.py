@@ -212,6 +212,7 @@ _exit_node_handlers[DivisionExpression].update(
     }
 )
 
+
 #
 # EXPONENTIATION
 #
@@ -222,6 +223,7 @@ def _handle_pow_linear_constant(visitor, node, arg1, arg2):
         return arg1
     else:
         return _handle_pow_nonlinear(visitor, node, arg1, arg2)
+
 
 _exit_node_handlers[PowExpression].update(
     {
