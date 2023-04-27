@@ -306,7 +306,6 @@ class _LPWriter_impl(object):
             )
 
         self.var_map = var_map = {id(ONE_VAR_CONSTANT): ONE_VAR_CONSTANT}
-        self.var_order = {id(ONE_VAR_CONSTANT): 0}
         if self.config.column_order is not None:
             # Note that Vars that appear twice (e.g., through a
             # Reference) will be sorted with the FIRST occurrence.
@@ -317,7 +316,7 @@ class _LPWriter_impl(object):
                             var_map[id(_v)] = _v
                 elif not var.fixed:
                     var_map[id(var)] = var
-            self.var_order = {_id: i for i, _id in enumerate(var_map)}
+        self.var_order = {_id: i for i, _id in enumerate(var_map)}
 
         _qp = self.config.allow_quadratic_objective
         _qc = self.config.allow_quadratic_constraint
@@ -415,28 +414,35 @@ class _LPWriter_impl(object):
                     f"Model constraint ({con.name}) contains nonlinear terms that "
                     "cannot be written to LP format"
                 )
+
+            # Pull out the constant: we will move it to the bounds
+            offset = repn.constant
+            repn.constant = 0
+            lb = con.lb
+            ub = con.ub
+
             if repn.linear or getattr(repn, 'quadratic', None):
                 have_nontrivial = True
             else:
                 if (
                     skip_trivial_constraints
-                    and (not con.has_lb() or con.lb() <= repn.const)
-                    and (not con.has_ub() or con.ub() >= repn.const)
+                    and (lb is None or lb < offset)
+                    and (ub is None or ub > offset)
                 ):
                     continue
+                # This is a trivially infeasible model.  We could raise
+                # an exception, or we could allow the solver to return
+                # infeasible.  There are fewer logic paths (in
+                # particular related to mapping solver result status) if
+                # we just defer to the solver.
+                #
                 # Add a dummy (fixed) variable to the constraint,
                 # because some solvers (including versions of GLPK)
                 # cannot parse an LP file without a variable on the left
                 # hand side.
                 repn.linear[id(ONE_VAR_CONSTANT)] = 0
 
-            # Pull out the constant: we will move it to the bounds
-            offset = repn.constant
-            repn.constant = 0
-
             symbol = labeler(con)
-            lb = con.lb
-            ub = con.ub
             if lb == ub and lb is not None:
                 label = f'c_e_{symbol}_'
                 addSymbol(con, label)
