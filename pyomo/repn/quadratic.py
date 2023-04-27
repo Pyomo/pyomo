@@ -172,9 +172,9 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
         arg1.linear = {}
     elif arg2.constant != 1:
         c = arg2.constant
-        linear = arg1.linear
-        for vid, coef in linear.items():
-            linear[k] = c * coef
+        _linear = arg1.linear
+        for vid, coef in _linear.items():
+            _linear[vid] = c * coef
     if arg1.constant:
         linear._merge_dict(arg1.constant, arg1.linear, arg2.linear)
     # Finally, the constant and multipliers
