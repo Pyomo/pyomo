@@ -239,9 +239,7 @@ def identify_variables_via_nl(con, linear_only=False, filter_zeros=True):
     if expr.linear is None:
         linear_var_ids = []
     elif filter_zeros:
-        linear_var_ids = [
-            v_id for v_id, coef in expr.linear.items() if coef != 0.0
-        ]
+        linear_var_ids = [v_id for v_id, coef in expr.linear.items() if coef != 0.0]
     else:
         linear_var_ids = list(expr.linear.keys())
 

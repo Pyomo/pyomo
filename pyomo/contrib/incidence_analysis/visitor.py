@@ -463,8 +463,8 @@ def handle_product_node(visitor, node, arg1, arg2):
         arg2, arg1 = arg1, arg2
     if arg1[0] is _CONSTANT:
         mult = arg1[1]
-        if mult == 0: # Skip this branch if mult is None
-        #if not mult:
+        if mult == 0:  # Skip this branch if mult is None
+            # if not mult:
             # simplify multiplication by 0 (if arg2 is zero, the
             # simplification happens when we evaluate the constant
             # below).  Note that this is not IEEE-754 compliant, and

@@ -1725,9 +1725,9 @@ class TestInterface(unittest.TestCase):
     def test_zero_coeff(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        m.eq1 = pyo.Constraint(expr=m.x[1] + 0*m.x[2] == 2)
-        m.eq2 = pyo.Constraint(expr=m.x[1]**2 == 1)
-        m.eq3 = pyo.Constraint(expr=m.x[2]*m.x[3] - m.x[1] == 1)
+        m.eq1 = pyo.Constraint(expr=m.x[1] + 0 * m.x[2] == 2)
+        m.eq2 = pyo.Constraint(expr=m.x[1] ** 2 == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[2] * m.x[3] - m.x[1] == 1)
 
         igraph = IncidenceGraphInterface(m)
         var_dmp, con_dmp = igraph.dulmage_mendelsohn()
@@ -1740,8 +1740,8 @@ class TestInterface(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         m.eq1 = pyo.Constraint(expr=m.x[1] + m.x[2] - m.x[2] == 2)
-        m.eq2 = pyo.Constraint(expr=m.x[1]**2 == 1)
-        m.eq3 = pyo.Constraint(expr=m.x[2]*m.x[3] - m.x[1] == 1)
+        m.eq2 = pyo.Constraint(expr=m.x[1] ** 2 == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[2] * m.x[3] - m.x[1] == 1)
 
         igraph = IncidenceGraphInterface(m)
         var_dmp, con_dmp = igraph.dulmage_mendelsohn()
