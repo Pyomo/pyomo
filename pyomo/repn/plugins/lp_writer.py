@@ -374,7 +374,7 @@ class _LPWriter_impl(object):
             repn.constant = 0
         self.write_expression(ostream, repn, True)
         aliasSymbol(obj, '__default_objective__')
-        if with_debug_timing and obj.parent_component() is not last_parent:
+        if with_debug_timing:
             timer.toc('Objective %s', obj, level=logging.DEBUG)
 
         ostream.write("\ns.t.\n")
@@ -542,7 +542,7 @@ class _LPWriter_impl(object):
         ostream.write("\nend\n")
 
         info = LPWriterInfo(self.symbol_map)
-        timer.toc("Generated NL representation", delta=False)
+        timer.toc("Generated LP representation", delta=False)
         return info
 
     def write_expression(self, ostream, expr, is_objective):
