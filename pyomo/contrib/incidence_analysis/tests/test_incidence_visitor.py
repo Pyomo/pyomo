@@ -29,11 +29,11 @@ class TestUninitialized(unittest.TestCase):
         m.x = pyo.Var([1, 2])
         m.x[1].fix()
 
-        variables = get_incident_variables(m.x[1]*m.x[2])
+        variables = get_incident_variables(m.x[1] * m.x[2])
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
-        variables = get_incident_variables(m.x[2]*m.x[1])
+        variables = get_incident_variables(m.x[2] * m.x[1])
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
@@ -43,14 +43,14 @@ class TestUninitialized(unittest.TestCase):
         m.expr = pyo.Expression(expr=m.x[1] + 2 * m.x[2])
         m.x[1].fix()
         m.x[2].fix()
-        variables = get_incident_variables(m.x[3]*m.expr)
+        variables = get_incident_variables(m.x[3] * m.expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[3])
 
     def test_nonlinear(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = m.x[1]*m.x[2]*m.x[3]
+        expr = m.x[1] * m.x[2] * m.x[3]
         m.x[2].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
@@ -58,14 +58,14 @@ class TestUninitialized(unittest.TestCase):
         self.assertIn(m.x[1], var_set)
         self.assertIn(m.x[3], var_set)
 
-        expr = m.x[3]*pyo.exp(m.x[1]**m.x[2])
+        expr = m.x[3] * pyo.exp(m.x[1] ** m.x[2])
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(len(var_set), 2)
         self.assertIn(m.x[1], var_set)
         self.assertIn(m.x[3], var_set)
 
-        expr = m.x[1]*m.x[2]*m.x[3] - m.x[3]*pyo.exp(m.x[1]**m.x[2])
+        expr = m.x[1] * m.x[2] * m.x[3] - m.x[3] * pyo.exp(m.x[1] ** m.x[2])
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(len(var_set), 2)
@@ -77,7 +77,7 @@ class TestInitialized(unittest.TestCase):
     def test_nonlinear(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1)
-        expr = m.x[1]*m.x[2]*m.x[3]
+        expr = m.x[1] * m.x[2] * m.x[3]
         m.x[2].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
