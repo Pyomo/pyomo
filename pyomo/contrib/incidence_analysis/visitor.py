@@ -1209,34 +1209,6 @@ def _get_ampl_expr(expr):
     return ampl_expr, var_map
 
 
-#def identify_variables_via_nl(con, linear_only=False, filter_zeros=True):
-#    expr, var_map = _get_ampl_expr(con)
-#
-#    if expr.linear is None:
-#        linear_var_ids = []
-#    elif filter_zeros:
-#        linear_var_ids = [v_id for v_id, coef in expr.linear.items() if coef != 0.0]
-#    else:
-#        linear_var_ids = list(expr.linear.keys())
-#
-#    if expr.nonlinear is None:
-#        nonlinear_var_ids = []
-#    else:
-#        _, nonlinear_var_ids = expr.nonlinear
-#
-#    if linear_only:
-#        return [var_map[v_id] for v_id in linear_var_ids]
-#    else:
-#        var_ids = linear_var_ids + nonlinear_var_ids
-#        unique_var_ids = []
-#        seen_var_ids = set()
-#        for v_id in var_ids:
-#            if v_id not in seen_var_ids:
-#                seen_var_ids.add(v_id)
-#                unique_var_ids.append(v_id)
-#        return [var_map[v_id] for v_id in unique_var_ids]
-
-
 def get_incident_variables(expr, linear_only=False, filter_zeros=True):
     ampl_expr, var_map = _get_ampl_expr(expr)
 
