@@ -320,7 +320,9 @@ class _LPWriter_impl(object):
             objectives = []
             for blk in component_map[Objective]:
                 objectives.extend(
-                    blk.component_data_objects(Objective, active=True, sort=sorter)
+                    blk.component_data_objects(
+                        Objective, active=True, descend_into=False, sort=sorter
+                    )
                 )
         if len(objectives) > 1:
             raise ValueError(
@@ -454,7 +456,9 @@ class _LPWriter_impl(object):
             sos = []
             for blk in component_map[Objective]:
                 sos.extend(
-                    blk.component_data_objects(SOSConstraint, active=True, sort=sorter)
+                    blk.component_data_objects(
+                        SOSConstraint, active=True, descend_into=False, sort=sorter
+                    )
                 )
             if self.config.row_order:
                 # sorted() is stable (per Python docs), so we can let
@@ -540,7 +544,7 @@ class _LPWriter_impl(object):
                     sym = f' {getSymbol(getVar(vid2))} ^ 2\n'
                 else:
                     col = c1, c2
-                    sym = f' {getSymbol(getVar(vid2))} * {getSymbol(getVar(vid1))}\n'
+                    sym = f' {getSymbol(getVar(vid1))} * {getSymbol(getVar(vid2))}\n'
                 if coef < 0:
                     return col, repr(coef) + sym
                 else:
