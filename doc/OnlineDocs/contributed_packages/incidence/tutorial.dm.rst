@@ -53,8 +53,7 @@ with fields for each of the four subsets defined by the partition:
 If any variables or constraints are unmatched, the (Jacobian of the) model
 is structurally singular.
 
-.. doctest::
-   :skipif: not scipy_available or not networkx_available or not asl_available
+.. code-block:: python
 
    >>> for var in var_dm_partition.unmatched:
    ...     print(f"  {var.name}")
