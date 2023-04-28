@@ -80,9 +80,9 @@ class LinearRepn(object):
 
     def walker_exitNode(self):
         if self.nonlinear is not None:
-            return _GENERAL, data
+            return _GENERAL, self
         elif self.linear:
-            return _LINEAR, data
+            return _LINEAR, self
         else:
             return _CONSTANT, self.multiplier * self.constant
 
@@ -325,7 +325,11 @@ def _handle_unary_constant(visitor, node, arg):
 
 
 def _handle_unary_nonlinear(visitor, node, arg):
-    return node.create_node_with_local_data((to_expression[arg[0]](visitor, arg),))
+    ans = visitor.Result()
+    ans.nonlinear = node.create_node_with_local_data(
+        (to_expression[arg[0]](visitor, arg),)
+    )
+    return _GENERAL, ans
 
 
 _exit_node_handlers[UnaryFunctionExpression] = {
