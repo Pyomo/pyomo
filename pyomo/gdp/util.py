@@ -120,6 +120,7 @@ class GDPTree:
     Disjuncts may not be leaves, and could have child Disjunctions of their
     own.
     """
+
     def __init__(self):
         self._children = {}
         self._in_degrees = {}
@@ -154,7 +155,7 @@ class GDPTree:
             return None
 
     def parent_disjunct(self, u):
-        """Returns the parent Disjunct of us, or None if u is the 
+        """Returns the parent Disjunct of us, or None if u is the
         closest-to-root Disjunct in the forest.
 
         Arg:
@@ -230,6 +231,7 @@ class GDPTree:
         for u, children in self._children.items():
             if len(children) == 0:
                 yield u
+
 
 def _parent_disjunct(obj):
     parent = obj.parent_block()

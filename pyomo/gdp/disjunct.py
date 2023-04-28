@@ -477,8 +477,7 @@ _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts', 'xor', '_algebraic_constraint',
-                 '_transformation_map')
+    __slots__ = ('disjuncts', 'xor', '_algebraic_constraint', '_transformation_map')
     __autoslot_mappers__ = {'_algebraic_constraint': AutoSlots.weakref_mapper}
     _NoArgument = (0,)
 
