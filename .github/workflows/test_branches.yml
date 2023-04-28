@@ -50,7 +50,6 @@ jobs:
 
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
-    needs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -657,7 +656,6 @@ jobs:
 
   bare-python-env:
     name: linux/3.8/bare-env
-    needs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
