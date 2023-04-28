@@ -21,8 +21,10 @@ from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
+from pyomo.common.numeric_types import native_types, native_numeric_types
 
 from pyomo.core.expr import current as EXPR
+import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
@@ -53,8 +55,9 @@ class _ExpressionData(NumericValue):
 
     def __call__(self, exception=True):
         """Compute the value of this expression."""
-        if self.expr is None:
-            return None
+        if self.expr.__class__ in native_types:
+            # Note: native_types includes NoneType
+            return self.expr
         return self.expr(exception=exception)
 
     def is_named_expression_type(self):
@@ -99,6 +102,8 @@ class _ExpressionData(NumericValue):
 
     def polynomial_degree(self):
         """A tuple of subexpressions involved in this expressions operation."""
+        if self.expr.__class__ in native_types:
+            return 0
         return self.expr.polynomial_degree()
 
     def _compute_polynomial_degree(self, result):
@@ -179,27 +184,22 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def set_value(self, expr):
         """Set the expression on this expression."""
-        if expr is None:
-            self._expr = None
+        if expr is None or expr.__class__ in native_numeric_types:
+            self._expr = expr
             return
-        expr = as_numeric(expr)
-        if not expr.is_numeric_type():
-            raise ValueError(
-                f"Cannot assign {expr.__class__.__name__} to "
-                f"'{self.name}': {self.__class__.__name__} components only "
-                "allow numeric expression types."
-            )
-        # In-place operators will leave self as an argument.  We need to
-        # replace that with the current expression in order to avoid
-        # loops in the expression tree.
-        if expr.is_expression_type():
-            _args = expr.args
-            if any(arg is self for arg in _args):
-                new_args = _args.__class__(
-                    arg.expr if arg is self else arg for arg in _args
-                )
-                expr = expr.create_node_with_local_data(new_args)
-        self._expr = expr
+        try:
+            if expr.is_numeric_type():
+                self._expr = expr
+                return
+        except AttributeError:
+            if check_if_numeric_type(expr):
+                self._expr = expr
+                return
+        raise ValueError(
+            f"Cannot assign {expr.__class__.__name__} to "
+            f"'{self.name}': {self.__class__.__name__} components only "
+            "allow numeric expression types."
+        )
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
@@ -209,7 +209,34 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
-        return self._expr is None or self._expr.is_fixed()
+        return self._expr.__class__ in native_types or self._expr.is_fixed()
+
+    # Override the in-place operators here so that we can redirect the
+    # dispatcher based on the current contained expression type and not
+    # this Expression object (which would map to "other")
+
+    def __iadd__(self, other):
+        e = self._expr
+        return numeric_expr._add_dispatcher[e.__class__, other.__class__](e, other)
+
+    # Note: the default implementation of __isub__ leverages __iadd__
+    # and doesn't need to be reimplemented here
+
+    def __imul__(self, other):
+        e = self._expr
+        return numeric_expr._mul_dispatcher[e.__class__, other.__class__](e, other)
+
+    def __idiv__(self, other):
+        e = self._expr
+        return numeric_expr._div_dispatcher[e.__class__, other.__class__](e, other)
+
+    def __itruediv__(self, other):
+        e = self._expr
+        return numeric_expr._div_dispatcher[e.__class__, other.__class__](e, other)
+
+    def __ipow__(self, other):
+        e = self._expr
+        return numeric_expr._pow_dispatcher[e.__class__, other.__class__](e, other)
 
 
 class _GeneralExpressionData(_GeneralExpressionDataImpl, ComponentData):
