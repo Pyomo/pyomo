@@ -25,13 +25,10 @@ from pyomo.core.expr.current import (
 from pyomo.core.base.expression import ScalarExpression
 from . import linear
 
-_CONSTANT = linear._CONSTANT
-_LINEAR = linear._LINEAR
-_GENERAL = linear._GENERAL
-
-
-class _QUADRATIC(object):
-    pass
+_CONSTANT = linear.ExprType.CONSTANT
+_LINEAR = linear.ExprType.LINEAR
+_GENERAL = linear.ExprType.GENERAL
+_QUADRATIC = linear.ExprType.QUADRATIC
 
 
 class QuadraticRepn(object):
