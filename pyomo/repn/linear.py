@@ -131,7 +131,7 @@ class LinearRepn(object):
         # assert self.multiplier == 1
         _type, other = other
         if _type is _CONSTANT:
-            self.constant += other[1]
+            self.constant += other
             return
 
         mult = other.multiplier
