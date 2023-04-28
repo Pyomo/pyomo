@@ -68,6 +68,8 @@ class QuadraticRepn(object):
         ans.linear = dict(self.linear)
         if self.quadratic:
             ans.quadratic = dict(self.quadratic)
+        else:
+            ans.quadratic = None
         ans.nonlinear = self.nonlinear
         return ans
 
