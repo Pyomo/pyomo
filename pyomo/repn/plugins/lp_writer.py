@@ -73,6 +73,9 @@ class LPWriterInfo(object):
         self.symbol_map = symbol_map
 
 
+@WriterFactory.register(
+    'cpxlp_v2', 'Generate the corresponding AMPL LP file (version 2).'
+)
 @WriterFactory.register('lp_v2', 'Generate the corresponding AMPL LP file (version 2).')
 class LPWriter(object):
     CONFIG = ConfigBlock('lpwriter')

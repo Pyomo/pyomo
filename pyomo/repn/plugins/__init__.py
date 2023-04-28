@@ -29,6 +29,9 @@ def load():
     WriterFactory.register('lp', 'Generate the corresponding CPLEX LP file.')(
         WriterFactory.get_class('lp_v1')
     )
+    WriterFactory.register('cpxlp', 'Generate the corresponding CPLEX LP file.')(
+        WriterFactory.get_class('cpxlp_v1')
+    )
 
 
 def activate_writer_version(name, ver):

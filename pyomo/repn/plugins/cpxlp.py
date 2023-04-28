@@ -51,7 +51,7 @@ def _get_bound(exp):
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
-@WriterFactory.register('cpxlp', 'Generate the corresponding CPLEX LP file')
+@WriterFactory.register('cpxlp_v1', 'Generate the corresponding CPLEX LP file')
 @WriterFactory.register('lp_v1', 'Generate the corresponding CPLEX LP file')
 class ProblemWriter_cpxlp(AbstractProblemWriter):
     def __init__(self):
