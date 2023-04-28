@@ -45,7 +45,7 @@ class CommonLHSTransformation(Transformation):
     TODO: example
 
     NOTE: Because this transformation allows tighter bound values higher in
-    the GDP hierarchy to supercede looser ones that are lower, the transformed
+    the GDP hierarchy to supersede looser ones that are lower, the transformed
     model will not necessarily still be valid in the case that there are
     mutable Params in disjunctive variable bounds or in constraints setting
     bounds or values for exactly one variable when those mutable Param values
@@ -183,7 +183,7 @@ class CommonLHSTransformation(Transformation):
                 # Same case as above in the UB
                 ub = cons.upper
         # In all other cases, there is nothing to do... The parent gives more
-        # information, so we just propogate that down
+        # information, so we just propagate that down
         v_bounds[disjunct] = (lb, ub)
 
     def _create_transformation_constraints(
