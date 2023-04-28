@@ -25,7 +25,7 @@ def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
     if len(base) != len(test):
         return False
     for i, b in enumerate(base):
-        if b == test[i]:
+        if b.strip() == test[i].strip():
             continue
         try:
             b = float(b)
