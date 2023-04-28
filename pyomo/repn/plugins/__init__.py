@@ -27,10 +27,10 @@ def load():
         WriterFactory.get_class('nl_v2')
     )
     WriterFactory.register('lp', 'Generate the corresponding CPLEX LP file.')(
-        WriterFactory.get_class('lp_v1')
+        WriterFactory.get_class('lp_v2')
     )
     WriterFactory.register('cpxlp', 'Generate the corresponding CPLEX LP file.')(
-        WriterFactory.get_class('cpxlp_v1')
+        WriterFactory.get_class('cpxlp_v2')
     )
 
 
