@@ -367,6 +367,18 @@ class SeparationLoopResults:
             return None
 
     @property
+    def violated_performance_constraints(self):
+        """
+        list of Constraint : Performance constraints for which violation
+        found.
+        """
+        return [
+            con for con, solver_call_results
+            in self.solver_call_results.items()
+            if solver_call_results.found_violation
+        ]
+
+    @property
     def subsolver_error(self):
         """
         bool : Return True if subsolver error reported for
@@ -576,6 +588,13 @@ class SeparationResults:
         then None is returned.
         """
         return self.get_violating_attr("violating_separation_variable_values")
+
+    @property
+    def violated_performance_constraints(self):
+        """
+        Return list of violated performance constraints.
+        """
+        return self.get_violating_attr("violated_performance_constraints")
 
     def evaluate_local_solve_time(self, evaluator_func, **evaluator_func_kwargs):
         """
