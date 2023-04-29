@@ -1,10 +1,10 @@
-'''
+"""
 Objects to contain all model data and solve results for the ROSolver
-'''
+"""
 
 
 class ROSolveResults(object):
-    '''
+    """
     Container for solve-instance data returned to the user after solving with PyROS.
 
     Attributes:
@@ -13,24 +13,24 @@ class ROSolveResults(object):
         :time: Total solver CPU time
         :iterations: total iterations done by PyROS solver
         :final_objective_value: objective function value at termination
-    '''
+    """
 
     pass
 
 
 class MasterProblemData(object):
-    '''
+    """
     Container for the grcs master problem
 
     Attributes:
         :master_model: master problem model object
         :base_model: block representing the original model object
         :iteration: current iteration of the algorithm
-    '''
+    """
 
 
 class SeparationProblemData(object):
-    '''
+    """
     Container for the grcs separation problem
 
     Attributes:
@@ -39,7 +39,7 @@ class SeparationProblemData(object):
         :separation_problem_subsolver_statuses: list of subordinate sub-solver statuses throughout separations
         :total_global_separation_solvers: Counter for number of times global solvers were employed in separation
         :constraint_violations: List of constraint violations identified in separation
-    '''
+    """
 
     pass
 
@@ -373,8 +373,8 @@ class SeparationLoopResults:
         found.
         """
         return [
-            con for con, solver_call_results
-            in self.solver_call_results.items()
+            con
+            for con, solver_call_results in self.solver_call_results.items()
             if solver_call_results.found_violation
         ]
 
