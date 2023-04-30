@@ -291,7 +291,10 @@ class AMPLRepn(object):
         if _type is _MONOMIAL:
             _, v, c = other
             if v in self.linear:
-                self.linear[v] += c
+                if self.linear[v] is None or c is None:
+                    self.linear[v] = None
+                else:
+                    self.linear[v] += c
             else:
                 self.linear[v] = c
         elif _type is _GENERAL:
@@ -323,11 +326,18 @@ class AMPLRepn(object):
                     self.named_exprs.update(other.named_exprs)
             if other.mult != 1:
                 mult = other.mult
-                self.const += mult * other.const
+                if mult == None:
+                    if other.const == 0:
+                        self.const += 0
+                    else:
+                        self.const = None
+                else:
+                    self.const += mult * other.const
                 if other.linear:
                     linear = self.linear
                     for v, c in other.linear.items():
                         if v in linear:
+                            # TODO: handle mult == None here
                             linear[v] += c * mult
                         else:
                             linear[v] = c * mult
@@ -342,11 +352,16 @@ class AMPLRepn(object):
                         (prefix + other.nonlinear[0], other.nonlinear[1])
                     )
             else:
-                self.const += other.const
+                if self.const is not None:
+                    if other.const is None:
+                        self.const = None
+                    else:
+                        self.const += other.const
                 if other.linear:
                     linear = self.linear
                     for v, c in other.linear.items():
                         if v in linear:
+                            # TODO: Handle None here
                             linear[v] += c
                         else:
                             linear[v] = c
@@ -572,11 +587,30 @@ def handle_division_node(visitor, node, arg1, arg2):
 def handle_pow_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         if arg1[0] is _CONSTANT:
-            return _apply_node_operation(node, (arg1[1], arg2[1]))
+            # Handle None, i.e. uninitialized fixed variable/parameter
+            if arg1[1] is None:
+                if arg2[1] == 0:
+                    # None ** 0 = 1
+                    return (_CONSTANT, 1)
+                else:
+                    # None ** constant = None
+                    return (_CONSTANT, None)
+            elif arg2[1] is None:
+                if arg1[1] == 1:
+                    # 1 ** None = 1
+                    return (_CONSTANT, 1)
+                else:
+                    # constant ** None = 1
+                    # Note that 0 ** None = None as it could take a value
+                    # of 0 or 1 depending on what None is.
+                    return (_CONSTANT, None)
+            else:
+                return _apply_node_operation(node, (arg1[1], arg2[1]))
         elif arg2[1] == 0:
             return _CONSTANT, 1
         elif arg2[1] == 1:
             return arg1
+    # What happens when we try to compile None into amplrepn?
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor, visitor.template.pow)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
@@ -584,14 +618,20 @@ def handle_pow_node(visitor, node, arg1, arg2):
 
 def handle_abs_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
-        return (_CONSTANT, abs(arg1[1]))
+        if arg1[1] is None:
+            return (_CONSTANT, None)
+        else:
+            return (_CONSTANT, abs(arg1[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor, visitor.template.abs)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 
 def handle_unary_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
-        return _apply_node_operation(node, (arg1[1],))
+        if arg1[1] is None:
+            return (_CONSTANT, None)
+        else:
+            return _apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name]
     )
@@ -1194,6 +1234,10 @@ def _get_ampl_expr(expr):
     used_named_expressions = set()
     symbolic_solver_labels = False
     export_defined_variables = False
+    # Get errors when using this option, which includes "variables"
+    # for named expressions. This may be useful to support at some point,
+    # but for now I will ignore it.
+    #export_defined_variables = True
     visitor = AMPLRepnVisitor(
         template,
         subexpression_cache,
