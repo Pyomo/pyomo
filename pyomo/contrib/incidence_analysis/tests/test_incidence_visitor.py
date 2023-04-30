@@ -86,10 +86,11 @@ class TestUninitialized(unittest.TestCase):
     def test_named_expr(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        m.named_expr1 = pyo.Expression(expr=m.x[1]**2 + m.x[2]**2)
-        m.named_expr2 = pyo.Expression(expr=5*m.x[2] + m.x[2]**3)
+        m.named_expr1 = pyo.Expression(expr=m.x[1] ** 2 + m.x[2] ** 2)
+        m.named_expr2 = pyo.Expression(expr=5 * m.x[2] + m.x[2] ** 3)
         expr = (
-            m.named_expr1 * m.x[3] + m.x[1]**2 * m.x[2]*m.named_expr2
+            m.named_expr1 * m.x[3]
+            + m.x[1] ** 2 * m.x[2] * m.named_expr2
             + m.named_expr1
         )
         m.x[1].fix()
@@ -106,7 +107,9 @@ class TestUninitialized(unittest.TestCase):
         # when used_named_exprs=True, but we never use this option at
         # this point.
         expr = (
-            m.named_expr1*m.x[2] + m.x[2]**2 + m.named_expr1*m.named_expr2
+            m.named_expr1 * m.x[2]
+            + m.x[2] ** 2
+            + m.named_expr1 * m.named_expr2
             + m.named_expr2
         )
         variables = get_incident_variables(expr)
@@ -116,13 +119,13 @@ class TestUninitialized(unittest.TestCase):
     def test_combine_like_linear(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = (m.x[1] + m.x[1]**2) + (m.x[2]*m.x[1] + 2*m.x[1]**3)
+        expr = (m.x[1] + m.x[1] ** 2) + (m.x[2] * m.x[1] + 2 * m.x[1] ** 3)
         m.x[2].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[1])
 
-        expr = m.x[1] + 3*m.x[3] + m.x[2]*m.x[1]
+        expr = m.x[1] + 3 * m.x[3] + m.x[2] * m.x[1]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(len(variables), 2)
@@ -132,26 +135,26 @@ class TestUninitialized(unittest.TestCase):
     def test_fixed_var_pow_zero(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = m.x[1]**0 * m.x[2]
+        expr = m.x[1] ** 0 * m.x[2]
         m.x[1].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[2]]))
 
-        expr = m.x[1]**0 * m.x[2] - m.x[2]
+        expr = m.x[1] ** 0 * m.x[2] - m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
     def test_one_pow_fixed_var(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = 1**m.x[1]*m.x[2]
+        expr = 1 ** m.x[1] * m.x[2]
         m.x[1].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[2]]))
 
-        expr = 1**m.x[1] * m.x[2] - m.x[2]
+        expr = 1 ** m.x[1] * m.x[2] - m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
@@ -160,7 +163,7 @@ class TestUninitialized(unittest.TestCase):
         m.x = pyo.Var([1, 2, 3])
         # This does not induce a cancellation as 0**x[1] can be 1
         # if x[1] == 0
-        expr = 0**m.x[1]*m.x[2]
+        expr = 0 ** m.x[1] * m.x[2]
         m.x[1].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
@@ -169,7 +172,7 @@ class TestUninitialized(unittest.TestCase):
     def test_const_pow_fixed_var(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = 1.5**m.x[1]*m.x[2]
+        expr = 1.5 ** m.x[1] * m.x[2]
         m.x[1].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
@@ -179,7 +182,7 @@ class TestUninitialized(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         m.x[1].fix()
-        expr = abs(m.x[1])*m.x[2]
+        expr = abs(m.x[1]) * m.x[2]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[2]]))
@@ -187,7 +190,7 @@ class TestUninitialized(unittest.TestCase):
     def test_abs(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = abs(m.x[1])*m.x[2]
+        expr = abs(m.x[1]) * m.x[2]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[2]]))
@@ -196,7 +199,7 @@ class TestUninitialized(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         m.x[1].fix()
-        expr = pyo.sin(m.x[1])*m.x[2]
+        expr = pyo.sin(m.x[1]) * m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         var_set = ComponentSet(variables)
@@ -206,47 +209,47 @@ class TestUninitialized(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         m.x[1].fix()
-        
+
         # Cancellation is branch-dependent, so x[2] "is incident"
-        expr = m.x[2]*pyo.Expr_if(m.x[1], 2, 3) - 3*m.x[2]
+        expr = m.x[2] * pyo.Expr_if(m.x[1], 2, 3) - 3 * m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
         # Cancellation is not branch-dependent
-        expr = m.x[2]*pyo.Expr_if(m.x[1], 3, 3) - 3*m.x[2]
+        expr = m.x[2] * pyo.Expr_if(m.x[1], 3, 3) - 3 * m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
         nan = float('nan')
-        expr = m.x[2]*pyo.Expr_if(m.x[1], nan, nan)
+        expr = m.x[2] * pyo.Expr_if(m.x[1], nan, nan)
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
         # If one branch is NaN, assume we will avoid it (similar to assuming
         # that None != 0 when we have 1/None)
-        expr = m.x[2]*pyo.Expr_if(m.x[1], nan, 2)
+        expr = m.x[2] * pyo.Expr_if(m.x[1], nan, 2)
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
-        expr = m.x[2]*pyo.Expr_if(m.x[1], 2, nan)
+        expr = m.x[2] * pyo.Expr_if(m.x[1], 2, nan)
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
         # If either branch is None, no cancellation occurs
-        expr = m.x[2]*pyo.Expr_if(m.x[1], 3, None) - 3*m.x[2]
+        expr = m.x[2] * pyo.Expr_if(m.x[1], 3, None) - 3 * m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
-        # IMO incidence graph generation with Expr_if that branches on an 
+        # IMO incidence graph generation with Expr_if that branches on an
         # uninitialized parameter is only well-defined if both branches
         # contain the same variables. We haven't implemented this, so
         # we just raise an error for uninitialized parameters with
         # non-constant branches.
-        expr = pyo.Expr_if(m.x[1], m.x[2], m.x[2]**2)
+        expr = pyo.Expr_if(m.x[1], m.x[2], m.x[2] ** 2)
         msg = "Cannot generate incident variables for Expr_if"
         with self.assertRaisesRegex(ValueError, msg):
             variables = get_incident_variables(expr)
@@ -260,7 +263,7 @@ class TestUninitialized(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         m.x[1].fix()
-        expr = m.x[1]*m.x[2]*m.x[3]
+        expr = m.x[1] * m.x[2] * m.x[3]
         m.x[1].fix()
         m.x[2].fix(0)
         variables = get_incident_variables(expr)
@@ -273,7 +276,7 @@ class TestUninitialized(unittest.TestCase):
 
         nan = float("nan")
         m.x[1].fix(nan)
-        expr = (m.x[1]*m.x[2] + 1)*m.x[3]
+        expr = (m.x[1] * m.x[2] + 1) * m.x[3]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
@@ -281,7 +284,7 @@ class TestUninitialized(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         # Why does this get treated as negation(monomial) but -2*x[1] does not?
-        expr = -(2*m.x[1] * m.x[2]) + 2*m.x[1] * m.x[2]
+        expr = -(2 * m.x[1] * m.x[2]) + 2 * m.x[1] * m.x[2]
         m.x[1].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
@@ -290,13 +293,13 @@ class TestUninitialized(unittest.TestCase):
     def test_division_by_fixed_var(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = m.x[1]/m.x[2]
+        expr = m.x[1] / m.x[2]
         m.x[2].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[1])
 
-        expr = (m.x[1] + m.x[3])/m.x[2] - m.x[1]
+        expr = (m.x[1] + m.x[3]) / m.x[2] - m.x[1]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
@@ -305,28 +308,28 @@ class TestUninitialized(unittest.TestCase):
         # non-obvious how I could ever get AMPLRepn.mult to be zero.
         m.x[3].fix(0)
         # This currently tests the constant NaN/None branch
-        expr = ((m.x[1] + m.x[1]**2)/m.x[3])/m.x[2]
+        expr = ((m.x[1] + m.x[1] ** 2) / m.x[3]) / m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
         m.x[3].fix(1)
-        expr = m.x[3]/m.x[2]*m.x[1]
+        expr = m.x[3] / m.x[2] * m.x[1]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[1])
 
         m.x[3].fix(0)
-        expr = m.x[3]/m.x[2]*m.x[1]
+        expr = m.x[3] / m.x[2] * m.x[1]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
         m.x[3].fix(0)
-        expr = (m.x[2]/m.x[3] + 1)*m.x[1]
+        expr = (m.x[2] / m.x[3] + 1) * m.x[1]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
         m.x[3].fix(3)
-        expr = m.x[2]/m.x[3]*m.x[1]
+        expr = m.x[2] / m.x[3] * m.x[1]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[1])
@@ -334,7 +337,7 @@ class TestUninitialized(unittest.TestCase):
     def test_fixed_var_divided_by(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = m.x[2]/m.x[3]
+        expr = m.x[2] / m.x[3]
         m.x[2].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
@@ -356,7 +359,7 @@ class TestInitialized(unittest.TestCase):
     def test_nonlinear_with_const_mult(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1)
-        expr = 5 * m.x[1] + (-1)*m.x[2] ** 3 * m.x[3] ** 2
+        expr = 5 * m.x[1] + (-1) * m.x[2] ** 3 * m.x[3] ** 2
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet(m.x[:]))
@@ -371,7 +374,7 @@ class TestInitialized(unittest.TestCase):
     def test_combine_like_linear(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=2)
-        expr = (m.x[1] + m.x[1]**2) + (m.x[2]*m.x[1] + 2*m.x[1]**3)
+        expr = (m.x[1] + m.x[1] ** 2) + (m.x[2] * m.x[1] + 2 * m.x[1] ** 3)
         m.x[2].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
@@ -380,7 +383,7 @@ class TestInitialized(unittest.TestCase):
     def test_pow_fixed_var(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=2)
-        expr = m.x[1]**2 * m.x[2]
+        expr = m.x[1] ** 2 * m.x[2]
         m.x[1].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
@@ -389,12 +392,12 @@ class TestInitialized(unittest.TestCase):
     def test_var_pow_zero(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=2)
-        expr = m.x[1]**0 * m.x[2]
+        expr = m.x[1] ** 0 * m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
-        expr = m.x[1]**0 * m.x[2] - m.x[2]
+        expr = m.x[1] ** 0 * m.x[2] - m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
@@ -405,12 +408,12 @@ class TestInitialized(unittest.TestCase):
         # x**1 appears to get simplified during expression generation, so
         # using a fixed var here is necessary to cover the x**1 simplification
         # in the visitor.
-        expr = m.x[2]**m.x[1]
+        expr = m.x[2] ** m.x[1]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
-        expr = m.x[2]**m.x[1] - m.x[2]
+        expr = m.x[2] ** m.x[1] - m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
@@ -418,12 +421,12 @@ class TestInitialized(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=-1)
         m.x[1].fix()
-        expr = abs(m.x[1])*m.x[2]
+        expr = abs(m.x[1]) * m.x[2]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[2]]))
 
-        expr = abs(m.x[1])*m.x[2] - m.x[2]
+        expr = abs(m.x[1]) * m.x[2] - m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
@@ -448,7 +451,7 @@ class TestInitialized(unittest.TestCase):
     def test_equality(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1)
-        expr = (m.x[1] + m.x[2] == m.x[2])
+        expr = m.x[1] + m.x[2] == m.x[2]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         # Note that cancellations don't occur with equality expressions.
@@ -472,7 +475,7 @@ class TestInitialized(unittest.TestCase):
     def test_inequality(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1)
-        expr = (m.x[1] + m.x[2] <= m.x[2])
+        expr = m.x[1] + m.x[2] <= m.x[2]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         # Note that cancellations don't occur with inequality expressions.
@@ -496,7 +499,7 @@ class TestInitialized(unittest.TestCase):
     def test_product_two_constants(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1)
-        expr = m.x[1]*m.x[2]*m.x[3]
+        expr = m.x[1] * m.x[2] * m.x[3]
         m.x[1].fix(2)
         m.x[2].fix(0)
         variables = get_incident_variables(expr)
@@ -509,12 +512,12 @@ class TestInitialized(unittest.TestCase):
 
         # NOTE: This test relies on deprecated behavior and should be
         # updated once 0*nan -> nan (correctly) rather than 0
-        expr = (m.x[1]*m.x[2] + 1)*m.x[3]
+        expr = (m.x[1] * m.x[2] + 1) * m.x[3]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[3])
 
-        expr = m.x[1]*m.x[2]*m.x[3]
+        expr = m.x[1] * m.x[2] * m.x[3]
         m.x[1].fix(0)
         m.x[2].fix(2)
         variables = get_incident_variables(expr)
@@ -522,13 +525,13 @@ class TestInitialized(unittest.TestCase):
 
         # NOTE: This test relies on deprecated behavior and should be
         # updated once 0*nan -> nan (correctly) rather than 0
-        expr = (m.x[1]*m.x[2] + 1)*m.x[3]
+        expr = (m.x[1] * m.x[2] + 1) * m.x[3]
         m.x[2].fix(nan)
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertEqual(variables[0], m.x[3])
 
-        expr = m.x[1]*m.x[2]*m.x[3] - 12*m.x[3]
+        expr = m.x[1] * m.x[2] * m.x[3] - 12 * m.x[3]
         m.x[1].fix(3)
         m.x[2].fix(4)
         variables = get_incident_variables(expr)
@@ -542,7 +545,7 @@ class TestInitialized(unittest.TestCase):
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
-    #def test_monomial_zero_coef(self):
+    # def test_monomial_zero_coef(self):
     #    # How do I generate a monomial with zero coef?
     #    # 0*x gets replaced by _CONSTANT
     #    m = pyo.ConcreteModel()
@@ -566,7 +569,7 @@ class TestInitialized(unittest.TestCase):
         m.x = pyo.Var([1, 2, 3], initialize=1)
         # Why does this get treated as negation(monomial)
         # but -2*m.x[1] does not?
-        expr = -(2*m.x[1] * m.x[2]) + 2*m.x[1] * m.x[2]
+        expr = -(2 * m.x[1] * m.x[2]) + 2 * m.x[1] * m.x[2]
         m.x[1].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
@@ -574,7 +577,7 @@ class TestInitialized(unittest.TestCase):
     def test_division_by_fixed_var(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=2)
-        expr = m.x[1]/m.x[2] - m.x[1]/2
+        expr = m.x[1] / m.x[2] - m.x[1] / 2
         m.x[2].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
@@ -585,13 +588,13 @@ class TestInitialized(unittest.TestCase):
         self.assertIs(variables[0], m.x[1])
 
         m.x[2].fix(2)
-        expr = (m.x[1] + m.x[3])/m.x[2] - m.x[1]/2
+        expr = (m.x[1] + m.x[3]) / m.x[2] - m.x[1] / 2
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[3])
 
         m.x[2].fix(0)
-        expr = (m.x[1] + m.x[3])/m.x[2] - m.x[1]/2
+        expr = (m.x[1] + m.x[3]) / m.x[2] - m.x[1] / 2
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[1])
@@ -599,7 +602,7 @@ class TestInitialized(unittest.TestCase):
     def test_fixed_var_divided_by(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1)
-        expr = m.x[2]/m.x[3]
+        expr = m.x[2] / m.x[3]
         m.x[2].fix(0)
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)

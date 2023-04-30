@@ -331,9 +331,8 @@ class AMPLRepn(object):
                 c = other.const
                 if (c is None and mult == 0) or (mult is None and c == 0):
                     c_mult = 0
-                elif (
-                    (c is None and math.isnan(mult))
-                    or (mult is None and math.isnan(c))
+                elif (c is None and math.isnan(mult)) or (
+                    mult is None and math.isnan(c)
                 ):
                     c_mult = nan
                 elif (c is None) or (mult is None):
@@ -342,9 +341,8 @@ class AMPLRepn(object):
                     c_mult = c * mult
 
                 # self.const += other.const * other.mult, preserving None/NaN
-                if (
-                    (self.const is None and math.isnan(c_mult))
-                    or (c_mult is None and math.isnan(self.const))
+                if (self.const is None and math.isnan(c_mult)) or (
+                    c_mult is None and math.isnan(self.const)
                 ):
                     self.const = nan
                 elif (self.const is None) or (c_mult is None):
@@ -357,9 +355,8 @@ class AMPLRepn(object):
                     for v, c in other.linear.items():
                         if (c is None and mult == 0) or (mult is None and c == 0):
                             c_mult = 0
-                        elif (
-                            (c is None and math.isnan(mult))
-                            or (mult is None and math.isnan(c))
+                        elif (c is None and math.isnan(mult)) or (
+                            mult is None and math.isnan(c)
                         ):
                             c_mult = nan
                         elif (c is None) or (mult is None):
@@ -369,8 +366,10 @@ class AMPLRepn(object):
 
                         if v in linear:
                             if (
-                                c_mult is None and math.isnan(linear[v])
-                                or linear[v] is None and math.isnan(c_mult)
+                                c_mult is None
+                                and math.isnan(linear[v])
+                                or linear[v] is None
+                                and math.isnan(c_mult)
                             ):
                                 # NaN + None = NaN
                                 linear[v] = nan
@@ -574,15 +573,11 @@ def handle_product_node(visitor, node, arg1, arg2):
             arg2[1].mult *= mult
             return arg2
         elif arg2[0] is _CONSTANT:
-            if (
-                (arg1[1] is None and arg2[1] == 0)
-                or (arg2[1] is None and arg1[1] == 0)
-            ):
+            if (arg1[1] is None and arg2[1] == 0) or (arg2[1] is None and arg1[1] == 0):
                 # One uninitialized and one zero. We return zero
                 return (_CONSTANT, 0)
-            elif (
-                (arg1[1] is None and math.isnan(arg2[1]))
-                or (arg2[1] is None and math.isnan(arg1[1]))
+            elif (arg1[1] is None and math.isnan(arg2[1])) or (
+                arg2[1] is None and math.isnan(arg1[1])
             ):
                 # One uninitialized and one nan. We return nan.
                 return (_CONSTANT, nan)
@@ -1363,7 +1358,7 @@ def _get_ampl_expr(expr):
     # Get errors when using this option, which includes "variables"
     # for named expressions. This may be useful to support at some point,
     # but for now I will ignore it.
-    #export_defined_variables = True
+    # export_defined_variables = True
     visitor = AMPLRepnVisitor(
         template,
         subexpression_cache,
