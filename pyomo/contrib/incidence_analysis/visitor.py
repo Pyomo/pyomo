@@ -15,6 +15,7 @@ import os
 import sys
 from collections import deque
 from operator import itemgetter, attrgetter, setitem
+import math
 
 from pyomo.common.backports import nullcontext
 from pyomo.common.config import (
@@ -326,21 +327,60 @@ class AMPLRepn(object):
                     self.named_exprs.update(other.named_exprs)
             if other.mult != 1:
                 mult = other.mult
-                if mult == None:
-                    if other.const == 0:
-                        self.const += 0
-                    else:
-                        self.const = None
+                # Multipy other.const * other.mult, preserving None appropriately
+                c = other.const
+                if (c is None and mult == 0) or (mult is None and c == 0):
+                    c_mult = 0
+                elif (
+                    (c is None and math.isnan(mult))
+                    or (mult is None and math.isnan(c))
+                ):
+                    c_mult = nan
+                elif (c is None) or (mult is None):
+                    c_mult = None
                 else:
-                    self.const += mult * other.const
+                    c_mult = c * mult
+
+                # self.const += other.const * other.mult, preserving None/NaN
+                if (
+                    (self.const is None and math.isnan(c_mult))
+                    or (c_mult is None and math.isnan(self.const))
+                ):
+                    self.const = nan
+                elif (self.const is None) or (c_mult is None):
+                    self.const = None
+                else:
+                    self.const += c_mult
+
                 if other.linear:
                     linear = self.linear
                     for v, c in other.linear.items():
-                        if v in linear:
-                            # TODO: handle mult == None here
-                            linear[v] += c * mult
+                        if (c is None and mult == 0) or (mult is None and c == 0):
+                            c_mult = 0
+                        elif (
+                            (c is None and math.isnan(mult))
+                            or (mult is None and math.isnan(c))
+                        ):
+                            c_mult = nan
+                        elif (c is None) or (mult is None):
+                            c_mult = None
                         else:
-                            linear[v] = c * mult
+                            c_mult = c * mult
+
+                        if v in linear:
+                            if (
+                                c_mult is None and math.isnan(linear[v])
+                                or linear[v] is None and math.isnan(c_mult)
+                            ):
+                                # NaN + None = NaN
+                                linear[v] = nan
+                            elif c_mult is None or linear[v] is None:
+                                # None + finite constant = None
+                                linear[v] = None
+                            else:
+                                linear[v] += c_mult
+                        else:
+                            linear[v] = c_mult
                 if other.nonlinear:
                     if other.nonlinear.__class__ is list:
                         other.compile_nonlinear_fragment(self.ActiveVisitor)
@@ -459,6 +499,7 @@ def node_result_to_amplrepn(data):
         if c != 0:
             return AMPLRepn(0, {v: c}, None)
         else:
+            # Unclear to me how we get into this branch.
             return AMPLRepn(0, None, None)
     elif data[0] is _CONSTANT:
         return AMPLRepn(data[1], None, None)
@@ -468,7 +509,10 @@ def node_result_to_amplrepn(data):
 
 def handle_negation_node(visitor, node, arg1):
     if arg1[0] is _MONOMIAL:
-        return (_MONOMIAL, arg1[1], -1 * arg1[2])
+        if arg1[2] is None:
+            return (_MONOMIAL, arg1[1], None)
+        else:
+            return (_MONOMIAL, arg1[1], -1 * arg1[2])
     elif arg1[0] is _GENERAL:
         arg1[1].mult *= -1
         return arg1
@@ -494,8 +538,8 @@ def handle_product_node(visitor, node, arg1, arg2):
             # "feature" in the future.
             if arg2[0] is _CONSTANT:
                 if arg2[1] is None:
-                    _prod = None
-                    return (_CONSTANT, _prod)
+                    # 0 * None -> 0
+                    return (_CONSTANT, 0)
                 else:
                     _prod = mult * arg2[1]
                     if _prod:
@@ -530,10 +574,23 @@ def handle_product_node(visitor, node, arg1, arg2):
             arg2[1].mult *= mult
             return arg2
         elif arg2[0] is _CONSTANT:
-            # Catch None in either argument
-            if arg2[1] is None or mult is None:
+            if (
+                (arg1[1] is None and arg2[1] == 0)
+                or (arg2[1] is None and arg1[1] == 0)
+            ):
+                # One uninitialized and one zero. We return zero
+                return (_CONSTANT, 0)
+            elif (
+                (arg1[1] is None and math.isnan(arg2[1]))
+                or (arg2[1] is None and math.isnan(arg1[1]))
+            ):
+                # One uninitialized and one nan. We return nan.
+                return (_CONSTANT, nan)
+            elif arg1[1] is None or arg2[1] is None:
+                # Either uninitialized and other is non-zero/nan.
+                # We return None.
                 return (_CONSTANT, None)
-            if not arg2[1]:
+            elif arg2[1] == 0:
                 # Simplify multiplication by 0; see note above about
                 # IEEE-754 incompatibility.
                 _prod = mult * arg2[1]
@@ -561,22 +618,52 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
+            if div is None:
+                # We assume that None != 0 and return a monomial with
+                # coefficient of None
+                return (_MONOMIAL, arg1[1], None)
             tmp = _apply_node_operation(node, (arg1[2], div))
             if tmp[1] != tmp[1]:
                 # This catches if the coefficient division results in nan
                 return tmp
             return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
-            tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
-            if tmp != tmp:
-                # This catches if the multiplier division results in nan
-                return _CONSTANT, tmp
-            arg1[1].mult = tmp
-            return arg1
+            if div is None:
+                if arg1[1].mult == 0 or math.isnan(arg1[1].mult):
+                    # 0 or NaN absorb the uninitialized constant None
+                    # Not sure how we would end up with mult == 0...
+                    return arg1
+                else:
+                    # Multiplier becomes an uninitialized constant
+                    arg1[1].mult = None
+                    return arg1
+            else:
+                tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
+                if tmp != tmp:
+                    # This catches if the multiplier division results in nan
+                    return _CONSTANT, tmp
+                arg1[1].mult = tmp
+                return arg1
         elif arg1[0] is _CONSTANT:
-            return _apply_node_operation(node, (arg1[1], div))
-    elif arg1[0] is _CONSTANT and not arg1[1]:
+            if (
+                # FIXME: This is buggy. math.isnan does not handle args
+                # that are None.
+                (arg1[1] is None and math.isnan(arg2[1]))
+                or (arg2[1] is None and math.isnan(arg1[1]))
+            ):
+                # This handles either arg==None correctly
+                return (_CONSTANT, nan)
+            elif arg1[1] == 0 and arg2[1] is None:
+                return (_CONSTANT, 0)
+            elif arg1[1] is None and arg2[1] == 0:
+                return (_CONSTANT, nan)
+            elif arg1[1] is None or arg2[1] is None:
+                return (_CONSTANT, None)
+            else:
+                return _apply_node_operation(node, (arg1[1], div))
+    elif arg1[0] is _CONSTANT and arg1[1] == 0:
         return _CONSTANT, 0
+    # What happens when arg1 is None and arg2 is non-constant?
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.division
     )
@@ -640,7 +727,46 @@ def handle_unary_node(visitor, node, arg1):
 
 def handle_exprif_node(visitor, node, arg1, arg2, arg3):
     if arg1[0] is _CONSTANT:
-        if arg1[1]:
+        if arg1[1] is None:
+            if arg2[0] is _CONSTANT and arg3[0] is _CONSTANT:
+                if arg2[1] is not None and arg3[1] is not None:
+                    # We are branching between two constants
+                    if arg2[1] == arg3[1]:
+                        # We are not actually branch-dependent
+                        # This branch covers the case of arg2 == 0 and arg3 == 0
+                        return (_CONSTANT, arg2[1])
+                    elif math.isnan(arg2[1]) and math.isnan(arg3[1]):
+                        return (_CONSTANT, nan)
+                    elif math.isnan(arg2[1]):
+                        # If only one branch is NaN, we return the value of the
+                        # other branch.
+                        return (_CONSTANT, arg3[1])
+                    elif math.isnan(arg3[1]):
+                        return (_CONSTANT, arg2[1])
+                    else:
+                        # We are branching on an uninitialized value between
+                        # two non-None constants. As we cannot determine which
+                        # constant will be used, return None.
+                        return (_CONSTANT, None)
+                else:
+                    # If either branch is None, we return None
+                    return (_CONSTANT, None)
+            else:
+                # We could alternatively return the AMPLRepn for:
+                #   None*arg2 + None*arg3
+                # but then the incidence graph is a bit misleading, as it
+                # will include the variables for arg2 and arg3, which never
+                # appear simultaneously.
+                #
+                # Note that we could correctly handle this if arg2 and arg3
+                # contain the same variables. We can think about implementing
+                # this if it comes up.
+                raise ValueError(
+                    "Cannot generate incident variables for Expr_if node that"
+                    " branches on an uninitialized (None) value with"
+                    " non-constant branches."
+                )
+        elif arg1[1]:  # arg1[1] is not None
             return arg2
         else:
             return arg3
