@@ -11,13 +11,12 @@
 
 # Imports from Pyomo
 from pyomo.core import *
-from pyomo.common.plugin import *
+from pyomo.common.plugin_base import *
 from pyomo.opt import *
 
 
 @plugin_factory(SolverFactory)
 class MySolver(object):
-
     alias('greedy')
 
     # Declare that this is an IOptSolver plugin
@@ -42,7 +41,7 @@ class MySolver(object):
         soln.status = SolutionStatus.feasible
         for j in sequence(n):
             if instance.y[j].value is 1:
-                soln.variable[instance.y[j].name] = {"Value" : 1, "Id" : j}
+                soln.variable[instance.y[j].name] = {"Value": 1, "Id": j}
         return results
 
     # Perform a greedy search
@@ -50,33 +49,33 @@ class MySolver(object):
         p = value(instance.P)
         n = value(instance.N)
         m = value(instance.M)
-        fixed=set()
+        fixed = set()
         # Initialize
         for j in sequence(n):
-            instance.y[j].value=0
+            instance.y[j].value = 0
         # Greedily fix the next best facility
         for i in sequence(p):
             best = None
-            ndx=j
+            ndx = j
             for j in sequence(n):
                 if j in fixed:
                     continue
-                instance.y[j].value=1
+                instance.y[j].value = 1
                 # Compute value
                 val = 0.0
                 for kk in sequence(m):
-                    tmp=copy.copy(fixed)
+                    tmp = copy.copy(fixed)
                     tmp.add(j)
                     tbest = None
                     for jj in tmp:
-                        if tbest is None or instance.d[jj,kk].value < tbest:
-                            tbest = instance.d[jj,kk].value
+                        if tbest is None or instance.d[jj, kk].value < tbest:
+                            tbest = instance.d[jj, kk].value
                     val += tbest
                 # Keep best greedy choice
                 if best is None or val < best:
-                    best=val
-                    ndx=j
-                instance.y[j].value=0
+                    best = val
+                    ndx = j
+                instance.y[j].value = 0
             fixed.add(ndx)
-            instance.y[ndx].value=1
+            instance.y[ndx].value = 1
         return [best, instance]

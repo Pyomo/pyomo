@@ -19,6 +19,7 @@ Contributed packages distributed with Pyomo:
    doe/doe.rst
    gdpopt.rst
    iis.rst
+   incidence/index.rst
    mindtpy.rst
    mpc/index.rst
    multistart.rst

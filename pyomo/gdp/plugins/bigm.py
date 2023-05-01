@@ -18,21 +18,37 @@ from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
-    LogicalToDisjunctive)
+    LogicalToDisjunctive,
+)
 from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Var,
-    Expression, SortComponents, TraversalStrategy, value, RangeSet,
-    NonNegativeIntegers, Binary, Any)
+    Block,
+    BooleanVar,
+    Connector,
+    Constraint,
+    Param,
+    Set,
+    SetOf,
+    Var,
+    Expression,
+    SortComponents,
+    TraversalStrategy,
+    value,
+    RangeSet,
+    NonNegativeIntegers,
+    Binary,
+    Any,
+)
 from pyomo.core.base import TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.bigm_mixin import (
-    _BigM_MixIn, _get_bigM_suffix_list, _warn_for_unused_bigM_args)
-from pyomo.gdp.plugins.gdp_to_mip_transformation import (
-    GDP_to_MIP_Transformation)
+    _BigM_MixIn,
+    _get_bigM_suffix_list,
+    _warn_for_unused_bigM_args,
+)
+from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
-from pyomo.gdp.util import (
-    is_child_of, _get_constraint_transBlock, _to_dict)
+from pyomo.gdp.util import is_child_of, _get_constraint_transBlock, _to_dict
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -40,8 +56,10 @@ from weakref import ref as weakref_ref, ReferenceType
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
-@TransformationFactory.register('gdp.bigm', doc="Relax disjunctive model using "
-                                "big-M terms.")
+
+@TransformationFactory.register(
+    'gdp.bigm', doc="Relax disjunctive model using big-M terms."
+)
 class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     """Relax disjunctive model using big-M terms.
 
@@ -90,35 +108,43 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     """
 
     CONFIG = ConfigDict("gdp.bigm")
-    CONFIG.declare('targets', ConfigValue(
-        default=None,
-        domain=target_list,
-        description="target or list of targets that will be relaxed",
-        doc="""
+    CONFIG.declare(
+        'targets',
+        ConfigValue(
+            default=None,
+            domain=target_list,
+            description="target or list of targets that will be relaxed",
+            doc="""
 
         This specifies the list of components to relax. If None (default), the
         entire model is transformed. Note that if the transformation is done out
         of place, the list of targets should be attached to the model before it
         is cloned, and the list will specify the targets on the cloned
-        instance."""
-    ))
-    CONFIG.declare('bigM', ConfigValue(
-        default=None,
-        domain=_to_dict,
-        description="Big-M value used for constraint relaxation",
-        doc="""
+        instance.""",
+        ),
+    )
+    CONFIG.declare(
+        'bigM',
+        ConfigValue(
+            default=None,
+            domain=_to_dict,
+            description="Big-M value used for constraint relaxation",
+            doc="""
 
         A user-specified value, dict, or ComponentMap of M values that override
         M-values found through model Suffixes or that would otherwise be
-        calculated using variable domains."""
-    ))
-    CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
-        default=False,
-        domain=bool,
-        description="Boolean indicating whether or not to transform so that "
-        "the transformed model will still be valid when fixed Vars are "
-        "unfixed.",
-        doc="""
+        calculated using variable domains.""",
+        ),
+    )
+    CONFIG.declare(
+        'assume_fixed_vars_permanent',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="Boolean indicating whether or not to transform so that "
+            "the transformed model will still be valid when fixed Vars are "
+            "unfixed.",
+            doc="""
         This is only relevant when the transformation will be estimating values
         for M. If True, the transformation will calculate M values assuming that
         fixed variables will always be fixed to their current values. This means
@@ -128,20 +154,21 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         future and will use their bounds to calculate the M value rather than
         their value. Note that this could make for a weaker LP relaxation
         while the variables remain fixed.
-        """
-    ))
+        """,
+        ),
+    )
     transformation_name = 'bigm'
 
     def __init__(self):
         super().__init__(logger)
 
     def _apply_to(self, instance, **kwds):
-        self.used_args = ComponentMap() # If everything was sure to go well,
-                                        # this could be a dictionary. But if
-                                        # someone messes up and gives us a Var
-                                        # as a key in bigMargs, I need the error
-                                        # not to be when I try to put it into
-                                        # this map!
+        self.used_args = ComponentMap()  # If everything was sure to go well,
+        # this could be a dictionary. But if
+        # someone messes up and gives us a Var
+        # as a key in bigMargs, I need the error
+        # not to be when I try to put it into
+        # this map!
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
@@ -166,29 +193,31 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
                 self._transform_disjunctionData(
-                    t, t.index(), parent_disjunct=gdp_tree.parent(t),
-                    root_disjunct=gdp_tree.root_disjunct(t))
-            else:# We know t is a Disjunct after preprocessing
+                    t,
+                    t.index(),
+                    parent_disjunct=gdp_tree.parent(t),
+                    root_disjunct=gdp_tree.root_disjunct(t),
+                )
+            else:  # We know t is a Disjunct after preprocessing
                 self._transform_disjunct(
-                    t, bigM, root_disjunct=gdp_tree.root_disjunct(t))
+                    t, bigM, root_disjunct=gdp_tree.root_disjunct(t)
+                )
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
         _warn_for_unused_bigM_args(bigM, self.used_args, logger)
 
-    def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
-                                   root_disjunct=None):
-
-        (transBlock,
-         xorConstraint) = self._setup_transform_disjunctionData(obj,
-                                                                root_disjunct)
+    def _transform_disjunctionData(
+        self, obj, index, parent_disjunct=None, root_disjunct=None
+    ):
+        (transBlock, xorConstraint) = self._setup_transform_disjunctionData(
+            obj, root_disjunct
+        )
 
         # add or (or xor) constraint
-        or_expr = sum(disjunct.binary_indicator_var for disjunct in
-                      obj.disjuncts)
+        or_expr = sum(disjunct.binary_indicator_var for disjunct in obj.disjuncts)
 
-        rhs = 1 if parent_disjunct is None else \
-              parent_disjunct.binary_indicator_var
+        rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
         if obj.xor:
             xorConstraint[index] = or_expr == rhs
         else:
@@ -201,14 +230,16 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         obj.deactivate()
 
     def _transform_disjunct(self, obj, bigM, root_disjunct):
-        root = root_disjunct.parent_block() if root_disjunct is not None else \
-               obj.parent_block()
+        root = (
+            root_disjunct.parent_block()
+            if root_disjunct is not None
+            else obj.parent_block()
+        )
         transBlock = self._add_transformation_block(root)[0]
         suffix_list = _get_bigM_suffix_list(obj)
         arg_list = self._get_bigM_arg_list(bigM, obj)
 
-        relaxationBlock = self._get_disjunct_transformation_block(obj,
-                                                                  transBlock)
+        relaxationBlock = self._get_disjunct_transformation_block(obj, transBlock)
 
         # we will keep a map of constraints (hashable, ha!) to a tuple to
         # indicate what their M value is and where it came from, of the form:
@@ -236,8 +267,9 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
-                              disjunct_suffix_list):
+    def _transform_constraint(
+        self, obj, disjunct, bigMargs, arg_list, disjunct_suffix_list
+    ):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
         bigm_src = transBlock.bigm_src
@@ -261,32 +293,35 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
             # first, we see if an M value was specified in the arguments.
             # (This returns None if not)
-            lower, upper = self._get_M_from_args(c, bigMargs, arg_list, lower,
-                                                 upper)
+            lower, upper = self._get_M_from_args(c, bigMargs, arg_list, lower, upper)
             M = (lower[0], upper[0])
 
             if self._generate_debug_messages:
-                logger.debug("GDP(BigM): The value for M for constraint '%s' "
-                             "from the BigM argument is %s." % (c.name,
-                                                                str(M)))
+                logger.debug(
+                    "GDP(BigM): The value for M for constraint '%s' "
+                    "from the BigM argument is %s." % (c.name, str(M))
+                )
 
             # if we didn't get something we need from args, try suffixes:
-            if (M[0] is None and c.lower is not None) or \
-               (M[1] is None and c.upper is not None):
+            if (M[0] is None and c.lower is not None) or (
+                M[1] is None and c.upper is not None
+            ):
                 # first get anything parent to c but below disjunct
                 suffix_list = _get_bigM_suffix_list(
-                    c.parent_block(),
-                    stopping_block=disjunct)
+                    c.parent_block(), stopping_block=disjunct
+                )
                 # prepend that to what we already collected for the disjunct.
                 suffix_list.extend(disjunct_suffix_list)
-                lower, upper = self._update_M_from_suffixes(c, suffix_list,
-                                                            lower, upper)
+                lower, upper = self._update_M_from_suffixes(
+                    c, suffix_list, lower, upper
+                )
                 M = (lower[0], upper[0])
 
             if self._generate_debug_messages:
-                logger.debug("GDP(BigM): The value for M for constraint '%s' "
-                             "after checking suffixes is %s." % (c.name,
-                                                                 str(M)))
+                logger.debug(
+                    "GDP(BigM): The value for M for constraint '%s' "
+                    "after checking suffixes is %s." % (c.name, str(M))
+                )
 
             if c.lower is not None and M[0] is None:
                 M = (self._estimate_M(c.body, c)[0] - c.lower, M[1])
@@ -296,16 +331,17 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 upper = (M[1], None, None)
 
             if self._generate_debug_messages:
-                logger.debug("GDP(BigM): The value for M for constraint '%s' "
-                             "after estimating (if needed) is %s." %
-                             (c.name, str(M)))
+                logger.debug(
+                    "GDP(BigM): The value for M for constraint '%s' "
+                    "after estimating (if needed) is %s." % (c.name, str(M))
+                )
 
             # save the source information
             bigm_src[c] = (lower, upper)
 
-            self._add_constraint_expressions(c, i, M,
-                                             disjunct.binary_indicator_var,
-                                             newConstraint, constraintMap)
+            self._add_constraint_expressions(
+                c, i, M, disjunct.binary_indicator_var, newConstraint, constraintMap
+            )
 
             # deactivate because we relaxed
             c.deactivate()
@@ -321,12 +357,16 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         for bigm in suffix_list:
             if constraint in bigm:
                 M = bigm[constraint]
-                (lower, upper,
-                 need_lower,
-                 need_upper) = self._process_M_value(M, lower, upper,
-                                                     need_lower, need_upper,
-                                                     bigm, constraint,
-                                                     constraint)
+                (lower, upper, need_lower, need_upper) = self._process_M_value(
+                    M,
+                    lower,
+                    upper,
+                    need_lower,
+                    need_upper,
+                    bigm,
+                    constraint,
+                    constraint,
+                )
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -334,11 +374,9 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             if constraint.parent_component() in bigm:
                 parent = constraint.parent_component()
                 M = bigm[parent]
-                (lower, upper,
-                 need_lower,
-                 need_upper) = self._process_M_value(M, lower, upper,
-                                                     need_lower, need_upper,
-                                                     bigm, parent, constraint)
+                (lower, upper, need_lower, need_upper) = self._process_M_value(
+                    M, lower, upper, need_lower, need_upper, bigm, parent, constraint
+                )
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -348,30 +386,38 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             for bigm in suffix_list:
                 if None in bigm:
                     M = bigm[None]
-                    (lower, upper,
-                     need_lower,
-                     need_upper) = self._process_M_value(M, lower, upper,
-                                                         need_lower, need_upper,
-                                                         bigm, None, constraint)
+                    (lower, upper, need_lower, need_upper) = self._process_M_value(
+                        M, lower, upper, need_lower, need_upper, bigm, None, constraint
+                    )
                 if not need_lower and not need_upper:
                     return lower, upper
         return lower, upper
 
-    @deprecated("The get_m_value_src function is deprecated. Use "
-                "the get_M_value_src function if you need source "
-                "information or the get_M_value function if you "
-                "only need values.", version='5.7.1')
+    @deprecated(
+        "The get_m_value_src function is deprecated. Use "
+        "the get_M_value_src function if you need source "
+        "information or the get_M_value function if you "
+        "only need values.",
+        version='5.7.1',
+    )
     def get_m_value_src(self, constraint):
         transBlock = _get_constraint_transBlock(constraint)
-        ((lower_val, lower_source, lower_key),
-         (upper_val, upper_source, upper_key)) = transBlock.bigm_src[constraint]
+        (
+            (lower_val, lower_source, lower_key),
+            (upper_val, upper_source, upper_key),
+        ) = transBlock.bigm_src[constraint]
 
-        if constraint.lower is not None and constraint.upper is not None and \
-           (not lower_source is upper_source or not lower_key is upper_key):
-            raise GDP_Error("This is why this method is deprecated: The lower "
-                            "and upper M values for constraint %s came from "
-                            "different sources, please use the get_M_value_src "
-                            "method." % constraint.name)
+        if (
+            constraint.lower is not None
+            and constraint.upper is not None
+            and (not lower_source is upper_source or not lower_key is upper_key)
+        ):
+            raise GDP_Error(
+                "This is why this method is deprecated: The lower "
+                "and upper M values for constraint %s came from "
+                "different sources, please use the get_M_value_src "
+                "method." % constraint.name
+            )
         # if source and key are equal for the two, this is representable in the
         # old format.
         if constraint.lower is not None and lower_source is not None:
@@ -442,9 +488,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         """
         m_values = {}
         for disj in model.component_data_objects(
-                Disjunct,
-                active=None,
-                descend_into=(Block, Disjunct)):
+            Disjunct, active=None, descend_into=(Block, Disjunct)
+        ):
             transBlock = disj.transformation_block
             # First check if it was transformed at all.
             if transBlock is not None:
@@ -461,5 +506,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         ----------
         model: A GDP model that has been transformed with BigM
         """
-        return max(max(abs(m) for m in m_values if m is not None) for m_values
-                   in self.get_all_M_values_by_constraint(model).values())
+        return max(
+            max(abs(m) for m in m_values if m is not None)
+            for m_values in self.get_all_M_values_by_constraint(model).values()
+        )

@@ -14,6 +14,7 @@ from pyomo.core import ConcreteModel, Var, Objective
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
+
 @register_model
 class LP_unbounded(_BaseTestModel):
     """
@@ -26,7 +27,7 @@ class LP_unbounded(_BaseTestModel):
     def __init__(self):
         _BaseTestModel.__init__(self)
         self.solve_should_fail = True
-        self.add_results(self.description+".json")
+        self.add_results(self.description + ".json")
 
     def _generate_model(self):
         self.model = ConcreteModel()
@@ -36,7 +37,7 @@ class LP_unbounded(_BaseTestModel):
         model.x = Var()
         model.y = Var()
 
-        model.o = Objective(expr=model.x+model.y)
+        model.o = Objective(expr=model.x + model.y)
 
     def warmstart_model(self):
         assert self.model is not None
@@ -46,17 +47,22 @@ class LP_unbounded(_BaseTestModel):
 
     def post_solve_test_validation(self, tester, results):
         if tester is None:
-            assert results['Solver'][0]['termination condition'] in \
-                (TerminationCondition.unbounded,
-                 TerminationCondition.infeasibleOrUnbounded)
+            assert results['Solver'][0]['termination condition'] in (
+                TerminationCondition.unbounded,
+                TerminationCondition.infeasibleOrUnbounded,
+            )
         else:
-            tester.assertIn(results['Solver'][0]['termination condition'],
-                            (TerminationCondition.unbounded,
-                             TerminationCondition.infeasibleOrUnbounded))
+            tester.assertIn(
+                results['Solver'][0]['termination condition'],
+                (
+                    TerminationCondition.unbounded,
+                    TerminationCondition.infeasibleOrUnbounded,
+                ),
+            )
+
 
 @register_model
 class LP_unbounded_kernel(LP_unbounded):
-
     def _generate_model(self):
         self.model = pmo.block()
         model = self.model
@@ -65,4 +71,4 @@ class LP_unbounded_kernel(LP_unbounded):
         model.x = pmo.variable()
         model.y = pmo.variable()
 
-        model.o = pmo.objective(model.x+model.y)
+        model.o = pmo.objective(model.x + model.y)

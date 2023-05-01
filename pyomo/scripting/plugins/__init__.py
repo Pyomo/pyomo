@@ -9,8 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 def load():
-    import pyomo.scripting.plugins.check
     import pyomo.scripting.plugins.convert
     import pyomo.scripting.plugins.solve
     import pyomo.scripting.plugins.download

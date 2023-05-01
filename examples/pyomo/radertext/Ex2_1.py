@@ -34,24 +34,37 @@ model.LaborLimit = Param(within=NonNegativeReals)
 # Variables
 model.NumDoors = Var(model.DoorType, within=NonNegativeIntegers)
 
+
 # Objective
 def CalcProfit(M):
-    return sum (M.NumDoors[d]*M.Profit[d] for d in M.DoorType)
+    return sum(M.NumDoors[d] * M.Profit[d] for d in M.DoorType)
+
+
 model.TotProf = Objective(rule=CalcProfit, sense=maximize)
+
 
 # Constraints
 def EnsureMachineLimit(M, m):
-    return sum (M.NumDoors[d]*M.Labor[d,m] for d in M.DoorType) \
-           <= M.MachineLimit[m]
+    return sum(M.NumDoors[d] * M.Labor[d, m] for d in M.DoorType) <= M.MachineLimit[m]
+
+
 model.MachineUpBound = Constraint(model.MachineType, rule=EnsureMachineLimit)
 
+
 def EnsureLaborLimit(M):
-    return sum (M.NumDoors[d]*M.Labor[d,m] \
-                for d in M.DoorType for m in M.MachineType) \
-           <= M.LaborLimit
+    return (
+        sum(M.NumDoors[d] * M.Labor[d, m] for d in M.DoorType for m in M.MachineType)
+        <= M.LaborLimit
+    )
+
+
 model.MachineUpBound = Constraint(rule=EnsureLaborLimit)
 
+
 def EnsureMarketRatio(M):
-    return sum (M.NumDoors[d] for d in M.MarketDoorType1) \
-           <= sum (M.NumDoors[d] for d in M.MarketDoorType2)
+    return sum(M.NumDoors[d] for d in M.MarketDoorType1) <= sum(
+        M.NumDoors[d] for d in M.MarketDoorType2
+    )
+
+
 model.MarketRatio = Constraint(rule=EnsureMarketRatio)

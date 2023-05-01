@@ -14,48 +14,38 @@ import pickle
 
 import pyomo.common.unittest as unittest
 from pyomo.common.collections import ComponentMap
-from pyomo.core.kernel.variable import (variable,
-                                        variable_dict,
-                                        variable_list)
-from pyomo.core.kernel.constraint import (constraint,
-                                          constraint_dict,
-                                          constraint_list)
-from pyomo.core.kernel.objective import (objective,
-                                         objective_dict,
-                                         objective_list)
-from pyomo.core.kernel.expression import (expression,
-                                          expression_dict,
-                                          expression_list)
-from pyomo.core.kernel.block import (block,
-                                     block_dict,
-                                     block_list)
+from pyomo.core.kernel.variable import variable, variable_dict, variable_list
+from pyomo.core.kernel.constraint import constraint, constraint_dict, constraint_list
+from pyomo.core.kernel.objective import objective, objective_dict, objective_list
+from pyomo.core.kernel.expression import expression, expression_dict, expression_list
+from pyomo.core.kernel.block import block, block_dict, block_list
 from pyomo.core.kernel.suffix import suffix
 
 
 class TestComponentMap(unittest.TestCase):
-
-    _components = [(variable(), "v"),
-                   (variable_dict(), "vdict"),
-                   (variable_list(), "vlist"),
-                   (constraint(), "c"),
-                   (constraint_dict(), "cdict"),
-                   (constraint_list(), "clist"),
-                   (objective(), "o"),
-                   (objective_dict(), "odict"),
-                   (objective_list(), "olist"),
-                   (expression(), "e"),
-                   (expression_dict(), "edict"),
-                   (expression_list(), "elist"),
-                   (block(), "b"),
-                   (block_dict(), "bdict"),
-                   (block_list(), "blist"),
-                   (suffix(), "s")]
+    _components = [
+        (variable(), "v"),
+        (variable_dict(), "vdict"),
+        (variable_list(), "vlist"),
+        (constraint(), "c"),
+        (constraint_dict(), "cdict"),
+        (constraint_list(), "clist"),
+        (objective(), "o"),
+        (objective_dict(), "odict"),
+        (objective_list(), "olist"),
+        (expression(), "e"),
+        (expression_dict(), "edict"),
+        (expression_list(), "elist"),
+        (block(), "b"),
+        (block_dict(), "bdict"),
+        (block_list(), "blist"),
+        (suffix(), "s"),
+    ]
 
     def test_pickle(self):
         c = ComponentMap()
         self.assertEqual(len(c), 0)
-        cup = pickle.loads(
-            pickle.dumps(c))
+        cup = pickle.loads(pickle.dumps(c))
         self.assertIsNot(cup, c)
         self.assertEqual(len(cup), 0)
 
@@ -63,8 +53,7 @@ class TestComponentMap(unittest.TestCase):
         c[v] = 1.0
         self.assertEqual(len(c), 1)
         self.assertEqual(c[v], 1.0)
-        cup = pickle.loads(
-            pickle.dumps(c))
+        cup = pickle.loads(pickle.dumps(c))
         vup = list(cup.keys())[0]
         self.assertIsNot(cup, c)
         self.assertIsNot(vup, v)
@@ -81,8 +70,7 @@ class TestComponentMap(unittest.TestCase):
         self.assertIs(v.parent, b.V)
         self.assertIs(V.parent, b)
         self.assertIs(b.parent, None)
-        bup = pickle.loads(
-            pickle.dumps(b))
+        bup = pickle.loads(pickle.dumps(b))
         Vup = bup.V
         vup = Vup[0]
         cup = bup.c
@@ -149,29 +137,30 @@ class TestComponentMap(unittest.TestCase):
         ids_seen = set()
         for c in cmap:
             ids_seen.add(id(c))
-        self.assertEqual(ids_seen,
-                         set(id(c) for c,val in self._components))
+        self.assertEqual(ids_seen, set(id(c) for c, val in self._components))
 
     def test_keys(self):
         cmap = ComponentMap(self._components)
-        self.assertEqual(sorted(cmap.keys(), key=id),
-                         sorted(list(c for c,val in self._components),
-                                key=id))
+        self.assertEqual(
+            sorted(cmap.keys(), key=id),
+            sorted(list(c for c, val in self._components), key=id),
+        )
 
     def test_values(self):
         cmap = ComponentMap(self._components)
-        self.assertEqual(sorted(cmap.values()),
-                         sorted(list(val for c,val in self._components)))
+        self.assertEqual(
+            sorted(cmap.values()), sorted(list(val for c, val in self._components))
+        )
 
     def test_items(self):
         cmap = ComponentMap(self._components)
         for x in cmap.items():
             self.assertEqual(type(x), tuple)
             self.assertEqual(len(x), 2)
-        self.assertEqual(sorted(cmap.items(),
-                                key=lambda _x: (id(_x[0]), _x[1])),
-                         sorted(self._components,
-                                key=lambda _x: (id(_x[0]), _x[1])))
+        self.assertEqual(
+            sorted(cmap.items(), key=lambda _x: (id(_x[0]), _x[1])),
+            sorted(self._components, key=lambda _x: (id(_x[0]), _x[1])),
+        )
 
     def test_update(self):
         cmap = ComponentMap()
@@ -191,7 +180,7 @@ class TestComponentMap(unittest.TestCase):
 
     def test_setdefault(self):
         cmap = ComponentMap()
-        for c,_ in self._components:
+        for c, _ in self._components:
             with self.assertRaises(KeyError):
                 cmap[c]
             self.assertTrue(c not in cmap)

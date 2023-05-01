@@ -20,22 +20,28 @@ model.N = Param(within=Integers)
 #
 # Set I
 #
-model.I = RangeSet(1,model.N)
+model.I = RangeSet(1, model.N)
 #
 # Variable b
 #
 model.b = Var(model.I, domain=Boolean)
+
+
 #
 # Objective zot
 #
 def costrule(model):
     ans = 0
     for i in model.I:
-#               ans += (-1 - .02*i)*model.b[i]
-        ans += (1 + .02*i)*model.b[i]
+        #               ans += (-1 - .02*i)*model.b[i]
+        ans += (1 + 0.02 * i) * model.b[i]
     return ans
-#model.zot = Objective(rule=costrule)
+
+
+# model.zot = Objective(rule=costrule)
 model.zot = Objective(rule=costrule, sense=maximize)
+
+
 #
 # Set w_ind
 #
@@ -47,11 +53,13 @@ def w_ind_rule(model):
         j = i
         i9 = i + 9
         while j <= i9:
-            ans.add((i,j))
+            ans.add((i, j))
             j += 1
         i += 1
     return ans
-model.w_ind = Set(initialize=w_ind_rule,dimen=2)
+
+
+model.w_ind = Set(initialize=w_ind_rule, dimen=2)
 #
 # Parameter w
 #
@@ -59,11 +67,13 @@ model.w = Param(model.w_ind)
 #
 # Set rhs_ind
 #
-model.rhs_ind = RangeSet(1,model.N-9)
+model.rhs_ind = RangeSet(1, model.N - 9)
 #
 # Parameter rhs
 #
 model.rhs = Param(model.rhs_ind)
+
+
 #
 # Constraint bletch
 #
@@ -72,8 +82,10 @@ def bletch_rule(model, i):
     j = i
     i9 = i + 9
     while j <= i9:
-        ans += model.w[i,j]*model.b[j]
+        ans += model.w[i, j] * model.b[j]
         j += 1
     ans = ans < model.rhs[i]
     return ans
+
+
 model.bletch = Constraint(model.rhs_ind, rule=bletch_rule)

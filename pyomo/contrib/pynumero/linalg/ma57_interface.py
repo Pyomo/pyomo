@@ -36,7 +36,6 @@ class MA57(DirectLinearSolverInterface):
     def do_symbolic_factorization(
         self, matrix: Union[spmatrix, BlockMatrix], raise_on_error: bool = True
     ) -> LinearSolverResults:
-
         if not isspmatrix_coo(matrix):
             matrix = matrix.tocoo()
         matrix = tril(matrix)
@@ -70,7 +69,6 @@ class MA57(DirectLinearSolverInterface):
     def do_numeric_factorization(
         self, matrix: Union[spmatrix, BlockMatrix], raise_on_error: bool = True
     ) -> LinearSolverResults:
-
         if not isspmatrix_coo(matrix):
             matrix = matrix.tocoo()
         matrix = tril(matrix)
@@ -107,7 +105,6 @@ class MA57(DirectLinearSolverInterface):
     def do_back_solve(
         self, rhs: Union[np.ndarray, BlockVector], raise_on_error: bool = True
     ) -> Tuple[Optional[Union[np.ndarray, BlockVector]], LinearSolverResults]:
-
         if isinstance(rhs, BlockVector):
             _rhs = rhs.flatten()
             result = _rhs

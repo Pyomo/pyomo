@@ -13,16 +13,31 @@
 # Utility functions
 #
 
-__all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum', 'target_list']
+__all__ = [
+    'sum_product',
+    'summation',
+    'dot_product',
+    'sequence',
+    'prod',
+    'quicksum',
+    'target_list',
+]
 
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.numvalue import native_numeric_types
-from pyomo.core.expr.numeric_expr import decompose_term
+from pyomo.core.expr.numeric_expr import (
+    mutable_expression,
+    nonlinear_expression,
+    NPV_SumExpression,
+)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.component import _ComponentBase
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def prod(terms):
     """
@@ -41,100 +56,69 @@ def prod(terms):
 
 
 def quicksum(args, start=0, linear=None):
+    """A utility function to compute a sum of Pyomo expressions.
+
+    The behavior of :func:`quicksum` is similar to the builtin
+    :func:`sum` function, but this function can avoid the generation and
+    disposal of intermediate objects, and thus is slightly more
+    performant.
+
+    Parameters
+    ----------
+    args: Iterable
+        A generator for terms in the sum.
+
+    start: Any
+        A value that initializes the sum.  If this value is not a
+        numeric constant, then the += operator is used to add terms to
+        this object.  Defaults to 0.
+
+    linear: bool
+        DEPRECATED: the linearity of the resulting expression is
+        determined automatically.  This option is ignored.
+
+    Returns
+    -------
+    The value of the sum, which may be a Pyomo expression object.
+
     """
-    A utility function to compute a sum of Pyomo expressions.
 
-    The behavior of :func:`quicksum` is similar to the builtin :func:`sum`
-    function, but this function generates a more compact Pyomo
-    expression.
-
-    Args:
-        args: A generator for terms in the sum.
-
-        start: A value that is initializes the sum.  If
-            this value is not a numeric constant, then the += 
-            operator is used to add terms to this object.
-            Defaults to zero.
-
-        linear: If :attr:`start` is not a numeric constant, then this 
-            option is ignored.  Otherwise, this value indicates
-            whether the terms in the sum are linear.  If the value
-            is :const:`False`, then the terms are
-            treated as nonlinear, and if :const:`True`, then
-            the terms are treated as linear.  Default is
-            :const:`None`, which indicates that the first term
-            in the :attr:`args` is used to determine this value.
-
-    Returns:
-        The value of the sum, which may be a Pyomo expression object.
-    """
-
-    # Ensure that args is an iterator (this manages things like IndexedComponent_slice objects)
+    # Ensure that args is an iterator (this manages things like
+    # IndexedComponent_slice objects)
     try:
         args = iter(args)
     except:
         logger.error('The argument `args` to quicksum() is not iterable!')
         raise
 
+    if linear is not None:
+        deprecation_warning(
+            "The quicksum(linear=...) argument is deprecated and ignored.",
+            version='6.5.1.dev0',
+        )
+
     #
-    # If we're starting with a numeric value, then 
-    # create a new nonlinear sum expression but 
+    # If we're starting with a numeric value, then
+    # create a new nonlinear sum expression but
     # return a static version to the user.
     #
     if start.__class__ in native_numeric_types:
-        if linear is None:
-            #
-            # Get the first term, which we will test for linearity
-            #
-            first = next(args, None)
-            if first is None:
-                return start
-            #
-            # Check if the first term is linear, and if so return the terms
-            #
-            linear, terms = decompose_term(first)
-            #
-            # Right now Pyomo5 expressions can only handle single linear
-            # terms.
-            #
-            # Also, we treat linear expressions as nonlinear if the constant
-            # term is not a native numeric type.  Otherwise, large summation
-            # objects are created for the constant term.
-            #
-            if linear:
-                nvar=0
-                for term in terms:
-                    c,v = term
-                    if not v is None:
-                        nvar += 1
-                    elif not c.__class__ in native_numeric_types:
-                        linear = False
-                if nvar > 1:
-                    linear = False
-            start = start+first
-        if linear:
-            with EXPR.linear_expression() as e:
-                e += start
-                for arg in args:
-                    e += arg
-            # Return the constant term if the linear expression does not
-            # contain variables
-            #
-            # getattr() because the linear expression may not have ended
-            # up being linear (and e could be a SumExpression)
-            if not getattr(e, 'linear_vars', True):
-                return e.constant
+        with mutable_expression() as e:
+            e += start
+            for arg in args:
+                e += arg
+        # Special case: reduce NPV sums of native types to a single
+        # constant
+        if e.__class__ is NPV_SumExpression and all(
+            arg.__class__ in native_numeric_types for arg in e.args
+        ):
+            return e()
+        if e.nargs() > 1:
             return e
+        elif not e.nargs():
+            return 0
         else:
-            with EXPR.nonlinear_expression() as e:
-                e += start
-                for arg in args:
-                    e += arg
-            if e.nargs() == 0:
-                return 0
-            elif e.nargs() == 1:
-                return e.arg(0)
-            return e
+            return e.arg(0)
     #
     # Otherwise, use the context that is provided and return it.
     #
@@ -146,7 +130,7 @@ def quicksum(args, start=0, linear=None):
 
 def sum_product(*args, **kwds):
     """
-    A utility function to compute a generalized dot product.  
+    A utility function to compute a generalized dot product.
 
     This function accepts one or more components that provide terms
     that are multiplied together.  These products are added together
@@ -167,89 +151,76 @@ def sum_product(*args, **kwds):
     Returns:
         The value of the sum.
     """
-    denom = kwds.pop('denom', tuple() )
+    denom = kwds.pop('denom', tuple())
     if type(denom) not in (list, tuple):
         denom = [denom]
     nargs = len(args)
     ndenom = len(denom)
 
     if nargs == 0 and ndenom == 0:
-        raise ValueError("The sum_product() command requires at least an " + \
-              "argument or a denominator term")
+        raise ValueError(
+            "The sum_product() command requires at least an "
+            + "argument or a denominator term"
+        )
 
     if 'index' in kwds:
-        index=kwds['index']
+        index = kwds['index']
     else:
         if nargs > 0:
-            iarg=args[-1]
-            if not isinstance(iarg,Var) and not isinstance(iarg, Expression):
-                raise ValueError("Error executing sum_product(): The last argument value must be a variable or expression object if no 'index' option is specified")
+            iarg = args[-1]
+            if not isinstance(iarg, Var) and not isinstance(iarg, Expression):
+                raise ValueError(
+                    "Error executing sum_product(): The last argument value must be a variable or expression object if no 'index' option is specified"
+                )
         else:
-            iarg=denom[-1]
-            if not isinstance(iarg,Var) and not isinstance(iarg, Expression):
-                raise ValueError("Error executing sum_product(): The last denom argument value must be a variable or expression object if no 'index' option is specified")
+            iarg = denom[-1]
+            if not isinstance(iarg, Var) and not isinstance(iarg, Expression):
+                raise ValueError(
+                    "Error executing sum_product(): The last denom argument value must be a variable or expression object if no 'index' option is specified"
+                )
         index = iarg.index_set()
 
     start = kwds.get("start", 0)
-    vars_ = []
-    params_ = []
-    for arg in args:
-        if isinstance(arg, Var):
-            vars_.append(arg)
-        else:
-            params_.append(arg)
-    nvars = len(vars_)
 
     if ndenom == 0:
         #
         # Sum of polynomial terms
         #
-        if start.__class__ in native_numeric_types:
-            if nvars == 1:
-                v = vars_[0]
-                if len(params_) == 0:
-                    with EXPR.linear_expression() as expr:
-                        expr += start
-                        for i in index:
-                            expr += v[i]
-                elif len(params_) == 1:    
-                    p = params_[0]
-                    with EXPR.linear_expression() as expr:
-                        expr += start
-                        for i in index:
-                            expr += p[i]*v[i]
-                else:
-                    with EXPR.linear_expression() as expr:
-                        expr += start
-                        for i in index:
-                            term = 1
-                            for p in params_:
-                                term *= p[i]
-                            expr += term * v[i]
-                return expr
-            #
-            with EXPR.nonlinear_expression() as expr:
-                expr += start
+        with mutable_expression() as expr:
+            expr += start
+            if nargs == 1:
+                arg1 = args[0]
                 for i in index:
-                    term = 1
-                    for arg in args:
-                        term *= arg[i]
-                    expr += term
+                    expr += arg1[i]
+            elif nargs == 2:
+                arg1, arg2 = args
+                for i in index:
+                    expr += arg1[i] * arg2[i]
+            else:
+                for i in index:
+                    expr += prod(arg[i] for arg in args)
+        if expr.nargs() > 1:
             return expr
-        #
-        return quicksum((prod(arg[i] for arg in args) for i in index), start)
+        elif not expr.nargs():
+            return 0
+        else:
+            return expr.arg(0)
     elif nargs == 0:
         #
         # Sum of reciprocals
         #
-        return quicksum((1/prod(den[i] for den in denom) for i in index), start)
+        return quicksum((1 / prod(den[i] for den in denom) for i in index), start)
     else:
         #
         # Sum of fractions
         #
-        return quicksum((
-            prod(arg[i] for arg in args) / prod(den[i] for den in denom)
-            for i in index), start)
+        return quicksum(
+            (
+                prod(arg[i] for arg in args) / prod(den[i] for den in denom)
+                for i in index
+            ),
+            start,
+        )
 
 
 #: An alias for :func:`sum_product <pyomo.core.expr.util>`
@@ -264,9 +235,9 @@ def sequence(*args):
     sequence([start,] stop[, step]) -> generator for a list of integers
 
     Return a generator that containing an arithmetic
-    progression of integers.  
-       sequence(i, j) returns [i, i+1, i+2, ..., j]; 
-       start defaults to 1.  
+    progression of integers.
+       sequence(i, j) returns [i, i+1, i+2, ..., j];
+       start defaults to 1.
        step specifies the increment (or decrement)
     For example, sequence(4) returns [1, 2, 3, 4].
     """
@@ -275,14 +246,15 @@ def sequence(*args):
     if len(args) > 3:
         raise ValueError('sequence expected at most 3 arguments, got %d' % len(args))
     if len(args) == 1:
-        return range(1,args[0]+1)
+        return range(1, args[0] + 1)
     if len(args) == 2:
-        return range(args[0],args[1]+1)
-    return range(args[0],args[1]+1,args[2])
+        return range(args[0], args[1] + 1)
+    return range(args[0], args[1] + 1, args[2])
+
 
 def target_list(x):
     if isinstance(x, _ComponentBase):
-        return [ x ]
+        return [x]
     elif hasattr(x, '__iter__'):
         ans = []
         for i in x:
@@ -291,9 +263,10 @@ def target_list(x):
             else:
                 raise ValueError(
                     "Expected Component or list of Components."
-                    "\n\tReceived %s" % (type(i),))
+                    "\n\tReceived %s" % (type(i),)
+                )
         return ans
     else:
         raise ValueError(
-            "Expected Component or list of Components."
-            "\n\tReceived %s" % (type(x),))
+            "Expected Component or list of Components.\n\tReceived %s" % (type(x),)
+        )

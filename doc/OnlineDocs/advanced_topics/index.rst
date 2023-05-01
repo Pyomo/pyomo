@@ -7,3 +7,4 @@ Advanced Topics
    persistent_solvers.rst
    units_container.rst
    linearexpression.rst
+   flattener/index.rst

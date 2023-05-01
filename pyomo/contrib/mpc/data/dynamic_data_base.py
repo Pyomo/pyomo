@@ -10,9 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.base.set import Set
-from pyomo.contrib.mpc.data.get_cuid import (
-    get_indexed_cuid,
-)
+from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
 
 
 def _is_iterable(obj):
@@ -56,9 +54,7 @@ class _DynamicDataBase(object):
         self._orig_time_set = time_set
 
         self._data = {
-            get_indexed_cuid(
-                key, (self._orig_time_set,), context=context
-            ): val
+            get_indexed_cuid(key, (self._orig_time_set,), context=context): val
             for key, val in data.items()
         }
 
@@ -68,8 +64,7 @@ class _DynamicDataBase(object):
         else:
             # Should this return False or raise TypeError?
             raise TypeError(
-                "%s and %s are not comparable"
-                % (self.__class__, other.__class__)
+                "%s and %s are not comparable" % (self.__class__, other.__class__)
             )
 
     def get_data(self):
@@ -83,18 +78,14 @@ class _DynamicDataBase(object):
         """
         Get the time-indexed CUID corresponding to the provided key
         """
-        return get_indexed_cuid(
-            key, (self._orig_time_set,), context=context
-        )
+        return get_indexed_cuid(key, (self._orig_time_set,), context=context)
 
     def get_data_from_key(self, key, context=None):
         """
         Returns the value associated with the given key.
 
         """
-        cuid = get_indexed_cuid(
-            key, (self._orig_time_set,), context=context
-        )
+        cuid = get_indexed_cuid(key, (self._orig_time_set,), context=context)
         return self._data[cuid]
 
     def contains_key(self, key, context=None):
@@ -102,9 +93,7 @@ class _DynamicDataBase(object):
         Returns whether this object's dict contains the given key.
 
         """
-        cuid = get_indexed_cuid(
-            key, (self._orig_time_set,), context=context
-        )
+        cuid = get_indexed_cuid(key, (self._orig_time_set,), context=context)
         return cuid in self._data
 
     def update_data(self, other, context=None):
@@ -116,9 +105,7 @@ class _DynamicDataBase(object):
             self._data.update(other.get_data())
         else:
             other = {
-                get_indexed_cuid(
-                    key, (self._orig_time_set,), context=context
-                ): val
+                get_indexed_cuid(key, (self._orig_time_set,), context=context): val
                 for key, val in other.items()
             }
             self._data.update(other)
@@ -131,8 +118,7 @@ class _DynamicDataBase(object):
         # We have no idea whether the values in this object's dict are
         # json-serializable.
         raise NotImplementedError(
-            "to_serializable has not been implemented by %s"
-            % self.__class__
+            "to_serializable has not been implemented by %s" % self.__class__
         )
 
     def extract_variables(self, variables, context=None, copy_values=False):
@@ -146,14 +132,11 @@ class _DynamicDataBase(object):
             # so we don't know how to copy them.
             raise NotImplementedError(
                 "extract_variables with copy_values=True has not been"
-                " implemented by %s"
-                % self.__class__
+                " implemented by %s" % self.__class__
             )
         data = {}
-        for var in variables:        
-            cuid = get_indexed_cuid(
-                var, (self._orig_time_set,), context=context
-            )
+        for var in variables:
+            cuid = get_indexed_cuid(var, (self._orig_time_set,), context=context)
             data[cuid] = self._data[cuid]
         MyClass = self.__class__
         # Subclasses likely have different construction signatures,

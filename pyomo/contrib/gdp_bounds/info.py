@@ -36,14 +36,13 @@ def disjunctive_bound(var, scope):
     # Initialize to the global variable bound
     var_bnd = (
         value(var.lb) if var.has_lb() else -inf,
-        value(var.ub) if var.has_ub() else inf)
+        value(var.ub) if var.has_ub() else inf,
+    )
     possible_disjunct = scope
     while possible_disjunct is not None:
         try:
             disj_bnd = possible_disjunct._disj_var_bounds.get(var, (-inf, inf))
-            disj_bnd = (
-                max(var_bnd[0], disj_bnd[0]),
-                min(var_bnd[1], disj_bnd[1]))
+            disj_bnd = (max(var_bnd[0], disj_bnd[0]), min(var_bnd[1], disj_bnd[1]))
             return disj_bnd
         except AttributeError:
             # possible disjunct does not have attribute '_disj_var_bounds'.

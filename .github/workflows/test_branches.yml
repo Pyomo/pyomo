@@ -25,8 +25,29 @@ env:
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
+  SRC_REF: ${{ github.head_ref || github.ref }}
 
 jobs:
+  lint:
+    name: lint/style-and-typos
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Black Formatting Check
+      run: |
+        pip install black
+        black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
+    - name: Spell Check
+      uses: crate-ci/typos@master
+      with: 
+        config: ./.github/workflows/typos.toml
+
+
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     runs-on: ${{ matrix.os }}
@@ -529,7 +550,8 @@ jobs:
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
-        git clone -b main https://github.com/Pyomo/pyomo-model-libraries.git
+        URL=https://github.com/Pyomo/pyomo-model-libraries.git
+        git clone -b ${SRC_REF##*/} $URL || git clone -b main $URL
         echo ""
         echo "Install Pyomo..."
         echo ""
@@ -675,7 +697,7 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: always() # run even if a build job fails
+    if: ${{ false }} # turn off for branches
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -807,6 +829,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         files: coverage.xml
+        token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
         fail_ci_if_error: true
@@ -818,6 +841,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         files: coverage-other.xml
+        token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
         fail_ci_if_error: true

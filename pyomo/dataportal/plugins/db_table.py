@@ -31,8 +31,8 @@ pymysql, pymysql_available = attempt_import('pymysql')
 # password=
 # table=
 
-class db_Table(TableData):
 
+class db_Table(TableData):
     def __init__(self):
         TableData.__init__(self)
         self.using = None
@@ -79,6 +79,7 @@ class db_Table(TableData):
             tmp = [tmp]
         except sqlite3.OperationalError:
             import logging
+
             logging.getLogger('pyomo.core').error(
                 """Fatal error reading from an external ODBC data source.
 
@@ -94,13 +95,15 @@ for the query:
 It is possible that you have an error in your external data file,
 the ODBC connector for this data source is not correctly installed,
 or that there is a bug in the ODBC connector.
-""" % (self.filename, self.options.query) )
+"""
+                % (self.filename, self.options.query)
+            )
             raise
         for row in rows:
-            #print("DATA %s" % str(list(row))) # XXX
-            ttmp=[]
+            # print("DATA %s" % str(list(row))) # XXX
+            ttmp = []
             for data in list(row):
-                if isinstance(data,Decimal):
+                if isinstance(data, Decimal):
                     ttmp.append(float(data))
                 elif data is None:
                     ttmp.append('.')
@@ -112,7 +115,7 @@ or that there is a bug in the ODBC connector.
                 else:
                     ttmp.append(data)
             tmp.append(ttmp)
-        #print('FINAL %s' % str(tmp)) # XXX
+        # print('FINAL %s' % str(tmp)) # XXX
         #
         # Process data from the table
         #
@@ -120,15 +123,23 @@ or that there is a bug in the ODBC connector.
             if not self.options.param is None:
                 self._info = ["param", self.options.param.local_name, ":=", tmp]
             elif len(self.options.symbol_map) == 1:
-                self._info = ["param", self.options.symbol_map[self.options.symbol_map.keys()[0]], ":=", tmp]
+                self._info = [
+                    "param",
+                    self.options.symbol_map[self.options.symbol_map.keys()[0]],
+                    ":=",
+                    tmp,
+                ]
             else:
-                raise IOError("Data looks like a scalar parameter, but multiple parameter names have been specified: %s" % str(self.options.symbol_map))
+                raise IOError(
+                    "Data looks like a scalar parameter, but multiple parameter names have been specified: %s"
+                    % str(self.options.symbol_map)
+                )
         elif len(tmp) == 0:
             raise IOError("Empty range '%s'" % self.options.range)
         else:
-            #print("_info %s" % str(self._info))
-            #print("SETTING DATA %s %s" % (str(tmp[0]), str(tmp[1:]))) # XXX
-            #print("OPTIONS %s" % str(self.options))
+            # print("_info %s" % str(self._info))
+            # print("SETTING DATA %s %s" % (str(tmp[0]), str(tmp[1:]))) # XXX
+            # print("OPTIONS %s" % str(self.options))
             self._set_data(tmp[0], tmp[1:])
 
     def close(self):
@@ -149,6 +160,7 @@ or that there is a bug in the ODBC connector.
         except ImportError:
             return None
 
+
 #
 # NOTE: The pyodbc interface currently doesn't work.  Notably, nothing
 # sets the "table" or "query" options, which causes db_table.read() to
@@ -156,16 +168,19 @@ or that there is a bug in the ODBC connector.
 # in sheet.py
 #
 
+
 @DataManagerFactory.register('pyodbc', "%s database interface" % 'pyodbc')
 class pyodbc_db_Table(db_Table):
-
     _drivers = {
         'mdb': ["Microsoft Access Driver (*.mdb)"],
-        'xls': ["Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)","Microsoft Excel Driver (*.xls)"],
+        'xls': [
+            "Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)",
+            "Microsoft Excel Driver (*.xls)",
+        ],
         'xlsx': ["Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)"],
         'xlsm': ["Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)"],
         'xlsb': ["Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)"],
-        'mysql': ["MySQL"]
+        'mysql': ["MySQL"],
     }
     _drivers['access'] = _drivers['mdb']
     _drivers['excel'] = _drivers['xls']
@@ -190,7 +205,13 @@ class pyodbc_db_Table(db_Table):
         else:
             ctype = ''
         extras = {}
-        if ctype in ['xls', 'xlsx', 'xlsm', 'xlsb', 'excel'] or '.xls' in connection or '.xlsx' in connection or '.xlsm' in connection or '.xlsb' in connection:
+        if (
+            ctype in ['xls', 'xlsx', 'xlsm', 'xlsb', 'excel']
+            or '.xls' in connection
+            or '.xlsx' in connection
+            or '.xlsm' in connection
+            or '.xlsb' in connection
+        ):
             extras['autocommit'] = True
 
         connection = self.create_connection_string(ctype, connection, options)
@@ -220,7 +241,9 @@ class pyodbc_db_Table(db_Table):
                         config = ODBCConfig()
 
                     dsninfo = self.create_dsn_dict(connection, config)
-                    dsnid = re.sub('[^A-Za-z0-9]', '', dsninfo['Database']) # Strip filenames of funny characters
+                    dsnid = re.sub(
+                        '[^A-Za-z0-9]', '', dsninfo['Database']
+                    )  # Strip filenames of funny characters
                     dsn = 'PYOMO{0}'.format(dsnid)
 
                     config.add_source(dsn, dsninfo['Driver'])
@@ -235,12 +258,14 @@ class pyodbc_db_Table(db_Table):
                     connstr = []
                     for k, v in dsninfo.items():
                         if ' ' in v and (v[0] != "{" or v[-1] != "}"):
-                            connstr.append("%s={%s}" % (k.upper(),v))
+                            connstr.append("%s={%s}" % (k.upper(), v))
                         else:
-                            connstr.append("%s=%s" % (k.upper(),v))
+                            connstr.append("%s=%s" % (k.upper(), v))
                     connstr = ";".join(connstr)
 
-                conn = db_Table.connect(self, connstr, options, extras) # Will raise its own exception on failure
+                conn = db_Table.connect(
+                    self, connstr, options, extras
+                )  # Will raise its own exception on failure
 
             # Propagate the exception
             else:
@@ -255,7 +280,7 @@ class pyodbc_db_Table(db_Table):
         argdict = {}
         for part in parts:
             if len(part) > 0 and '=' in part:
-                key, val = part.split('=',1)
+                key, val = part.split('=', 1)
                 argdict[key.lower().strip()] = val.strip()
 
         if 'driver' in argdict:
@@ -266,8 +291,13 @@ class pyodbc_db_Table(db_Table):
                 return existing_config.source_specs[argdict['dsn']]
             else:
                 import logging
+
                 logger = logging.getLogger("pyomo.core")
-                logger.warning("DSN with name {0} not found. Attempting to continue with options...".format(argdict['dsn']))
+                logger.warning(
+                    "DSN with name {0} not found. Attempting to continue with options...".format(
+                        argdict['dsn']
+                    )
+                )
 
         if 'dbq' in argdict:
             # Using a file for db access.
@@ -297,7 +327,11 @@ class pyodbc_db_Table(db_Table):
                 result['Password'] = argdict.get('password', '')
                 result['Description'] = argdict.get('description', '')
             else:
-                raise Exception("Unknown driver type '{0}' for database connection".format(result['Driver']))
+                raise Exception(
+                    "Unknown driver type '{0}' for database connection".format(
+                        result['Driver']
+                    )
+                )
 
         return result
 
@@ -315,7 +349,7 @@ class pyodbc_db_Table(db_Table):
         # a match in the pyodbc.drivvers() list.  If a match is found,
         # return it.  Otherwise (arbitrarily) return the first one.  If
         # the ctype is not known, return None.
-        drivers = self._drivers.get(ctype,[])
+        drivers = self._drivers.get(ctype, [])
         for driver in drivers:
             if driver in pyodbc.drivers():
                 return driver
@@ -328,11 +362,12 @@ class pyodbc_db_Table(db_Table):
 class ODBCError(Exception):
     def __init__(self, value):
         self.parameter = value
+
     def __repr__(self):
         return repr(self.parameter)
 
 
-class ODBCConfig():
+class ODBCConfig:
     """
     Encapsulates an ODBC configuration file, usually odbc.ini or
     .odbc.ini, as specified by IBM. ODBC config data can be loaded
@@ -391,11 +426,17 @@ class ODBCConfig():
         self.source_specs.update(sections)
 
     def __str__(self):
-        return "<ODBC config: {0} sources, {1} source specs>".format(len(self.sources), len(self.source_specs))
+        return "<ODBC config: {0} sources, {1} source specs>".format(
+            len(self.sources), len(self.source_specs)
+        )
 
     def __eq__(self, other):
         if isinstance(other, ODBCConfig):
-            return self.sources == other.sources and self.source_specs == other.source_specs and self.odbc_info == other.odbc_info
+            return (
+                self.sources == other.sources
+                and self.source_specs == other.source_specs
+                and self.odbc_info == other.odbc_info
+            )
         return False
 
     def odbc_repr(self):
@@ -468,9 +509,13 @@ class ODBCConfig():
         """
 
         if name is None or spec is None or len(name) == 0:
-            raise ODBCError("A source spec must specify both a name and a spec dictionary")
+            raise ODBCError(
+                "A source spec must specify both a name and a spec dictionary"
+            )
         if name not in self.sources:
-            raise ODBCError("A source spec must have a corresponding source; call .add_source() first")
+            raise ODBCError(
+                "A source spec must have a corresponding source; call .add_source() first"
+            )
 
         self.source_specs[name] = dict(spec)
 
@@ -522,7 +567,9 @@ class ODBCConfig():
                 pass
             elif len(line) < 2:
                 # Not enough room for even 'k='; can't contain info
-                raise ODBCError("Malformed line in ODBC config (no meaningful data): " + line)
+                raise ODBCError(
+                    "Malformed line in ODBC config (no meaningful data): " + line
+                )
             elif line[0] == '[' and line[-1] == ']':
                 # Starts a new section; '=' has no special meaning here
                 sections[sectionKey] = sectionContents
@@ -531,11 +578,15 @@ class ODBCConfig():
             else:
                 # Not whitespace or section header; must be key=value. No duplicate '=' permitted.
                 if '=' not in line:
-                    raise ODBCError("Malformed line in ODBC config (no key-value mapping): " + line)
+                    raise ODBCError(
+                        "Malformed line in ODBC config (no key-value mapping): " + line
+                    )
 
-                key, value = line.split("=",1)
+                key, value = line.split("=", 1)
                 if '=' in value:
-                    raise ODBCError("Malformed line in ODBC config (too many '='): " + line)
+                    raise ODBCError(
+                        "Malformed line in ODBC config (too many '='): " + line
+                    )
 
                 sectionContents[key.strip()] = value.strip()
         sections[sectionKey] = sectionContents
@@ -548,7 +599,6 @@ class ODBCConfig():
 
 @DataManagerFactory.register('pypyodbc', "%s database interface" % 'pypyodbc')
 class pypyodbc_db_Table(pyodbc_db_Table):
-
     def __init__(self):
         pyodbc_db_Table.__init__(self)
         self.using = 'pypyodbc'
@@ -560,14 +610,13 @@ class pypyodbc_db_Table(pyodbc_db_Table):
         return 'pypyodbc'
 
     def connect(self, connection, options):
-        assert(options['using'] == 'pypyodbc')
+        assert options['using'] == 'pypyodbc'
 
         return pyodbc_db_Table.connect(self, connection, options)
 
 
 @DataManagerFactory.register('sqlite3', "sqlite3 database interface")
 class sqlite3_db_Table(db_Table):
-
     def __init__(self):
         db_Table.__init__(self)
         self.using = 'sqlite3'
@@ -579,7 +628,7 @@ class sqlite3_db_Table(db_Table):
         return 'sqlite3'
 
     def connect(self, connection, options):
-        assert(options['using'] == 'sqlite3')
+        assert options['using'] == 'sqlite3'
 
         filename = connection
         if not os.path.exists(filename):
@@ -593,7 +642,6 @@ class sqlite3_db_Table(db_Table):
 
 @DataManagerFactory.register('pymysql', "pymysql database interface")
 class pymysql_db_Table(db_Table):
-
     def __init__(self):
         db_Table.__init__(self)
         self.using = 'pymysql'

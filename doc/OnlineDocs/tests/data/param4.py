@@ -12,4 +12,4 @@ instance = model.create_instance('param4.dat')
 print('B')
 keys = instance.B.keys()
 for key in sorted(keys):
-    print(str(key)+" "+str(value(instance.B[key])))
+    print(str(key) + " " + str(value(instance.B[key])))

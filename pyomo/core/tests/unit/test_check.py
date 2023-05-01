@@ -23,8 +23,8 @@ import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, BuildCheck, Param, Set, value
 
-class PyomoModel(unittest.TestCase):
 
+class PyomoModel(unittest.TestCase):
     def setUp(self):
         self.model = AbstractModel()
         self.instance = None
@@ -33,32 +33,34 @@ class PyomoModel(unittest.TestCase):
         self.model = None
         self.instance = None
 
-    def construct(self,filename):
+    def construct(self, filename):
         self.instance = self.model.create_instance(filename)
 
 
 def action1a_fn(model):
     return value(model.A) == 3.3
 
+
 def action1b_fn(model):
     return value(model.A) != 3.3
 
+
 def action2a_fn(model, i):
-    ans=True
+    ans = True
     if i in model.A:
-        return (value(model.A[i]) == 1.3)
+        return value(model.A[i]) == 1.3
     return True
+
 
 def action2b_fn(model, i):
     if i in model.A:
-        ans = (value(model.A[i]) == 1.3)
-        #print "HERE",i,ans,not ans
+        ans = value(model.A[i]) == 1.3
+        # print "HERE",i,ans,not ans
         return not ans
     return True
 
 
 class Scalar(PyomoModel):
-
     def setUp(self):
         #
         # Create Model
@@ -79,7 +81,7 @@ class Scalar(PyomoModel):
         self.model.action1 = BuildCheck(rule=action1a_fn)
         self.instance = self.model.create_instance()
         tmp = value(self.instance.A)
-        self.assertEqual( tmp, 3.3 )
+        self.assertEqual(tmp, 3.3)
 
     def test_false(self):
         """Apply a build check that returns false"""
@@ -92,7 +94,6 @@ class Scalar(PyomoModel):
 
 
 class Array1(PyomoModel):
-
     def setUp(self):
         #
         # Create Model
@@ -101,7 +102,7 @@ class Array1(PyomoModel):
         #
         # Create model instance
         #
-        self.model.Z = Set(initialize=[1,3])
+        self.model.Z = Set(initialize=[1, 3])
         self.model.A = Param(self.model.Z, initialize=1.3)
 
     def tearDown(self):
@@ -123,7 +124,6 @@ class Array1(PyomoModel):
 
 
 class Array2(PyomoModel):
-
     def setUp(self):
         #
         # Create Model
@@ -132,7 +132,7 @@ class Array2(PyomoModel):
         #
         # Create model instance
         #
-        self.model.Z = Set(initialize=[1,3])
+        self.model.Z = Set(initialize=[1, 3])
         self.model.A = Param(self.model.Z, initialize=1.3)
 
     def tearDown(self):
@@ -154,7 +154,6 @@ class Array2(PyomoModel):
 
 
 class TestMisc(unittest.TestCase):
-
     def test_error1(self):
         model = AbstractModel()
         try:
@@ -166,13 +165,15 @@ class TestMisc(unittest.TestCase):
     def test_io(self):
         model = AbstractModel()
         model.c1 = BuildCheck(rule=lambda M: True)
-        model.A = Set(initialize=[1,2,3])
-        model.c2 = BuildCheck(model.A, rule=lambda M,i: True)
+        model.A = Set(initialize=[1, 2, 3])
+        model.c2 = BuildCheck(model.A, rule=lambda M, i: True)
         instance = model.create_instance()
         #
         buf = StringIO()
         instance.pprint(ostream=buf)
-        self.assertEqual(buf.getvalue(),"""1 Set Declarations
+        self.assertEqual(
+            buf.getvalue(),
+            """1 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
@@ -182,8 +183,8 @@ class TestMisc(unittest.TestCase):
     c2 : 
 
 3 Declarations: c1 A c2
-""")
-
+""",
+        )
 
 
 if __name__ == "__main__":

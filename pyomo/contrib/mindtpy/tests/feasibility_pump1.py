@@ -10,10 +10,16 @@ Ref:
                      3  constraints
 
 """
-from __future__ import division
 
-from pyomo.environ import (Binary, ConcreteModel, Constraint, Objective,
-                            Var, minimize, Reals)
+from pyomo.environ import (
+    Binary,
+    ConcreteModel,
+    Constraint,
+    Objective,
+    Var,
+    minimize,
+    Reals,
+)
 from pyomo.common.collections import ComponentMap
 
 
@@ -32,8 +38,9 @@ class Feasibility_Pump1(ConcreteModel):
 
         m.objective = Objective(expr=m.x, sense=minimize)
 
-        m.c1 = Constraint(expr=(m.y1-0.5) * (m.y1-0.5) +
-                          (m.y2-0.5) * (m.y2-0.5) <= 0.25)
+        m.c1 = Constraint(
+            expr=(m.y1 - 0.5) * (m.y1 - 0.5) + (m.y2 - 0.5) * (m.y2 - 0.5) <= 0.25
+        )
         m.c2 = Constraint(expr=m.x - m.y1 <= 3)
         m.c3 = Constraint(expr=m.y2 <= 0)
         m.optimal_value = 0

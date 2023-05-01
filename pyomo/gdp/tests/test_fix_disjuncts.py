@@ -14,13 +14,24 @@
 """Tests disjunct fixing."""
 import pyomo.common.unittest as unittest
 from pyomo.environ import (
-    Block, Constraint, ConcreteModel, TransformationFactory, NonNegativeReals,
-    BooleanVar, LogicalConstraint, SolverFactory, Objective, value, Var,
-    implies)
+    Block,
+    Constraint,
+    ConcreteModel,
+    TransformationFactory,
+    NonNegativeReals,
+    BooleanVar,
+    LogicalConstraint,
+    SolverFactory,
+    Objective,
+    value,
+    Var,
+    implies,
+)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.opt import check_available_solvers
 
 solvers = check_available_solvers('gurobi')
+
 
 class TestFixDisjuncts(unittest.TestCase):
     """Tests fixing of disjuncts."""
@@ -74,11 +85,12 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d1.binary_indicator_var.set_value(0.5)
         m.d2.binary_indicator_var.set_value(0.5)
         with self.assertRaisesRegex(
-                GDP_Error, 
-                "The value of the indicator_var of "
-                "Disjunct 'd1' is None. All indicator_vars "
-                "must have values before calling "
-                "'fix_disjuncts'."):
+            GDP_Error,
+            "The value of the indicator_var of "
+            "Disjunct 'd1' is None. All indicator_vars "
+            "must have values before calling "
+            "'fix_disjuncts'.",
+        ):
             TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
     def test_disjuncts_partially_fixed(self):
@@ -94,17 +106,18 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d2.indicator_var.set_value(False)
 
         with self.assertRaisesRegex(
-                GDP_Error,
-                "The value of the indicator_var of "
-                "Disjunct 'another1' is None. All indicator_vars "
-                "must have values before calling "
-                "'fix_disjuncts'."):
+            GDP_Error,
+            "The value of the indicator_var of "
+            "Disjunct 'another1' is None. All indicator_vars "
+            "must have values before calling "
+            "'fix_disjuncts'.",
+        ):
             TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_logical_constraints_transformed(self):
         """It is expected that the result of this transformation is a MI(N)LP,
-        so check that LogicalConstraints are handeled correctly"""
+        so check that LogicalConstraints are handled correctly"""
         m = ConcreteModel()
         m.x = Var(bounds=(0, 10))
         m.d1 = Disjunct()
@@ -115,7 +128,8 @@ class TestFixDisjuncts(unittest.TestCase):
         m.Y = BooleanVar()
         m.global_logical = LogicalConstraint(expr=m.Y.xor(m.d1.indicator_var))
         m.d1.logical = LogicalConstraint(
-            expr=implies(~m.Y, m.another.disjuncts[0].indicator_var))
+            expr=implies(~m.Y, m.another.disjuncts[0].indicator_var)
+        )
         m.obj = Objective(expr=m.x)
 
         m.d1.indicator_var.set_value(True)
@@ -127,10 +141,15 @@ class TestFixDisjuncts(unittest.TestCase):
 
         # Make sure there are no active LogicalConstraints
         self.assertEqual(
-            len(list(m.component_data_objects(LogicalConstraint,
-                                              active=True,
-                                              descend_into=(Block,
-                                                            Disjunct)))), 0)
+            len(
+                list(
+                    m.component_data_objects(
+                        LogicalConstraint, active=True, descend_into=(Block, Disjunct)
+                    )
+                )
+            ),
+            0,
+        )
         # See that it solves as expected
         SolverFactory('gurobi').solve(m)
         self.assertTrue(value(m.d1.indicator_var))
@@ -147,7 +166,7 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d[1].deactivate()
         m.d[2].indicator_var = True
         m.d[3].indicator_var = False
-        
+
         TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
         self.assertTrue(m.d[1].indicator_var.fixed)
@@ -163,6 +182,7 @@ class TestFixDisjuncts(unittest.TestCase):
         self.assertFalse(m.d[3].active)
         self.assertEqual(m.d[1].ctype, Block)
         self.assertEqual(m.d[2].ctype, Block)
+
 
 if __name__ == '__main__':
     unittest.main()
