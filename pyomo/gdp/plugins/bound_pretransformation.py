@@ -29,6 +29,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+##debug
+from pdb import set_trace
+
 
 @TransformationFactory.register(
     'gdp.common_constraint_body',
@@ -135,10 +138,6 @@ class CommonLHSTransformation(Transformation):
         disjunctions_to_transform = set()
         for d in gdp_forest.topological_sort():
             if d.ctype is Disjunct:
-                # TODO: This is a mess because you're overwriting for all
-                # the Disjuncts in a Disjunction. Need to keep a dict for
-                # each root Disjunct, at least, but I need to think about it
-                # a little more
                 self._update_bounds_from_constraints(d, bound_dict, gdp_forest)
         self._create_transformation_constraints(
             disjunction, bound_dict, gdp_forest, transformation_blocks
@@ -193,31 +192,37 @@ class CommonLHSTransformation(Transformation):
         if self.transformation_name not in disjunction._transformation_map:
             disjunction._transformation_map[self.transformation_name] = ComponentMap()
         trans_map = disjunction._transformation_map[self.transformation_name]
-        unique_id = len(trans_block.transformed_bound_constraints)
-        lb_expr = 0
-        ub_expr = 0
         for v, v_bounds in bound_dict.items():
+            unique_id = len(trans_block.transformed_bound_constraints)
+            lb_expr = 0
+            ub_expr = 0
+            print("collecting bounds for: %s" % v.name)
             all_lbs = True
             all_ubs = True
             for disjunct in gdp_forest.leaves:
+                print("\tdisjunct: %s" % disjunct.name)
                 indicator_var = disjunct.binary_indicator_var
                 need_lb = True
                 need_ub = True
                 while need_lb or need_ub:
                     if disjunct in v_bounds:
                         (lb, ub) = v_bounds[disjunct]
-                        need_lb = lb is None
-                        need_ub = ub is None
-                        if not need_lb:
+                        if need_lb and lb is not None:
+                            print("\tfound lb %s on disjunct %s" % (lb, disjunct))
                             lb_expr += lb * indicator_var
-                        if not need_ub:
+                            need_lb = False
+                        if need_ub and ub is not None:
+                            print("\tfound ub %s on disjunct %s" % (ub, disjunct))
                             ub_expr += ub * indicator_var
+                            need_ub = False
                     if disjunct is None:
                         break
                     disjunct = gdp_forest.parent_disjunct(disjunct)
                 if need_lb:
+                    print("Never found lb")
                     all_lbs = False
                 if need_ub:
+                    print("Never found ub")
                     all_ubs = False
             deactivate_lower = set()
             deactivate_upper = set()

@@ -11,28 +11,36 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.environ import Block, ConcreteModel, Constraint, TransformationFactory, Var
+from pyomo.environ import Any, Block, ConcreteModel, Constraint, TransformationFactory, Var
 from pyomo.gdp import Disjunct, Disjunction
 
 
 class TestCommonConstraintBodyTransformation(unittest.TestCase):
+    def create_nested_structure(self):
+        """
+        Creates a two-term Disjunction with on nested two-term Disjunction on
+        the first Disjunct
+        """
+        m = ConcreteModel()
+        m.outer_d1 = Disjunct()
+        m.outer_d1.inner_d1 = Disjunct()
+        m.outer_d1.inner_d2 = Disjunct()
+        m.outer_d1.inner = Disjunction(expr=[m.outer_d1.inner_d1, m.outer_d1.inner_d2])
+        m.outer_d2 = Disjunct()
+        m.outer = Disjunction(expr=[m.outer_d1, m.outer_d2])
+        return m
+
     def create_nested_model(self):
         """
         -100 <= x <= 102
         [-10 <= x <= 11, [x <= 3] v [x >= -17]] v [x == 0]
         """
-        m = ConcreteModel()
+        m = self.create_nested_structure()
         m.x = Var(bounds=(-100, 102))
-        m.outer_d1 = Disjunct()
         m.outer_d1.c = Constraint(expr=(-10, m.x, 11))
-        m.outer_d1.inner_d1 = Disjunct()
         m.outer_d1.inner_d1.c = Constraint(expr=m.x <= 3)
-        m.outer_d1.inner_d2 = Disjunct()
         m.outer_d1.inner_d2.c = Constraint(expr=m.x >= -7)
-        m.outer_d1.inner = Disjunction(expr=[m.outer_d1.inner_d1, m.outer_d1.inner_d2])
-        m.outer_d2 = Disjunct()
         m.outer_d2.c = Constraint(expr=m.x == 0)
-        m.outer = Disjunction(expr=[m.outer_d1, m.outer_d2])
 
         return m
 
@@ -52,14 +60,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             self,
             lb.expr,
             -10.0 * m.outer_d1.inner_d1.binary_indicator_var
-            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var
+            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var +
+            0.0 * m.outer_d2.binary_indicator_var
             <= m.x,
         )
         assertExpressionsEqual(
             self,
             ub.expr,
             3.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
+            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var +
+            0.0 * m.outer_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -131,3 +141,80 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             ),
             2,
         )
+
+    def test_transformation_gives_up_without_enough_bound_info(self):
+        """
+        If we have unbounded variables and not enough bounding constraints,
+        we want the transformation to just leave the bounding constraints
+        be to be transformed later.
+        """
+        m = self.create_nested_structure()
+        m.x = Var()
+        m.y = Var(bounds=(4, 67))
+        m.outer_d1.c = Constraint(Any)
+        m.outer_d1.c[1] = m.x >= 3
+        m.outer_d1.c[2] = 5 <= m.y
+        m.outer_d1.inner_d1.c = Constraint(Any)
+        m.outer_d1.inner_d1.c[1] = m.x >= 4
+        m.outer_d1.inner_d2.c = Constraint(Any)
+        m.outer_d1.inner_d2.c[1] = m.x >= 17
+        m.outer_d2.c = Constraint(Any)
+        m.outer_d2.c[1] = m.x <= 1
+        m.outer_d2.c[2] = m.y <= 66
+        m.outer_d2.c[3] = m.x >= 2
+
+        # y constraints should be fully transformed, and x can do lower but not
+        # upper.
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m)
+
+        # We expect: 4w_1 + 17w_2 + 2y_2 <= x
+        #            5w_1 + 5w_2 + 4y_2 <= y <= 67w_1 + 67w_2 + 66y_2
+
+        cons = bt.get_transformed_constraints(m.x, m.outer)
+        self.assertEqual(len(cons), 1)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            4.0*m.outer_d1.inner_d1.binary_indicator_var +
+            17.0*m.outer_d1.inner_d2.binary_indicator_var +
+            2.0*m.outer_d2.binary_indicator_var <= m.x
+        )
+
+        cons = bt.get_transformed_constraints(m.y, m.outer)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            5.0*m.outer_d1.inner_d1.binary_indicator_var +
+            5.0*m.outer_d1.inner_d2.binary_indicator_var +
+            4*m.outer_d2.binary_indicator_var <= m.y
+        )
+        ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            67*m.outer_d1.inner_d1.binary_indicator_var +
+            67*m.outer_d1.inner_d2.binary_indicator_var +
+            66.0*m.outer_d2.binary_indicator_var >= m.y
+        )
+        
+        # check that all the y constraints are deactivated, and that the 
+        # lower bound ones for x are, but not the upper bound ones
+        self.assertFalse(m.outer_d1.c[1].active)
+        self.assertFalse(m.outer_d1.c[2].active)
+        self.assertFalse(m.outer_d1.inner_d1.c[1].active)
+        self.assertFalse(m.outer_d1.inner_d2.c[1].active)
+        self.assertTrue(m.outer_d2.c[1].active)
+        self.assertFalse(m.outer_d2.c[2].active)
+        self.assertFalse(m.outer_d2.c[3].active)
+
+        # and check that there are only four active constraints, the ones we
+        # made and the remaining upper bound for x:
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            active=True,
+            descend_into=(Block, Disjunct)))), 4)
