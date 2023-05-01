@@ -485,7 +485,7 @@ def _before_monomial(visitor, child):
     _id = id(arg2)
     if _id not in visitor.var_map:
         if arg2.fixed:
-            return (_CONSTANT, arg1 * arg2())
+            return False, (_CONSTANT, arg1 * arg2())
         visitor.var_map[_id] = arg2
         visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
