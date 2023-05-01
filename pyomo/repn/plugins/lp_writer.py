@@ -54,6 +54,8 @@ from pyomo.core.base import Set, RangeSet, ExternalFunction
 from pyomo.network import Port
 
 logger = logging.getLogger(__name__)
+inf = float('inf')
+neg_inf = float('-inf')
 
 
 # TODO: make a proper base class
@@ -421,8 +423,8 @@ class _LPWriter_impl(object):
                 ostream.write(f'\n{label}:\n')
                 self.write_expression(ostream, repn, False)
                 ostream.write(f'= {(lb - offset)!r}\n')
-            elif lb is not None:
-                if ub is not None:
+            elif lb is not None and lb != neg_inf:
+                if ub is not None and ub != inf:
                     # We will need the constraint body twice.  Generate
                     # in a buffer so we only have to do that once.
                     buf = StringIO()
@@ -445,7 +447,7 @@ class _LPWriter_impl(object):
                     ostream.write(f'\n{label}:\n')
                     self.write_expression(ostream, repn, False)
                     ostream.write(f'>= {(lb - offset)!r}\n')
-            elif ub is not None:
+            elif ub is not None and ub != inf:
                 label = f'c_u_{symbol}_'
                 aliasSymbol(con, label)
                 ostream.write(f'\n{label}:\n')
@@ -482,7 +484,7 @@ class _LPWriter_impl(object):
 
             lb, ub = v.bounds
             lb = '-inf' if lb is None else repr(lb)
-            ub = '+inf' if ub is None else repr(ub)
+            ub = '+inf' if ub is None or ub == inf else repr(ub)
             ostream.write(f"\n   {lb} <= {v_symbol} <= {ub}")
 
         if integer_vars:
