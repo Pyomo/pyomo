@@ -8,27 +8,25 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #
-#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation 
-#  Initiative (CCSI), and is copyright (c) 2022 by the software owners: 
-#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC., 
-#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,  
+#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
+#  Initiative (CCSI), and is copyright (c) 2022 by the software owners:
+#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
+#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
 #  Battelle Memorial Institute, University of Notre Dame,
-#  The University of Pittsburgh, The University of Texas at Austin, 
+#  The University of Pittsburgh, The University of Texas at Austin,
 #  University of Toledo, West Virginia University, et al. All rights reserved.
-# 
-#  NOTICE. This Software was developed under funding from the 
-#  U.S. Department of Energy and the U.S. Government consequently retains 
+#
+#  NOTICE. This Software was developed under funding from the
+#  U.S. Department of Energy and the U.S. Government consequently retains
 #  certain rights. As such, the U.S. Government has been granted for itself
-#  and others acting on its behalf a paid-up, nonexclusive, irrevocable, 
-#  worldwide license in the Software to reproduce, distribute copies to the 
+#  and others acting on its behalf a paid-up, nonexclusive, irrevocable,
+#  worldwide license in the Software to reproduce, distribute copies to the
 #  public, prepare derivative works, and perform publicly and display
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
 
-from pyomo.common.dependencies import (
-    numpy as np, numpy_available
-)
+from pyomo.common.dependencies import numpy as np, numpy_available
 
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
@@ -41,6 +39,7 @@ from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_step
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
+
 class calculation_mode(Enum):
     sequential_finite = 1
     direct_kaug = 2
@@ -48,30 +47,42 @@ class calculation_mode(Enum):
     @classmethod
     def has_value(cls, value):
         return value in cls._value2member_map_
-    
-class objective_lib(Enum): 
+
+
+class objective_lib(Enum):
     det = 1
-    trace = 2 
+    trace = 2
     zero = 3
 
     @classmethod
     def has_value(cls, value):
         return value in cls._value2member_map_
-    
+
+
 class model_option_lib(Enum):
     parmest = 1
     stage1 = 2
     stage2 = 3
-    
+
     @classmethod
     def has_value(cls, value):
         return value in cls._value2member_map_
 
+
 class DesignOfExperiments:
-    def __init__(self, param_init, design_vars, measurement_vars, create_model, solver=None,
-                  prior_FIM=None, discretize_model=None, args=None):
+    def __init__(
+        self,
+        param_init,
+        design_vars,
+        measurement_vars,
+        create_model,
+        solver=None,
+        prior_FIM=None,
+        discretize_model=None,
+        args=None,
+    ):
         """
-        This package enables model-based design of experiments analysis with Pyomo. 
+        This package enables model-based design of experiments analysis with Pyomo.
         Both direct optimization and enumeration modes are supported.
         NLP sensitivity tools, e.g.,  sipopt and k_aug, are supported to accelerate analysis via enumeration.
         It can be applied to dynamic models, where design variables are controlled throughout the experiment.
@@ -79,18 +90,18 @@ class DesignOfExperiments:
         Parameters
         ----------
         param_init:
-            A  ``dictionary`` of parameter names and values. 
+            A  ``dictionary`` of parameter names and values.
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
         design_vars:
             A DesignVariable ``object`` which contains the Pyomo variable names and their corresponding indices
-            and bounds for experiment design of freedom 
+            and bounds for experiment design of freedom
         measurement_vars:
-            A Measurement ``object`` which contains the Pyomo variable names and their corresponding indices and 
+            A Measurement ``object`` which contains the Pyomo variable names and their corresponding indices and
             bounds for experimental measurements
         create_model:
             A Python ``function`` that returns a Concrete Pyomo model, similar to the interface for ``parmest``
         solver:
-            A ``solver`` object that User specified, default=None. 
+            A ``solver`` object that User specified, default=None.
             If not specified, default solver is IPOPT MA57.
         prior_FIM:
             A ``list`` of lists containing Fisher information matrix (FIM) for prior experiments.
@@ -100,7 +111,7 @@ class DesignOfExperiments:
         args:
             Additional arguments for the create_model function.
         """
-        
+
         # parameters
         self.param = param_init
         # design variable name
@@ -133,21 +144,33 @@ class DesignOfExperiments:
         # if print statements
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.INFO)
-        
+
     def _check_inputs(self):
         """
         Check if the prior FIM is N*N matrix, where N is the number of parameter
         """
-        if type(self.prior_FIM)!=type(None):
+        if type(self.prior_FIM) != type(None):
             if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
                 raise ValueError('Found wrong prior information matrix shape.')
             elif np.shape(self.prior_FIM)[0] != len(self.param):
                 raise ValueError('Found wrong prior information matrix shape.')
 
-    def stochastic_program(self,  if_optimize=True, objective_option=objective_lib.det,
-                     scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-7, L_initial=None,
-                     jac_initial=None, fim_initial=None,
-                     formula=finite_difference_step.central, step=0.001, tee_opt=True):
+    def stochastic_program(
+        self,
+        if_optimize=True,
+        objective_option=objective_lib.det,
+        scale_nominal_param_value=False,
+        scale_constant_value=1,
+        optimize_opt=None,
+        if_Cholesky=False,
+        L_LB=1e-7,
+        L_initial=None,
+        jac_initial=None,
+        fim_initial=None,
+        formula=finite_difference_step.central,
+        step=0.001,
+        tee_opt=True,
+    ):
         """
         Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
@@ -173,7 +196,7 @@ class DesignOfExperiments:
         if_Cholesky:
             if True, Cholesky decomposition is used for Objective function for D-optimality.
         L_LB:
-            L is the Cholesky decomposition matrix for FIM, i.e. FIM = L*L.T. 
+            L is the Cholesky decomposition matrix for FIM, i.e. FIM = L*L.T.
             L_LB is the lower bound for every element in L.
             if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
         L_initial:
@@ -210,7 +233,7 @@ class DesignOfExperiments:
 
         # calculate how much the FIM element is scaled by a constant number
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
-        self.fim_scale_constant_value = self.scale_constant_value **2
+        self.fim_scale_constant_value = self.scale_constant_value**2
 
         sp_timer = TicTocTimer()
         sp_timer.tic()
@@ -224,18 +247,17 @@ class DesignOfExperiments:
         if self.optimize:
             analysis_optimize = self._optimize_stochastic_program(m)
             dT = sp_timer.toc()
-            self.logger.info("elapsed time: %0.1f"%dT)
+            self.logger.info("elapsed time: %0.1f" % dT)
             return analysis_square, analysis_optimize
-            
+
         else:
             dT = sp_timer.toc(msg=None)
-            self.logger.info("elapsed time: %0.1f"%dT)
+            self.logger.info("elapsed time: %0.1f" % dT)
             return analysis_square
-            
 
     def _compute_stochastic_program(self, m, optimize_option):
         """
-        Solve the stochastic program problem as a square problem. 
+        Solve the stochastic program problem as a square problem.
         """
 
         # Solve square problem first
@@ -246,8 +268,14 @@ class DesignOfExperiments:
         jac_square = self._extract_jac(m)
 
         # create result object
-        analysis_square = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac_square,
-                                    prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
+        analysis_square = FisherResults(
+            list(self.param.keys()),
+            self.measure,
+            jacobian_info=None,
+            all_jacobian_info=jac_square,
+            prior_FIM=self.prior_FIM,
+            scale_constant_value=self.scale_constant_value,
+        )
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
         analysis_square.calculate_FIM(self.design_values, result=result_square)
 
@@ -258,9 +286,9 @@ class DesignOfExperiments:
 
     def _optimize_stochastic_program(self, m):
         """
-        Solve the stochastic program problem with degrees of freedom. 
+        Solve the stochastic program problem with degrees of freedom.
         """
-        
+
         m = self._add_objective(m)
 
         result_doe = self._solve_doe(m, fix=False)
@@ -269,20 +297,33 @@ class DesignOfExperiments:
         jac_optimize = self._extract_jac(m)
 
         # create result object
-        analysis_optimize = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac_optimize,
-                                        prior_FIM=self.prior_FIM)
+        analysis_optimize = FisherResults(
+            list(self.param.keys()),
+            self.measure,
+            jacobian_info=None,
+            all_jacobian_info=jac_optimize,
+            prior_FIM=self.prior_FIM,
+        )
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
         analysis_optimize.calculate_FIM(self.design_name, result=result_doe)
         analysis_optimize.model = m
 
         return analysis_optimize
 
-
-
-    def compute_FIM(self, mode=calculation_mode.direct_kaug, FIM_store_name=None, specified_prior=None,
-                    tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
-                    store_output = None, read_output=None, extract_single_model=None,
-                    formula=finite_difference_step.central, step=0.001):
+    def compute_FIM(
+        self,
+        mode=calculation_mode.direct_kaug,
+        FIM_store_name=None,
+        specified_prior=None,
+        tee_opt=True,
+        scale_nominal_param_value=False,
+        scale_constant_value=1,
+        store_output=None,
+        read_output=None,
+        extract_single_model=None,
+        formula=finite_difference_step.central,
+        step=0.001,
+    ):
         """
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
         It calculates FIM with sensitivity information from the Enum calculation_mode with two modes:
@@ -308,11 +349,11 @@ class DesignOfExperiments:
         read_output:
             if reading the output (value for Var 'output_record') as a pickle file, give the file name here as a string.
         extract_single_model:
-            if True, the solved model outputs for each scenario are all recorded as a .csv file. 
-            The output file uses the name AB.csv, where string A is store_output input, B is the index of scenario.  
+            if True, the solved model outputs for each scenario are all recorded as a .csv file.
+            The output file uses the name AB.csv, where string A is store_output input, B is the index of scenario.
             scenario index is the number of the scenario outputs which is stored.
         formula:
-            choose from the Enum finite_difference_step.central, .forward, or .backward. 
+            choose from the Enum finite_difference_step.central, .forward, or .backward.
             This option is only used for calculation_mode.sequential_finite mode.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
@@ -321,7 +362,7 @@ class DesignOfExperiments:
         ------
         FIM_analysis: result summary object of this solve
         """
-        
+
         # save inputs in object
         self.design_values = self.design_vars.variable_names_value
         self.scale_nominal_param_value = scale_nominal_param_value
@@ -341,24 +382,25 @@ class DesignOfExperiments:
 
         # calculate how much the FIM element is scaled by a constant number
         # As FIM~Jacobian.T@Jacobian, FIM is scaled twice the number the Q is scaled
-        self.fim_scale_constant_value = self.scale_constant_value ** 2
+        self.fim_scale_constant_value = self.scale_constant_value**2
 
         square_timer = TicTocTimer()
         square_timer.tic(msg=None)
-        if mode==calculation_mode.sequential_finite:
-            FIM_analysis = self._sequential_finite(read_output, extract_single_model, store_output)
+        if mode == calculation_mode.sequential_finite:
+            FIM_analysis = self._sequential_finite(
+                read_output, extract_single_model, store_output
+            )
 
-        elif mode==calculation_mode.direct_kaug:
+        elif mode == calculation_mode.direct_kaug:
             FIM_analysis = self._direct_kaug()
 
         dT = square_timer.toc(msg=None)
-        self.logger.info("elapsed time: %0.1f"%dT)
-        
+        self.logger.info("elapsed time: %0.1f" % dT)
+
         return FIM_analysis
 
     def _sequential_finite(self, read_output, extract_single_model, store_output):
-        """ Sequential_finite mode uses Pyomo Block to evaluate the sensitivity information.
-        """
+        """Sequential_finite mode uses Pyomo Block to evaluate the sensitivity information."""
 
         # if measurements are provided
         if read_output:
@@ -387,7 +429,7 @@ class DesignOfExperiments:
                 # loop over measurement item and time to store model measurements
                 output_iter = []
 
-                # extract variable values 
+                # extract variable values
                 for r in self.measure_name:
                     cuid = pyo.ComponentUID(r)
                     var_up = cuid.find_component_on(mod.block[s])
@@ -396,7 +438,7 @@ class DesignOfExperiments:
                 output_record[s] = output_iter
 
                 output_record['design'] = self.design_values
-                
+
                 if store_output:
                     f = open(store_output, 'wb')
                     pickle.dump(output_record, f)
@@ -409,7 +451,7 @@ class DesignOfExperiments:
             self.model = mod
 
             # Store the Jacobian information for access by users, not necessarily call result object to achieve jacobian information
-            # It is the overall set of Jacobian information, 
+            # It is the overall set of Jacobian information,
             # while in the result object the jacobian can be cut to achieve part of the FIM information
             self.jac = jac
 
@@ -419,10 +461,15 @@ class DesignOfExperiments:
         else:
             prior_in_use = self.specified_prior
 
-        FIM_analysis = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac,
-                                    prior_FIM=prior_in_use, store_FIM=self.FIM_store_name, scale_constant_value=self.scale_constant_value)
-
-        
+        FIM_analysis = FisherResults(
+            list(self.param.keys()),
+            self.measure,
+            jacobian_info=None,
+            all_jacobian_info=jac,
+            prior_FIM=prior_in_use,
+            store_FIM=self.FIM_store_name,
+            scale_constant_value=self.scale_constant_value,
+        )
 
         return FIM_analysis
 
@@ -449,7 +496,9 @@ class DesignOfExperiments:
 
         # call k_aug get_dsdp function
         square_result = self._solve_doe(mod, fix=True)
-        dsdp_re, col = get_dsdp(mod, list(self.param.keys()), self.param, tee=self.tee_opt)
+        dsdp_re, col = get_dsdp(
+            mod, list(self.param.keys()), self.param, tee=self.tee_opt
+        )
 
         # analyze result
         dsdp_array = dsdp_re.toarray().T
@@ -462,12 +511,12 @@ class DesignOfExperiments:
 
         # loop over measurement variables and their time points
         for mname in self.measure_name:
-            try: 
+            try:
                 kaug_no = col.index(mname)
                 measurement_index.append(kaug_no)
                 # get right line of dsdp
                 dsdp_extract.append(dsdp_array[kaug_no])
-            except: 
+            except:
                 # k_aug does not provide value for fixed variables
                 self.logger.debug('The variable is fixed:  %s', mname)
                 # produce the sensitivity for fixed variables
@@ -484,11 +533,11 @@ class DesignOfExperiments:
         for d in range(len(dsdp_extract)):
             for p, par in enumerate(self.param.keys()):
                 # if scaled by parameter value or constant value
-                sensi = dsdp_extract[d][p]*self.scale_constant_value
+                sensi = dsdp_extract[d][p] * self.scale_constant_value
                 if self.scale_nominal_param_value:
                     sensi *= self.param[par]
                 jac[par].append(sensi)
-            
+
         # check if another prior experiment FIM is provided other than the user-specified one
         if self.specified_prior is None:
             prior_in_use = self.prior_FIM
@@ -496,33 +545,41 @@ class DesignOfExperiments:
             prior_in_use = self.specified_prior
 
         # Assemble and analyze results
-        FIM_analysis = FisherResults(list(self.param.keys()),self.measure, jacobian_info=None, all_jacobian_info=jac,
-                                    prior_FIM=prior_in_use, store_FIM=self.FIM_store_name,
-                                    scale_constant_value=self.scale_constant_value)
-        
+        FIM_analysis = FisherResults(
+            list(self.param.keys()),
+            self.measure,
+            jacobian_info=None,
+            all_jacobian_info=jac,
+            prior_FIM=prior_in_use,
+            store_FIM=self.FIM_store_name,
+            scale_constant_value=self.scale_constant_value,
+        )
+
         self.jac = jac
         self.mod = mod
-        
+
         return FIM_analysis
 
     def _create_block(self):
         """
-        Create a pyomo Concrete model and add blocks with different parameter perturbation scenarios. 
+        Create a pyomo Concrete model and add blocks with different parameter perturbation scenarios.
         """
 
         # create scenario information for block scenarios
-        scena_object = ScenarioGenerator(self.param, formula=self.formula, step=self.step)
+        scena_object = ScenarioGenerator(
+            self.param, formula=self.formula, step=self.step
+        )
         scena_gen = scena_object.generate_scenario()
-            
+
         # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
         self.scenario_list = scena_gen["scenario"]
         # dictionary, keys are parameter name, values are a list of scenario index where this parameter is perturbed.
         self.scenario_num = scena_gen["scena_num"]
-        # dictionary, keys are parameter name, values are the perturbation step 
+        # dictionary, keys are parameter name, values are the perturbation step
         self.eps_abs = scena_gen["eps-abs"]
         self.scena_gen = scena_gen
 
-        # Create a global model 
+        # Create a global model
         mod = pyo.ConcreteModel()
 
         # Set for block/scenarios
@@ -531,35 +588,34 @@ class DesignOfExperiments:
         # Allow user to self-define complex design variables
         self.create_model(mod=mod, model_option=model_option_lib.stage1)
 
-        def block_build(b,s):
+        def block_build(b, s):
             # create block scenarios
             self.create_model(mod=b, model_option=model_option_lib.stage2)
-            
+
             # fix parameter values to perturbed values
             for par in self.param:
-                par_strname = eval('b.'+str(par))
+                par_strname = eval('b.' + str(par))
                 par_strname.fix(scena_gen["scenario"][s][par])
 
         mod.block = pyo.Block(mod.scena, rule=block_build)
 
-        # discretize the model        
+        # discretize the model
         if self.discretize_model:
             mod = self.discretize_model(mod)
 
         # force design variables in blocks to be equal to global design values
         for name in self.design_name:
-            
+
             def fix1(mod, s):
                 cuid = pyo.ComponentUID(name)
                 design_var_global = cuid.find_component_on(mod)
                 design_var = cuid.find_component_on(mod.block[s])
                 return design_var == design_var_global
-            
-            con_name = "con"+name
-            mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1)) 
 
-        return mod 
+            con_name = "con" + name
+            mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1))
 
+        return mod
 
     def _finite_calculation(self, output_record, scena_gen):
         """
@@ -583,11 +639,15 @@ class DesignOfExperiments:
             involved_s = scena_gen['scena_num'][para]
 
             # each parameter has two involved scenarios
-            s1 = involved_s[0] # positive perturbation
-            s2 = involved_s[1] # negative perturbation
+            s1 = involved_s[0]  # positive perturbation
+            s2 = involved_s[1]  # negative perturbation
             list_jac = []
             for i in range(len(output_record[s1])):
-                sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen['eps-abs'][para] * self.scale_constant_value
+                sensi = (
+                    (output_record[s1][i] - output_record[s2][i])
+                    / scena_gen['eps-abs'][para]
+                    * self.scale_constant_value
+                )
                 if self.scale_nominal_param_value:
                     sensi *= self.param[para]
                 list_jac.append(sensi)
@@ -598,7 +658,7 @@ class DesignOfExperiments:
 
     def _extract_jac(self, m):
         """
-        Extract jacobian from the stochastic program 
+        Extract jacobian from the stochastic program
         Arguments
         ---------
         m: solved stochastic program model
@@ -609,29 +669,38 @@ class DesignOfExperiments:
         # dictionary form of jacobian
         jac = {}
         # loop over parameters
-        for p in self.param.keys(): 
+        for p in self.param.keys():
             jac_para = []
             for res in m.res:
                 jac_para.append(pyo.value(m.jac[p, res]))
             jac[p] = jac_para
         return jac
 
-    def run_grid_search(self, design_ranges, 
-                     mode=calculation_mode.sequential_finite, tee_option=False, 
-                    scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
-                        filename=None, formula=finite_difference_step.central, step=0.001):
+    def run_grid_search(
+        self,
+        design_ranges,
+        mode=calculation_mode.sequential_finite,
+        tee_option=False,
+        scale_nominal_param_value=False,
+        scale_constant_value=1,
+        store_name=None,
+        read_name=None,
+        filename=None,
+        formula=finite_difference_step.central,
+        step=0.001,
+    ):
         """
         Enumerate through full grid search for any number of design variables;
         solve square problems sequentially to compute FIMs.
         It calculates FIM with sensitivity information from two modes:
-            1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. 
+            1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios.
             Sensitivity info estimated by finite difference
             2.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity
 
         Parameters
         -----------
         design_ranges:
-            a ``dict``, keys are design variable names, 
+            a ``dict``, keys are design variable names,
             values are a list of design variable values to go over
         mode:
             choose from calculation_mode.sequential_finite, .direct_kaug.
@@ -643,12 +712,12 @@ class DesignOfExperiments:
             scale all elements in Jacobian matrix, default is 1.
         store_name:
             a string of file name. If not None, store results with this name.
-            Since there are maultiple experiments, results are numbered with a scalar number, 
+            Since there are maultiple experiments, results are numbered with a scalar number,
             and the result for one grid is 'store_name(count).csv' (count is the number of count).
-        read_name: 
-            a string of file name. If not None, read result files. 
+        read_name:
+            a string of file name. If not None, read result files.
             Since there are multiple experiments, this string should be the common part of all files;
-            Real name of the file is "read_name(count)", where count is the number of the experiment. 
+            Real name of the file is "read_name(count)", where count is the number of the experiment.
         filename:
             if True, grid search results stored with this file name
         formula:
@@ -662,18 +731,18 @@ class DesignOfExperiments:
         figure_draw_object: a combined result object of class Grid_search_result
         """
         # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option=objective_lib.zero
+        self.objective_option = objective_lib.zero
         self.filename = filename
 
         # calculate how much the FIM element is scaled
-        self.fim_scale_constant_value = scale_constant_value ** 2
+        self.fim_scale_constant_value = scale_constant_value**2
 
         # to store all FIM results
         result_combine = {}
 
         # all lists of values of each design variable to go over
         design_ranges_list = list(design_ranges.values())
-        # design variable names to go over 
+        # design variable names to go over
         design_dimension_names = list(design_ranges.keys())
 
         # iteration 0
@@ -684,7 +753,7 @@ class DesignOfExperiments:
         for rng in design_ranges_list:
             total_count *= len(rng)
 
-        time_set = [] # record time for every iteration
+        time_set = []  # record time for every iteration
 
         # generate combinations of design variable values to go over
         search_design_set = product(*design_ranges_list)
@@ -696,18 +765,20 @@ class DesignOfExperiments:
             design_iter = self.design_vars.variable_names_value.copy()
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
-                #names = design_dimension_names[i]
+                # names = design_dimension_names[i]
                 # if the element is a list, all design variables in this list share the same values
                 if type(names) is list or type(names) is tuple:
                     for n in names:
-                        design_iter[n] = list(design_set_iter)[i] 
+                        design_iter[n] = list(design_set_iter)[i]
                 else:
                     design_iter[names] = list(design_set_iter)[i]
 
             self.design_vars.variable_names_value = design_iter
             iter_timer = TicTocTimer()
-            self.logger.info('=======Iteration Number: %s =====', count+1)
-            self.logger.debug('Design variable values of this iteration: %s', design_iter)
+            self.logger.info('=======Iteration Number: %s =====', count + 1)
+            self.logger.debug(
+                'Design variable values of this iteration: %s', design_iter
+            )
             iter_timer.tic(msg=None)
             # generate store name
             if store_name is None:
@@ -716,19 +787,22 @@ class DesignOfExperiments:
                 store_output_name = store_name + str(count)
 
             if read_name:
-                read_input_name = read_name+str(count)
+                read_input_name = read_name + str(count)
             else:
                 read_input_name = None
 
             # call compute_FIM to get FIM
             try:
-                result_iter = self.compute_FIM(mode=mode,
-                                                tee_opt=tee_option,
-                                                scale_nominal_param_value=scale_nominal_param_value,
-                                                scale_constant_value = scale_constant_value,
-                                                store_output=store_output_name, 
-                                                read_output=read_input_name,
-                                                formula=formula, step=step)
+                result_iter = self.compute_FIM(
+                    mode=mode,
+                    tee_opt=tee_option,
+                    scale_nominal_param_value=scale_nominal_param_value,
+                    scale_constant_value=scale_constant_value,
+                    store_output=store_output_name,
+                    read_output=read_input_name,
+                    formula=formula,
+                    step=step,
+                )
 
                 count += 1
 
@@ -739,15 +813,22 @@ class DesignOfExperiments:
                 time_set.append(iter_t)
 
                 # give run information at each iteration
-                self.logger.info('This is the  %s run out of  %s run.', (count+1), total_count)
+                self.logger.info(
+                    'This is the  %s run out of  %s run.', (count + 1), total_count
+                )
                 self.logger.info('The code has run  %s seconds.', sum(time_set))
-                self.logger.info('Estimated remaining time:  %s seconds', (sum(time_set)/(count+1)*(total_count-count-1)))
+                self.logger.info(
+                    'Estimated remaining time:  %s seconds',
+                    (sum(time_set) / (count + 1) * (total_count - count - 1)),
+                )
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
 
             except:
-                self.logger.warning(':::::::::::Warning: Cannot converge this run.::::::::::::')
+                self.logger.warning(
+                    ':::::::::::Warning: Cannot converge this run.::::::::::::'
+                )
                 count += 1
                 failed_count += 1
                 self.logger.warning('failed count:', failed_count)
@@ -757,16 +838,20 @@ class DesignOfExperiments:
         self.all_fim = result_combine
 
         # Create figure drawing object
-        figure_draw_object = GridSearchResult(design_ranges_list, design_dimension_names, result_combine, store_optimality_name=filename)
-        
+        figure_draw_object = GridSearchResult(
+            design_ranges_list,
+            design_dimension_names,
+            result_combine,
+            store_optimality_name=filename,
+        )
+
         self.logger.info('Overall wall clock time [s]:  %s', sum(time_set))
 
         return figure_draw_object
 
-
     def _create_doe_model(self, no_obj=True):
         """
-        Add equations to compute sensitivities, FIM, and objective. 
+        Add equations to compute sensitivities, FIM, and objective.
 
         Parameters:
         -----------
@@ -782,22 +867,22 @@ class DesignOfExperiments:
         mod.param = pyo.Set(initialize=list(self.param.keys()))
         mod.res = pyo.Set(initialize=self.measure_name)
 
-        def identity_matrix(m,i,j):
-            if i==j:
-                return 1 
+        def identity_matrix(m, i, j):
+            if i == j:
+                return 1
             else:
-                return 0 
-        
+                return 0
+
         mod.jac = pyo.Var(mod.param, mod.res, initialize=0.1)
 
         if self.fim_initial:
             dict_fim = {}
             for i, bu in enumerate(mod.param):
                 for j, un in enumerate(mod.param):
-                    dict_fim[(bu,un)]=self.fim_initial[i][j]
+                    dict_fim[(bu, un)] = self.fim_initial[i][j]
 
-        def initialize_fim(m,j,d):
-            return dict_fim[(j,d)]
+        def initialize_fim(m, j, d):
+            return dict_fim[(j, d)]
 
         if self.fim_initial:
             mod.fim = pyo.Var(mod.param, mod.param, initialize=initialize_fim)
@@ -806,13 +891,14 @@ class DesignOfExperiments:
 
         # move the L matrix initial point to a dictionary
         if type(self.L_initial) != type(None):
-            dict_cho={}
+            dict_cho = {}
             for i, bu in enumerate(mod.param):
                 for j, un in enumerate(mod.param):
-                    dict_cho[(bu,un)] = self.L_initial[i][j]
+                    dict_cho[(bu, un)] = self.L_initial[i][j]
+
         # use the L dictionary to initialize L matrix
-        def init_cho(m,i,j):
-            return dict_cho[(i,j)]
+        def init_cho(m, i, j):
+            return dict_cho[(i, j)]
 
         # if cholesky, define L elements as variables
         if self.Cholesky_option:
@@ -829,68 +915,87 @@ class DesignOfExperiments:
                 for j, d in enumerate(mod.param):
                     # fix the 0 half of L matrix to be 0.0
                     if i < j:
-                        mod.L_ele[c,d].fix(0.0)
-                    # Give LB to the diagonal entries 
+                        mod.L_ele[c, d].fix(0.0)
+                    # Give LB to the diagonal entries
                     if self.L_LB:
-                        if c==d:
-                            mod.L_ele[c,d].setlb(self.L_LB)
+                        if c == d:
+                            mod.L_ele[c, d].setlb(self.L_LB)
 
         # jacobian rule
         def jacobian_rule(m, p, n):
             """
-            p: parameter 
+            p: parameter
             n: response
             """
             cuid = pyo.ComponentUID(n)
             var_up = cuid.find_component_on(m.block[self.scenario_num[p][0]])
             var_lo = cuid.find_component_on(m.block[self.scenario_num[p][1]])
             if self.scale_nominal_param_value:
-                return m.jac[p,n] == (var_up-var_lo)/self.eps_abs[p]*self.param[p]*self.scale_constant_value
+                return (
+                    m.jac[p, n]
+                    == (var_up - var_lo)
+                    / self.eps_abs[p]
+                    * self.param[p]
+                    * self.scale_constant_value
+                )
             else:
-                return m.jac[p,n] == (var_up-var_lo)/self.eps_abs[p]*self.scale_constant_value
-            
-        #A constraint to calculate elements in Hessian matrix
+                return (
+                    m.jac[p, n]
+                    == (var_up - var_lo) / self.eps_abs[p] * self.scale_constant_value
+                )
+
+        # A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
-        dict_fele={}
+        dict_fele = {}
         for i, bu in enumerate(mod.param):
             for j, un in enumerate(mod.param):
-                dict_fele[(bu,un)] = self.prior_FIM[i][j]
+                dict_fele[(bu, un)] = self.prior_FIM[i][j]
 
-        def read_prior(m,i,j):
-            return dict_fele[(i,j)]
+        def read_prior(m, i, j):
+            return dict_fele[(i, j)]
+
         mod.priorFIM = pyo.Expression(mod.param, mod.param, rule=read_prior)
-        
-        def fim_rule(m,p,q):
+
+        def fim_rule(m, p, q):
             """
-            p: parameter 
+            p: parameter
             q: parameter
             """
-            return m.fim[p,q] == sum(1/self.measure.variance[n]*m.jac[p,n]*m.jac[q,n] for n in mod.res) + m.priorFIM[p,q]*self.fim_scale_constant_value 
-        
+            return (
+                m.fim[p, q]
+                == sum(
+                    1 / self.measure.variance[n] * m.jac[p, n] * m.jac[q, n]
+                    for n in mod.res
+                )
+                + m.priorFIM[p, q] * self.fim_scale_constant_value
+            )
+
         mod.jac_const = pyo.Constraint(mod.param, mod.res, rule=jacobian_rule)
         mod.fim_const = pyo.Constraint(mod.param, mod.param, rule=fim_rule)
 
         return mod
 
     def _add_objective(self, m):
-
         def cholesky_imp(m, c, d):
             """
             Calculate Cholesky L matrix using algebraic constraints
             """
-        # If it is the left bottom half of L
-            if (list(self.param.keys()).index(c) >= list(self.param.keys()).index(d)):
+            # If it is the left bottom half of L
+            if list(self.param.keys()).index(c) >= list(self.param.keys()).index(d):
                 return m.fim[c, d] == sum(
-                    m.L_ele[c, list(self.param.keys())[k]] * m.L_ele[d, list(self.param.keys())[k]] for k in range(list(self.param.keys()).index(d) + 1))
+                    m.L_ele[c, list(self.param.keys())[k]]
+                    * m.L_ele[d, list(self.param.keys())[k]]
+                    for k in range(list(self.param.keys()).index(d) + 1)
+                )
             else:
-        # This is the empty half of L above the diagonal
+                # This is the empty half of L above the diagonal
                 return pyo.Constraint.Skip
 
         def trace_calc(m):
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
-            return m.trace == sum(m.fim[j,j] for j in m.para_set)
+            return m.trace == sum(m.fim[j, j] for j in m.para_set)
 
         def det_general(m):
             """Calculate determinant. Can be applied to FIM of any size.
@@ -914,21 +1019,28 @@ class DesignOfExperiments:
                             name_order.append(element)
 
             # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
-            det_perm = sum( self._sgn(list_p[d])*sum(m.fim[each, name_order[b]] for b, each in enumerate(m.param)) for d in range(len(list_p)))
+            det_perm = sum(
+                self._sgn(list_p[d])
+                * sum(m.fim[each, name_order[b]] for b, each in enumerate(m.param))
+                for d in range(len(list_p))
+            )
             return m.det == det_perm
 
         if self.Cholesky_option:
             m.cholesky_cons = pyo.Constraint(m.param, m.param, rule=cholesky_imp)
-            m.Obj = pyo.Objective(expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.param), sense=pyo.maximize)
+            m.Obj = pyo.Objective(
+                expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.param),
+                sense=pyo.maximize,
+            )
         # if not cholesky but determinant, calculating det and evaluate the OBJ with det
-        elif (self.objective_option == objective_lib.det):
+        elif self.objective_option == objective_lib.det:
             m.det_rule = pyo.Constraint(rule=det_general)
             m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
         # if not determinant or cholesky, calculating the OBJ with trace
-        elif (self.objective_option == objective_lib.trace):
+        elif self.objective_option == objective_lib.trace:
             m.trace_rule = pyo.Constraint(rule=trace_calc)
             m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
-        elif (self.objective_option == objective_lib.zero):
+        elif self.objective_option == objective_lib.zero:
             m.Obj = pyo.Objective(expr=0)
 
         return m
@@ -951,7 +1063,7 @@ class DesignOfExperiments:
         for name in self.design_name:
             cuid = pyo.ComponentUID(name)
             var = cuid.find_component_on(m)
-            if fix_opt:   
+            if fix_opt:
                 var.fix(design_val[name])
             else:
                 if optimize_option is None:
@@ -962,8 +1074,7 @@ class DesignOfExperiments:
         return m
 
     def _get_default_ipopt_solver(self):
-        """Default solver
-        """
+        """Default solver"""
         solver = SolverFactory('ipopt')
         solver.options['linear_solver'] = 'ma57'
         solver.options['halt_on_ampl_error'] = 'yes'
@@ -979,23 +1090,25 @@ class DesignOfExperiments:
         -----------
         m:model
         fix: if true, solve two times (square first). Else, just solve the square problem
-        opt_option: a dictionary, keys are design variable name, values are True or False, 
+        opt_option: a dictionary, keys are design variable name, values are True or False,
             deciding if this design variable is optimized as DOF this time.
             If None, all design variables are optimized as DOF this time.
-            
+
         Return:
         -------
         solver_results: solver results
         """
         ### Solve square problem
-        mod = self._fix_design(m, self.design_values, fix_opt=fix, optimize_option=opt_option)
+        mod = self._fix_design(
+            m, self.design_values, fix_opt=fix, optimize_option=opt_option
+        )
 
         # if user gives solver, use this solver. if not, use default IPOPT solver
-        solver_result = self.solver.solve(mod,tee=self.tee_opt)
+        solver_result = self.solver.solve(mod, tee=self.tee_opt)
 
         return solver_result
 
-    def _sgn(self,p):
+    def _sgn(self, p):
         """
         This is a helper function for stochastic_program function to compute the determinant formula.
         Give the signature of a permutation
@@ -1026,7 +1139,3 @@ class DesignOfExperiments:
             return 1
         else:
             return -1
-
-
-
-

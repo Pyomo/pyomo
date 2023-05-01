@@ -8,19 +8,19 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #
-#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation 
-#  Initiative (CCSI), and is copyright (c) 2022 by the software owners: 
-#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC., 
-#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,  
+#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
+#  Initiative (CCSI), and is copyright (c) 2022 by the software owners:
+#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
+#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
 #  Battelle Memorial Institute, University of Notre Dame,
-#  The University of Pittsburgh, The University of Texas at Austin, 
+#  The University of Pittsburgh, The University of Texas at Austin,
 #  University of Toledo, West Virginia University, et al. All rights reserved.
-# 
-#  NOTICE. This Software was developed under funding from the 
-#  U.S. Department of Energy and the U.S. Government consequently retains 
+#
+#  NOTICE. This Software was developed under funding from the
+#  U.S. Department of Energy and the U.S. Government consequently retains
 #  certain rights. As such, the U.S. Government has been granted for itself
-#  and others acting on its behalf a paid-up, nonexclusive, irrevocable, 
-#  worldwide license in the Software to reproduce, distribute copies to the 
+#  and others acting on its behalf a paid-up, nonexclusive, irrevocable,
+#  worldwide license in the Software to reproduce, distribute copies to the
 #  public, prepare derivative works, and perform publicly and display
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
@@ -28,17 +28,21 @@
 import pickle
 from enum import Enum
 
+
 class finite_difference_step(Enum):
     forward = 1
     central = 2
-    backward =3 
+    backward = 3
 
     @classmethod
     def has_value(cls, value):
         return value in cls._value2member_map_
 
+
 class ScenarioGenerator:
-    def __init__(self, para_dict, formula=finite_difference_step.central, step=0.001, store=False):
+    def __init__(
+        self, para_dict, formula=finite_difference_step.central, step=0.001, store=False
+    ):
         """Generate scenarios.
         DoE library first calls this function to generate scenarios.
 
@@ -75,11 +79,11 @@ class ScenarioGenerator:
         scena_overall['scena-num']: a dict of scenario number related to one parameter
 
         For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
-            scena_dict = {'eps-abs': {'P': 2.0, 'D': 0.4}, 
+            scena_dict = {'eps-abs': {'P': 2.0, 'D': 0.4},
             'scenario': [{'P':101, 'D':20}, {'P':99, 'D':20}, {'P':100, 'D':20.2}, {'P':100, 'D':19.8}],
             'scena_num': {'P':[0,1], 'D':[2,3]}}
         if formula ='forward', it will return:
-            scena_dict = {'eps-abs':  {'P': 2.0, 'D': 0.4}, 
+            scena_dict = {'eps-abs':  {'P': 2.0, 'D': 0.4},
             'scenario': [{'P':101, 'D':20}, {'P':100, 'D':20.2}, {'P':100, 'D':20}],
             'scena_num': {'P':[0,2], 'D':[1,2]}}
         """
@@ -90,32 +94,40 @@ class ScenarioGenerator:
         eps_abs = {}
         # scenario dict for block
         scenario = []
-        # number of scenario 
+        # number of scenario
         scena_num = {}
 
         # loop over parameter name
         for p, para in enumerate(self.para_names):
-
             ## get scenario dictionary
             if self.formula == finite_difference_step.central:
-                scena_num[para] = [2*p, 2*p+1]
-                scena_dict_up, scena_dict_lo = self.para_dict.copy(), self.para_dict.copy()
+                scena_num[para] = [2 * p, 2 * p + 1]
+                scena_dict_up, scena_dict_lo = (
+                    self.para_dict.copy(),
+                    self.para_dict.copy(),
+                )
                 # corresponding parameter dictionary for the scenario
-                scena_dict_up[para] *= (1+self.step)
-                scena_dict_lo[para] *= (1-self.step)
+                scena_dict_up[para] *= 1 + self.step
+                scena_dict_lo[para] *= 1 - self.step
 
                 scenario.append(scena_dict_up)
                 scenario.append(scena_dict_lo)
 
-            elif self.formula in [finite_difference_step.forward, finite_difference_step.backward]:
+            elif self.formula in [
+                finite_difference_step.forward,
+                finite_difference_step.backward,
+            ]:
                 # the base case is added as the last one
-                scena_num[para] = [p,len(self.param_names)]
-                scena_dict_up, scena_dict_lo = self.para_dict.copy(), self.para_dict.copy()
-                if self.formula==finite_difference_step.forward:
-                    scena_dict_up[para] *= (1+self.step)
-                
-                elif self.formula==finite_difference_step.backward:
-                    scena_dict_lo[para] *= (1-self.step)
+                scena_num[para] = [p, len(self.param_names)]
+                scena_dict_up, scena_dict_lo = (
+                    self.para_dict.copy(),
+                    self.para_dict.copy(),
+                )
+                if self.formula == finite_difference_step.forward:
+                    scena_dict_up[para] *= 1 + self.step
+
+                elif self.formula == finite_difference_step.backward:
+                    scena_dict_lo[para] *= 1 - self.step
 
                 scenario.append(scena_dict_up)
                 scenario.append(scena_dict_lo)
@@ -128,9 +140,8 @@ class ScenarioGenerator:
                 eps_abs[para] = self.step * self.para_dict[para]
 
         scenario_dict['eps-abs'] = eps_abs
-        scenario_dict['scenario'] = scenario 
+        scenario_dict['scenario'] = scenario
         scenario_dict['scena_num'] = scena_num
-
 
         # store scenario
         if self.store:
