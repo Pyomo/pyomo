@@ -449,7 +449,7 @@ class _LPWriter_impl(object):
                     ostream.write(f'>= {(lb - offset)!r}\n')
             elif ub is not None and ub != inf:
                 label = f'c_u_{symbol}_'
-                aliasSymbol(con, label)
+                addSymbol(con, label)
                 ostream.write(f'\n{label}:\n')
                 self.write_expression(ostream, repn, False)
                 ostream.write(f'<= {(ub - offset)!r}\n')
