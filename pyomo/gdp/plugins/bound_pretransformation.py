@@ -258,7 +258,7 @@ class CommonLHSTransformation(Transformation):
     def _add_transformation_block(self, disjunction, transformation_blocks):
         to_block = disjunction.parent_block()
         if to_block in transformation_blocks:
-            return transformation_blocks[disjunction]
+            return transformation_blocks[to_block]
 
         trans_block_name = unique_component_name(
             to_block, '_pyomo_gdp_common_constraint_body_reformulation'
