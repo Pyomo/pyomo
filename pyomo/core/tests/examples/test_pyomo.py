@@ -112,9 +112,20 @@ class TestJson(BaseTester):
         with open(file1, 'r') as f1, open(file2, 'r') as f2:
             f1_contents = json.load(f1)
             f2_contents = json.load(f2)
+        try:
             self.assertStructuredAlmostEqual(
                 f2_contents, f1_contents, abstol=_diff_tol, allow_second_superset=True
             )
+        except:
+            pass
+        # The LPv2 writer no longer writes a constraint for
+        # the ONE_VAR_CONSTANT variable
+        f2_contents['Problem'][0]['Number of constraints'] -= 1
+        f2_contents['Problem'][0]['Number of nonzeros'] -= 1
+        f2_contents['Problem'][0]['Number of variables'] -= 1
+        self.assertStructuredAlmostEqual(
+            f2_contents, f1_contents, abstol=_diff_tol, allow_second_superset=True
+        )
 
     def filter_items(self, items):
         filtered = []
@@ -297,9 +308,20 @@ class TestWithYaml(BaseTester):
         with open(file1, 'r') as f1, open(file2, 'r') as f2:
             f1_contents = json.load(f1)
             f2_contents = json.load(f2)
+        try:
             self.assertStructuredAlmostEqual(
                 f2_contents, f1_contents, abstol=_diff_tol, allow_second_superset=True
             )
+        except:
+            pass
+        # The LPv2 writer no longer writes a constraint for
+        # the ONE_VAR_CONSTANT variable
+        f2_contents['Problem'][0]['Number of constraints'] -= 1
+        f2_contents['Problem'][0]['Number of nonzeros'] -= 1
+        f2_contents['Problem'][0]['Number of variables'] -= 1
+        self.assertStructuredAlmostEqual(
+            f2_contents, f1_contents, abstol=_diff_tol, allow_second_superset=True
+        )
 
     def test15b_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
