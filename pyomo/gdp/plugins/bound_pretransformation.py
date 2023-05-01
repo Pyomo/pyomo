@@ -29,9 +29,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-##debug
-from pdb import set_trace
-
 
 @TransformationFactory.register(
     'gdp.common_constraint_body',
@@ -196,11 +193,9 @@ class CommonLHSTransformation(Transformation):
             unique_id = len(trans_block.transformed_bound_constraints)
             lb_expr = 0
             ub_expr = 0
-            print("collecting bounds for: %s" % v.name)
             all_lbs = True
             all_ubs = True
             for disjunct in gdp_forest.leaves:
-                print("\tdisjunct: %s" % disjunct.name)
                 indicator_var = disjunct.binary_indicator_var
                 need_lb = True
                 need_ub = True
@@ -208,21 +203,17 @@ class CommonLHSTransformation(Transformation):
                     if disjunct in v_bounds:
                         (lb, ub) = v_bounds[disjunct]
                         if need_lb and lb is not None:
-                            print("\tfound lb %s on disjunct %s" % (lb, disjunct))
                             lb_expr += lb * indicator_var
                             need_lb = False
                         if need_ub and ub is not None:
-                            print("\tfound ub %s on disjunct %s" % (ub, disjunct))
                             ub_expr += ub * indicator_var
                             need_ub = False
                     if disjunct is None:
                         break
                     disjunct = gdp_forest.parent_disjunct(disjunct)
                 if need_lb:
-                    print("Never found lb")
                     all_lbs = False
                 if need_ub:
-                    print("Never found ub")
                     all_ubs = False
             deactivate_lower = set()
             deactivate_upper = set()
@@ -291,7 +282,7 @@ class CommonLHSTransformation(Transformation):
         trans_map = disjunction._transformation_map[self.transformation_name]
         if v not in trans_map:
             logger.debug(
-                "Constraint bounding variable '%s' on Disjunction '%s' were "
+                "Constraint bounding variable '%s' on Disjunction '%s' was "
                 "not transformed by the 'gdp.%s' transformation"
                 % (v.name, disjunction.name, self.transformation_name)
             )
