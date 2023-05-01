@@ -458,9 +458,16 @@ class _LPWriter_impl(object):
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
         if not have_nontrivial:
-            logger.warning(
-                'Empty constraint block written in LP format - solver may error'
-            )
+            # Some solvers (notably CBC through at least 2.10.4) will
+            # return a nonzero return code when the model has no
+            # constraints.  To work around the original Pyomo solver
+            # hierarchy (where the return code was processed in the base
+            # class), we will add a dummy constraint here.
+            repn = constraint_visitor.Result()  # walk_expression(ONE_VAR_CONSTANT)
+            repn.linear[id(ONE_VAR_CONSTANT)] = 1
+            ostream.write(f'\nc_e_ONE_VAR_CONSTANT:\n')
+            self.write_expression(ostream, repn, False)
+            ostream.write(f'= 1\n')
 
         ostream.write("\nbounds")
 
