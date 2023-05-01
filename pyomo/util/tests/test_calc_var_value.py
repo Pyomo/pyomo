@@ -14,6 +14,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
+from pyomo.common.dependencies import sympy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
     ConcreteModel,
