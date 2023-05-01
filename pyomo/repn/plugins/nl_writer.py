@@ -73,13 +73,6 @@ from pyomo.opt import WriterFactory
 
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
-if sys.version_info[:2] >= (3, 7):
-    _deterministic_dict = dict
-else:
-    from pyomo.common.collections import OrderedDict
-
-    _deterministic_dict = OrderedDict
-
 ### FIXME: Remove the following as soon as non-active components no
 ### longer report active==True
 from pyomo.core.base import Set, RangeSet
@@ -516,7 +509,7 @@ class _NLWriter_impl(object):
         self.subexpression_order = []
         self.external_functions = {}
         self.used_named_expressions = set()
-        self.var_map = _deterministic_dict()
+        self.var_map = {}
         self.visitor = AMPLRepnVisitor(
             self.template,
             self.subexpression_cache,
@@ -2442,27 +2435,34 @@ def _before_monomial(visitor, child):
 
 def _before_linear(visitor, child):
     # Because we are going to modify the LinearExpression in this
-    # walker, we need to make a copy of the LinearExpression from
-    # the original expression tree.
+    # walker, we need to make a copy of the arg list from the original
+    # expression tree.
     var_map = visitor.var_map
-    const = child.constant
+    const = 0
     linear = {}
-    for v, c in zip(child.linear_vars, child.linear_coefs):
-        if c.__class__ not in native_types:
-            c = c()
-        if not c:
-            continue
-        elif v.fixed:
-            const += c * v()
+    for arg in child.args:
+        if arg.__class__ is MonomialTermExpression:
+            c, v = arg.args
+            if c.__class__ not in native_types:
+                c = c()
+            if v.fixed:
+                const += c * v.value
+            elif c:
+                _id = id(v)
+                if _id not in var_map:
+                    var_map[_id] = v
+                if _id in linear:
+                    linear[_id] += c
+                else:
+                    linear[_id] = c
+        elif arg.__class__ in native_types:
+            const += arg
         else:
-            _id = id(v)
-            if _id not in var_map:
-                var_map[_id] = v
-            if _id in linear:
-                linear[_id] += c
-            else:
-                linear[_id] = c
-    return False, (_GENERAL, AMPLRepn(const, linear, None))
+            const += arg()
+    if linear:
+        return False, (_GENERAL, AMPLRepn(const, linear, None))
+    else:
+        return False, (_CONSTANT, const)
 
 
 def _before_named_expression(visitor, child):

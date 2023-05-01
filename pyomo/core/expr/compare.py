@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import collections
 from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
 from .current import (
@@ -38,17 +39,10 @@ from .current import (
 )
 from .template_expr import GetItemExpression
 from typing import List
+from pyomo.common.collections import Sequence
 from pyomo.common.errors import PyomoException
 from pyomo.common.formatting import tostr
 from pyomo.common.numeric_types import native_types
-
-
-def handle_linear_expression(node: LinearExpression, pn: List):
-    pn.append((type(node), 2 * len(node.linear_vars) + 1))
-    pn.append(node.constant)
-    pn.extend(node.linear_coefs)
-    pn.extend(node.linear_vars)
-    return tuple()
 
 
 def handle_expression(node: ExpressionBase, pn: List):
@@ -72,30 +66,19 @@ def handle_external_function_expression(node: ExternalFunctionExpression, pn: Li
     return node.args
 
 
-handler = dict()
-handler[LinearExpression] = handle_linear_expression
-handler[SumExpression] = handle_expression
-handler[MonomialTermExpression] = handle_expression
-handler[ProductExpression] = handle_expression
-handler[DivisionExpression] = handle_expression
-handler[PowExpression] = handle_expression
-handler[NegationExpression] = handle_expression
-handler[NPV_ProductExpression] = handle_expression
-handler[NPV_DivisionExpression] = handle_expression
-handler[NPV_PowExpression] = handle_expression
-handler[NPV_SumExpression] = handle_expression
-handler[NPV_NegationExpression] = handle_expression
+def _generic_expression_handler():
+    return handle_expression
+
+
+handler = collections.defaultdict(_generic_expression_handler)
+
 handler[UnaryFunctionExpression] = handle_unary_expression
 handler[NPV_UnaryFunctionExpression] = handle_unary_expression
 handler[ExternalFunctionExpression] = handle_external_function_expression
 handler[NPV_ExternalFunctionExpression] = handle_external_function_expression
-handler[Expr_ifExpression] = handle_expression
 handler[AbsExpression] = handle_unary_expression
 handler[NPV_AbsExpression] = handle_unary_expression
 handler[RangedExpression] = handle_expression
-handler[InequalityExpression] = handle_expression
-handler[EqualityExpression] = handle_expression
-handler[GetItemExpression] = handle_expression
 
 
 class PrefixVisitor(StreamBasedExpressionVisitor):
@@ -178,7 +161,10 @@ def convert_expression_to_prefix_notation(expr, include_named_exprs=True):
 
     """
     visitor = PrefixVisitor(include_named_exprs=include_named_exprs)
-    return visitor.walk_expression(expr)
+    if isinstance(expr, Sequence):
+        return expr.__class__(visitor.walk_expression(e) for e in expr)
+    else:
+        return visitor.walk_expression(expr)
 
 
 def compare_expressions(expr1, expr2, include_named_exprs=True):

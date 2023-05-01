@@ -304,12 +304,12 @@ class TestPyomoUnit(unittest.TestCase):
             3.0 * model.x * kg + 1.0 * model.y * kg + 3.65 * model.z * kg,
             uc,
             'kg',
-            EXPR.SumExpression,
+            EXPR.LinearExpression,
         )
         self._get_check_units_fail(
             3.0 * model.x * kg + 1.0 * model.y * m + 3.65 * model.z * kg,
             uc,
-            EXPR.SumExpression,
+            EXPR.LinearExpression,
         )
 
         self._get_check_units_ok(
@@ -725,7 +725,7 @@ class TestPyomoUnit(unittest.TestCase):
 
         model.mat = Var(model.S, model.S)
         self._get_check_units_ok(
-            model.mat[i, j + 1], uc, 'dimensionless', EXPR.GetItemExpression
+            model.mat[i, j + 1], uc, 'dimensionless', EXPR.Numeric_GetItemExpression
         )
 
         # test ExternalFunctionExpression, NPV_ExternalFunctionExpression

@@ -71,7 +71,7 @@ class TestTemplateExpressions(unittest.TestCase):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.x[t]
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertEqual(e.args, (m.x, t))
         self.assertFalse(e.is_constant())
         self.assertFalse(e.is_fixed())
@@ -85,7 +85,7 @@ class TestTemplateExpressions(unittest.TestCase):
         t.set_value()
 
         e = m.p[t, 10]
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.NPV_Numeric_GetItemExpression)
         self.assertEqual(e.args, (m.p, t, 10))
         self.assertFalse(e.is_constant())
         self.assertTrue(e.is_fixed())
@@ -99,7 +99,7 @@ class TestTemplateExpressions(unittest.TestCase):
         t.set_value()
 
         e = m.p[5, t]
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.NPV_Numeric_GetItemExpression)
         self.assertEqual(e.args, (m.p, 5, t))
         self.assertFalse(e.is_constant())
         self.assertTrue(e.is_fixed())
@@ -116,11 +116,20 @@ class TestTemplateExpressions(unittest.TestCase):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.s[t]
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.NPV_Structural_GetItemExpression)
         self.assertEqual(e.args, (m.s, t))
         self.assertFalse(e.is_constant())
         self.assertTrue(e.is_fixed())
-        self.assertEqual(e.polynomial_degree(), 0)
+        # Generic templates generate CallExpression objects
+        ee = e.polynomial_degree()
+        self.assertIs(type(ee), EXPR.CallExpression)
+        t.set_value(1)
+        # Note that structural expressions do not implement polynomial_degree
+        with self.assertRaisesRegex(
+            AttributeError,
+            "'_InsertionOrderSetData' object has " "no attribute 'polynomial_degree'",
+        ):
+            e.polynomial_degree()
         self.assertEqual(str(e), "s[{I}]")
         t.set_value(5)
         v = e()
@@ -132,7 +141,7 @@ class TestTemplateExpressions(unittest.TestCase):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.x[t + m.P[5]]
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
@@ -144,12 +153,12 @@ class TestTemplateExpressions(unittest.TestCase):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.x[t + m.P[t + 1]]
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
         self.assertEqual(str(e), "x[{I} + P[{I} + 1]]")
@@ -169,9 +178,9 @@ class TestTemplateExpressions(unittest.TestCase):
 
         t = IndexTemplate(m.T)
         e = m.b[t].x
-        self.assertIs(type(e), EXPR.GetAttrExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetAttrExpression)
         self.assertEqual(e.nargs(), 2)
-        self.assertIs(type(e.arg(0)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(0)), EXPR.NPV_Structural_GetItemExpression)
         self.assertIs(e.arg(0).arg(0), m.b)
         self.assertEqual(e.arg(0).nargs(), 2)
         self.assertIs(e.arg(0).arg(1), t)
@@ -184,7 +193,7 @@ class TestTemplateExpressions(unittest.TestCase):
         t.set_value()
 
         e = m.b[t].bb[t].y[1]
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertEqual(str(e), "b[{T}].bb[{T}].y[1]")
         t.set_value(2)
@@ -210,48 +219,48 @@ class TestTemplateExpressions(unittest.TestCase):
         E = m.x[t + m.P[t + 1]] + m.P[1]
         self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(0)
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E = m.P[1] + m.x[t + m.P[t + 1]]
         self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(1)
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E = m.x[t + m.P[t + 1]] + 1
         self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(0)
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E = 1 + m.x[t + m.P[t + 1]]
         self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(E.nargs() - 1)
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
@@ -263,13 +272,13 @@ class TestTemplateExpressions(unittest.TestCase):
         E = E_base.clone()
         self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(0)
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIs(type(e.arg(1).arg(1)), type(E_base.arg(0).arg(1).arg(1)))
         self.assertIsNot(e.arg(1).arg(1), E_base.arg(0).arg(1).arg(1))
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
@@ -279,13 +288,13 @@ class TestTemplateExpressions(unittest.TestCase):
         E = E_base.clone()
         self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(1)
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIs(type(e.arg(1).arg(1)), type(E_base.arg(1).arg(1).arg(1)))
         self.assertIsNot(e.arg(1).arg(1), E_base.arg(1).arg(1).arg(1))
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
@@ -295,13 +304,13 @@ class TestTemplateExpressions(unittest.TestCase):
         E = E_base.clone()
         self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(0)
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIs(type(e.arg(1).arg(1)), type(E_base.arg(0).arg(1).arg(1)))
         self.assertIsNot(e.arg(1).arg(1), E_base.arg(0).arg(1).arg(1))
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
@@ -311,13 +320,13 @@ class TestTemplateExpressions(unittest.TestCase):
         E = E_base.clone()
         self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(-1)
-        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertIs(type(e), EXPR.Numeric_GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.x)
         self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(0), t)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.NPV_Numeric_GetItemExpression)
         self.assertIs(type(e.arg(1).arg(1)), type(E_base.arg(-1).arg(1).arg(1)))
         self.assertIsNot(e.arg(1).arg(1), E_base.arg(-1).arg(1).arg(1))
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
@@ -582,7 +591,7 @@ class TestTemplatizeRule(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, r'Evaluating uninitialized IndexTemplate \({T}\)'
         ):
-            e()
+            value(e())
         with self.assertRaisesRegex(
             KeyError, r"Index 'None' is not valid for indexed component 'b'"
         ):
@@ -599,7 +608,7 @@ class TestTemplatizeRule(unittest.TestCase):
         self.assertIs(f.__class__, CallExpression)
         self.assertEqual(f._kwds, ())
         self.assertEqual(len(f._args_), 2)
-        self.assertIs(f._args_[0].__class__, GetAttrExpression)
+        self.assertIs(f._args_[0].__class__, EXPR.Structural_GetAttrExpression)
         self.assertIs(f._args_[0]._args_[0], e)
         self.assertEqual(f._args_[1], 5)
 
@@ -611,7 +620,7 @@ class TestTemplatizeRule(unittest.TestCase):
         self.assertIs(f.__class__, CallExpression)
         self.assertEqual(f._kwds, ('skip_validation',))
         self.assertEqual(len(f._args_), 3)
-        self.assertIs(f._args_[0].__class__, GetAttrExpression)
+        self.assertIs(f._args_[0].__class__, EXPR.Structural_GetAttrExpression)
         self.assertIs(f._args_[0]._args_[0], e)
         self.assertEqual(f._args_[1], 'a')
         self.assertEqual(f._args_[2], True)

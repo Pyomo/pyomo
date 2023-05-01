@@ -17,10 +17,11 @@ import math
 import os
 
 import pyomo.repn.plugins.nl_writer as nl_writer
+from pyomo.repn.tests.ampl.nl_diff import nl_diff
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.core.expr.current import Expr_if, inequality
+from pyomo.core.expr.current import Expr_if, inequality, LinearExpression
 from pyomo.core.base.expression import ScalarExpression
 from pyomo.environ import (
     ConcreteModel,
@@ -44,7 +45,7 @@ class INFO(object):
         self.subexpression_cache = {}
         self.subexpression_order = []
         self.external_functions = {}
-        self.var_map = nl_writer._deterministic_dict()
+        self.var_map = {}
         self.used_named_expressions = set()
         self.symbolic_solver_labels = symbolic
 
@@ -180,7 +181,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 3*x/p\n",
+            "\texpression: 3/p\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -463,12 +464,37 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 3*x/p\n",
+            "\texpression: 3/p\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertTrue(math.isnan(repn.const))
         self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+    def test_linearexpression_npv(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=4)
+        m.y = Var(initialize=4)
+        m.z = Var(initialize=4)
+        m.p = Param(initialize=5, mutable=True)
+
+        info = INFO()
+        with LoggingIntercept() as LOG:
+            repn = info.visitor.walk_expression(
+                (
+                    LinearExpression(
+                        args=[1, m.p, m.p * m.x, (m.p + 2) * m.y, 3 * m.z, m.p * m.z]
+                    ),
+                    None,
+                    None,
+                )
+            )
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 6)
+        self.assertEqual(repn.linear, {id(m.x): 5, id(m.y): 7, id(m.z): 8})
         self.assertEqual(repn.nonlinear, None)
 
     def test_eval_pow(self):
@@ -885,4 +911,48 @@ class Test_NLWriter(unittest.TestCase):
             "keys that are not Var, Constraint, Objective, or the model.  "
             "Skipping.\n",
             LOG.getvalue(),
+        )
+
+    def test_linear_constraint_npv_const(self):
+        # This tests an error possibly reported by #2810
+        m = ConcreteModel()
+        m.x = Var([1, 2])
+        m.p = Param(initialize=5, mutable=True)
+        m.o = Objective(expr=1)
+        m.c = Constraint(
+            expr=LinearExpression([m.p**2, 5 * m.x[1], 10 * m.x[2]]) == 0
+        )
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 2 1 1 0 1 	# vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 0 0 0 	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 0 	# nonzeros in Jacobian, obj. gradient
+ 0 0	# max name lengths: constraints, variables
+ 0 0 0 0 0	# common exprs: b,c,o,c1,o1
+C0
+n0
+O0 0
+n1.0
+x0
+r
+4 -25
+b
+3
+3
+k1
+1
+J0 2
+0 5
+1 10
+""",
+                OUT.getvalue(),
+            )
         )

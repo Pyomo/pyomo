@@ -28,9 +28,11 @@ from pyomo.environ import (
     TerminationCondition,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.base import constraint, ComponentUID
 from pyomo.core.base.block import _BlockData
 from pyomo.repn import generate_standard_repn
+import pyomo.core.expr.current as EXPR
 import pyomo.gdp.tests.models as models
 from io import StringIO
 import random
@@ -402,13 +404,16 @@ def check_indicator_vars(self, transformation):
 def check_two_term_disjunction_xor(self, xor, disj1, disj2):
     self.assertIsInstance(xor, Constraint)
     self.assertEqual(len(xor), 1)
-    self.assertIs(disj1.binary_indicator_var, xor.body.arg(0))
-    self.assertIs(disj2.binary_indicator_var, xor.body.arg(1))
-    repn = generate_standard_repn(xor.body)
-    self.assertTrue(repn.is_linear())
-    self.assertEqual(repn.constant, 0)
-    check_linear_coef(self, repn, disj1.indicator_var, 1)
-    check_linear_coef(self, repn, disj2.indicator_var, 1)
+    assertExpressionsEqual(
+        self,
+        xor.body,
+        EXPR.LinearExpression(
+            [
+                EXPR.MonomialTermExpression((1, disj1.binary_indicator_var)),
+                EXPR.MonomialTermExpression((1, disj2.binary_indicator_var)),
+            ]
+        ),
+    )
     self.assertEqual(xor.lower, 1)
     self.assertEqual(xor.upper, 1)
 

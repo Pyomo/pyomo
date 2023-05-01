@@ -25,7 +25,6 @@ from .numvalue import (
     value,
     check_if_numeric_type,
 )
-from .numeric_expr import _process_arg
 from .visitor import polynomial_degree
 
 # -------------------------------------------------------
@@ -373,12 +372,12 @@ _relational_op = {
 
 
 def _process_nonnumeric_arg(obj):
-    if hasattr(obj, 'as_binary'):
-        # We assume non-numeric types that have an as_binary method
-        # are instances of AutoLinkedBooleanVar.  Calling as_binary
+    if hasattr(obj, 'as_numeric'):
+        # We assume non-numeric types that have an as_numeric method
+        # are instances of AutoLinkedBooleanVar.  Calling as_numeric
         # will return a valid Binary Var (and issue the appropriate
         # deprecation warning)
-        obj = obj.as_binary()
+        obj = obj.as_numeric()
     elif check_if_numeric_type(obj):
         return obj
     else:

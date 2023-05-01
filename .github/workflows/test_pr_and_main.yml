@@ -45,6 +45,8 @@ jobs:
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
+
+
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     needs: lint

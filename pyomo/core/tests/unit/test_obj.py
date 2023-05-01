@@ -46,9 +46,9 @@ class TestScalarObj(unittest.TestCase):
         self.assertEqual(len(model.o), 1)
         self.assertEqual(model.o.expr, 1)
         model.o.expr = 2
-        self.assertEqual(model.o.expr(), 2)
+        self.assertEqual(model.o.expr, 2)
         model.o.expr += 2
-        self.assertEqual(model.o.expr(), 4)
+        self.assertEqual(model.o.expr, 4)
 
     def test_singleton_get_set_value(self):
         model = ConcreteModel()
@@ -56,9 +56,9 @@ class TestScalarObj(unittest.TestCase):
         self.assertEqual(len(model.o), 1)
         self.assertEqual(model.o.expr, 1)
         model.o.expr = 2
-        self.assertEqual(model.o.expr(), 2)
+        self.assertEqual(model.o.expr, 2)
         model.o.expr += 2
-        self.assertEqual(model.o.expr(), 4)
+        self.assertEqual(model.o.expr, 4)
 
     def test_scalar_invalid_expr(self):
         m = ConcreteModel()
@@ -323,9 +323,9 @@ class TestArrayObj(unittest.TestCase):
         self.assertEqual(len(model.o), 1)
         self.assertEqual(model.o[1].expr, 1)
         model.o[1].expr = 2
-        self.assertEqual(model.o[1].expr(), 2)
+        self.assertEqual(model.o[1].expr, 2)
         model.o[1].expr += 2
-        self.assertEqual(model.o[1].expr(), 4)
+        self.assertEqual(model.o[1].expr, 4)
 
     def test_objdata_get_set_value(self):
         model = ConcreteModel()
@@ -333,9 +333,9 @@ class TestArrayObj(unittest.TestCase):
         self.assertEqual(len(model.o), 1)
         self.assertEqual(model.o[1].expr, 1)
         model.o[1].expr = 2
-        self.assertEqual(model.o[1].expr(), 2)
+        self.assertEqual(model.o[1].expr, 2)
         model.o[1].expr += 2
-        self.assertEqual(model.o[1].expr(), 4)
+        self.assertEqual(model.o[1].expr, 4)
 
     def test_objdata_get_set_sense(self):
         model = ConcreteModel()
