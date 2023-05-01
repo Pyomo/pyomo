@@ -421,15 +421,6 @@ class Test_calc_var(unittest.TestCase):
         m.sq = ExternalFunction(fgh=sum_sq)
         m.c = Constraint(expr=m.sq(m.x - 3) == 0)
 
-        with self.assertRaisesRegex(
-            TypeError,
-            r"Expressions containing external functions are not convertible "
-            r"to sympy expressions \(found 'f\(x0 - 3",
-        ):
-            calculate_variable_from_constraint(
-                m.x, m.c, diff_mode=differentiate.Modes.sympy
-            )
-
         with LoggingIntercept(level=logging.DEBUG) as LOG:
             calculate_variable_from_constraint(m.x, m.c)
         self.assertAlmostEqual(value(m.x), 3, 3)
@@ -438,3 +429,19 @@ class Test_calc_var(unittest.TestCase):
             "Calculating symbolic derivative of expression failed. "
             "Reverting to numeric differentiation\n",
         )
+
+    @unittest.skipUnless(sympy_available, 'test expects that sympy is available')
+    def test_external_function_explicit_sympy(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.sq = ExternalFunction(fgh=sum_sq)
+        m.c = Constraint(expr=m.sq(m.x - 3) == 0)
+
+        with self.assertRaisesRegex(
+            TypeError,
+            r"Expressions containing external functions are not convertible "
+            r"to sympy expressions \(found 'f\(x0 - 3",
+        ):
+            calculate_variable_from_constraint(
+                m.x, m.c, diff_mode=differentiate.Modes.sympy
+            )
