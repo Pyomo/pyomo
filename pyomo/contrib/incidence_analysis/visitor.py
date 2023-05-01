@@ -327,7 +327,7 @@ class AMPLRepn(object):
                     self.named_exprs.update(other.named_exprs)
             if other.mult != 1:
                 mult = other.mult
-                # Multipy other.const * other.mult, preserving None appropriately
+                # Multiply other.const * other.mult, preserving None appropriately
                 c = other.const
                 if (c is None and mult == 0) or (mult is None and c == 0):
                     c_mult = 0
