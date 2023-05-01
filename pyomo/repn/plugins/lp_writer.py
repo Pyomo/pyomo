@@ -345,12 +345,16 @@ class _LPWriter_impl(object):
                 f"Model objective ({obj.name}) contains nonlinear terms that "
                 "cannot be written to LP format"
             )
-        if repn.constant:
+        if repn.constant or not (repn.linear or getattr(repn, 'quadratic', None)):
             # Older versions of CPLEX (including 12.6) and all versions
             # of GLPK (through 5.0) do not support constants in the
             # objective in LP format.  To avoid painful bookkeeping, we
             # introduce the following "variable", constrained to the
             # value 1.
+            #
+            # In addition, most solvers do no tolerate an empty
+            # objective, this will ensure we at least write out
+            # 0*ONE_VAR_CONSTANT.
             repn.linear[id(ONE_VAR_CONSTANT)] = repn.constant
             repn.constant = 0
         self.write_expression(ostream, repn, True)
