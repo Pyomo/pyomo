@@ -44,12 +44,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
 
         return m
 
-    def test_transform_nested_model(self):
-        m = self.create_nested_model()
-
-        bt = TransformationFactory('gdp.common_constraint_body')
-        bt.apply_to(m)
-
+    def check_nested_model_disjunction(self, m, bt):
         # We expect: -10w_1 -7w_2 <= x <= 3w_1 + 11w_2
 
         cons = bt.get_transformed_constraints(m.x, m.outer)
@@ -79,6 +74,13 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         self.assertFalse(m.outer_d1.inner_d2.c.active)
         self.assertFalse(m.outer_d2.c.active)
 
+    def test_transform_nested_model(self):
+        m = self.create_nested_model()
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m)
+        self.check_nested_model_disjunction(m, bt)
+
         # There aren't any other constraints on the model other than what we
         # added
         self.assertEqual(
@@ -91,7 +93,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             ),
             2,
         )
-
+        
     def test_transform_nested_model_no_0_terms(self):
         m = self.create_nested_model()
         m.outer_d2.c.deactivate()
@@ -302,3 +304,103 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             Constraint,
             active=True,
             descend_into=(Block, Disjunct)))), 2)
+
+    def create_two_disjunction_model(self):
+        m = self.create_nested_model()
+        m.y = Var()
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d3 = Disjunct()
+        m.disjunction = Disjunction(expr=[m.d1, m.d2, m.d3])
+
+        m.d1.c = Constraint(expr=m.y == 7.8)
+        m.d1.c_x = Constraint(expr=m.x <= 27)
+        m.d2.c = Constraint(expr=m.y == 8.9)
+        m.d2.c_x = Constraint(expr=m.x >= 34)
+        m.d3.c = Constraint(expr=m.y <= 45.7)
+        return m
+    
+    def test_transform_multiple_disjunctions(self):
+        m = self.create_two_disjunction_model()
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m)
+
+        self.check_nested_model_disjunction(m, bt)
+
+        cons = bt.get_transformed_constraints(m.x, m.disjunction)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            -100*m.d1.binary_indicator_var +
+            34.0*m.d2.binary_indicator_var +
+            -100*m.d3.binary_indicator_var <= m.x
+        )
+        ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            27.0*m.d1.binary_indicator_var +
+            102*m.d2.binary_indicator_var +
+            102*m.d3.binary_indicator_var >= m.x
+        )
+
+        cons = bt.get_transformed_constraints(m.y, m.disjunction)
+        self.assertEqual(len(cons), 1)
+        ub = cons[0]
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            7.8*m.d1.binary_indicator_var +
+            8.9*m.d2.binary_indicator_var +
+            45.7*m.d3.binary_indicator_var >= m.y
+        )
+
+        self.assertFalse(m.d1.c.active)
+        self.assertFalse(m.d1.c_x.active)
+        self.assertFalse(m.d2.c.active)
+        self.assertFalse(m.d2.c_x.active)
+        self.assertFalse(m.d3.c.active)
+
+        c_lb = m.d1.component('c_lb')
+        self.assertIsInstance(c_lb, Constraint)
+        self.assertTrue(c_lb.active)
+        assertExpressionsEqual(
+            self,
+            c_lb.expr,
+            7.8 <= m.y
+        )
+        c_lb = m.d2.component('c_lb')
+        self.assertIsInstance(c_lb, Constraint)
+        self.assertTrue(c_lb.active)
+        assertExpressionsEqual(
+            self,
+            c_lb.expr,
+            8.9 <= m.y
+        )
+
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            active=True,
+            descend_into=(Block, Disjunct)))), 7)
+
+    def test_disjunction_target(self):
+        m = self.create_two_disjunction_model()
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m, targets=m.outer)
+
+        self.check_nested_model_disjunction(m, bt)
+
+        self.assertTrue(m.d1.c.active)
+        self.assertTrue(m.d1.c_x.active)
+        self.assertTrue(m.d2.c.active)
+        self.assertTrue(m.d2.c_x.active)
+        self.assertTrue(m.d3.c.active)
+        
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            active=True,
+            descend_into=(Block, Disjunct)))), 7)

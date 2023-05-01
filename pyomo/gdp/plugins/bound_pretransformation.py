@@ -117,7 +117,7 @@ class CommonLHSTransformation(Transformation):
                     )
             elif t.ctype is Disjunction:
                 self._transform_disjunction(
-                    disjunction, instance, transformation_blocks
+                    t, instance, transformation_blocks
                 )
             else:
                 raise GDP_Error(
