@@ -20,6 +20,7 @@ from pyomo.environ import (
     Var,
     Constraint,
     Param,
+    ExternalFunction,
     value,
     exp,
     NonNegativeReals,
@@ -35,6 +36,13 @@ all_diff_modes = [
     differentiate.Modes.reverse_symbolic,
     differentiate.Modes.reverse_numeric,
 ]
+
+
+def sum_sq(args, fixed, fgh):
+    f = sum(arg**2 for arg in args)
+    g = [2 * arg for arg in args]
+    h = None
+    return f, g, h
 
 
 class Test_calc_var(unittest.TestCase):
@@ -406,3 +414,27 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.x, m.c)
 
         self.assertAlmostEqual(value(m.x), 0.214597, 5)
+
+    def test_external_function(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.sq = ExternalFunction(fgh=sum_sq)
+        m.c = Constraint(expr=m.sq(m.x - 3) == 0)
+
+        with self.assertRaisesRegex(
+            TypeError,
+            r"Expressions containing external functions are not convertible "
+            r"to sympy expressions \(found 'f\(x0 - 3",
+        ):
+            calculate_variable_from_constraint(
+                m.x, m.c, diff_mode=differentiate.Modes.sympy
+            )
+
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            calculate_variable_from_constraint(m.x, m.c)
+        self.assertAlmostEqual(value(m.x), 3, 3)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Calculating symbolic derivative of expression failed. "
+            "Reverting to numeric differentiation\n",
+        )
