@@ -400,8 +400,8 @@ class _LPWriter_impl(object):
             else:
                 if (
                     skip_trivial_constraints
-                    and (lb is None or lb < offset)
-                    and (ub is None or ub > offset)
+                    and (lb is None or lb <= offset)
+                    and (ub is None or ub >= offset)
                 ):
                     continue
                 # This is a trivially infeasible model.  We could raise
