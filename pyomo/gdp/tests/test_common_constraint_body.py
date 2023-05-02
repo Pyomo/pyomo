@@ -9,10 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from io import StringIO
+import logging
 import pyomo.common.unittest as unittest
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import Any, Block, ConcreteModel, Constraint, TransformationFactory, Var
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.common.log import LoggingIntercept
 
 
 class TestCommonConstraintBodyTransformation(unittest.TestCase):
@@ -404,3 +407,23 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             Constraint,
             active=True,
             descend_into=(Block, Disjunct)))), 7)
+
+    def test_get_transformed_constraint_errors(self):
+        m = self.create_nested_model()
+        m.z = Var()
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m, targets=m.outer)
+
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.gdp.plugins.bound_pretransformation',
+                              logging.DEBUG):
+            nothing = bt.get_transformed_constraints(m.z, m.outer)
+        self.assertEqual(len(nothing), 0)
+        # ...And we log that we're a bit confused.
+        self.assertEqual(
+            out.getvalue(),
+            "Constraint bounding variable 'z' on Disjunction 'outer' was "
+            "not transformed by the 'gdp.common_constraint_body' "
+            "transformation\n"
+        )
