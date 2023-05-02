@@ -164,7 +164,7 @@ Pyomo.DoE Solver Interface
         #.  Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem. This step is for initialization.
         #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
 
-.. autoclass:: pyomo.contrib.doe.measurements.Measurements
+.. autoclass:: pyomo.contrib.doe.measurements.MeasurementVariables
     :members: __init__, add_elements
 
 .. autoclass:: pyomo.contrib.doe.measurements.DesignVariabless
@@ -217,8 +217,8 @@ Step 0: Import Pyomo and the Pyomo.DoE module
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import ContinuousSet, DerivativeVar
-    >>> from pyomo.contrib.doe import DesignOfExperiments, Measurements, DesignVariables
-    >>> from pyomo.contrib.doe import objective_lib, finite_difference_lib, calculation_mode
+    >>> from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
+    >>> from pyomo.contrib.doe import objective_lib, finite_difference_step, calculation_mode, model_option_lib
     >>> import numpy as np
 
 Step 1: Define the Pyomo process model
@@ -233,12 +233,18 @@ The process model for the reaction kinetics problem is shown below.
     ...     theta = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05} # parameters
     ...     t_control =  [0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1] # control timepoints
     ...     # === model options ===
-    ...     if model_option == "parmest":
+    ...     if model_option == model_option_lib.parmest:
     ...         mod = pyo.ConcreteModel()
     ...         return_m = True # the created model will be returned
-    ...     elif model_option in ["block", "global"]: # a model needs to be passed
+    ...     elif (
+    ...         model_option == model_option_lib.stage1 
+    ...         or model_option_lib == model_option_lib.stage2
+    ...     ): 
+    ...         # a model needs to be passed
     ...         if not mod:
-    ...             raise ValueError("If model option is global or block, a created model needs to be provided.")
+    ...             raise ValueError(
+    ...                 "If model option is global or block, a created model needs to be provided."
+    ...                 )
     ...         return_m = False # no need to return the model 
     ...     else:
     ...         raise ValueError("model_option needs to be defined as global, block, or parmest.")
@@ -246,8 +252,13 @@ The process model for the reaction kinetics problem is shown below.
     ...     mod.t0 = pyo.Set(initialize=[0])
     ...     mod.t_con = pyo.Set(initialize=t_control)
     ...     mod.CA0 = pyo.Var(mod.t0, initialize = 1, bounds=(1.0,5.0), within=pyo.NonNegativeReals) # mol/L
-    ...     if model_option=="global":
-    ...         mod.T = pyo.Var(mod.t_con, initialize = 300, bounds=(300, 700), within=pyo.NonNegativeReals)
+    ...     if model_option==model_option_lib.stage1:
+    ...         mod.T = pyo.Var(
+    ...                 mod.t_con, 
+    ...                 initialize = 300, 
+    ...                 bounds=(300, 700), 
+    ...                 within=pyo.NonNegativeReals)
+    ...         return 
     ...     else:
     ...         para_list = ['A1', 'A2', 'E1', 'E2']
     ...         mod.t = ContinuousSet(bounds=(0, 1))
@@ -301,8 +312,8 @@ The process model for the reaction kinetics problem is shown below.
     ...         mod.alge_rule = pyo.Constraint(mod.t, rule=alge)
     ...         mod.C['CB',0.0].fix(0.0)
     ...         mod.C['CC',0.0].fix(0.0)
-    ...     if return_m:
-    ...         return m
+    ...         if return_m:
+    ...             return m
 .. doctest::
 
     >>> # === Discretization ===
@@ -332,12 +343,12 @@ Step 2: Define the inputs for Pyomo.DoE
     >>> total_name = ["C"]   # Measurement names 
     >>> extra_index = [[["CA", "CB", "CC"]]] # extra indexes
     >>> time_index = [t_control]  # time list 
-    >>> measure_class = Measurements()  # Use Pyomo.DoE.Measurements to achieve a measurement object
-    >>> measure_class.add_elements(total_name, extra_index=extra_index, time_index = time_index)
-
+    >>> measurements = MeasurementVariables()  # Use Pyomo.DoE.Measurements to achieve a measurement object
+    >>> measurements.add_variables("C", # measurement object
+    ...                             indices={0: ['CA', 'CB', 'CC'], 1: t_control}, # 0,1 are indices of the index sets
+    ...                             time_index_position=1)
     >>> # === Parameter dictionary ===
-    >>> parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
-
+    >>> parameter_dict = {'A1': 85, 'A2': 372, 'E1': 8, 'E2': 15}
     >>> # === Design variables object === 
     >>> total_name = ["CA0", "T"] # names
     >>> dtime_index = [[0], t_control] # time indexes 
@@ -345,10 +356,24 @@ Step 2: Define the inputs for Pyomo.DoE
     >>> upper_bound = [5, 700, 700, 700, 700, 700, 700, 700, 700, 700]
     >>> lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
-    >>> design_gen = DesignVariables() # create object
-    >>> design_gen.add_elements(total_name, time_index = dtime_index, values=exp1, 
-    ... upper_bound=upper_bound, lower_bound=lower_bound)
-
+    >>> exp_design = DesignVariables() # create object
+    >>> exp_design.add_elements(
+    ...                 "CA0",
+    ...                 indices={0: [0]},
+    ...                 time_index_position=0,
+    ...                 values= [5],
+    ...                 lower_bounds=1,
+    ...                 upper_bounds=5,
+    ...                 ) 
+    >>> # add T as design variable
+    >>> exp_design.add_variables(
+    ...                 'T',
+    ...                 indices= {0: t_control},
+    ...                 time_index_position=0,
+    ...                 values=[570, 300, 300, 300, 300, 300, 300, 300, 300], # same length with t_control
+    ...                 lower_bounds=300,
+    ...                 upper_bounds=700,
+    ...                 )
     >>> # === Define prior information ==
     >>> prior_pass = np.zeros((4,4))
 
@@ -369,12 +394,20 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
     >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
     >>> design_gen.update_values(exp1) # update values for design object
     >>> # === Create the DOE object ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, design_gen,
-    ...                          measure_class, create_model,
-    ...                         prior_FIM=prior_pass, discretize_model=disc_for_measure)
+    >>> doe_object = DesignOfExperiments(
+    ...                 parameter_dict, 
+    ...                 exp_design,
+    ...                 measurements, 
+    ...                 create_model,
+    ...                 prior_FIM=prior_pass, 
+    ...                 discretize_model=disc_for_measure
+    ...                 ) # doctest: +SKIP
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
-    >>> result = doe_object.compute_FIM(mode=sensi_opt,  scale_nominal_param_value=True,
-    ...                            formula = finite_difference_lib.central) # doctest: +SKIP
+    >>> result = doe_object.compute_FIM(
+    ...                 mode=sensi_opt,  
+    ...                 scale_nominal_param_value=True,
+    ...                 formula = finite_difference_step.central
+    ...                 ) # doctest: +SKIP
     >>> # === Use ``calculate_FIM`` method of the result object to evaluate the FIM ===
     >>> result.calculate_FIM(doe_object.design_values) # doctest: +SKIP
     >>> # === Print FIM and its trace, determinant, condition number and minimal eigen value ===
@@ -407,9 +440,17 @@ Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` an
     >>> prior_pass = np.zeros((4,4))
 
     >>> # === Run enumeration ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, design_gen,measure_class, create_model,
-    ...                            prior_FIM=prior_pass, discretize_model=disc_for_measure) # doctest: +SKIP
-    >>> all_fim = doe_object.run_grid_search(design_ranges, dv_apply_name, mode=sensi_opt) # doctest: +SKIP
+    >>> doe_object = DesignOfExperiments(
+    ...                 parameter_dict, 
+    ...                 exp_design,
+    ...                 measurements, 
+    ...                 create_model,
+    ...                 prior_FIM=prior_pass, 
+    ...                 discretize_model=disc_for_measure
+    ...                 ) # doctest: +SKIP
+    >>> all_fim = doe_object.run_grid_search(
+    ...                 design_ranges, 
+    ...                 mode=sensi_opt) # doctest: +SKIP
 
     >>> # === Analyze results ===
     >>> all_fim.extract_criteria() # doctest: +SKIP
@@ -441,11 +482,20 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
     >>> design_gen.update_values(exp1)
     >>> # === Define DOE object ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, design_gen,measure_class, create_model,
-    ...                            prior_FIM=prior, discretize_model=disc_for_measure) # doctest: +SKIP
+    >>> doe_object = DesignOfExperiments(
+    ...                 parameter_dict, 
+    ...                 exp_design,
+    ...                 measurements, 
+    ...                 create_model,
+    ...                 prior_FIM=prior_pass, 
+    ...                 discretize_model=disc_for_measure
+    ...                 ) # doctest: +SKIP
     >>> # === Optimize ===
-    >>> square_result, optimize_result= doe_object2.stochastic_program(if_optimize=True, if_Cholesky=True,
-    ...                                                         scale_nominal_param_value=True, objective_option=objective_lib.det, 
-    ...                                                          L_initial=np.linalg.cholesky(prior)) # doctest: +SKIP
+    >>> square_result, optimize_result= doe_object2.stochastic_program(
+    ...                 if_optimize=True, 
+    ...                 if_Cholesky=True,
+    ...                 scale_nominal_param_value=True, 
+    ...                 objective_option=objective_lib.det, 
+    ...                 L_initial=np.linalg.cholesky(prior)) # doctest: +SKIP
 
 
