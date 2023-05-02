@@ -42,41 +42,33 @@ def main():
     # Control time set [h]
     t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
     # Define parameter nominal value
-    parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
+    parameter_dict = {'A1': 85, 'A2': 372, 'E1': 8, 'E2': 15}
 
     # measurement object
-    variable_name = "C"
-    indices = {0: ['CA', 'CB', 'CC'], 1: t_control}
-
     measurements = MeasurementVariables()
-    measurements.add_variables(variable_name, indices=indices, time_index_position=1)
+    measurements.add_variables("C", 
+                               indices= {0: ['CA', 'CB', 'CC'], 1: t_control}, 
+                               time_index_position=1)
 
     # design object
     exp_design = DesignVariables()
 
     # add CAO as design variable
-    var_C = 'CA0'
-    indices_C = {0: [0]}
-    exp1_C = [5]
     exp_design.add_variables(
-        var_C,
-        indices=indices_C,
+        'CA0',
+        indices= {0: [0]},
         time_index_position=0,
-        values=exp1_C,
+        values=[5],
         lower_bounds=1,
         upper_bounds=5,
     )
 
     # add T as design variable
-    var_T = 'T'
-    indices_T = {0: t_control}
-    exp1_T = [470, 300, 300, 300, 300, 300, 300, 300, 300]
-
     exp_design.add_variables(
-        var_T,
-        indices=indices_T,
+        'T',
+        indices={0: t_control},
         time_index_position=0,
-        values=exp1_T,
+        values=[470, 300, 300, 300, 300, 300, 300, 300, 300],
         lower_bounds=300,
         upper_bounds=700,
     )

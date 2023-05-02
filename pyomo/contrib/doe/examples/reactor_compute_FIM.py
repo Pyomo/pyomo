@@ -43,7 +43,7 @@ def main():
     # Control time set [h]
     t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
     # Define parameter nominal value
-    parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
+    parameter_dict = {'A1': 85, 'A2': 370, 'E1': 8, 'E2': 15}
 
     # Define measurement object
     measurements = MeasurementVariables()
@@ -65,15 +65,11 @@ def main():
     )
 
     # add T as design variable
-    var_T = 'T'
-    indices_T = {0: t_control}
-    exp1_T = [570, 300, 300, 300, 300, 300, 300, 300, 300]
-
     exp_design.add_variables(
-        var_T,
-        indices=indices_T,
+        'T',
+        indices= {0: t_control},
         time_index_position=0,
-        values=exp1_T,
+        values=[570, 300, 300, 300, 300, 300, 300, 300, 300], # same length with t_control
         lower_bounds=300,
         upper_bounds=700,
     )
@@ -98,10 +94,10 @@ def main():
     result.calculate_FIM(doe_object.design_values)
 
     # test result
-    relative_error = abs(np.log10(result.trace) - 2.7885)
+    relative_error = abs(np.log10(result.trace) - 2.78)
     assert relative_error < 0.01
 
-    relative_error = abs(np.log10(result.det) - 2.8218)
+    relative_error = abs(np.log10(result.det) - 2.99)
     assert relative_error < 0.01
 
 
