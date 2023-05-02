@@ -854,7 +854,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.y = BooleanVar()
         m.c = LogicalConstraint(expr=(m.y.implies(m.f(m.x))))
         with self.assertRaisesRegex(
-            ValueError,
+            TypeError,
             "Expressions containing external functions are not convertible "
             r"to sympy expressions \(found 'f\(x1",
         ):
