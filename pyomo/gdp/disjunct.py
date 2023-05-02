@@ -20,6 +20,7 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
+from pyomo.common.numeric_types import native_logical_types, native_types
 from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
@@ -40,7 +41,6 @@ from pyomo.core.base.component import (
     ComponentData,
 )
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
@@ -136,7 +136,7 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
 
     """
 
-    def as_binary(self):
+    def as_numeric(self):
         """Return the binary variable associated with this Boolean variable.
 
         This method returns the associated binary variable along with a
@@ -153,6 +153,9 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
             version='6.0',
         )
         return self.get_associated_binary()
+
+    def as_binary(self):
+        return self.as_numeric()
 
     def set_value(self, val, skip_validation=False, _propagate_value=True):
         # super() does not work as expected for properties; we will call
@@ -184,149 +187,197 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
 
     #
     # Duck-type the numeric expression API, but route the conversion to
-    # Binary through as_binary to generate the deprecation warning
+    # Binary through as_numeric to generate the deprecation warning
     #
 
     @property
     def bounds(self):
-        return self.as_binary().bounds
+        return self.as_numeric().bounds
 
     @bounds.setter
     def bounds(self, value):
-        self.as_binary().bounds = value
+        self.as_numeric().bounds = value
 
     @property
     def lb(self):
-        return self.as_binary().lb
+        return self.as_numeric().lb
 
     @lb.setter
     def lb(self, value):
-        self.as_binary().lb = value
+        self.as_numeric().lb = value
 
     @property
     def ub(self):
-        return self.as_binary().ub
+        return self.as_numeric().ub
 
     @ub.setter
     def ub(self, value):
-        self.as_binary().ub = value
+        self.as_numeric().ub = value
 
     def __abs__(self):
-        return self.as_binary().__abs__()
+        return self.as_numeric().__abs__()
 
     def __float__(self):
-        return self.as_binary().__float__()
+        return self.as_numeric().__float__()
 
     def __int__(self):
-        return self.as_binary().__int__()
+        return self.as_numeric().__int__()
 
     def __neg__(self):
-        return self.as_binary().__neg__()
+        return self.as_numeric().__neg__()
 
     def __bool__(self):
-        return self.as_binary().__bool__()
+        return self.as_numeric().__bool__()
 
     def __pos__(self):
-        return self.as_binary().__pos__()
+        return self.as_numeric().__pos__()
 
     def get_units(self):
-        return self.as_binary().get_units()
+        return self.as_numeric().get_units()
 
     def has_lb(self):
-        return self.as_binary().has_lb()
+        return self.as_numeric().has_lb()
 
     def has_ub(self):
-        return self.as_binary().has_ub()
+        return self.as_numeric().has_ub()
 
     def is_binary(self):
-        return self.as_binary().is_binary()
+        return self.as_numeric().is_binary()
 
     def is_continuous(self):
-        return self.as_binary().is_continuous()
+        return self.as_numeric().is_continuous()
 
     def is_integer(self):
-        return self.as_binary().is_integer()
+        return self.as_numeric().is_integer()
 
     def polynomial_degree(self):
-        return self.as_binary().polynomial_degree()
+        return self.as_numeric().polynomial_degree()
 
     def __le__(self, arg):
-        return self.as_binary().__le__(arg)
+        return self.as_numeric().__le__(arg)
 
     def __lt__(self, arg):
-        return self.as_binary().__lt__(arg)
+        return self.as_numeric().__lt__(arg)
 
     def __ge__(self, arg):
-        return self.as_binary().__ge__(arg)
+        return self.as_numeric().__ge__(arg)
 
     def __gt__(self, arg):
-        return self.as_binary().__gt__(arg)
+        return self.as_numeric().__gt__(arg)
 
     def __eq__(self, arg):
-        return self.as_binary().__eq__(arg)
+        # If the other operand is a Boolean, then we want to fall back
+        # on the "normal" implementation of __eq__ for Boolean values
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return super().__eq__(arg)
+        # Otherwise, we will treat this as a binary operand and use the
+        # (numeric) relational expression system
+        return self.as_numeric().__eq__(arg)
 
     def __ne__(self, arg):
-        return self.as_binary().__ne__(arg)
+        # If the other operand is a Boolean, then we want to fall back
+        # on the "normal" implementation of __ne__ for Boolean values
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return super().__ne__(arg)
+        # Otherwise, we will treat this as a binary operand and use the
+        # (numeric) relational expression system
+        return self.as_numeric().__ne__(arg)
 
     def __add__(self, arg):
-        return self.as_binary().__add__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__add__(arg)
 
     def __div__(self, arg):
-        return self.as_binary().__div__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__div__(arg)
 
     def __mul__(self, arg):
-        return self.as_binary().__mul__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__mul__(arg)
 
     def __pow__(self, arg):
-        return self.as_binary().__pow__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__pow__(arg)
 
     def __sub__(self, arg):
-        return self.as_binary().__sub__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__sub__(arg)
 
     def __truediv__(self, arg):
-        return self.as_binary().__truediv__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__truediv__(arg)
 
     def __iadd__(self, arg):
-        return self.as_binary().__iadd__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__iadd__(arg)
 
     def __idiv__(self, arg):
-        return self.as_binary().__idiv__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__idiv__(arg)
 
     def __imul__(self, arg):
-        return self.as_binary().__imul__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__imul__(arg)
 
     def __ipow__(self, arg):
-        return self.as_binary().__ipow__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__ipow__(arg)
 
     def __isub__(self, arg):
-        return self.as_binary().__isub__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__isub__(arg)
 
     def __itruediv__(self, arg):
-        return self.as_binary().__itruediv__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__itruediv__(arg)
 
     def __radd__(self, arg):
-        return self.as_binary().__radd__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__radd__(arg)
 
     def __rdiv__(self, arg):
-        return self.as_binary().__rdiv__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__rdiv__(arg)
 
     def __rmul__(self, arg):
-        return self.as_binary().__rmul__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__rmul__(arg)
 
     def __rpow__(self, arg):
-        return self.as_binary().__rpow__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__rpow__(arg)
 
     def __rsub__(self, arg):
-        return self.as_binary().__rsub__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__rsub__(arg)
 
     def __rtruediv__(self, arg):
-        return self.as_binary().__rtruediv__(arg)
+        if isinstance(arg, BooleanValue) or arg.__class__ in native_logical_types:
+            return NotImplemented
+        return self.as_numeric().__rtruediv__(arg)
 
     def setlb(self, arg):
-        return self.as_binary().setlb(arg)
+        return self.as_numeric().setlb(arg)
 
     def setub(self, arg):
-        return self.as_binary().setub(arg)
+        return self.as_numeric().setub(arg)
 
 
 # The following should eventually be promoted so that all

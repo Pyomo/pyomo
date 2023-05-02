@@ -82,7 +82,6 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.z.fix(0)
         m.y.fix(0)
         TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
-        self.assertEqual(m.c.body.polynomial_degree(), 1)
         self.assertTrue(m.c.active)
         self.assertFalse(m.x.has_lb())
         self.assertFalse(m.x.has_ub())
@@ -96,7 +95,9 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         )
         self.assertFalse(m.c.active)
         self.assertTrue(m.x.has_lb())
+        self.assertEqual(m.x.lb, 3)
         self.assertTrue(m.x.has_ub())
+        self.assertEqual(m.x.ub, 3)
         self.assertFalse(m.x.fixed)
 
 

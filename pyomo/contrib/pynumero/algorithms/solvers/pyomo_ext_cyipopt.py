@@ -286,6 +286,10 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
         # currently, this interface does not do anything with Hessians
 
+        # Call CyIpoptProblemInterface.__init__, which calls
+        # cyipopt.Problem.__init__
+        super(PyomoExternalCyIpoptProblem, self).__init__()
+
     def load_x_into_pyomo(self, primals):
         """
         Use this method to load a numpy array of values into the corresponding
