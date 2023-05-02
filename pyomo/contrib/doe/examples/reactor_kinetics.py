@@ -70,7 +70,7 @@ def create_model(
     model_option: choose from the 3 options in model_option
         if model_option_lib.parmest, create a process model.
         if model_option_lib.stage1, create the global model.
-        if model_option_lib.stage2, add model variables and constriants for block.
+        if model_option_lib.stage2, add model variables and constraints for block.
     control_time: time-dependent design (control) variables, a list of control timepoints
     control_val: control design variable values T at corresponding timepoints
     t_range: time range, h

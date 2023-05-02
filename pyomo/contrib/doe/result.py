@@ -190,7 +190,7 @@ class FisherResults:
             measure_subset: the object of the measurement subsets
 
         Returns:
-            jaco_info: splitted Jacobian
+            jaco_info: split Jacobian
         """
         # create a dict for FIM. It has the same keys as the Jacobian dict.
         jaco_info = {}
@@ -307,7 +307,7 @@ class FisherResults:
 
         Return:
         ------
-        solver_status: a solver infomation dictionary containing the following key:value pairs
+        solver_status: a solver information dictionary containing the following key:value pairs
             -['square']: a string of square result solver status
             -['doe']: a string of doe result solver status
         """

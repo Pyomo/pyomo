@@ -44,7 +44,7 @@ class VariablesWithIndices:
 
         Parameter
         ---------
-        self_define_res: a ``list`` of ``string``, containing the variable names with indexs,
+        self_define_res: a ``list`` of ``string``, containing the variable names with indexes,
             for e.g. "C['CA', 23, 0]".
         """
         self.variable_names.extend(self_define_res)
@@ -223,7 +223,7 @@ class MeasurementVariables(VariablesWithIndices):
 
         Parameter
         ---------
-        self_define_res: a ``list`` of ``string``, containing the variable names with indexs,
+        self_define_res: a ``list`` of ``string``, containing the variable names with indexes,
             for e.g. "C['CA', 23, 0]".
         variance: a ``list`` of scalar numbers , which is the variance for this measurement.
         """
@@ -290,7 +290,7 @@ class DesignVariables(VariablesWithIndices):
 
         Parameter
         ---------
-        self_define_res: a ``list`` of ``string``, containing the variable names with indexs,
+        self_define_res: a ``list`` of ``string``, containing the variable names with indexes,
             for e.g. "C['CA', 23, 0]".
         """
         super().set_variable_name_list(self_define_res)

@@ -302,7 +302,7 @@ class TestParameter(unittest.TestCase):
         scenario_gene = ScenarioGenerator(
             param_dict, formula=finite_difference_step.central, step=0.1
         )
-        parameter_set = scenario_gene.generate_scenario()
+        parameter_set = scenario_gene.scenario_data
 
         self.assertAlmostEqual(parameter_set['eps-abs']['A1'], 16.9582, places=1)
         self.assertAlmostEqual(parameter_set['eps-abs']['E1'], 1.5554, places=1)

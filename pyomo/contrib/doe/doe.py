@@ -286,7 +286,7 @@ class DesignOfExperiments:
 
     def _optimize_stochastic_program(self, m):
         """
-        Solve the stochastic program problem with degrees of freedom.
+        Solve the stochastic program problem as an optimization problem.
         """
 
         m = self._add_objective(m)
@@ -325,15 +325,15 @@ class DesignOfExperiments:
         step=0.001,
     ):
         """
-        This function solves a square Pyomo model with fixed design variables to compute the FIM.
-        It calculates FIM with sensitivity information from the Enum calculation_mode with two modes:
+        This function calculates the Fisher information matrix (FIM) using sensitivity information obtaind
+        from two possible mods (dfined by the calculation_mode Enum):
             1.  sequential_finite: sequentially solve square problems and use finite difference approximation
             2.  direct_kaug: solve a single square problem then extract derivatives using NLP sensitivity theory
 
         Parameters
         -----------
         mode:
-            use calculation_mode.sequential_finite or calculation_mode.direct_kaug
+            supports calculation_mode.sequential_finite or calculation_mode.direct_kaug
         FIM_store_name:
             if storing the FIM in a .csv or .txt, give the file name here as a string.
         specified_prior:
@@ -407,7 +407,7 @@ class DesignOfExperiments:
             with open(read_output, 'rb') as f:
                 output_record = pickle.load(f)
                 f.close()
-            jac = self._finite_calculation(output_record, self.scena_gen)
+            jac = self._finite_calculation(output_record)
 
         # if measurements are not provided
         else:
@@ -445,7 +445,7 @@ class DesignOfExperiments:
                     f.close()
 
             # calculate jacobian
-            jac = self._finite_calculation(output_record, self.scena_gen)
+            jac = self._finite_calculation(output_record)
 
             # return all models formed
             self.model = mod
@@ -566,24 +566,25 @@ class DesignOfExperiments:
         """
 
         # create scenario information for block scenarios
-        scena_object = ScenarioGenerator(
+        scena_gen = ScenarioGenerator(
             self.param, formula=self.formula, step=self.step
         )
-        scena_gen = scena_object.generate_scenario()
+
+        self.scenario_data = scena_gen.scenario_data
 
         # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
-        self.scenario_list = scena_gen["scenario"]
+        self.scenario_list = self.scenario_data["scenario"]
         # dictionary, keys are parameter name, values are a list of scenario index where this parameter is perturbed.
-        self.scenario_num = scena_gen["scena_num"]
+        self.scenario_num = self.scenario_data["scena_num"]
         # dictionary, keys are parameter name, values are the perturbation step
-        self.eps_abs = scena_gen["eps-abs"]
+        self.eps_abs = self.scenario_data["eps-abs"]
         self.scena_gen = scena_gen
 
         # Create a global model
         mod = pyo.ConcreteModel()
 
         # Set for block/scenarios
-        mod.scena = pyo.Set(initialize=list(range(len(self.scenario_list))))
+        mod.scenario = pyo.Set(initialize=self.scenario_data['scenario_number'])
 
         # Allow user to self-define complex design variables
         self.create_model(mod=mod, model_option=model_option_lib.stage1)
@@ -594,10 +595,11 @@ class DesignOfExperiments:
 
             # fix parameter values to perturbed values
             for par in self.param:
-                par_strname = eval('b.' + str(par))
-                par_strname.fix(scena_gen["scenario"][s][par])
+                cuid = pyo.ComponentUID(par)
+                var = cuid.find_component_on(b)
+                var.fix(self.scenario_data["scenario"][s][par])
 
-        mod.block = pyo.Block(mod.scena, rule=block_build)
+        mod.block = pyo.Block(mod.scenario, rule=block_build)
 
         # discretize the model
         if self.discretize_model:
@@ -613,11 +615,11 @@ class DesignOfExperiments:
                 return design_var == design_var_global
 
             con_name = "con" + name
-            mod.add_component(con_name, pyo.Constraint(mod.scena, expr=fix1))
+            mod.add_component(con_name, pyo.Constraint(mod.scenario, expr=fix1))
 
         return mod
 
-    def _finite_calculation(self, output_record, scena_gen):
+    def _finite_calculation(self, output_record):
         """
         Calculate Jacobian for sequential_finite mode
 
@@ -636,7 +638,7 @@ class DesignOfExperiments:
         # After collecting outputs from all scenarios, calculate sensitivity
         for para in self.param.keys():
             # extract involved scenario No. for each parameter from scenario class
-            involved_s = scena_gen['scena_num'][para]
+            involved_s = self.scenario_data['scena_num'][para]
 
             # each parameter has two involved scenarios
             s1 = involved_s[0]  # positive perturbation
@@ -645,7 +647,7 @@ class DesignOfExperiments:
             for i in range(len(output_record[s1])):
                 sensi = (
                     (output_record[s1][i] - output_record[s2][i])
-                    / scena_gen['eps-abs'][para]
+                    / self.scenario_data['eps-abs'][para]
                     * self.scale_constant_value
                 )
                 if self.scale_nominal_param_value:
