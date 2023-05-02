@@ -409,7 +409,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             descend_into=(Block, Disjunct)))), 7)
 
     def test_get_transformed_constraint_errors(self):
-        m = self.create_nested_model()
+        m = self.create_two_disjunction_model()
         m.z = Var()
 
         bt = TransformationFactory('gdp.common_constraint_body')
@@ -426,4 +426,15 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             "Constraint bounding variable 'z' on Disjunction 'outer' was "
             "not transformed by the 'gdp.common_constraint_body' "
             "transformation\n"
+        )
+
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.gdp.plugins.bound_pretransformation',
+                              logging.DEBUG):
+            nothing = bt.get_transformed_constraints(m.x, m.disjunction)
+        self.assertEqual(len(nothing), 0)
+        self.assertEqual(
+            out.getvalue(),
+            "No variable on Disjunction 'disjunction' was transformed with the "
+            "gdp.common_constraint_body transformation\n"
         )
