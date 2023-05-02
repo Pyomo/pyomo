@@ -45,25 +45,21 @@ def main():
     # Define parameter nominal value
     parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
-    # measurement object
-    variable_name = "C"
-    indices = {0: ['CA', 'CB', 'CC'], 1: t_control}
-
+    # Define measurement object
     measurements = MeasurementVariables()
-    measurements.add_variables(variable_name, indices=indices, time_index_position=1)
+    measurements.add_variables("C", # measurement object
+                               indices={0: ['CA', 'CB', 'CC'], 1: t_control}, # 0,1 are indices of the index sets 
+                               time_index_position=1)
 
     # design object
     exp_design = DesignVariables()
 
     # add CAO as design variable
-    var_C = 'CA0'
-    indices_C = {0: [0]}
-    exp1_C = [5]
     exp_design.add_variables(
-        var_C,
-        indices=indices_C,
+        "CA0",
+        indices={0: [0]},
         time_index_position=0,
-        values=exp1_C,
+        values= [5],
         lower_bounds=1,
         upper_bounds=5,
     )

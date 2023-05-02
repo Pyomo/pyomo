@@ -673,8 +673,8 @@ class DesignOfExperiments:
         # loop over parameters
         for p in self.param.keys():
             jac_para = []
-            for res in m.res:
-                jac_para.append(pyo.value(m.jac[p, res]))
+            for res in m.measured_variables:
+                jac_para.append(pyo.value(m.sensitivity_jacobian[p, res]))
             jac[p] = jac_para
         return jac
 
@@ -866,8 +866,8 @@ class DesignOfExperiments:
         mod = self._create_block()
 
         # variables for jacobian and FIM
-        mod.param = pyo.Set(initialize=list(self.param.keys()))
-        mod.res = pyo.Set(initialize=self.measure_name)
+        mod.regression_parameters = pyo.Set(initialize=list(self.param.keys()))
+        mod.measured_variables = pyo.Set(initialize=self.measure_name)
 
         def identity_matrix(m, i, j):
             if i == j:
@@ -875,27 +875,27 @@ class DesignOfExperiments:
             else:
                 return 0
 
-        mod.jac = pyo.Var(mod.param, mod.res, initialize=0.1)
+        mod.sensitivity_jacobian = pyo.Var(mod.regression_parameters, mod.measured_variables, initialize=0.1)
 
         if self.fim_initial:
-            dict_fim = {}
-            for i, bu in enumerate(mod.param):
-                for j, un in enumerate(mod.param):
-                    dict_fim[(bu, un)] = self.fim_initial[i][j]
+            dict_fim_initialize = {}
+            for i, bu in enumerate(mod.regression_parameters):
+                for j, un in enumerate(mod.regression_parameters):
+                    dict_fim_initialize[(bu, un)] = self.fim_initial[i][j]
 
         def initialize_fim(m, j, d):
-            return dict_fim[(j, d)]
+            return dict_fim_initialize[(j, d)]
 
         if self.fim_initial:
-            mod.fim = pyo.Var(mod.param, mod.param, initialize=initialize_fim)
+            mod.fim = pyo.Var(mod.regression_parameters, mod.regression_parameters, initialize=initialize_fim)
         else:
-            mod.fim = pyo.Var(mod.param, mod.param, initialize=identity_matrix)
+            mod.fim = pyo.Var(mod.regression_parameters, mod.regression_parameters, initialize=identity_matrix)
 
         # move the L matrix initial point to a dictionary
         if type(self.L_initial) != type(None):
             dict_cho = {}
-            for i, bu in enumerate(mod.param):
-                for j, un in enumerate(mod.param):
+            for i, bu in enumerate(mod.regression_parameters):
+                for j, un in enumerate(mod.regression_parameters):
                     dict_cho[(bu, un)] = self.L_initial[i][j]
 
         # use the L dictionary to initialize L matrix
@@ -907,14 +907,14 @@ class DesignOfExperiments:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if type(self.L_initial) != type(None):
-                mod.L_ele = pyo.Var(mod.param, mod.param, initialize=init_cho)
+                mod.L_ele = pyo.Var(mod.regression_parameters, mod.regression_parameters, initialize=init_cho)
             # or initialize with the identity matrix
             else:
-                mod.L_ele = pyo.Var(mod.param, mod.param, initialize=identity_matrix)
+                mod.L_ele = pyo.Var(mod.regression_parameters, mod.regression_parameters, initialize=identity_matrix)
 
             # loop over parameter name
-            for i, c in enumerate(mod.param):
-                for j, d in enumerate(mod.param):
+            for i, c in enumerate(mod.regression_parameters):
+                for j, d in enumerate(mod.regression_parameters):
                     # fix the 0 half of L matrix to be 0.0
                     if i < j:
                         mod.L_ele[c, d].fix(0.0)
@@ -934,7 +934,7 @@ class DesignOfExperiments:
             var_lo = cuid.find_component_on(m.block[self.scenario_num[p][1]])
             if self.scale_nominal_param_value:
                 return (
-                    m.jac[p, n]
+                    m.sensitivity_jacobian[p, n]
                     == (var_up - var_lo)
                     / self.eps_abs[p]
                     * self.param[p]
@@ -942,21 +942,21 @@ class DesignOfExperiments:
                 )
             else:
                 return (
-                    m.jac[p, n]
+                    m.sensitivity_jacobian[p, n]
                     == (var_up - var_lo) / self.eps_abs[p] * self.scale_constant_value
                 )
 
         # A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
-        dict_fele = {}
-        for i, bu in enumerate(mod.param):
-            for j, un in enumerate(mod.param):
-                dict_fele[(bu, un)] = self.prior_FIM[i][j]
+        fim_initial_dict = {}
+        for i, bu in enumerate(mod.regression_parameters):
+            for j, un in enumerate(mod.regression_parameters):
+                fim_initial_dict[(bu, un)] = self.prior_FIM[i][j]
 
         def read_prior(m, i, j):
-            return dict_fele[(i, j)]
+            return fim_initial_dict[(i, j)]
 
-        mod.priorFIM = pyo.Expression(mod.param, mod.param, rule=read_prior)
+        mod.priorFIM = pyo.Expression(mod.regression_parameters, mod.regression_parameters, rule=read_prior)
 
         def fim_rule(m, p, q):
             """
@@ -966,14 +966,14 @@ class DesignOfExperiments:
             return (
                 m.fim[p, q]
                 == sum(
-                    1 / self.measure.variance[n] * m.jac[p, n] * m.jac[q, n]
-                    for n in mod.res
+                    1 / self.measure.variance[n] * m.sensitivity_jacobian[p, n] * m.sensitivity_jacobian[q, n]
+                    for n in mod.measured_variables
                 )
                 + m.priorFIM[p, q] * self.fim_scale_constant_value
             )
 
-        mod.jac_const = pyo.Constraint(mod.param, mod.res, rule=jacobian_rule)
-        mod.fim_const = pyo.Constraint(mod.param, mod.param, rule=fim_rule)
+        mod.jacobian_constraint = pyo.Constraint(mod.regression_parameters, mod.measured_variables, rule=jacobian_rule)
+        mod.fim_constraint = pyo.Constraint(mod.regression_parameters, mod.regression_parameters, rule=fim_rule)
 
         return mod
 
@@ -997,14 +997,14 @@ class DesignOfExperiments:
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
-            return m.trace == sum(m.fim[j, j] for j in m.para_set)
+            return m.trace == sum(m.fim[j, j] for j in m.regression_parameters)
 
         def det_general(m):
             """Calculate determinant. Can be applied to FIM of any size.
             det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
             """
-            r_list = list(range(len(m.para_set)))
+            r_list = list(range(len(m.regression_parameters)))
             # get all permutations
             object_p = permutations(r_list)
             list_p = list(object_p)
@@ -1016,22 +1016,22 @@ class DesignOfExperiments:
                 x_order = list_p[i]
                 # sigma_i is the value in the i-th position after the reordering \sigma
                 for x in range(len(x_order)):
-                    for y, element in enumerate(m.para_set):
+                    for y, element in enumerate(m.regression_parameters):
                         if x_order[x] == y:
                             name_order.append(element)
 
             # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             det_perm = sum(
                 self._sgn(list_p[d])
-                * sum(m.fim[each, name_order[b]] for b, each in enumerate(m.param))
+                * sum(m.fim[each, name_order[b]] for b, each in enumerate(m.regression_parameters))
                 for d in range(len(list_p))
             )
             return m.det == det_perm
 
         if self.Cholesky_option:
-            m.cholesky_cons = pyo.Constraint(m.param, m.param, rule=cholesky_imp)
+            m.cholesky_cons = pyo.Constraint(m.regression_parameters, m.regression_parameters, rule=cholesky_imp)
             m.Obj = pyo.Objective(
-                expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.param),
+                expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.regression_parameters),
                 sense=pyo.maximize,
             )
         # if not cholesky but determinant, calculating det and evaluate the OBJ with det
