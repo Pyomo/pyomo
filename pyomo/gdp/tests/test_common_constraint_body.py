@@ -13,7 +13,14 @@ from io import StringIO
 import logging
 import pyomo.common.unittest as unittest
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.environ import Any, Block, ConcreteModel, Constraint, TransformationFactory, Var
+from pyomo.environ import (
+    Any,
+    Block,
+    ConcreteModel,
+    Constraint,
+    TransformationFactory,
+    Var,
+)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.common.log import LoggingIntercept
 
@@ -58,16 +65,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             self,
             lb.expr,
             -10.0 * m.outer_d1.inner_d1.binary_indicator_var
-            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var +
-            0.0 * m.outer_d2.binary_indicator_var
+            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var
+            + 0.0 * m.outer_d2.binary_indicator_var
             <= m.x,
         )
         assertExpressionsEqual(
             self,
             ub.expr,
             3.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var +
-            0.0 * m.outer_d2.binary_indicator_var
+            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
+            + 0.0 * m.outer_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -96,7 +103,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             ),
             2,
         )
-        
+
     def test_transform_nested_model_no_0_terms(self):
         m = self.create_nested_model()
         m.outer_d2.c.deactivate()
@@ -183,9 +190,10 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            4.0*m.outer_d1.inner_d1.binary_indicator_var +
-            17.0*m.outer_d1.inner_d2.binary_indicator_var +
-            2.0*m.outer_d2.binary_indicator_var <= m.x
+            4.0 * m.outer_d1.inner_d1.binary_indicator_var
+            + 17.0 * m.outer_d1.inner_d2.binary_indicator_var
+            + 2.0 * m.outer_d2.binary_indicator_var
+            <= m.x,
         )
 
         cons = bt.get_transformed_constraints(m.y, m.outer)
@@ -194,20 +202,22 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            5.0*m.outer_d1.inner_d1.binary_indicator_var +
-            5.0*m.outer_d1.inner_d2.binary_indicator_var +
-            4*m.outer_d2.binary_indicator_var <= m.y
+            5.0 * m.outer_d1.inner_d1.binary_indicator_var
+            + 5.0 * m.outer_d1.inner_d2.binary_indicator_var
+            + 4 * m.outer_d2.binary_indicator_var
+            <= m.y,
         )
         ub = cons[1]
         assertExpressionsEqual(
             self,
             ub.expr,
-            67*m.outer_d1.inner_d1.binary_indicator_var +
-            67*m.outer_d1.inner_d2.binary_indicator_var +
-            66.0*m.outer_d2.binary_indicator_var >= m.y
+            67 * m.outer_d1.inner_d1.binary_indicator_var
+            + 67 * m.outer_d1.inner_d2.binary_indicator_var
+            + 66.0 * m.outer_d2.binary_indicator_var
+            >= m.y,
         )
-        
-        # check that all the y constraints are deactivated, and that the 
+
+        # check that all the y constraints are deactivated, and that the
         # lower bound ones for x are, but not the upper bound ones
         self.assertFalse(m.outer_d1.c[1].active)
         self.assertFalse(m.outer_d1.c[2].active)
@@ -219,10 +229,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
 
         # and check that there are only four active constraints, the ones we
         # made and the remaining upper bound for x:
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            active=True,
-            descend_into=(Block, Disjunct)))), 4)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, active=True, descend_into=(Block, Disjunct)
+                    )
+                )
+            ),
+            4,
+        )
 
     def test_partially_deactivating_constraint_lb_transformed_but_ub_not(self):
         m = ConcreteModel()
@@ -233,7 +249,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.d2 = Disjunct()
         m.d2.c = Constraint(expr=5.6 <= m.x)
         m.disj = Disjunction(expr=[m.d1, m.d2])
-        
+
         bt = TransformationFactory('gdp.common_constraint_body')
         bt.apply_to(m)
 
@@ -245,8 +261,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            4.5*m.d1.binary_indicator_var +
-            5.6*m.d2.binary_indicator_var <= m.x
+            4.5 * m.d1.binary_indicator_var + 5.6 * m.d2.binary_indicator_var <= m.x,
         )
 
         self.assertFalse(m.d1.c.active)
@@ -254,16 +269,18 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         c_ub = m.d1.component('c_ub')
         self.assertIsInstance(c_ub, Constraint)
         self.assertTrue(c_ub.active)
-        assertExpressionsEqual(
-            self,
-            c_ub.expr,
-            m.x <= 6.0
-        )
+        assertExpressionsEqual(self, c_ub.expr, m.x <= 6.0)
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            active=True,
-            descend_into=(Block, Disjunct)))), 2)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, active=True, descend_into=(Block, Disjunct)
+                    )
+                )
+            ),
+            2,
+        )
 
     def test_partially_deactivating_constraint_ub_transformed_but_lb_not(self):
         m = ConcreteModel()
@@ -286,9 +303,10 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ub.expr,
-            45.0*m.d[1].binary_indicator_var +
-            36.0*m.d[2].binary_indicator_var +
-            232.0*m.d[3].binary_indicator_var >= m.w
+            45.0 * m.d[1].binary_indicator_var
+            + 36.0 * m.d[2].binary_indicator_var
+            + 232.0 * m.d[3].binary_indicator_var
+            >= m.w,
         )
 
         self.assertFalse(m.d[1].c.active)
@@ -297,16 +315,18 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         c_lb = m.d[1].component('c_lb')
         self.assertIsInstance(c_lb, Constraint)
         self.assertTrue(c_lb.active)
-        assertExpressionsEqual(
-            self,
-            c_lb.expr,
-            m.w >= 45.0
-        )
+        assertExpressionsEqual(self, c_lb.expr, m.w >= 45.0)
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            active=True,
-            descend_into=(Block, Disjunct)))), 2)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, active=True, descend_into=(Block, Disjunct)
+                    )
+                )
+            ),
+            2,
+        )
 
     def create_two_disjunction_model(self):
         m = self.create_nested_model()
@@ -322,7 +342,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.d2.c_x = Constraint(expr=m.x >= 34)
         m.d3.c = Constraint(expr=m.y <= 45.7)
         return m
-    
+
     def test_transform_multiple_disjunctions(self):
         m = self.create_two_disjunction_model()
 
@@ -337,17 +357,19 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            -100*m.d1.binary_indicator_var +
-            34.0*m.d2.binary_indicator_var +
-            -100*m.d3.binary_indicator_var <= m.x
+            -100 * m.d1.binary_indicator_var
+            + 34.0 * m.d2.binary_indicator_var
+            + -100 * m.d3.binary_indicator_var
+            <= m.x,
         )
         ub = cons[1]
         assertExpressionsEqual(
             self,
             ub.expr,
-            27.0*m.d1.binary_indicator_var +
-            102*m.d2.binary_indicator_var +
-            102*m.d3.binary_indicator_var >= m.x
+            27.0 * m.d1.binary_indicator_var
+            + 102 * m.d2.binary_indicator_var
+            + 102 * m.d3.binary_indicator_var
+            >= m.x,
         )
 
         cons = bt.get_transformed_constraints(m.y, m.disjunction)
@@ -356,9 +378,10 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ub.expr,
-            7.8*m.d1.binary_indicator_var +
-            8.9*m.d2.binary_indicator_var +
-            45.7*m.d3.binary_indicator_var >= m.y
+            7.8 * m.d1.binary_indicator_var
+            + 8.9 * m.d2.binary_indicator_var
+            + 45.7 * m.d3.binary_indicator_var
+            >= m.y,
         )
 
         self.assertFalse(m.d1.c.active)
@@ -370,24 +393,22 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         c_lb = m.d1.component('c_lb')
         self.assertIsInstance(c_lb, Constraint)
         self.assertTrue(c_lb.active)
-        assertExpressionsEqual(
-            self,
-            c_lb.expr,
-            7.8 <= m.y
-        )
+        assertExpressionsEqual(self, c_lb.expr, 7.8 <= m.y)
         c_lb = m.d2.component('c_lb')
         self.assertIsInstance(c_lb, Constraint)
         self.assertTrue(c_lb.active)
-        assertExpressionsEqual(
-            self,
-            c_lb.expr,
-            8.9 <= m.y
-        )
+        assertExpressionsEqual(self, c_lb.expr, 8.9 <= m.y)
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            active=True,
-            descend_into=(Block, Disjunct)))), 7)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, active=True, descend_into=(Block, Disjunct)
+                    )
+                )
+            ),
+            7,
+        )
 
     def test_disjunction_target(self):
         m = self.create_two_disjunction_model()
@@ -402,11 +423,17 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         self.assertTrue(m.d2.c.active)
         self.assertTrue(m.d2.c_x.active)
         self.assertTrue(m.d3.c.active)
-        
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            active=True,
-            descend_into=(Block, Disjunct)))), 7)
+
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, active=True, descend_into=(Block, Disjunct)
+                    )
+                )
+            ),
+            7,
+        )
 
     def test_get_transformed_constraint_errors(self):
         m = self.create_two_disjunction_model()
@@ -416,8 +443,9 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         bt.apply_to(m, targets=m.outer)
 
         out = StringIO()
-        with LoggingIntercept(out, 'pyomo.gdp.plugins.bound_pretransformation',
-                              logging.DEBUG):
+        with LoggingIntercept(
+            out, 'pyomo.gdp.plugins.bound_pretransformation', logging.DEBUG
+        ):
             nothing = bt.get_transformed_constraints(m.z, m.outer)
         self.assertEqual(len(nothing), 0)
         # ...And we log that we're a bit confused.
@@ -425,16 +453,17 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             out.getvalue(),
             "Constraint bounding variable 'z' on Disjunction 'outer' was "
             "not transformed by the 'gdp.common_constraint_body' "
-            "transformation\n"
+            "transformation\n",
         )
 
         out = StringIO()
-        with LoggingIntercept(out, 'pyomo.gdp.plugins.bound_pretransformation',
-                              logging.DEBUG):
+        with LoggingIntercept(
+            out, 'pyomo.gdp.plugins.bound_pretransformation', logging.DEBUG
+        ):
             nothing = bt.get_transformed_constraints(m.x, m.disjunction)
         self.assertEqual(len(nothing), 0)
         self.assertEqual(
             out.getvalue(),
             "No variable on Disjunction 'disjunction' was transformed with the "
-            "gdp.common_constraint_body transformation\n"
+            "gdp.common_constraint_body transformation\n",
         )

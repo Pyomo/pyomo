@@ -116,9 +116,7 @@ class CommonLHSTransformation(Transformation):
                         disjunction, instance, transformation_blocks
                     )
             elif t.ctype is Disjunction:
-                self._transform_disjunction(
-                    t, instance, transformation_blocks
-                )
+                self._transform_disjunction(t, instance, transformation_blocks)
             else:
                 raise GDP_Error(
                     "Target '%s' was not a Block, Disjunct, or Disjunction. "
