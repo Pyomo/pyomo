@@ -101,14 +101,14 @@ class InducedLinearity(IsomorphicTransformation):
         """Apply the transformation to the given model."""
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
-        _process_container(model, config)
         _process_subcontainers(model, config)
+        _process_container(model, config)
 
 
 def _process_subcontainers(blk, config):
-    for disj in blk.component_data_objects(Disjunct, active=True, descend_into=True):
-        _process_container(disj, config)
+    for disj in blk.component_data_objects(Disjunct, active=True, descend_into=False):
         _process_subcontainers(disj, config)
+        _process_container(disj, config)
 
 
 def _process_container(blk, config):
