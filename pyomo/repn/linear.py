@@ -285,7 +285,8 @@ _exit_node_handlers[DivisionExpression] = {
 
 
 def _handle_pow_constant_constant(visitor, node, *args):
-    return _CONSTANT, apply_node_operation(node, args)
+    arg1, arg2 = args
+    return _CONSTANT, apply_node_operation(node, (args1[1], args2[1]))
 
 
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
