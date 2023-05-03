@@ -57,8 +57,6 @@ We repeat the abstract model from the previous section:
 One way to implement this in Pyomo is as shown as follows:
 
 .. testcode::
-
-   from __future__ import division
    import pyomo.environ as pyo
 
    model = pyo.AbstractModel()
@@ -103,21 +101,8 @@ One way to implement this in Pyomo is as shown as follows:
    indented and the end of the indentation is used by Python to signal
    the end of the definition.
 
-We will now examine the lines in this example.  The first import line is
-used to ensure that ``int`` or ``long`` division arguments are converted
-to floating point values before division is performed.
-
-.. testcode::
-
-   from __future__ import division
-
-In Python versions before 3.0, division returns the floor of the
-mathematical result of division if arguments are ``int`` or ``long``.
-This import line avoids unexpected behavior when developing mathematical
-models with integer values in Python 2.x (and is not necessary in Python
-3.x).
-
-The next import line that is required in every Pyomo model. Its purpose
+We will now examine the lines in this example.  
+The first import line is required in every Pyomo model. Its purpose
 is to make the symbols used by Pyomo known to Python.
 
 .. testcode::
