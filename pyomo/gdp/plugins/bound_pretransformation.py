@@ -22,9 +22,11 @@ from pyomo.core import (
     Var,
 )
 from pyomo.core.base import Transformation, TransformationFactory
+from pyomo.core.expr.current import identify_variables
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import is_child_of, get_gdp_tree
+from pyomo.repn.standard_repn import generate_standard_repn
 import logging
 
 logger = logging.getLogger(__name__)
@@ -154,28 +156,67 @@ class CommonLHSTransformation(Transformation):
                         None: (v.lb, v.ub),
                         'to_deactivate': set(),
                     }
-                self._update_bounds_dict(
-                    v_bounds, constraint, disjunct, gdp_forest.parent_disjunct(disjunct)
-                )
+                self._update_bounds_dict(v_bounds, value(constraint.lower),
+                                         value(constraint.upper), disjunct,
+                                         gdp_forest)
                 # We won't know til the end if we're *really* transforming this
                 # constraint, so we just cache the fact that it is a constraint
                 # on v and wait for later
                 v_bounds['to_deactivate'].add(constraint)
+            elif len(list(identify_variables(constraint.body))) == 1:
+                repn = generate_standard_repn(constraint.body)
+                if not repn.is_linear():
+                    continue
+                v = repn.linear_vars[0]
+                v_bounds = bound_dict.get(v)
+                if v_bounds is None:
+                    v_bounds = bound_dict[v] = {
+                        None: (v.lb, v.ub),
+                        'to_deactivate': set(),
+                    }
+                coef = repn.linear_coefs[0]
+                constant = repn.constant
+                self._update_bounds_dict(
+                    v_bounds, 
+                    (value(constraint.lower) - constant)/coef if constraint.lower 
+                    is not None else None,
+                    (value(constraint.upper) - constant)/coef if constraint.upper
+                    is not None else None,
+                    disjunct,
+                    gdp_forest
+                )
+                v_bounds['to_deactivate'].add(constraint)
 
-    def _update_bounds_dict(self, v_bounds, cons, disjunct, parent):
-        (lb, ub) = v_bounds[parent]
-        lower = value(cons.lower)
+    def _get_tightest_ancestral_bounds(self, v_bounds, disjunct, gdp_forest):
+        lb = None
+        ub = None
+        parent = disjunct
+        while lb is None or ub is None:
+            if parent is None:
+                (lb, ub) = v_bounds[None]
+                break
+            elif parent in v_bounds:
+                l, u = v_bounds[parent]
+                if lb is None and l is not None:
+                    lb = l
+                if ub is None and u is not None:
+                    ub = u
+            parent = gdp_forest.parent_disjunct(parent)
+        v_bounds[disjunct] = (lb, ub)
+        return v_bounds[disjunct]
+
+    def _update_bounds_dict(self, v_bounds, lower, upper, disjunct, gdp_forest):
+        (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct, gdp_forest)
         if lower is not None:
-            if lb is None or (lb is not None and lower > lb):
+            if lb is None or lower > lb:
                 # This GDP is more constrained here than it was in the parent
                 # Disjunct (what we would expect, usually. If it's looser, we're
                 # essentially just ignoring it...)
-                lb = cons.lower
-        upper = value(cons.upper)
+                lb = lower
         if upper is not None:
-            if ub is None or (ub is not None and upper < ub):
+            if ub is None or upper < ub:
                 # Same case as above in the UB
-                ub = cons.upper
+                ub = upper
         # In all other cases, there is nothing to do... The parent gives more
         # information, so we just propagate that down
         v_bounds[disjunct] = (lb, ub)

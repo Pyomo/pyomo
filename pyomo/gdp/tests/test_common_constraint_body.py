@@ -467,3 +467,132 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             "No variable on Disjunction 'disjunction' was transformed with the "
             "gdp.common_constraint_body transformation\n",
         )
+
+    def test_univariate_constraints_with_expression_bodies(self):
+        m = self.create_nested_structure()
+
+        # This is a convoluted way to write the same model as the nested model
+        m.x = Var(bounds=(-100, 102))
+        m.outer_d1.c = Constraint(expr=-20 <= 2*m.x)
+        m.outer_d1.c2 = Constraint(expr=m.x - 1 <= 10)
+        m.outer_d1.inner_d1.c = Constraint(expr=3*m.x - 7 <= 2)
+        m.outer_d1.inner_d2.c = Constraint(expr=m.x >= -7)
+        m.outer_d2.c = Constraint(expr=m.x + 4 == 4)
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m)
+
+        self.check_nested_model_disjunction(m, bt)
+
+        self.assertFalse(m.outer_d1.c.active)
+        self.assertFalse(m.outer_d1.c2.active)
+        self.assertFalse(m.outer_d1.inner_d1.c.active)
+        self.assertFalse(m.outer_d1.inner_d2.c.active)
+        self.assertFalse(m.outer_d2.c.active)
+
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            descend_into=(Block, Disjunct),
+            active=True))), 2)
+
+    def test_bound_constraints_skip_levels_in_hierarchy(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.y = Var()
+        m.Y = Disjunct([1, 2])
+        m.Z = Disjunct([1, 2, 3])
+        m.W = Disjunct([1, 2])
+        m.W[1].c = Constraint(expr=m.x <= 7)
+        m.W[2].c = Constraint(expr=m.x <= 9)
+        m.Z[1].c = Constraint(expr=m.y == 0)
+        m.Z[1].w_disj = Disjunction(expr=[m.W[i] for i in [1, 2]])
+        m.Z[2].c = Constraint(expr=m.y==1)
+        m.Z[3].c = Constraint(expr=m.y==2)
+        m.Y[1].c = Constraint(expr=m.x >= 2)
+        m.Y[1].z_disj = Disjunction(expr=[m.Z[i] for i in [1, 2, 3]])
+        m.Y[2].c1 = Constraint(expr=m.x == 0)
+        m.Y[2].c2 = Constraint(expr=(3, m.y, 17))
+        m.y_disj = Disjunction(expr=[m.Y[i] for i in [1, 2]])
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m)
+
+        cons = bt.get_transformed_constraints(m.x, m.y_disj)
+        self.assertEqual(len(cons), 2)
+        x_lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            x_lb.expr,
+            2.0*m.Z[2].binary_indicator_var + 
+            2.0*m.Z[3].binary_indicator_var + 
+            2.0*m.W[1].binary_indicator_var + 
+            2.0*m.W[2].binary_indicator_var + 
+            0*m.Y[2].binary_indicator_var <= m.x
+        )
+        x_ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            x_ub.expr,
+            10*m.Z[2].binary_indicator_var + 10*m.Z[3].binary_indicator_var + 
+            7.0*m.W[1].binary_indicator_var + 9.0*m.W[2].binary_indicator_var + 
+            0.0*m.Y[2].binary_indicator_var >= m.x
+        )
+
+        cons = bt.get_transformed_constraints(m.y, m.y_disj)
+        y_lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            y_lb.expr,
+            1.0*m.Z[2].binary_indicator_var + 2.0*m.Z[3].binary_indicator_var +
+            0.0*m.W[1].binary_indicator_var + 0.0*m.W[2].binary_indicator_var +
+            3.0*m.Y[2].binary_indicator_var <= m.y
+        )
+        y_ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            y_ub.expr,
+            1.0*m.Z[2].binary_indicator_var + 2.0*m.Z[3].binary_indicator_var +
+            0.0*m.W[1].binary_indicator_var + 0.0*m.W[2].binary_indicator_var +
+            17.0*m.Y[2].binary_indicator_var >= m.y
+        )
+
+        self.assertFalse(m.W[1].c.active)
+        self.assertFalse(m.W[2].c.active)
+        self.assertFalse(m.Z[1].c.active)
+        self.assertFalse(m.Z[2].c.active)
+        self.assertFalse(m.Z[3].c.active)
+        self.assertFalse(m.Y[1].c.active)
+        self.assertFalse(m.Y[2].c1.active)
+        self.assertFalse(m.Y[2].c2.active)
+
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            descend_into=(Block, Disjunct),
+            active=True))), 4)
+
+    def test_skip_nonlinear_and_multivariate_constraints(self):
+        m = self.create_nested_model()
+        m.y = Var()
+        m.z = Var()
+        m.outer_d1.nonlinear = Constraint(expr=m.y**2 <= 7)
+        m.outer_d1.inner_d2.multivariate = Constraint(expr=m.x + m.y <= m.z)
+        m.outer_d2.leave_it = Constraint(expr=m.z == 7)
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m)
+
+        self.check_nested_model_disjunction(m, bt)
+
+        self.assertTrue(m.outer_d1.nonlinear.active)
+        self.assertTrue(m.outer_d1.inner_d2.multivariate.active)
+        self.assertTrue(m.outer_d2.leave_it.active)
+
+        self.assertFalse(m.outer_d1.c.active)
+        self.assertFalse(m.outer_d1.inner_d1.c.active)
+        self.assertFalse(m.outer_d1.inner_d2.c.active)
+        self.assertFalse(m.outer_d2.c.active)
+
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            descend_into=(Block, Disjunct),
+            active=True))), 5)
