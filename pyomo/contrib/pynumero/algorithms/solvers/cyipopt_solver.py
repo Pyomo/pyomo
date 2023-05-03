@@ -410,7 +410,8 @@ class PyomoCyIpoptSolver(object):
                 )
             )
             soln.constraint.update(
-                (sm.getSymbol(i), {'Dual': j}) for i, j in zip(nlp.get_pyomo_constraints(), info['mult_g'])
+                (sm.getSymbol(i), {'Dual': j})
+                for i, j in zip(nlp.get_pyomo_constraints(), info['mult_g'])
             )
             model.solutions.add_symbol_map(sm)
             results._smap_id = id(sm)
