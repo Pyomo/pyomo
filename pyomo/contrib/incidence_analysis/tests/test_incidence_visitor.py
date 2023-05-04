@@ -348,7 +348,7 @@ class TestUninitialized(unittest.TestCase):
         m.x = pyo.Var([1, 2, 3])
 
         def fcn(*args):
-            return args[0] + 0.5*args[1]**2
+            return args[0] + 0.5 * args[1] ** 2
 
         m.ef = pyo.ExternalFunction(fcn)
         expr = m.x[1] * m.ef(m.x[2], m.x[3])
@@ -638,7 +638,7 @@ class TestInitialized(unittest.TestCase):
         m.x = pyo.Var([1, 2, 3], initialize=1)
 
         def fcn(*args):
-            return args[0] + 0.5*args[1]**2
+            return args[0] + 0.5 * args[1] ** 2
 
         m.ef = pyo.ExternalFunction(fcn)
         expr = m.x[1] * m.ef(m.x[2], m.x[3])
