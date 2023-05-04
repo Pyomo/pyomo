@@ -369,6 +369,41 @@ class TestUninitialized(unittest.TestCase):
         self.assertEqual(len(variables), 1)
         self.assertEqual(var_set, ComponentSet([m.x[1]]))
 
+    def test_linear_expression(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.p = pyo.Param([1, 2], mutable=True, initialize=None)
+
+        expr = 1 + m.p[1] * m.x[1] + 2 * m.x[2] + 3 * m.x[3] + 3 * m.x[1]
+        m.x[2].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+
+        expr = 1 + m.p[1] * m.x[1] + 2 * m.x[2] + 3 * m.x[3]
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+
+        # Covers a branch where two coefficients of a variable are None
+        expr = 1 + m.p[1] * m.x[1] + 2 * m.x[2] + 3 * m.x[3] + m.p[2] * m.x[1]
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+
+        # Covers the NaN*None branch
+        nan = float('nan')
+        expr = 1 + nan * m.x[1] + 2 * m.x[2] + 3 * m.x[3] + m.p[2] * m.x[1]
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+
+        # Covers the None*NaN branch
+        expr = 1 + m.p[1] * m.x[1] + 2 * m.x[2] + 3 * m.x[3] + nan * m.x[1]
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+
 
 class TestInitialized(unittest.TestCase):
     def test_nonlinear(self):
@@ -396,6 +431,29 @@ class TestInitialized(unittest.TestCase):
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[2], m.x[3]]))
+
+    def test_nonlinear_with_zero_mult(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1)
+        m.x[1].fix()
+        expr = (m.x[3] ** 3) * (m.x[1] - 1) * (m.x[2] ** 2)
+        variables = get_incident_variables(expr)
+        self.assertEqual(len(variables), 0)
+
+    def test_nonlinear_terms_dont_cancel(self):
+        # Ideally we could change this behavior eventually for polynomial terms
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1)
+        m.x[1].fix()
+        expr = m.x[1] * m.x[2] ** 2 - m.x[2] ** 2
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[2]]))
+
+        expr = m.x[2] ** 2 - m.x[2] ** 2
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[2]]))
 
     def test_combine_like_linear(self):
         m = pyo.ConcreteModel()
@@ -661,4 +719,5 @@ class TestInitialized(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    TestUninitialized().test_linear_expression()

@@ -1122,19 +1122,27 @@ def _before_linear(visitor, child):
                     const = None
                 else:
                     const += c * v.value
-            elif c:
-                # What is this check? c is nonzero?
+            elif c != 0:
                 _id = id(v)
                 if _id not in var_map:
                     var_map[_id] = v
                 if _id in linear:
-                    linear[_id] += c
+                    # c or linear[_id] could both be None
+                    if c is None and linear[_id] is None:
+                        pass  # linear[_id] stays None
+                    elif c is None and math.isnan(linear[_id]):
+                        pass  # linear[_id] stays NaN
+                    elif linear[_id] is None and math.isnan(c):
+                        linear[_id] = float('nan')
+                    elif c is None or linear[_id] is None:
+                        linear[_id] = None
+                    else:  # Neither is None
+                        linear[_id] += c
                 else:
                     linear[_id] = c
         elif arg.__class__ in native_types:
             # const is an "accumulated" constant and therefore could be None.
-            # arg is an unprocessed node of the expression system and therefore
-            # should not be None
+            # arg is an unprocessed native type
             if const is not None:
                 const += arg
         else:
