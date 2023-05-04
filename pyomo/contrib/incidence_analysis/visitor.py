@@ -949,6 +949,8 @@ def handle_external_function_node(visitor, node, *args):
         for arg in args
     ):
         arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const for arg in args]
+        if any(arg is None for arg in arg_list):
+            return (_CONSTANT, None)
         return _apply_node_operation(node, arg_list)
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:

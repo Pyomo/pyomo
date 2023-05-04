@@ -343,6 +343,32 @@ class TestUninitialized(unittest.TestCase):
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[3])
 
+    def test_external_function(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+
+        def fcn(*args):
+            return args[0] + 0.5*args[1]**2
+
+        m.ef = pyo.ExternalFunction(fcn)
+        expr = m.x[1] * m.ef(m.x[2], m.x[3])
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(len(variables), 3)
+        self.assertEqual(var_set, ComponentSet(m.x[:]))
+
+        m.x[2].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(len(variables), 2)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+
+        m.x[3].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(len(variables), 1)
+        self.assertEqual(var_set, ComponentSet([m.x[1]]))
+
 
 class TestInitialized(unittest.TestCase):
     def test_nonlinear(self):
@@ -606,6 +632,32 @@ class TestInitialized(unittest.TestCase):
         m.x[2].fix(0)
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
+
+    def test_external_function(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1)
+
+        def fcn(*args):
+            return args[0] + 0.5*args[1]**2
+
+        m.ef = pyo.ExternalFunction(fcn)
+        expr = m.x[1] * m.ef(m.x[2], m.x[3])
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(len(variables), 3)
+        self.assertEqual(var_set, ComponentSet(m.x[:]))
+
+        m.x[2].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(len(variables), 2)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+
+        m.x[3].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(len(variables), 1)
+        self.assertEqual(var_set, ComponentSet([m.x[1]]))
 
 
 if __name__ == "__main__":
