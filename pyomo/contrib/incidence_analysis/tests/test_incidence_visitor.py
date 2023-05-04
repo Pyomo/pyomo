@@ -435,8 +435,15 @@ class TestInitialized(unittest.TestCase):
     def test_nonlinear_with_zero_mult(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1)
-        m.x[1].fix()
+        m.x[1].fix(1)
         expr = (m.x[3] ** 3) * (m.x[1] - 1) * (m.x[2] ** 2)
+        variables = get_incident_variables(expr)
+        self.assertEqual(len(variables), 0)
+
+        # Some unsafe behavior due to how we cancel product expressions
+        nan = float('nan')
+        m.x[1].fix(1)
+        expr = (m.x[1] - 1) * (nan * m.x[2] ** 2 + nan * m.x[3])
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
@@ -719,5 +726,4 @@ class TestInitialized(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #unittest.main()
-    TestUninitialized().test_linear_expression()
+    unittest.main()

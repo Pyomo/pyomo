@@ -141,6 +141,16 @@ class NLFragment(object):
         return 'nl(' + self._node.name + ')'
 
 
+class IncidenceRepn(object):
+    __slots__ = ("mult", "const", "linear", "nonlinear")
+
+    def __init__(self, const, linear, nonlinear):
+        self.mult = 1
+        self.const = const
+        self.linear = linear
+        self.nonlinear = nonlinear
+
+
 class AMPLRepn(object):
     __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear', 'named_exprs')
 
@@ -1133,7 +1143,7 @@ def _before_linear(visitor, child):
                     elif c is None and math.isnan(linear[_id]):
                         pass  # linear[_id] stays NaN
                     elif linear[_id] is None and math.isnan(c):
-                        linear[_id] = float('nan')
+                        linear[_id] = nan
                     elif c is None or linear[_id] is None:
                         linear[_id] = None
                     else:  # Neither is None
