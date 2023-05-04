@@ -65,16 +65,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             self,
             lb.expr,
             -10.0 * m.outer_d1.inner_d1.binary_indicator_var
-            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var +
-            0.0 * m.outer_d2.binary_indicator_var
+            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var
+            + 0.0 * m.outer_d2.binary_indicator_var
             <= m.x,
         )
         assertExpressionsEqual(
             self,
             ub.expr,
             3.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var +
-            0.0 * m.outer_d2.binary_indicator_var
+            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
+            + 0.0 * m.outer_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -130,8 +130,8 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             self,
             ub.expr,
             3.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var +
-            101.0 * m.outer_d2.binary_indicator_var
+            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
+            + 101.0 * m.outer_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -473,9 +473,9 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
 
         # This is a convoluted way to write the same model as the nested model
         m.x = Var(bounds=(-100, 102))
-        m.outer_d1.c = Constraint(expr=-20 <= 2*m.x)
+        m.outer_d1.c = Constraint(expr=-20 <= 2 * m.x)
         m.outer_d1.c2 = Constraint(expr=m.x - 1 <= 10)
-        m.outer_d1.inner_d1.c = Constraint(expr=3*m.x - 7 <= 2)
+        m.outer_d1.inner_d1.c = Constraint(expr=3 * m.x - 7 <= 2)
         m.outer_d1.inner_d2.c = Constraint(expr=m.x >= -7)
         m.outer_d2.c = Constraint(expr=m.x + 4 == 4)
 
@@ -490,10 +490,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         self.assertFalse(m.outer_d1.inner_d2.c.active)
         self.assertFalse(m.outer_d2.c.active)
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            descend_into=(Block, Disjunct),
-            active=True))), 2)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, descend_into=(Block, Disjunct), active=True
+                    )
+                )
+            ),
+            2,
+        )
 
     def test_bound_constraints_skip_levels_in_hierarchy(self):
         m = ConcreteModel()
@@ -506,8 +512,8 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.W[2].c = Constraint(expr=m.x <= 9)
         m.Z[1].c = Constraint(expr=m.y == 0)
         m.Z[1].w_disj = Disjunction(expr=[m.W[i] for i in [1, 2]])
-        m.Z[2].c = Constraint(expr=m.y==1)
-        m.Z[3].c = Constraint(expr=m.y==2)
+        m.Z[2].c = Constraint(expr=m.y == 1)
+        m.Z[3].c = Constraint(expr=m.y == 2)
         m.Y[1].c = Constraint(expr=m.x >= 2)
         m.Y[1].z_disj = Disjunction(expr=[m.Z[i] for i in [1, 2, 3]])
         m.Y[2].c1 = Constraint(expr=m.x == 0)
@@ -523,19 +529,23 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             x_lb.expr,
-            2.0*m.Z[2].binary_indicator_var + 
-            2.0*m.Z[3].binary_indicator_var + 
-            2.0*m.W[1].binary_indicator_var + 
-            2.0*m.W[2].binary_indicator_var + 
-            0*m.Y[2].binary_indicator_var <= m.x
+            2.0 * m.Z[2].binary_indicator_var
+            + 2.0 * m.Z[3].binary_indicator_var
+            + 2.0 * m.W[1].binary_indicator_var
+            + 2.0 * m.W[2].binary_indicator_var
+            + 0 * m.Y[2].binary_indicator_var
+            <= m.x,
         )
         x_ub = cons[1]
         assertExpressionsEqual(
             self,
             x_ub.expr,
-            10*m.Z[2].binary_indicator_var + 10*m.Z[3].binary_indicator_var + 
-            7.0*m.W[1].binary_indicator_var + 9.0*m.W[2].binary_indicator_var + 
-            0.0*m.Y[2].binary_indicator_var >= m.x
+            10 * m.Z[2].binary_indicator_var
+            + 10 * m.Z[3].binary_indicator_var
+            + 7.0 * m.W[1].binary_indicator_var
+            + 9.0 * m.W[2].binary_indicator_var
+            + 0.0 * m.Y[2].binary_indicator_var
+            >= m.x,
         )
 
         cons = bt.get_transformed_constraints(m.y, m.y_disj)
@@ -543,17 +553,23 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             y_lb.expr,
-            1.0*m.Z[2].binary_indicator_var + 2.0*m.Z[3].binary_indicator_var +
-            0.0*m.W[1].binary_indicator_var + 0.0*m.W[2].binary_indicator_var +
-            3.0*m.Y[2].binary_indicator_var <= m.y
+            1.0 * m.Z[2].binary_indicator_var
+            + 2.0 * m.Z[3].binary_indicator_var
+            + 0.0 * m.W[1].binary_indicator_var
+            + 0.0 * m.W[2].binary_indicator_var
+            + 3.0 * m.Y[2].binary_indicator_var
+            <= m.y,
         )
         y_ub = cons[1]
         assertExpressionsEqual(
             self,
             y_ub.expr,
-            1.0*m.Z[2].binary_indicator_var + 2.0*m.Z[3].binary_indicator_var +
-            0.0*m.W[1].binary_indicator_var + 0.0*m.W[2].binary_indicator_var +
-            17.0*m.Y[2].binary_indicator_var >= m.y
+            1.0 * m.Z[2].binary_indicator_var
+            + 2.0 * m.Z[3].binary_indicator_var
+            + 0.0 * m.W[1].binary_indicator_var
+            + 0.0 * m.W[2].binary_indicator_var
+            + 17.0 * m.Y[2].binary_indicator_var
+            >= m.y,
         )
 
         self.assertFalse(m.W[1].c.active)
@@ -565,10 +581,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         self.assertFalse(m.Y[2].c1.active)
         self.assertFalse(m.Y[2].c2.active)
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            descend_into=(Block, Disjunct),
-            active=True))), 4)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, descend_into=(Block, Disjunct), active=True
+                    )
+                )
+            ),
+            4,
+        )
 
     def test_skip_nonlinear_and_multivariate_constraints(self):
         m = self.create_nested_model()
@@ -592,10 +614,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         self.assertFalse(m.outer_d1.inner_d2.c.active)
         self.assertFalse(m.outer_d2.c.active)
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            descend_into=(Block, Disjunct),
-            active=True))), 5)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, descend_into=(Block, Disjunct), active=True
+                    )
+                )
+            ),
+            5,
+        )
 
     def test_tightest_bound_is_at_root(self):
         """
@@ -612,31 +640,37 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.disjunction = Disjunction(expr=[m.d[1], m.d[2]])
         m.d[1].disjunction = Disjunction(expr=[m.inner1[1], m.inner1[2]])
         m.inner1[1].disjunction = Disjunction(expr=[m.inner2[1], m.inner2[2]])
-        
+
         m.d[2].c = Constraint(expr=m.x >= 5)
         m.inner1[1].c = Constraint(expr=m.x >= 55)
         m.inner2[2].c = Constraint(expr=m.x >= 66)
-        
+
         bt = TransformationFactory('gdp.common_constraint_body')
         bt.apply_to(m)
-        
+
         cons = bt.get_transformed_constraints(m.x, m.disjunction)
         self.assertEqual(len(cons), 1)
         lb = cons[0]
         assertExpressionsEqual(
             self,
             lb.expr,
-            60.0*m.inner1[2].binary_indicator_var +
-            60.0*m.inner2[1].binary_indicator_var +
-            66.0*m.inner2[2].binary_indicator_var +
-            60.0*m.d[2].binary_indicator_var <= m.x
+            60.0 * m.inner1[2].binary_indicator_var
+            + 60.0 * m.inner2[1].binary_indicator_var
+            + 66.0 * m.inner2[2].binary_indicator_var
+            + 60.0 * m.d[2].binary_indicator_var
+            <= m.x,
         )
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            descend_into=(Block, Disjunct),
-            active=True
-        ))), 1)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, descend_into=(Block, Disjunct), active=True
+                    )
+                )
+            ),
+            1,
+        )
 
     def test_bounds_on_disjuncts_with_block_hierarchies(self):
         m = ConcreteModel()
@@ -661,14 +695,20 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ub.expr,
-            4.0*m.d[1].binary_indicator_var +
-            3.0*m.d[2].binary_indicator_var >= m.x
+            4.0 * m.d[1].binary_indicator_var + 3.0 * m.d[2].binary_indicator_var
+            >= m.x,
         )
         # just the one we made is active.
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            descend_into=(Block, Disjunct),
-            active=True))), 1)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, descend_into=(Block, Disjunct), active=True
+                    )
+                )
+            ),
+            1,
+        )
 
     def test_indexed_disjunction_target(self):
         m = ConcreteModel()
@@ -692,9 +732,10 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ub.expr,
-            1.0*m.d[1].binary_indicator_var +
-            2.0*m.d[2].binary_indicator_var +
-            3.0*m.d[3].binary_indicator_var >= m.x
+            1.0 * m.d[1].binary_indicator_var
+            + 2.0 * m.d[2].binary_indicator_var
+            + 3.0 * m.d[3].binary_indicator_var
+            >= m.x,
         )
         cons = bt.get_transformed_constraints(m.x, m.disjunction['neg'])
         self.assertEqual(len(cons), 1)
@@ -702,18 +743,24 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             lb.expr,
-            -5.0*m.d[4].binary_indicator_var -
-            8.0*m.d[5].binary_indicator_var <= m.x
+            -5.0 * m.d[4].binary_indicator_var - 8.0 * m.d[5].binary_indicator_var
+            <= m.x,
         )
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            descend_into=(Block, Disjunct),
-            active=True))), 2)
-        
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, descend_into=(Block, Disjunct), active=True
+                    )
+                )
+            ),
+            2,
+        )
+
     def test_nested_target(self):
         m = self.create_nested_model()
-        
+
         bt = TransformationFactory('gdp.common_constraint_body')
         bt.apply_to(m, targets=[m.outer_d1.inner])
 
@@ -725,14 +772,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             self,
             lb.expr,
             -100 * m.outer_d1.inner_d1.binary_indicator_var
-            -7.0 * m.outer_d1.inner_d2.binary_indicator_var <= m.x
+            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var
+            <= m.x,
         )
         self.assertIs(lb.parent_block().parent_block(), m.outer_d1)
         assertExpressionsEqual(
             self,
             ub.expr,
-            3.0 * m.outer_d1.inner_d1.binary_indicator_var +
-            102 * m.outer_d1.inner_d2.binary_indicator_var >= m.x
+            3.0 * m.outer_d1.inner_d1.binary_indicator_var
+            + 102 * m.outer_d1.inner_d2.binary_indicator_var
+            >= m.x,
         )
         self.assertIs(ub.parent_block().parent_block(), m.outer_d1)
 
@@ -741,18 +790,24 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         self.assertTrue(lb.active)
         self.assertTrue(ub.active)
 
-        self.assertEqual(len(list(m.component_data_objects(
-            Constraint,
-            active=True,
-            descend_into=(Block, Disjunct)))), 4)
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, active=True, descend_into=(Block, Disjunct)
+                    )
+                )
+            ),
+            4,
+        )
 
     def test_targets_nested_in_each_other(self):
         m = self.create_nested_model()
-        
+
         bt = TransformationFactory('gdp.common_constraint_body')
         bt.apply_to(m, targets=[m.outer_d1.inner, m.outer])
 
-        # This should do the outermost disjunctions only--we should 
+        # This should do the outermost disjunctions only--we should
         # get the same result as if we had transformed the whole
         # model.
 

@@ -98,8 +98,7 @@ class CommonLHSTransformation(Transformation):
 
         transformation_blocks = {}
         bound_dict = ComponentMap()
-        self._update_bounds_from_constraints(instance, bound_dict, None,
-                                             is_root=True)
+        self._update_bounds_from_constraints(instance, bound_dict, None, is_root=True)
         # [ESJ 05/04/23]: In the future, I should think about getting my little
         # trees from this tree, or asking for leaves rooted somewhere specific
         # or something. Because this transformation currently does the work of
@@ -107,11 +106,13 @@ class CommonLHSTransformation(Transformation):
         whole_tree = get_gdp_tree(targets, instance)
         for t in whole_tree.topological_sort():
             if t.ctype is Disjunction and whole_tree.in_degree(t) == 0:
-                self._transform_disjunction(t, instance, bound_dict,
-                                            transformation_blocks)
+                self._transform_disjunction(
+                    t, instance, bound_dict, transformation_blocks
+                )
 
-    def _transform_disjunction(self, disjunction, instance, bound_dict,
-                               transformation_blocks):
+    def _transform_disjunction(
+        self, disjunction, instance, bound_dict, transformation_blocks
+    ):
         # We go from root to leaves so that whenever we hit a variable, we can
         # ask if the bounds we're seeing on its parent Disjunct (or if we're at
         # the root, in the global scope) are looser or tighter than the bounds
@@ -130,28 +131,30 @@ class CommonLHSTransformation(Transformation):
     def _get_bound_dict_for_var(self, bound_dict, v):
         v_bounds = bound_dict.get(v)
         if v_bounds is None:
-            v_bounds = bound_dict[v] = {
-                None: (v.lb, v.ub),
-                'to_deactivate': set(),
-            }
-        return v_bounds        
+            v_bounds = bound_dict[v] = {None: (v.lb, v.ub), 'to_deactivate': set()}
+        return v_bounds
 
-    def _update_bounds_from_constraints(self, disjunct, bound_dict, gdp_forest,
-                                        is_root=False):
+    def _update_bounds_from_constraints(
+        self, disjunct, bound_dict, gdp_forest, is_root=False
+    ):
         bound_dict_key = None if is_root else disjunct
         for constraint in disjunct.component_data_objects(
-                Constraint,
-                active=True,
-                descend_into=Block,
-                sort=SortComponents.deterministic
+            Constraint,
+            active=True,
+            descend_into=Block,
+            sort=SortComponents.deterministic,
         ):
             if hasattr(constraint.body, 'ctype') and constraint.body.ctype is Var:
                 v = constraint.body
                 # Then this is a bound or an equality
                 v_bounds = self._get_bound_dict_for_var(bound_dict, v)
-                self._update_bounds_dict(v_bounds, value(constraint.lower),
-                                         value(constraint.upper), bound_dict_key,
-                                         gdp_forest)
+                self._update_bounds_dict(
+                    v_bounds,
+                    value(constraint.lower),
+                    value(constraint.upper),
+                    bound_dict_key,
+                    gdp_forest,
+                )
                 # We won't know til the end if we're *really* transforming this
                 # constraint, so we just cache the fact that it is a constraint
                 # on v and wait for later
@@ -165,13 +168,15 @@ class CommonLHSTransformation(Transformation):
                 coef = repn.linear_coefs[0]
                 constant = repn.constant
                 self._update_bounds_dict(
-                    v_bounds, 
-                    (value(constraint.lower) - constant)/coef if constraint.lower 
-                    is not None else None,
-                    (value(constraint.upper) - constant)/coef if constraint.upper
-                    is not None else None,
+                    v_bounds,
+                    (value(constraint.lower) - constant) / coef
+                    if constraint.lower is not None
+                    else None,
+                    (value(constraint.upper) - constant) / coef
+                    if constraint.upper is not None
+                    else None,
                     bound_dict_key,
-                    gdp_forest
+                    gdp_forest,
                 )
                 v_bounds['to_deactivate'].add(constraint)
 
@@ -199,8 +204,7 @@ class CommonLHSTransformation(Transformation):
         return v_bounds[disjunct]
 
     def _update_bounds_dict(self, v_bounds, lower, upper, disjunct, gdp_forest):
-        (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct,
-                                                       gdp_forest)
+        (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct, gdp_forest)
         if lower is not None:
             if lb is None or lower > lb:
                 # This GDP is more constrained here than it was in the parent
