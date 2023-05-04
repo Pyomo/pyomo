@@ -57,6 +57,7 @@ We repeat the abstract model from the previous section:
 One way to implement this in Pyomo is as shown as follows:
 
 .. testcode::
+
    import pyomo.environ as pyo
 
    model = pyo.AbstractModel()
