@@ -123,11 +123,11 @@ class QuadraticRepn(object):
         mult = other.multiplier
         self.constant += mult * other.constant
         if other.linear:
-            linear._merge_dict(mult, self.linear, other.linear)
+            linear._merge_dict(self.linear, mult, other.linear)
         if other.quadratic:
             if not self.quadratic:
                 self.quadratic = {}
-            linear._merge_dict(mult, self.quadratic, other.quadratic)
+            linear._merge_dict(self.quadratic, mult, other.quadratic)
         if other.nonlinear is not None:
             if mult != 1:
                 nl = mult * other.nonlinear
@@ -150,14 +150,10 @@ _exit_node_handlers[NegationExpression][(_QUADRATIC,)] = linear._handle_negation
 #
 # PRODUCT
 #
-def _handle_product_linear_linear(visitor, node, arg1, arg2):
-    _, arg1 = arg1
-    _, arg2 = arg2
-    # Quadratic first, because we will update linear in a minute
-    varOrder = visitor.var_order.__getitem__
-    quadratic = arg1.quadratic = {}
-    for vid1, coef1 in arg1.linear.items():
-        for vid2, coef2 in arg2.linear.items():
+def _mul_linear_linear(varOrder, linear1, linear2):
+    quadratic = {}
+    for vid1, coef1 in linear1.items():
+        for vid2, coef2 in linear2.items():
             if varOrder(vid1) < varOrder(vid2):
                 key = vid1, vid2
             else:
@@ -166,6 +162,16 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
                 quadratic[key] += coef1 * coef2
             else:
                 quadratic[key] = coef1 * coef2
+    return quadratic
+
+
+def _handle_product_linear_linear(visitor, node, arg1, arg2):
+    _, arg1 = arg1
+    _, arg2 = arg2
+    # Quadratic first, because we will update linear in a minute
+    arg1.quadratic = _mul_linear_linear(
+        visitor.var_order.__getitem__, arg1.linear, arg2.linear
+    )
     # Linear second, as this relies on knowing the original constants
     if not arg2.constant:
         arg1.linear = {}
@@ -175,11 +181,80 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
         for vid, coef in _linear.items():
             _linear[vid] = c * coef
     if arg1.constant:
-        linear._merge_dict(arg1.constant, arg1.linear, arg2.linear)
+        linear._merge_dict(arg1.linear, arg1.constant, arg2.linear)
     # Finally, the constant and multipliers
     arg1.constant *= arg2.constant
     arg1.multiplier *= arg2.multiplier
     return _QUADRATIC, arg1
+
+
+def _handle_product_nonlinear(visitor, node, arg1, arg2):
+    ans = visitor.Result()
+    if not visitor.expand_nonlinear_products:
+        ans.nonlinear = to_expression(visitor, arg1) * to_expression(visitor, arg2)
+        return ans
+
+    # We are multiplying (A + Bx + Cx^2 + D(x)) * (A + Bx + Cx^2 + Dx))
+    _, x1 = arg1
+    _, x2 = arg2
+    ans = visitor.Result()
+    ans.multiplier = x1.multiplier * x2.multiplier
+    x1.multiplier = x2.multiplier = 1
+    # x1.const * x2.const [AA]
+    ans.constant = x1.constant * x2.constant
+    # linear & quadratic terms
+    if x2.constant:
+        # [BA], [CA]
+        c = x2.constant
+        if c == 1:
+            ans.linear = x1.linear
+            ans.quadratic = x1.quadratic
+        else:
+            ans.linear = {vid: c * coef for vid, coef in x1.linear.items()}
+            if x1.quadratic:
+                ans.quadratic = {k: c * coef for k, coef in x1.quadratic.items()}
+    if x1.constant:
+        # [AB]
+        _merge_dict(ans.linear, x1.constant, x2.linear)
+        # [AC]
+        if x2.quadratic:
+            if ans.quadratic:
+                _merge_dict(ans.quadratic, x1.constant, x2.quadratic)
+            elif x1.constant == 1:
+                ans.quadratic = x2.quadratic
+            else:
+                c = x1.constant
+                ans.quadratic = {k: c * coef for k, coef in x2.quadratic.items()}
+    # [BB]
+    if x1.linear and x2.linear:
+        quad = _mul_linear_linear(
+            visitor.var_order.__getitem__, arg1.linear, arg2.linear
+        )
+        if ans.quadratic:
+            _merge_dict(ans.quadratic, 1, quad)
+        else:
+            ans.quadratic = quad
+    # [DA] + [DB] + [DC] + [DD]
+    ans.nonlinear = 0
+    if x1.nonlinear is not None:
+        ans.nonlinear += x1.nonlinear * to_expression(visitor, arg2)
+    x1.nonlinear = None
+    x2.constant = 0
+    x1_c = x1.constant
+    x1.constant = 0
+    x1_lin = x1.linear
+    x1.linear = {}
+    # [CB] + [CC] + [CD]
+    if x1.quadratic:
+        ans.nonlinear += to_expression(visitor, arg1) * to_expression(visitor, arg2)
+        x1.quadratic = None
+    if x1_lin:
+        x1.linear = x1_lin
+        ans.nonlinear += to_expression(visitor, arg1) * to_expression(visitor, arg2)
+    # [AD]
+    if x1_c and x2.nonlinear is not None:
+        ans.nonlinear += x1_c * x2.nonlinear
+    return _GENERAL, ans
 
 
 _exit_node_handlers[ProductExpression].update(
@@ -215,15 +290,6 @@ _exit_node_handlers[DivisionExpression].update(
 #
 # EXPONENTIATION
 #
-def _handle_pow_linear_constant(visitor, node, arg1, arg2):
-    if arg2[1] == 2:
-        return _handle_product_linear_linear(visitor, node, arg1, arg1)
-    elif arg2[1] == 1:
-        return arg1
-    else:
-        return _handle_pow_nonlinear(visitor, node, arg1, arg2)
-
-
 _exit_node_handlers[PowExpression].update(
     {
         (_CONSTANT, _QUADRATIC): linear._handle_pow_nonlinear,
@@ -233,8 +299,6 @@ _exit_node_handlers[PowExpression].update(
         (_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant,
         (_QUADRATIC, _LINEAR): linear._handle_pow_nonlinear,
         (_QUADRATIC, _GENERAL): linear._handle_pow_nonlinear,
-        # Replace handler from the linear walker
-        (_LINEAR, _CONSTANT): _handle_pow_linear_constant,
     }
 )
 
@@ -273,3 +337,4 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     Result = QuadraticRepn
     exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = linear._initialize_exit_node_dispatcher(_exit_node_handlers)
+    max_exponential_expansion = 2

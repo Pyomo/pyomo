@@ -45,19 +45,19 @@ _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
 
 
-def _merge_dict(mult, self_dict, other_dict):
+def _merge_dict(dest_dict, mult, src_dict):
     if mult == 1:
-        for vid, coef in other_dict.items():
-            if vid in self_dict:
-                self_dict[vid] += coef
+        for vid, coef in src_dict.items():
+            if vid in dest_dict:
+                dest_dict[vid] += coef
             else:
-                self_dict[vid] = coef
+                dest_dict[vid] = coef
     else:
-        for vid, coef in other_dict.items():
-            if vid in self_dict:
-                self_dict[vid] += mult * coef
+        for vid, coef in src_dict.items():
+            if vid in dest_dict:
+                dest_dict[vid] += mult * coef
             else:
-                self_dict[vid] = mult * coef
+                dest_dict[vid] = mult * coef
 
 
 class LinearRepn(object):
@@ -137,7 +137,7 @@ class LinearRepn(object):
         mult = other.multiplier
         self.constant += mult * other.constant
         if other.linear:
-            _merge_dict(mult, self.linear, other.linear)
+            _merge_dict(self.linear, mult, other.linear)
         if other.nonlinear is not None:
             if mult != 1:
                 nl = mult * other.nonlinear
@@ -149,23 +149,11 @@ class LinearRepn(object):
                 self.nonlinear += nl
 
 
-def _to_expression_CONST(visitor, arg):
-    return arg[1]
-
-
-def _to_expression_LINEAR(visitor, arg):
-    return arg[1].to_expression(visitor)
-
-
-def _to_expression_GENERAL(visitor, arg):
-    return arg[1].to_expression(visitor)
-
-
-to_expression = {
-    _CONSTANT: _to_expression_CONST,
-    _LINEAR: _to_expression_LINEAR,
-    _GENERAL: _to_expression_GENERAL,
-}
+def to_expression(visitor, arg):
+    if arg[0] is _CONSTANT:
+        return arg[1]
+    else:
+        return arg[1].to_expression(visitor)
 
 
 _exit_node_handlers = {}
@@ -221,9 +209,39 @@ def _handle_product_ANY_constant(visitor, node, arg1, arg2):
 
 def _handle_product_nonlinear(visitor, node, arg1, arg2):
     ans = visitor.Result()
-    ans.nonlinear = to_expression[arg1[0]](visitor, arg1) * to_expression[arg2[0]](
-        visitor, arg2
-    )
+    if not visitor.expand_nonlinear_products:
+        ans.nonlinear = to_expression(visitor, arg1) * to_expression(visitor, arg2)
+        return ans
+
+    # We are multiplying (A + Bx + C(x)) * (A + Bx + C(x))
+    _, x1 = arg1
+    _, x2 = arg2
+    ans.multiplier = x1.multiplier * x2.multiplier
+    x1.multiplier = x2.multiplier = 1
+    # x1.const * x2.const [AA]
+    ans.constant = x1.constant * x2.constant
+    # x1.linear * x2.const [BA] + x1.const * x2.linear [AB]
+    if x2.constant:
+        c = x2.constant
+        if c == 1:
+            ans.linear = x1.linear
+        else:
+            ans.linear = {vid: c * coef for vid, coef in x1.linear.items()}
+    if x1.constant:
+        _merge_dict(ans.linear, x1.constant, x2.linear)
+    ans.nonlinear = 0
+    if x1.nonlinear is not None:
+        # [CA] + [CB] + [CC]
+        ans.nonlinear += x1.nonlinear * to_expression(visitor, arg2)
+    # [BB] + [BC]
+    if x1.linear:
+        x1.constant = 0
+        x1.nonlinear = None
+        x2.constant = 0
+        ans.nonlinear += to_expression(visitor, arg1) * to_expression(visitor, arg2)
+    # [AC]
+    if x1.constant and x2.nonlinear is not None:
+        ans.nonlinear += x1.constant * x2.nonlinear
     return _GENERAL, ans
 
 
@@ -261,9 +279,7 @@ def _handle_division_ANY_constant(visitor, node, arg1, arg2):
 
 def _handle_division_nonlinear(visitor, node, arg1, arg2):
     ans = visitor.Result()
-    ans.nonlinear = to_expression[arg1[0]](visitor, arg1) / to_expression[arg2[0]](
-        visitor, arg2
-    )
+    ans.nonlinear = to_expression(visitor, arg1) / to_expression(visitor, arg2)
     return _GENERAL, ans
 
 
@@ -292,15 +308,19 @@ def _handle_pow_constant_constant(visitor, node, *args):
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
     if arg2[1] == 1:
         return arg1
+    elif arg2[1] <= visitor.max_exponential_expansion:
+        ans = arg1.duplicate()
+        for i in range(1, arg2[1]):
+            ans = visitor.exit_node_handlers[ProductExpression, ans[0], arg1[0]](
+                visitor, ans, arg1.duplicate()
+            )
     else:
         return _handle_pow_nonlinear(visitor, node, arg1, arg2)
 
 
 def _handle_pow_nonlinear(visitor, node, arg1, arg2):
     ans = visitor.Result()
-    ans.nonlinear = to_expression[arg1[0]](visitor, arg1) ** to_expression[arg2[0]](
-        visitor, arg2
-    )
+    ans.nonlinear = to_expression(visitor, arg1) ** to_expression(visitor, arg2)
     return _GENERAL, ans
 
 
@@ -327,9 +347,7 @@ def _handle_unary_constant(visitor, node, arg):
 
 def _handle_unary_nonlinear(visitor, node, arg):
     ans = visitor.Result()
-    ans.nonlinear = node.create_node_with_local_data(
-        (to_expression[arg[0]](visitor, arg),)
-    )
+    ans.nonlinear = node.create_node_with_local_data((to_expression(visitor, arg),))
     return _GENERAL, ans
 
 
@@ -397,9 +415,9 @@ def _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3):
     ans = visitor.Result()
     ans.nonlinear = Expr_ifExpression(
         (
-            to_expression[arg1[0]](visitor, arg1),
-            to_expression[arg2[0]](visitor, arg2),
-            to_expression[arg3[0]](visitor, arg3),
+            to_expression(visitor, arg1),
+            to_expression(visitor, arg2),
+            to_expression(visitor, arg3),
         )
     )
     return _GENERAL, ans
@@ -682,6 +700,8 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
     Result = LinearRepn
     exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = _initialize_exit_node_dispatcher(_exit_node_handlers)
+    expand_nonlinear_products = False
+    max_exponential_expansion = 1
 
     def __init__(self, subexpression_cache, var_map, var_order):
         super().__init__()
