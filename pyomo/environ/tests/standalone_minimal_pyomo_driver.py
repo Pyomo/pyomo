@@ -13,7 +13,7 @@ import sys
 from io import StringIO
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
-from pyomo.repn.tests.cpxlp.lp_diff import lp_diff
+from pyomo.repn.tests.lp_diff import lp_diff
 
 _baseline = """\\* Source Pyomo model name=unknown *\\
 
