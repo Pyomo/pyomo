@@ -65,16 +65,16 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             self,
             lb.expr,
             -10.0 * m.outer_d1.inner_d1.binary_indicator_var
-            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var
-            + 0.0 * m.outer_d2.binary_indicator_var
+            - 7.0 * m.outer_d1.inner_d2.binary_indicator_var +
+            0.0 * m.outer_d2.binary_indicator_var
             <= m.x,
         )
         assertExpressionsEqual(
             self,
             ub.expr,
             3.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
-            + 0.0 * m.outer_d2.binary_indicator_var
+            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var +
+            0.0 * m.outer_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -130,8 +130,8 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             self,
             ub.expr,
             3.0 * m.outer_d1.inner_d1.binary_indicator_var
-            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var
-            + 101.0 * m.outer_d2.binary_indicator_var
+            + 11.0 * m.outer_d1.inner_d2.binary_indicator_var +
+            101.0 * m.outer_d2.binary_indicator_var
             >= m.x,
         )
 
@@ -596,3 +596,176 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             Constraint,
             descend_into=(Block, Disjunct),
             active=True))), 5)
+
+    def test_tightest_bound_is_at_root(self):
+        """
+        x >= 60
+        [[x >= 55, [ ] v [x >= 66]] v [ ]] v [x >= 5]
+        """
+        m = ConcreteModel()
+        m.x = Var()
+        m.x.setlb(4)
+        m.c = Constraint(expr=m.x >= 60)
+        m.d = Disjunct([1, 2])
+        m.inner1 = Disjunct([1, 2])
+        m.inner2 = Disjunct([1, 2])
+        m.disjunction = Disjunction(expr=[m.d[1], m.d[2]])
+        m.d[1].disjunction = Disjunction(expr=[m.inner1[1], m.inner1[2]])
+        m.inner1[1].disjunction = Disjunction(expr=[m.inner2[1], m.inner2[2]])
+        
+        m.d[2].c = Constraint(expr=m.x >= 5)
+        m.inner1[1].c = Constraint(expr=m.x >= 55)
+        m.inner2[2].c = Constraint(expr=m.x >= 66)
+        
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m)
+        
+        cons = bt.get_transformed_constraints(m.x, m.disjunction)
+        self.assertEqual(len(cons), 1)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            60.0*m.inner1[2].binary_indicator_var +
+            60.0*m.inner2[1].binary_indicator_var +
+            66.0*m.inner2[2].binary_indicator_var +
+            60.0*m.d[2].binary_indicator_var <= m.x
+        )
+
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            descend_into=(Block, Disjunct),
+            active=True
+        ))), 1)
+
+    def test_bounds_on_disjuncts_with_block_hierarchies(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.b = Block()
+        m.b.c = Constraint(expr=m.x <= 4)
+        m.d = Disjunct([1, 2])
+        m.d[1].b = Block()
+        m.d[1].b.c = Constraint(expr=m.x <= 5)
+        m.d[2].b = Block()
+        m.d[2].b.c = Constraint(expr=m.x <= 3)
+        m.d[2].c = Constraint(expr=m.x <= 4.1)
+        m.disjunction = Disjunction(expr=[m.d[1], m.d[2]])
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m)
+
+        cons = bt.get_transformed_constraints(m.x, m.disjunction)
+        self.assertEqual(len(cons), 1)
+        ub = cons[0]
+
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            4.0*m.d[1].binary_indicator_var +
+            3.0*m.d[2].binary_indicator_var >= m.x
+        )
+        # just the one we made is active.
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            descend_into=(Block, Disjunct),
+            active=True))), 1)
+
+    def test_indexed_disjunction_target(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.d = Disjunct([1, 2, 3, 4, 5])
+        m.d[1].c = Constraint(expr=m.x <= 1)
+        m.d[2].c = Constraint(expr=m.x <= 2)
+        m.d[3].c = Constraint(expr=m.x <= 3)
+        m.d[4].c = Constraint(expr=m.x >= -5)
+        m.d[5].c = Constraint(expr=m.x >= -8)
+        m.disjunction = Disjunction(['pos', 'neg'])
+        m.disjunction['pos'] = [m.d[1], m.d[2], m.d[3]]
+        m.disjunction['neg'] = [m.d[4], m.d[5]]
+
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m, targets=m.disjunction)
+
+        cons = bt.get_transformed_constraints(m.x, m.disjunction['pos'])
+        self.assertEqual(len(cons), 1)
+        ub = cons[0]
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            1.0*m.d[1].binary_indicator_var +
+            2.0*m.d[2].binary_indicator_var +
+            3.0*m.d[3].binary_indicator_var >= m.x
+        )
+        cons = bt.get_transformed_constraints(m.x, m.disjunction['neg'])
+        self.assertEqual(len(cons), 1)
+        lb = cons[0]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            -5.0*m.d[4].binary_indicator_var -
+            8.0*m.d[5].binary_indicator_var <= m.x
+        )
+
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            descend_into=(Block, Disjunct),
+            active=True))), 2)
+        
+    def test_nested_target(self):
+        m = self.create_nested_model()
+        
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m, targets=[m.outer_d1.inner])
+
+        cons = bt.get_transformed_constraints(m.x, m.outer_d1.inner)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(
+            self,
+            lb.expr,
+            -100 * m.outer_d1.inner_d1.binary_indicator_var
+            -7.0 * m.outer_d1.inner_d2.binary_indicator_var <= m.x
+        )
+        self.assertIs(lb.parent_block().parent_block(), m.outer_d1)
+        assertExpressionsEqual(
+            self,
+            ub.expr,
+            3.0 * m.outer_d1.inner_d1.binary_indicator_var +
+            102 * m.outer_d1.inner_d2.binary_indicator_var >= m.x
+        )
+        self.assertIs(ub.parent_block().parent_block(), m.outer_d1)
+
+        self.assertTrue(m.outer_d1.c.active)
+        self.assertTrue(m.outer_d2.c.active)
+        self.assertTrue(lb.active)
+        self.assertTrue(ub.active)
+
+        self.assertEqual(len(list(m.component_data_objects(
+            Constraint,
+            active=True,
+            descend_into=(Block, Disjunct)))), 4)
+
+    def test_targets_nested_in_each_other(self):
+        m = self.create_nested_model()
+        
+        bt = TransformationFactory('gdp.common_constraint_body')
+        bt.apply_to(m, targets=[m.outer_d1.inner, m.outer])
+
+        # This should do the outermost disjunctions only--we should 
+        # get the same result as if we had transformed the whole
+        # model.
+
+        self.check_nested_model_disjunction(m, bt)
+        # There aren't any other constraints on the model other than what we
+        # added
+        self.assertEqual(
+            len(
+                list(
+                    m.component_data_objects(
+                        Constraint, active=True, descend_into=(Block, Disjunct)
+                    )
+                )
+            ),
+            2,
+        )

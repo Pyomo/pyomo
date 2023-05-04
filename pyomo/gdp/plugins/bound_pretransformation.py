@@ -97,42 +97,29 @@ class CommonLHSTransformation(Transformation):
             targets = (instance,)
 
         transformation_blocks = {}
-        knownBlocks = {}
-        for t in targets:
-            # first check it's not insane, that is, it is at least on the
-            # instance
-            if not is_child_of(parent=instance, child=t, knownBlocks=knownBlocks):
-                raise GDP_Error(
-                    "Target '%s' is not a component on instance "
-                    "'%s'!" % (t.name, instance.name)
-                )
-            # Blocks, Disjuncts, and their ilk
-            if isinstance(t, Block):
-                for disjunction in t.component_data_objects(
-                    Disjunction,
-                    descend_into=Block,
-                    sort=SortComponents.deterministic,
-                    active=True,
-                ):
-                    self._transform_disjunction(
-                        disjunction, instance, transformation_blocks
-                    )
-            elif t.ctype is Disjunction:
-                self._transform_disjunction(t, instance, transformation_blocks)
-            else:
-                raise GDP_Error(
-                    "Target '%s' was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed." % (t.name, type(t))
-                )
-
-    def _transform_disjunction(self, disjunction, instance, transformation_blocks):
-        gdp_forest = get_gdp_tree([disjunction], instance)
-        # we have to go from leaf to root because we pass bound information
-        # upwards--the innermost disjuncts should restrict it the most. If
-        # that's not true, they're useless, and if there are contradictions,
-        # we'll catch them.
         bound_dict = ComponentMap()
+        self._update_bounds_from_constraints(instance, bound_dict, None,
+                                             is_root=True)
+        # [ESJ 05/04/23]: In the future, I should think about getting my little
+        # trees from this tree, or asking for leaves rooted somewhere specific
+        # or something. Because this transformation currently does the work of
+        # getting the GDP tree twice...
+        whole_tree = get_gdp_tree(targets, instance)
+        for t in whole_tree.topological_sort():
+            if t.ctype is Disjunction and whole_tree.in_degree(t) == 0:
+                self._transform_disjunction(t, instance, bound_dict,
+                                            transformation_blocks)
+
+    def _transform_disjunction(self, disjunction, instance, bound_dict,
+                               transformation_blocks):
+        # We go from root to leaves so that whenever we hit a variable, we can
+        # ask if the bounds we're seeing on its parent Disjunct (or if we're at
+        # the root, in the global scope) are looser or tighter than the bounds
+        # on it, and we pass the tightest ones down. For sane models, the bounds
+        # will tighten as we go down the tree, but that's of course not
+        # guaranteed since not all models are sane...
         disjunctions_to_transform = set()
+        gdp_forest = get_gdp_tree((disjunction,), instance)
         for d in gdp_forest.topological_sort():
             if d.ctype is Disjunct:
                 self._update_bounds_from_constraints(d, bound_dict, gdp_forest)
@@ -140,24 +127,30 @@ class CommonLHSTransformation(Transformation):
             disjunction, bound_dict, gdp_forest, transformation_blocks
         )
 
-    def _update_bounds_from_constraints(self, disjunct, bound_dict, gdp_forest):
+    def _get_bound_dict_for_var(self, bound_dict, v):
+        v_bounds = bound_dict.get(v)
+        if v_bounds is None:
+            v_bounds = bound_dict[v] = {
+                None: (v.lb, v.ub),
+                'to_deactivate': set(),
+            }
+        return v_bounds        
+
+    def _update_bounds_from_constraints(self, disjunct, bound_dict, gdp_forest,
+                                        is_root=False):
+        bound_dict_key = None if is_root else disjunct
         for constraint in disjunct.component_data_objects(
-            Constraint,
-            active=True,
-            descend_into=Block,
-            sort=SortComponents.deterministic,
+                Constraint,
+                active=True,
+                descend_into=Block,
+                sort=SortComponents.deterministic
         ):
             if hasattr(constraint.body, 'ctype') and constraint.body.ctype is Var:
                 v = constraint.body
                 # Then this is a bound or an equality
-                v_bounds = bound_dict.get(v)
-                if v_bounds is None:
-                    v_bounds = bound_dict[v] = {
-                        None: (v.lb, v.ub),
-                        'to_deactivate': set(),
-                    }
+                v_bounds = self._get_bound_dict_for_var(bound_dict, v)
                 self._update_bounds_dict(v_bounds, value(constraint.lower),
-                                         value(constraint.upper), disjunct,
+                                         value(constraint.upper), bound_dict_key,
                                          gdp_forest)
                 # We won't know til the end if we're *really* transforming this
                 # constraint, so we just cache the fact that it is a constraint
@@ -168,12 +161,7 @@ class CommonLHSTransformation(Transformation):
                 if not repn.is_linear():
                     continue
                 v = repn.linear_vars[0]
-                v_bounds = bound_dict.get(v)
-                if v_bounds is None:
-                    v_bounds = bound_dict[v] = {
-                        None: (v.lb, v.ub),
-                        'to_deactivate': set(),
-                    }
+                v_bounds = self._get_bound_dict_for_var(bound_dict, v)
                 coef = repn.linear_coefs[0]
                 constant = repn.constant
                 self._update_bounds_dict(
@@ -182,31 +170,37 @@ class CommonLHSTransformation(Transformation):
                     is not None else None,
                     (value(constraint.upper) - constant)/coef if constraint.upper
                     is not None else None,
-                    disjunct,
+                    bound_dict_key,
                     gdp_forest
                 )
                 v_bounds['to_deactivate'].add(constraint)
+
+    def _select_tighter_bounds(self, parent_lb, parent_ub, lb, ub):
+        if lb is None:
+            # either we replace None with None, or we fill in the parent value
+            # (which we know if the tightest of the ancestral values because
+            # we've already come down the tree once.)
+            lb = parent_lb
+        if ub is None:
+            ub = parent_ub
+        return (lb, ub)
 
     def _get_tightest_ancestral_bounds(self, v_bounds, disjunct, gdp_forest):
         lb = None
         ub = None
         parent = disjunct
         while lb is None or ub is None:
+            if parent in v_bounds:
+                lb, ub = self._select_tighter_bounds(*v_bounds[parent], lb, ub)
             if parent is None:
-                (lb, ub) = v_bounds[None]
                 break
-            elif parent in v_bounds:
-                l, u = v_bounds[parent]
-                if lb is None and l is not None:
-                    lb = l
-                if ub is None and u is not None:
-                    ub = u
             parent = gdp_forest.parent_disjunct(parent)
         v_bounds[disjunct] = (lb, ub)
         return v_bounds[disjunct]
 
     def _update_bounds_dict(self, v_bounds, lower, upper, disjunct, gdp_forest):
-        (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct, gdp_forest)
+        (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct,
+                                                       gdp_forest)
         if lower is not None:
             if lb is None or lower > lb:
                 # This GDP is more constrained here than it was in the parent
