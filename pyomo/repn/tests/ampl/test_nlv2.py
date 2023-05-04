@@ -18,7 +18,7 @@ import os
 
 import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
-from pyomo.repn.tests.ampl.nl_diff import nl_diff
+from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager

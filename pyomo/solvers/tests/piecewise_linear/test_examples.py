@@ -25,7 +25,7 @@ scriptdir = join(scriptdir, 'examples', 'pyomo', 'piecewise')
 import pyomo.common.unittest as unittest
 
 import pyomo.scripting.convert as convert
-from pyomo.repn.tests.ampl.nl_diff import load_and_compare_nl_baseline
+from pyomo.repn.tests.nl_diff import load_and_compare_nl_baseline
 
 _NL_diff_tol = 1e-9
 _LP_diff_tol = 1e-9
