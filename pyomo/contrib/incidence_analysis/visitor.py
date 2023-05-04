@@ -148,7 +148,27 @@ class IncidenceRepn(object):
         self.mult = 1
         self.const = const
         self.linear = linear
+
+        # nonlinear will simply be a set of var ids
         self.nonlinear = nonlinear
+
+    def __str__(self):
+        return (
+            f'IncidenceRepn(mult={self.mult}, const={self.const}, '
+            f'linear={self.linear}, nonlinear={self.nonlinear})'
+        )
+
+    def __repr__(self):
+        return str(self)
+
+    def duplicate(self):
+        ans = self.__class__.__new__(self.__class__)
+        ans.mult = self.mult
+        ans.const = self.const
+        ans.linear = None if self.linear is None else dict(self.linear)
+        # TODO: Duplicate this nonlinear data structure
+        ans.nonlinear = self.nonlinear
+        return ans
 
 
 class AMPLRepn(object):
