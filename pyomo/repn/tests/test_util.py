@@ -140,14 +140,15 @@ class TestRepnUtils(unittest.TestCase):
             component_map, unrecognized = categorize_valid_components(m, active=False)
 
         with self.assertRaisesRegex(
-                DeveloperError,
-                "categorize_valid_components: Cannot have component type "
-                r"\[\<class[^>]*Set'\>\] in both the `valid` "
-                "and `targets` sets"
+            DeveloperError,
+            "categorize_valid_components: Cannot have component type "
+            r"\[\<class[^>]*Set'\>\] in both the `valid` "
+            "and `targets` sets",
         ):
             categorize_valid_components(
                 m, valid={Var, Block, Set}, targets={Param, Objective, Set}
             )
+
 
 if __name__ == "__main__":
     unittest.main()
