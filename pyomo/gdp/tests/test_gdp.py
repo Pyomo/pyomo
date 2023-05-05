@@ -191,9 +191,11 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem + "_" + solver + '.lp')
 
     def check(self, problem, solver):
-        load_and_compare_lp_baseline(
-            self.referenceFile(problem, solver),
-            join(currdir, self.problem + '_result.lp'),
+        self.assertEqual(
+            *load_and_compare_lp_baseline(
+                self.referenceFile(problem, solver),
+                join(currdir, self.problem + '_result.lp'),
+            )
         )
         if os.path.exists(join(currdir, self.problem + '_result.lp')):
             os.remove(join(currdir, self.problem + '_result.lp'))
