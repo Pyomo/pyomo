@@ -46,7 +46,7 @@ class BoundPretransformation(Transformation):
     Constraints (bounds or equalities involving one variable), and
     transforms them according to [1]. The transformed Constraints are
     deactivated, but the remainder of the GDP is untouched. That is,
-    to completely transform the GDP, a GDP-to-MIP transformation is 
+    to completely transform the GDP, a GDP-to-MIP transformation is
     needed that will transform the remaining disjunctive constraints as
     well as any LogicalConstraints and the logic of the disjunctions
     themselves.
@@ -54,7 +54,7 @@ class BoundPretransformation(Transformation):
     NOTE: Because this transformation allows tighter bound values higher in
     the GDP hierarchy to supersede looser ones that are lower, the transformed
     model will not necessarily still be valid in the case that there are
-    mutable Params in disjunctive variable bounds or in the transformed 
+    mutable Params in disjunctive variable bounds or in the transformed
     Constraints and the values of those mutable Params are later changed.
 
     [1] Egon Balas, "On the convex hull of the union of certain polyhedra,"
