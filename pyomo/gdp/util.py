@@ -155,7 +155,7 @@ class GDPTree:
             return None
 
     def parent_disjunct(self, u):
-        """Returns the parent Disjunct of us, or None if u is the
+        """Returns the parent Disjunct of u, or None if u is the
         closest-to-root Disjunct in the forest.
 
         Arg:
