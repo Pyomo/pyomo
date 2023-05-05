@@ -198,13 +198,19 @@ class BoundPretransformation(Transformation):
         lb = None
         ub = None
         parent = disjunct
+        ancestors = set()
         while lb is None or ub is None:
             if parent in v_bounds:
                 lb, ub = self._select_tighter_bounds(*v_bounds[parent], lb, ub)
             if parent is None:
                 break
+            ancestors.add(parent)
             parent = gdp_forest.parent_disjunct(parent)
-        v_bounds[disjunct] = (lb, ub)
+        # we fill in the bounds not only for 'disjunct', but also for all the
+        # ancestors we passed on the way up to finding the bounds. That way this
+        # is a shorter traversal the next time up, if there is a next time.
+        for ancestor in ancestors:
+            v_bounds[ancestor] = (lb, ub)
         return v_bounds[disjunct]
 
     def _update_bounds_dict(self, v_bounds, lower, upper, disjunct, gdp_forest):
