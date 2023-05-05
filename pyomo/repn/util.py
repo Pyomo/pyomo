@@ -106,9 +106,10 @@ def categorize_valid_components(
     # Generate an error if a target is in the valid set (because the
     # valid set will preclude recording the block in the component_map)
     if any(ctype in valid for ctype in targets):
+        ctypes = list(filter(valid.__contains__, targets))
         raise DeveloperError(
-            "categorize_valid_components: Cannot have component in both the "
-            "`valid` and `targets` sets"
+            f"categorize_valid_components: Cannot have component type {ctypes} in "
+            "both the `valid` and `targets` sets"
         )
     unrecognized = {}
     component_map = {k: [] for k in targets}
@@ -124,8 +125,10 @@ def categorize_valid_components(
                 continue
             # TODO: we should rethink the definition of "active" for
             # Components that are not subclasses of ActiveComponent
-            if not issubclass(ctype, ActiveComponent) and not issubclass(
-                ctype, kernel.base.ICategorizedObject
+            if (
+                active
+                and not issubclass(ctype, ActiveComponent)
+                and not issubclass(ctype, kernel.base.ICategorizedObject)
             ):
                 continue
             if ctype not in unrecognized:
