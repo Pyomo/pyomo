@@ -33,33 +33,35 @@ logger = logging.getLogger(__name__)
 
 
 @TransformationFactory.register(
-    'gdp.common_constraint_body',
+    'gdp.bound_pretransformation',
     doc="Partially transforms a GDP to a MIP by finding all disjunctive "
     "constraints with common left-hand sides and transforming them according "
-    "to Balas 1988, Blair, and Jeroslow (TODO: I think)",
+    "to the formulation in Balas 1988",
 )
-class CommonLHSTransformation(Transformation):
+class BoundPretransformation(Transformation):
     """
-    Implements the special transformation mentioned in [1], [2], and [3] for
+    Implements a special case of the transformation mentioned in [1] for
     handling disjunctive constraints with common left-hand sides (i.e.,
-    Constraint bodies).
-
-    TODO: example
+    Constraint bodies). Automatically detects univariate disjunctive
+    Constraints (bounds or equalities involving one variable), and
+    transforms them according to [1]. The transformed Constraints are
+    deactivated, but the remainder of the GDP is untouched. That is,
+    to completely transform the GDP, a GDP-to-MIP transformation is 
+    needed that will transform the remaining disjunctive constraints as
+    well as any LogicalConstraints and the logic of the disjunctions
+    themselves.
 
     NOTE: Because this transformation allows tighter bound values higher in
     the GDP hierarchy to supersede looser ones that are lower, the transformed
     model will not necessarily still be valid in the case that there are
-    mutable Params in disjunctive variable bounds or in constraints setting
-    bounds or values for exactly one variable when those mutable Param values
-    are changed.
+    mutable Params in disjunctive variable bounds or in the transformed 
+    Constraints and the values of those mutable Params are later changed.
 
     [1] Egon Balas, "On the convex hull of the union of certain polyhedra,"
         Operations Research Letters, vol. 7, 1988, pp. 279-283
-    [2] TODO: Blair 1990
-    [3] TODO: Jeroslow 1988
     """
 
-    CONFIG = ConfigDict('gdp.common_constraint_body')
+    CONFIG = ConfigDict('gdp.bound_pretransformation')
     CONFIG.declare(
         'targets',
         ConfigValue(
@@ -75,7 +77,7 @@ class CommonLHSTransformation(Transformation):
             """,
         ),
     )
-    transformation_name = 'common_constraint_body'
+    transformation_name = 'bound_pretransformation'
 
     def __init__(self):
         super().__init__()
@@ -300,7 +302,7 @@ class CommonLHSTransformation(Transformation):
             return transformation_blocks[to_block]
 
         trans_block_name = unique_component_name(
-            to_block, '_pyomo_gdp_common_constraint_body_reformulation'
+            to_block, '_pyomo_gdp_%s_reformulation' % self.transformation_name
         )
         transformation_blocks[to_block] = trans_block = Block()
         to_block.add_component(trans_block_name, trans_block)

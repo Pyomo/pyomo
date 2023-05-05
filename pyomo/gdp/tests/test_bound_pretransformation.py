@@ -25,7 +25,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.common.log import LoggingIntercept
 
 
-class TestCommonConstraintBodyTransformation(unittest.TestCase):
+class TestBoundPretransformation(unittest.TestCase):
     def create_nested_structure(self):
         """
         Creates a two-term Disjunction with on nested two-term Disjunction on
@@ -87,7 +87,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
     def test_transform_nested_model(self):
         m = self.create_nested_model()
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
         self.check_nested_model_disjunction(m, bt)
 
@@ -109,7 +109,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.outer_d2.c.deactivate()
         m.outer_d2.c2 = Constraint(expr=m.x == 101)
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         # We expect: -10w_1 -7w_2 + 101 y_2 <= x <= 3w_1 + 11w_2 + 101y_2
@@ -178,7 +178,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         # y constraints should be fully transformed, and x can do lower but not
         # upper.
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         # We expect: 4w_1 + 17w_2 + 2y_2 <= x
@@ -250,7 +250,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.d2.c = Constraint(expr=5.6 <= m.x)
         m.disj = Disjunction(expr=[m.d1, m.d2])
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         # We expect: 4.5*y_1 + 5.6*y_2 <= x
@@ -292,7 +292,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.d[2].c = Constraint(expr=m.w <= 36)
         m.d[3].c = Constraint(expr=m.w <= 232)
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         # We expect: 45*y_1 + 36y_2 + 232y_3 >= w
@@ -346,7 +346,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
     def test_transform_multiple_disjunctions(self):
         m = self.create_two_disjunction_model()
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         self.check_nested_model_disjunction(m, bt)
@@ -413,7 +413,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
     def test_disjunction_target(self):
         m = self.create_two_disjunction_model()
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m, targets=m.outer)
 
         self.check_nested_model_disjunction(m, bt)
@@ -439,7 +439,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m = self.create_two_disjunction_model()
         m.z = Var()
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m, targets=m.outer)
 
         out = StringIO()
@@ -452,7 +452,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         self.assertEqual(
             out.getvalue(),
             "Constraint bounding variable 'z' on Disjunction 'outer' was "
-            "not transformed by the 'gdp.common_constraint_body' "
+            "not transformed by the 'gdp.bound_pretransformation' "
             "transformation\n",
         )
 
@@ -465,7 +465,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         self.assertEqual(
             out.getvalue(),
             "No variable on Disjunction 'disjunction' was transformed with the "
-            "gdp.common_constraint_body transformation\n",
+            "gdp.bound_pretransformation transformation\n",
         )
 
     def test_univariate_constraints_with_expression_bodies(self):
@@ -479,7 +479,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.outer_d1.inner_d2.c = Constraint(expr=m.x >= -7)
         m.outer_d2.c = Constraint(expr=m.x + 4 == 4)
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         self.check_nested_model_disjunction(m, bt)
@@ -520,7 +520,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.Y[2].c2 = Constraint(expr=(3, m.y, 17))
         m.y_disj = Disjunction(expr=[m.Y[i] for i in [1, 2]])
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         cons = bt.get_transformed_constraints(m.x, m.y_disj)
@@ -600,7 +600,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.outer_d1.inner_d2.multivariate = Constraint(expr=m.x + m.y <= m.z)
         m.outer_d2.leave_it = Constraint(expr=m.z == 7)
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         self.check_nested_model_disjunction(m, bt)
@@ -645,7 +645,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.inner1[1].c = Constraint(expr=m.x >= 55)
         m.inner2[2].c = Constraint(expr=m.x >= 66)
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         cons = bt.get_transformed_constraints(m.x, m.disjunction)
@@ -688,7 +688,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.d[2].c = Constraint(expr=m.x <= 4.1)
         m.disjunction = Disjunction(expr=[m.d[1], m.d[2]])
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
         cons = bt.get_transformed_constraints(m.x, m.disjunction)
@@ -726,7 +726,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
         m.disjunction['pos'] = [m.d[1], m.d[2], m.d[3]]
         m.disjunction['neg'] = [m.d[4], m.d[5]]
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m, targets=m.disjunction)
 
         cons = bt.get_transformed_constraints(m.x, m.disjunction['pos'])
@@ -764,7 +764,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
     def test_nested_target(self):
         m = self.create_nested_model()
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m, targets=[m.outer_d1.inner])
 
         cons = bt.get_transformed_constraints(m.x, m.outer_d1.inner)
@@ -807,7 +807,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
     def test_targets_nested_in_each_other(self):
         m = self.create_nested_model()
 
-        bt = TransformationFactory('gdp.common_constraint_body')
+        bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m, targets=[m.outer_d1.inner, m.outer])
 
         # This should do the outermost disjunctions only--we should
