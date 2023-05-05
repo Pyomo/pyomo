@@ -309,11 +309,13 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
     if arg2[1] == 1:
         return arg1
     elif arg2[1] <= visitor.max_exponential_expansion:
-        ans = arg1.duplicate()
+        _type, _arg = arg1
+        ans = _type, _arg.duplicate()
         for i in range(1, arg2[1]):
-            ans = visitor.exit_node_handlers[ProductExpression, ans[0], arg1[0]](
-                visitor, ans, arg1.duplicate()
+            ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
+                visitor, None, ans, (_type, _arg.duplicate())
             )
+        return ans
     else:
         return _handle_pow_nonlinear(visitor, node, arg1, arg2)
 
