@@ -661,6 +661,9 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             <= m.x,
         )
 
+        # We shouldn't deactivate global constraints. Reason 1 being that we
+        # don't deactivate bounds and Reason 2 being that generally the global
+        # part of the model is none of pyomo.gdp's beeswax.
         self.assertEqual(
             len(
                 list(
@@ -669,7 +672,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
                     )
                 )
             ),
-            1,
+            2,
         )
 
     def test_bounds_on_disjuncts_with_block_hierarchies(self):
@@ -698,7 +701,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
             4.0 * m.d[1].binary_indicator_var + 3.0 * m.d[2].binary_indicator_var
             >= m.x,
         )
-        # just the one we made is active.
+        # just the one we made and the global one are active.
         self.assertEqual(
             len(
                 list(
@@ -707,7 +710,7 @@ class TestCommonConstraintBodyTransformation(unittest.TestCase):
                     )
                 )
             ),
-            1,
+            2,
         )
 
     def test_indexed_disjunction_target(self):

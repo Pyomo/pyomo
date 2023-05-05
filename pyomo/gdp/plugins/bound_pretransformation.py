@@ -158,7 +158,8 @@ class CommonLHSTransformation(Transformation):
                 # We won't know til the end if we're *really* transforming this
                 # constraint, so we just cache the fact that it is a constraint
                 # on v and wait for later
-                v_bounds['to_deactivate'].add(constraint)
+                if not is_root:
+                    v_bounds['to_deactivate'].add(constraint)
             elif len(list(identify_variables(constraint.body))) == 1:
                 repn = generate_standard_repn(constraint.body)
                 if not repn.is_linear():
@@ -178,7 +179,8 @@ class CommonLHSTransformation(Transformation):
                     bound_dict_key,
                     gdp_forest,
                 )
-                v_bounds['to_deactivate'].add(constraint)
+                if not is_root:
+                    v_bounds['to_deactivate'].add(constraint)
 
     def _select_tighter_bounds(self, parent_lb, parent_ub, lb, ub):
         if lb is None:
