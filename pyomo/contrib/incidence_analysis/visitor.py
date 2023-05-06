@@ -200,7 +200,6 @@ class AMPLRepn(object):
         ans.const = self.const
         ans.linear = None if self.linear is None else dict(self.linear)
         ans.nonlinear = None if self.nonlinear is None else set(self.nonlinear)
-        ans.named_exprs = self.named_exprs
         return ans
 
     def compile_repn(self, visitor, nonlinear_vars=None):
@@ -295,21 +294,21 @@ class AMPLRepn(object):
         #else:  # nterms == 0
         #    return prefix + (template.const % 0), args, named_exprs
 
-    def compile_nonlinear_fragment(self, visitor):
-        if not self.nonlinear:
-            self.nonlinear = None
-            return
-        args = []
-        nterms = len(self.nonlinear)
-        nl_sum = ''.join(map(itemgetter(0), self.nonlinear))
-        deque(map(args.extend, map(itemgetter(1), self.nonlinear)), maxlen=0)
+    #def compile_nonlinear_fragment(self, visitor):
+    #    if not self.nonlinear:
+    #        self.nonlinear = None
+    #        return
+    #    args = []
+    #    nterms = len(self.nonlinear)
+    #    nl_sum = ''.join(map(itemgetter(0), self.nonlinear))
+    #    deque(map(args.extend, map(itemgetter(1), self.nonlinear)), maxlen=0)
 
-        if nterms > 2:
-            self.nonlinear = (visitor.template.nary_sum % nterms) + nl_sum, args
-        elif nterms == 2:
-            self.nonlinear = visitor.template.binary_sum + nl_sum, args
-        else:  # nterms == 1:
-            self.nonlinear = nl_sum, args
+    #    if nterms > 2:
+    #        self.nonlinear = (visitor.template.nary_sum % nterms) + nl_sum, args
+    #    elif nterms == 2:
+    #        self.nonlinear = visitor.template.binary_sum + nl_sum, args
+    #    else:  # nterms == 1:
+    #        self.nonlinear = nl_sum, args
 
     def append(self, other):
         """Append a child result from acceptChildResult
