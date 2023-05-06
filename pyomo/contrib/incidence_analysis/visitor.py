@@ -184,20 +184,20 @@ class IncidenceRepn(object):
             for var_id in self.linear.keys():
                 nonlinear_vars.add(var_id)
         return nonlinear_vars
-        #template = visitor.template
+        # template = visitor.template
         ## All these branches are doing is adding to the string
-        #if self.mult != 1:
+        # if self.mult != 1:
         #    if self.mult == -1:
         #        prefix += template.negation
         #    else:
         #        prefix += template.multiplier % self.mult
         #    self.mult = 1
-        #if self.named_exprs is not None:
+        # if self.named_exprs is not None:
         #    if named_exprs is None:
         #        named_exprs = set(self.named_exprs)
         #    else:
         #        named_exprs.update(self.named_exprs)
-        #if self.nl is not None:
+        # if self.nl is not None:
         #    # This handles both named subexpressions and embedded
         #    # non-numeric (e.g., string) arguments.
         #    nl, nl_args = self.nl
@@ -217,9 +217,9 @@ class IncidenceRepn(object):
         #        named_exprs.update(nl_args)
         #    return nl, args, named_exprs
 
-        #if args is None:
+        # if args is None:
         #    args = []
-        #if self.linear:
+        # if self.linear:
         #    nterms = -len(args)
         #    _v_template = template.var
         #    _m_template = template.monomial
@@ -239,10 +239,10 @@ class IncidenceRepn(object):
         #        if c != 0
         #    )
         #    nterms += len(args)
-        #else:
+        # else:
         #    nterms = 0
         #    nl_sum = ''
-        #if self.nonlinear:
+        # if self.nonlinear:
         #    #if self.nonlinear.__class__ is list:
         #    #    nterms += len(self.nonlinear)
         #    #    nl_sum += ''.join(map(itemgetter(0), self.nonlinear))
@@ -251,20 +251,20 @@ class IncidenceRepn(object):
         #    #    nterms += 1
         #    #    nl_sum += self.nonlinear[0]
         #    #    args.extend(self.nonlinear[1])
-        #if self.const:
+        # if self.const:
         #    nterms += 1
         #    nl_sum += template.const % self.const
 
-        #if nterms > 2:
+        # if nterms > 2:
         #    return (prefix + (template.nary_sum % nterms) + nl_sum, args, named_exprs)
-        #elif nterms == 2:
+        # elif nterms == 2:
         #    return prefix + template.binary_sum + nl_sum, args, named_exprs
-        #elif nterms == 1:
+        # elif nterms == 1:
         #    return prefix + nl_sum, args, named_exprs
-        #else:  # nterms == 0
+        # else:  # nterms == 0
         #    return prefix + (template.const % 0), args, named_exprs
 
-    #def compile_nonlinear_fragment(self, visitor):
+    # def compile_nonlinear_fragment(self, visitor):
     #    if not self.nonlinear:
     #        self.nonlinear = None
     #        return
@@ -315,7 +315,7 @@ class IncidenceRepn(object):
             # I do not know what the "nl" attribute does. I will assume it is
             # not necessary for incidence graph generation
             #
-            #if other.nl is not None and other.nl[1]:
+            # if other.nl is not None and other.nl[1]:
             #    if other.linear:
             #        # This is a named expression with both a linear and
             #        # nonlinear component.  We want to merge it with
@@ -335,7 +335,7 @@ class IncidenceRepn(object):
             #        nl, nl_args, self.named_exprs = other
             #        self.nonlinear.append((nl, nl_args))
             #        return
-            #if other.named_exprs is not None:
+            # if other.named_exprs is not None:
             #    if self.named_exprs is None:
             #        self.named_exprs = set(other.named_exprs)
             #    else:
@@ -396,15 +396,15 @@ class IncidenceRepn(object):
                         else:
                             linear[v] = c_mult
                 if other.nonlinear is not None:
-                    #if other.nonlinear.__class__ is list:
+                    # if other.nonlinear.__class__ is list:
                     #    other.compile_nonlinear_fragment(self.ActiveVisitor)
-                    #if mult == -1:
+                    # if mult == -1:
                     #    prefix = self.ActiveVisitor.template.negation
-                    #else:
+                    # else:
                     #    prefix = self.ActiveVisitor.template.multiplier % mult
-                    #self.nonlinear.append(
+                    # self.nonlinear.append(
                     #    (prefix + other.nonlinear[0], other.nonlinear[1])
-                    #)
+                    # )
                     if self.nonlinear is None:
                         self.nonlinear = set()
                     for var_id in other.nonlinear:
@@ -424,9 +424,9 @@ class IncidenceRepn(object):
                         else:
                             linear[v] = c
                 if other.nonlinear is not None:
-                    #if other.nonlinear.__class__ is list:
+                    # if other.nonlinear.__class__ is list:
                     #    self.nonlinear.extend(other.nonlinear)
-                    #else:
+                    # else:
                     #    self.nonlinear.append(other.nonlinear)
                     if self.nonlinear is None:
                         self.nonlinear = set()
@@ -1317,7 +1317,7 @@ def get_incident_variables(expr, linear_only=False, filter_zeros=True):
     if ampl_expr.nonlinear is None:
         nonlinear_var_ids = []
     else:
-        #_, nonlinear_var_ids = ampl_expr.nonlinear
+        # _, nonlinear_var_ids = ampl_expr.nonlinear
         nonlinear_var_ids = list(ampl_expr.nonlinear)
 
     if linear_only:
