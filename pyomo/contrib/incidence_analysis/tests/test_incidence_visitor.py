@@ -14,7 +14,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.incidence_analysis.visitor import (
     get_incident_variables,
-    _get_ampl_expr,
+    _get_incidence_repn,
 )
 
 
@@ -305,7 +305,7 @@ class TestUninitialized(unittest.TestCase):
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
 
         # I am trying to test an `if arg1[1].mult == 0` branch, but it is very
-        # non-obvious how I could ever get AMPLRepn.mult to be zero.
+        # non-obvious how I could ever get IncidenceRepn.mult to be zero.
         m.x[3].fix(0)
         # This currently tests the constant NaN/None branch
         expr = ((m.x[1] + m.x[1] ** 2) / m.x[3]) / m.x[2]
@@ -726,11 +726,4 @@ class TestInitialized(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #unittest.main()
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var([1,2,3])
-    m.x[3].fix()
-    expr = m.x[1] * m.x[3]*m.x[2]**2 + m.x[1]**(1/2) + 2*m.x[2] + m.x[3]
-    get_incident_variables(expr)
-    for var in get_incident_variables(expr):
-        print(var.name)
+    unittest.main()
