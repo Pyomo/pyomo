@@ -726,4 +726,11 @@ class TestInitialized(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([1,2,3])
+    m.x[3].fix()
+    expr = m.x[1] * m.x[3]*m.x[2]**2 + m.x[1]**(1/2) + 2*m.x[2] + m.x[3]
+    get_incident_variables(expr)
+    for var in get_incident_variables(expr):
+        print(var.name)
