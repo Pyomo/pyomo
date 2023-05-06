@@ -360,5 +360,4 @@ def _solve_with_ipopt():
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    _solve_with_ipopt()
+    unittest.main()
