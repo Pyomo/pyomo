@@ -1214,7 +1214,7 @@ class IncidenceRepnVisitor(StreamBasedExpressionVisitor):
         # I don't know under what conditions this happens so I will ignore it
         # for now.
         #
-        #if ans.nonlinear.__class__ is list:
+        # if ans.nonlinear.__class__ is list:
         #    ans.compile_nonlinear_fragment(self)
 
         if not ans.linear:
