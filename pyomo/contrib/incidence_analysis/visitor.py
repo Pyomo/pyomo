@@ -142,36 +142,6 @@ class NLFragment(object):
 
 
 class IncidenceRepn(object):
-    __slots__ = ("mult", "const", "linear", "nonlinear")
-
-    def __init__(self, const, linear, nonlinear):
-        self.mult = 1
-        self.const = const
-        self.linear = linear
-
-        # nonlinear will simply be a set of var ids
-        self.nonlinear = nonlinear
-
-    def __str__(self):
-        return (
-            f'IncidenceRepn(mult={self.mult}, const={self.const}, '
-            f'linear={self.linear}, nonlinear={self.nonlinear})'
-        )
-
-    def __repr__(self):
-        return str(self)
-
-    def duplicate(self):
-        ans = self.__class__.__new__(self.__class__)
-        ans.mult = self.mult
-        ans.const = self.const
-        ans.linear = None if self.linear is None else dict(self.linear)
-        # TODO: Duplicate this nonlinear data structure
-        ans.nonlinear = self.nonlinear
-        return ans
-
-
-class AMPLRepn(object):
     __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear', 'named_exprs')
 
     ActiveVisitor = None
@@ -185,7 +155,7 @@ class AMPLRepn(object):
 
     def __str__(self):
         return (
-            f'AMPLRepn(mult={self.mult}, const={self.const}, '
+            f'IncidenceRepn(mult={self.mult}, const={self.const}, '
             f'linear={self.linear}, nonlinear={self.nonlinear}, '
             f'nl={self.nl}, named_exprs={self.named_exprs})'
         )
@@ -316,7 +286,7 @@ class AMPLRepn(object):
         Notes
         -----
         This method assumes that the operator was "+". It is implemented
-        so that we can directly use an AMPLRepn() as a data object in
+        so that we can directly use an IncidenceRepn() as a data object in
         the expression walker (thereby avoiding the function call for a
         custom callback)
 
@@ -349,9 +319,9 @@ class AMPLRepn(object):
             #    if other.linear:
             #        # This is a named expression with both a linear and
             #        # nonlinear component.  We want to merge it with
-            #        # this AMPLRepn, preserving the named expression for
+            #        # this IncidenceRepn, preserving the named expression for
             #        # only the nonlinear component (merging the linear
-            #        # component with this AMPLRepn).
+            #        # component with this IncidenceRepn).
             #        pass
             #    else:
             #        # This is a nonlinear-only named expression,
@@ -549,12 +519,12 @@ def node_result_to_amplrepn(data):
     elif data[0] is _MONOMIAL:
         _, v, c = data
         if c != 0:
-            return AMPLRepn(0, {v: c}, None)
+            return IncidenceRepn(0, {v: c}, None)
         else:
             # Unclear to me how we get into this branch.
-            return AMPLRepn(0, None, None)
+            return IncidenceRepn(0, None, None)
     elif data[0] is _CONSTANT:
-        return AMPLRepn(data[1], None, None)
+        return IncidenceRepn(data[1], None, None)
     else:
         raise DeveloperError("unknown result type")
 
@@ -655,7 +625,7 @@ def handle_product_node(visitor, node, arg1, arg2):
             return (_CONSTANT, mult * arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_division_node(visitor, node, arg1, arg2):
@@ -712,7 +682,7 @@ def handle_division_node(visitor, node, arg1, arg2):
     # What happens when arg1 is None and arg2 is non-constant?
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_pow_node(visitor, node, arg1, arg2):
@@ -744,7 +714,7 @@ def handle_pow_node(visitor, node, arg1, arg2):
     # What happens when we try to compile None into amplrepn?
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_abs_node(visitor, node, arg1):
@@ -754,7 +724,7 @@ def handle_abs_node(visitor, node, arg1):
         else:
             return (_CONSTANT, abs(arg1[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_unary_node(visitor, node, arg1):
@@ -764,7 +734,7 @@ def handle_unary_node(visitor, node, arg1):
         else:
             return _apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_exprif_node(visitor, node, arg1, arg2, arg3):
@@ -794,7 +764,7 @@ def handle_exprif_node(visitor, node, arg1, arg2, arg3):
                     # If either branch is None, we return None
                     return (_CONSTANT, None)
             else:
-                # We could alternatively return the AMPLRepn for:
+                # We could alternatively return the IncidenceRepn for:
                 #   None*arg2 + None*arg3
                 # but then the incidence graph is a bit misleading, as it
                 # will include the variables for arg2 and arg3, which never
@@ -815,7 +785,7 @@ def handle_exprif_node(visitor, node, arg1, arg2, arg3):
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonlin)
     nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_equality_node(visitor, node, arg1, arg2):
@@ -823,7 +793,7 @@ def handle_equality_node(visitor, node, arg1, arg2):
         return (_CONSTANT, arg1[1] == arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_inequality_node(visitor, node, arg1, arg2):
@@ -831,7 +801,7 @@ def handle_inequality_node(visitor, node, arg1, arg2):
         return (_CONSTANT, node._apply_operation((arg1[1], arg2[1])))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
@@ -843,7 +813,7 @@ def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonline)
     nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 def handle_named_expression_node(visitor, node, arg1):
@@ -920,7 +890,7 @@ def handle_external_function_node(visitor, node, *args):
     nonlin = node_result_to_amplrepn(args[0]).compile_repn(visitor)
     for arg in args[1:]:
         nonlin = node_result_to_amplrepn(arg).compile_repn(visitor, nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, IncidenceRepn(0, None, nonlin))
 
 
 _operator_handles = {
@@ -960,7 +930,7 @@ def _before_native(visitor, child):
 
 def _before_string(visitor, child):
     visitor.encountered_string_arguments = True
-    ans = AMPLRepn(child, None, None)
+    ans = IncidenceRepn(child, None, None)
     ans.nl = (visitor.template.string % (len(child), child), ())
     return False, (_GENERAL, ans)
 
@@ -1092,7 +1062,7 @@ def _before_linear(visitor, child):
             if const is not None:
                 const += arg()
     if linear:
-        return False, (_GENERAL, AMPLRepn(const, linear, None))
+        return False, (_GENERAL, IncidenceRepn(const, linear, None))
     else:
         return False, (_CONSTANT, const)
 
@@ -1141,7 +1111,7 @@ _before_child_handlers[LinearExpression] = _before_linear
 _before_child_handlers[SumExpression] = _before_general_expression
 
 
-class AMPLRepnVisitor(StreamBasedExpressionVisitor):
+class IncidenceRepnVisitor(StreamBasedExpressionVisitor):
     def __init__(
         self,
         template,
@@ -1185,14 +1155,14 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
         if node.__class__ is SumExpression:
-            data = AMPLRepn(0, {}, None)
+            data = IncidenceRepn(0, {}, None)
             data.nonlinear = set()
             return node.args, data
         else:
             return node.args, []
 
     def exitNode(self, node, data):
-        if data.__class__ is AMPLRepn:
+        if data.__class__ is IncidenceRepn:
             # If the summation resulted in a constant, return the constant
             if data.linear or data.nonlinear or data.nl:
                 return (_GENERAL, data)
@@ -1299,7 +1269,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             handlers[child_type] = _before_general_expression
 
 
-def _get_ampl_expr(expr):
+def _get_incidence_repn(expr):
     template = text_nl_template
     subexpression_cache = {}
     subexpression_order = []
@@ -1312,7 +1282,7 @@ def _get_ampl_expr(expr):
     # for named expressions. This may be useful to support at some point,
     # but for now I will ignore it.
     # export_defined_variables = True
-    visitor = AMPLRepnVisitor(
+    visitor = IncidenceRepnVisitor(
         template,
         subexpression_cache,
         subexpression_order,
@@ -1322,18 +1292,18 @@ def _get_ampl_expr(expr):
         symbolic_solver_labels,
         export_defined_variables,
     )
-    AMPLRepn.ActiveVisitor = visitor
+    IncidenceRepn.ActiveVisitor = visitor
     try:
         # Why is the component necessary for this function? If it wasn't, this
         # function could simply accept the expression.
         ampl_expr = visitor.walk_expression((expr, None, None))
     finally:
-        AMPLRepn.ActiveVisitor = None
+        IncidenceRepn.ActiveVisitor = None
     return ampl_expr, var_map
 
 
 def get_incident_variables(expr, linear_only=False, filter_zeros=True):
-    ampl_expr, var_map = _get_ampl_expr(expr)
+    ampl_expr, var_map = _get_incidence_repn(expr)
 
     if ampl_expr.linear is None:
         linear_var_ids = []
