@@ -183,6 +183,7 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
 def _generate_variables_in_constraints(constraints, include_fixed=False):
     known_vars = ComponentSet()
     for con in constraints:
+        # TODO: Should this be replaced with get_incident_variables?
         for var in identify_variables(con.expr, include_fixed=include_fixed):
             if var not in known_vars:
                 known_vars.add(var)
@@ -213,13 +214,24 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
     rows = []
     cols = []
-    for i, con in enumerate(constraints):
-        cols.extend(
-            var_idx_map[v]
-            for v in identify_variables(con.expr, include_fixed=include_fixed)
-            if v in var_idx_map
-        )
-        rows.extend([i] * (len(cols) - len(rows)))
+
+    if include_fixed:
+        # AMPLRepnVisitor will not include fixed variables, so if we need to
+        # include these variables, we temporarily unfix them to generate the
+        # AMPLRepn, then re-fix them when we are done.
+        to_unfix = [var for var in variables if var.fixed]
+        context = TemporarySubsystemManager(to_unfix=to_unfix)
+    else:
+        context = nullcontext()
+
+    with context:
+        for i, con in enumerate(constraints):
+            cols.extend(
+                var_idx_map[v]
+                for v in get_incident_variables(con.body)
+                if v in var_idx_map
+            )
+            rows.extend([i] * (len(cols) - len(rows)))
     assert len(rows) == len(cols)
     data = [1.0] * len(rows)
     matrix = sp.sparse.coo_matrix((data, (rows, cols)), shape=(M, N))
@@ -304,6 +316,8 @@ class IncidenceGraphInterface(object):
                 if include_inequality or isinstance(con.expr, EqualityExpression)
             ]
             self._variables = list(
+                # TODO: Should this filter variables if they only appear
+                # e.g. with coefficient 0?
                 _generate_variables_in_constraints(
                     self._constraints, include_fixed=include_fixed
                 )
