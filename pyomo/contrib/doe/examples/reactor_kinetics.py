@@ -30,7 +30,7 @@ import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
 import numpy as np
 from enum import Enum
-from pyomo.contrib.doe import model_option_lib
+from pyomo.contrib.doe import ModelOptionLib
 
 
 def disc_for_measure(m, nfe=32, block=True):
@@ -39,7 +39,7 @@ def disc_for_measure(m, nfe=32, block=True):
     Arguments
     ---------
     m: Pyomo model
-    nfe: number of finite elements
+    nfe: number of finite elements b 
     block: if True, the input model has blocks
     """
     discretizer = pyo.TransformationFactory("dae.collocation")
@@ -53,7 +53,7 @@ def disc_for_measure(m, nfe=32, block=True):
 
 def create_model(
     mod=None,
-    model_option=model_option_lib.stage2,
+    model_option="stage2",
     control_time=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1],
     control_val=None,
     t_range=[0.0, 1],
@@ -68,9 +68,9 @@ def create_model(
     ---------
     model: Pyomo model. If None, a Pyomo concrete model is created
     model_option: choose from the 3 options in model_option
-        if model_option_lib.parmest, create a process model.
-        if model_option_lib.stage1, create the global model.
-        if model_option_lib.stage2, add model variables and constraints for block.
+        if ModelOptionLib.parmest, create a process model.
+        if ModelOptionLib.stage1, create the global model.
+        if ModelOptionLib.stage2, add model variables and constraints for block.
     control_time: time-dependent design (control) variables, a list of control timepoints
     control_val: control design variable values T at corresponding timepoints
     t_range: time range, h
@@ -84,12 +84,14 @@ def create_model(
 
     theta = {"A1": 84.79, "A2": 371.72, "E1": 7.78, "E2": 15.05}
 
-    if model_option == model_option_lib.parmest:
+    model_option = ModelOptionLib(model_option)
+
+    if model_option == ModelOptionLib.parmest:
         mod = pyo.ConcreteModel()
         return_m = True
     elif (
-        model_option == model_option_lib.stage1
-        or model_option == model_option_lib.stage2
+        model_option == ModelOptionLib.stage1
+        or model_option == ModelOptionLib.stage2
     ):
         if not mod:
             raise ValueError(
@@ -119,7 +121,7 @@ def create_model(
         control_time[0] >= t_range[0] and control_time[-1] <= t_range[1]
     ), "control time is outside time range."
 
-    if model_option == model_option_lib.stage1:
+    if model_option == ModelOptionLib.stage1:
         mod.T = pyo.Var(
             mod.t_con,
             initialize=controls,

@@ -32,9 +32,7 @@ from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_m
 from pyomo.contrib.doe import (
     DesignOfExperiments,
     MeasurementVariables,
-    calculation_mode,
-    DesignVariables,
-    finite_difference_step,
+    DesignVariables
 )
 
 
@@ -75,7 +73,7 @@ def main():
     )
 
     ### Test sequential_finite mode
-    sensi_opt = calculation_mode.sequential_finite
+    sensi_opt = "sequential_finite"
 
     doe_object = DesignOfExperiments(
         parameter_dict,
@@ -88,7 +86,7 @@ def main():
     result = doe_object.compute_FIM(
         mode=sensi_opt,
         scale_nominal_param_value=True,
-        formula=finite_difference_step.central,
+        formula="central",
     )
 
     result.calculate_FIM(doe_object.design_values)

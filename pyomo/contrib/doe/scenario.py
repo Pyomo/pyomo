@@ -29,19 +29,15 @@ import pickle
 from enum import Enum
 
 
-class finite_difference_step(Enum):
-    forward = 1
-    central = 2
-    backward = 3
-
-    @classmethod
-    def has_value(cls, value):
-        return value in cls._value2member_map_
+class FiniteDifferenceStep(Enum):
+    forward = "forward"
+    central = "central"
+    backward = "backward"
 
 
 class ScenarioGenerator:
     def __init__(
-        self, parameter_dict=None, formula=finite_difference_step.central, step=0.001, store=False
+        self, parameter_dict=None, formula="central", step=0.001, store=False
     ):
         """Generate scenarios.
         DoE library first calls this function to generate scenarios.
@@ -62,7 +58,7 @@ class ScenarioGenerator:
         self.parameter_dict = parameter_dict
         self.para_names = list(parameter_dict.keys())
         self.no_para = len(self.para_names)
-        self.formula = formula
+        self.formula = FiniteDifferenceStep(formula)
         self.step = step
         self.store = store
         self.scenario_nominal = [parameter_dict[d] for d in self.para_names]
@@ -103,7 +99,7 @@ class ScenarioGenerator:
         # loop over parameter name
         for p, para in enumerate(self.para_names):
             ## get scenario dictionary
-            if self.formula == finite_difference_step.central:
+            if self.formula == FiniteDifferenceStep.central:
                 scena_num[para] = [2 * p, 2 * p + 1]
                 scena_dict_up, scena_dict_lo = (
                     self.parameter_dict.copy(),
@@ -117,8 +113,8 @@ class ScenarioGenerator:
                 scenario.append(scena_dict_lo)
 
             elif self.formula in [
-                finite_difference_step.forward,
-                finite_difference_step.backward,
+                FiniteDifferenceStep.forward,
+                FiniteDifferenceStep.backward,
             ]:
                 # the base case is added as the last one
                 scena_num[para] = [p, len(self.param_names)]
@@ -126,10 +122,10 @@ class ScenarioGenerator:
                     self.parameter_dict.copy(),
                     self.parameter_dict.copy(),
                 )
-                if self.formula == finite_difference_step.forward:
+                if self.formula == FiniteDifferenceStep.forward:
                     scena_dict_up[para] *= 1 + self.step
 
-                elif self.formula == finite_difference_step.backward:
+                elif self.formula == FiniteDifferenceStep.backward:
                     scena_dict_lo[para] *= 1 - self.step
 
                 scenario.append(scena_dict_up)
@@ -137,7 +133,7 @@ class ScenarioGenerator:
 
             ## get perturbation sizes
             # for central difference scheme, perturbation size is two times the step size
-            if self.formula == finite_difference_step.central:
+            if self.formula == FiniteDifferenceStep.central:
                 eps_abs[para] = 2 * self.step * self.parameter_dict[para]
             else:
                 eps_abs[para] = self.step * self.parameter_dict[para]

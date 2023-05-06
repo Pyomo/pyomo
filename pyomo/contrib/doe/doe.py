@@ -36,38 +36,23 @@ import logging
 from enum import Enum
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
-from pyomo.contrib.doe.scenario import ScenarioGenerator, finite_difference_step
+from pyomo.contrib.doe.scenario import ScenarioGenerator, FiniteDifferenceStep
 from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
 
-class calculation_mode(Enum):
-    sequential_finite = 1
-    direct_kaug = 2
+class CalculationMode(Enum):
+    sequential_finite = "sequential_finite"
+    direct_kaug = "direct_kaug"
 
-    @classmethod
-    def has_value(cls, value):
-        return value in cls._value2member_map_
+class ObjectiveLib(Enum):
+    det = "det"
+    trace = "trace"
+    zero = "zero"
 
-
-class objective_lib(Enum):
-    det = 1
-    trace = 2
-    zero = 3
-
-    @classmethod
-    def has_value(cls, value):
-        return value in cls._value2member_map_
-
-
-class model_option_lib(Enum):
-    parmest = 1
-    stage1 = 2
-    stage2 = 3
-
-    @classmethod
-    def has_value(cls, value):
-        return value in cls._value2member_map_
-
+class ModelOptionLib(Enum):
+    parmest = "parmest"
+    stage1 = "stage1"
+    stage2 = "stage2"
 
 class DesignOfExperiments:
     def __init__(
@@ -158,7 +143,7 @@ class DesignOfExperiments:
     def stochastic_program(
         self,
         if_optimize=True,
-        objective_option=objective_lib.det,
+        objective_option="det",
         scale_nominal_param_value=False,
         scale_constant_value=1,
         optimize_opt=None,
@@ -167,7 +152,7 @@ class DesignOfExperiments:
         L_initial=None,
         jac_initial=None,
         fim_initial=None,
-        formula=finite_difference_step.central,
+        formula="central",
         step=0.001,
         tee_opt=True,
     ):
@@ -184,9 +169,9 @@ class DesignOfExperiments:
         if_optimize:
             if true, continue to do optimization. else, just run square problem with given design variable values
         objective_option:
-            choose from the objective_lib enum,
-            maximizing the determinant with objective_lib.det,
-            or the trace of the FIM with objective_lib.trace
+            choose from the ObjectiveLib enum,
+            "det": maximizing the determinant with ObjectiveLib.det,
+            "trace": or the trace of the FIM with ObjectiveLib.trace
         scale_nominal_param_value:
             if True, the parameters are scaled by its own nominal value in param_init
         scale_constant_value:
@@ -206,7 +191,8 @@ class DesignOfExperiments:
         fim_initial:
             a matrix used to initialize FIM matrix
         formula:
-            choose from the Enum finite_difference_step.central, .forward, or .backward
+            choose from "central", "forward", "backward",
+            which refers to the Enum FiniteDifferenceStep.central, .forward, or .backward
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
@@ -219,7 +205,7 @@ class DesignOfExperiments:
         # store inputs in object
         self.design_values = self.design_vars.variable_names_value
         self.optimize = if_optimize
-        self.objective_option = objective_option
+        self.objective_option = ObjectiveLib(objective_option)
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
         self.Cholesky_option = if_Cholesky
@@ -227,7 +213,7 @@ class DesignOfExperiments:
         self.L_initial = L_initial
         self.jac_initial = jac_initial
         self.fim_initial = fim_initial
-        self.formula = formula
+        self.formula = FiniteDifferenceStep(formula)
         self.step = step
         self.tee_opt = tee_opt
 
@@ -312,7 +298,7 @@ class DesignOfExperiments:
 
     def compute_FIM(
         self,
-        mode=calculation_mode.direct_kaug,
+        mode="direct_kaug",
         FIM_store_name=None,
         specified_prior=None,
         tee_opt=True,
@@ -321,19 +307,19 @@ class DesignOfExperiments:
         store_output=None,
         read_output=None,
         extract_single_model=None,
-        formula=finite_difference_step.central,
+        formula="central",
         step=0.001,
     ):
         """
         This function calculates the Fisher information matrix (FIM) using sensitivity information obtaind
-        from two possible mods (dfined by the calculation_mode Enum):
+        from two possible mods (dfined by the CalculationMode Enum):
             1.  sequential_finite: sequentially solve square problems and use finite difference approximation
             2.  direct_kaug: solve a single square problem then extract derivatives using NLP sensitivity theory
 
         Parameters
         -----------
         mode:
-            supports calculation_mode.sequential_finite or calculation_mode.direct_kaug
+            supports CalculationMode.sequential_finite or CalculationMode.direct_kaug
         FIM_store_name:
             if storing the FIM in a .csv or .txt, give the file name here as a string.
         specified_prior:
@@ -353,8 +339,8 @@ class DesignOfExperiments:
             The output file uses the name AB.csv, where string A is store_output input, B is the index of scenario.
             scenario index is the number of the scenario outputs which is stored.
         formula:
-            choose from the Enum finite_difference_step.central, .forward, or .backward.
-            This option is only used for calculation_mode.sequential_finite mode.
+            choose from the Enum FiniteDifferenceStep.central, .forward, or .backward.
+            This option is only used for CalculationMode.sequential_finite mode.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
@@ -367,14 +353,14 @@ class DesignOfExperiments:
         self.design_values = self.design_vars.variable_names_value
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
-        self.formula = formula
-        self.mode = mode
+        self.formula = FiniteDifferenceStep(formula)
+        self.mode = CalculationMode(mode)
         self.step = step
 
         # This method only solves square problem
         self.optimize = False
         # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option = objective_lib.zero
+        self.objective_option = ObjectiveLib.zero
         self.tee_opt = tee_opt
 
         self.FIM_store_name = FIM_store_name
@@ -386,12 +372,12 @@ class DesignOfExperiments:
 
         square_timer = TicTocTimer()
         square_timer.tic(msg=None)
-        if mode == calculation_mode.sequential_finite:
+        if self.mode == CalculationMode.sequential_finite:
             FIM_analysis = self._sequential_finite(
                 read_output, extract_single_model, store_output
             )
 
-        elif mode == calculation_mode.direct_kaug:
+        elif self.mode == CalculationMode.direct_kaug:
             FIM_analysis = self._direct_kaug()
 
         dT = square_timer.toc(msg=None)
@@ -475,7 +461,7 @@ class DesignOfExperiments:
 
     def _direct_kaug(self):
         # create model
-        mod = self.create_model(model_option=model_option_lib.parmest)
+        mod = self.create_model(model_option=ModelOptionLib.parmest)
 
         # discretize if needed
         if self.discretize_model:
@@ -587,11 +573,11 @@ class DesignOfExperiments:
         mod.scenario = pyo.Set(initialize=self.scenario_data['scenario_number'])
 
         # Allow user to self-define complex design variables
-        self.create_model(mod=mod, model_option=model_option_lib.stage1)
+        self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
 
         def block_build(b, s):
             # create block scenarios
-            self.create_model(mod=b, model_option=model_option_lib.stage2)
+            self.create_model(mod=b, model_option=ModelOptionLib.stage2)
 
             # fix parameter values to perturbed values
             for par in self.param:
@@ -681,14 +667,14 @@ class DesignOfExperiments:
     def run_grid_search(
         self,
         design_ranges,
-        mode=calculation_mode.sequential_finite,
+        mode="sequential_finite",
         tee_option=False,
         scale_nominal_param_value=False,
         scale_constant_value=1,
         store_name=None,
         read_name=None,
         filename=None,
-        formula=finite_difference_step.central,
+        formula="central",
         step=0.001,
     ):
         """
@@ -705,7 +691,7 @@ class DesignOfExperiments:
             a ``dict``, keys are design variable names,
             values are a list of design variable values to go over
         mode:
-            choose from calculation_mode.sequential_finite, .direct_kaug.
+            choose from CalculationMode.sequential_finite, .direct_kaug.
         tee_option:
             if solver console output is made
         scale_nominal_param_value:
@@ -723,8 +709,8 @@ class DesignOfExperiments:
         filename:
             if True, grid search results stored with this file name
         formula:
-            choose from finite_difference_step.central, .forward, or .backward.
-            This option is only used for calculation_mode.sequential_finite.
+            choose from FiniteDifferenceStep.central, .forward, or .backward.
+            This option is only used for CalculationMode.sequential_finite.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
@@ -733,7 +719,7 @@ class DesignOfExperiments:
         figure_draw_object: a combined result object of class Grid_search_result
         """
         # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option = objective_lib.zero
+        self.objective_option = ObjectiveLib.zero
         self.filename = filename
 
         # calculate how much the FIM element is scaled
@@ -1035,14 +1021,14 @@ class DesignOfExperiments:
                 sense=pyo.maximize,
             )
         # if not cholesky but determinant, calculating det and evaluate the OBJ with det
-        elif self.objective_option == objective_lib.det:
+        elif self.objective_option == ObjectiveLib.det:
             m.det_rule = pyo.Constraint(rule=det_general)
             m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
         # if not determinant or cholesky, calculating the OBJ with trace
-        elif self.objective_option == objective_lib.trace:
+        elif self.objective_option == ObjectiveLib.trace:
             m.trace_rule = pyo.Constraint(rule=trace_calc)
             m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
-        elif self.objective_option == objective_lib.zero:
+        elif self.objective_option == ObjectiveLib.zero:
             m.Obj = pyo.Objective(expr=0)
 
         return m

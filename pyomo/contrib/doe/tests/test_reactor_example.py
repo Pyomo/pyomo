@@ -31,12 +31,6 @@ from pyomo.common.dependencies import numpy as np, numpy_available, pandas_avail
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
-from pyomo.contrib.doe import (
-    model_option_lib,
-    calculation_mode,
-    finite_difference_step,
-    objective_lib,
-)
 from pyomo.environ import value, ConcreteModel
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
 from pyomo.opt import SolverFactory
@@ -49,18 +43,18 @@ class Test_example_options(unittest.TestCase):
 
     def test_setUP(self):
         # parmest option
-        mod = create_model(model_option=model_option_lib.parmest)
+        mod = create_model(model_option="parmest")
 
         # global and block option
         mod = ConcreteModel()
-        create_model(mod, model_option=model_option_lib.stage1)
-        create_model(mod, model_option=model_option_lib.stage2)
+        create_model(mod, model_option="stage1")
+        create_model(mod, model_option="stage2")
         # both options need a given model, or raise errors
         self.assertRaises(
-            ValueError, create_model, model_option=model_option_lib.stage1
+            ValueError, create_model, model_option="stage1"
         )
         self.assertRaises(
-            ValueError, create_model, model_option=model_option_lib.stage2
+            ValueError, create_model, model_option="stage2"
         )
 
         self.assertRaises(ValueError, create_model, model_option='NotDefine')
@@ -119,7 +113,7 @@ class Test_doe_object(unittest.TestCase):
         )
 
         ### Test sequential_finite mode
-        sensi_opt = calculation_mode.sequential_finite
+        sensi_opt = "sequential_finite"
 
         exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
 
@@ -136,7 +130,7 @@ class Test_doe_object(unittest.TestCase):
         result = doe_object.compute_FIM(
             mode=sensi_opt,
             scale_nominal_param_value=True,
-            formula=finite_difference_step.central,
+            formula="central",
         )
 
         result.calculate_FIM(doe_object.design_values)
@@ -161,7 +155,7 @@ class Test_doe_object(unittest.TestCase):
         self.assertAlmostEqual(np.log10(sub_result.min_eig), -1.5386, places=2)
 
         ### Test direct_kaug mode
-        sensi_opt = calculation_mode.direct_kaug
+        sensi_opt = "direct_kaug"
         # Define a new experiment
         exp1 = [5, 570, 400, 300, 300, 300, 300, 300, 300, 300]
         exp_design.update_values(exp1)
@@ -177,7 +171,7 @@ class Test_doe_object(unittest.TestCase):
         result = doe_object.compute_FIM(
             mode=sensi_opt,
             scale_nominal_param_value=True,
-            formula=finite_difference_step.central,
+            formula="central",
         )
 
         result.calculate_FIM(doe_object.design_values)
@@ -214,7 +208,7 @@ class Test_doe_object(unittest.TestCase):
             if_optimize=True,
             if_Cholesky=True,
             scale_nominal_param_value=True,
-            objective_option=objective_lib.det,
+            objective_option="det",
             L_initial=np.linalg.cholesky(prior),
         )
 

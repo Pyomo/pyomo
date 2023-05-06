@@ -31,8 +31,7 @@ from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_m
 from pyomo.contrib.doe import (
     DesignOfExperiments,
     MeasurementVariables,
-    DesignVariables,
-    objective_lib,
+    DesignVariables
 )
 
 
@@ -98,7 +97,7 @@ def main():
         if_optimize=True,
         if_Cholesky=True,
         scale_nominal_param_value=True,
-        objective_option=objective_lib.det,
+        objective_option="det",
         L_initial=np.linalg.cholesky(prior),
     )
 
@@ -106,7 +105,7 @@ def main():
         if_optimize=True,
         if_Cholesky=True,
         scale_nominal_param_value=True,
-        objective_option=objective_lib.trace,
+        objective_option="trace",
         L_initial=np.linalg.cholesky(prior),
     )
 

@@ -32,8 +32,7 @@ from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_m
 from pyomo.contrib.doe import (
     DesignOfExperiments,
     MeasurementVariables,
-    DesignVariables,
-    calculation_mode,
+    DesignVariables
 )
 
 
@@ -91,7 +90,7 @@ def main():
         ): [300, 500, 700],
     }
     ## choose from "sequential_finite", "direct_kaug"
-    sensi_opt = calculation_mode.direct_kaug
+    sensi_opt = "direct_kaug"
 
     doe_object = DesignOfExperiments(
         parameter_dict,
@@ -122,7 +121,7 @@ def main():
         ): [300, 500],
     }
 
-    sensi_opt = calculation_mode.direct_kaug
+    sensi_opt = "direct_kaug"
 
     doe_object = DesignOfExperiments(
         parameter_dict,

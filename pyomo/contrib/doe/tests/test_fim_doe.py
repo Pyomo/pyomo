@@ -30,7 +30,6 @@ from pyomo.contrib.doe import (
     MeasurementVariables,
     DesignVariables,
     ScenarioGenerator,
-    finite_difference_step,
     DesignOfExperiments,
     VariablesWithIndices,
 )
@@ -300,7 +299,7 @@ class TestParameter(unittest.TestCase):
         param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
         scenario_gene = ScenarioGenerator(
-            param_dict, formula=finite_difference_step.central, step=0.1
+            param_dict, formula="central", step=0.1
         )
         parameter_set = scenario_gene.scenario_data
 
