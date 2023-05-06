@@ -1222,13 +1222,8 @@ class IncidenceRepnVisitor(StreamBasedExpressionVisitor):
             if linear:
                 for k in linear:
                     linear[k] *= mult
-            if ans.nonlinear:
-                if mult == -1:
-                    prefix = self.template.negation
-                else:
-                    prefix = self.template.multiplier % mult
-                ans.nonlinear = prefix + ans.nonlinear[0], ans.nonlinear[1]
-        #
+            # As the nonlinear part is just a set of variable IDs, we
+            # do not need to apply the multiplier
         self.active_expression_source = None
         return ans
 
