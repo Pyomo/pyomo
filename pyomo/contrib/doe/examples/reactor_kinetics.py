@@ -42,7 +42,7 @@ def disc_for_measure(m, nfe=32, block=True):
     nfe: number of finite elements
     block: if True, the input model has blocks
     """
-    discretizer = pyo.TransformationFactory('dae.collocation')
+    discretizer = pyo.TransformationFactory("dae.collocation")
     if block:
         for s in range(len(m.block)):
             discretizer.apply_to(m.block[s], nfe=nfe, ncp=3, wrt=m.block[s].t)
@@ -82,7 +82,7 @@ def create_model(
     m: a Pyomo.DAE model
     """
 
-    theta = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
+    theta = {"A1": 84.79, "A2": 371.72, "E1": 7.78, "E2": 15.05}
 
     if model_option == model_option_lib.parmest:
         mod = pyo.ConcreteModel()
@@ -129,7 +129,7 @@ def create_model(
         return
 
     else:
-        para_list = ['A1', 'A2', 'E1', 'E2']
+        para_list = ["A1", "A2", "E1", "E2"]
 
         ### Add variables
         mod.CA_init = CA_init
@@ -159,13 +159,13 @@ def create_model(
         mod.R = 8.31446261815324  # J / K / mole
 
         # Define parameters as Param
-        mod.A1 = pyo.Var(initialize=theta['A1'])
-        mod.A2 = pyo.Var(initialize=theta['A2'])
-        mod.E1 = pyo.Var(initialize=theta['E1'])
-        mod.E2 = pyo.Var(initialize=theta['E2'])
+        mod.A1 = pyo.Var(initialize=theta["A1"])
+        mod.A2 = pyo.Var(initialize=theta["A2"])
+        mod.E1 = pyo.Var(initialize=theta["E1"])
+        mod.E2 = pyo.Var(initialize=theta["E2"])
 
         # Concentration variables under perturbation
-        mod.C_set = pyo.Set(initialize=['CA', 'CB', 'CC'])
+        mod.C_set = pyo.Set(initialize=["CA", "CB", "CC"])
         mod.C = pyo.Var(
             mod.C_set, mod.t, initialize=C_init, within=pyo.NonNegativeReals
         )
@@ -225,11 +225,11 @@ def create_model(
             y: CA, CB, CC
             t: timepoints
             """
-            if y == 'CA':
-                return m.dCdt[y, t] == -m.kp1[t] * m.C['CA', t]
-            elif y == 'CB':
-                return m.dCdt[y, t] == m.kp1[t] * m.C['CA', t] - m.kp2[t] * m.C['CB', t]
-            elif y == 'CC':
+            if y == "CA":
+                return m.dCdt[y, t] == -m.kp1[t] * m.C["CA", t]
+            elif y == "CB":
+                return m.dCdt[y, t] == m.kp1[t] * m.C["CA", t] - m.kp2[t] * m.C["CB", t]
+            elif y == "CC":
                 return pyo.Constraint.Skip
 
         def alge(m, t):
@@ -238,7 +238,7 @@ def create_model(
             z: m.pert
             t: time
             """
-            return m.C['CA', t] + m.C['CB', t] + m.C['CC', t] == m.CA0[0]
+            return m.C["CA", t] + m.C["CB", t] + m.C["CC", t] == m.CA0[0]
 
         # Control time
         mod.T_rule = pyo.Constraint(mod.t, rule=T_control)
@@ -251,8 +251,8 @@ def create_model(
         mod.alge_rule = pyo.Constraint(mod.t, rule=alge)
 
         # B.C.
-        mod.C['CB', 0.0].fix(0.0)
-        mod.C['CC', 0.0].fix(0.0)
+        mod.C["CB", 0.0].fix(0.0)
+        mod.C["CC", 0.0].fix(0.0)
 
         if return_m:
             return mod

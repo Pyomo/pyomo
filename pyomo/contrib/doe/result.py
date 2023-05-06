@@ -50,8 +50,7 @@ class FisherResults:
         prior_FIM=None,
         store_FIM=None,
         scale_constant_value=1,
-        max_condition_number=1.0e12,
-        verbose=True,
+        max_condition_number=1.0e12
     ):
         """Analyze the FIM result for a single run
 
@@ -74,8 +73,6 @@ class FisherResults:
             scale all elements in Jacobian matrix, default is 1.
         max_condition_number:
             max condition number
-        verbose:
-            if True, print statements are used
         """
         self.para_name = para_name
         self.measure_object = measure_object
@@ -92,7 +89,6 @@ class FisherResults:
         self.scale_constant_value = scale_constant_value
         self.fim_scale_constant_value = scale_constant_value**2
         self.max_condition_number = max_condition_number
-        self.verbose = verbose
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.WARN)
 
@@ -183,11 +179,11 @@ class FisherResults:
 
         return FIM_subclass
 
-    def _split_jacobian(self, measure_subset):
+    def _split_jacobian(self, measurement_subset):
         """
         Split jacobian
         Args:
-            measure_subset: the object of the measurement subsets
+            measurement_subset: the object of the measurement subsets
 
         Returns:
             jaco_info: split Jacobian
@@ -200,12 +196,12 @@ class FisherResults:
         for par in self.para_name:
             jaco_info[par] = []
             # loop over measurements
-            for nam in measure_subset.name:
+            for nam in measurement_subset.name:
                 try:
                     n_all_measure = self.measurement_variables.index(nam)
                     jaco_info[par].append(self.all_jacobian_info[par][n_all_measure])
                 except:
-                    print("Measurement ", nam, " is not in original measurement set.")
+                    raise ValueError("Measurement ", nam, " is not in original measurement set.")
 
         return jaco_info
 
@@ -213,7 +209,7 @@ class FisherResults:
         """
         using a dictionary to store all FIM information
 
-        Parameters:
+        Parameters
         -----------
         FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
         dv_names: design variable dictionary
@@ -250,7 +246,7 @@ class FisherResults:
         """
         Solution information. Only for optimization problem
 
-        Parameters:
+        Parameters
         -----------
         m: model
         dv_set: design variable dictionary
@@ -330,14 +326,13 @@ class GridSearchResult:
         design_ranges,
         design_dimension_names,
         FIM_result_list,
-        store_optimality_name=None,
-        verbose=True,
+        store_optimality_name=None
     ):
         """
         This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
         Can choose to draw 1D sensitivity curves and 2D heatmaps.
 
-        Parameters:
+        Parameters
         -----------
         design_ranges:
             a ``dict`` whose keys are design variable names, values are a list of design variable values to go over
@@ -347,8 +342,6 @@ class GridSearchResult:
             a ``dict`` containing FIM results, keys are a tuple of design variable values, values are FIM result objects
         store_optimality_name:
             a .csv file name containing all four optimalities value
-        verbose:
-            if True, print statements
         """
         # design variables
         self.design_names = design_dimension_names
@@ -356,13 +349,12 @@ class GridSearchResult:
         self.FIM_result_list = FIM_result_list
 
         self.store_optimality_name = store_optimality_name
-        self.verbose = verbose
 
     def extract_criteria(self):
         """
         Extract design criteria values for every 'grid' (design variable combination) searched.
 
-        Returns:
+        Returns
         -------
         self.store_all_results_dataframe: a pandas dataframe with columns as design variable names and A, D, E, ME-criteria names.
             Each row contains the design variable value for this 'grid', and the 4 design criteria value for this 'grid'.
@@ -410,7 +402,6 @@ class GridSearchResult:
         column_names.append('ME')
         # generate the dataframe
         store_all_results = np.asarray(store_all_results)
-        print(column_names)
         self.store_all_results_dataframe = pd.DataFrame(
             store_all_results, columns=column_names
         )
@@ -436,7 +427,7 @@ class GridSearchResult:
         Draw 1D sensitivity curve or 2D heatmap.
         It can be applied to results of any dimensions, but requires design variable values in other dimensions be fixed.
 
-        Parameters:
+        Parameters
         ----------
         fixed_design_dimensions: a dictionary, keys are the design variable names to be fixed, values are the value of it to be fixed.
         sensitivity_dimension: a list of design variable names to draw figures.
@@ -452,7 +443,7 @@ class GridSearchResult:
         font_tick: tick label font size
         log_scale: if True, the result matrix will be scaled by log10
 
-        Returns:
+        Returns
         --------
         None
         """
@@ -513,7 +504,7 @@ class GridSearchResult:
         """
         Draw 1D sensitivity curves for all design criteria
 
-        Parameters:
+        Parameters
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
@@ -522,7 +513,7 @@ class GridSearchResult:
         font_tick: tick label font size
         log_scale: if True, the result matrix will be scaled by log10
 
-        Returns:
+        Returns
         --------
         4 Figures of 1D sensitivity curves for each criteria
         """
@@ -618,7 +609,7 @@ class GridSearchResult:
         """
         Draw 2D heatmaps for all design criteria
 
-        Parameters:
+        Parameters
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
@@ -629,7 +620,7 @@ class GridSearchResult:
         font_tick: tick label font size
         log_scale: if True, the result matrix will be scaled by log10
 
-        Returns:
+        Returns
         --------
         4 Figures of 2D heatmap for each criteria
         """

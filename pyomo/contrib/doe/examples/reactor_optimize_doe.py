@@ -41,12 +41,12 @@ def main():
     # Control time set [h]
     t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
     # Define parameter nominal value
-    parameter_dict = {'A1': 85, 'A2': 372, 'E1': 8, 'E2': 15}
+    parameter_dict = {"A1": 85, "A2": 372, "E1": 8, "E2": 15}
 
     # measurement object
     measurements = MeasurementVariables()
     measurements.add_variables("C", 
-                               indices={0: ['CA', 'CB', 'CC'], 1: t_control}, 
+                               indices={0: ["CA", "CB", "CC"], 1: t_control}, 
                                time_index_position=1)
 
     # design object
@@ -54,7 +54,7 @@ def main():
 
     # add CAO as design variable
     exp_design.add_variables(
-        'CA0',
+        "CA0",
         indices={0: [0]},
         time_index_position=0,
         values=[5],
@@ -64,7 +64,7 @@ def main():
 
     # add T as design variable
     exp_design.add_variables(
-        'T',
+        "T",
         indices={0: t_control},
         time_index_position=0,
         values=[470, 300, 300, 300, 300, 300, 300, 300, 300],

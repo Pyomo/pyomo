@@ -79,7 +79,7 @@ class VariablesWithIndices:
         if not defining values, return a set of variable names
         if defining values, return a dictionary of variable names and its value
         """
-        added_names = self._add_variables(
+        added_names = self._generate_variable_names_with_indices(
             var_name, indices=indices, time_index_position=time_index_position
         )
 
@@ -95,40 +95,21 @@ class VariablesWithIndices:
 
         if values:
             # this dictionary keys are special set, values are its value
-            self._generate_dict(self.variable_names_value, added_names, values)
+            self.variable_names_value.update(zip(added_names, values))
 
         if lower_bounds:
             if type(lower_bounds) in [int, float]:
                 lower_bounds = [lower_bounds] * len(added_names)
-            self._generate_dict(self.lower_bounds, added_names, lower_bounds)
+            self.lower_bounds.update(zip(added_names, lower_bounds))
 
         if upper_bounds:
             if type(upper_bounds) in [int, float]:
                 upper_bounds = [upper_bounds] * len(added_names)
-            self._generate_dict(self.upper_bounds, added_names, upper_bounds)
+            self.upper_bounds.update(zip(added_names, upper_bounds))
 
         return added_names
 
-    def update_values(self, values):
-        """
-        Update values of variables. Used for defining values for design variables of different experiments.
-
-        Parameters
-        ---------
-         values: a ``list`` containing values which has the same shape of flattened variables
-            default choice is None, means there is no give nvalues
-        """
-        self._generate_dict(self.variable_names_value, self.variable_names, values)
-
-    def _generate_dict(self, dict_name, keys, values):
-        """
-        Given a list of keys and values, add them to a dictionary.
-        """
-        print(keys, values)
-        for i in range(len(values)):
-            dict_name.update({keys[i]: values[i]})
-
-    def _add_variables(self, var_name, indices=None, time_index_position=None):
+    def _generate_variable_names_with_indices(self, var_name, indices=None, time_index_position=None):
         """
         Used for generating string names with indexes.
 
@@ -234,7 +215,7 @@ class MeasurementVariables(VariablesWithIndices):
         if variance is not list:
             variance = [variance] * len(self_define_res)
 
-        super()._generate_dict(self.variance, self_define_res, variance)
+        self.variance.update(zip(self_define_res, variance))
 
     def add_variables(
         self, var_name, indices=None, time_index_position=None, variance=1
@@ -259,19 +240,19 @@ class MeasurementVariables(VariablesWithIndices):
         # store variance
         if variance is not list:
             variance = [variance] * len(added_names)
-        super()._generate_dict(self.variance, added_names, variance)
+        self.variance.update(zip(added_names, variance))
 
-    def check_subset(self, subset_class):
+    def check_subset(self, subset_object):
         """
-        Check if subset_class is a subset of the current measurement object
+        Check if subset_object is a subset of the current measurement object
 
         Parameters
         ----------
-        subset_class: a measurement object
+        subset_object: a measurement object
         """
-        for nam in subset_class.name:
-            if nam not in self.name:
-                raise ValueError("Measurement not in the set: ", nam)
+        for name in subset_object.name:
+            if name not in self.name:
+                raise ValueError("Measurement not in the set: ", name)
 
         return True
 
@@ -332,4 +313,12 @@ class DesignVariables(VariablesWithIndices):
         self.name = self.variable_names
 
     def update_values(self, values):
-        return super().update_values(values)
+        """
+        Update values of variables. Used for defining values for design variables of different experiments.
+
+        Parameters
+        ---------
+         values: a ``list`` containing values which has the same shape of flattened variables
+            default choice is None, means there is no give nvalues
+        """
+        self.variable_names_value.update(zip(self.variable_names, values))

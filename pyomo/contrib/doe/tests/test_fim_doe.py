@@ -370,11 +370,6 @@ class TestSpecialSet(unittest.TestCase):
         self.assertEqual(special.lower_bounds['CA0[0]'], 1)
         self.assertEqual(special.lower_bounds['T[0]'], 300)
 
-        exp1 = [4, 600, 300, 300, 300, 300, 300, 300, 300, 300]
-        special.update_values(exp1)
-        self.assertEqual(special.variable_names_value['CA0[0]'], 4)
-        self.assertEqual(special.variable_names_value['T[0]'], 600)
-
 
 if __name__ == '__main__':
     unittest.main()

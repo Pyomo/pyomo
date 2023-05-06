@@ -41,14 +41,14 @@ class finite_difference_step(Enum):
 
 class ScenarioGenerator:
     def __init__(
-        self, para_dict, formula=finite_difference_step.central, step=0.001, store=False
+        self, parameter_dict=None, formula=finite_difference_step.central, step=0.001, store=False
     ):
         """Generate scenarios.
         DoE library first calls this function to generate scenarios.
 
         Parameters
         -----------
-        para_dict:
+        parameter_dict:
             a ``dict`` of parameter, keys are names of ''string'', values are their nominal value of ''float''.
             for e.g., {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
         formula:
@@ -59,13 +59,13 @@ class ScenarioGenerator:
             if True, store results.
         """
         # get info from parameter dictionary
-        self.para_dict = para_dict
-        self.para_names = list(para_dict.keys())
+        self.parameter_dict = parameter_dict
+        self.para_names = list(parameter_dict.keys())
         self.no_para = len(self.para_names)
         self.formula = formula
         self.step = step
         self.store = store
-        self.scenario_nominal = [para_dict[d] for d in self.para_names]
+        self.scenario_nominal = [parameter_dict[d] for d in self.para_names]
 
         # generate scenarios
         self.generate_scenario()
@@ -77,7 +77,7 @@ class ScenarioGenerator:
         Returns:
         -------
         scenario_dict: a dictionary containing scenarios dictionaries.
-        scenario_dict['sceanrio']: a list of dictionaries, each dictionary contains a perturbed scenario
+        scenario_dict['scenario']: a list of dictionaries, each dictionary contains a perturbed scenario
         scenario_dict['eps-abs']: keys are parameter name, values are the step it is perturbed
         scena_overall['scena-num']: a dict of scenario number related to one parameter
 
@@ -106,8 +106,8 @@ class ScenarioGenerator:
             if self.formula == finite_difference_step.central:
                 scena_num[para] = [2 * p, 2 * p + 1]
                 scena_dict_up, scena_dict_lo = (
-                    self.para_dict.copy(),
-                    self.para_dict.copy(),
+                    self.parameter_dict.copy(),
+                    self.parameter_dict.copy(),
                 )
                 # corresponding parameter dictionary for the scenario
                 scena_dict_up[para] *= 1 + self.step
@@ -123,8 +123,8 @@ class ScenarioGenerator:
                 # the base case is added as the last one
                 scena_num[para] = [p, len(self.param_names)]
                 scena_dict_up, scena_dict_lo = (
-                    self.para_dict.copy(),
-                    self.para_dict.copy(),
+                    self.parameter_dict.copy(),
+                    self.parameter_dict.copy(),
                 )
                 if self.formula == finite_difference_step.forward:
                     scena_dict_up[para] *= 1 + self.step
@@ -138,9 +138,9 @@ class ScenarioGenerator:
             ## get perturbation sizes
             # for central difference scheme, perturbation size is two times the step size
             if self.formula == finite_difference_step.central:
-                eps_abs[para] = 2 * self.step * self.para_dict[para]
+                eps_abs[para] = 2 * self.step * self.parameter_dict[para]
             else:
-                eps_abs[para] = self.step * self.para_dict[para]
+                eps_abs[para] = self.step * self.parameter_dict[para]
 
         self.scenario_data['eps-abs'] = eps_abs
         self.scenario_data['scenario'] = scenario

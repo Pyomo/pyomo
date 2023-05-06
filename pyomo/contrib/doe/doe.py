@@ -121,8 +121,8 @@ class DesignOfExperiments:
         self.args = args
 
         # create the measurement information object
-        self.measure = measurement_vars
-        self.measure_name = self.measure.name
+        self.measurement_vars = measurement_vars
+        self.measure_name = self.measurement_vars.name
 
         # check if user-defined solver is given
         if solver:
@@ -270,7 +270,7 @@ class DesignOfExperiments:
         # create result object
         analysis_square = FisherResults(
             list(self.param.keys()),
-            self.measure,
+            self.measurement_vars,
             jacobian_info=None,
             all_jacobian_info=jac_square,
             prior_FIM=self.prior_FIM,
@@ -299,7 +299,7 @@ class DesignOfExperiments:
         # create result object
         analysis_optimize = FisherResults(
             list(self.param.keys()),
-            self.measure,
+            self.measurement_vars,
             jacobian_info=None,
             all_jacobian_info=jac_optimize,
             prior_FIM=self.prior_FIM,
@@ -463,7 +463,7 @@ class DesignOfExperiments:
 
         FIM_analysis = FisherResults(
             list(self.param.keys()),
-            self.measure,
+            self.measurement_vars,
             jacobian_info=None,
             all_jacobian_info=jac,
             prior_FIM=prior_in_use,
@@ -547,7 +547,7 @@ class DesignOfExperiments:
         # Assemble and analyze results
         FIM_analysis = FisherResults(
             list(self.param.keys()),
-            self.measure,
+            self.measurement_vars,
             jacobian_info=None,
             all_jacobian_info=jac,
             prior_FIM=prior_in_use,
@@ -567,7 +567,7 @@ class DesignOfExperiments:
 
         # create scenario information for block scenarios
         scena_gen = ScenarioGenerator(
-            self.param, formula=self.formula, step=self.step
+            parameter_dict=self.param, formula=self.formula, step=self.step
         )
 
         self.scenario_data = scena_gen.scenario_data
@@ -714,7 +714,7 @@ class DesignOfExperiments:
             scale all elements in Jacobian matrix, default is 1.
         store_name:
             a string of file name. If not None, store results with this name.
-            Since there are maultiple experiments, results are numbered with a scalar number,
+            Since there are multiple experiments, results are numbered with a scalar number,
             and the result for one grid is 'store_name(count).csv' (count is the number of count).
         read_name:
             a string of file name. If not None, read result files.
@@ -855,11 +855,11 @@ class DesignOfExperiments:
         """
         Add equations to compute sensitivities, FIM, and objective.
 
-        Parameters:
+        Parameters
         -----------
         no_obj: if True, objective function is 0.
 
-        Return:
+        Return
         -------
         m: the DOE model
         """
@@ -966,7 +966,7 @@ class DesignOfExperiments:
             return (
                 m.fim[p, q]
                 == sum(
-                    1 / self.measure.variance[n] * m.sensitivity_jacobian[p, n] * m.sensitivity_jacobian[q, n]
+                    1 / self.measurement_vars.variance[n] * m.sensitivity_jacobian[p, n] * m.sensitivity_jacobian[q, n]
                     for n in mod.measured_variables
                 )
                 + m.priorFIM[p, q] * self.fim_scale_constant_value
@@ -1051,7 +1051,7 @@ class DesignOfExperiments:
         """
         Fix design variable
 
-        Parameters:
+        Parameters
         -----------
         m: model
         design_val: design variable values dict
@@ -1088,7 +1088,7 @@ class DesignOfExperiments:
         If it's a square problem, fix design variable and solve.
         Else, fix design variable and solve square problem firstly, then unfix them and solve the optimization problem
 
-        Parameters:
+        Parameters
         -----------
         m:model
         fix: if true, solve two times (square first). Else, just solve the square problem
@@ -1096,7 +1096,7 @@ class DesignOfExperiments:
             deciding if this design variable is optimized as DOF this time.
             If None, all design variables are optimized as DOF this time.
 
-        Return:
+        Return
         -------
         solver_results: solver results
         """
@@ -1115,11 +1115,11 @@ class DesignOfExperiments:
         This is a helper function for stochastic_program function to compute the determinant formula.
         Give the signature of a permutation
 
-        Parameters:
+        Parameters
         -----------
         p: the permutation (a list)
 
-        Return:
+        Return
         ------
         1 if the number of exchange is an even number
         -1 if the number is an odd number
