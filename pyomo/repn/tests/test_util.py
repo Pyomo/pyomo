@@ -10,10 +10,12 @@
 #  ___________________________________________________________________________
 
 import logging
+import math
 
 import pyomo.common.unittest as unittest
 from io import StringIO
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
@@ -25,8 +27,17 @@ from pyomo.environ import (
     Suffix,
     Expression,
     Set,
+    SortComponents,
 )
-from pyomo.repn.util import ftoa, FileDeterminism, categorize_valid_components
+import pyomo.repn.util
+from pyomo.repn.util import (
+    ftoa,
+    FileDeterminism,
+    categorize_valid_components,
+    apply_node_operation,
+    FileDeterminism_to_SortComponents,
+    initialize_var_map_from_column_order,
+)
 
 try:
     import numpy as np
@@ -62,11 +73,14 @@ class TestRepnUtils(unittest.TestCase):
             'resulted in loss of precision',
         )
 
-    def test_filedeterminism_missing(self):
+    def test_filedeterminism(self):
         with LoggingIntercept() as LOG:
             a = FileDeterminism(10)
         self.assertEqual(a, FileDeterminism.ORDERED)
         self.assertEqual('', LOG.getvalue())
+
+        self.assertEqual(str(a), 'FileDeterminism.ORDERED')
+        self.assertEqual(f"{a}", 'FileDeterminism.ORDERED')
 
         with LoggingIntercept() as LOG:
             a = FileDeterminism(1)
@@ -79,6 +93,65 @@ class TestRepnUtils(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "5 is not a valid FileDeterminism"):
             FileDeterminism(5)
+
+    def test_apply_operation(self):
+        m = ConcreteModel()
+        m.x = Var()
+        div = 1 / m.x
+        exp = m.x ** (1 / 2)
+
+        with LoggingIntercept() as LOG:
+            self.assertEqual(apply_node_operation(exp, [4, 1 / 2]), 2)
+        self.assertEqual(LOG.getvalue(), "")
+
+        _halt = pyomo.repn.util.HALT_ON_EVALUATION_ERROR
+        try:
+            pyomo.repn.util.HALT_ON_EVALUATION_ERROR = True
+            with LoggingIntercept() as LOG:
+                with self.assertRaisesRegex(
+                    ValueError, 'Pyomo does not support complex numbers'
+                ):
+                    print(apply_node_operation(exp, [-1, 1 / 2]))
+            self.assertEqual(
+                LOG.getvalue(),
+                "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
+                "\tmessage: Pyomo does not support complex numbers\n"
+                "\texpression: x**0.5\n",
+            )
+
+            with LoggingIntercept() as LOG:
+                with self.assertRaisesRegex(ZeroDivisionError, 'division by zero'):
+                    apply_node_operation(div, [1, 0])
+            self.assertEqual(
+                LOG.getvalue(),
+                "Exception encountered evaluating expression 'div(1, 0)'\n"
+                "\tmessage: division by zero\n"
+                "\texpression: 1/x\n",
+            )
+
+            pyomo.repn.util.HALT_ON_EVALUATION_ERROR = False
+            with LoggingIntercept() as LOG:
+                val = apply_node_operation(exp, [-1, 1 / 2])
+                self.assertTrue(math.isnan(val), f"{val} is not NaN")
+            self.assertEqual(
+                LOG.getvalue(),
+                "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
+                "\tmessage: Pyomo does not support complex numbers\n"
+                "\texpression: x**0.5\n",
+            )
+
+            with LoggingIntercept() as LOG:
+                val = apply_node_operation(div, [1, 0])
+                self.assertTrue(math.isnan(val), f"{val} is not NaN")
+            self.assertEqual(
+                LOG.getvalue(),
+                "Exception encountered evaluating expression 'div(1, 0)'\n"
+                "\tmessage: division by zero\n"
+                "\texpression: 1/x\n",
+            )
+
+        finally:
+            pyomo.repn.util.HALT_ON_EVALUATION_ERROR = _halt
 
     def test_categorize_valid_components(self):
         m = ConcreteModel()
@@ -148,6 +221,97 @@ class TestRepnUtils(unittest.TestCase):
             categorize_valid_components(
                 m, valid={Var, Block, Set}, targets={Param, Objective, Set}
             )
+
+    def test_FileDeterminism_to_SortComponents(self):
+        self.assertEqual(
+            FileDeterminism_to_SortComponents(FileDeterminism(0)),
+            SortComponents.unsorted,
+        )
+        self.assertEqual(
+            FileDeterminism_to_SortComponents(FileDeterminism.ORDERED),
+            SortComponents.unsorted,
+        )
+        self.assertEqual(
+            FileDeterminism_to_SortComponents(FileDeterminism.SORT_INDICES),
+            SortComponents.indices,
+        )
+        self.assertEqual(
+            FileDeterminism_to_SortComponents(FileDeterminism.SORT_SYMBOLS),
+            SortComponents.indices | SortComponents.alphabetical,
+        )
+
+    def test_initialize_var_map_from_column_order(self):
+        class MockConfig(object):
+            column_order = None
+            file_determinism = FileDeterminism(0)
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([3, 2])
+        m.c = Block()
+        m.c.x = Var()
+        m.c.y = Var([5, 4])
+        m.b = Block()
+        m.b.x = Var()
+        m.b.y = Var([7, 6])
+
+        # No column order, no determinism:
+        self.assertEqual(
+            list(initialize_var_map_from_column_order(m, MockConfig, {}).values()), []
+        )
+
+        # column order "True", no determinism:
+        MockConfig.column_order = True
+        self.assertEqual(
+            list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
+            [m.x, m.y[3], m.y[2], m.c.x, m.c.y[5], m.c.y[4], m.b.x, m.b.y[7], m.b.y[6]],
+        )
+
+        # column order "True", sort indices (but not names):
+        MockConfig.column_order = True
+        MockConfig.file_determinism = FileDeterminism.SORT_INDICES
+        self.assertEqual(
+            list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
+            [m.x, m.y[2], m.y[3], m.c.x, m.c.y[4], m.c.y[5], m.b.x, m.b.y[6], m.b.y[7]],
+        )
+
+        # column order "True", sort indices and names:
+        MockConfig.column_order = True
+        MockConfig.file_determinism = FileDeterminism.SORT_SYMBOLS
+        self.assertEqual(
+            list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
+            [m.x, m.y[2], m.y[3], m.b.x, m.b.y[6], m.b.y[7], m.c.x, m.c.y[4], m.c.y[5]],
+        )
+
+        # column order "True", no determinism, pre-specified entries
+        # (prespecified stay at the beginning of the list):
+        MockConfig.column_order = True
+        MockConfig.file_determinism = FileDeterminism.ORDERED
+        var_map = {id(m.b.y[7]): m.b.y[7], id(m.c.y[5]): m.c.y[5], id(m.y[3]): m.y[3]}
+        self.assertEqual(
+            list(initialize_var_map_from_column_order(m, MockConfig, var_map).values()),
+            [m.b.y[7], m.c.y[5], m.y[3], m.x, m.y[2], m.c.x, m.c.y[4], m.b.x, m.b.y[6]],
+        )
+
+        MockConfig.column_order = ComponentMap(
+            (v, i) for i, v in enumerate([m.b.y, m.y, m.c.y[4], m.x])
+        )
+        MockConfig.file_determinism = FileDeterminism.ORDERED
+        self.assertEqual(
+            list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
+            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x],
+        )
+
+        MockConfig.file_determinism = FileDeterminism.SORT_INDICES
+        self.assertEqual(
+            list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[4], m.b.x],
+        )
+        MockConfig.file_determinism = FileDeterminism.SORT_SYMBOLS
+        self.assertEqual(
+            list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[4]],
+        )
 
 
 if __name__ == "__main__":
