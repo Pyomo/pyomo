@@ -13,7 +13,7 @@ import enum
 import logging
 import sys
 
-from pyomo.common.collections import Mapping
+from pyomo.common.collections import Sequence, ComponentMap
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.core.base import (
@@ -166,7 +166,12 @@ def initialize_var_map_from_column_order(model, config, var_map):
     column_order = config.column_order
     sorter = FileDeterminism_to_SortComponents(config.file_determinism)
 
-    if isinstance(column_order, Mapping):
+    if column_order is None or column_order == True:
+        pass
+    elif isinstance(column_order, Sequence):
+        # Copy the incoming list to avoid side-effects
+        column_order = list(column_order)
+    elif isinstance(column_order, ComponentMap):
         # The column order has historically has supported a ComponentMap of
         # component to position in addition to the simple list of
         # components.  Convert it to the simple list
@@ -179,12 +184,13 @@ def initialize_var_map_from_column_order(model, config, var_map):
         # matches the file_determinism flag.  This is a little
         # cumbersome, but is implemented this way for consistency
         # with the original NL writer.
+        var_obj = model.component_data_objects(Var, descend_into=True, sort=sorter)
         if column_order is None:
-            column_order = []
-        column_order.extend(
-            model.component_data_objects(Var, descend_into=True, sort=sorter)
-        )
-    if column_order:
+            column_order = var_obj
+        else:
+            column_order.extend(var_obj)
+
+    if column_order is not None:
         # Note that Vars that appear twice (e.g., through a
         # Reference) will be sorted with the FIRST occurrence.
         for var in column_order:
