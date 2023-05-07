@@ -546,7 +546,9 @@ You can silence this warning by one of three ways:
             self._not_constructed_error(index)
 
         try:
-            obj = self._data.get(index, _NotFound)
+            return self._data[index]
+        except KeyError:
+            obj = _NotFound
         except TypeError:
             try:
                 index = self._processUnhashableIndex(index)
