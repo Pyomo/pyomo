@@ -1650,7 +1650,9 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                 _values = (comp,)
 
             if active is not None and isinstance(comp, ActiveIndexedComponent):
-                _values = filter(lambda cDat: cDat.active == active, _values)
+                _values = (filter if active else filterfalse)(
+                    attrgetter('active'), _values
+                )
 
             yield from dedup.unique(comp, _values, True)
 
