@@ -104,6 +104,123 @@ class _GENERAL(object):
     pass
 
 
+def _none_safe_addition(arg1, arg2):
+    """Add two values, either of which could be ``None``
+
+    ``None`` here is treated as an uninitialized, non-zero, non-NaN constant.
+    It will absorb any other non-NaN constant, and will in turn be absorbed
+    if added with NaN.
+
+    """
+    if arg1 is None and arg2 as None:
+        # None + None = None
+        return None
+    elif arg1 is None and math.isnan(arg2):
+        # Since arg1 is None, we know that arg2 is not None, so calling
+        # math.isnan is safe here.
+        # None + NaN = NaN
+        return arg2
+    elif arg2 is None and math.isnan(arg1):
+        # NaN + None = NaN
+        return arg1
+    elif arg1 is None or arg2 is None:
+        # None + const = None
+        return None
+    else:
+        return arg1 + arg2
+
+
+def _none_safe_multiply(arg1, arg2):
+    """Multiply two values, either of which could be ``None``
+
+    ``None`` here is treated as an uninitialized, non-zero, non-NaN constant.
+    It will absorb any other non-NaN, non-zero constant, and will in turn be
+    absorbed if multiplied by zero or NaN.
+
+    """
+    if arg1 is None and arg2 is None:
+        # None * None = None
+        return None
+    elif arg1 is None and math.isnan(arg2):
+        # Since arg1 is None, we know that arg2 is not None, so calling
+        # math.isnan is safe here.
+        # None * NaN = NaN
+        return arg2
+    elif arg2 is None and math.isnan(arg1):
+        # NaN * None = NaN
+        return arg1
+    elif arg1 is None and arg2 == 0:
+        # None * 0 = 0
+        return arg2
+    elif arg2 is None and arg1 == 0:
+        # 0 * None = 0
+        return arg1
+    else:
+        return arg1 * arg2
+
+
+def _none_safe_divide(arg1, arg2):
+    """Divide ``arg1`` by ``arg2``, allowing either to be ``None``
+
+    ``None`` here is treated as an uninitialized, non-zero, non-NaN constant.
+    It will absorb any other non-NaN, non-zero constant, and will in turn be
+    absorbed if divided by or divisor to zero or NaN.
+
+    """
+    if arg1 is None and arg2 is None:
+        return None
+    elif arg1 is None and math.isnan(arg2):
+        # Since arg1 is None, we know that arg2 is not None, so calling
+        # math.isnan is safe here.
+        # None / NaN = NaN
+        return arg2
+    elif arg2 is None and math.isnan(arg1):
+        # NaN / None = NaN
+        return arg1
+    elif arg1 is None and arg2 == 0:
+        # None / 0 = NaN
+        # Should we raise ZeroDivisionError instead?
+        return nan
+    elif arg2 is None and arg1 == 0:
+        # 0 / None = 0
+        return arg1
+    else:
+        return arg1 / arg2
+
+
+def _none_safe_pow(arg1, arg2):
+    """Raise ``arg1`` to the power of ``arg2``, allowing either to be ``None``
+
+    ``None`` here is treated as an uninitialized, non-zero, non-NaN constant.
+    It will absorb any other non-NaN, non-zero, (and non-one base) constant,
+    and will in turn be absorbed if is base or exponent to NaN or zero,
+    or exponent to one.
+
+    """
+    if arg1 is None and arg2 is None:
+        # None ** None = None
+        return None
+    elif arg1 is None and math.isnan(arg2):
+        # Since arg1 is None, we know that arg2 is not None, so calling
+        # math.isnan is safe here.
+        # None ** NaN = NaN
+        return arg2
+    elif arg2 is None and math.isnan(arg1):
+        # NaN ** None = NaN
+        return arg1
+    elif arg2 is None and arg1 == 1:
+        # 1 ** None = 1
+        return arg1
+    elif arg2 is None and arg1 == 0:
+        # 0 ** None == 0
+        return arg1
+    elif arg1 is None and arg2 == 0:
+        # None ** 0 = 1
+        return 1.0
+    else:
+        return arg1 ** arg2
+
+
 def _apply_node_operation(node, args):
     try:
         tmp = (_CONSTANT, node._apply_operation(args))
