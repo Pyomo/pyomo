@@ -112,7 +112,7 @@ def _none_safe_addition(arg1, arg2):
     if added with NaN.
 
     """
-    if arg1 is None and arg2 as None:
+    if arg1 is None and arg2 is None:
         # None + None = None
         return None
     elif arg1 is None and math.isnan(arg2):
@@ -155,6 +155,9 @@ def _none_safe_multiply(arg1, arg2):
     elif arg2 is None and arg1 == 0:
         # 0 * None = 0
         return arg1
+    elif arg1 is None or arg2 is None:
+        # None * const = None
+        return None
     else:
         return arg1 * arg2
 
@@ -184,8 +187,15 @@ def _none_safe_divide(arg1, arg2):
     elif arg2 is None and arg1 == 0:
         # 0 / None = 0
         return arg1
+    elif arg1 is None or arg2 is None:
+        # None / const = None
+        return None
     else:
-        return arg1 / arg2
+        # TODO: Check HALT_ON_EVALUATION_ERROR here?
+        try:
+            return arg1 / arg2
+        except ZeroDivisionError:
+            return nan
 
 
 def _none_safe_pow(arg1, arg2):
@@ -212,11 +222,16 @@ def _none_safe_pow(arg1, arg2):
         # 1 ** None = 1
         return arg1
     elif arg2 is None and arg1 == 0:
-        # 0 ** None == 0
-        return arg1
+        # 0 ** None = None
+        # 0 ** x = 1 if x == 0 else 0. Because we can't determine the
+        # value beforehand, we return None.
+        return None
     elif arg1 is None and arg2 == 0:
         # None ** 0 = 1
         return 1.0
+    elif arg1 is None or arg2 is None:
+        # None ** const = None
+        return None
     else:
         return arg1 ** arg2
 
@@ -416,10 +431,7 @@ class IncidenceRepn(object):
         if _type is _MONOMIAL:
             _, v, c = other
             if v in self.linear:
-                if self.linear[v] is None or c is None:
-                    self.linear[v] = None
-                else:
-                    self.linear[v] += c
+                self.linear[v] = _none_safe_addition(c, self.linear[v])
             else:
                 self.linear[v] = c
         elif _type is _GENERAL:
@@ -461,55 +473,20 @@ class IncidenceRepn(object):
                 mult = other.mult
                 # Multiply other.const * other.mult, preserving None appropriately
                 c = other.const
-                if (c is None and mult == 0) or (mult is None and c == 0):
-                    c_mult = 0
-                elif (c is None and math.isnan(mult)) or (
-                    mult is None and math.isnan(c)
-                ):
-                    c_mult = nan
-                elif (c is None) or (mult is None):
-                    c_mult = None
-                else:
-                    c_mult = c * mult
+                c_mult = _none_safe_multiply(c, mult)
 
-                # self.const += other.const * other.mult, preserving None/NaN
-                if (self.const is None and math.isnan(c_mult)) or (
-                    c_mult is None and math.isnan(self.const)
-                ):
-                    self.const = nan
-                elif (self.const is None) or (c_mult is None):
-                    self.const = None
-                else:
-                    self.const += c_mult
+                # FIXME: This line is not tested appropriately.
+                # If I call _none_safe_addition twice, no test fails.
+                self.const = _none_safe_addition(self.const, c_mult)
 
                 if other.linear:
                     linear = self.linear
                     for v, c in other.linear.items():
-                        if (c is None and mult == 0) or (mult is None and c == 0):
-                            c_mult = 0
-                        elif (c is None and math.isnan(mult)) or (
-                            mult is None and math.isnan(c)
-                        ):
-                            c_mult = nan
-                        elif (c is None) or (mult is None):
-                            c_mult = None
-                        else:
-                            c_mult = c * mult
-
+                        c_mult = _none_safe_multiply(c, mult)
                         if v in linear:
-                            if (
-                                c_mult is None
-                                and math.isnan(linear[v])
-                                or linear[v] is None
-                                and math.isnan(c_mult)
-                            ):
-                                # NaN + None = NaN
-                                linear[v] = nan
-                            elif c_mult is None or linear[v] is None:
-                                # None + finite constant = None
-                                linear[v] = None
-                            else:
-                                linear[v] += c_mult
+                            # FIXME: This line is not tested appropriately.
+                            # If I call _none_safe_addition twice, no test fails.
+                            linear[v] = _none_safe_addition(linear[v], c_mult)
                         else:
                             linear[v] = c_mult
                 if other.nonlinear is not None:
@@ -522,22 +499,24 @@ class IncidenceRepn(object):
                     # self.nonlinear.append(
                     #    (prefix + other.nonlinear[0], other.nonlinear[1])
                     # )
+
+                    # TODO: I would like to make sure that self.nonlinear is
+                    # never None.
                     if self.nonlinear is None:
                         self.nonlinear = set()
                     for var_id in other.nonlinear:
                         self.nonlinear.add(var_id)
             else:
-                if self.const is not None:
-                    if other.const is None:
-                        self.const = None
-                    else:
-                        self.const += other.const
+                # FIXME: This line is not tested appropriately.
+                # If I call _none_safe_addition twice, no test fails.
+                self.const = _none_safe_addition(self.const, other.const)
                 if other.linear:
                     linear = self.linear
                     for v, c in other.linear.items():
                         if v in linear:
-                            # TODO: Handle None here
-                            linear[v] += c
+                            # FIXME: This line is not tested appropriately.
+                            # If I call _none_safe_addition twice, no test fails.
+                            linear[v] += _none_safe_addition(linear[v], c)
                         else:
                             linear[v] = c
                 if other.nonlinear is not None:
@@ -550,10 +529,7 @@ class IncidenceRepn(object):
                     for var_id in other.nonlinear:
                         self.nonlinear.add(var_id)
         elif _type is _CONSTANT:
-            if other[1] is None:
-                self.const = None
-            else:
-                self.const += other[1]
+            self.const = _none_safe_addition(self.const, other[1])
 
 
 def _create_strict_inequality_map(vars_):
@@ -648,15 +624,14 @@ def node_result_to_amplrepn(data):
 
 def handle_negation_node(visitor, node, arg1):
     if arg1[0] is _MONOMIAL:
-        if arg1[2] is None:
-            return (_MONOMIAL, arg1[1], None)
-        else:
-            return (_MONOMIAL, arg1[1], -1 * arg1[2])
+        return (_MONOMIAL, arg1[1], _none_safe_multiply(-1, arg1[2]))
     elif arg1[0] is _GENERAL:
-        arg1[1].mult *= -1
+        arg1[1].mult = _none_safe_multiply(-1, arg1[1].mult)
         return arg1
     elif arg1[0] is _CONSTANT:
-        return (_CONSTANT, -1 * arg1[1])
+        # Not sure if this branch can be hit with a fixed variable
+        # in arg1...
+        return (_CONSTANT, _none_safe_multiply(-1, arg1[1]))
     else:
         raise RuntimeError("%s: %s" % (type(arg1[0]), arg1))
 
@@ -676,59 +651,7 @@ def handle_product_node(visitor, node, arg1, arg2):
             # writer, but arguably we should deprecate/remove this
             # "feature" in the future.
             if arg2[0] is _CONSTANT:
-                if arg2[1] is None:
-                    # 0 * None -> 0
-                    return (_CONSTANT, 0)
-                else:
-                    _prod = mult * arg2[1]
-                    if _prod:
-                        deprecation_warning(
-                            f"Encountered {mult}*{arg2[1]} in expression tree.  "
-                            "Mapping the NaN result to 0 for compatibility "
-                            "with the nl_v1 writer.  In the future, this NaN "
-                            "will be preserved/emitted to comply with IEEE-754.",
-                            version='6.4.3',
-                        )
-                        _prod = 0
-                    return (_CONSTANT, _prod)
-            return arg1
-        if mult == 1:
-            return arg2
-        elif arg2[0] is _MONOMIAL:
-            # Catch None and return a monomial term
-            if mult is None:
-                return (_MONOMIAL, arg2[1], None)
-            if mult != mult:
-                # This catches mult (i.e., arg1) == nan
-                return arg1
-            return (_MONOMIAL, arg2[1], mult * arg2[2])
-        elif arg2[0] is _GENERAL:
-            # Catch None and return a general expression term
-            if mult is None:
-                arg2[1].mult = None
-                return arg2
-            if mult != mult:
-                # This catches mult (i.e., arg1) == nan
-                return arg1
-            arg2[1].mult *= mult
-            return arg2
-        elif arg2[0] is _CONSTANT:
-            if (arg1[1] is None and arg2[1] == 0) or (arg2[1] is None and arg1[1] == 0):
-                # One uninitialized and one zero. We return zero
-                return (_CONSTANT, 0)
-            elif (arg1[1] is None and math.isnan(arg2[1])) or (
-                arg2[1] is None and math.isnan(arg1[1])
-            ):
-                # One uninitialized and one nan. We return nan.
-                return (_CONSTANT, nan)
-            elif arg1[1] is None or arg2[1] is None:
-                # Either uninitialized and other is non-zero/nan.
-                # We return None.
-                return (_CONSTANT, None)
-            elif arg2[1] == 0:
-                # Simplify multiplication by 0; see note above about
-                # IEEE-754 incompatibility.
-                _prod = mult * arg2[1]
+                _prod = _none_safe_multiply(0, arg2[1])
                 if _prod:
                     deprecation_warning(
                         f"Encountered {mult}*{arg2[1]} in expression tree.  "
@@ -739,7 +662,39 @@ def handle_product_node(visitor, node, arg1, arg2):
                     )
                     _prod = 0
                 return (_CONSTANT, _prod)
-            return (_CONSTANT, mult * arg2[1])
+            return arg1
+        if mult == 1:
+            return arg2
+        elif arg2[0] is _MONOMIAL:
+            _prod = _none_safe_multiply(mult, arg2[2])
+            if _prod is not None and math.isnan(_prod):
+                # NaN absorbs the variable
+                return (_CONSTANT, arg2[1])
+            else:
+                return (_MONOMIAL, arg2[1], _prod)
+        elif arg2[0] is _GENERAL:
+            if mult is not None and mult != mult:
+                # This catches mult (i.e., arg1) == nan
+                # In this way, NaN cancels out a general expression
+                return arg1
+            arg2[1].mult = _none_safe_multiply(arg2[1].mult, mult)
+            return arg2
+        elif arg2[0] is _CONSTANT:
+            if arg2[1] == 0:
+                # Simplify multiplication by 0; see note above about
+                # IEEE-754 incompatibility.
+                _prod = _none_safe_multiply(mult, arg2[1])
+                if math.isnan(_prod):
+                    deprecation_warning(
+                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the nl_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='6.4.3',
+                    )
+                    _prod = 0
+                return (_CONSTANT, _prod)
+            return (_CONSTANT, _none_safe_multiply(mult, arg2[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonlin)
     return (_GENERAL, IncidenceRepn(0, None, nonlin))
@@ -751,52 +706,61 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            if div is None:
-                # We assume that None != 0 and return a monomial with
-                # coefficient of None
-                return (_MONOMIAL, arg1[1], None)
-            tmp = _apply_node_operation(node, (arg1[2], div))
-            if tmp[1] != tmp[1]:
-                # This catches if the coefficient division results in nan
-                return tmp
-            return (_MONOMIAL, arg1[1], tmp[1])
+            # TODO: Should this use _apply_node_operation?
+            quotient = _none_safe_divide(arg1[2], div)
+            if quotient is not None and math.isnan(quotient):
+                return (_CONSTANT, quotient)
+            return (_MONOMIAL, arg1[1], quotient)
+            #if div is None:
+            #    # We assume that None != 0 and return a monomial with
+            #    # coefficient of None
+            #    return (_MONOMIAL, arg1[1], None)
+            #tmp = _apply_node_operation(node, (arg1[2], div))
+            #if tmp[1] != tmp[1]:
+            #    # This catches if the coefficient division results in nan
+            #    return tmp
+            #return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
-            if div is None:
-                if arg1[1].mult == 0 or math.isnan(arg1[1].mult):
-                    # 0 or NaN absorb the uninitialized constant None
-                    # Not sure how we would end up with mult == 0...
-                    return arg1
-                else:
-                    # Multiplier becomes an uninitialized constant
-                    arg1[1].mult = None
-                    return arg1
-            else:
-                tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
-                if tmp != tmp:
-                    # This catches if the multiplier division results in nan
-                    return _CONSTANT, tmp
-                arg1[1].mult = tmp
-                return arg1
+            quotient = _none_safe_divide(arg1[1].mult, div)
+            if quotient is not None and math.isnan(quotient):
+                # zero division cancels out the expression with NaN
+                return (_CONSTANT, quotient)
+            arg1[1].mult = quotient
+            return arg1
+            #if div is None:
+            #    if arg1[1].mult == 0 or math.isnan(arg1[1].mult):
+            #        # 0 or NaN absorb the uninitialized constant None
+            #        # Not sure how we would end up with mult == 0...
+            #        return arg1
+            #    else:
+            #        # Multiplier becomes an uninitialized constant
+            #        arg1[1].mult = None
+            #        return arg1
+            #else:
+            #    tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
+            #    if tmp != tmp:
+            #        # This catches if the multiplier division results in nan
+            #        return _CONSTANT, tmp
+            #    arg1[1].mult = tmp
+            #    return arg1
         elif arg1[0] is _CONSTANT:
-            if (
-                # FIXME: This is buggy. math.isnan does not handle args
-                # that are None.
-                (arg1[1] is None and math.isnan(arg2[1]))
-                or (arg2[1] is None and math.isnan(arg1[1]))
-            ):
-                # This handles either arg==None correctly
-                return (_CONSTANT, nan)
-            elif arg1[1] == 0 and arg2[1] is None:
-                return (_CONSTANT, 0)
-            elif arg1[1] is None and arg2[1] == 0:
-                return (_CONSTANT, nan)
-            elif arg1[1] is None or arg2[1] is None:
-                return (_CONSTANT, None)
-            else:
-                return _apply_node_operation(node, (arg1[1], div))
+            return (_CONSTANT, _none_safe_divide(arg1[1], div))
+            #if (
+            #    (arg1[1] is None and math.isnan(arg2[1]))
+            #    or (arg2[1] is None and math.isnan(arg1[1]))
+            #):
+            #    # This handles either arg==None correctly
+            #    return (_CONSTANT, nan)
+            #elif arg1[1] == 0 and arg2[1] is None:
+            #    return (_CONSTANT, 0)
+            #elif arg1[1] is None and arg2[1] == 0:
+            #    return (_CONSTANT, nan)
+            #elif arg1[1] is None or arg2[1] is None:
+            #    return (_CONSTANT, None)
+            #else:
+            #    return _apply_node_operation(node, (arg1[1], div))
     elif arg1[0] is _CONSTANT and arg1[1] == 0:
         return _CONSTANT, 0
-    # What happens when arg1 is None and arg2 is non-constant?
     nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, nonlin)
     return (_GENERAL, IncidenceRepn(0, None, nonlin))
@@ -806,25 +770,30 @@ def handle_pow_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         if arg1[0] is _CONSTANT:
             # Handle None, i.e. uninitialized fixed variable/parameter
-            if arg1[1] is None:
-                if arg2[1] == 0:
-                    # None ** 0 = 1
-                    return (_CONSTANT, 1)
-                else:
-                    # None ** constant = None
-                    return (_CONSTANT, None)
-            elif arg2[1] is None:
-                if arg1[1] == 1:
-                    # 1 ** None = 1
-                    return (_CONSTANT, 1)
-                else:
-                    # constant ** None = 1
-                    # Note that 0 ** None = None as it could take a value
-                    # of 0 or 1 depending on what None is.
-                    return (_CONSTANT, None)
-            else:
-                return _apply_node_operation(node, (arg1[1], arg2[1]))
+            result = _none_safe_pow(arg1[1], arg2[1])
+            if result.__class__ is complex:
+                result = nan
+            return (_CONSTANT, result)
+            #if arg1[1] is None:
+            #    if arg2[1] == 0:
+            #        # None ** 0 = 1
+            #        return (_CONSTANT, 1)
+            #    else:
+            #        # None ** constant = None
+            #        return (_CONSTANT, None)
+            #elif arg2[1] is None:
+            #    if arg1[1] == 1:
+            #        # 1 ** None = 1
+            #        return (_CONSTANT, 1)
+            #    else:
+            #        # constant ** None = 1
+            #        # Note that 0 ** None = None as it could take a value
+            #        # of 0 or 1 depending on what None is.
+            #        return (_CONSTANT, None)
+            #else:
+            #    return _apply_node_operation(node, (arg1[1], arg2[1]))
         elif arg2[1] == 0:
+            # This is valid even if arg1[1] is None
             return _CONSTANT, 1
         elif arg2[1] == 1:
             return arg1
@@ -1110,12 +1079,8 @@ def _before_monomial(visitor, child):
 
     if arg2.fixed:
         arg2 = arg2.value
-        if arg2 is None:
-            _prod = None
-        else:
-            _prod = arg1 * arg2
-        if not (arg1 and arg2) and _prod:
-            # What is this checking for?
+        _prod = _none_safe_multiply(arg1, arg2)
+        if (arg1 == 0 or arg2 == 0) and math.isnan(_prod):
             deprecation_warning(
                 f"Encountered {arg1}*{arg2} in expression tree.  "
                 "Mapping the NaN result to 0 for compatibility "
@@ -1128,6 +1093,8 @@ def _before_monomial(visitor, child):
 
     # Trap multiplication by 0.
     if not arg1:
+        # arg1 should never be None as this happens before a fixed variable
+        # can potentially be resolved to None.
         return False, (_CONSTANT, 0)
     _id = id(arg2)
     if _id not in visitor.var_map:
@@ -1148,36 +1115,24 @@ def _before_linear(visitor, child):
             if c.__class__ not in native_types:
                 c = c()
             if v.fixed:
-                if v.value is None:
-                    const = None
-                else:
-                    const += c * v.value
+                const = _none_safe_addition(
+                    const,
+                    _none_safe_multiply(c, v.value),
+                )
             elif c != 0:
                 _id = id(v)
                 if _id not in var_map:
                     var_map[_id] = v
                 if _id in linear:
-                    # c or linear[_id] could both be None
-                    if c is None and linear[_id] is None:
-                        pass  # linear[_id] stays None
-                    elif c is None and math.isnan(linear[_id]):
-                        pass  # linear[_id] stays NaN
-                    elif linear[_id] is None and math.isnan(c):
-                        linear[_id] = nan
-                    elif c is None or linear[_id] is None:
-                        linear[_id] = None
-                    else:  # Neither is None
-                        linear[_id] += c
+                    linear[_id] = _none_safe_addition(linear[_id], c)
                 else:
                     linear[_id] = c
         elif arg.__class__ in native_types:
             # const is an "accumulated" constant and therefore could be None.
             # arg is an unprocessed native type
-            if const is not None:
-                const += arg
+            const = _none_safe_addition(const, arg)
         else:
-            if const is not None:
-                const += arg()
+            const = _none_safe_addition(const, arg)
     if linear:
         return False, (_GENERAL, IncidenceRepn(const, linear, None))
     else:
@@ -1339,10 +1294,10 @@ class IncidenceRepnVisitor(StreamBasedExpressionVisitor):
         linear = ans.linear
         if ans.mult != 1:
             mult, ans.mult = ans.mult, 1
-            ans.const *= mult
+            ans.const = _none_safe_multiply(ans.const, mult)
             if linear:
                 for k in linear:
-                    linear[k] *= mult
+                    linear[k] = _none_safe_multiply(linear[k], mult)
             # As the nonlinear part is just a set of variable IDs, we
             # do not need to apply the multiplier
         self.active_expression_source = None
