@@ -1756,7 +1756,7 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
     def block_data_objects(
         self, active=None, sort=False, descend_into=True, descent_order=None
     ):
-        """Generator returning this block and any matching sub-blocks.
+        """Returns this block and any matching sub-blocks.
 
         This is roughly equivalent to
 
@@ -1790,6 +1790,10 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
             The strategy used to walk the block hierarchy.  Defaults to
             `TraversalStrategy.PrefixDepthFirstSearch`.
 
+        Returns
+        -------
+        tuple or generator
+
         """
         # TODO: we should determine if that is desirable behavior(it is
         # historical, so there are backwards compatibility arguments to
@@ -1797,10 +1801,9 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         # component_data_objects, it might be desirable to always return
         # self.
         if active is not None and self.active != active:
-            return
+            return ()
         if not descend_into:
-            yield self
-            return
+            return (self,)
 
         if descend_into is True:
             ctype = (Block,)
@@ -1821,7 +1824,7 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
             walker = self._postfix_dfs_iterator(ctype, active, sort, dedup)
         else:
             raise RuntimeError("unrecognized traversal strategy: %s" % (descent_order,))
-        yield from walker
+        return walker
 
     def _prefix_dfs_iterator(self, ctype, active, sort, dedup):
         """Helper function implementing a non-recursive prefix order
