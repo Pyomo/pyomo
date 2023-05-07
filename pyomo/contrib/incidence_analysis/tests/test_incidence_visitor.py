@@ -290,18 +290,18 @@ class TestUninitialized(unittest.TestCase):
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
-        expr = - 2 * m.x[1] * m.x[2] + 2 * m.x[2]
+        expr = -2 * m.x[1] * m.x[2] + 2 * m.x[2]
         m.x[1].fix()
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
         # FIXME: This test fails trying to evaluate the NPV_Expression
-        #m.p = pyo.Param(mutable=True, initialize=None)
-        #expr = - m.p * m.x[2] + 2 * m.x[2]
-        #variables = get_incident_variables(expr)
-        #self.assertEqual(len(variables), 1)
-        #self.assertIs(variables[0], m.x[2])
+        # m.p = pyo.Param(mutable=True, initialize=None)
+        # expr = - m.p * m.x[2] + 2 * m.x[2]
+        # variables = get_incident_variables(expr)
+        # self.assertEqual(len(variables), 1)
+        # self.assertIs(variables[0], m.x[2])
 
     def test_division_by_fixed_var(self):
         m = pyo.ConcreteModel()

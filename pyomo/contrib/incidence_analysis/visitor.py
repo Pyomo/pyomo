@@ -233,7 +233,7 @@ def _none_safe_pow(arg1, arg2):
         # None ** const = None
         return None
     else:
-        return arg1 ** arg2
+        return arg1**arg2
 
 
 def _apply_node_operation(node, args):
@@ -711,15 +711,15 @@ def handle_division_node(visitor, node, arg1, arg2):
             if quotient is not None and math.isnan(quotient):
                 return (_CONSTANT, quotient)
             return (_MONOMIAL, arg1[1], quotient)
-            #if div is None:
+            # if div is None:
             #    # We assume that None != 0 and return a monomial with
             #    # coefficient of None
             #    return (_MONOMIAL, arg1[1], None)
-            #tmp = _apply_node_operation(node, (arg1[2], div))
-            #if tmp[1] != tmp[1]:
+            # tmp = _apply_node_operation(node, (arg1[2], div))
+            # if tmp[1] != tmp[1]:
             #    # This catches if the coefficient division results in nan
             #    return tmp
-            #return (_MONOMIAL, arg1[1], tmp[1])
+            # return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
             quotient = _none_safe_divide(arg1[1].mult, div)
             if quotient is not None and math.isnan(quotient):
@@ -727,7 +727,7 @@ def handle_division_node(visitor, node, arg1, arg2):
                 return (_CONSTANT, quotient)
             arg1[1].mult = quotient
             return arg1
-            #if div is None:
+            # if div is None:
             #    if arg1[1].mult == 0 or math.isnan(arg1[1].mult):
             #        # 0 or NaN absorb the uninitialized constant None
             #        # Not sure how we would end up with mult == 0...
@@ -736,7 +736,7 @@ def handle_division_node(visitor, node, arg1, arg2):
             #        # Multiplier becomes an uninitialized constant
             #        arg1[1].mult = None
             #        return arg1
-            #else:
+            # else:
             #    tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
             #    if tmp != tmp:
             #        # This catches if the multiplier division results in nan
@@ -745,19 +745,19 @@ def handle_division_node(visitor, node, arg1, arg2):
             #    return arg1
         elif arg1[0] is _CONSTANT:
             return (_CONSTANT, _none_safe_divide(arg1[1], div))
-            #if (
+            # if (
             #    (arg1[1] is None and math.isnan(arg2[1]))
             #    or (arg2[1] is None and math.isnan(arg1[1]))
-            #):
+            # ):
             #    # This handles either arg==None correctly
             #    return (_CONSTANT, nan)
-            #elif arg1[1] == 0 and arg2[1] is None:
+            # elif arg1[1] == 0 and arg2[1] is None:
             #    return (_CONSTANT, 0)
-            #elif arg1[1] is None and arg2[1] == 0:
+            # elif arg1[1] is None and arg2[1] == 0:
             #    return (_CONSTANT, nan)
-            #elif arg1[1] is None or arg2[1] is None:
+            # elif arg1[1] is None or arg2[1] is None:
             #    return (_CONSTANT, None)
-            #else:
+            # else:
             #    return _apply_node_operation(node, (arg1[1], div))
     elif arg1[0] is _CONSTANT and arg1[1] == 0:
         return _CONSTANT, 0
@@ -774,14 +774,14 @@ def handle_pow_node(visitor, node, arg1, arg2):
             if result.__class__ is complex:
                 result = nan
             return (_CONSTANT, result)
-            #if arg1[1] is None:
+            # if arg1[1] is None:
             #    if arg2[1] == 0:
             #        # None ** 0 = 1
             #        return (_CONSTANT, 1)
             #    else:
             #        # None ** constant = None
             #        return (_CONSTANT, None)
-            #elif arg2[1] is None:
+            # elif arg2[1] is None:
             #    if arg1[1] == 1:
             #        # 1 ** None = 1
             #        return (_CONSTANT, 1)
@@ -790,7 +790,7 @@ def handle_pow_node(visitor, node, arg1, arg2):
             #        # Note that 0 ** None = None as it could take a value
             #        # of 0 or 1 depending on what None is.
             #        return (_CONSTANT, None)
-            #else:
+            # else:
             #    return _apply_node_operation(node, (arg1[1], arg2[1]))
         elif arg2[1] == 0:
             # This is valid even if arg1[1] is None
