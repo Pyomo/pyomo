@@ -1115,10 +1115,7 @@ def _before_linear(visitor, child):
             if c.__class__ not in native_types:
                 c = c()
             if v.fixed:
-                const = _none_safe_addition(
-                    const,
-                    _none_safe_multiply(c, v.value),
-                )
+                const = _none_safe_addition(const, _none_safe_multiply(c, v.value))
             elif c != 0:
                 _id = id(v)
                 if _id not in var_map:
