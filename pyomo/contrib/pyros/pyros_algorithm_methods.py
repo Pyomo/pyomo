@@ -230,9 +230,7 @@ def ROSolver_iterative_solve(model_data, config):
                 master_soln.feasibility_problem_results
             )
 
-        master_statuses.append(
-            master_soln.results.solver.termination_condition
-        )
+        master_statuses.append(master_soln.results.solver.termination_condition)
         master_soln.master_problem_subsolver_statuses = master_statuses
 
         # === Check for robust infeasibility or error or time-out in master problem solve
@@ -373,9 +371,7 @@ def ROSolver_iterative_solve(model_data, config):
             if scaled_violations is not None:
                 # can be None if time out or subsolver error
                 # reported in separation
-                separation_data.constraint_violations.append(
-                    scaled_violations.values()
-                )
+                separation_data.constraint_violations.append(scaled_violations.values())
         separation_data.points_separated = (
             separation_results.violating_param_realization
         )
