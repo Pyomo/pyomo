@@ -922,6 +922,8 @@ def solver_call_separation(
     # === Initialize separation problem; fix first-stage variables
     initialize_separation(model_data, config)
 
+    separation_obj.activate()
+
     solve_call_results = SeparationSolveCallResults(
         solved_globally=solve_globally,
         time_out=False,
@@ -931,7 +933,6 @@ def solver_call_separation(
     )
     timer = TicTocTimer()
     for opt in solvers:
-        separation_obj.activate()
         orig_setting, custom_setting_present = adjust_solver_time_settings(
             model_data.timing, opt, config
         )
@@ -960,8 +961,6 @@ def solver_call_separation(
                 opt, orig_setting, custom_setting_present, config
             )
 
-        separation_obj.deactivate()
-
         # record termination condition for this particular solver
         solver_status_dict[str(opt)] = results.solver.termination_condition
         solve_call_results.results_list.append(results)
@@ -971,6 +970,7 @@ def solver_call_separation(
         if config.time_limit:
             if elapsed >= config.time_limit:
                 solve_call_results.time_out = True
+                separation_obj.deactivate()
                 return solve_call_results
 
         # if separation problem solved to optimality, record results
@@ -1000,6 +1000,9 @@ def solver_call_separation(
             ) = evaluate_performance_constraint_violations(
                 model_data, config, perf_con_to_maximize, perf_cons_to_evaluate
             )
+
+            separation_obj.deactivate()
+
             return solve_call_results
 
     # All subordinate solvers failed to optimize model to appropriate
@@ -1031,6 +1034,8 @@ def solver_call_separation(
             objective=objective,
             status_dict=solver_status_dict,
         )
+
+    separation_obj.deactivate()
 
     return solve_call_results
 
