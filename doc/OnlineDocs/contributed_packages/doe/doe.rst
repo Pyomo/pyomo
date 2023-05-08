@@ -132,15 +132,15 @@ The required inputs to the Pyomo.DoE solver are the following:
 
 Below is a list of arguments that Pyomo.DoE expects the user to provide.
 
-param_init : ``dictionary``
+parameter_dict : ``dictionary``
     A ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index in a nested ``Dictionary``.
 
-design_variable_timepoints : ``object``
-    A ``object`` of design variables, provided by the design class.
+design_variables: ``object``
+    A ``object`` of design variables, provided by the DesignVariables class.
     If this design var is independent of time (constant), set the time to [0]
 
-measurement_object : ``object``
-    An ``object`` of the measurements, provided by the measurement class.
+measurement_variables : ``object``
+    An ``object`` of the measurements, provided by the MeasurementVariables class.
 
 create_model : ``function``
     A ``function`` returning a deterministic process model.
@@ -165,10 +165,10 @@ Pyomo.DoE Solver Interface
         #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
 
 .. autoclass:: pyomo.contrib.doe.measurements.MeasurementVariables
-    :members: __init__, add_elements
+    :members: __init__, add_variables
 
 .. autoclass:: pyomo.contrib.doe.measurements.DesignVariabless
-    :members: __init__, add_elements
+    :members: __init__, add_variables
 
 .. autoclass:: pyomo.contrib.doe.scenario.ScenarioGenerator
     :special-members: __init__
@@ -286,12 +286,8 @@ The process model for the reaction kinetics problem is shown below.
     ...             if t in m.t_con:
     ...                 return pyo.Constraint.Skip
     ...             else:
-    ...                 j = -1
-    ...                 for t_con in m.t_con:
-    ...                     if t>t_con:
-    ...                         j+=1
-    ...                 neighbour_t = t_control[j]
-    ...                 return m.T[t] == m.T[neighbour_t]
+    ...                 neighbour_t = max(tc for tc in control_time if tc<t)
+    ...             return m.T[t] == m.T[neighbour_t]
     ...         def cal_kp1(m,t):
     ...             return m.kp1[t] == m.A1*pyo.exp(-m.E1*1000/(m.R*m.T[t])) 
     ...         def cal_kp2(m,t):
@@ -389,10 +385,12 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
 .. doctest::
 
     >>> # === Decide mode ===
-    >>> sensi_opt = calculation_mode.sequential_finite
+    >>> sensi_opt = "sequential_finite"
     >>> # === Specify an experiment ===
+    >>> design_names = design_gen.variable_names
     >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
-    >>> design_gen.update_values(exp1) # update values for design object
+    >>> exp1_design_dict = dict(zip(design_names, exp1))
+    >>> design_gen.update_values(exp1_design_dict) # update values for design object
     >>> # === Create the DOE object ===
     >>> doe_object = DesignOfExperiments(
     ...                 parameter_dict, 
@@ -406,7 +404,7 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
     >>> result = doe_object.compute_FIM(
     ...                 mode=sensi_opt,  
     ...                 scale_nominal_param_value=True,
-    ...                 formula = finite_difference_step.central
+    ...                 formula = "central"
     ...                 ) # doctest: +SKIP
     >>> # === Use ``calculate_FIM`` method of the result object to evaluate the FIM ===
     >>> result.calculate_FIM(doe_object.design_values) # doctest: +SKIP
@@ -436,7 +434,7 @@ Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` an
     >>> # === Specify inputs===
     >>> design_ranges = [list(np.linspace(1,5,3)), list(np.linspace(300,700,3))] # CA0, T
     >>> dv_apply_name = ['CA0[0]',['T[0]','T[0.125]','T[0.25]','T[0.375]','T[0.5]','T[0.625]','T[0.75]','T[0.875]','T[1]']]
-    >>> sensi_opt = calculation_mode.direct_kaug
+    >>> sensi_opt = "direct_kaug"
     >>> prior_pass = np.zeros((4,4))
 
     >>> # === Run enumeration ===
@@ -480,7 +478,8 @@ This function solves twice: It solves the square version of the MBDoE problem fi
 
     >>> # === Specify a starting point ===
     >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
-    >>> design_gen.update_values(exp1)
+    >>> exp1_design_dict = dict(zip(design_names, exp1))
+    >>> design_gen.update_values(exp1_design_dict)
     >>> # === Define DOE object ===
     >>> doe_object = DesignOfExperiments(
     ...                 parameter_dict, 
@@ -495,7 +494,7 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     ...                 if_optimize=True, 
     ...                 if_Cholesky=True,
     ...                 scale_nominal_param_value=True, 
-    ...                 objective_option=objective_lib.det, 
+    ...                 objective_option="det", 
     ...                 L_initial=np.linalg.cholesky(prior)) # doctest: +SKIP
 
 
