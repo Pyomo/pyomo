@@ -138,7 +138,7 @@ def create_model(
         mod.para_list = para_list
 
         # timepoints
-        mod.t = ContinuousSet(bounds=(t_range[0], t_range[1]))
+        mod.t = ContinuousSet(bounds=t_range, initialize=control_time)
 
         # time-dependent design variable, initialized with the first control value
         def T_initial(m, t):
@@ -147,11 +147,7 @@ def create_model(
             else:
                 # count how many control points are before the current t;
                 # locate the nearest neighbouring control point before this t
-                j = -1
-                for t_con in m.t_con:
-                    if t > t_con:
-                        j += 1
-                neighbour_t = control_time[j]
+                neighbour_t = max(tc for tc in control_time if tc<t)
                 return controls[neighbour_t]
 
         mod.T = pyo.Var(
@@ -194,11 +190,7 @@ def create_model(
             if t in m.t_con:
                 return pyo.Constraint.Skip
             else:
-                j = -1
-                for t_con in m.t_con:
-                    if t > t_con:
-                        j += 1
-                neighbour_t = control_time[j]
+                neighbour_t = max(tc for tc in control_time if tc<t)
                 return m.T[t] == m.T[neighbour_t]
 
         def cal_kp1(m, t):

@@ -191,11 +191,11 @@ class TestMeasurement(unittest.TestCase):
             variable_name2, indices=indices2, time_index_position=1, variance=10
         )
 
-        # test names, variance
-        self.assertEqual(measurements.name[0], 'C[CA,0]')
-        self.assertEqual(measurements.name[1], 'C[CA,0.125]')
-        self.assertEqual(measurements.name[-1], 'T[5,0.8]')
-        self.assertEqual(measurements.name[-2], 'T[5,0.6]')
+        # check variable names
+        self.assertEqual(measurements.variable_names[0], 'C[CA,0]')
+        self.assertEqual(measurements.variable_names[1], 'C[CA,0.125]')
+        self.assertEqual(measurements.variable_names[-1], 'T[5,0.8]')
+        self.assertEqual(measurements.variable_names[-2], 'T[5,0.6]')
         self.assertEqual(measurements.variance['T[5,0.4]'], 10)
         self.assertEqual(measurements.variance['T[5,0.6]'], 10)
         self.assertEqual(measurements.variance['T[5,0.4]'], 10)
@@ -220,8 +220,8 @@ class TestMeasurement(unittest.TestCase):
         measurements2 = MeasurementVariables()
         measurements2.set_variable_name_list(var_names)
 
-        self.assertEqual(measurements2.name[1], 'C[CA,0.125]')
-        self.assertEqual(measurements2.name[-1], 'C[CC,0.375]')
+        self.assertEqual(measurements2.variable_names[1], 'C[CA,0.125]')
+        self.assertEqual(measurements2.variable_names[-1], 'C[CC,0.375]')
 
         ### check_subset function
         self.assertTrue(measurements.check_subset(measurements2))
@@ -264,7 +264,7 @@ class TestDesignVariable(unittest.TestCase):
         )
 
         self.assertEqual(
-            exp_design.name,
+            exp_design.variable_names,
             [
                 'CA0[0]',
                 'T[0]',
@@ -285,8 +285,10 @@ class TestDesignVariable(unittest.TestCase):
         self.assertEqual(exp_design.lower_bounds['CA0[0]'], 1)
         self.assertEqual(exp_design.lower_bounds['T[0]'], 300)
 
+        design_names = exp_design.variable_names
         exp1 = [4, 600, 300, 300, 300, 300, 300, 300, 300, 300]
-        exp_design.update_values(exp1)
+        exp1_design_dict = dict(zip(design_names, exp1))
+        exp_design.update_values(exp1_design_dict)
         self.assertEqual(exp_design.variable_names_value['CA0[0]'], 4)
         self.assertEqual(exp_design.variable_names_value['T[0]'], 600)
 
@@ -313,7 +315,7 @@ class TestParameter(unittest.TestCase):
         self.assertAlmostEqual(parameter_set['scenario'][-2]['E2'], 16.55, places=1)
 
 
-class TestSpecialSet(unittest.TestCase):
+class TestVariablesWithIndices(unittest.TestCase):
     """Test the DesignVariable class, specify, add_element, add_bounds, update_values."""
 
     def test_setup(self):

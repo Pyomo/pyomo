@@ -43,8 +43,8 @@ from pyomo.opt import SolverStatus, TerminationCondition
 class FisherResults:
     def __init__(
         self,
-        para_name,
-        measure_object,
+        parameter_names,
+        measurements,
         jacobian_info=None,
         all_jacobian_info=None,
         prior_FIM=None,
@@ -56,9 +56,9 @@ class FisherResults:
 
         Parameters
         -----------
-        para_name:
+        parameter_names:
             A ``list`` of parameter names
-        measure_object:
+        measurements:
             A measurement ``object`` which contains the Pyomo variable names and their corresponding indices and
             bounds for experimental measurements
         jacobian_info:
@@ -74,9 +74,9 @@ class FisherResults:
         max_condition_number:
             max condition number
         """
-        self.para_name = para_name
-        self.measure_object = measure_object
-        self.measurement_variables = measure_object.name
+        self.parameter_names = parameter_names
+        self.measurements = measurements
+        self.measurement_variables = measurements.variable_names
 
         if jacobian_info is None:
             self.jaco_information = all_jacobian_info
@@ -92,12 +92,12 @@ class FisherResults:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.WARN)
 
-    def calculate_FIM(self, dv_names, result=None):
+    def calculate_FIM(self, design_variable_names, result=None):
         """Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
         Parameters
         ----------
-        dv_names:
+        design_variable_names:
             a list of design variable names
         result:
             solver status returned by IPOPT
@@ -106,22 +106,23 @@ class FisherResults:
         self.doe_result = None
 
         # get number of parameters
-        no_param = len(self.para_name)
+        no_param = len(self.parameter_names)
 
         fim = np.zeros((no_param, no_param))
 
         # convert dictionary to a numpy array
         Q_all = []
-        for par in self.para_name:
+        for par in self.parameter_names:
             Q_all.append(self.jaco_information[par])
-        n = len(self.para_name)
+        n = len(self.parameter_names)
 
-        Q_all = np.asarray(Q_all).T
+        Q_all = np.array(list(self.jaco_information[p] for p in self.parameter_names)).T
+        # add the FIM for each measurement variables together 
         for i, mea_name in enumerate(self.measurement_variables):
             fim += (
                 1
-                / self.measure_object.variance[str(mea_name)]
-                * (Q_all[i, :].reshape(n, 1) @ Q_all[i, :].reshape(n, 1).T)
+                / self.measurements.variance[str(mea_name)] # variance of measurement 
+                * (Q_all[i, :].reshape(n, 1) @ Q_all[i, :].reshape(n, 1).T) # Q.T @ Q for each measurement variable
             )
 
         # add prior information
@@ -143,7 +144,7 @@ class FisherResults:
             )
 
         # call private methods
-        self._print_FIM_info(fim, dv_names=dv_names)
+        self._print_FIM_info(fim, design_variable_names=design_variable_names)
         if self.result is not None:
             self._get_solver_info()
 
@@ -161,14 +162,14 @@ class FisherResults:
         """
 
         # Check that measurement_subset is a valid subset of self.measurement
-        self.measure_object.check_subset(measurement_subset)
+        self.measurements.check_subset(measurement_subset)
 
         # Split Jacobian (should already be 3D)
         small_jac = self._split_jacobian(measurement_subset)
 
         # create a new subject
-        FIM_subclass = FisherResults(
-            self.para_name,
+        FIM_subset = FisherResults(
+            self.parameter_names,
             measurement_subset,
             jacobian_info=small_jac,
             prior_FIM=self.prior_FIM,
@@ -177,7 +178,7 @@ class FisherResults:
             max_condition_number=self.max_condition_number,
         )
 
-        return FIM_subclass
+        return FIM_subset
 
     def _split_jacobian(self, measurement_subset):
         """
@@ -193,10 +194,10 @@ class FisherResults:
 
         # reorganize the jacobian subset with the same form of the jacobian
         # loop over parameters
-        for par in self.para_name:
+        for par in self.parameter_names:
             jaco_info[par] = []
             # loop over measurements
-            for nam in measurement_subset.name:
+            for nam in measurement_subset.variable_names:
                 try:
                     n_all_measure = self.measurement_variables.index(nam)
                     jaco_info[par].append(self.all_jacobian_info[par][n_all_measure])
@@ -205,14 +206,14 @@ class FisherResults:
 
         return jaco_info
 
-    def _print_FIM_info(self, FIM, dv_names=None):
+    def _print_FIM_info(self, FIM, design_variable_names=None):
         """
         using a dictionary to store all FIM information
 
         Parameters
         -----------
         FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
-        dv_names: design variable dictionary
+        design_variable_names: design variable dictionary
 
         Return:
         ------
@@ -267,16 +268,16 @@ class FisherResults:
         # For trace, the scaling factor to trace is the scaling factor.
         if self.obj == 'det':
             self.obj_det = np.exp(value(m.obj)) / (self.fim_scale_constant_value) ** (
-                len(self.para_name)
+                len(self.parameter_names)
             )
         elif self.obj == 'trace':
             self.obj_trace = np.exp(value(m.obj)) / (self.fim_scale_constant_value)
 
-        dv_names = list(dv_set.keys())
+        design_variable_names = list(dv_set.keys())
         dv_times = list(dv_set.values())
 
         solution = {}
-        for d, dname in enumerate(dv_names):
+        for d, dname in enumerate(design_variable_names):
             sol = []
             if dv_times[d] is not None:
                 for t, time in enumerate(dv_times[d]):
@@ -292,7 +293,7 @@ class FisherResults:
     def _store_FIM(self):
         # if given store file name, store the FIM
         store_dict = {}
-        for i, name in enumerate(self.para_name):
+        for i, name in enumerate(self.parameter_names):
             store_dict[name] = self.FIM[i]
         FIM_store = pd.DataFrame(store_dict)
         FIM_store.to_csv(self.store_FIM, index=False)

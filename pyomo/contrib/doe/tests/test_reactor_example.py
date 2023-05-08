@@ -114,10 +114,12 @@ class Test_doe_object(unittest.TestCase):
 
         ### Test sequential_finite mode
         sensi_opt = "sequential_finite"
-
+        
+        design_names = exp_design.variable_names
         exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+        exp1_design_dict = dict(zip(design_names, exp1))
 
-        exp_design.update_values(exp1)
+        exp_design.update_values(exp1_design_dict)
 
         doe_object = DesignOfExperiments(
             parameter_dict,
@@ -157,8 +159,10 @@ class Test_doe_object(unittest.TestCase):
         ### Test direct_kaug mode
         sensi_opt = "direct_kaug"
         # Define a new experiment
+
         exp1 = [5, 570, 400, 300, 300, 300, 300, 300, 300, 300]
-        exp_design.update_values(exp1)
+        exp1_design_dict = dict(zip(design_names, exp1))
+        exp_design.update_values(exp1_design_dict)
 
         doe_object = DesignOfExperiments(
             parameter_dict,
@@ -183,7 +187,8 @@ class Test_doe_object(unittest.TestCase):
         ### Test stochastic_program mode
 
         exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
-        exp_design.update_values(exp1)
+        exp1_design_dict = dict(zip(design_names, exp1))
+        exp_design.update_values(exp1_design_dict)
 
         # add a prior information (scaled FIM with T=500 and T=300 experiments)
         prior = np.asarray(

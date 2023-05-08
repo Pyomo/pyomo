@@ -27,13 +27,14 @@
 
 import pickle
 from enum import Enum
-
+from collections import namedtuple
 
 class FiniteDifferenceStep(Enum):
     forward = "forward"
     central = "central"
     backward = "backward"
 
+ScenarioData = namedtuple("ScenarioData", ["scenario", "scena_num", "eps_abs"])
 
 class ScenarioGenerator:
     def __init__(

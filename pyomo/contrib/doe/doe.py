@@ -100,14 +100,14 @@ class DesignOfExperiments:
         # parameters
         self.param = param_init
         # design variable name
-        self.design_name = design_vars.name
+        self.design_name = design_vars.variable_names
         self.design_vars = design_vars
         self.create_model = create_model
         self.args = args
 
         # create the measurement information object
         self.measurement_vars = measurement_vars
-        self.measure_name = self.measurement_vars.name
+        self.measure_name = self.measurement_vars.variable_names
 
         # check if user-defined solver is given
         if solver:
@@ -418,7 +418,10 @@ class DesignOfExperiments:
                 # extract variable values
                 for r in self.measure_name:
                     cuid = pyo.ComponentUID(r)
-                    var_up = cuid.find_component_on(mod.block[s])
+                    try:
+                        var_up = cuid.find_component_on(mod.block[s])
+                    except:
+                        raise ValueError(f"measurement {r} cannot be found in the model.")
                     output_iter.append(pyo.value(var_up))
 
                 output_record[s] = output_iter

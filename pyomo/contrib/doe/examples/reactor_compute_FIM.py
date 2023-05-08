@@ -54,39 +54,36 @@ def main():
 
     # add CAO as design variable
     exp_design.add_variables(
-        "CA0",
-        indices={0: [0]},
-        time_index_position=0,
-        values= [5],
-        lower_bounds=1,
-        upper_bounds=5,
+        "CA0", # design variable name 
+        indices={0: [0]}, # index dictionary 
+        time_index_position=0, # time index position
+        values= [5], # design variable values
+        lower_bounds=1, # design variable lower bounds
+        upper_bounds=5, # design variable upper bounds
     )
 
     # add T as design variable
     exp_design.add_variables(
-        "T",
-        indices= {0: t_control},
-        time_index_position=0,
+        "T", # design variable name
+        indices= {0: t_control}, # index dictionary
+        time_index_position=0, # time index position
         values=[570, 300, 300, 300, 300, 300, 300, 300, 300], # same length with t_control
-        lower_bounds=300,
-        upper_bounds=700,
+        lower_bounds=300, # design variable lower bounds
+        upper_bounds=700, # design variable upper bounds
     )
 
-    ### Test sequential_finite mode
-    sensi_opt = "sequential_finite"
-
     doe_object = DesignOfExperiments(
-        parameter_dict,
-        exp_design,
-        measurements,
-        create_model,
-        discretize_model=disc_for_measure,
+        parameter_dict, # parameter dictionary
+        exp_design, # design object
+        measurements, # measurement object
+        create_model, # create model function 
+        discretize_model=disc_for_measure, # discretize model function
     )
 
     result = doe_object.compute_FIM(
-        mode=sensi_opt,
-        scale_nominal_param_value=True,
-        formula="central",
+        mode="sequential_finite", # calculation mode
+        scale_nominal_param_value=True, # scale nominal parameter value
+        formula="central", # formula for finite difference
     )
 
     result.calculate_FIM(doe_object.design_values)

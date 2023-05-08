@@ -44,35 +44,37 @@ def main():
 
     # measurement object
     measurements = MeasurementVariables()
-    measurements.add_variables("C", 
-                               indices={0: ["CA", "CB", "CC"], 1: t_control}, 
-                               time_index_position=1)
+    measurements.add_variables("C",     # name of measurement
+                               indices={0: ["CA", "CB", "CC"], 1: t_control},  # indices of measurement
+                               time_index_position=1) # position of time index
 
     # design object
     exp_design = DesignVariables()
 
     # add CAO as design variable
     exp_design.add_variables(
-        "CA0",
-        indices={0: [0]},
-        time_index_position=0,
-        values=[5],
-        lower_bounds=1,
-        upper_bounds=5,
+        "CA0", # name of design variable
+        indices={0: [0]}, # indices of design variable
+        time_index_position=0, # position of time index
+        values=[5], # nominal value of design variable
+        lower_bounds=1,     # lower bound of design variable
+        upper_bounds=5,    # upper bound of design variable
     )
 
     # add T as design variable
     exp_design.add_variables(
-        "T",
-        indices={0: t_control},
-        time_index_position=0,
-        values=[470, 300, 300, 300, 300, 300, 300, 300, 300],
-        lower_bounds=300,
-        upper_bounds=700,
+        "T", # name of design variable
+        indices={0: t_control}, # indices of design variable
+        time_index_position=0, # position of time index
+        values=[470, 300, 300, 300, 300, 300, 300, 300, 300], # nominal value of design variable
+        lower_bounds=300,    # lower bound of design variable
+        upper_bounds=700,   # upper bound of design variable
     )
 
+    design_names = exp_design.variable_names
     exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
-    exp_design.update_values(exp1)
+    exp1_design_dict = dict(zip(design_names, exp1))
+    exp_design.update_values(exp1_design_dict)
 
     # add a prior information (scaled FIM with T=500 and T=300 experiments)
     prior = np.asarray(
@@ -85,28 +87,28 @@ def main():
     )
 
     doe_object2 = DesignOfExperiments(
-        parameter_dict,
-        exp_design,
-        measurements,
-        create_model,
-        prior_FIM=prior,
-        discretize_model=disc_for_measure,
+        parameter_dict,     # dictionary of parameters
+        exp_design,        # design variables
+        measurements,     # measurement variables
+        create_model,   # function to create model
+        prior_FIM=prior, # prior information
+        discretize_model=disc_for_measure, # function to discretize model
     )
 
     square_result, optimize_result = doe_object2.stochastic_program(
-        if_optimize=True,
-        if_Cholesky=True,
-        scale_nominal_param_value=True,
-        objective_option="det",
-        L_initial=np.linalg.cholesky(prior),
+        if_optimize=True, # if optimize
+        if_Cholesky=True, # if use Cholesky decomposition
+        scale_nominal_param_value=True, # if scale nominal parameter value
+        objective_option="det", # objective option
+        L_initial=np.linalg.cholesky(prior), # initial Cholesky decomposition
     )
 
     square_result, optimize_result = doe_object2.stochastic_program(
-        if_optimize=True,
-        if_Cholesky=True,
-        scale_nominal_param_value=True,
-        objective_option="trace",
-        L_initial=np.linalg.cholesky(prior),
+        if_optimize=True, # if optimize
+        if_Cholesky=True, # if use Cholesky decomposition
+        scale_nominal_param_value=True, # if scale nominal parameter value
+        objective_option="trace", # objective option
+        L_initial=np.linalg.cholesky(prior), # initial Cholesky decomposition
     )
 
 
