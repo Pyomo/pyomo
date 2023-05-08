@@ -369,9 +369,13 @@ def ROSolver_iterative_solve(model_data, config):
             separation_results.evaluate_global_solve_time(get_time_from_solver)
         )
         if separation_results.found_violation:
-            separation_data.constraint_violations.append(
-                list(separation_results.scaled_violations.values())
-            )
+            scaled_violations = separation_results.scaled_violations
+            if scaled_violations is not None:
+                # can be None if time out or subsolver error
+                # reported in separation
+                separation_data.constraint_violations.append(
+                    scaled_violations.values()
+                )
         separation_data.points_separated = (
             separation_results.violating_param_realization
         )
