@@ -559,21 +559,21 @@ class DesignOfExperiments:
             parameter_dict=self.param, formula=self.formula, step=self.step
         )
 
-        self.scenario_data = scena_gen.scenario_data
+        self.scenario_data = scena_gen.ScenarioData 
 
         # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
-        self.scenario_list = self.scenario_data["scenario"]
+        self.scenario_list = self.scenario_data.scenario
         # dictionary, keys are parameter name, values are a list of scenario index where this parameter is perturbed.
-        self.scenario_num = self.scenario_data["scena_num"]
+        self.scenario_num = self.scenario_data.scena_num
         # dictionary, keys are parameter name, values are the perturbation step
-        self.eps_abs = self.scenario_data["eps-abs"]
+        self.eps_abs = self.scenario_data.eps_abs
         self.scena_gen = scena_gen
 
         # Create a global model
         mod = pyo.ConcreteModel()
 
         # Set for block/scenarios
-        mod.scenario = pyo.Set(initialize=self.scenario_data['scenario_number'])
+        mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
 
         # Allow user to self-define complex design variables
         self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
@@ -586,7 +586,7 @@ class DesignOfExperiments:
             for par in self.param:
                 cuid = pyo.ComponentUID(par)
                 var = cuid.find_component_on(b)
-                var.fix(self.scenario_data["scenario"][s][par])
+                var.fix(self.scenario_data.scenario[s][par])
 
         mod.block = pyo.Block(mod.scenario, rule=block_build)
 
@@ -627,7 +627,7 @@ class DesignOfExperiments:
         # After collecting outputs from all scenarios, calculate sensitivity
         for para in self.param.keys():
             # extract involved scenario No. for each parameter from scenario class
-            involved_s = self.scenario_data['scena_num'][para]
+            involved_s = self.scenario_data.scena_num[para]
 
             # each parameter has two involved scenarios
             s1 = involved_s[0]  # positive perturbation
@@ -636,7 +636,7 @@ class DesignOfExperiments:
             for i in range(len(output_record[s1])):
                 sensi = (
                     (output_record[s1][i] - output_record[s2][i])
-                    / self.scenario_data['eps-abs'][para]
+                    / self.scenario_data.eps_abs[para]
                     * self.scale_constant_value
                 )
                 if self.scale_nominal_param_value:

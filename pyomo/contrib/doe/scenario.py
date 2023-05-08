@@ -34,7 +34,8 @@ class FiniteDifferenceStep(Enum):
     central = "central"
     backward = "backward"
 
-ScenarioData = namedtuple("ScenarioData", ["scenario", "scena_num", "eps_abs"])
+# namedtuple for scenario data
+ScenarioData = namedtuple("ScenarioData", ["scenario", "scena_num", "eps_abs", "scenario_indices"])
 
 class ScenarioGenerator:
     def __init__(
@@ -69,27 +70,28 @@ class ScenarioGenerator:
 
     def generate_scenario(self):
         """
-        Generate scenario dict
+        Generate scenario data for the given parameter dictionary.
 
         Returns:
         -------
-        scenario_dict: a dictionary containing scenarios dictionaries.
-        scenario_dict['scenario']: a list of dictionaries, each dictionary contains a perturbed scenario
-        scenario_dict['eps-abs']: keys are parameter name, values are the step it is perturbed
-        scena_overall['scena-num']: a dict of scenario number related to one parameter
+        ScenarioData: a namedtuple containing scenarios information.
+        ScenarioData.scenario: a list of dictionaries, each dictionary contains a perturbed scenario
+        ScenarioData.scena_num: a dict of scenario number related to one parameter
+        ScenarioData.eps_abs: keys are parameter name, values are the step it is perturbed
+        ScenarioData.scenario_indices: a list of scenario indices
+        
 
         For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
-            self.scenario_data = {'eps-abs': {'P': 2.0, 'D': 0.4},
-            'scenario': [{'P':101, 'D':20}, {'P':99, 'D':20}, {'P':100, 'D':20.2}, {'P':100, 'D':19.8}],
-            'scena_num': {'P':[0,1], 'D':[2,3]}}
+            self.ScenarioData.scenario: [{'P':101, 'D':20}, {'P':99, 'D':20}, {'P':100, 'D':20.2}, {'P':100, 'D':19.8}],
+            self.ScenarioData.scena_num: {'P':[0,1], 'D':[2,3]}}
+            self.ScenarioData.eps_abs: {'P': 2.0, 'D': 0.4}
+            self.ScenarioData.scenario_indices: [0,1,2,3]
         if formula ='forward', it will return:
-            self.scenario_data = {'eps-abs':  {'P': 2.0, 'D': 0.4},
-            'scenario': [{'P':101, 'D':20}, {'P':100, 'D':20.2}, {'P':100, 'D':20}],
-            'scena_num': {'P':[0,2], 'D':[1,2]}}
+            self.ScenarioData.scenario:[{'P':101, 'D':20}, {'P':100, 'D':20.2}, {'P':100, 'D':20}],
+            self.ScenarioData.scena_num: {'P':[0,2], 'D':[1,2]}}
+            self.ScenarioData.eps_abs: {'P': 2.0, 'D': 0.4}
+            self.ScenarioData.scenario_indices: [0,1,2]
         """
-
-        # overall dict to return
-        self.scenario_data = {}
         # dict for parameter perturbation step size
         eps_abs = {}
         # scenario dict for block
@@ -139,10 +141,7 @@ class ScenarioGenerator:
             else:
                 eps_abs[para] = self.step * self.parameter_dict[para]
 
-        self.scenario_data['eps-abs'] = eps_abs
-        self.scenario_data['scenario'] = scenario
-        self.scenario_data['scena_num'] = scena_num
-        self.scenario_data['scenario_number'] = list(range(len(scenario)))
+        self.ScenarioData = ScenarioData(scenario, scena_num, eps_abs,list(range(len(scenario))))
 
         # store scenario
         if self.store:
