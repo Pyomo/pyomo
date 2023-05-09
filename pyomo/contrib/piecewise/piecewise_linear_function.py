@@ -295,7 +295,7 @@ class PiecewiseLinearFunction(Block):
         # there if any were coplanar.
         obj._points = [pt for pt in map(tuple, triangulation.points)]
         obj._simplices = []
-        for idx, simplex in enumerate(triangulation.simplices):
+        for simplex in triangulation.simplices:
             # For each simplex, check whether or not the simplex is
             # degenerate. If it is, we will just drop it.
 
