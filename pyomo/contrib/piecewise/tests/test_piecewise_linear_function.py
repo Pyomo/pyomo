@@ -21,7 +21,7 @@ from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
 )
-from pyomo.environ import ConcreteModel, Constraint, log, Reals, Var
+from pyomo.environ import ConcreteModel, Constraint, log, Var
 
 np, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import('scipy')
