@@ -25,7 +25,7 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import numpy as np, numpy_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import (
     MeasurementVariables,
@@ -92,7 +92,7 @@ class TestDesignError(unittest.TestCase):
             upper_bounds=upper_bound,
         )
 
-
+@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestPriorFIMError(unittest.TestCase):
     def test(self):
         # Control time set [h]
@@ -139,8 +139,8 @@ class TestPriorFIMError(unittest.TestCase):
         parameter_dict = {"A1": 1, "A2": 1, "E1": 1}
 
         # empty prior
-        prior_right = np.zeros((3, 3))
-        prior_pass = np.zeros((60, 5))
+        prior_right = [[0]*3 for i in range(3)]
+        prior_pass = [[0]*5 for i in range(10)]
 
         doe_object = DesignOfExperiments(
             parameter_dict,
