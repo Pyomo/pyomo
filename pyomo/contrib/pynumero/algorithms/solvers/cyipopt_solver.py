@@ -64,6 +64,7 @@ from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import Block, Objective, minimize
 from pyomo.opt import SolverStatus, SolverResults, TerminationCondition, ProblemSense
+from pyomo.opt.results.solution import Solution
 
 logger = logging.getLogger(__name__)
 
@@ -400,16 +401,21 @@ class PyomoCyIpoptSolver(object):
                 bound_multipliers=(info["mult_x_L"], info["mult_x_U"])
             )
         else:
-            soln = results.solution.add()
+            soln = Solution()
+            sm = nlp.symbol_map
             soln.variable.update(
-                (i, {"Value": j, "ipopt_zL_out": zl, "ipopt_zU_out": zu})
+                (sm.getSymbol(i), {'Value': j, 'ipopt_zL_out': zl, 'ipopt_zU_out': zu})
                 for i, j, zl, zu in zip(
-                    nlp.variable_names(), x, info["mult_x_L"], info["mult_x_U"]
+                    nlp.get_pyomo_variables(), x, info['mult_x_L'], info['mult_x_U']
                 )
             )
             soln.constraint.update(
-                (i, {"Dual": j}) for i, j in zip(nlp.constraint_names(), info["mult_g"])
+                (sm.getSymbol(i), {'Dual': j})
+                for i, j in zip(nlp.get_pyomo_constraints(), info['mult_g'])
             )
+            model.solutions.add_symbol_map(sm)
+            results._smap_id = id(sm)
+            results.solution.insert(soln)
 
         results.problem.name = model.name
         obj = next(model.component_data_objects(Objective, active=True))
