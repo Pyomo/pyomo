@@ -28,8 +28,6 @@
 
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
-import numpy as np
-from enum import Enum
 from pyomo.contrib.doe import ModelOptionLib
 
 

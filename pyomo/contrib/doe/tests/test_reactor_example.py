@@ -28,7 +28,6 @@
 
 # import libraries
 from pyomo.common.dependencies import numpy as np, numpy_available, pandas_available
-
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
 from pyomo.environ import value, ConcreteModel

@@ -25,6 +25,7 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
+from pyomo.common.dependencies import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import (
     MeasurementVariables,
@@ -34,7 +35,6 @@ from pyomo.contrib.doe import (
     VariablesWithIndices,
 )
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
-import numpy as np
 
 
 class TestMeasurementError(unittest.TestCase):
