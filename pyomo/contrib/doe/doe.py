@@ -315,7 +315,7 @@ class DesignOfExperiments:
     ):
         """
         This function calculates the Fisher information matrix (FIM) using sensitivity information obtaind
-        from two possible mods (dfined by the CalculationMode Enum):
+        from two possible modes (defined by the CalculationMode Enum):
             1.  sequential_finite: sequentially solve square problems and use finite difference approximation
             2.  direct_kaug: solve a single square problem then extract derivatives using NLP sensitivity theory
 

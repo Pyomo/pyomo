@@ -31,7 +31,7 @@ and facilitate an uncertainty analysis to approximate the parameter covariance m
 If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
 If not, MBDoE recommends optimized experimental conditions to generate new data.
 
-Below is an overview of the type of optimization models Pyomo.DoE can accomodate:
+Below is an overview of the type of optimization models Pyomo.DoE can accommodate:
 
 * Pyomo.DoE is suitable for optimization models of **continuous** variables
 * Pyomo.DoE can handle **equality constraints** defining state variables
@@ -218,7 +218,6 @@ Step 0: Import Pyomo and the Pyomo.DoE module
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import ContinuousSet, DerivativeVar
     >>> from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
-    >>> from pyomo.contrib.doe import objective_lib, finite_difference_step, calculation_mode, model_option_lib
     >>> import numpy as np
 
 Step 1: Define the Pyomo process model
@@ -353,7 +352,7 @@ Step 2: Define the inputs for Pyomo.DoE
     >>> lower_bound = [1, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 
     >>> exp_design = DesignVariables() # create object
-    >>> exp_design.add_elements(
+    >>> exp_design.add_variables(
     ...                 "CA0",
     ...                 indices={0: [0]},
     ...                 time_index_position=0,
@@ -387,10 +386,10 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
     >>> # === Decide mode ===
     >>> sensi_opt = "sequential_finite"
     >>> # === Specify an experiment ===
-    >>> design_names = design_gen.variable_names
+    >>> design_names = exp_design.variable_names
     >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
     >>> exp1_design_dict = dict(zip(design_names, exp1))
-    >>> design_gen.update_values(exp1_design_dict) # update values for design object
+    >>> exp_design.update_values(exp1_design_dict) # update values for design object
     >>> # === Create the DOE object ===
     >>> doe_object = DesignOfExperiments(
     ...                 parameter_dict, 
@@ -478,8 +477,9 @@ This function solves twice: It solves the square version of the MBDoE problem fi
 
     >>> # === Specify a starting point ===
     >>> exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
+    >>> design_names = exp_design.variable_names
     >>> exp1_design_dict = dict(zip(design_names, exp1))
-    >>> design_gen.update_values(exp1_design_dict)
+    >>> exp_design.update_values(exp1_design_dict)
     >>> # === Define DOE object ===
     >>> doe_object = DesignOfExperiments(
     ...                 parameter_dict, 
