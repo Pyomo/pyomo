@@ -300,9 +300,7 @@ class TestParameter(unittest.TestCase):
         # set up parameter class
         param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
-        scenario_gene = ScenarioGenerator(
-            param_dict, formula="central", step=0.1
-        )
+        scenario_gene = ScenarioGenerator(param_dict, formula="central", step=0.1)
         parameter_set = scenario_gene.ScenarioData
 
         self.assertAlmostEqual(parameter_set.eps_abs['A1'], 16.9582, places=1)

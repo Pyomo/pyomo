@@ -29,18 +29,21 @@ import pickle
 from enum import Enum
 from collections import namedtuple
 
+
 class FiniteDifferenceStep(Enum):
     forward = "forward"
     central = "central"
     backward = "backward"
 
+
 # namedtuple for scenario data
-ScenarioData = namedtuple("ScenarioData", ["scenario", "scena_num", "eps_abs", "scenario_indices"])
+ScenarioData = namedtuple(
+    "ScenarioData", ["scenario", "scena_num", "eps_abs", "scenario_indices"]
+)
+
 
 class ScenarioGenerator:
-    def __init__(
-        self, parameter_dict=None, formula="central", step=0.001, store=False
-    ):
+    def __init__(self, parameter_dict=None, formula="central", step=0.001, store=False):
         """Generate scenarios.
         DoE library first calls this function to generate scenarios.
 
@@ -79,7 +82,7 @@ class ScenarioGenerator:
         ScenarioData.scena_num: a dict of scenario number related to one parameter
         ScenarioData.eps_abs: keys are parameter name, values are the step it is perturbed
         ScenarioData.scenario_indices: a list of scenario indices
-        
+
 
         For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
             self.ScenarioData.scenario: [{'P':101, 'D':20}, {'P':99, 'D':20}, {'P':100, 'D':20.2}, {'P':100, 'D':19.8}],
@@ -141,7 +144,9 @@ class ScenarioGenerator:
             else:
                 eps_abs[para] = self.step * self.parameter_dict[para]
 
-        self.ScenarioData = ScenarioData(scenario, scena_num, eps_abs,list(range(len(scenario))))
+        self.ScenarioData = ScenarioData(
+            scenario, scena_num, eps_abs, list(range(len(scenario)))
+        )
 
         # store scenario
         if self.store:

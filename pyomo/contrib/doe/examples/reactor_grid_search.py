@@ -29,11 +29,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import (
-    DesignOfExperiments,
-    MeasurementVariables,
-    DesignVariables
-)
+from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
 
 
 def main():
@@ -45,31 +41,33 @@ def main():
 
     # measurement object
     measurements = MeasurementVariables()
-    measurements.add_variables("C",     # variable name
-                               indices= {0: ["CA", "CB", "CC"], 1: t_control},  # indices 
-                               time_index_position=1) # position of time index
+    measurements.add_variables(
+        "C",  # variable name
+        indices={0: ["CA", "CB", "CC"], 1: t_control},  # indices
+        time_index_position=1,
+    )  # position of time index
 
     # design object
     exp_design = DesignVariables()
 
     # add CAO as design variable
     exp_design.add_variables(
-        "CA0", # variable name
-        indices= {0: [0]}, # indices
-        time_index_position=0, # position of time index
-        values=[5],     # nominal value
-        lower_bounds=1, # lower bound
-        upper_bounds=5, # upper bound
+        "CA0",  # variable name
+        indices={0: [0]},  # indices
+        time_index_position=0,  # position of time index
+        values=[5],  # nominal value
+        lower_bounds=1,  # lower bound
+        upper_bounds=5,  # upper bound
     )
 
     # add T as design variable
     exp_design.add_variables(
-        "T", # variable name
-        indices={0: t_control}, # indices
-        time_index_position=0, # position of time index
-        values=[470, 300, 300, 300, 300, 300, 300, 300, 300], # nominal value
-        lower_bounds=300, # lower bound
-        upper_bounds=700, # upper bound
+        "T",  # variable name
+        indices={0: t_control},  # indices
+        time_index_position=0,  # position of time index
+        values=[470, 300, 300, 300, 300, 300, 300, 300, 300],  # nominal value
+        lower_bounds=300,  # lower bound
+        upper_bounds=700,  # upper bound
     )
 
     # For each variable, we define a list of possible values that are used
@@ -93,10 +91,10 @@ def main():
     sensi_opt = "direct_kaug"
 
     doe_object = DesignOfExperiments(
-        parameter_dict, # parameter dictionary
-        exp_design, # design variables
-        measurements, # measurement variables
-        create_model, # model function
+        parameter_dict,  # parameter dictionary
+        exp_design,  # design variables
+        measurements,  # measurement variables
+        create_model,  # model function
         discretize_model=disc_for_measure,  # discretization function
     )
     # run full factorial grid search
@@ -124,10 +122,10 @@ def main():
     sensi_opt = "direct_kaug"
 
     doe_object = DesignOfExperiments(
-        parameter_dict, # parameter dictionary
-        exp_design, # design variables
-        measurements, # measurement variables
-        create_model, # model function
+        parameter_dict,  # parameter dictionary
+        exp_design,  # design variables
+        measurements,  # measurement variables
+        create_model,  # model function
         discretize_model=disc_for_measure,  # discretization function
     )
     # run the grid search for 3 dimensional case

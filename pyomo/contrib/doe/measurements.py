@@ -110,7 +110,9 @@ class VariablesWithIndices:
 
         return added_names
 
-    def _generate_variable_names_with_indices(self, var_name, indices=None, time_index_position=None):
+    def _generate_variable_names_with_indices(
+        self, var_name, indices=None, time_index_position=None
+    ):
         """
         Used for generating string names with indices.
 
@@ -324,5 +326,5 @@ class DesignVariables(VariablesWithIndices):
                 print(key)
                 print(self.variable_names)
                 raise ValueError("Variable not in the set: ", key)
-            
+
             self.variable_names_value[key] = new_value_dict[key]

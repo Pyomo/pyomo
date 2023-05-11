@@ -50,7 +50,7 @@ class FisherResults:
         prior_FIM=None,
         store_FIM=None,
         scale_constant_value=1,
-        max_condition_number=1.0e12
+        max_condition_number=1.0e12,
     ):
         """Analyze the FIM result for a single run
 
@@ -117,12 +117,14 @@ class FisherResults:
         n = len(self.parameter_names)
 
         Q_all = np.array(list(self.jaco_information[p] for p in self.parameter_names)).T
-        # add the FIM for each measurement variables together 
+        # add the FIM for each measurement variables together
         for i, mea_name in enumerate(self.measurement_variables):
             fim += (
                 1
-                / self.measurements.variance[str(mea_name)] # variance of measurement 
-                * (Q_all[i, :].reshape(n, 1) @ Q_all[i, :].reshape(n, 1).T) # Q.T @ Q for each measurement variable
+                / self.measurements.variance[str(mea_name)]  # variance of measurement
+                * (
+                    Q_all[i, :].reshape(n, 1) @ Q_all[i, :].reshape(n, 1).T
+                )  # Q.T @ Q for each measurement variable
             )
 
         # add prior information
@@ -202,7 +204,9 @@ class FisherResults:
                     n_all_measure = self.measurement_variables.index(nam)
                     jaco_info[par].append(self.all_jacobian_info[par][n_all_measure])
                 except:
-                    raise ValueError("Measurement ", nam, " is not in original measurement set.")
+                    raise ValueError(
+                        "Measurement ", nam, " is not in original measurement set."
+                    )
 
         return jaco_info
 
@@ -327,7 +331,7 @@ class GridSearchResult:
         design_ranges,
         design_dimension_names,
         FIM_result_list,
-        store_optimality_name=None
+        store_optimality_name=None,
     ):
         """
         This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.

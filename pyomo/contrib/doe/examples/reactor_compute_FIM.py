@@ -29,11 +29,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import (
-    DesignOfExperiments,
-    MeasurementVariables,
-    DesignVariables
-)
+from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
 
 
 def main():
@@ -45,45 +41,60 @@ def main():
 
     # Define measurement object
     measurements = MeasurementVariables()
-    measurements.add_variables("C", # measurement object
-                               indices={0: ["CA", "CB", "CC"], 1: t_control}, # 0,1 are indices of the index sets 
-                               time_index_position=1)
+    measurements.add_variables(
+        "C",  # measurement object
+        indices={
+            0: ["CA", "CB", "CC"],
+            1: t_control,
+        },  # 0,1 are indices of the index sets
+        time_index_position=1,
+    )
 
     # design object
     exp_design = DesignVariables()
 
     # add CAO as design variable
     exp_design.add_variables(
-        "CA0", # design variable name 
-        indices={0: [0]}, # index dictionary 
-        time_index_position=0, # time index position
-        values= [5], # design variable values
-        lower_bounds=1, # design variable lower bounds
-        upper_bounds=5, # design variable upper bounds
+        "CA0",  # design variable name
+        indices={0: [0]},  # index dictionary
+        time_index_position=0,  # time index position
+        values=[5],  # design variable values
+        lower_bounds=1,  # design variable lower bounds
+        upper_bounds=5,  # design variable upper bounds
     )
 
     # add T as design variable
     exp_design.add_variables(
-        "T", # design variable name
-        indices= {0: t_control}, # index dictionary
-        time_index_position=0, # time index position
-        values=[570, 300, 300, 300, 300, 300, 300, 300, 300], # same length with t_control
-        lower_bounds=300, # design variable lower bounds
-        upper_bounds=700, # design variable upper bounds
+        "T",  # design variable name
+        indices={0: t_control},  # index dictionary
+        time_index_position=0,  # time index position
+        values=[
+            570,
+            300,
+            300,
+            300,
+            300,
+            300,
+            300,
+            300,
+            300,
+        ],  # same length with t_control
+        lower_bounds=300,  # design variable lower bounds
+        upper_bounds=700,  # design variable upper bounds
     )
 
     doe_object = DesignOfExperiments(
-        parameter_dict, # parameter dictionary
-        exp_design, # design object
-        measurements, # measurement object
-        create_model, # create model function 
-        discretize_model=disc_for_measure, # discretize model function
+        parameter_dict,  # parameter dictionary
+        exp_design,  # design object
+        measurements,  # measurement object
+        create_model,  # create model function
+        discretize_model=disc_for_measure,  # discretize model function
     )
 
     result = doe_object.compute_FIM(
-        mode="sequential_finite", # calculation mode
-        scale_nominal_param_value=True, # scale nominal parameter value
-        formula="central", # formula for finite difference
+        mode="sequential_finite",  # calculation mode
+        scale_nominal_param_value=True,  # scale nominal parameter value
+        formula="central",  # formula for finite difference
     )
 
     result.calculate_FIM(doe_object.design_values)

@@ -39,7 +39,7 @@ def disc_for_measure(m, nfe=32, block=True):
     Arguments
     ---------
     m: Pyomo model
-    nfe: number of finite elements b 
+    nfe: number of finite elements b
     block: if True, the input model has blocks
     """
     discretizer = pyo.TransformationFactory("dae.collocation")
@@ -89,10 +89,7 @@ def create_model(
     if model_option == ModelOptionLib.parmest:
         mod = pyo.ConcreteModel()
         return_m = True
-    elif (
-        model_option == ModelOptionLib.stage1
-        or model_option == ModelOptionLib.stage2
-    ):
+    elif model_option == ModelOptionLib.stage1 or model_option == ModelOptionLib.stage2:
         if not mod:
             raise ValueError(
                 "If model option is stage1 or stage2, a created model needs to be provided."
@@ -147,7 +144,7 @@ def create_model(
             else:
                 # count how many control points are before the current t;
                 # locate the nearest neighbouring control point before this t
-                neighbour_t = max(tc for tc in control_time if tc<t)
+                neighbour_t = max(tc for tc in control_time if tc < t)
                 return controls[neighbour_t]
 
         mod.T = pyo.Var(
@@ -190,7 +187,7 @@ def create_model(
             if t in m.t_con:
                 return pyo.Constraint.Skip
             else:
-                neighbour_t = max(tc for tc in control_time if tc<t)
+                neighbour_t = max(tc for tc in control_time if tc < t)
                 return m.T[t] == m.T[neighbour_t]
 
         def cal_kp1(m, t):

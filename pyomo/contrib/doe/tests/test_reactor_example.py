@@ -50,12 +50,8 @@ class Test_example_options(unittest.TestCase):
         create_model(mod, model_option="stage1")
         create_model(mod, model_option="stage2")
         # both options need a given model, or raise errors
-        self.assertRaises(
-            ValueError, create_model, model_option="stage1"
-        )
-        self.assertRaises(
-            ValueError, create_model, model_option="stage2"
-        )
+        self.assertRaises(ValueError, create_model, model_option="stage1")
+        self.assertRaises(ValueError, create_model, model_option="stage2")
 
         self.assertRaises(ValueError, create_model, model_option='NotDefine')
 
@@ -114,7 +110,7 @@ class Test_doe_object(unittest.TestCase):
 
         ### Test sequential_finite mode
         sensi_opt = "sequential_finite"
-        
+
         design_names = exp_design.variable_names
         exp1 = [5, 570, 300, 300, 300, 300, 300, 300, 300, 300]
         exp1_design_dict = dict(zip(design_names, exp1))
@@ -130,9 +126,7 @@ class Test_doe_object(unittest.TestCase):
         )
 
         result = doe_object.compute_FIM(
-            mode=sensi_opt,
-            scale_nominal_param_value=True,
-            formula="central",
+            mode=sensi_opt, scale_nominal_param_value=True, formula="central"
         )
 
         result.calculate_FIM(doe_object.design_values)
@@ -173,9 +167,7 @@ class Test_doe_object(unittest.TestCase):
         )
 
         result = doe_object.compute_FIM(
-            mode=sensi_opt,
-            scale_nominal_param_value=True,
-            formula="central",
+            mode=sensi_opt, scale_nominal_param_value=True, formula="central"
         )
 
         result.calculate_FIM(doe_object.design_values)

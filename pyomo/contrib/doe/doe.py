@@ -44,15 +44,18 @@ class CalculationMode(Enum):
     sequential_finite = "sequential_finite"
     direct_kaug = "direct_kaug"
 
+
 class ObjectiveLib(Enum):
     det = "det"
     trace = "trace"
     zero = "zero"
 
+
 class ModelOptionLib(Enum):
     parmest = "parmest"
     stage1 = "stage1"
     stage2 = "stage2"
+
 
 class DesignOfExperiments:
     def __init__(
@@ -421,7 +424,9 @@ class DesignOfExperiments:
                     try:
                         var_up = cuid.find_component_on(mod.block[s])
                     except:
-                        raise ValueError(f"measurement {r} cannot be found in the model.")
+                        raise ValueError(
+                            f"measurement {r} cannot be found in the model."
+                        )
                     output_iter.append(pyo.value(var_up))
 
                 output_record[s] = output_iter
@@ -559,7 +564,7 @@ class DesignOfExperiments:
             parameter_dict=self.param, formula=self.formula, step=self.step
         )
 
-        self.scenario_data = scena_gen.ScenarioData 
+        self.scenario_data = scena_gen.ScenarioData
 
         # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
         self.scenario_list = self.scenario_data.scenario
@@ -864,7 +869,9 @@ class DesignOfExperiments:
             else:
                 return 0
 
-        mod.sensitivity_jacobian = pyo.Var(mod.regression_parameters, mod.measured_variables, initialize=0.1)
+        mod.sensitivity_jacobian = pyo.Var(
+            mod.regression_parameters, mod.measured_variables, initialize=0.1
+        )
 
         if self.fim_initial:
             dict_fim_initialize = {}
@@ -876,9 +883,17 @@ class DesignOfExperiments:
             return dict_fim_initialize[(j, d)]
 
         if self.fim_initial:
-            mod.fim = pyo.Var(mod.regression_parameters, mod.regression_parameters, initialize=initialize_fim)
+            mod.fim = pyo.Var(
+                mod.regression_parameters,
+                mod.regression_parameters,
+                initialize=initialize_fim,
+            )
         else:
-            mod.fim = pyo.Var(mod.regression_parameters, mod.regression_parameters, initialize=identity_matrix)
+            mod.fim = pyo.Var(
+                mod.regression_parameters,
+                mod.regression_parameters,
+                initialize=identity_matrix,
+            )
 
         # move the L matrix initial point to a dictionary
         if type(self.L_initial) != type(None):
@@ -896,10 +911,18 @@ class DesignOfExperiments:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if type(self.L_initial) != type(None):
-                mod.L_ele = pyo.Var(mod.regression_parameters, mod.regression_parameters, initialize=init_cho)
+                mod.L_ele = pyo.Var(
+                    mod.regression_parameters,
+                    mod.regression_parameters,
+                    initialize=init_cho,
+                )
             # or initialize with the identity matrix
             else:
-                mod.L_ele = pyo.Var(mod.regression_parameters, mod.regression_parameters, initialize=identity_matrix)
+                mod.L_ele = pyo.Var(
+                    mod.regression_parameters,
+                    mod.regression_parameters,
+                    initialize=identity_matrix,
+                )
 
             # loop over parameter name
             for i, c in enumerate(mod.regression_parameters):
@@ -945,7 +968,9 @@ class DesignOfExperiments:
         def read_prior(m, i, j):
             return fim_initial_dict[(i, j)]
 
-        mod.priorFIM = pyo.Expression(mod.regression_parameters, mod.regression_parameters, rule=read_prior)
+        mod.priorFIM = pyo.Expression(
+            mod.regression_parameters, mod.regression_parameters, rule=read_prior
+        )
 
         def fim_rule(m, p, q):
             """
@@ -955,14 +980,21 @@ class DesignOfExperiments:
             return (
                 m.fim[p, q]
                 == sum(
-                    1 / self.measurement_vars.variance[n] * m.sensitivity_jacobian[p, n] * m.sensitivity_jacobian[q, n]
+                    1
+                    / self.measurement_vars.variance[n]
+                    * m.sensitivity_jacobian[p, n]
+                    * m.sensitivity_jacobian[q, n]
                     for n in mod.measured_variables
                 )
                 + m.priorFIM[p, q] * self.fim_scale_constant_value
             )
 
-        mod.jacobian_constraint = pyo.Constraint(mod.regression_parameters, mod.measured_variables, rule=jacobian_rule)
-        mod.fim_constraint = pyo.Constraint(mod.regression_parameters, mod.regression_parameters, rule=fim_rule)
+        mod.jacobian_constraint = pyo.Constraint(
+            mod.regression_parameters, mod.measured_variables, rule=jacobian_rule
+        )
+        mod.fim_constraint = pyo.Constraint(
+            mod.regression_parameters, mod.regression_parameters, rule=fim_rule
+        )
 
         return mod
 
@@ -1012,13 +1044,18 @@ class DesignOfExperiments:
             # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             det_perm = sum(
                 self._sgn(list_p[d])
-                * sum(m.fim[each, name_order[b]] for b, each in enumerate(m.regression_parameters))
+                * sum(
+                    m.fim[each, name_order[b]]
+                    for b, each in enumerate(m.regression_parameters)
+                )
                 for d in range(len(list_p))
             )
             return m.det == det_perm
 
         if self.Cholesky_option:
-            m.cholesky_cons = pyo.Constraint(m.regression_parameters, m.regression_parameters, rule=cholesky_imp)
+            m.cholesky_cons = pyo.Constraint(
+                m.regression_parameters, m.regression_parameters, rule=cholesky_imp
+            )
             m.Obj = pyo.Objective(
                 expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.regression_parameters),
                 sense=pyo.maximize,

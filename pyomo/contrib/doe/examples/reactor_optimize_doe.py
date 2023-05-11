@@ -28,11 +28,7 @@
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
-from pyomo.contrib.doe import (
-    DesignOfExperiments,
-    MeasurementVariables,
-    DesignVariables
-)
+from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
 
 
 def main():
@@ -44,31 +40,43 @@ def main():
 
     # measurement object
     measurements = MeasurementVariables()
-    measurements.add_variables("C",     # name of measurement
-                               indices={0: ["CA", "CB", "CC"], 1: t_control},  # indices of measurement
-                               time_index_position=1) # position of time index
+    measurements.add_variables(
+        "C",  # name of measurement
+        indices={0: ["CA", "CB", "CC"], 1: t_control},  # indices of measurement
+        time_index_position=1,
+    )  # position of time index
 
     # design object
     exp_design = DesignVariables()
 
     # add CAO as design variable
     exp_design.add_variables(
-        "CA0", # name of design variable
-        indices={0: [0]}, # indices of design variable
-        time_index_position=0, # position of time index
-        values=[5], # nominal value of design variable
-        lower_bounds=1,     # lower bound of design variable
-        upper_bounds=5,    # upper bound of design variable
+        "CA0",  # name of design variable
+        indices={0: [0]},  # indices of design variable
+        time_index_position=0,  # position of time index
+        values=[5],  # nominal value of design variable
+        lower_bounds=1,  # lower bound of design variable
+        upper_bounds=5,  # upper bound of design variable
     )
 
     # add T as design variable
     exp_design.add_variables(
-        "T", # name of design variable
-        indices={0: t_control}, # indices of design variable
-        time_index_position=0, # position of time index
-        values=[470, 300, 300, 300, 300, 300, 300, 300, 300], # nominal value of design variable
-        lower_bounds=300,    # lower bound of design variable
-        upper_bounds=700,   # upper bound of design variable
+        "T",  # name of design variable
+        indices={0: t_control},  # indices of design variable
+        time_index_position=0,  # position of time index
+        values=[
+            470,
+            300,
+            300,
+            300,
+            300,
+            300,
+            300,
+            300,
+            300,
+        ],  # nominal value of design variable
+        lower_bounds=300,  # lower bound of design variable
+        upper_bounds=700,  # upper bound of design variable
     )
 
     design_names = exp_design.variable_names
@@ -87,28 +95,28 @@ def main():
     )
 
     doe_object2 = DesignOfExperiments(
-        parameter_dict,     # dictionary of parameters
-        exp_design,        # design variables
-        measurements,     # measurement variables
-        create_model,   # function to create model
-        prior_FIM=prior, # prior information
-        discretize_model=disc_for_measure, # function to discretize model
+        parameter_dict,  # dictionary of parameters
+        exp_design,  # design variables
+        measurements,  # measurement variables
+        create_model,  # function to create model
+        prior_FIM=prior,  # prior information
+        discretize_model=disc_for_measure,  # function to discretize model
     )
 
     square_result, optimize_result = doe_object2.stochastic_program(
-        if_optimize=True, # if optimize
-        if_Cholesky=True, # if use Cholesky decomposition
-        scale_nominal_param_value=True, # if scale nominal parameter value
-        objective_option="det", # objective option
-        L_initial=np.linalg.cholesky(prior), # initial Cholesky decomposition
+        if_optimize=True,  # if optimize
+        if_Cholesky=True,  # if use Cholesky decomposition
+        scale_nominal_param_value=True,  # if scale nominal parameter value
+        objective_option="det",  # objective option
+        L_initial=np.linalg.cholesky(prior),  # initial Cholesky decomposition
     )
 
     square_result, optimize_result = doe_object2.stochastic_program(
-        if_optimize=True, # if optimize
-        if_Cholesky=True, # if use Cholesky decomposition
-        scale_nominal_param_value=True, # if scale nominal parameter value
-        objective_option="trace", # objective option
-        L_initial=np.linalg.cholesky(prior), # initial Cholesky decomposition
+        if_optimize=True,  # if optimize
+        if_Cholesky=True,  # if use Cholesky decomposition
+        scale_nominal_param_value=True,  # if scale nominal parameter value
+        objective_option="trace",  # objective option
+        L_initial=np.linalg.cholesky(prior),  # initial Cholesky decomposition
     )
 
 
