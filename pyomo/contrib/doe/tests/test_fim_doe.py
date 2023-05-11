@@ -92,6 +92,7 @@ class TestDesignError(unittest.TestCase):
             upper_bounds=upper_bound,
         )
 
+
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestPriorFIMError(unittest.TestCase):
     def test(self):
@@ -139,8 +140,8 @@ class TestPriorFIMError(unittest.TestCase):
         parameter_dict = {"A1": 1, "A2": 1, "E1": 1}
 
         # empty prior
-        prior_right = [[0]*3 for i in range(3)]
-        prior_pass = [[0]*5 for i in range(10)]
+        prior_right = [[0] * 3 for i in range(3)]
+        prior_pass = [[0] * 5 for i in range(10)]
 
         doe_object = DesignOfExperiments(
             parameter_dict,
