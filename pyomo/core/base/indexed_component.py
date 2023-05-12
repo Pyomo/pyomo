@@ -538,14 +538,6 @@ You can silence this warning by one of three ways:
 """
                     % (self.name,)
                 )
-
-            if not self._index_set.isordered():
-                #
-                # If the index set is not ordered, then return the
-                # data iterator.  This is in an arbitrary order, which is
-                # fine because the data is unordered.
-                #
-                ans = self._data.__iter__()
             else:
                 #
                 # Test each element of a sparse data with an ordered
@@ -555,13 +547,8 @@ You can silence this warning by one of three ways:
                 # small number of indices.  However, this provides a
                 # consistent ordering that the user expects.
                 #
-                ans = filter(self._data.__contains__, self._index_set)
-                # As the iterator is ordered, we do not need to sort it
-                sort_needed = False
-        if sort_needed:
-            return iter(sorted_robust(ans))
-        else:
-            return ans
+                ans = filter(self._data.__contains__, ans)
+        return ans
 
     def values(self, ordered=False):
         """Return an iterator of the component data objects
