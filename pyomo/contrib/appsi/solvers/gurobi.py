@@ -257,7 +257,10 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._last_results_object: Optional[GurobiResults] = None
 
     def available(self):
-        if self._available in {self.Availability.NotFound, self.Availability.BadVersion}:
+        if self._available in {
+            self.Availability.NotFound,
+            self.Availability.BadVersion,
+        }:
             return self._available
         self._check_license()
         return self._available
