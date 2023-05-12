@@ -227,6 +227,12 @@ class LPWriter(object):
         """
         config = self.config(options)
 
+        if config.output_fixed_variable_bounds:
+            deprecation_warning(
+                "The 'output_fixed_variable_bounds' option to the LP "
+                "writer is deprecated and is ignored by the lp_v2 writer."
+            )
+
         # Pause the GC, as the walker that generates the compiled LP
         # representation generates (and disposes of) a large number of
         # small objects.
