@@ -109,6 +109,48 @@ def apply_node_operation(node, args):
 def categorize_valid_components(
     model, active=True, sort=None, valid=set(), targets=set()
 ):
+    """Walk model and check for valid component types
+
+    This routine will walk the model and checck all component types.
+    Components types in the `valid` set are ignored, blocks with
+    components in the `targets` set are collected, and all other
+    component types are added to a dictionary of `unrecognized`
+    components.
+
+    A Component type may not appear in both `valid` and `targets` sets.
+
+    Parameters
+    ----------
+    model: _BlockData
+        The model tree to walk
+
+    active: True or None
+        If True, only unrecognized active components are returned in the
+        `uncategorized` dictionary.  Also, if True, only active Blocks
+        are descended into.
+
+    sort: bool or SortComponents
+        The sorting flag to pass to the block walkers
+
+    valid: Set[type]
+        The set of "valid" component types.  These are ignored by the
+        categorizer.
+
+    targets: Set[type]
+        The set of component types to "collect".  Blocks with components
+        in the `targets` set will be returned in the `component_map`
+
+    Returns
+    -------
+    component_map: Dict[type, List[_BlockData]]
+        A dict mapping component type to a list of block data
+        objects that contain declared component of that type.
+
+    unrecognized: Dict[type, List[ComponentData]]
+        A dict mapping unrecognized component types to a (non-empty)
+        list of component data objects found on the model.
+
+    """
     assert active in (True, None)
     # Note: we assume every target component is valid but that we expect
     # there to be far mode valid components than target components.

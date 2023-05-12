@@ -76,9 +76,9 @@ class LPWriterInfo(object):
 
 
 @WriterFactory.register(
-    'cpxlp_v2', 'Generate the corresponding AMPL LP file (version 2).'
+    'cpxlp_v2', 'Generate the corresponding CPLEX LP file (version 2).'
 )
-@WriterFactory.register('lp_v2', 'Generate the corresponding AMPL LP file (version 2).')
+@WriterFactory.register('lp_v2', 'Generate the corresponding LP file (version 2).')
 class LPWriter(object):
     CONFIG = ConfigBlock('lpwriter')
     CONFIG.declare(
