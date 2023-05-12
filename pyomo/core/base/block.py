@@ -30,7 +30,7 @@ import textwrap
 from contextlib import contextmanager
 
 from inspect import isclass
-from itertools import filterfalse
+from itertools import filterfalse, chain
 from operator import itemgetter, attrgetter
 from io import StringIO
 from pyomo.common.pyomo_typing import overload
@@ -260,34 +260,6 @@ class TraversalStrategy(enum.Enum):
     PrefixDFS = PrefixDepthFirstSearch
     DepthFirstSearch = PrefixDepthFirstSearch
     DFS = DepthFirstSearch
-
-
-def _sortingLevelWalker(list_of_generators):
-    """Utility function for iterating over all members of a list of
-    generators that prefixes each item with the index of the original
-    generator that produced it.  This is useful for creating lists where
-    we want to preserve the original generator order but want to sort
-    the sub-lists.
-
-    Note that the generators must produce tuples.
-    """
-    lastName = ''
-    nameCounter = 0
-    for gen in list_of_generators:
-        nameCounter += 1  # Each generator starts a new component name
-        for item in gen:
-            if item[0] != lastName:
-                nameCounter += 1
-                lastName = item[0]
-            yield (nameCounter,) + item
-
-
-def _levelWalker(list_of_generators):
-    """Simple utility function for iterating over all members of a list of
-    generators.
-    """
-    for gen in list_of_generators:
-        yield from gen
 
 
 def _isNotNone(val):
@@ -1824,39 +1796,15 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         # the list of "seen" IDs
         dedup.seen_data.add(id(self))
 
-        if SortComponents.sort_indices(sort):
-            if SortComponents.sort_names(sort):
-                sorter = itemgetter(1, 2)
-            else:
-                sorter = itemgetter(0, 2)
-        elif SortComponents.sort_names(sort):
-            sorter = itemgetter(1)
-        else:
-            sorter = None
-
-        _levelQueue = {0: (((None, None, self),),)}
-        while _levelQueue:
-            _level = min(_levelQueue)
-            _queue = _levelQueue.pop(_level)
-            if not _queue:
-                break
-            if sorter is None:
-                _queue = _levelWalker(_queue)
-            else:
-                _queue = sorted(_sortingLevelWalker(_queue), key=sorter)
-
-            _level += 1
-            _levelQueue[_level] = []
-            # JDS: rework the _levelQueue logic so we don't need to
-            # merge the key/value returned by the new
-            # component_data_iterindex() method.
-            for _items in _queue:
-                yield _items[-1]  # _block
-                _levelQueue[_level].append(
-                    tmp[0] + (tmp[1],)
-                    for tmp in _items[-1]._component_data_iteritems(
-                        ctype, active, sort, dedup
-                    )
+        _thisLevel = None
+        _nextLevel = [(self,)]
+        while _nextLevel:
+            _thisLevel = _nextLevel
+            _nextLevel = []
+            for block in chain(*_thisLevel):
+                yield block
+                _nextLevel.append(
+                    block._component_data_itervalues(ctype, active, sort, dedup)
                 )
 
     def fix_all_vars(self):
