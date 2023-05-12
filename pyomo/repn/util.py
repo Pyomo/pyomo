@@ -250,7 +250,7 @@ def ordered_active_constraints(model, config):
     constraints = model.component_data_objects(Constraint, active=True, sort=sorter)
 
     row_order = config.row_order
-    if isinstance(row_order, Mapping):
+    if isinstance(row_order, ComponentMap):
         # The row order has historically also supported a ComponentMap of
         # component to position in addition to the simple list of
         # components.  Convert it to the simple list
