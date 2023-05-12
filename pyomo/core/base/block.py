@@ -1623,6 +1623,12 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         ):
             yield from _block._component_data_itervalues(ctype, active, sort, dedup)
 
+    @deprecated(
+        "The component_data_iterindex method is deprecated.  "
+        "Components now know their index, so it is more efficient to use the "
+        "Block.component_data_objects() method followed by .index().",
+        version="6.5.1.dev0",
+    )
     def component_data_iterindex(
         self, ctype=None, active=None, sort=False, descend_into=True, descent_order=None
     ):
