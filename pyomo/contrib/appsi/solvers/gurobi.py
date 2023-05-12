@@ -272,7 +272,9 @@ class Gurobi(PersistentBase, PersistentSolver):
             # the environment
             with capture_output(capture_fd=True):
                 m = gurobipy.Model()
-                m.dispose()
+            del m
+            cls._available = Gurobi.Availability.FullLicense
+            return
         except ImportError:
             # Triggered if this is the first time the deferred import of
             # gurobipy is resolved. _import_gurobipy will have already
@@ -281,22 +283,6 @@ class Gurobi(PersistentBase, PersistentSolver):
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
-        m = gurobipy.Model()
-        m.setParam('OutputFlag', 0)
-        try:
-            # As of 3/2021, the limited-size Gurobi license was limited
-            # to 2000 variables.
-            m.addVars(range(2001))
-            m.setParam('OutputFlag', 0)
-            m.optimize()
-            cls._available = Gurobi.Availability.FullLicense
-        except gurobipy.GurobiError:
-            cls._available = Gurobi.Availability.LimitedLicense
-        finally:
-            m.dispose()
-            del m
-            with capture_output(capture_fd=True):
-                gurobipy.disposeDefaultEnv()
 
     def release_license(self):
         self._reinit()
