@@ -85,6 +85,15 @@ class _UnindexedComponent_set(GlobalSetBase):
     def __iter__(self):
         return (None,).__iter__()
 
+    def __reversed__(self):
+        return iter(self)
+
+    def ordered_iter(self):
+        return iter(self)
+
+    def sorted_iter(self):
+        return iter(self)
+
     def subsets(self, expand_all_set_operators=None):
         return [self]
 
