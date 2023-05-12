@@ -22,6 +22,7 @@ __all__ = [
 ]
 
 import copy
+import enum
 import logging
 import sys
 import weakref
@@ -54,6 +55,7 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
+    SortComponents,
     UnindexedComponent_set,
 )
 
@@ -246,67 +248,10 @@ class _DeduplicateInfo(object):
                 return filterfalse(has_been_seen, items)
 
 
-class SortComponents(object):
-
-    """
-    This class is a convenient wrapper for specifying various sort
-    ordering.  We pass these objects to the "sort" argument to various
-    accessors / iterators to control how much work we perform sorting
-    the resultant list.  The idea is that
-    "sort=SortComponents.deterministic" is more descriptive than
-    "sort=True".
-    """
-
-    unsorted = set()
-    indices = set([1])
-    declOrder = set([2])
-    declarationOrder = declOrder
-    alphaOrder = set([3])
-    alphabeticalOrder = alphaOrder
-    alphabetical = alphaOrder
-    # both alpha and decl orders are deterministic, so only must sort indices
-    deterministic = indices
-    sortBoth = indices | alphabeticalOrder  # Same as True
-    alphabetizeComponentAndIndex = sortBoth
-
-    @staticmethod
-    def default():
-        return set()
-
-    @staticmethod
-    def sorter(sort_by_names=False, sort_by_keys=False):
-        sort = SortComponents.default()
-        if sort_by_names:
-            sort |= SortComponents.alphabeticalOrder
-        if sort_by_keys:
-            sort |= SortComponents.indices
-        return sort
-
-    @staticmethod
-    def sort_names(flag):
-        if type(flag) is bool:
-            return flag
-        else:
-            try:
-                return SortComponents.alphaOrder.issubset(flag)
-            except:
-                return False
-
-    @staticmethod
-    def sort_indices(flag):
-        if type(flag) is bool:
-            return flag
-        else:
-            try:
-                return SortComponents.indices.issubset(flag)
-            except:
-                return False
-
-
-class TraversalStrategy(object):
-    BreadthFirstSearch = (1,)
-    PrefixDepthFirstSearch = (2,)
-    PostfixDepthFirstSearch = (3,)
+class TraversalStrategy(enum.Enum):
+    BreadthFirstSearch = 1
+    PrefixDepthFirstSearch = 2
+    PostfixDepthFirstSearch = 3
     # aliases
     BFS = BreadthFirstSearch
     ParentLastDepthFirstSearch = PostfixDepthFirstSearch
@@ -385,7 +330,7 @@ class PseudoMap(AutoSlots.Mixin):
         else:
             self._ctypes = set(ctype)
         self._active = active
-        self._sorted = SortComponents.sort_names(sort)
+        self._sorted = SortComponents.ALPHABETICAL in SortComponents(sort)
 
     def __iter__(self):
         """
@@ -1004,7 +949,7 @@ class _BlockData(ActiveComponentData):
         assert active in (True, None)
         ctypes = set()
         for block in self.block_data_objects(
-            active=active, descend_into=descend_into, sort=SortComponents.unsorted
+            active=active, descend_into=descend_into, sort=SortComponents.UNSORTED
         ):
             if active is None:
                 ctypes.update(block._ctypes)
@@ -1015,7 +960,7 @@ class _BlockData(ActiveComponentData):
                         ctype=ctype,
                         active=True,
                         descend_into=False,
-                        sort=SortComponents.unsorted,
+                        sort=SortComponents.UNSORTED,
                     ):
                         # We only need to verify that there is at least
                         # one active data member
@@ -1566,7 +1511,6 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         dedup: _DeduplicateInfo
             Deduplicator to prevent returning the same _ComponentData twice
         """
-        _sort_indices = SortComponents.sort_indices(sort)
         for name, comp in PseudoMap(self, ctype, active, sort).items():
             # NOTE: Suffix has a dict interface (something other derived
             #   non-indexed Components may do as well), so we don't want
@@ -1576,9 +1520,7 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
             #   processing for the scalar components to catch the case
             #   where there are "sparse scalar components"
             if comp.is_indexed():
-                _items = comp.items()
-                if _sort_indices:
-                    _items = sorted_robust(_items, key=itemgetter(0))
+                _items = comp.items(sort)
             elif hasattr(comp, '_data'):
                 # This is a Scalar component, which may be empty (e.g.,
                 # from Constraint.Skip on a scalar Constraint).  Only
@@ -1620,15 +1562,6 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         dedup: _DeduplicateInfo
             Deduplicator to prevent returning the same _ComponentData twice
         """
-        if SortComponents.sort_indices(sort):
-            # We need the indices so that we can correctly sort.  Fall
-            # back on _component_data_iteritems.
-            yield from map(
-                itemgetter(1),
-                self._component_data_iteritems(ctype, active, sort, dedup),
-            )
-            return
-
         for comp in PseudoMap(self, ctype, active, sort).values():
             # NOTE: Suffix has a dict interface (something other derived
             #   non-indexed Components may do as well), so we don't want
@@ -1638,7 +1571,7 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
             #   processing for the scalar components to catch the case
             #   where there are "sparse scalar components"
             if comp.is_indexed():
-                _values = comp.values()
+                _values = comp.values(sort)
             elif hasattr(comp, '_data'):
                 # This is a Scalar component, which may be empty (e.g.,
                 # from Constraint.Skip on a scalar Constraint).  Only

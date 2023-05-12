@@ -11,6 +11,7 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
+import enum
 import inspect
 import logging
 import sys
@@ -38,6 +39,70 @@ from collections.abc import Sequence
 logger = logging.getLogger('pyomo.core')
 
 sequence_types = {tuple, list}
+
+
+class SortComponents(enum.Flag):
+
+    """
+    This class is a convenient wrapper for specifying various sort
+    ordering.  We pass these objects to the "sort" argument to various
+    accessors / iterators to control how much work we perform sorting
+    the resultant list.  The idea is that
+    "sort=SortComponents.deterministic" is more descriptive than
+    "sort=True".
+    """
+
+    UNSORTED = 0
+    # Note: skip '1' so that we can map True to something other than 1
+    ORDERED_INDICES = 2
+    SORTED_INDICES = 4
+    ALPHABETICAL = 8
+
+    # aliases
+    # TODO: deprecate some of these
+    unsorted = UNSORTED
+    indices = SORTED_INDICES
+    declOrder = UNSORTED
+    declarationOrder = declOrder
+    alphaOrder = ALPHABETICAL
+    alphabeticalOrder = alphaOrder
+    alphabetical = alphaOrder
+    # both alpha and decl orders are deterministic, so only must sort indices
+    deterministic = indices
+    sortBoth = indices | alphabeticalOrder  # Same as True
+    alphabetizeComponentAndIndex = sortBoth
+
+    @classmethod
+    def _missing_(cls, value):
+        if type(value) is bool:
+            if value:
+                return cls.SORTED_INDICES | cls.ALPHABETICAL
+            else:
+                return cls.UNSORTED
+        elif value is None:
+            return cls.UNSORTED
+        return super()._missing_(value)
+
+    @staticmethod
+    def default():
+        return SortComponents.unsorted
+
+    @staticmethod
+    def sorter(sort_by_names=False, sort_by_keys=False):
+        sort = SortComponents.default()
+        if sort_by_names:
+            sort |= SortComponents.ALPHABETICAL
+        if sort_by_keys:
+            sort |= SortComponents.SORTED_INDICES
+        return sort
+
+    @staticmethod
+    def sort_names(flag):
+        return SortComponents.ALPHABETICAL in SortComponents(flag)
+
+    @staticmethod
+    def sort_indices(flag):
+        return SortComponents.SORTED_INDICES in SortComponents(flag)
 
 
 def normalize_index(x):
@@ -420,14 +485,14 @@ class IndexedComponent(Component):
 
         Parameters
         ----------
-        ordered: bool
+        ordered: bool or SortComponents
             If True, then the keys are returned in a deterministic
             order.  If the underlying indexing set is ordered then that
             ordering is used.  Otherwise, the keys are sorted using
             :py:func:`sorted_robust`.
 
         """
-        sort_needed = ordered
+        ordered = SortComponents(ordered)
         if not self._index_set.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
@@ -438,16 +503,20 @@ class IndexedComponent(Component):
             ans = self._data.__iter__()
         elif self.is_reference():
             ans = self._data.__iter__()
-        elif len(self) == len(self._index_set):
-            #
-            # If the data is dense then return the index iterator.
-            #
-            ans = self._index_set.__iter__()
-            if ordered and self._index_set.isordered():
-                # As this iterator is ordered, we do not need to sort it
-                sort_needed = False
         else:
-            if not self._data and self._index_set and PyomoOptions.paranoia_level:
+            if SortComponents.SORTED_INDICES in ordered:
+                ans = self._index_set.sorted_iter()
+            elif SortComponents.ORDERED_INDICES in ordered:
+                ans = self._index_set.ordered_iter()
+            else:
+                ans = iter(self._index_set)
+
+            if len(self) == len(self._index_set):
+                #
+                # If the data is dense then return the index iterator.
+                #
+                pass
+            elif not self._data and self._index_set and PyomoOptions.paranoia_level:
                 logger.warning(
                     """Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have
