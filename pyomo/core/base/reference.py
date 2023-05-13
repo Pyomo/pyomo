@@ -12,7 +12,6 @@
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
     UserDict,
-    OrderedDict,
     Mapping,
     MutableMapping,
     Set as collections_Set,
@@ -700,7 +699,7 @@ def Reference(reference, ctype=NOTSET):
         index = SetOf(_data)
     elif isinstance(reference, Sequence):
         slice_idx = None
-        _data = _ReferenceDict_mapping(OrderedDict(enumerate(reference)))
+        _data = _ReferenceDict_mapping(dict(enumerate(reference)))
         _iter = _data.values()
         index = OrderedSetOf(_data)
     else:
