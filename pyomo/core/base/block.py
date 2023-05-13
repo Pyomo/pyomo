@@ -48,6 +48,7 @@ from pyomo.core.base.component import (
     ActiveComponentData,
     ModelComponentFactory,
 )
+from pyomo.core.base.enums import SortComponents, TraversalStrategy
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import Any, GlobalSetBase, _SetDataBase
@@ -55,7 +56,6 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
-    SortComponents,
     UnindexedComponent_set,
 )
 
@@ -246,20 +246,6 @@ class _DeduplicateInfo(object):
                 else:
                     has_been_seen = lambda item: seen_data_contains(id(item[0]))
                 return filterfalse(has_been_seen, items)
-
-
-class TraversalStrategy(enum.Enum):
-    BreadthFirstSearch = 1
-    PrefixDepthFirstSearch = 2
-    PostfixDepthFirstSearch = 3
-    # aliases
-    BFS = BreadthFirstSearch
-    ParentLastDepthFirstSearch = PostfixDepthFirstSearch
-    PostfixDFS = PostfixDepthFirstSearch
-    ParentFirstDepthFirstSearch = PrefixDepthFirstSearch
-    PrefixDFS = PrefixDepthFirstSearch
-    DepthFirstSearch = PrefixDepthFirstSearch
-    DFS = DepthFirstSearch
 
 
 def _isNotNone(val):

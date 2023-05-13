@@ -22,6 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.core.base.set import DeclareGlobalSet, Set, SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.global_set import UnindexedComponent_set
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.indexed_component import IndexedComponent, normalize_index
 from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice,
