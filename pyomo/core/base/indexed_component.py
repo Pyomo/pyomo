@@ -437,25 +437,36 @@ class IndexedComponent(Component):
             # of the underlying Set, there should be no warning if the
             # user iterates over the set when the _data dict is empty.
             #
-            ans = self._data.__iter__()
-        elif self.is_reference():
-            ans = self._data.__iter__()
-        else:
-            if SortComponents.SORTED_INDICES in ordered:
-                ans = self._index_set.sorted_iter()
-            elif SortComponents.ORDERED_INDICES in ordered:
-                ans = self._index_set.ordered_iter()
+            if (
+                SortComponents.SORTED_INDICES in ordered
+                or SortComponents.ORDERED_INDICES in ordered
+            ):
+                return iter(sorted_robust(self._data))
             else:
-                ans = iter(self._index_set)
+                return self._data.__iter__()
 
-            if len(self) == len(self._index_set):
-                #
-                # If the data is dense then return the index iterator.
-                #
-                pass
-            elif not self._data and self._index_set and PyomoOptions.paranoia_level:
-                logger.warning(
-                    """Iterating over a Component (%s)
+        if SortComponents.SORTED_INDICES in ordered:
+            ans = self._index_set.sorted_iter()
+        elif SortComponents.ORDERED_INDICES in ordered:
+            ans = self._index_set.ordered_iter()
+        else:
+            ans = iter(self._index_set)
+
+        if self._data.__class__ is not dict:
+            # We currently only need to worry about sparse data
+            # structures when the underlying _data is a dict.  Avoiding
+            # the len() and filter() below is especially important for
+            # References (where both can be expensive linear-time
+            # operations)
+            pass
+        elif len(self) == len(self._index_set):
+            #
+            # If the data is dense then return the index iterator.
+            #
+            pass
+        elif not self._data and self._index_set and PyomoOptions.paranoia_level:
+            logger.warning(
+                """Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have
 actually been added to the Component.  The iterator will be empty.
 This is usually caused by Concrete models where you declare the
@@ -473,18 +484,18 @@ You can silence this warning by one of three ways:
        if the component is empty first and avoid iteration in the case
        where it is empty.
 """
-                    % (self.name,)
-                )
-            else:
-                #
-                # Test each element of a sparse data with an ordered
-                # index set in order.  This is potentially *slow*: if
-                # the component is in fact very sparse, we could be
-                # iterating over a huge (dense) index in order to sort a
-                # small number of indices.  However, this provides a
-                # consistent ordering that the user expects.
-                #
-                ans = filter(self._data.__contains__, ans)
+                % (self.name,)
+            )
+        else:
+            #
+            # Test each element of a sparse data with an ordered
+            # index set in order.  This is potentially *slow*: if
+            # the component is in fact very sparse, we could be
+            # iterating over a huge (dense) index in order to sort a
+            # small number of indices.  However, this provides a
+            # consistent ordering that the user expects.
+            #
+            ans = filter(self._data.__contains__, ans)
         return ans
 
     def values(self, ordered=False):
@@ -499,6 +510,16 @@ You can silence this warning by one of three ways:
             using :py:func:`sorted_robust` and the values are returned
             in that order.
         """
+        # Note that looking up the values in a reference may be an
+        # expensive operation (linear time).  To avoid making this a
+        # quadratic time operation, we will leverage _ReferenceDict's
+        # values().  This may fail for references created from mappings
+        # or sequences, raising the TypeError
+        if self.is_reference():
+            try:
+                return self._data.values(ordered)
+            except TypeError:
+                pass
         return map(self.__getitem__, self.keys(ordered))
 
     def items(self, ordered=False):
@@ -512,6 +533,16 @@ You can silence this warning by one of three ways:
             ordering is used.  Otherwise, the items are sorted using
             :py:func:`sorted_robust`.
         """
+        # Note that looking up the values in a reference may be an
+        # expensive operation (linear time).  To avoid making this a
+        # quadratic time operation, we will try and use _ReferenceDict's
+        # items().  This may fail for references created from mappings
+        # or sequences, raising the TypeError
+        if self.is_reference():
+            try:
+                return self._data.items(ordered)
+            except TypeError:
+                pass
         return ((s, self[s]) for s in self.keys(ordered))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
