@@ -15,6 +15,7 @@ from pyomo.core import (
     ConstraintList,
     native_types,
     BooleanVarList,
+    SortComponents,
 )
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.boolean_var import _DeprecatedImplicitAssociatedBinaryVariable
@@ -132,7 +133,7 @@ class LogicalToLinear(IsomorphicTransformation):
                 new_binary_vardata.fix()
 
     def _transform_constraint(self, constraint, new_varlists, transBlocks):
-        for i in constraint.keys(ordered=True):
+        for i in constraint.keys(sort=SortComponents.ORDERED_INDICES):
             self._transform_constraintData(constraint[i], new_varlists, transBlocks)
         constraint.deactivate()
 

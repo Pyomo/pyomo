@@ -31,7 +31,7 @@ from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 
@@ -412,7 +412,7 @@ class IndexedComponent(Component):
         """Return an iterator of the component data keys"""
         return self.keys()
 
-    def keys(self, ordered=False):
+    def keys(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
         """Return an iterator over the component data keys
 
         This method sets the ordering of component data objects within
@@ -422,14 +422,26 @@ class IndexedComponent(Component):
 
         Parameters
         ----------
-        ordered: bool or SortComponents
-            If True, then the keys are returned in a deterministic
-            order.  If the underlying indexing set is ordered then that
-            ordering is used.  Otherwise, the keys are sorted using
-            :py:func:`sorted_robust`.
+        sort: bool or SortComponents
+            Iterate over declared the component keys in a specified
+            sorted order.  See :py:class:`SortComponents` for valid
+            options and descriptions.
+
+        ordered: bool
+            DEPRECATED: Please use `sort=SortComponents.ORDERED_INDICES`.
+            If True, then the keys are returned in a deterministic order
+            (using the underlying set's `ordered_iter()`.
 
         """
-        ordered = SortComponents(ordered)
+        sort = SortComponents(sort)
+        if ordered is not NOTSET:
+            deprecation_warning(
+                f"keys(ordered={ordered}) is deprecated.  "
+                "Please use `sort=SortComponents.ORDERED_INDICES`",
+                version='6.5.1.dev0',
+            )
+            if ordered:
+                sort = sort | SortComponents.ORDERED_INDICES
         if not self._index_set.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
@@ -438,16 +450,16 @@ class IndexedComponent(Component):
             # user iterates over the set when the _data dict is empty.
             #
             if (
-                SortComponents.SORTED_INDICES in ordered
-                or SortComponents.ORDERED_INDICES in ordered
+                SortComponents.SORTED_INDICES in sort
+                or SortComponents.ORDERED_INDICES in sort
             ):
                 return iter(sorted_robust(self._data))
             else:
                 return self._data.__iter__()
 
-        if SortComponents.SORTED_INDICES in ordered:
+        if SortComponents.SORTED_INDICES in sort:
             ans = self._index_set.sorted_iter()
-        elif SortComponents.ORDERED_INDICES in ordered:
+        elif SortComponents.ORDERED_INDICES in sort:
             ans = self._index_set.ordered_iter()
         else:
             ans = iter(self._index_set)
@@ -498,18 +510,29 @@ You can silence this warning by one of three ways:
             ans = filter(self._data.__contains__, ans)
         return ans
 
-    def values(self, ordered=False):
+    def values(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
         """Return an iterator of the component data objects
 
         Parameters
         ----------
+        sort: bool or SortComponents
+            Iterate over declared the component values in a specified
+            sorted order.  See :py:class:`SortComponents` for valid
+            options and descriptions.
+
         ordered: bool
-            If True, then the values are returned in a deterministic
-            order.  If the underlying indexing set is ordered then that
-            ordering is used.  Otherwise, the component keys are sorted
-            using :py:func:`sorted_robust` and the values are returned
-            in that order.
+            DEPRECATED: Please use `sort=SortComponents.ORDERED_INDICES`.
+            If True, then the values are returned in a deterministic order
+            (using the underlying set's `ordered_iter()`.
         """
+        if ordered is not NOTSET:
+            deprecation_warning(
+                f"values(ordered={ordered}) is deprecated.  "
+                "Please use `sort=SortComponents.ORDERED_INDICES`",
+                version='6.5.1.dev0',
+            )
+            if ordered:
+                sort = SortComponents(sort) | SortComponents.ORDERED_INDICES
         # Note that looking up the values in a reference may be an
         # expensive operation (linear time).  To avoid making this a
         # quadratic time operation, we will leverage _ReferenceDict's
@@ -517,22 +540,34 @@ You can silence this warning by one of three ways:
         # or sequences, raising the TypeError
         if self.is_reference():
             try:
-                return self._data.values(ordered)
+                return self._data.values(sort)
             except TypeError:
                 pass
-        return map(self.__getitem__, self.keys(ordered))
+        return map(self.__getitem__, self.keys(sort))
 
-    def items(self, ordered=False):
+    def items(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
         """Return an iterator of (index,data) component data tuples
 
         Parameters
         ----------
+        sort: bool or SortComponents
+            Iterate over declared the component items in a specified
+            sorted order.  See :py:class:`SortComponents` for valid
+            options and descriptions.
+
         ordered: bool
-            If True, then the items are returned in a deterministic
-            order.  If the underlying indexing set is ordered then that
-            ordering is used.  Otherwise, the items are sorted using
-            :py:func:`sorted_robust`.
+            DEPRECATED: Please use `sort=SortComponents.ORDERED_INDICES`.
+            If True, then the items are returned in a deterministic order
+            (using the underlying set's `ordered_iter()`.
         """
+        if ordered is not NOTSET:
+            deprecation_warning(
+                f"items(ordered={ordered}) is deprecated.  "
+                "Please use `sort=SortComponents.ORDERED_INDICES`",
+                version='6.5.1.dev0',
+            )
+            if ordered:
+                sort = SortComponents(sort) | SortComponents.ORDERED_INDICES
         # Note that looking up the values in a reference may be an
         # expensive operation (linear time).  To avoid making this a
         # quadratic time operation, we will try and use _ReferenceDict's
@@ -540,10 +575,10 @@ You can silence this warning by one of three ways:
         # or sequences, raising the TypeError
         if self.is_reference():
             try:
-                return self._data.items(ordered)
+                return self._data.items(sort)
             except TypeError:
                 pass
-        return ((s, self[s]) for s in self.keys(ordered))
+        return ((s, self[s]) for s in self.keys(sort))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
     def iterkeys(self):
