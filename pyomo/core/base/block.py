@@ -1737,18 +1737,19 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         dedup.seen_data.add(id(self))
 
         PM = PseudoMap(self, ctype, active, sort)
-        _stack = [(self,).__iter__()]
-        while _stack:
+        _stack = (None, (self,).__iter__())
+        while _stack is not None:
             try:
-                PM._block = _block = next(_stack[-1])
+                PM._block = _block = next(_stack[1])
                 yield _block
                 if not PM:
                     continue
-                _stack.append(
-                    _block._component_data_itervalues(ctype, active, sort, dedup)
+                _stack = (
+                    _stack,
+                    _block._component_data_itervalues(ctype, active, sort, dedup),
                 )
             except StopIteration:
-                _stack.pop()
+                _stack = _stack[0]
 
     def _postfix_dfs_iterator(self, ctype, active, sort, dedup):
         """
@@ -1764,15 +1765,22 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         # the list of "seen" IDs
         dedup.seen_data.add(id(self))
 
-        _stack = [(self, self._component_data_itervalues(ctype, active, sort, dedup))]
-        while _stack:
+        _stack = (
+            None,
+            self,
+            self._component_data_itervalues(ctype, active, sort, dedup),
+        )
+        while _stack is not None:
             try:
-                _sub = next(_stack[-1][1])
-                _stack.append(
-                    (_sub, _sub._component_data_itervalues(ctype, active, sort, dedup))
+                _sub = next(_stack[2])
+                _stack = (
+                    _stack,
+                    _sub,
+                    _sub._component_data_itervalues(ctype, active, sort, dedup),
                 )
             except StopIteration:
-                yield _stack.pop()[0]
+                yield _stack[1]
+                _stack = _stack[0]
 
     def _bfs_iterator(self, ctype, active, sort, dedup):
         """Helper function implementing a non-recursive breadth-first search.
