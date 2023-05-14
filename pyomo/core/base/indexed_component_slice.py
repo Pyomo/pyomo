@@ -334,16 +334,22 @@ class IndexedComponent_slice(object):
         ans._call_stack = ans._call_stack[: ans._len]
         return ans
 
-    def index_wildcard_keys(self):
-        _iter = _IndexedComponent_slice_iter(self, iter_over_index=True)
+    def index_wildcard_keys(self, sort):
+        _iter = _IndexedComponent_slice_iter(
+            self, iter_over_index=True, sort=sort
+        )
         return (_iter.get_last_index_wildcards() for _ in _iter)
 
-    def wildcard_keys(self):
-        _iter = self.__iter__()
+    def wildcard_keys(self, sort):
+        _iter = _IndexedComponent_slice_iter(self, sort=sort)
         return (_iter.get_last_index_wildcards() for _ in _iter)
 
-    def wildcard_items(self):
-        _iter = self.__iter__()
+    def wildcard_values(self, sort):
+        """Return an iterator over this slice"""
+        return _IndexedComponent_slice_iter(self, sort=sort)
+
+    def wildcard_items(self, sort):
+        _iter = _IndexedComponent_slice_iter(self, sort=sort)
         return ((_iter.get_last_index_wildcards(), _) for _ in _iter)
 
     def expanded_keys(self):
@@ -385,7 +391,7 @@ class _slice_generator(object):
     values that match the slice template.
     """
 
-    def __init__(self, component, fixed, sliced, ellipsis, iter_over_index):
+    def __init__(self, component, fixed, sliced, ellipsis, iter_over_index, sort):
         self.component = component
         self.fixed = fixed
         self.sliced = sliced
@@ -416,10 +422,15 @@ class _slice_generator(object):
         if iter_over_index and component.index_set().isfinite():
             # This should be used to iterate over all the potential
             # indices of a sparse IndexedComponent.
-            self.component_iter = component.index_set().__iter__()
+            if SortComponents.SORTED_INDICES in sort:
+                self.component_iter = component.index_set().sorted_iter()
+            elif SortComponents.ORDERED_INDICES in sort:
+                self.component_iter = component.index_set().ordered_iter()
+            else:
+                self.component_iter = iter(component.index_set())
         else:
             # The default behavior is to iterate over the component.
-            self.component_iter = component.keys()
+            self.component_iter = component.keys(sort)
 
     def next(self):
         """__next__() iterator for Py2 compatibility"""
@@ -519,7 +530,11 @@ class _NotIterable(object):
 
 class _IndexedComponent_slice_iter(object):
     def __init__(
-        self, component_slice, advance_iter=_advance_iter, iter_over_index=False
+        self,
+        component_slice,
+        advance_iter=_advance_iter,
+        iter_over_index=False,
+        sort=False,
     ):
         # _iter_stack holds a list of elements X where X is either a
         # _slice_generator iterator (if this level in the hierarchy is a
@@ -528,6 +543,7 @@ class _IndexedComponent_slice_iter(object):
         self._slice = component_slice
         self.advance_iter = advance_iter
         self._iter_over_index = iter_over_index
+        self._sort = SortComponents(sort)
         call_stack = self._slice._call_stack
         call_stack_len = self._slice._len
         self._iter_stack = [None] * call_stack_len
@@ -537,7 +553,9 @@ class _IndexedComponent_slice_iter(object):
             # The root of the _iter_stack is a generator for the
             # "highest-level slice" (slice closest to the model() block)
             self._iter_stack[0] = _slice_generator(
-                *call_stack[0][1], iter_over_index=self._iter_over_index
+                *call_stack[0][1],
+                iter_over_index=self._iter_over_index,
+                sort=self._sort,
             )
             # call_stack[0][1] is a (fixed, sliced, ellipsis) tuple, where
             # fixed and sliced are dicts.
@@ -688,7 +706,8 @@ class _IndexedComponent_slice_iter(object):
                         assert _comp._len == 1
                         self._iter_stack[idx] = _slice_generator(
                             *_comp._call_stack[0][1],
-                            iter_over_index=self._iter_over_index
+                            iter_over_index=self._iter_over_index,
+                            sort=self._sort,
                         )
                         try:
                             # Advance to get the first component defined
@@ -767,7 +786,9 @@ class _IndexedComponent_slice_iter(object):
                     # _iter_stack value to _NotIterable.
                     if self._iter_stack[idx] is _NotIterable:
                         _iter = _slice_generator(
-                            *_call[1], iter_over_index=self._iter_over_index
+                            *_call[1],
+                            iter_over_index=self._iter_over_index,
+                            sort=self._sort,
                         )
                         while True:
                             # This ends when the _slice_generator raises
@@ -804,7 +825,9 @@ class _IndexedComponent_slice_iter(object):
                     if _tmp.__class__ is IndexedComponent_slice:
                         # Extract the _slice_generator and evaluate it.
                         assert _tmp._len == 1
-                        _iter = _IndexedComponent_slice_iter(_tmp, self.advance_iter)
+                        _iter = _IndexedComponent_slice_iter(
+                            _tmp, self.advance_iter, sort=self._sort
+                        )
                         for _ in _iter:
                             # Check to make sure the custom iterator
                             # (i.e._fill_in_known_wildcards) is complete
@@ -845,7 +868,9 @@ class _IndexedComponent_slice_iter(object):
                     if _tmp.__class__ is IndexedComponent_slice:
                         # Extract the _slice_generator and evaluate it.
                         assert _tmp._len == 1
-                        _iter = _IndexedComponent_slice_iter(_tmp, self.advance_iter)
+                        _iter = _IndexedComponent_slice_iter(
+                            _tmp, self.advance_iter, sort=self._sort
+                        )
                         _idx_to_del = []
                         # Two passes, so that we don't edit the _data
                         # dicts while we are iterating over them
