@@ -335,9 +335,7 @@ class IndexedComponent_slice(object):
         return ans
 
     def index_wildcard_keys(self, sort):
-        _iter = _IndexedComponent_slice_iter(
-            self, iter_over_index=True, sort=sort
-        )
+        _iter = _IndexedComponent_slice_iter(self, iter_over_index=True, sort=sort)
         return (_iter.get_last_index_wildcards() for _ in _iter)
 
     def wildcard_keys(self, sort):
