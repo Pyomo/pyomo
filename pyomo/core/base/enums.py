@@ -70,7 +70,7 @@ class SortComponents(enum.Flag):
 
     @staticmethod
     def default():
-        return SortComponents.unsorted
+        return SortComponents.UNSORTED
 
     @staticmethod
     def sorter(sort_by_names=False, sort_by_keys=False):
