@@ -1516,6 +1516,9 @@ class _OrderedSetMixin(object):
     def ordered_data(self):
         return self.data()
 
+    def ordered_iter(self):
+        return iter(self)
+
     def first(self):
         return self.at(1)
 
@@ -1641,9 +1644,6 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     def __reversed__(self):
         return reversed(self._ordered_values)
 
-    def ordered_iter(self):
-        return iter(self)
-
     def _add_impl(self, value):
         self._values[value] = len(self._values)
         self._ordered_values.append(value)
@@ -1750,6 +1750,12 @@ class _SortedSetMixin(object):
 
     __slots__ = ()
 
+    def ordered_iter(self):
+        return iter(self)
+
+    def sorted_iter(self):
+        return iter(self)
+
 
 class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     """
@@ -1780,12 +1786,6 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         if not self._is_sorted:
             self._sort()
         return super(_SortedSetData, self).__reversed__()
-
-    def ordered_iter(self):
-        return iter(self)
-
-    def sorted_iter(self):
-        return iter(self)
 
     def _add_impl(self, value):
         # Note that the sorted status has no bearing on insertion,
