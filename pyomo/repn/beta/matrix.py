@@ -748,7 +748,7 @@ class MatrixConstraint(Mapping, IndexedConstraint):
         # ignore the `sort` argument
         return super().values()
 
-    def items(self, sort.None):
+    def items(self, sort=None):
         # The 0..n-1 indices are always ordered and sorted; we can
         # ignore the `sort` argument
         return super().items()
