@@ -314,15 +314,14 @@ def ftoa(val, parenthesize_negative_values=False):
     # necessary, this helps keep the emitted string consistent between
     # python versions by simplifying things like "1.0000000000001" to
     # "1".
-    i = len(a)
-    try:
-        while i > 1:
-            if float(a[: i - 1]) == _val:
+    i = len(a) - 1
+    if i:
+        try:
+            while float(a[:i]) == _val:
                 i -= 1
-            else:
-                break
-    except:
-        pass
+        except:
+            pass
+    i += 1
     #
     # It is important to issue a warning if the conversion loses
     # precision (as the emitted model is not exactly what the user
