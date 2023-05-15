@@ -70,7 +70,9 @@ class FileDeterminism(enum.IntEnum):
         return enum.Enum.__str__(self)
 
     def __format__(self, spec):
-        return enum.Enum.__format__(self, spec)
+        # This cannot just call Enum.__format__ because that returns the
+        # numeric value in Python 3.7
+        return str(self).__format__(spec)
 
     @classmethod
     def _missing_(cls, value):
