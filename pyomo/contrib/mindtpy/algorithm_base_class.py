@@ -806,7 +806,7 @@ class _MindtPyAlgorithm(object):
         self.primal_bound_progress = [self.primal_bound]
         self.dual_bound_progress = [self.dual_bound]
 
-        if config.nlp_solver == 'ipopt':
+        if config.nlp_solver in {'ipopt', 'cyipopt'}:
             if not hasattr(self.working_model, 'ipopt_zL_out'):
                 self.working_model.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
             if not hasattr(self.working_model, 'ipopt_zU_out'):
@@ -900,11 +900,18 @@ class _MindtPyAlgorithm(object):
             )
             # Add OA cut
             if add_oa_cuts:
-                dual_values = (
-                    list(m.dual[c] for c in MindtPy.constraint_list)
-                    if config.calculate_dual_at_solution
-                    else None
-                )
+                if self.config.nlp_solver == 'cyipopt' and self.objective_sense == minimize:
+                    dual_values = (
+                        list(-1 * m.dual[c] for c in MindtPy.constraint_list)
+                        if config.calculate_dual_at_solution
+                        else None
+                    )
+                else:
+                    dual_values = (
+                        list(m.dual[c] for c in MindtPy.constraint_list)
+                        if config.calculate_dual_at_solution
+                        else None
+                    )
                 copy_var_list_values(
                     m.MindtPy_utils.variable_list,
                     self.mip.MindtPy_utils.variable_list,
@@ -1194,6 +1201,8 @@ class _MindtPyAlgorithm(object):
             for c in fixed_nlp.tmp_duals:
                 if fixed_nlp.dual.get(c, None) is None:
                     fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
+                elif self.config.nlp_solver == 'cyipopt' and self.objective_sense == minimize:
+                    fixed_nlp.dual[c] = - fixed_nlp.dual[c]
             dual_values = list(
                 fixed_nlp.dual[c] for c in fixed_nlp.MindtPy_utils.constraint_list
             )
@@ -1798,7 +1807,7 @@ class _MindtPyAlgorithm(object):
             The customized MIP solver.
         """
         # Deactivate extraneous IMPORT/EXPORT suffixes
-        if config.nlp_solver == 'ipopt':
+        if config.nlp_solver in {'ipopt', 'cyipopt'}:
             getattr(self.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
             getattr(self.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
         if regularization_problem:
