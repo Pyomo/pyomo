@@ -239,7 +239,7 @@ def initialize_var_map_from_column_order(model, config, var_map):
         # Reference) will be sorted with the FIRST occurrence.
         for var in column_order:
             if var.is_indexed():
-                for _v in var.values():
+                for _v in var.values(sorter):
                     if not _v.fixed:
                         var_map[id(_v)] = _v
             elif not var.fixed:
