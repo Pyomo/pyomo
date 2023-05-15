@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import enum
+import itertools
 import logging
 import sys
 
@@ -210,11 +211,9 @@ def initialize_var_map_from_column_order(model, config, var_map):
     column_order = config.column_order
     sorter = FileDeterminism_to_SortComponents(config.file_determinism)
 
-    if column_order is None or column_order == True:
-        pass
-    elif isinstance(column_order, Sequence):
-        # Copy the incoming list to avoid side-effects
-        column_order = list(column_order)
+    if column_order is None or column_order.__class__ is bool:
+        if not column_order:
+            column_order = None
     elif isinstance(column_order, ComponentMap):
         # The column order has historically has supported a ComponentMap of
         # component to position in addition to the simple list of
@@ -228,11 +227,11 @@ def initialize_var_map_from_column_order(model, config, var_map):
         # matches the file_determinism flag.  This is a little
         # cumbersome, but is implemented this way for consistency
         # with the original NL writer.
-        var_obj = model.component_data_objects(Var, descend_into=True, sort=sorter)
+        var_objs = model.component_data_objects(Var, descend_into=True, sort=sorter)
         if column_order is None:
-            column_order = var_obj
+            column_order = var_objs
         else:
-            column_order.extend(var_obj)
+            column_order = itertools.chain(column_order, var_objs)
 
     if column_order is not None:
         # Note that Vars that appear twice (e.g., through a
@@ -252,29 +251,31 @@ def ordered_active_constraints(model, config):
     constraints = model.component_data_objects(Constraint, active=True, sort=sorter)
 
     row_order = config.row_order
-    if isinstance(row_order, ComponentMap):
+    if row_order is None or row_order.__class__ is bool:
+        return constraints
+    elif isinstance(row_order, ComponentMap):
         # The row order has historically also supported a ComponentMap of
         # component to position in addition to the simple list of
         # components.  Convert it to the simple list
         row_order = sorted(row_order, key=row_order.__getitem__)
 
-    if row_order:
-        row_map = {}
-        for con in row_order:
-            if con.is_indexed():
-                for c in con.values():
-                    row_map[id(c)] = c
-            else:
-                row_map[id(con)] = con
-        # map the implicit dict ordering to an explicit 0..n ordering
-        row_map = {_id: i for i, _id in enumerate(row_map)}
-        # sorted() is stable (per Python docs), so we can let all
-        # unspecified rows have a row number one bigger than the
-        # number of rows specified by the user ordering.
-        _n = len(row_map)
-        _row_getter = row_map.get
-        constraints = sorted(constraints, key=lambda x: _row_getter(id(x), _n))
-    return constraints
+    row_map = {}
+    for con in row_order:
+        if con.is_indexed():
+            for c in con.values(sorter):
+                row_map[id(c)] = c
+        else:
+            row_map[id(con)] = con
+    if not row_map:
+        return constraints
+    # map the implicit dict ordering to an explicit 0..n ordering
+    row_map = {_id: i for i, _id in enumerate(row_map)}
+    # sorted() is stable (per Python docs), so we can let all
+    # unspecified rows have a row number one bigger than the
+    # number of rows specified by the user ordering.
+    _n = len(row_map)
+    _row_getter = row_map.get
+    return sorted(constraints, key=lambda x: _row_getter(id(x), _n))
 
 
 # Copied from cpxlp.py:
