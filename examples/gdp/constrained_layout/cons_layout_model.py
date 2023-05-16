@@ -15,7 +15,7 @@ from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var
 
 
 def build_model(
-    rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals, sep_penalty_matrix
+    rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals, sep_penalty_matrix, metric="l1"
 ):
     """Build the model."""
 
@@ -30,36 +30,36 @@ def build_model(
         assert len(row) == len(
             sep_penalty_matrix[0]
         ), "Matrix rows should have the same length"
+    assert metric in ["l1", "l2"]
 
     m = ConcreteModel(name="2-D constrained layout")
     m.rectangles = RangeSet(len(rect_lengths), doc=f"{len(rect_lengths)} rectangles")
     m.circles = RangeSet(len(circ_xvals), doc=f"{len(circ_xvals)} circles")
 
-    # note: make the dict first and pass that in
     m.rect_length = Param(
         m.rectangles,
-        initialize={k: v for k, v in enumerate(rect_lengths, start=1)},
+        initialize=rect_lengths,
         doc="Rectangle length",
     )
     m.rect_height = Param(
         m.rectangles,
-        initialize={k: v for k, v in enumerate(rect_heights, start=1)},
+        initialize=rect_heights,
         doc="Rectangle height",
     )
 
     m.circle_x = Param(
         m.circles,
-        initialize={k: v for k, v in enumerate(circ_xvals, start=1)},
+        initialize=circ_xvals,
         doc="x-coordinate of circle center",
     )
     m.circle_y = Param(
         m.circles,
-        initialize={k: v for k, v in enumerate(circ_yvals, start=1)},
+        initialize=circ_yvals,
         doc="y-coordinate of circle center",
     )
     m.circle_r = Param(
         m.circles,
-        initialize={k: v for k, v in enumerate(circ_rvals, start=1)},
+        initialize=circ_rvals,
         doc="radius of circle",
     )
 
@@ -91,12 +91,8 @@ def build_model(
             for circ in m.circles
         )
 
-    # todo remove
-    m.ordered_rect_pairs = Set(
-        initialize=m.rectangles * m.rectangles, filter=lambda _, r1, r2: r1 != r2
-    )
     m.rect_pairs = Set(
-        initialize=[(r1, r2) for r1, r2 in m.ordered_rect_pairs if r1 < r2]
+        initialize=m.rectangles * m.rectangles, filter=lambda _, r1, r2: r1 < r2
     )
 
     m.rect_sep_penalty = Param(
@@ -123,22 +119,39 @@ def build_model(
     m.dist_x = Var(m.rect_pairs, doc="x-axis separation between rectangle pair")
     m.dist_y = Var(m.rect_pairs, doc="y-axis separation between rectangle pair")
 
-    # todo: argument for l2 distance
-    m.min_dist_cost = Objective(
-        expr=sum(
-            m.rect_sep_penalty[r1, r2] * (m.dist_x[r1, r2] + m.dist_y[r1, r2])
-            for (r1, r2) in m.rect_pairs
+    if metric == 'l2':
+        m.min_dist_cost = Objective(
+            expr=sum(
+                m.rect_sep_penalty[r1, r2] * (m.dist_x[r1, r2]**2 + m.dist_y[r1, r2]**2)**0.5
+                for (r1, r2) in m.rect_pairs
+            )
         )
-    )
+    # l1 distance used in the paper
+    else:
+        m.min_dist_cost = Objective(
+            expr=sum(
+                m.rect_sep_penalty[r1, r2] * (m.dist_x[r1, r2] + m.dist_y[r1, r2])
+                for (r1, r2) in m.rect_pairs
+            )
+        )
 
-    # todo make less weird
-    @m.Constraint(m.ordered_rect_pairs, doc="x-distance between rectangles")
-    def dist_x_defn(m, r1, r2):
-        return m.dist_x[tuple(sorted([r1, r2]))] >= m.rect_x[r2] - m.rect_x[r1]
+    # Ensure the dist_x and dist_y are greater than the positive and negative
+    # signed distances.
+    @m.Constraint(m.rect_pairs, doc="x-distance between rectangles")
+    def dist_x_defn_1(m, r1, r2):
+        return m.dist_x[(r1, r2)] >= m.rect_x[r2] - m.rect_x[r1]
+    
+    @m.Constraint(m.rect_pairs, doc="x-distance between rectangles")
+    def dist_x_defn_2(m, r1, r2):
+        return m.dist_x[(r1, r2)] >= m.rect_x[r1] - m.rect_x[r2]
 
-    @m.Constraint(m.ordered_rect_pairs, doc="y-distance between rectangles")
-    def dist_y_defn(m, r1, r2):
-        return m.dist_y[tuple(sorted([r1, r2]))] >= m.rect_y[r2] - m.rect_y[r1]
+    @m.Constraint(m.rect_pairs, doc="y-distance between rectangles")
+    def dist_y_defn_1(m, r1, r2):
+        return m.dist_y[(r1, r2)] >= m.rect_y[r2] - m.rect_y[r1]
+    
+    @m.Constraint(m.rect_pairs, doc="y-distance between rectangles")
+    def dist_y_defn_2(m, r1, r2):
+        return m.dist_y[(r1, r2)] >= m.rect_y[r1] - m.rect_y[r2]
 
     @m.Disjunction(
         m.rect_pairs,
@@ -182,8 +195,6 @@ def build_model(
         ]
 
     return m
-
-    # todo use black
 
 
 def draw_model(m, **kwargs):
@@ -254,26 +265,27 @@ def draw_model(m, **kwargs):
 
 
 # Constrained layout model examples. These are from Nicolas Sawaya (2006).
-# Format: rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals, sep_penalty_matrix
+# Format: rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals (as dicts), 
+# sep_penalty_matrix (as nested array)
 # Note that only the strict upper triangle of sep_penalty_matrix is used
 constrained_layout_model_examples = {
     "Clay0203": [
-        [5, 7, 3],
-        [6, 5, 3],
-        [15, 50],
-        [10, 80],
-        [6, 5],
+        {1: 5, 2: 7, 3: 3},
+        {1: 6, 2: 5, 3: 3},
+        {1: 15, 2: 50},
+        {1: 10, 2: 80},
+        {1: 6, 2: 5},
         [
             [0, 300, 240],
             [0, 0, 100],
         ],
     ],
     "Clay0204": [
-        [5, 7, 3, 2],
-        [6, 5, 3, 3],
-        [15, 50],
-        [10, 80],
-        [6, 10],
+        {1: 5, 2: 7, 3: 3, 4: 2},
+        {1: 6, 2: 5, 3: 3, 4: 3},
+        {1: 15, 2: 50},
+        {1: 10, 2: 80},
+        {1: 6, 2: 10},
         [
             [0, 300, 240, 210],
             [0, 0, 100, 150],
@@ -281,11 +293,11 @@ constrained_layout_model_examples = {
         ],
     ],
     "Clay0205": [
-        [5, 7, 3, 2, 9],
-        [6, 5, 3, 3, 7],
-        [15, 50],
-        [10, 80],
-        [6, 10],
+        {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
+        {1: 6, 2: 5, 3: 3, 4: 3, 5: 7},
+        {1: 15, 2: 50},
+        {1: 10, 2: 80},
+        {1: 6, 2: 10},
         [
             [0, 300, 240, 210, 50],
             [0, 0, 100, 150, 30],
@@ -294,22 +306,22 @@ constrained_layout_model_examples = {
         ],
     ],
     "Clay0303": [
-        [5, 7, 3],
-        [6, 5, 3],
-        [15, 50, 30],
-        [10, 80, 50],
-        [6, 5, 4],
+        {1: 5, 2: 7, 3: 3},
+        {1: 6, 2: 5, 3: 3},
+        {1: 15, 2: 50, 3: 30},
+        {1: 10, 2: 80, 3: 50},
+        {1: 6, 2: 5, 3: 4},
         [
             [0, 300, 240],
             [0, 0, 100],
         ],
     ],
     "Clay0304": [
-        [5, 7, 3, 2],
-        [6, 5, 3, 3],
-        [15, 50, 30],
-        [10, 80, 50],
-        [6, 5, 4],
+        {1: 5, 2: 7, 3: 3, 4: 2},
+        {1: 6, 2: 5, 3: 3, 4: 3},
+        {1: 15, 2: 50, 3: 30},
+        {1: 10, 2: 80, 3: 50},
+        {1: 6, 2: 5, 3: 4},
         [
             [0, 300, 240, 210],
             [0, 0, 100, 150],
@@ -317,11 +329,11 @@ constrained_layout_model_examples = {
         ],
     ],
     "Clay0305": [
-        [5, 7, 3, 2, 9],
-        [6, 5, 3, 3, 7],
-        [15, 50, 30],
-        [10, 80, 50],
-        [6, 10, 4],
+        {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
+        {1: 6, 2: 5, 3: 3, 4: 3, 5: 7},
+        {1: 15, 2: 50, 3: 30},
+        {1: 10, 2: 80, 3: 50},
+        {1: 6, 2: 10, 3: 4},
         [
             [0, 300, 240, 210, 50],
             [0, 0, 100, 150, 30],
@@ -342,11 +354,12 @@ if __name__ == "__main__":
     transformer = TransformationFactory("gdp.bigm")
 
     # Do all of them
-    for key in constrained_layout_model_examples.keys():
-        print(f"Solving example problem: {key}")
-        model = build_model(*constrained_layout_model_examples[key])
-        transformer.apply_to(model)
-        solver.solve(model)
-        print(f"Found objective function value: {model.min_dist_cost()}")
-        draw_model(model, title=key)
-        print()
+    for d in ["l1", "l2"]:
+        for key in constrained_layout_model_examples.keys():
+            print(f"Solving example problem: {key}")
+            model = build_model(*constrained_layout_model_examples[key], metric=d)
+            transformer.apply_to(model)
+            solver.solve(model)
+            print(f"Found objective function value: {model.min_dist_cost()}")
+            draw_model(model, title=(key if d == "l1" else f"{key} ({d} distance)"))
+            print()
