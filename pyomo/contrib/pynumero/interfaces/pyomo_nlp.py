@@ -80,6 +80,7 @@ class PyomoNLP(AslNLP):
             fname, symbolMap = WriterFactory('nl')(
                 pyomo_model, nl_file, lambda x: True, nl_file_options
             )
+            self._symbol_map = symbolMap
 
             # create component maps from vardata to idx and condata to idx
             self._vardata_to_idx = vdidx = ComponentMap()
@@ -130,6 +131,10 @@ class PyomoNLP(AslNLP):
         finally:
             # delete the nl file
             TempfileManager.pop()
+
+    @property
+    def symbol_map(self):
+        return self._symbol_map
 
     def pyomo_model(self):
         """
