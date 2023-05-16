@@ -14,26 +14,36 @@ from __future__ import division
 from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var
 
 
-def build_constrained_layout_model():
+def build_model(rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals, sep_penalty_matrix):
     """Build the model."""
+    
+    # Ensure the caller passed good data
+    assert len(rect_lengths) == len(rect_heights), "There should be the same number of rectangle lengths and heights."
+    assert len(circ_xvals) == len(circ_yvals) == len(circ_rvals), "There should be the same number of circle x values, y values, and radii"
+    for row in sep_penalty_matrix:
+        assert len(row) == len(sep_penalty_matrix[0]), "Matrix rows should have the same length"
+    
     m = ConcreteModel(name="2-D constrained layout")
-    m.rectangles = RangeSet(3, doc="Three rectangles")
-    m.circles = RangeSet(2, doc="Two circles")
+    m.rectangles = RangeSet(len(rect_lengths), doc=f"{len(rect_lengths)} rectangles")
+    m.circles = RangeSet(len(circ_xvals), doc=f"{len(circ_xvals)} circles")
 
+# note: make the dict first and pass that in
     m.rect_length = Param(
-        m.rectangles, initialize={1: 5, 2: 7, 3: 3}, doc="Rectangle length"
+        m.rectangles, initialize={k + 1: v for k, v in enumerate(rect_lengths)}, doc="Rectangle length"
     )
     m.rect_height = Param(
-        m.rectangles, initialize={1: 6, 2: 5, 3: 3}, doc="Rectangle height"
+        m.rectangles, initialize={k + 1: v for k, v in enumerate(rect_heights)}, doc="Rectangle height"
     )
 
     m.circle_x = Param(
-        m.circles, initialize={1: 15, 2: 50}, doc="x-coordinate of circle center"
+        m.circles, initialize={k + 1: v for k, v in enumerate(circ_xvals)}, doc="x-coordinate of circle center"
     )
     m.circle_y = Param(
-        m.circles, initialize={1: 10, 2: 80}, doc="y-coordinate of circle center"
+        m.circles, initialize={k + 1: v for k, v in enumerate(circ_yvals)}, doc="y-coordinate of circle center"
     )
-    m.circle_r = Param(m.circles, initialize={1: 6, 2: 5}, doc="radius of circle")
+    m.circle_r = Param(
+        m.circles, initialize={k + 1: v for k, v in enumerate(circ_rvals)}, doc="radius of circle"
+    )
 
     @m.Param(m.rectangles, doc="Minimum feasible x value for rectangle")
     def x_min(m, rect):
@@ -63,6 +73,7 @@ def build_constrained_layout_model():
             for circ in m.circles
         )
 
+# todo remove
     m.ordered_rect_pairs = Set(
         initialize=m.rectangles * m.rectangles, filter=lambda _, r1, r2: r1 != r2
     )
@@ -72,7 +83,8 @@ def build_constrained_layout_model():
 
     m.rect_sep_penalty = Param(
         m.rect_pairs,
-        initialize={(1, 2): 300, (1, 3): 240, (2, 3): 100},
+        # 0-based vs 1-based indices...
+        initialize={(r1, r2): sep_penalty_matrix[r1 - 1][r2 - 1] for r1, r2 in m.rect_pairs},
         doc="Penalty for separation distance between two rectangles.",
     )
 
@@ -91,13 +103,14 @@ def build_constrained_layout_model():
     m.dist_x = Var(m.rect_pairs, doc="x-axis separation between rectangle pair")
     m.dist_y = Var(m.rect_pairs, doc="y-axis separation between rectangle pair")
 
+# todo: argument for l2 distance
     m.min_dist_cost = Objective(
         expr=sum(
             m.rect_sep_penalty[r1, r2] * (m.dist_x[r1, r2] + m.dist_y[r1, r2])
             for (r1, r2) in m.rect_pairs
         )
     )
-
+#todo make less weird
     @m.Constraint(m.ordered_rect_pairs, doc="x-distance between rectangles")
     def dist_x_defn(m, r1, r2):
         return m.dist_x[tuple(sorted([r1, r2]))] >= m.rect_x[r2] - m.rect_x[r1]
@@ -148,3 +161,99 @@ def build_constrained_layout_model():
         ]
 
     return m
+
+    # todo use black
+    
+def draw_model(m, **kwargs):
+    """Draw a model using matplotlib to illustrate what's going on. Pass 'title' kwarg to give chart a title"""
+    
+    # matplotlib setup
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    
+    # Hardcode these bounds since I'm not sure the best way to do it automatically
+    ax.set_xlim([0, 100])
+    ax.set_ylim([0, 100])
+    
+    if 'title' in kwargs:
+        plt.title(kwargs['title'])
+    
+    for c in m.circles:
+        print(f"drawing circle {c}: x={m.circle_x[c]}, y={m.circle_y[c]}, r={m.circle_r[c]}")
+        # no idea about colors
+        ax.add_patch(mpl.patches.Circle((m.circle_x[c], m.circle_y[c]), radius=m.circle_r[c], facecolor='#0d98e6', edgecolor='#000000'))
+        # the alignment appears to work by magic
+        ax.text(m.circle_x[c], m.circle_y[c] + m.circle_r[c] + 1.5, f"Circle {c}", horizontalalignment="center")
+    
+    for r in m.rectangles:
+        print(f"drawing rectangle {r}: x={m.rect_x[r]()}, y={m.rect_y[r]()} (center), L={m.rect_length[r]}, H={m.rect_height[r]}")
+        ax.add_patch(mpl.patches.Rectangle((m.rect_x[r]() - m.rect_length[r]/2, m.rect_y[r]() - m.rect_height[r]/2), m.rect_length[r], m.rect_height[r],
+                                           facecolor='#ebdc78', edgecolor='#000000'))
+        ax.text(m.rect_x[r](), m.rect_y[r](), f"R{r}", horizontalalignment="center", verticalalignment="center", fontsize=8)
+    
+    plt.show()
+
+    
+
+# Constrained layout model examples. These are from Nicolas Sawaya (2006).
+# Format: rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals, sep_penalty_matrix
+# Note that only the strict upper triangle of sep_penalty_matrix is used
+constrained_layout_model_examples = {
+    'Clay0203': [[5, 7, 3], [6, 5, 3],
+                 [15, 50], [10, 80], [6, 5],
+                 [[0, 300, 240],
+                  [0,   0, 100]]],
+    'Clay0204': [[5, 7, 3, 2], [6, 5, 3, 3],
+                 [15, 50], [10, 80], [6, 10],
+                 [[0, 300, 240, 210],
+                  [0,   0, 100, 150],
+                  [0,   0,   0, 120]]],
+    'Clay0205': [[5, 7, 3, 2, 9], [6, 5, 3, 3, 7],
+                 [15, 50], [10, 80], [6, 10],
+                 [[0, 300, 240, 210,  50],
+                  [0,   0, 100, 150,  30],
+                  [0,   0,   0, 120,  25],
+                  [0,   0,   0,   0,  60]]],
+    'Clay0303': [[5, 7, 3], [6, 5, 3],
+                 [15, 50, 30], [10, 80, 50], [6, 5, 4],
+                 [[0, 300, 240],
+                  [0,   0, 100]]],
+    'Clay0304': [[5, 7, 3, 2], [6, 5, 3, 3],
+                 [15, 50, 30], [10, 80, 50], [6, 5, 4],
+                 [[0, 300, 240, 210],
+                  [0,   0, 100, 150],
+                  [0,   0,   0, 120]]],
+    'Clay0305': [[5, 7, 3, 2, 9], [6, 5, 3, 3, 7],
+                 [15, 50, 30], [10, 80, 50], [6, 10, 4],
+                 [[0, 300, 240, 210,  50],
+                  [0,   0, 100, 150,  30],
+                  [0,   0,   0, 120,  25],
+                  [0,   0,   0,   0,  60]]]
+    }
+
+
+# Solve some example problems and draw some pictures
+if __name__ == '__main__':
+    from pyomo.environ import SolverFactory
+    from pyomo.core.base import TransformationFactory
+    
+    # Set up a solver
+    solver = SolverFactory('scip')
+    transformer = TransformationFactory('gdp.bigm')
+    
+    # Do all of them
+    for key in constrained_layout_model_examples.keys():
+        print(f"Solving example problem: {key}")
+        model = build_model(*constrained_layout_model_examples[key])
+        transformer.apply_to(model)
+        solver.solve(model)
+        print(f"Found objective function value: {model.min_dist_cost()}")
+        draw_model(model, title=key)
+        print()
+        
+    
+
+
