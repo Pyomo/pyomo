@@ -296,7 +296,7 @@ class IncidenceRepn(object):
         return (
             f'IncidenceRepn(mult={self.mult}, const={self.const}, '
             f'linear={self.linear}, nonlinear={self.nonlinear}, '
-            f'nl={self.nl}, named_exprs={self.named_exprs})'
+            f'nl={self.nl})'
         )
 
     def __repr__(self):
@@ -488,6 +488,9 @@ class IncidenceRepn(object):
 
                 # FIXME: This line is not tested appropriately.
                 # If I call _none_safe_addition twice, no test fails.
+                #
+                # In my tests, the only times I hit this line is when self.const
+                # and c_mult are both zero.
                 self.const = _none_safe_addition(self.const, c_mult)
 
                 if other.linear:
@@ -497,6 +500,9 @@ class IncidenceRepn(object):
                         if v in linear:
                             # FIXME: This line is not tested appropriately.
                             # If I call _none_safe_addition twice, no test fails.
+                            #
+                            # I can hit this branch, but have not been able to hit
+                            # it in cases where it would lead to a cancellation.
                             linear[v] = _none_safe_addition(linear[v], c_mult)
                         else:
                             linear[v] = c_mult
