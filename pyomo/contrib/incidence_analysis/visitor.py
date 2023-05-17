@@ -1387,6 +1387,9 @@ def _get_incidence_repn(expr):
     return ampl_expr, var_map
 
 
+from pyomo.repn import generate_standard_repn
+
+
 def get_incident_variables(
     expr, include_fixed=False, linear_only=False, filter_zeros=True
 ):
@@ -1437,3 +1440,46 @@ def get_incident_variables(
                 seen_var_ids.add(v_id)
                 unique_var_ids.append(v_id)
         return [var_map[v_id] for v_id in unique_var_ids]
+
+
+def _get_incident_variables(
+    expr, include_fixed=False, linear_only=False, filter_zeros=True
+):
+    if include_fixed:
+        to_unfix = []
+        var_set = set()
+        for var in identify_variables(expr, include_fixed=True):
+            if id(var) not in var_set:
+                var_set.add(id(var))
+                to_unfix.append(var)
+        # We will temporarily unfix variables to generate the incident
+        # variables
+        context = TemporarySubsystemManager(to_unfix=to_unfix)
+    else:
+        context = nullcontext()
+
+    with context:
+        repn = generate_standard_repn(expr, compute_values=False)
+
+    linear_vars = []
+    for var, coef in zip(repn.linear_vars, repn.linear_coefs):
+        try:
+            coef_value = pyo.value(coef)
+        except:
+            coef_value = None
+        if coef_value is None or (coef_value != 0 and not math.isnan(coef_value)):
+            linear_vars.append(var)
+
+    if linear_only:
+        return linear_vars
+    else:
+        variables = tuple(linear_vars) + repn.quadratic_vars + repn.nonlinear_vars
+
+        unique_variables = []
+        seen_var_ids = set()
+        for var in variables:
+            v_id = id(var)
+            if v_id not in seen_var_ids:
+                seen_var_ids.add(v_id)
+                unique_variables.append(var)
+        return unique_variables
