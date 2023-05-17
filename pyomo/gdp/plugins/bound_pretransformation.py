@@ -146,23 +146,7 @@ class BoundPretransformation(Transformation):
             descend_into=Block,
             sort=SortComponents.deterministic,
         ):
-            if hasattr(constraint.body, 'ctype') and constraint.body.ctype is Var:
-                v = constraint.body
-                # Then this is a bound or an equality
-                v_bounds = self._get_bound_dict_for_var(bound_dict, v)
-                self._update_bounds_dict(
-                    v_bounds,
-                    value(constraint.lower),
-                    value(constraint.upper),
-                    bound_dict_key,
-                    gdp_forest,
-                )
-                # We won't know til the end if we're *really* transforming this
-                # constraint, so we just cache the fact that it is a constraint
-                # on v and wait for later
-                if not is_root:
-                    v_bounds['to_deactivate'].add(constraint)
-            elif len(list(identify_variables(constraint.body))) == 1:
+            if len(list(identify_variables(constraint.body))) == 1:
                 repn = generate_standard_repn(constraint.body)
                 if not repn.is_linear():
                     continue
