@@ -451,6 +451,24 @@ class TestUninitialized(unittest.TestCase):
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[2]]))
 
+    def test_include_fixed(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+
+        expr = m.x[1] + m.x[2]*pyo.exp(2*m.x[2]*m.x[3]) - m.x[1]
+        m.x[1].fix()
+        m.x[3].fix()
+        variables = get_incident_variables(expr, include_fixed=True)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[2], m.x[3]]))
+
+        expr = m.x[1] + m.x[2]*pyo.exp(2*m.x[2]*m.x[3]) - 2*m.x[1]
+        m.x[1].fix()
+        m.x[3].fix()
+        variables = get_incident_variables(expr, include_fixed=True)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet(m.x[:]))
+
 
 class TestInitialized(unittest.TestCase):
     def test_nonlinear(self):

@@ -28,6 +28,7 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
+from pyomo.util.subsystems import TemporarySubsystemManager
 
 from pyomo.core.expr.current import (
     NegationExpression,
@@ -47,6 +48,7 @@ from pyomo.core.expr.current import (
     native_types,
     native_numeric_types,
     value,
+    identify_variables,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.base import (
@@ -1370,8 +1372,24 @@ def _get_incidence_repn(expr):
     return ampl_expr, var_map
 
 
-def get_incident_variables(expr, linear_only=False, filter_zeros=True):
-    ampl_expr, var_map = _get_incidence_repn(expr)
+def get_incident_variables(
+    expr, include_fixed=False, linear_only=False, filter_zeros=True
+):
+    if include_fixed:
+        to_unfix = []
+        var_set = set()
+        for var in identify_variables(expr, include_fixed=True):
+            if id(var) not in var_set:
+                var_set.add(id(var))
+                to_unfix.append(var)
+        # We will temporarily unfix variables to generate the incident
+        # variables
+        context = TemporarySubsystemManager(to_unfix=to_unfix)
+    else:
+        context = nullcontext()
+
+    with context:
+        ampl_expr, var_map = _get_incidence_repn(expr)
 
     if ampl_expr.linear is None:
         linear_var_ids = []
