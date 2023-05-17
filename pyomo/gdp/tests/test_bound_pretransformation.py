@@ -886,10 +886,7 @@ class TestBoundPretransformation(unittest.TestCase):
         m.y.fix(1)
         m.z = Var()
 
-        m.disjunction = Disjunction(expr=[
-            [m.x + m.y <= 5],
-            [m.x <= 17],
-            [m.z == 0]])
+        m.disjunction = Disjunction(expr=[[m.x + m.y <= 5], [m.x <= 17], [m.z == 0]])
 
         bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
@@ -903,7 +900,7 @@ class TestBoundPretransformation(unittest.TestCase):
             4.0 * m.disjunction.disjuncts[0].binary_indicator_var
             + 17.0 * m.disjunction.disjuncts[1].binary_indicator_var
             + 78 * m.disjunction.disjuncts[2].binary_indicator_var
-            >= m.x
+            >= m.x,
         )
 
         self.assertFalse(m.disjunction.disjuncts[0].constraint[1].active)
