@@ -420,7 +420,7 @@ class TestUninitialized(unittest.TestCase):
     def test_equality_expression(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = m.x[1] == 2*m.x[2]*m.x[3]
+        expr = m.x[1] == 2 * m.x[2] * m.x[3]
         m.x[3].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
@@ -428,7 +428,7 @@ class TestUninitialized(unittest.TestCase):
 
         # No elimination occurs in this case.
         # Would be nice if this could change
-        expr = m.x[1] == 2*m.x[2]*m.x[3] + m.x[1]
+        expr = m.x[1] == 2 * m.x[2] * m.x[3] + m.x[1]
         m.x[3].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
@@ -437,7 +437,7 @@ class TestUninitialized(unittest.TestCase):
     def test_inequality_expression(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        expr = m.x[1] <= 2*m.x[2]*m.x[3]
+        expr = m.x[1] <= 2 * m.x[2] * m.x[3]
         m.x[3].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
@@ -445,7 +445,7 @@ class TestUninitialized(unittest.TestCase):
 
         # No elimination occurs in this case.
         # Would be nice if this could change
-        expr = m.x[1] <= 2*m.x[2]*m.x[3] + m.x[1]
+        expr = m.x[1] <= 2 * m.x[2] * m.x[3] + m.x[1]
         m.x[3].fix()
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
@@ -455,14 +455,14 @@ class TestUninitialized(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
 
-        expr = m.x[1] + m.x[2]*pyo.exp(2*m.x[2]*m.x[3]) - m.x[1]
+        expr = m.x[1] + m.x[2] * pyo.exp(2 * m.x[2] * m.x[3]) - m.x[1]
         m.x[1].fix()
         m.x[3].fix()
         variables = get_incident_variables(expr, include_fixed=True)
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[2], m.x[3]]))
 
-        expr = m.x[1] + m.x[2]*pyo.exp(2*m.x[2]*m.x[3]) - 2*m.x[1]
+        expr = m.x[1] + m.x[2] * pyo.exp(2 * m.x[2] * m.x[3]) - 2 * m.x[1]
         m.x[1].fix()
         m.x[3].fix()
         variables = get_incident_variables(expr, include_fixed=True)
