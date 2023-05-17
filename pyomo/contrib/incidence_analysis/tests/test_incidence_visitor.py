@@ -409,13 +409,17 @@ class TestUninitialized(unittest.TestCase):
         expr = 1 + nan * m.x[1] + 2 * m.x[2] + 3 * m.x[3] + m.p[2] * m.x[1]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
-        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+        # self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+        # x[1] has a coefficient of NaN so it gets filtered
+        self.assertEqual(var_set, ComponentSet([m.x[3]]))
 
         # Covers the None*NaN branch
         expr = 1 + m.p[1] * m.x[1] + 2 * m.x[2] + 3 * m.x[3] + nan * m.x[1]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
-        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+        # self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+        # x[1] has a coefficient of NaN so it gets filtered
+        self.assertEqual(var_set, ComponentSet([m.x[3]]))
 
     def test_equality_expression(self):
         m = pyo.ConcreteModel()
@@ -544,6 +548,17 @@ class TestInitialized(unittest.TestCase):
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
+
+        expr = float('nan') * m.x[2]
+        variables = get_incident_variables(expr)
+        self.assertEqual(len(variables), 0)
+
+        # Test a fractional power
+        m.x[1].fix(-3)
+        # This will generate a linear coefficient of NaN
+        expr = m.x[1] ** (1 / 3) * m.x[2]
+        variables = get_incident_variables(expr)
+        self.assertEqual(len(variables), 0)
 
     def test_var_pow_zero(self):
         m = pyo.ConcreteModel()

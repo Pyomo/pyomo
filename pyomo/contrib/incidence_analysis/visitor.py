@@ -238,6 +238,10 @@ def _none_safe_pow(arg1, arg2):
         return arg1**arg2
 
 
+# This is used to trap complex numbers (which can result from e.g. a negative
+# number to a fractional power) and return constant with value NaN.
+# Should HALT_ON_EVALUATION_ERROR apply in incidence graph generation?
+# My intuition is that this makes sense.
 def _apply_node_operation(node, args):
     try:
         tmp = (_CONSTANT, node._apply_operation(args))
@@ -255,24 +259,24 @@ def _apply_node_operation(node, args):
         return (_CONSTANT, nan)
 
 
-class NLFragment(object):
-    """This is a mock "component" for the nl portion of a named Expression.
-
-    It is used internally in the writer when requesting symbolic solver
-    labels so that we can generate meaningful names for the nonlinear
-    portion of an Expression component.
-
-    """
-
-    __slots__ = ('_repn', '_node')
-
-    def __init__(self, repn, node):
-        self._repn = repn
-        self._node = node
-
-    @property
-    def name(self):
-        return 'nl(' + self._node.name + ')'
+# class NLFragment(object):
+#    """This is a mock "component" for the nl portion of a named Expression.
+#
+#    It is used internally in the writer when requesting symbolic solver
+#    labels so that we can generate meaningful names for the nonlinear
+#    portion of an Expression component.
+#
+#    """
+#
+#    __slots__ = ('_repn', '_node')
+#
+#    def __init__(self, repn, node):
+#        self._repn = repn
+#        self._node = node
+#
+#    @property
+#    def name(self):
+#        return 'nl(' + self._node.name + ')'
 
 
 class IncidenceRepn(object):
@@ -281,6 +285,7 @@ class IncidenceRepn(object):
     ActiveVisitor = None
 
     def __init__(self, const, linear, nonlinear):
+        # TODO: This nl attribute does not seem to be necessary?
         self.nl = None
         self.mult = 1
         self.const = const
@@ -297,6 +302,7 @@ class IncidenceRepn(object):
     def __repr__(self):
         return str(self)
 
+    # This is used to avoid repeating work for named expressions
     def duplicate(self):
         ans = self.__class__.__new__(self.__class__)
         ans.nl = self.nl
@@ -306,6 +312,9 @@ class IncidenceRepn(object):
         ans.nonlinear = None if self.nonlinear is None else set(self.nonlinear)
         return ans
 
+    # TODO: Rename. We are no longer compiling the expression. Rather just
+    # "accumulating" nonlinear variables
+    # def accumulate_nonlinear_variables(self, visitor, init=None) ?
     def compile_repn(self, visitor, nonlinear_vars=None):
         if nonlinear_vars is None:
             nonlinear_vars = set()
@@ -1393,12 +1402,17 @@ def get_incident_variables(
 
     if ampl_expr.linear is None:
         linear_var_ids = []
-    elif filter_zeros:
-        linear_var_ids = [
-            v_id for v_id, coef in ampl_expr.linear.items() if coef != 0.0
-        ]
     else:
-        linear_var_ids = list(ampl_expr.linear.keys())
+        linear_var_ids = [
+            v_id
+            for v_id, coef in ampl_expr.linear.items()
+            if (
+                # If we are not filtering zeros don't check the coefficient
+                (not filter_zeros or coef != 0.0)
+                # But we always filter NaN. (Can't check isnan if coef is None)
+                and (coef is None or not math.isnan(coef))
+            )
+        ]
 
     if ampl_expr.nonlinear is None:
         nonlinear_var_ids = []
