@@ -221,7 +221,7 @@ class TestUninitialized(unittest.TestCase):
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
-        nan = float('nan')
+        nan = float("nan")
         expr = m.x[2] * pyo.Expr_if(m.x[1], nan, nan)
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
@@ -317,6 +317,13 @@ class TestUninitialized(unittest.TestCase):
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
 
+        # This is testing a branch where x[1] is already in the
+        # linear subexpression
+        expr = m.x[1] + (m.x[1] + m.x[3]) / m.x[2]
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
+
         # I am trying to test an `if arg1[1].mult == 0` branch, but it is very
         # non-obvious how I could ever get IncidenceRepn.mult to be zero.
         m.x[3].fix(0)
@@ -405,7 +412,7 @@ class TestUninitialized(unittest.TestCase):
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
 
         # Covers the NaN*None branch
-        nan = float('nan')
+        nan = float("nan")
         expr = 1 + nan * m.x[1] + 2 * m.x[2] + 3 * m.x[3] + m.p[2] * m.x[1]
         variables = get_incident_variables(expr)
         var_set = ComponentSet(variables)
@@ -510,7 +517,7 @@ class TestInitialized(unittest.TestCase):
         self.assertEqual(len(variables), 0)
 
         # Some unsafe behavior due to how we cancel product expressions
-        nan = float('nan')
+        nan = float("nan")
         m.x[1].fix(1)
         expr = (m.x[1] - 1) * (nan * m.x[2] ** 2 + nan * m.x[3])
         variables = get_incident_variables(expr)
@@ -549,7 +556,7 @@ class TestInitialized(unittest.TestCase):
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[2])
 
-        expr = float('nan') * m.x[2]
+        expr = float("nan") * m.x[2]
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
@@ -676,7 +683,7 @@ class TestInitialized(unittest.TestCase):
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
 
-        nan = float('nan')
+        nan = float("nan")
         m.x[1].fix(nan)
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
@@ -716,7 +723,7 @@ class TestInitialized(unittest.TestCase):
     def test_product_const_general(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1)
-        nan = float('nan')
+        nan = float("nan")
         expr = nan * (m.x[1] + m.x[2])
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 0)
@@ -774,6 +781,14 @@ class TestInitialized(unittest.TestCase):
         variables = get_incident_variables(expr)
         self.assertEqual(len(variables), 1)
         self.assertIs(variables[0], m.x[1])
+
+        # This is testing a branch where x[1] is already in the
+        # linear subexpression
+        expr = m.x[1] + (m.x[1] + m.x[3]) / m.x[2] - m.x[1]
+        m.x[2].fix(1.0)
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
 
     def test_fixed_var_divided_by(self):
         m = pyo.ConcreteModel()
