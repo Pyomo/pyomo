@@ -184,7 +184,7 @@ class BoundPretransformation(Transformation):
                 if not is_root:
                     v_bounds['to_deactivate'].add(constraint)
 
-    def _select_tighter_bounds(self, parent_lb, parent_ub, lb, ub):
+    def _return_nonNone_bounds(self, parent_lb, parent_ub, lb, ub):
         if lb is None:
             # either we replace None with None, or we fill in the parent value
             # (which we know if the tightest of the ancestral values because
@@ -201,7 +201,7 @@ class BoundPretransformation(Transformation):
         ancestors = set()
         while lb is None or ub is None:
             if parent in v_bounds:
-                lb, ub = self._select_tighter_bounds(*v_bounds[parent], lb, ub)
+                lb, ub = self._return_nonNone_bounds(*v_bounds[parent], lb, ub)
             if parent is None:
                 break
             ancestors.add(parent)
