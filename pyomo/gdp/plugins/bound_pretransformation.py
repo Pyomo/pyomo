@@ -146,7 +146,20 @@ class BoundPretransformation(Transformation):
             descend_into=Block,
             sort=SortComponents.deterministic,
         ):
-            if len(list(identify_variables(constraint.body))) == 1:
+            # Avoid walking the whole expression tree if we have more than one
+            # variable by just trying to get two. If we succeed at one but not
+            # two, then the constraint is a bound or equality constraint and we
+            # save it. Otherwise, we just keep going to the next constraint.
+            var_gen = identify_variables(constraint.body)
+            try:
+                next(var_gen)
+            except StopIteration:
+                # No variables
+                continue
+            try:
+                next(var_gen)
+            except StopIteration:
+                # There was one but not two: This is what we want.
                 repn = generate_standard_repn(constraint.body)
                 if not repn.is_linear():
                     continue
