@@ -56,6 +56,9 @@ class BoundPretransformation(Transformation):
     model will not necessarily still be valid in the case that there are
     mutable Params in disjunctive variable bounds or in the transformed
     Constraints and the values of those mutable Params are later changed.
+    Similarly, if this transformation is called when Vars are fixed, it will
+    only be guaranteed to be valid when those Vars remain fixed to the same
+    values.
 
     [1] Egon Balas, "On the convex hull of the union of certain polyhedra,"
         Operations Research Letters, vol. 7, 1988, pp. 279-283
@@ -150,7 +153,7 @@ class BoundPretransformation(Transformation):
             # variable by just trying to get two. If we succeed at one but not
             # two, then the constraint is a bound or equality constraint and we
             # save it. Otherwise, we just keep going to the next constraint.
-            var_gen = identify_variables(constraint.body)
+            var_gen = identify_variables(constraint.body, include_fixed=False)
             try:
                 next(var_gen)
             except StopIteration:
