@@ -15,7 +15,13 @@ from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var
 
 
 def build_model(
-    rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals, sep_penalty_matrix, metric="l1"
+    rect_lengths,
+    rect_heights,
+    circ_xvals,
+    circ_yvals,
+    circ_rvals,
+    sep_penalty_matrix,
+    metric="l1",
 ):
     """Build the model."""
 
@@ -119,10 +125,11 @@ def build_model(
     m.dist_x = Var(m.rect_pairs, doc="x-axis separation between rectangle pair")
     m.dist_y = Var(m.rect_pairs, doc="y-axis separation between rectangle pair")
 
-    if metric == 'l2':
+    if metric == "l2":
         m.min_dist_cost = Objective(
             expr=sum(
-                m.rect_sep_penalty[r1, r2] * (m.dist_x[r1, r2]**2 + m.dist_y[r1, r2]**2)**0.5
+                m.rect_sep_penalty[r1, r2]
+                * (m.dist_x[r1, r2] ** 2 + m.dist_y[r1, r2] ** 2) ** 0.5
                 for (r1, r2) in m.rect_pairs
             )
         )
@@ -140,7 +147,7 @@ def build_model(
     @m.Constraint(m.rect_pairs, doc="x-distance between rectangles")
     def dist_x_defn_1(m, r1, r2):
         return m.dist_x[(r1, r2)] >= m.rect_x[r2] - m.rect_x[r1]
-    
+
     @m.Constraint(m.rect_pairs, doc="x-distance between rectangles")
     def dist_x_defn_2(m, r1, r2):
         return m.dist_x[(r1, r2)] >= m.rect_x[r1] - m.rect_x[r2]
@@ -148,7 +155,7 @@ def build_model(
     @m.Constraint(m.rect_pairs, doc="y-distance between rectangles")
     def dist_y_defn_1(m, r1, r2):
         return m.dist_y[(r1, r2)] >= m.rect_y[r2] - m.rect_y[r1]
-    
+
     @m.Constraint(m.rect_pairs, doc="y-distance between rectangles")
     def dist_y_defn_2(m, r1, r2):
         return m.dist_y[(r1, r2)] >= m.rect_y[r1] - m.rect_y[r2]
@@ -265,7 +272,7 @@ def draw_model(m, **kwargs):
 
 
 # Constrained layout model examples. These are from Nicolas Sawaya (2006).
-# Format: rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals (as dicts), 
+# Format: rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals (as dicts),
 # sep_penalty_matrix (as nested array)
 # Note that only the strict upper triangle of sep_penalty_matrix is used
 constrained_layout_model_examples = {
