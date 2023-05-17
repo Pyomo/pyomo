@@ -417,6 +417,40 @@ class TestUninitialized(unittest.TestCase):
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[1], m.x[3]]))
 
+    def test_equality_expression(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        expr = m.x[1] == 2*m.x[2]*m.x[3]
+        m.x[3].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[2]]))
+
+        # No elimination occurs in this case.
+        # Would be nice if this could change
+        expr = m.x[1] == 2*m.x[2]*m.x[3] + m.x[1]
+        m.x[3].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[2]]))
+
+    def test_inequality_expression(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        expr = m.x[1] <= 2*m.x[2]*m.x[3]
+        m.x[3].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[2]]))
+
+        # No elimination occurs in this case.
+        # Would be nice if this could change
+        expr = m.x[1] <= 2*m.x[2]*m.x[3] + m.x[1]
+        m.x[3].fix()
+        variables = get_incident_variables(expr)
+        var_set = ComponentSet(variables)
+        self.assertEqual(var_set, ComponentSet([m.x[1], m.x[2]]))
+
 
 class TestInitialized(unittest.TestCase):
     def test_nonlinear(self):
