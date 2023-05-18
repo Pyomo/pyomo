@@ -244,7 +244,7 @@ class _DeduplicateInfo(object):
                 if are_values:
                     has_been_seen = lambda item: seen_data_contains(id(item))
                 else:
-                    has_been_seen = lambda item: seen_data_contains(id(item[0]))
+                    has_been_seen = lambda item: seen_data_contains(id(item[1]))
                 return filterfalse(has_been_seen, items)
 
 
