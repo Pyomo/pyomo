@@ -3260,7 +3260,6 @@ class TestBlock(unittest.TestCase):
             ],
         )
 
-
         ans = list(m.component_data_objects(Var, sort=SortComponents.ALPHABETICAL))
         self.assertEqual(
             ans,
@@ -3280,7 +3279,11 @@ class TestBlock(unittest.TestCase):
             ],
         )
 
-        ans = list(m.component_data_objects(Var, sort=SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES))
+        ans = list(
+            m.component_data_objects(
+                Var, sort=SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES
+            )
+        )
         self.assertEqual(
             ans,
             [
@@ -3362,7 +3365,6 @@ class TestBlock(unittest.TestCase):
             ],
         )
 
-
         ans = list(m.component_data_iterindex(Var, sort=SortComponents.ALPHABETICAL))
         self.assertEqual(
             ans,
@@ -3382,7 +3384,11 @@ class TestBlock(unittest.TestCase):
             ],
         )
 
-        ans = list(m.component_data_iterindex(Var, sort=SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES))
+        ans = list(
+            m.component_data_iterindex(
+                Var, sort=SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES
+            )
+        )
         self.assertEqual(
             ans,
             [

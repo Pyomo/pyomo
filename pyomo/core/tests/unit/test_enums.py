@@ -29,7 +29,6 @@ class TestSortComponents(unittest.TestCase):
         # "future proofing" logic branch
         self.assertEqual(SortComponents._missing_(False), SortComponents.UNSORTED)
 
-
     def test_sorter(self):
         self.assertEqual(SortComponents.sorter(), SortComponents.UNSORTED)
         self.assertEqual(
