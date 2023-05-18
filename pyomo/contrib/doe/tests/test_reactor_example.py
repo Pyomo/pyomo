@@ -128,7 +128,7 @@ class Test_doe_object(unittest.TestCase):
             mode=sensi_opt, scale_nominal_param_value=True, formula="central"
         )
 
-        result.calculate_FIM(doe_object.design_values)
+        result.result_analysis()
 
         self.assertAlmostEqual(np.log10(result.trace), 2.7885, places=2)
         self.assertAlmostEqual(np.log10(result.det), 2.8218, places=2)
@@ -143,7 +143,7 @@ class Test_doe_object(unittest.TestCase):
             sub_name, indices=sub_indices, time_index_position=1
         )
         sub_result = result.subset(measure_subset)
-        sub_result.calculate_FIM(doe_object.design_values)
+        sub_result.result_analysis()
 
         self.assertAlmostEqual(np.log10(sub_result.trace), 2.5535, places=2)
         self.assertAlmostEqual(np.log10(sub_result.det), 1.3464, places=2)
@@ -169,7 +169,7 @@ class Test_doe_object(unittest.TestCase):
             mode=sensi_opt, scale_nominal_param_value=True, formula="central"
         )
 
-        result.calculate_FIM(doe_object.design_values)
+        result.result_analysis()
 
         self.assertAlmostEqual(np.log10(result.trace), 2.7211, places=2)
         self.assertAlmostEqual(np.log10(result.det), 2.0845, places=2)

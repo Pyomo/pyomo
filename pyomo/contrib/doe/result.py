@@ -28,11 +28,8 @@
 
 from pyomo.common.dependencies import (
     numpy as np,
-    numpy_available,
     pandas as pd,
-    pandas_available,
     matplotlib as plt,
-    matplotlib_available,
 )
 
 from itertools import product
@@ -92,13 +89,11 @@ class FisherResults:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.WARN)
 
-    def calculate_FIM(self, design_variable_names, result=None):
+    def result_analysis(self, result=None):
         """Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
         Parameters
         ----------
-        design_variable_names:
-            a list of design variable names
         result:
             solver status returned by IPOPT
         """
@@ -146,7 +141,7 @@ class FisherResults:
             )
 
         # call private methods
-        self._print_FIM_info(fim, design_variable_names=design_variable_names)
+        self._print_FIM_info(fim)
         if self.result is not None:
             self._get_solver_info()
 
@@ -210,14 +205,13 @@ class FisherResults:
 
         return jaco_info
 
-    def _print_FIM_info(self, FIM, design_variable_names=None):
+    def _print_FIM_info(self, FIM):
         """
         using a dictionary to store all FIM information
 
         Parameters
         -----------
         FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
-        design_variable_names: design variable dictionary
 
         Return:
         ------

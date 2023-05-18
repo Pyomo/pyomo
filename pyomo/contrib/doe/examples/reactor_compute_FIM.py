@@ -97,7 +97,7 @@ def main():
         formula="central",  # formula for finite difference
     )
 
-    result.calculate_FIM(doe_object.design_values)
+    result.result_analysis()
 
     # test result
     relative_error = abs(np.log10(result.trace) - 2.78)
