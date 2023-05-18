@@ -49,10 +49,14 @@ class Test_example_options(unittest.TestCase):
         create_model(mod, model_option="stage1")
         create_model(mod, model_option="stage2")
         # both options need a given model, or raise errors
-        self.assertRaises(ValueError, create_model, model_option="stage1")
-        self.assertRaises(ValueError, create_model, model_option="stage2")
+        with self.assertRaises(ValueError):
+            create_model(model_option="stage1")
 
-        self.assertRaises(ValueError, create_model, model_option='NotDefine')
+        with self.assertRaises(ValueError):
+            create_model(model_option="stage2")
+
+        with self.assertRaises(ValueError):
+            create_model(model_option="NotDefine")
 
 
 class Test_doe_object(unittest.TestCase):

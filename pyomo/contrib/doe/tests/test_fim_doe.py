@@ -45,14 +45,10 @@ class TestMeasurementError(unittest.TestCase):
         # measurement object
         measurements = MeasurementVariables()
         # if time index is not in indices, an value error is thrown.
-        self.assertRaises(
-            ValueError,
-            MeasurementVariables.add_variables,
-            measurements,
-            variable_name,
-            indices=indices,
-            time_index_position=2,
-        )
+        with self.assertRaises(ValueError):
+            measurements.add_variables(
+                variable_name, indices=indices, time_index_position=2
+            )
 
 
 class TestDesignError(unittest.TestCase):
@@ -80,17 +76,15 @@ class TestDesignError(unittest.TestCase):
         ]  # wrong upper bound since it has more elements than the length of variable names
         lower_bound = [300, 300, 300, 300, 300, 300, 300, 300, 300]
 
-        self.assertRaises(
-            ValueError,
-            DesignVariables.add_variables,
-            exp_design,
-            var_T,
-            indices=indices_T,
-            time_index_position=0,
-            values=exp1_T,
-            lower_bounds=lower_bound,
-            upper_bounds=upper_bound,
-        )
+        with self.assertRaises(ValueError):
+            exp_design.add_variables(
+                var_T,
+                indices=indices_T,
+                time_index_position=0,
+                values=exp1_T,
+                lower_bounds=lower_bound,
+                upper_bounds=upper_bound,
+            )
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -143,26 +137,16 @@ class TestPriorFIMError(unittest.TestCase):
         prior_right = [[0] * 3 for i in range(3)]
         prior_pass = [[0] * 5 for i in range(10)]
 
-        doe_object = DesignOfExperiments(
-            parameter_dict,
-            exp_design,
-            measurements,
-            create_model,
-            prior_FIM=prior_right,
-            discretize_model=disc_for_measure,
-        )
-
         # check if the error can be thrown when given a wrong shape of FIM prior
-        self.assertRaises(
-            ValueError,
-            DesignOfExperiments.__init__,
-            doe_object,
-            parameter_dict,
-            exp_design,
-            measurements,
-            create_model,
-            prior_FIM=prior_pass,
-        )
+        with self.assertRaises(ValueError):
+            doe_object = DesignOfExperiments(
+                parameter_dict,
+                exp_design,
+                measurements,
+                create_model,
+                prior_FIM=prior_pass,
+                discretize_model=disc_for_measure,
+            )
 
 
 class TestMeasurement(unittest.TestCase):
