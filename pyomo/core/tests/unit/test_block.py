@@ -37,6 +37,7 @@ from pyomo.environ import (
     Component,
     Objective,
     Expression,
+    Reference,
     SOSConstraint,
     SortComponents,
     NonNegativeIntegers,
@@ -3195,6 +3196,210 @@ class TestBlock(unittest.TestCase):
         cuid2 = ComponentUID("b2.v2[2]")
         self.assertIs(b1.find_component(cuid1), b1.b2.v1)
         self.assertIs(b1.find_component(cuid2), b1.b2.v2[2])
+
+    def test_deduplicate_component_data_objects(self):
+        m = ConcreteModel()
+        m.b = Block()
+        # Scalar, then reference
+        m.x = Var()
+        m.z_x = Reference(m.x)
+        # Indexed, then reference
+        m.I = Var([1, 3, 2])
+        m.z_I = Reference(m.I)
+
+        # Reference, then scalar
+        m.b.y = Var()
+        m.z_y = Reference(m.b.y)
+        # Reference, then indexed
+        m.b.J = Var([4, 6, 5])
+        m.z_J = Reference(m.b.J)
+
+        # Partial reference, then components
+        m.c = Block([2, 1])
+        m.c[1].A = Var([(0, 2), (1, 1)])
+        m.c[2].A = Var([(0, 3), (1, 1)])
+        m.z_AA = Reference(m.c[:].A[1, :])
+        # duplicate rederence
+        m.z_A = Reference(m.c[:].A[1, :])
+
+        ans = list(m.component_data_objects(Var))
+        self.assertEqual(
+            ans,
+            [
+                m.x,
+                m.I[1],
+                m.I[3],
+                m.I[2],
+                m.b.y,
+                m.b.J[4],
+                m.b.J[6],
+                m.b.J[5],
+                m.c[2].A[1, 1],
+                m.c[1].A[1, 1],
+                m.c[2].A[0, 3],
+                m.c[1].A[0, 2],
+            ],
+        )
+
+        ans = list(m.component_data_objects(Var, sort=SortComponents.SORTED_INDICES))
+        self.assertEqual(
+            ans,
+            [
+                m.x,
+                m.I[1],
+                m.I[2],
+                m.I[3],
+                m.b.y,
+                m.b.J[4],
+                m.b.J[5],
+                m.b.J[6],
+                m.c[1].A[1, 1],
+                m.c[2].A[1, 1],
+                m.c[1].A[0, 2],
+                m.c[2].A[0, 3],
+            ],
+        )
+
+
+        ans = list(m.component_data_objects(Var, sort=SortComponents.ALPHABETICAL))
+        self.assertEqual(
+            ans,
+            [
+                m.I[1],
+                m.I[3],
+                m.I[2],
+                m.x,
+                m.c[2].A[1, 1],
+                m.c[1].A[1, 1],
+                m.b.J[4],
+                m.b.J[6],
+                m.b.J[5],
+                m.b.y,
+                m.c[2].A[0, 3],
+                m.c[1].A[0, 2],
+            ],
+        )
+
+        ans = list(m.component_data_objects(Var, sort=SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES))
+        self.assertEqual(
+            ans,
+            [
+                m.I[1],
+                m.I[2],
+                m.I[3],
+                m.x,
+                m.c[1].A[1, 1],
+                m.c[2].A[1, 1],
+                m.b.J[4],
+                m.b.J[5],
+                m.b.J[6],
+                m.b.y,
+                m.c[1].A[0, 2],
+                m.c[2].A[0, 3],
+            ],
+        )
+
+    def test_deduplicate_component_data_iterindex(self):
+        m = ConcreteModel()
+        m.b = Block()
+        # Scalar, then reference
+        m.x = Var()
+        m.z_x = Reference(m.x)
+        # Indexed, then reference
+        m.I = Var([1, 3, 2])
+        m.z_I = Reference(m.I)
+
+        # Reference, then scalar
+        m.b.y = Var()
+        m.z_y = Reference(m.b.y)
+        # Reference, then indexed
+        m.b.J = Var([4, 6, 5])
+        m.z_J = Reference(m.b.J)
+
+        # Partial reference, then components
+        m.c = Block([2, 1])
+        m.c[1].A = Var([(0, 2), (1, 1)])
+        m.c[2].A = Var([(0, 3), (1, 1)])
+        m.z_AA = Reference(m.c[:].A[1, :])
+        # duplicate rederence
+        m.z_A = Reference(m.c[:].A[1, :])
+
+        ans = list(m.component_data_iterindex(Var))
+        self.assertEqual(
+            ans,
+            [
+                (('x', None), m.x),
+                (('I', 1), m.I[1]),
+                (('I', 3), m.I[3]),
+                (('I', 2), m.I[2]),
+                (('z_y', None), m.b.y),
+                (('z_J', 4), m.b.J[4]),
+                (('z_J', 6), m.b.J[6]),
+                (('z_J', 5), m.b.J[5]),
+                (('z_AA', (2, 1)), m.c[2].A[1, 1]),
+                (('z_AA', (1, 1)), m.c[1].A[1, 1]),
+                (('A', (0, 3)), m.c[2].A[0, 3]),
+                (('A', (0, 2)), m.c[1].A[0, 2]),
+            ],
+        )
+
+        ans = list(m.component_data_iterindex(Var, sort=SortComponents.SORTED_INDICES))
+        self.assertEqual(
+            ans,
+            [
+                (('x', None), m.x),
+                (('I', 1), m.I[1]),
+                (('I', 2), m.I[2]),
+                (('I', 3), m.I[3]),
+                (('z_y', None), m.b.y),
+                (('z_J', 4), m.b.J[4]),
+                (('z_J', 5), m.b.J[5]),
+                (('z_J', 6), m.b.J[6]),
+                (('z_AA', (1, 1)), m.c[1].A[1, 1]),
+                (('z_AA', (2, 1)), m.c[2].A[1, 1]),
+                (('A', (0, 2)), m.c[1].A[0, 2]),
+                (('A', (0, 3)), m.c[2].A[0, 3]),
+            ],
+        )
+
+
+        ans = list(m.component_data_iterindex(Var, sort=SortComponents.ALPHABETICAL))
+        self.assertEqual(
+            ans,
+            [
+                (('I', 1), m.I[1]),
+                (('I', 3), m.I[3]),
+                (('I', 2), m.I[2]),
+                (('x', None), m.x),
+                (('z_A', (2, 1)), m.c[2].A[1, 1]),
+                (('z_A', (1, 1)), m.c[1].A[1, 1]),
+                (('z_J', 4), m.b.J[4]),
+                (('z_J', 6), m.b.J[6]),
+                (('z_J', 5), m.b.J[5]),
+                (('z_y', None), m.b.y),
+                (('A', (0, 3)), m.c[2].A[0, 3]),
+                (('A', (0, 2)), m.c[1].A[0, 2]),
+            ],
+        )
+
+        ans = list(m.component_data_iterindex(Var, sort=SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES))
+        self.assertEqual(
+            ans,
+            [
+                (('I', 1), m.I[1]),
+                (('I', 2), m.I[2]),
+                (('I', 3), m.I[3]),
+                (('x', None), m.x),
+                (('z_A', (1, 1)), m.c[1].A[1, 1]),
+                (('z_A', (2, 1)), m.c[2].A[1, 1]),
+                (('z_J', 4), m.b.J[4]),
+                (('z_J', 5), m.b.J[5]),
+                (('z_J', 6), m.b.J[6]),
+                (('z_y', None), m.b.y),
+                (('A', (0, 2)), m.c[1].A[0, 2]),
+                (('A', (0, 3)), m.c[2].A[0, 3]),
+            ],
+        )
 
 
 if __name__ == "__main__":
