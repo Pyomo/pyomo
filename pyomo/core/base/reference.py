@@ -450,7 +450,7 @@ class _ReferenceSet(collections_Set):
         return "ReferenceSet(%s)" % (self._slice,)
 
     def ordered_iter(self):
-        return self._slice.index_wildcard_keys(SortComponents.ORDERED)
+        return self._slice.index_wildcard_keys(SortComponents.ORDERED_INDICES)
 
     def sorted_iter(self):
         return self._slice.index_wildcard_keys(SortComponents.SORTED_INDICES)
