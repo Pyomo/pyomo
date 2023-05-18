@@ -36,38 +36,22 @@ def build_model(
         assert len(row) == len(
             sep_penalty_matrix[0]
         ), "Matrix rows should have the same length"
-    assert metric in ["l1", "l2"]
+    assert metric in ["l1", "l2"], 'Metric options are "l1" and "l2"'
 
     m = ConcreteModel(name="2-D constrained layout")
     m.rectangles = RangeSet(len(rect_lengths), doc=f"{len(rect_lengths)} rectangles")
     m.circles = RangeSet(len(circ_xvals), doc=f"{len(circ_xvals)} circles")
 
-    m.rect_length = Param(
-        m.rectangles,
-        initialize=rect_lengths,
-        doc="Rectangle length",
-    )
-    m.rect_height = Param(
-        m.rectangles,
-        initialize=rect_heights,
-        doc="Rectangle height",
-    )
+    m.rect_length = Param(m.rectangles, initialize=rect_lengths, doc="Rectangle length")
+    m.rect_height = Param(m.rectangles, initialize=rect_heights, doc="Rectangle height")
 
     m.circle_x = Param(
-        m.circles,
-        initialize=circ_xvals,
-        doc="x-coordinate of circle center",
+        m.circles, initialize=circ_xvals, doc="x-coordinate of circle center"
     )
     m.circle_y = Param(
-        m.circles,
-        initialize=circ_yvals,
-        doc="y-coordinate of circle center",
+        m.circles, initialize=circ_yvals, doc="y-coordinate of circle center"
     )
-    m.circle_r = Param(
-        m.circles,
-        initialize=circ_rvals,
-        doc="radius of circle",
-    )
+    m.circle_r = Param(m.circles, initialize=circ_rvals, doc="radius of circle")
 
     @m.Param(m.rectangles, doc="Minimum feasible x value for rectangle")
     def x_min(m, rect):
@@ -282,10 +266,7 @@ constrained_layout_model_examples = {
         {1: 15, 2: 50},
         {1: 10, 2: 80},
         {1: 6, 2: 5},
-        [
-            [0, 300, 240],
-            [0, 0, 100],
-        ],
+        [[0, 300, 240], [0, 0, 100]],
     ],
     "Clay0204": [
         {1: 5, 2: 7, 3: 3, 4: 2},
@@ -293,11 +274,7 @@ constrained_layout_model_examples = {
         {1: 15, 2: 50},
         {1: 10, 2: 80},
         {1: 6, 2: 10},
-        [
-            [0, 300, 240, 210],
-            [0, 0, 100, 150],
-            [0, 0, 0, 120],
-        ],
+        [[0, 300, 240, 210], [0, 0, 100, 150], [0, 0, 0, 120]],
     ],
     "Clay0205": [
         {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
@@ -318,10 +295,7 @@ constrained_layout_model_examples = {
         {1: 15, 2: 50, 3: 30},
         {1: 10, 2: 80, 3: 50},
         {1: 6, 2: 5, 3: 4},
-        [
-            [0, 300, 240],
-            [0, 0, 100],
-        ],
+        [[0, 300, 240], [0, 0, 100]],
     ],
     "Clay0304": [
         {1: 5, 2: 7, 3: 3, 4: 2},
@@ -329,11 +303,7 @@ constrained_layout_model_examples = {
         {1: 15, 2: 50, 3: 30},
         {1: 10, 2: 80, 3: 50},
         {1: 6, 2: 5, 3: 4},
-        [
-            [0, 300, 240, 210],
-            [0, 0, 100, 150],
-            [0, 0, 0, 120],
-        ],
+        [[0, 300, 240, 210], [0, 0, 100, 150], [0, 0, 0, 120]],
     ],
     "Clay0305": [
         {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
