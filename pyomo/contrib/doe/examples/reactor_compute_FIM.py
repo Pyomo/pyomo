@@ -27,7 +27,6 @@
 
 
 from pyomo.common.dependencies import numpy as np
-import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
 from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
 
@@ -42,7 +41,7 @@ def main():
     # Define measurement object
     measurements = MeasurementVariables()
     measurements.add_variables(
-        "C",  # measurement object
+        "C",  # measurement variable name
         indices={
             0: ["CA", "CB", "CC"],
             1: t_control,
@@ -85,8 +84,8 @@ def main():
 
     doe_object = DesignOfExperiments(
         parameter_dict,  # parameter dictionary
-        exp_design,  # design object
-        measurements,  # measurement object
+        exp_design,  # DesignVariables object
+        measurements,  # MeasurementVariables object
         create_model,  # create model function
         discretize_model=disc_for_measure,  # discretize model function
     )

@@ -26,11 +26,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.common.dependencies import (
-    numpy as np,
-    pandas as pd,
-    matplotlib as plt,
-)
+from pyomo.common.dependencies import numpy as np, pandas as pd, matplotlib as plt
 
 from itertools import product
 import logging
@@ -56,7 +52,7 @@ class FisherResults:
         parameter_names:
             A ``list`` of parameter names
         measurements:
-            A measurement ``object`` which contains the Pyomo variable names and their corresponding indices and
+            A ``MeasurementVariables`` which contains the Pyomo variable names and their corresponding indices and
             bounds for experimental measurements
         jacobian_info:
             the jacobian for this measurement object
@@ -332,7 +328,7 @@ class GridSearchResult:
         Can choose to draw 1D sensitivity curves and 2D heatmaps.
 
         Parameters
-        -----------
+        ----------
         design_ranges:
             a ``dict`` whose keys are design variable names, values are a list of design variable values to go over
         design_dimension_names:

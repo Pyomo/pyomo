@@ -77,7 +77,7 @@ class TestDesignError(unittest.TestCase):
             700,
             700,
             800,
-        ]  # wrong upper bound
+        ]  # wrong upper bound since it has more elements than the length of variable names
         lower_bound = [300, 300, 300, 300, 300, 300, 300, 300, 300]
 
         self.assertRaises(
@@ -152,6 +152,7 @@ class TestPriorFIMError(unittest.TestCase):
             discretize_model=disc_for_measure,
         )
 
+        # check if the error can be thrown when given a wrong shape of FIM prior
         self.assertRaises(
             ValueError,
             DesignOfExperiments.__init__,
@@ -165,7 +166,7 @@ class TestPriorFIMError(unittest.TestCase):
 
 
 class TestMeasurement(unittest.TestCase):
-    """Test the Measurements class, specify, add_element, update_variance, check_subset functions."""
+    """Test the MeasurementVariables class, specify, add_element, update_variance, check_subset functions."""
 
     def test_setup(self):
         ### add_element function

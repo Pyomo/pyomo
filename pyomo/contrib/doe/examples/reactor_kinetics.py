@@ -64,12 +64,12 @@ def create_model(
 
     Arguments
     ---------
-    model: Pyomo model. If None, a Pyomo concrete model is created
+    mod: Pyomo model. If None, a Pyomo concrete model is created
     model_option: choose from the 3 options in model_option
         if ModelOptionLib.parmest, create a process model.
         if ModelOptionLib.stage1, create the global model.
         if ModelOptionLib.stage2, add model variables and constraints for block.
-    control_time: time-dependent design (control) variables, a list of control timepoints
+    control_time: a list of control timepoints
     control_val: control design variable values T at corresponding timepoints
     t_range: time range, h
     CA_init: time-independent design (control) variable, an initial value for CA

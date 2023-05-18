@@ -27,7 +27,6 @@
 
 
 from pyomo.common.dependencies import numpy as np
-import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
 from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
 

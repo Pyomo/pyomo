@@ -323,8 +323,6 @@ class DesignVariables(VariablesWithIndices):
         """
         for key in new_value_dict:
             if key not in self.variable_names:
-                print(key)
-                print(self.variable_names)
                 raise ValueError("Variable not in the set: ", key)
 
             self.variable_names_value[key] = new_value_dict[key]
