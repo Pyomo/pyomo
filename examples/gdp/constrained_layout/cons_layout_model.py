@@ -188,7 +188,7 @@ def build_model(
     return m
 
 
-def draw_model(m, **kwargs):
+def draw_model(m, title=None):
     """Draw a model using matplotlib to illustrate what's going on. Pass 'title' kwarg to give chart a title"""
 
     # matplotlib setup
@@ -203,8 +203,8 @@ def draw_model(m, **kwargs):
     ax.set_xlim([0, 100])
     ax.set_ylim([0, 100])
 
-    if "title" in kwargs:
-        plt.title(kwargs["title"])
+    if title is not None:
+        plt.title(title)
 
     for c in m.circles:
         print(
