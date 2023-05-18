@@ -10,9 +10,14 @@
 #  ___________________________________________________________________________
 
 import enum
+import sys
 
+if sys.version_info[:2] >= (3, 11):
+    strictEnum = {'boundary': enum.STRICT}
+else:
+    strictEnum = {}
 
-class TraversalStrategy(enum.Enum):
+class TraversalStrategy(enum.Enum, **strictEnum):
     BreadthFirstSearch = 1
     PrefixDepthFirstSearch = 2
     PostfixDepthFirstSearch = 3
@@ -26,7 +31,7 @@ class TraversalStrategy(enum.Enum):
     DFS = DepthFirstSearch
 
 
-class SortComponents(enum.Flag):
+class SortComponents(enum.Flag, **strictEnum):
 
     """
     This class is a convenient wrapper for specifying various sort
