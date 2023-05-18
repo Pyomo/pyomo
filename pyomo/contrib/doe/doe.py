@@ -81,10 +81,10 @@ class DesignOfExperiments:
             A  ``dictionary`` of parameter names and values.
             If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
         design_vars:
-            A DesignVariable ``object`` which contains the Pyomo variable names and their corresponding indices
-            and bounds for experiment design of freedom
+            A ``DesignVariables`` which contains the Pyomo variable names and their corresponding indices
+            and bounds for experiment degrees of freedom
         measurement_vars:
-            A Measurement ``object`` which contains the Pyomo variable names and their corresponding indices and
+            A ``MeasurementVariables`` which contains the Pyomo variable names and their corresponding indices and
             bounds for experimental measurements
         create_model:
             A Python ``function`` that returns a Concrete Pyomo model, similar to the interface for ``parmest``
@@ -314,7 +314,7 @@ class DesignOfExperiments:
         step=0.001,
     ):
         """
-        This function calculates the Fisher information matrix (FIM) using sensitivity information obtaind
+        This function calculates the Fisher information matrix (FIM) using sensitivity information obtained
         from two possible modes (defined by the CalculationMode Enum):
             1.  sequential_finite: sequentially solve square problems and use finite difference approximation
             2.  direct_kaug: solve a single square problem then extract derivatives using NLP sensitivity theory
