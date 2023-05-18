@@ -299,12 +299,10 @@ class _ReferenceDict(MutableMapping):
         elif op == IndexedComponent_slice.slice_info:
             assert len(tmp._call_stack) == 1
             _iter = self._get_iter(tmp, key)
-            try:
-                next(_iter)
-                del _iter._iter_stack[0].component[_iter.get_last_index()]
-                return
-            except StopIteration:
-                raise KeyError("KeyError: %s" % (key,))
+            # The iterator should map all StopIteration exceptions to KeyErrors
+            next(_iter)
+            del _iter._iter_stack[0].component[_iter.get_last_index()]
+            return
         elif op == IndexedComponent_slice.get_attribute:
             # If the last attribute of the slice retrieves an attribute,
             # change it to delete the attribute
