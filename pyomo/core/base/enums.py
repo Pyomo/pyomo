@@ -17,6 +17,7 @@ if sys.version_info[:2] >= (3, 11):
 else:
     strictEnum = {}
 
+
 class TraversalStrategy(enum.Enum, **strictEnum):
     BreadthFirstSearch = 1
     PrefixDepthFirstSearch = 2

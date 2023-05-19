@@ -23,8 +23,8 @@ class TestSortComponents(unittest.TestCase):
         self.assertEqual(SortComponents(False), SortComponents.UNSORTED)
         self.assertEqual(SortComponents(None), SortComponents.UNSORTED)
         with self.assertRaisesRegex(
-                ValueError,
-                r'(999 is not a valid SortComponents)|(invalid value 999)'):
+            ValueError, r'(999 is not a valid SortComponents)|(invalid value 999)'
+        ):
             SortComponents(999)
         # Note that enum maps False to 0 without hitting missing.  We
         # will explicitly test passing False to missing to cover a
