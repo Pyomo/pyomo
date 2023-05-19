@@ -5067,9 +5067,12 @@ I : Size=2, Index=I_index, Ordered=Insertion
         self.assertEqual(str(I), "UnindexedComponent_set")
         self.assertEqual(','.join(str(_) for _ in I.ranges()), "{None}")
 
+        self.assertIsNone(I.construct())
+
         val = I.data()
         self.assertIs(type(val), tuple)
         self.assertEqual(len(val), 1)
+        self.assertEqual(I.ordered_data(), val)
         self.assertEqual(I.sorted_data(), val)
         self.assertEqual(I.get(val[0], 100), val[0])
         self.assertEqual(I.get(999, 100), 100)
@@ -5079,8 +5082,8 @@ I : Size=2, Index=I_index, Ordered=Insertion
         self.assertEqual(tuple(I.sorted_iter()), val)
         self.assertEqual(tuple(I.ordered_iter()), val)
 
-        self.assertEqual(tuple(I.bounds()), (None, None))
-        self.assertEqual(tuple(I.get_interval()), (None, None, None))
+        self.assertEqual(I.bounds(), (None, None))
+        self.assertEqual(I.get_interval(), (None, None, None))
         self.assertEqual(I.subsets(), [I])
 
         self.assertEqual(I.first(), val[0])
