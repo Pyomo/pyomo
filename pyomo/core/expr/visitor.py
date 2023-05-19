@@ -1046,7 +1046,7 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
             if data[2]:
                 return node._apply_operation(data[1])
             else:
-                return node.create_node_with_local_data(tuple(data[1]))
+                return node.create_node_with_local_data(data[1])
         return node
 
     @deprecated(
@@ -1371,20 +1371,6 @@ class _VariableVisitor(SimpleExpressionVisitor):
             self.seen.add(id(node))
             return node
 
-        if node.is_expression_type() and isinstance(node, LinearExpression):
-            if id(node) in self.seen:
-                return
-            self.seen.add(id(node))
-
-            def unique_vars_generator():
-                for var in node.linear_vars:
-                    if id(var) in self.seen:
-                        continue
-                    self.seen.add(id(var))
-                    yield var
-
-            return tuple(v for v in unique_vars_generator())
-
 
 def identify_variables(expr, include_fixed=True):
     """
@@ -1562,14 +1548,6 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
-        if node.PRECEDENCE is None:
-            if (
-                self._expression_handlers
-                and node.__class__ in self._expression_handlers
-            ):
-                return self._expression_handlers[node.__class__](self, node, values)
-            return node._to_string(values, self.verbose, self.smap)
-
         for i, val in enumerate(values):
             arg = node._args_[i]
 
@@ -1581,7 +1559,11 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 values[i] = f"'{val}'"
             else:
                 parens = False
-                if not self.verbose and arg.is_expression_type():
+                if (
+                    not self.verbose
+                    and arg.is_expression_type()
+                    and node.PRECEDENCE is not None
+                ):
                     if arg.PRECEDENCE is None:
                         pass
                     elif node.PRECEDENCE < arg.PRECEDENCE:
