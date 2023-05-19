@@ -100,6 +100,61 @@ def build_model(areas, length_lbs, width_lbs, length_upper_overall, width_upper_
 
     return m
 
+
+def draw_model(m, title=None):
+    """Draw a model using matplotlib to illustrate what's going on. Pass 'title' kwarg to give chart a title"""
+
+    # matplotlib setup
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+
+    # Set bounds
+    ax.set_xlim([m.overall_length_ub() * -0.2, m.overall_length_ub() * 1.2 ])
+    ax.set_ylim([m.overall_width_ub() * -0.2, m.overall_width_ub() * 1.2])
+
+    if title is not None:
+        plt.title(title)
+    
+    # First, let's transparently draw the overall bounds
+    ax.add_patch(
+        mpl.patches.Rectangle(
+        (0, 0),
+        m.overall_length_ub(),
+        m.overall_width_ub(),
+        facecolor="#229922",
+        edgecolor="#000000",
+        alpha=0.2
+        )
+    )
+
+    for p in m.plots:
+        print(f"drawing plot {p}: x={m.plot_x[p]()}, y={m.plot_y[p]()}, length={m.plot_length[p]()}, width={m.plot_width[p]()}")
+        ax.add_patch(
+            mpl.patches.Rectangle(
+            (
+                m.plot_x[p]() - m.plot_length[p]() / 2,
+                m.plot_y[p]() - m.plot_width[p]() / 2,
+            ),
+            m.plot_length[p](),
+            m.plot_width[p](),
+            facecolor="#ebdc78",
+            edgecolor="#000000",
+            )
+        )
+        ax.text(
+            m.plot_x[p](),
+            m.plot_y[p](),
+            f"Plot {p}",
+            horizontalalignment="center",
+            verticalalignment="center",
+        )
+
+    plt.show()
+
 if __name__ == "__main__":
     from pyomo.environ import SolverFactory
     from pyomo.core.base import TransformationFactory
@@ -115,4 +170,5 @@ if __name__ == "__main__":
     print("solving example problem")
     solver.solve(model)
     print(f"Found objective function value: {model.perim()}")
+    draw_model(model)
     print()
