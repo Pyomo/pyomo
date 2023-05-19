@@ -74,8 +74,9 @@ class TestRepnUtils(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         with self.assertRaisesRegex(
-                ValueError, r'Converting non-fixed bound or value to string: 2\*x'):
-            self.assertIsNone(ftoa(2*m.x))
+            ValueError, r'Converting non-fixed bound or value to string: 2\*x'
+        ):
+            self.assertIsNone(ftoa(2 * m.x))
 
     @unittest.skipIf(not numpy_available, "NumPy is not available")
     def test_ftoa_precision(self):
