@@ -169,15 +169,14 @@ Pyomo.DoE Solver Interface
     :special-members: __init__
 
 .. autoclass:: pyomo.contrib.doe.result.FisherResults
-    :special-members: __init__, result_analysis
+    :members: __init__, result_analysis
 
 .. autoclass:: pyomo.contrib.doe.result.GridSearchResult
     :special-members: __init__
 
 
-
 Pyomo.DoE Usage Example
-------------------------
+-----------------------
 
 We illustrate the use of Pyomo.DoE using a reaction kinetics example (Wang and Dowling, 2022).
 The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only species A is fed to the reactor.
