@@ -42,8 +42,8 @@ class VariablesWithIndices:
         """
         Specify variable names with its full name.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         variable_name_list: a ``list`` of ``string``, containing the variable names with indices,
             for e.g. "C['CA', 23, 0]".
         """
@@ -61,8 +61,8 @@ class VariablesWithIndices:
         """
         Used for generating string names with indices.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         var_name: variable name in ``string``
         indices: a ``dict`` containing indices
             if default (None), no extra indices needed for all var in var_name
@@ -74,8 +74,8 @@ class VariablesWithIndices:
         lower_bounds: a ``list `` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
         upper_bounds: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
 
-        Return
-        ------
+        Returns
+        -------
         if not defining values, return a set of variable names
         if defining values, return a dictionary of variable names and its value
         """
@@ -116,8 +116,8 @@ class VariablesWithIndices:
         """
         Used for generating string names with indices.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         var_name: a ``list`` of var names
         indices: a ``dict`` containing indices
             if default (None), no extra indices needed for all var in var_name
@@ -207,8 +207,8 @@ class MeasurementVariables(VariablesWithIndices):
         """
         Specify variable names if given strings containing names and indices.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         variable_name_list: a ``list`` of ``string``, containing the variable names with indices,
             for e.g. "C['CA', 23, 0]".
         variance: a ``list`` of scalar numbers , which is the variance for this measurement.
@@ -272,8 +272,8 @@ class DesignVariables(VariablesWithIndices):
         """
         Specify variable names with its full name.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         variable_name_list: a ``list`` of ``string``, containing the variable names with indices,
             for e.g. "C['CA', 23, 0]".
         """
@@ -291,7 +291,7 @@ class DesignVariables(VariablesWithIndices):
         """
 
         Parameters
-        -----------
+        ----------
         var_name: a ``list`` of var names
         indices: a ``dict`` containing indices
             if default (None), no extra indices needed for all var in var_name
@@ -300,7 +300,7 @@ class DesignVariables(VariablesWithIndices):
             for e.g., 1 is the time index position in the indices example.
         values: a ``list`` containing values which has the same shape of flattened variables
             default choice is None, means there is no give nvalues
-        lower_bounds: a ``list `` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
+        lower_bounds: a ``list`` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
         upper_bounds: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
         """
         super().add_variables(
@@ -317,7 +317,7 @@ class DesignVariables(VariablesWithIndices):
         Update values of variables. Used for defining values for design variables of different experiments.
 
         Parameters
-        ---------
+        ----------
         new_value_dict: a ``dict`` containing the new values for the variables.
             for e.g., {"C['CA', 23, 0]": 0.5, "C['CA', 24, 0]": 0.6}
         """

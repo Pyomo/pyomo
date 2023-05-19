@@ -169,7 +169,7 @@ Pyomo.DoE Solver Interface
     :special-members: __init__
 
 .. autoclass:: pyomo.contrib.doe.result.FisherResults
-    :special-members: __init__, calculate_FIM
+    :special-members: __init__, result_analysis
 
 .. autoclass:: pyomo.contrib.doe.result.GridSearchResult
     :special-members: __init__
@@ -238,7 +238,8 @@ Step 2: Define the inputs for Pyomo.DoE
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_FIM.py 
     :language: python 
-    :lines: 36-85
+    :start-at: # Control time set
+    :end-before: ### Compute
 
 
 Step 3: Compute the FIM of a square MBDoE problem
@@ -251,7 +252,8 @@ This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_f
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_FIM.py 
     :language: python 
-    :lines: 85-101
+    :start-after: ### Compute the FIM
+    :end-before: # test result
 
 Step 4: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

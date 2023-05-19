@@ -48,7 +48,7 @@ class FisherResults:
         """Analyze the FIM result for a single run
 
         Parameters
-        -----------
+        ----------
         parameter_names:
             A ``list`` of parameter names
         measurements:
@@ -148,10 +148,14 @@ class FisherResults:
     def subset(self, measurement_subset):
         """Create new FisherResults object corresponding to provided measurement_subset.
         This requires that measurement_subset is a true subset of the original measurement object.
-        Arguments:
-            measurement_subset: Instance of Measurements class
-        Returns:
-            new_result: New instance of FisherResults
+
+        Parameters
+        ----------
+        measurement_subset: Instance of Measurements class
+
+        Returns
+        -------
+        new_result: New instance of FisherResults
         """
 
         # Check that measurement_subset is a valid subset of self.measurement
@@ -176,11 +180,14 @@ class FisherResults:
     def _split_jacobian(self, measurement_subset):
         """
         Split jacobian
-        Args:
-            measurement_subset: the object of the measurement subsets
 
-        Returns:
-            jaco_info: split Jacobian
+        Parameters
+        ----------
+        measurement_subset: the object of the measurement subsets
+
+        Returns
+        -------
+        jaco_info: split Jacobian
         """
         # create a dict for FIM. It has the same keys as the Jacobian dict.
         jaco_info = {}
@@ -206,11 +213,11 @@ class FisherResults:
         using a dictionary to store all FIM information
 
         Parameters
-        -----------
+        ----------
         FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
 
-        Return:
-        ------
+        Returns
+        -------
         fim_info: a FIM dictionary containing the following key:value pairs
             ~['FIM']: a list of FIM itself
             ~[design variable name]: a list of design variable values at each time point
@@ -242,12 +249,12 @@ class FisherResults:
         Solution information. Only for optimization problem
 
         Parameters
-        -----------
+        ----------
         m: model
         dv_set: design variable dictionary
 
-        Return:
-        ------
+        Returns
+        -------
         model_info: model solutions dictionary containing the following key:value pairs
             -['obj']: a scalar number of objective function value
             -['det']: a scalar number of determinant calculated by the model (different from FIM_info['det'] which

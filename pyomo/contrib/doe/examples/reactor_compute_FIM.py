@@ -82,6 +82,8 @@ def main():
         upper_bounds=700,  # design variable upper bounds
     )
 
+
+    ### Compute the FIM of a square model-based Design of Experiments problem
     doe_object = DesignOfExperiments(
         parameter_dict,  # parameter dictionary
         exp_design,  # DesignVariables object
