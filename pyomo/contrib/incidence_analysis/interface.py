@@ -44,6 +44,7 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     RowPartition,
     ColPartition,
 )
+from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
@@ -100,7 +101,8 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     graph.add_nodes_from(range(M, M + N), bipartite=1)
     var_node_map = ComponentMap((v, M + i) for i, v in enumerate(variables))
     for i, con in enumerate(constraints):
-        for var in identify_variables(con.expr, include_fixed=include_fixed):
+        #for var in identify_variables(con.expr, include_fixed=include_fixed):
+        for var in get_incident_variables(con.expr, include_fixed=include_fixed):
             if var in var_node_map:
                 graph.add_edge(i, var_node_map[var])
     return graph
@@ -165,7 +167,8 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
 def _generate_variables_in_constraints(constraints, include_fixed=False):
     known_vars = ComponentSet()
     for con in constraints:
-        for var in identify_variables(con.expr, include_fixed=include_fixed):
+        #for var in identify_variables(con.expr, include_fixed=include_fixed):
+        for var in get_incident_variables(con.expr, include_fixed=include_fixed):
             if var not in known_vars:
                 known_vars.add(var)
                 yield var
@@ -198,7 +201,8 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     for i, con in enumerate(constraints):
         cols.extend(
             var_idx_map[v]
-            for v in identify_variables(con.expr, include_fixed=include_fixed)
+            #for v in identify_variables(con.expr, include_fixed=include_fixed)
+            for v in get_incident_variables(con.expr, include_fixed=include_fixed)
             if v in var_idx_map
         )
         rows.extend([i] * (len(cols) - len(rows)))
@@ -286,6 +290,11 @@ class IncidenceGraphInterface(object):
                 if include_inequality or isinstance(con.expr, EqualityExpression)
             ]
             self._variables = list(
+                # Thould this function use get_incident_variables?
+                # Note that get_bipartite... below uses get_incident_variables,
+                # so if a variable only appears with coefficient 0, it won't have
+                # any edges... But this could indicate a false singularity because
+                # an effectively unused variable is present...
                 _generate_variables_in_constraints(
                     self._constraints, include_fixed=include_fixed
                 )
