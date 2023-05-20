@@ -8,8 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""Functionality for identifying variables that are incident on expressions
-
+"""Functionality for identifying variables that are "incident on" expressions
 """
 import enum
 from pyomo.core.expr.visitor import identify_variables
@@ -43,10 +42,15 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
         repn = generate_standard_repn(expr, compute_values=False)
 
     linear_vars = list(repn.linear_vars)
+    # TODO: Check coefficients
+    # This is only necessary when handling mutable parameters and fixed
+    # variables as coefficients, which we're punting on for now. Variables
+    # with constant coefficients of zero don't appear here.
     if linear_only:
-        # TODO: Check coefficients
         return linear_vars
     else:
+        # Combine linear, quadratic, and nonlinear variables and filter out
+        # duplicates
         variables = linear_vars
         for var1, var2 in repn.quadratic_vars:
             variables.extend((var1, var2))
