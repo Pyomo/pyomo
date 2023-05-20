@@ -22,6 +22,10 @@ class IncidenceMethod(enum.Enum):
     standard_repn = 1
 
 
+#
+# Handlers for different methods of generating the incidence graph
+#
+
 def _get_incident_via_identify_variables(expr, include_fixed):
     # Note that identify_variables will not identify the same variable
     # more than once.
