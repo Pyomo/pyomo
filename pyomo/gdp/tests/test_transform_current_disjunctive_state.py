@@ -15,7 +15,7 @@ from pyomo.environ import Block, ConcreteModel, Constraint, TransformationFactor
 from pyomo.gdp import Disjunct, Disjunction
 
 
-class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
+class TestTransformCurrentDisjunctiveState(unittest.TestCase):
     def make_two_term_disjunction(self):
         m = ConcreteModel()
         m.d1 = Disjunct()
@@ -41,11 +41,11 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         m.d2.indicator_var.set_value(False)
 
         reverse = TransformationFactory(
-            'gdp.transform_current_disjunctive_logic'
+            'gdp.transform_current_disjunctive_state'
         ).apply_to(m)
         self.check_fixed_mip(m)
 
-        TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(
+        TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
             m, reverse=reverse
         )
         self.assertFalse(m.d1.indicator_var.fixed)
@@ -64,11 +64,11 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         m.d1.indicator_var.set_value(True)
 
         reverse = TransformationFactory(
-            'gdp.transform_current_disjunctive_logic'
+            'gdp.transform_current_disjunctive_state'
         ).apply_to(m)
         self.check_fixed_mip(m)
 
-        TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(
+        TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
             m, reverse=reverse
         )
         self.assertFalse(m.d1.indicator_var.fixed)
@@ -87,11 +87,11 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         m.d2.indicator_var.set_value(False)
 
         reverse = TransformationFactory(
-            'gdp.transform_current_disjunctive_logic'
+            'gdp.transform_current_disjunctive_state'
         ).apply_to(m)
         self.check_fixed_mip(m)
 
-        TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(
+        TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
             m, reverse=reverse
         )
         self.assertFalse(m.d1.indicator_var.fixed)
@@ -114,7 +114,7 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
             "'disjunction1' is violated: All the "
             "Disjunct indicator_vars are 'False.'",
         ):
-            TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(m)
+            TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(m)
 
     def test_xor_sums_to_more_than_1(self):
         m = self.make_two_term_disjunction()
@@ -126,7 +126,7 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
             "'disjunction1' is violated. The following Disjuncts "
             "are selected: d., d.",
         ):
-            TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(m)
+            TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(m)
 
     def add_three_term_disjunction(self, m, exactly_one=True):
         m.d = Disjunct([1, 2, 3])
@@ -141,7 +141,7 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         m.d[3].indicator_var = False
 
         reverse = TransformationFactory(
-            'gdp.transform_current_disjunctive_logic'
+            'gdp.transform_current_disjunctive_state'
         ).apply_to(m, targets=m.disjunction2)
 
         self.assertTrue(m.d[1].indicator_var.fixed)
@@ -160,7 +160,7 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
 
         self.assertFalse(m.disjunction2.active)
 
-        TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(
+        TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
             m, reverse=reverse
         )
 
@@ -191,12 +191,12 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         m.d[3].indicator_var = False
 
         reverse = TransformationFactory(
-            'gdp.transform_current_disjunctive_logic'
+            'gdp.transform_current_disjunctive_state'
         ).apply_to(m)
 
         self.check_fixed_mip(m)
 
-        TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(
+        TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
             m, reverse=reverse, targets=m.disjunction2
         )
 
@@ -229,7 +229,7 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         m.d[3].indicator_var = False
 
         reverse = TransformationFactory(
-            'gdp.transform_current_disjunctive_logic'
+            'gdp.transform_current_disjunctive_state'
         ).apply_to(m)
 
         self.assertTrue(m.d[1].indicator_var.fixed)
@@ -250,7 +250,7 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
         self.assertFalse(m.disjunction2.active)
 
         reverse = TransformationFactory(
-            'gdp.transform_current_disjunctive_logic'
+            'gdp.transform_current_disjunctive_state'
         ).apply_to(m, reverse=reverse)
 
         self.assertTrue(m.d[1].indicator_var.fixed)
@@ -284,4 +284,4 @@ class TestTransformCurrentDisjunctiveLogic(unittest.TestCase):
             "'disjunction2' is violated: All "
             "the Disjunct indicator_vars are 'False.'",
         ):
-            TransformationFactory('gdp.transform_current_disjunctive_logic').apply_to(m)
+            TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(m)

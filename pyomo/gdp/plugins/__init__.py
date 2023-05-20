@@ -20,5 +20,5 @@ def load():
     import pyomo.gdp.plugins.partition_disjuncts
     import pyomo.gdp.plugins.between_steps
     import pyomo.gdp.plugins.multiple_bigm
-    import pyomo.gdp.plugins.transform_current_disjunctive_logic
+    import pyomo.gdp.plugins.transform_current_disjunctive_state
     import pyomo.gdp.plugins.bound_pretransformation

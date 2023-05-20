@@ -12,21 +12,27 @@
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.core.base import Block, SortComponents, Transformation, TransformationFactory
+from pyomo.core.base import (
+    Block,
+    SortComponents,
+    Transformation,
+    TransformationFactory,
+    ReverseTransformationToken,
+)
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 
 
 @TransformationFactory.register(
-    'gdp.transform_current_disjunctive_logic',
-    doc="""Convert current disjunctive logic (values of Disjunct
+    'gdp.transform_current_disjunctive_state',
+    doc="""Convert current disjunctive state (values of Disjunct
     indicator_vars) to MI(N)LP form in cases where enough of the 
     logic is fixed to determine which Disjunct(s) will be selected.
     """,
 )
-class TransformCurrentDisjunctiveLogic(Transformation):
-    """This transformation finds disjunctive logic (indicator_vars values)
-    in the given GDP, and, for any Disjunction, when the logic fully
+class TransformCurrentDisjunctiveState(Transformation):
+    """This transformation finds disjunctive state (indicator_vars values)
+    in the given GDP, and, for any Disjunction, when the state fully
     determines what Disjunct will be selected, it reclassifies all the Disjuncts
     of the Disjunction as Blocks, and activates or deactivates them according
     to whether their indicator_vars are set (or implied to be set) as
@@ -34,7 +40,7 @@ class TransformCurrentDisjunctiveLogic(Transformation):
 
     Note that this transformation does not necessarily return a MI(N)LP since
     it will not transform Disjunctions that are not fully determined by the
-    current logic. Be careful in partially-transformed states to remember that
+    current state. Be careful in partially-transformed states to remember that
     if even one DisjunctData in an IndexedDisjunct is reclassified as a Block,
     all of the DisjunctDatas will be as well. It is strongly recommended to not use
     DisjunctDatas from a single IndexedDisjunction in multiple Disjunctions
@@ -46,7 +52,7 @@ class TransformCurrentDisjunctiveLogic(Transformation):
     transformation as the 'reverse' argument.
     """
 
-    CONFIG = ConfigDict('gdp.transform_current_disjunctive_logic')
+    CONFIG = ConfigDict('gdp.transform_current_disjunctive_state')
     CONFIG.declare(
         "reverse",
         ConfigValue(
@@ -56,7 +62,7 @@ class TransformCurrentDisjunctiveLogic(Transformation):
             doc="""
             This argument should be the reverse transformation token
             returned by a previous call to this transformation to transform
-            fixed disjunctive logic in the given model.
+            fixed disjunctive state in the given model.
 
             If this argument is specified, this call to the transformation
             will reverse what the transformation did in the call that returned
@@ -74,7 +80,7 @@ class TransformCurrentDisjunctiveLogic(Transformation):
             description="The target component or list of target "
             "components to transform.",
             doc="""
-            This specifies the list of components to relax. If None (default),
+            This specifies the list of components to transform. If None (default),
             the entire model is transformed. These are expected to be Blocks or
             Disjunctions.
 
@@ -88,42 +94,43 @@ class TransformCurrentDisjunctiveLogic(Transformation):
         config = self.config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
-        if config.reverse is not None and config.targets is None:
-            # we can do this super efficiently and be done
-            self._reverse_transformation(model, config.reverse)
-            return
-
         targets = (model,) if config.targets is None else config.targets
 
         if config.reverse is None:
-            reverse_token = {'_disjunctions': set(), '_disjuncts': {}}
+            reverse_dict = {'_disjunctions': set(), '_disjuncts': {}}
+            reverse_token = ReverseTransformationToken(self.__class__,
+                                                       model,
+                                                       targets,
+                                                       reverse_dict)
             disjunction_transform = self._transform_disjunction
         else:
             reverse_token = config.reverse
+            reverse_token.check_token_valid(self.__class__, model, targets)
+            reverse_dict = reverse_token.reverse_dict
             disjunction_transform = self._reverse_transform_disjunction
 
         for t in targets:
             if isinstance(t, Block):
                 blocks = t.values() if t.is_indexed() else (t,)
                 for block in blocks:
-                    self._transform_block(block, reverse_token, disjunction_transform)
+                    self._transform_block(block, reverse_dict, disjunction_transform)
             elif t.ctype is Disjunction:
                 disjunctions = t.values() if t.is_indexed() else (t,)
                 for disj in disjunctions:
-                    disjunction_transform(disj, reverse_token)
+                    disjunction_transform(disj, reverse_dict)
         if config.reverse is None:
             return reverse_token
 
-    def _transform_block(self, block, reverse_token, disjunction_transform):
+    def _transform_block(self, block, reverse_dict, disjunction_transform):
         for disjunction in block.component_data_objects(
             Disjunction,
             active=True,
             descend_into=(Block, Disjunct),
             sort=SortComponents.deterministic,
         ):
-            disjunction_transform(disjunction, reverse_token)
+            disjunction_transform(disjunction, reverse_dict)
 
-    def _transform_disjunction(self, disjunction, reverse_token):
+    def _transform_disjunction(self, disjunction, reverse_dict):
         no_val = set()
         true_val = set()
         false_val = set()
@@ -156,24 +163,24 @@ class TransformCurrentDisjunctiveLogic(Transformation):
             elif len(true_val) == 1:
                 # We can fix everything
                 self._reclassify_disjuncts(
-                    true_val, no_val.union(false_val), reverse_token['_disjuncts']
+                    true_val, no_val.union(false_val), reverse_dict['_disjuncts']
                 )
                 # This disjunction is fully transformed
-                reverse_token['_disjunctions'].add(disjunction)
+                reverse_dict['_disjunctions'].add(disjunction)
                 disjunction.deactivate()
             elif len(false_val) == num_disjuncts - 1:
                 # We can fix everything. Since we didn't hit the case above, we
                 # know that the non-False value is a None.
                 self._reclassify_disjuncts(
-                    no_val, false_val, reverse_token['_disjuncts']
+                    no_val, false_val, reverse_dict['_disjuncts']
                 )
-                reverse_token['_disjunctions'].add(disjunction)
+                reverse_dict['_disjunctions'].add(disjunction)
                 disjunction.deactivate()
         # It's only an 'at-least' not an 'exactly', so if everything has a value
         # we can transform it
         elif len(no_val) == 0:
-            self._reclassify_disjuncts(true_val, false_val, reverse_token['_disjuncts'])
-            reverse_token['_disjunctions'].add(disjunction)
+            self._reclassify_disjuncts(true_val, false_val, reverse_dict['_disjuncts'])
+            reverse_dict['_disjunctions'].add(disjunction)
             disjunction.deactivate()
 
     def _reclassify_disjuncts(
@@ -187,15 +194,6 @@ class TransformCurrentDisjunctiveLogic(Transformation):
             reverse_dict[disj] = (disj.indicator_var.fixed, disj.indicator_var.value)
             # Deactivating fixes the indicator_var to False
             disj.deactivate()
-
-    def _reverse_transformation(self, model, reverse_token):
-        for disjunction in reverse_token['_disjunctions']:
-            disjunction.activate()
-        for disjunct, (fixed, val) in reverse_token['_disjuncts'].items():
-            disjunct.parent_block().reclassify_component_type(disjunct, Disjunct)
-            disjunct.activate()
-            disjunct.indicator_var = val
-            disjunct.indicator_var.fixed = fixed
 
     def _reverse_transform_disjunction(self, disjunction, reverse_token):
         if disjunction in reverse_token['_disjunctions']:
