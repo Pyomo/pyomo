@@ -193,7 +193,11 @@ from pyomo.core.base.PyomoModel import (
     ConcreteModel,
     AbstractModel,
 )
-from pyomo.core.base.transformation import Transformation, TransformationFactory
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+    ReverseTransformationToken,
+)
 
 from pyomo.core.base.instance2dat import instance2dat
 
