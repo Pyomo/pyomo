@@ -47,7 +47,10 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
         # TODO: Check coefficients
         return linear_vars
     else:
-        variables = repn.linear_vars + repn.quadratic_vars + repn.nonlinear_vars
+        variables = linear_vars
+        for var1, var2 in repn.quadratic_vars:
+            variables.extend((var1, var2))
+        variables.extend(repn.nonlinear_vars)
         unique_variables = []
         id_set = set()
         for var in variables:

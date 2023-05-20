@@ -102,7 +102,7 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     var_node_map = ComponentMap((v, M + i) for i, v in enumerate(variables))
     for i, con in enumerate(constraints):
         #for var in identify_variables(con.expr, include_fixed=include_fixed):
-        for var in get_incident_variables(con.expr, include_fixed=include_fixed):
+        for var in get_incident_variables(con.body, include_fixed=include_fixed):
             if var in var_node_map:
                 graph.add_edge(i, var_node_map[var])
     return graph
@@ -168,7 +168,7 @@ def _generate_variables_in_constraints(constraints, include_fixed=False):
     known_vars = ComponentSet()
     for con in constraints:
         #for var in identify_variables(con.expr, include_fixed=include_fixed):
-        for var in get_incident_variables(con.expr, include_fixed=include_fixed):
+        for var in get_incident_variables(con.body, include_fixed=include_fixed):
             if var not in known_vars:
                 known_vars.add(var)
                 yield var
@@ -202,7 +202,7 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
         cols.extend(
             var_idx_map[v]
             #for v in identify_variables(con.expr, include_fixed=include_fixed)
-            for v in get_incident_variables(con.expr, include_fixed=include_fixed)
+            for v in get_incident_variables(con.body, include_fixed=include_fixed)
             if v in var_idx_map
         )
         rows.extend([i] * (len(cols) - len(rows)))
