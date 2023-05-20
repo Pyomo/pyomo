@@ -15,11 +15,7 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.repn import generate_standard_repn
 from pyomo.common.backports import nullcontext
 from pyomo.util.subsystems import TemporarySubsystemManager
-
-
-class IncidenceMethod(enum.Enum):
-    identify_variables = 0
-    standard_repn = 1
+from pyomo.contrib.incidence_analysis.config import IncidenceMethod, IncidenceConfig
 
 
 #
@@ -69,13 +65,11 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
         return unique_variables
 
 
-def get_incident_variables(
-    expr,
-    include_fixed=False,
-    method=IncidenceMethod.standard_repn,
-    #method=IncidenceMethod.identify_variables,
-    linear_only=False,
-):
+def get_incident_variables(expr, **kwds):
+    config = IncidenceConfig(kwds)
+    method = config.method
+    include_fixed = config.include_fixed
+    linear_only = config.linear_only
     if linear_only and method is IncidenceMethod.identify_variables:
         raise RuntimeError(
             "linear_only=True is not supported when using identify_variables"
