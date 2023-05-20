@@ -1722,6 +1722,34 @@ class TestInterface(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, include_inequality=True, include_fixed=True)
         igraph.plot(title='test plot', show=False)
 
+    def test_zero_coeff(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq1 = pyo.Constraint(expr=m.x[1] + 0 * m.x[2] == 2)
+        m.eq2 = pyo.Constraint(expr=m.x[1] ** 2 == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[2] * m.x[3] - m.x[1] == 1)
+
+        igraph = IncidenceGraphInterface(m)
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+
+        # Because 0*m.x[2] does not appear in the incidence graph, we correctly
+        # identify that the system is structurally singular
+        self.assertGreater(len(var_dmp.unmatched), 0)
+
+    def test_var_minus_itself(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq1 = pyo.Constraint(expr=m.x[1] + m.x[2] - m.x[2] == 2)
+        m.eq2 = pyo.Constraint(expr=m.x[1] ** 2 == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[2] * m.x[3] - m.x[1] == 1)
+
+        igraph = IncidenceGraphInterface(m)
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+
+        # m.x[2] - m.x[2] is correctly ignored by generate_standard_repn,
+        # so we correctly identify that the system is structurally singular
+        self.assertGreater(len(var_dmp.unmatched), 0)
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestIndexedBlock(unittest.TestCase):
