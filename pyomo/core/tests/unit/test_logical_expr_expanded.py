@@ -239,6 +239,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
+        m.Y4 = BooleanVar()
 
         self.assertEqual(str(land(m.Y1, m.Y2, m.Y3)), "Y1 ∧ Y2 ∧ Y3")
         self.assertEqual(str(lor(m.Y1, m.Y2, m.Y3)), "Y1 ∨ Y2 ∨ Y3")
@@ -249,8 +250,16 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertEqual(str(atmost(1, m.Y1, m.Y2)), "atmost(1: [Y1, Y2])")
         self.assertEqual(str(exactly(1, m.Y1, m.Y2)), "exactly(1: [Y1, Y2])")
 
-        # Precedence check
+        # Precedence checks
         self.assertEqual(str(m.Y1.implies(m.Y2).lor(m.Y3)), "(Y1 --> Y2) ∨ Y3")
+        self.assertEqual(str(m.Y1 & m.Y2 | m.Y3 ^ m.Y4), "Y1 ∧ Y2 ∨ Y3 ⊻ Y4")
+        self.assertEqual(str(m.Y1 & (m.Y2 | m.Y3) ^ m.Y4), "Y1 ∧ (Y2 ∨ Y3) ⊻ Y4")
+        self.assertEqual(str(m.Y1 & m.Y2 ^ m.Y3 | m.Y4), "Y1 ∧ Y2 ⊻ Y3 ∨ Y4")
+        self.assertEqual(str(m.Y1 & m.Y2 ^ (m.Y3 | m.Y4)), "Y1 ∧ Y2 ⊻ (Y3 ∨ Y4)")
+        self.assertEqual(str(m.Y1 & (m.Y2 ^ (m.Y3 | m.Y4))), "Y1 ∧ (Y2 ⊻ (Y3 ∨ Y4))")
+        self.assertEqual(str(m.Y1 | m.Y2 ^ m.Y3 & m.Y4), "Y1 ∨ Y2 ⊻ Y3 ∧ Y4")
+        self.assertEqual(str((m.Y1 | m.Y2) ^ m.Y3 & m.Y4), "(Y1 ∨ Y2) ⊻ Y3 ∧ Y4")
+        self.assertEqual(str(((m.Y1 | m.Y2) ^ m.Y3) & m.Y4), "((Y1 ∨ Y2) ⊻ Y3) ∧ Y4")
 
     def test_node_types(self):
         m = ConcreteModel()

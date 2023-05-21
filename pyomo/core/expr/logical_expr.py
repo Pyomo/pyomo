@@ -308,7 +308,7 @@ class XorExpression(BinaryBooleanExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 5
+    PRECEDENCE = 4
 
     def getname(self, *arg, **kwd):
         return 'xor'
@@ -390,7 +390,7 @@ class AndExpression(NaryBooleanExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 4
+    PRECEDENCE = 3
 
     def getname(self, *arg, **kwd):
         return 'and'
@@ -417,7 +417,7 @@ class OrExpression(NaryBooleanExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 4
+    PRECEDENCE = 5
 
     def getname(self, *arg, **kwd):
         return 'or'
