@@ -1390,7 +1390,7 @@ def _get_incidence_repn(expr):
 from pyomo.repn import generate_standard_repn
 
 
-def get_incident_variables(
+def _get_incident_variables(
     expr, include_fixed=False, linear_only=False, filter_zeros=True
 ):
     if include_fixed:
@@ -1442,7 +1442,7 @@ def get_incident_variables(
         return [var_map[v_id] for v_id in unique_var_ids]
 
 
-def _get_incident_variables(
+def get_incident_variables(
     expr, include_fixed=False, linear_only=False, filter_zeros=True
 ):
     if include_fixed:
@@ -1473,7 +1473,10 @@ def _get_incident_variables(
     if linear_only:
         return linear_vars
     else:
-        variables = tuple(linear_vars) + repn.quadratic_vars + repn.nonlinear_vars
+        variables = linear_vars
+        variables.extend(repn.nonlinear_vars)
+        for var1, var2 in repn.quadratic_vars:
+            variables.extend((var1, var2))
 
         unique_variables = []
         seen_var_ids = set()
