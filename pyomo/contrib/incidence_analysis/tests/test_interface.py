@@ -1750,6 +1750,22 @@ class TestInterface(unittest.TestCase):
         # so we correctly identify that the system is structurally singular
         self.assertGreater(len(var_dmp.unmatched), 0)
 
+    def test_linear_only(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq1 = pyo.Constraint(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**2 == 1)
+        m.eq2 = pyo.Constraint(expr=m.x[2] + pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[3] + m.x[1]**3 + m.x[2] == 1)
+
+        igraph = IncidenceGraphInterface(m, linear_only=True)
+        self.assertEqual(igraph.n_edges, 3)
+        self.assertEqual(ComponentSet(igraph.variables), ComponentSet([m.x[2], m.x[3]]))
+
+        matching = igraph.maximum_matching()
+        self.assertEqual(len(matching), 2)
+        self.assertIs(matching[m.eq2], m.x[2])
+        self.assertIs(matching[m.eq3], m.x[3])
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestIndexedBlock(unittest.TestCase):

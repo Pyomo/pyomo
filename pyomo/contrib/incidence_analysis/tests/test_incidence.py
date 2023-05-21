@@ -50,9 +50,9 @@ class _TestIncidence(object):
         
 
 class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
-    def _get_incident_variables(self, expr):
+    def _get_incident_variables(self, expr, **kwds):
         method = IncidenceMethod.standard_repn
-        return get_incident_variables(expr, method=method)
+        return get_incident_variables(expr, method=method, **kwds)
 
     def test_zero_coef(self):
         m = pyo.ConcreteModel()
@@ -72,11 +72,19 @@ class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
         var_set = ComponentSet(variables)
         self.assertEqual(var_set, ComponentSet([m.x[2], m.x[3]]))
 
+    def test_linear_only(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+
+        expr = 2 * m.x[1] + 4 * m.x[2] * m.x[1] - m.x[1] * pyo.exp(m.x[3])
+        variables = self._get_incident_variables(expr, linear_only=True)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
+
 
 class TestIncidenceIdentifyVariables(unittest.TestCase, _TestIncidence):
-    def _get_incident_variables(self, expr):
+    def _get_incident_variables(self, expr, **kwds):
         method = IncidenceMethod.identify_variables
-        return get_incident_variables(expr, method=method)
+        return get_incident_variables(expr, method=method, **kwds)
 
     def test_zero_coef(self):
         m = pyo.ConcreteModel()

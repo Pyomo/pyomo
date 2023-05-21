@@ -304,8 +304,7 @@ class IncidenceGraphInterface(object):
             self._incidence_graph = get_bipartite_incidence_graph(
                 self._variables,
                 self._constraints,
-                # Note that include_fixed is not necessary here. We have
-                # already checked this condition above.
+                **self._config,
             )
         elif pyomo_nlp_available and isinstance(model, pyomo_nlp.PyomoNLP):
             if not active:
