@@ -1421,7 +1421,8 @@ class TestExceptions(unittest.TestCase):
         m.v2.fix(2.0)
         m._obj = pyo.Objective(expr=0.0)
         nlp = PyomoNLP(m)
-        with self.assertRaisesRegex(ValueError, "fixed variables"):
+        msg = "generation options.*are not supported"
+        with self.assertRaisesRegex(ValueError, msg):
             igraph = IncidenceGraphInterface(nlp, include_fixed=True)
 
     @unittest.skipUnless(scipy_available, "scipy is not available.")

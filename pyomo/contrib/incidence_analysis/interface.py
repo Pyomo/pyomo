@@ -307,12 +307,18 @@ class IncidenceGraphInterface(object):
                     "nl interface (PyomoNLP).\nPlease set the `active` flag "
                     "to True."
                 )
-            if self._config.include_fixed:
+            if kwds:
                 raise ValueError(
-                    "Cannot get the Jacobian with respect to fixed variables "
-                    "from the nl interface (PyomoNLP).\nPlease set the "
-                    "`include_fixed` flag to False."
+                    "Incidence graph generation options, e.g. include_fixed, method,"
+                    " and linear_only, are not supported when generating a graph"
+                    " from a PyomoNLP."
                 )
+            #if self._config.include_fixed:
+            #    raise ValueError(
+            #        "Cannot get the Jacobian with respect to fixed variables "
+            #        "from the nl interface (PyomoNLP).\nPlease set the "
+            #        "`include_fixed` flag to False."
+            #    )
             nlp = model
             self._variables = nlp.get_pyomo_variables()
             self._constraints = [
