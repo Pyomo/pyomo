@@ -37,22 +37,18 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
         context = nullcontext()
 
     with context:
-        repn = generate_standard_repn(expr, compute_values=False)
+        repn = generate_standard_repn(expr, compute_values=False, quadratic=False)
 
-    linear_vars = list(repn.linear_vars)
-    # TODO: Check coefficients
+    # TODO: Check coefficients of linear variables.
     # This is only necessary when handling mutable parameters and fixed
     # variables as coefficients, which we're punting on for now. Variables
     # with constant coefficients of zero don't appear here.
     if linear_only:
-        return linear_vars
+        return list(repn.linear_vars)
     else:
-        # Combine linear, quadratic, and nonlinear variables and filter out
-        # duplicates
-        variables = linear_vars
-        for var1, var2 in repn.quadratic_vars:
-            variables.extend((var1, var2))
-        variables.extend(repn.nonlinear_vars)
+        # Combine linear and nonlinear variables and filter out duplicates. Note
+        # that quadratic=False, so we don't need to include repn.quadratic_vars.
+        variables = repn.linear_vars + repn.nonlinear_vars
         unique_variables = []
         id_set = set()
         for var in variables:
