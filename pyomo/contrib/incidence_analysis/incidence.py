@@ -21,7 +21,6 @@ from pyomo.contrib.incidence_analysis.config import IncidenceMethod, IncidenceCo
 #
 # Handlers for different methods of generating the incidence graph
 #
-
 def _get_incident_via_identify_variables(expr, include_fixed):
     # Note that identify_variables will not identify the same variable
     # more than once.
@@ -66,6 +65,28 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
 
 
 def get_incident_variables(expr, **kwds):
+    """Get variables that participate in an expression
+
+    The exact variables returned depends on the method used to determine incidence.
+    For example, ``method=IncidenceMethod.identify_variables`` will return all
+    variables participating in the expression, while
+    ``method=IncidenceMethod.standard_repn`` will return only the variables
+    identified by ``generate_standard_repn`` which ignores variables that only
+    appear multiplied by a constant factor of zero.
+
+    Keyword arguments must be valid options for ``IncidenceConfig``.
+
+    Parameters
+    ----------
+    expr: ``NumericExpression``
+        Expression to search for variables
+
+    Returns
+    -------
+    list of VarData
+        List containing the variables that participate in the expression
+
+    """
     config = IncidenceConfig(kwds)
     method = config.method
     include_fixed = config.include_fixed
