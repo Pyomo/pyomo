@@ -16,9 +16,8 @@ from pyomo.common.config import ConfigDict, ConfigValue, InEnum
 
 
 class IncidenceMethod(enum.Enum):
-    """Methods for identifying variables that participate in expressions
+    """Methods for identifying variables that participate in expressions"""
 
-    """
     identify_variables = 0
     """Use ``pyomo.core.expr.visitor.identify_variables``"""
 
