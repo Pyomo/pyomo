@@ -528,7 +528,7 @@ _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts', 'xor', '_algebraic_constraint')
+    __slots__ = ('disjuncts', 'xor', '_algebraic_constraint', '_transformation_map')
     __autoslot_mappers__ = {'_algebraic_constraint': AutoSlots.weakref_mapper}
     _NoArgument = (0,)
 
@@ -553,6 +553,8 @@ class _DisjunctionData(ActiveComponentData):
         # pointer to XOR (or OR) constraint if this disjunction has been
         # transformed. None if it has not been transformed
         self._algebraic_constraint = None
+        # Dictionary to notate information from partial transformations
+        self._transformation_map = {}
 
     def set_value(self, expr):
         for e in expr:
