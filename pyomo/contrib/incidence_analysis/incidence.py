@@ -85,6 +85,22 @@ def get_incident_variables(expr, **kwds):
     list of VarData
         List containing the variables that participate in the expression
 
+    Example
+    -------
+
+    .. doctest::
+       :skipif: not networkx_available
+
+       >>> import pyomo.environ as pyo
+       >>> from pyomo.contrib.incidence_analysis import get_incident_variables
+       >>> m = pyo.ConcreteModel()
+       >>> m.x = pyo.Var([1, 2, 3])
+       >>> expr = m.x[1] + 2*m.x[2] + 3*m.x[3]**2
+       >>> print([v.name for v in get_incident_variables(expr)])
+       ['x[1]', 'x[2]', 'x[3]']
+       >>> print([v.name for v in get_incident_variables(expr, linear_only=True)])
+       ['x[1]', 'x[2]']
+
     """
     config = IncidenceConfig(kwds)
     method = config.method
