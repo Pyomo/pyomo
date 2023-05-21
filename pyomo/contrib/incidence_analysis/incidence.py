@@ -30,8 +30,7 @@ def _get_incident_via_identify_variables(expr, include_fixed):
 def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
     if include_fixed:
         to_unfix = [
-            var for var in identify_variables(expr, include_fixed=True)
-            if var.fixed
+            var for var in identify_variables(expr, include_fixed=True) if var.fixed
         ]
         context = TemporarySubsystemManager(to_unfix=to_unfix)
     else:

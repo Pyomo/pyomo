@@ -1753,9 +1753,9 @@ class TestInterface(unittest.TestCase):
     def test_linear_only(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        m.eq1 = pyo.Constraint(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**2 == 1)
+        m.eq1 = pyo.Constraint(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 == 1)
         m.eq2 = pyo.Constraint(expr=m.x[2] + pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
-        m.eq3 = pyo.Constraint(expr=m.x[3] + m.x[1]**3 + m.x[2] == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[3] + m.x[1] ** 3 + m.x[2] == 1)
 
         igraph = IncidenceGraphInterface(m, linear_only=True)
         self.assertEqual(igraph.n_edges, 3)

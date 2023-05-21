@@ -20,9 +20,7 @@ from pyomo.contrib.incidence_analysis.incidence import (
 
 class _TestIncidence(object):
     def _get_incident_variables(self, expr):
-        raise NotImplementedError(
-            "_TestIncidence should not be used directly"
-        )
+        raise NotImplementedError("_TestIncidence should not be used directly")
 
     def test_basic_incidence(self):
         m = pyo.ConcreteModel()
@@ -47,7 +45,7 @@ class _TestIncidence(object):
         expr = m.x[1] + m.p * m.x[1] * m.x[2] + m.x[1] * pyo.exp(m.x[3])
         variables = self._get_incident_variables(expr)
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
-        
+
 
 class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
     def _get_incident_variables(self, expr, **kwds):

@@ -65,9 +65,7 @@ def _check_unindexed(complist):
 
 def get_incidence_graph(variables, constraints, **kwds):
     config = IncidenceConfig(kwds)
-    return get_bipartite_incidence_graph(
-        variables, constraints, **config
-    )
+    return get_bipartite_incidence_graph(variables, constraints, **config)
 
 
 def get_bipartite_incidence_graph(variables, constraints, **kwds):
@@ -273,9 +271,7 @@ class IncidenceGraphInterface(object):
 
     """
 
-    def __init__(
-        self, model=None, active=True, include_inequality=True, **kwds
-    ):
+    def __init__(self, model=None, active=True, include_inequality=True, **kwds):
         """Construct an IncidenceGraphInterface object"""
         # If the user gives us a model or an NLP, we assume they want us
         # to cache the incidence graph for fast analysis later on.
