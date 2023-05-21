@@ -280,18 +280,25 @@ class TestLogicalClasses(unittest.TestCase):
 
         def iadd():
             m.Y3 += 2
+
         def isub():
             m.Y3 -= 2
+
         def imul():
             m.Y3 *= 2
+
         def idiv():
             m.Y3 /= 2
+
         def ipow():
             m.Y3 **= 2
+
         def iand():
             m.Y3 &= 2
+
         def ior():
             m.Y3 |= 2
+
         def ixor():
             m.Y3 ^= 2
 
