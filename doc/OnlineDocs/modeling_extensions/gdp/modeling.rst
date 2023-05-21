@@ -112,7 +112,7 @@ Using these Boolean variables, we can define ``LogicalConstraint`` objects, anal
 
 .. doctest::
 
-    >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[2] & m.Y[3])) | m.Y[4])
+    >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[2] & m.Y[3]) | m.Y[4])
     >>> m.p.pprint()
     p : Size=1, Index=None, Active=True
         Key  : Body                          : Active
@@ -290,7 +290,7 @@ Composition of standard operators
 .. code::
 
     m.p = LogicalConstraint(expr=(m.Y[1] | m.Y[2]).implies(
-        m.Y[3] & ~m.Y[4] & (m.Y[5] | m.Y[6])))
+        m.Y[3] & ~m.Y[4] & (m.Y[5] | m.Y[6]))
     )
 
 Expressions within CP-type operators
