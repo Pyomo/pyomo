@@ -97,9 +97,10 @@ And display the variables and constraints contained in each:
 
 .. code-block:: python
 
-   >>> # Overconstrained subsystem
    >>> # Note that while these variables/constraints are uniquely determined,
    >>> # their order is not!
+
+   >>> # Overconstrained subsystem
    >>> for var in oc_var:
    >>>     print(var.name)
    x[1]
