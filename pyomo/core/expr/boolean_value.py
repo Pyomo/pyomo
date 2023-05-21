@@ -196,7 +196,7 @@ class BooleanValue(PyomoObject):
 
     def xor(self, other):
         """
-        Construct an XorExpressionusing method "xor"
+        Construct an XorExpression using method "xor"
         """
         ans = _generate_logical_proposition(_xor, self, other)
         if ans is NotImplemented:
