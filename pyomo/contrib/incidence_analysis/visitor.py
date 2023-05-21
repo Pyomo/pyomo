@@ -1390,7 +1390,7 @@ def _get_incidence_repn(expr):
 from pyomo.repn import generate_standard_repn
 
 
-def _get_incident_variables(
+def get_incident_variables(
     expr, include_fixed=False, linear_only=False, filter_zeros=True
 ):
     if include_fixed:
@@ -1442,7 +1442,7 @@ def _get_incident_variables(
         return [var_map[v_id] for v_id in unique_var_ids]
 
 
-def get_incident_variables(
+def _get_incident_variables(
     expr, include_fixed=False, linear_only=False, filter_zeros=True
 ):
     if include_fixed:
