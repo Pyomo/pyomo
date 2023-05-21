@@ -55,17 +55,22 @@ is structurally singular.
 
 .. code-block:: python
 
+   >>> # Note that the unmatched variables/constraints are not mathematically
+   >>> # unique and could change with implementation!
    >>> for var in var_dm_partition.unmatched:
-   ...     print(f"  {var.name}")
+   ...     print(var.name)
    flow_comp[1]
    >>> for con in con_dm_partition.unmatched:
-   ...     print(f"  {con.name}")
+   ...     print(con.name)
    density_eqn
 
 This model has one unmatched constraint and one unmatched variable, so it is
 structurally singular. However, the unmatched variable and constraint are not
 unique. For example, ``flow_comp[2]`` could have been unmatched instead of
-``flow_comp[1]``.
+``flow_comp[1]``. The exact variables and constraints that are unmatched depends
+on both the order in which variables are identified in Pyomo expressions and
+the implementation of the matching algorithm. For a given implementation,
+however, these variables and constraints should be deterministic.
 
 Unique subsets of variables and constraints that are useful when debugging a
 structural singularity are the underconstrained and overconstrained subsystems.
@@ -93,14 +98,16 @@ And display the variables and constraints contained in each:
 .. code-block:: python
 
    >>> # Overconstrained subsystem
+   >>> # Note that while these variables/constraints are uniquely determined,
+   >>> # their order is not!
    >>> for var in oc_var:
-   >>>     print(f"  {var.name}")
+   >>>     print(var.name)
    x[1]
    density
    x[2]
    x[3]
    >>> for con in oc_con:
-   >>>     print(f"  {con.name}")
+   >>>     print(con.name)
    sum_eqn
    holdup_eqn[1]
    holdup_eqn[2]
@@ -109,13 +116,13 @@ And display the variables and constraints contained in each:
 
    >>> # Underconstrained subsystem
    >>> for var in uc_var:
-   >>>     print(f"  {var.name}")
+   >>>     print(var.name)
    flow_comp[1]
    flow
    flow_comp[2]
    flow_comp[3]
    >>> for con in uc_con:
-   >>>     print(f"  {con.name}")
+   >>>     print(con.name)
    flow_eqn[1]
    flow_eqn[2]
    flow_eqn[3]
