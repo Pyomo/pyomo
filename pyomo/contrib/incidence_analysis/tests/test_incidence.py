@@ -24,6 +24,7 @@ class _TestIncidence(object):
     independent of the method used
 
     """
+
     def _get_incident_variables(self, expr):
         raise NotImplementedError("_TestIncidence should not be used directly")
 
