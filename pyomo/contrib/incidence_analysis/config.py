@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+"""Configuration options for incidence graph generation
+"""
 
 import enum
 from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
@@ -23,11 +25,7 @@ IncidenceConfig = ConfigBlock()
 
 IncidenceConfig.declare(
     "include_fixed",
-    ConfigValue(
-        default=False,
-        domain=bool,
-        description="Include fixed variables",
-    ),
+    ConfigValue(default=False, domain=bool, description="Include fixed variables"),
 )
 
 
