@@ -89,7 +89,6 @@ def get_incident_variables(expr, **kwds):
     -------
 
     .. doctest::
-       :skipif: not networkx_available
 
        >>> import pyomo.environ as pyo
        >>> from pyomo.contrib.incidence_analysis import get_incident_variables
