@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
+from pyomo.repn import generate_standard_repn
 import pyomo.common.unittest as unittest
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.incidence_analysis.incidence import (
@@ -19,6 +20,10 @@ from pyomo.contrib.incidence_analysis.incidence import (
 
 
 class _TestIncidence(object):
+    """Base class with tests for get_incident_variables that should be
+    independent of the method used
+
+    """
     def _get_incident_variables(self, expr):
         raise NotImplementedError("_TestIncidence should not be used directly")
 
@@ -51,6 +56,24 @@ class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
     def _get_incident_variables(self, expr, **kwds):
         method = IncidenceMethod.standard_repn
         return get_incident_variables(expr, method=method, **kwds)
+
+    def test_assumed_standard_repn_behavior(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2])
+        m.p = pyo.Param(initialize=0.0)
+
+        # We rely on variables with constant coefficients of zero not appearing
+        # in the standard repn (as opposed to appearing with explicit
+        # coefficients of zero).
+        expr = m.x[1] + 0 * m.x[2]
+        repn = generate_standard_repn(expr)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], m.x[1])
+
+        expr = m.p * m.x[1] + m.x[2]
+        repn = generate_standard_repn(expr)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], m.x[2])
 
     def test_zero_coef(self):
         m = pyo.ConcreteModel()

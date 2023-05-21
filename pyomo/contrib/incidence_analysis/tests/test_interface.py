@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.dependencies import (
     networkx_available,
     plotly_available,
@@ -1683,6 +1684,13 @@ class TestGetAdjacent(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestInterface(unittest.TestCase):
+    def test_assumed_constraint_behavior(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.con = pyo.Constraint(expr=m.x[1] == m.x[2] - pyo.exp(m.x[3]))
+        var_set = ComponentSet(identify_variables(m.con.body))
+        self.assertEqual(var_set, ComponentSet(m.x[:]))
+
     def test_subgraph_with_fewer_var_or_con(self):
         m = pyo.ConcreteModel()
         m.I = pyo.Set(initialize=[1, 2])
