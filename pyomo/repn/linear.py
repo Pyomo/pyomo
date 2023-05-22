@@ -256,6 +256,7 @@ _exit_node_handlers[ProductExpression] = {
     (_GENERAL, _LINEAR): _handle_product_nonlinear,
     (_GENERAL, _GENERAL): _handle_product_nonlinear,
 }
+_exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpression]
 
 #
 # DIVISION handlers
