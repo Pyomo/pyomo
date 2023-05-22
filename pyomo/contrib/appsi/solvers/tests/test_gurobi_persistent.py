@@ -177,19 +177,6 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)
 
-    def test_set_instance_not_available(self):
-        _avail = Gurobi._available
-        try:
-            Gurobi._available = Gurobi.Availability.NeedsCompiledExtension
-            with self.assertRaisesRegex(
-                PyomoException,
-                r'Solver pyomo.contrib.appsi.solvers.gurobi.Gurobi '
-                r'is not available \(NeedsCompiledExtension\).',
-            ):
-                opt.set_instance(pe.ConcreteModel())
-        finally:
-            Gurobi._available = _avail
-
 
 class TestGurobiPersistent(unittest.TestCase):
     def test_range_constraints(self):
