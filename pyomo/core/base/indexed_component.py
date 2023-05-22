@@ -430,7 +430,7 @@ class IndexedComponent(Component):
         ordered: bool
             DEPRECATED: Please use `sort=SortComponents.ORDERED_INDICES`.
             If True, then the keys are returned in a deterministic order
-            (using the underlying set's `ordered_iter()`.
+            (using the underlying set's `ordered_iter()`).
 
         """
         sort = SortComponents(sort)
