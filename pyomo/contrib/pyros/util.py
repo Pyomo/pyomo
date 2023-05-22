@@ -375,20 +375,23 @@ def get_time_from_solver(results):
     This method attempts to access solver time through the
     attributes of `results.solver` in the following order
     of precedence:
-    1) `'user_time'` if the results object was returned by a GAMS
+
+    1) Attribute with name ``pyros.util.TIC_TOC_SOLVE_TIME_ATTR``.
+       This attribute is an estimate of the elapsed solve time
+       obtained using the Pyomo `TicTocTimer` at the point the
+       solver from which the results object is derived was invoked.
+       Preferred over other time attributes, as other attributes
+       may be in CPUs, and for purposes of evaluating overhead
+       time, we require wall s.
+    2) `'user_time'` if the results object was returned by a GAMS
        solver, `'time'` otherwise.
-    2) a custom-added attribute (with name
-       `pyros.util.TIC_TOC_SOLVE_TIME_ATTR`), which contains
-       an estimate of the elapsed solve time obtained using the Pyomo
-       `TicTocTimer` at the point the solver from which the results
-       object is derived was invoked.
     """
     solver_name = getattr(results.solver, "name", None)
 
     # is this sufficient to confirm GAMS solver used?
     from_gams = solver_name is not None and str(solver_name).startswith("GAMS ")
     time_attr_name = "user_time" if from_gams else "time"
-    for attr_name in [time_attr_name, TIC_TOC_SOLVE_TIME_ATTR]:
+    for attr_name in [TIC_TOC_SOLVE_TIME_ATTR, time_attr_name]:
         solve_time = getattr(results.solver, attr_name, None)
         if solve_time is not None:
             break
@@ -897,7 +900,11 @@ def coefficient_matching(model, constraint, uncertain_params, config):
                 temp_expr = replace_expressions(
                     val.constant, substitution_map=var_to_param_substitution_map_reverse
                 )
-                if temp_expr.is_potentially_variable():
+                # We will use generate_standard_repn to generate a
+                # simplified expression (in particular, to remove any
+                # "0*..." terms)
+                temp_expr = generate_standard_repn(temp_expr).to_expression()
+                if temp_expr.__class__ not in native_types:
                     model.coefficient_matching_constraints.add(expr=temp_expr == 0)
                 elif math.isclose(
                     value(temp_expr),
@@ -925,7 +932,11 @@ def coefficient_matching(model, constraint, uncertain_params, config):
                     temp_expr = replace_expressions(
                         coeff, substitution_map=var_to_param_substitution_map_reverse
                     )
-                    if temp_expr.is_potentially_variable():
+                    # We will use generate_standard_repn to generate a
+                    # simplified expression (in particular, to remove any
+                    # "0*..." terms)
+                    temp_expr = generate_standard_repn(temp_expr).to_expression()
+                    if temp_expr.__class__ not in native_types:
                         model.coefficient_matching_constraints.add(expr=temp_expr == 0)
                     elif math.isclose(
                         value(temp_expr),
@@ -953,7 +964,11 @@ def coefficient_matching(model, constraint, uncertain_params, config):
                     temp_expr = replace_expressions(
                         coeff, substitution_map=var_to_param_substitution_map_reverse
                     )
-                    if temp_expr.is_potentially_variable():
+                    # We will use generate_standard_repn to generate a
+                    # simplified expression (in particular, to remove any
+                    # "0*..." terms)
+                    temp_expr = generate_standard_repn(temp_expr).to_expression()
+                    if temp_expr.__class__ not in native_types:
                         model.coefficient_matching_constraints.add(expr=temp_expr == 0)
                     elif math.isclose(
                         value(temp_expr),

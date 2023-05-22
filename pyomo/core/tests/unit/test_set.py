@@ -961,6 +961,12 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             def __sub__(self, other):
                 return self.val - other
 
+            def __lt__(self, other):
+                return self.val < other
+
+            def __ge__(self, other):
+                return self.val >= other
+
         i = RangeSet(_AlmostNumeric(1))
         self.assertFalse(i.is_constructed())
         i.construct()

@@ -260,6 +260,19 @@ class TestToBaronVisitor(unittest.TestCase):
         test = expression_to_string(e, variables, smap)
         self.assertEqual(test, "3 ^ x")
 
+    def test_issue_2819(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.z = Var()
+        t = 0.55
+        m.x.fix(3.5)
+        e = (m.x - 4) ** 2 + (m.z - 1) ** 2 - t
+
+        variables = OrderedSet()
+        smap = SymbolMap()
+        test = expression_to_string(e, variables, smap)
+        self.assertEqual(test, '(-0.5) ^ 2 + (z - 1) ^ 2 + (-0.55)')
+
 
 # class TestBaron_writer(unittest.TestCase):
 class XTestBaron_writer(object):

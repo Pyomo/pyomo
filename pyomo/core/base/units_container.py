@@ -854,7 +854,12 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         EXPR.NPV_UnaryFunctionExpression: _get_unit_for_unary_function,
         EXPR.Expr_ifExpression: _get_unit_for_expr_if,
         IndexTemplate: _get_dimensionless_no_children,
-        EXPR.GetItemExpression: _get_dimensionless_with_dimensionless_children,
+        EXPR.Numeric_GetItemExpression: (
+            _get_dimensionless_with_dimensionless_children
+        ),
+        EXPR.NPV_Numeric_GetItemExpression: (
+            _get_dimensionless_with_dimensionless_children
+        ),
         EXPR.ExternalFunctionExpression: _get_units_ExternalFunction,
         EXPR.NPV_ExternalFunctionExpression: _get_units_ExternalFunction,
         EXPR.LinearExpression: _get_unit_for_equivalent_children,

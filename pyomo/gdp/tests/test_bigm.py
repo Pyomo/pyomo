@@ -35,6 +35,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
 import logging
 
+import pyomo.core.expr.current as EXPR
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
@@ -143,11 +144,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # check or constraint is an or (upper bound is None)
         orcons = m._pyomo_gdp_bigm_reformulation.component("disjunction_xor")
         self.assertIsInstance(orcons, Constraint)
-        self.assertIs(m.d[0].binary_indicator_var, orcons.body.arg(0))
-        self.assertIs(m.d[1].binary_indicator_var, orcons.body.arg(1))
-        repn = generate_standard_repn(orcons.body)
-        ct.check_linear_coef(self, repn, m.d[0].binary_indicator_var, 1)
-        ct.check_linear_coef(self, repn, m.d[1].binary_indicator_var, 1)
+        assertExpressionsEqual(
+            self,
+            orcons.body,
+            EXPR.LinearExpression(
+                [
+                    EXPR.MonomialTermExpression((1, m.d[0].binary_indicator_var)),
+                    EXPR.MonomialTermExpression((1, m.d[1].binary_indicator_var)),
+                ]
+            ),
+        )
         self.assertEqual(orcons.lower, 1)
         self.assertIsNone(orcons.upper)
 
@@ -1916,7 +1922,37 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         cons1ub = cons1[1]
         self.assertEqual(cons1lb.lower, 0)
         self.assertIsNone(cons1lb.upper)
-        self.assertIs(cons1lb.body, m.z)
+        assertExpressionsEqual(
+            self,
+            cons1lb.body,
+            EXPR.SumExpression(
+                [
+                    m.z,
+                    EXPR.NegationExpression(
+                        (
+                            EXPR.ProductExpression(
+                                (
+                                    0.0,
+                                    EXPR.LinearExpression(
+                                        [
+                                            1,
+                                            EXPR.MonomialTermExpression(
+                                                (
+                                                    -1,
+                                                    m.disjunct[1]
+                                                    .innerdisjunct[0]
+                                                    .binary_indicator_var,
+                                                )
+                                            ),
+                                        ]
+                                    ),
+                                )
+                            ),
+                        )
+                    ),
+                ]
+            ),
+        )
         self.assertIsNone(cons1ub.lower)
         self.assertEqual(cons1ub.upper, 0)
         self.check_bigM_constraint(

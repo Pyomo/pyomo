@@ -111,6 +111,13 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         )
         self.check_ln_x_approx(m.pw, m.x)
 
+    def test_pw_linear_approx_of_ln_x_tabular_data(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(
+            tabular_data={1: 0, 3: log(3), 6: log(6), 10: log(10)}
+        )
+        self.check_ln_x_approx(m.pw, m.x)
+
     def test_use_pw_function_in_constraint(self):
         m = self.make_ln_x_model()
         m.pw = PiecewiseLinearFunction(
@@ -166,6 +173,22 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
 
         m.pw = PiecewiseLinearFunction(
             [1, 2], points=silly_pts_rule, function_rule=lambda m, i: m.funcs[i]
+        )
+        self.check_ln_x_approx(m.pw[2], m.z[2])
+        self.check_x_squared_approx(m.pw[1], m.z[1])
+
+    def test_indexed_pw_linear_function_tabular_data(self):
+        m = self.make_ln_x_model()
+        m.z = Var([1, 2], bounds=(-10, 10))
+
+        def silly_tabular_data_rule(m, i):
+            if i == 1:
+                return {1: 1, 3: 9, 6: 36, 10: 100}
+            if i == 2:
+                return {1: 0, 3: log(3), 6: log(6), 10: log(10)}
+
+        m.pw = PiecewiseLinearFunction(
+            [1, 2], tabular_data_rule=silly_tabular_data_rule
         )
         self.check_ln_x_approx(m.pw[2], m.z[2])
         self.check_x_squared_approx(m.pw[1], m.z[1])
@@ -276,6 +299,22 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         m = self.make_model()
         m.pw = PiecewiseLinearFunction(
             points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7)], function=m.g
+        )
+        self.check_pw_linear_approximation(m)
+
+    @unittest.skipUnless(scipy_available, "scipy is not available")
+    def test_pw_linear_approx_tabular_data(self):
+        m = self.make_model()
+
+        m.pw = PiecewiseLinearFunction(
+            tabular_data={
+                (0, 1): g(0, 1),
+                (0, 4): g(0, 4),
+                (0, 7): g(0, 7),
+                (3, 1): g(3, 1),
+                (3, 4): g(3, 4),
+                (3, 7): g(3, 7),
+            }
         )
         self.check_pw_linear_approximation(m)
 
@@ -460,3 +499,85 @@ class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
                 ],
                 function=m.f,
             )
+
+    @unittest.skipUnless(
+        scipy_available and numpy_available, "scipy and/or numpy are not available"
+    )
+    def test_simplex_not_numerically_full_rank_but_determinant_nonzero(self):
+        m = ConcreteModel()
+
+        def f(x3, x6, x9, x4):
+            return -x6 * (0.01 * x4 * x9 + x3) + 0.98 * x3
+
+        points = [
+            (0, 0.85, 1.2, 0),
+            (0.07478, 0.86396, 1.8668, 5),
+            (0, 0.85, 1.8668, 0),
+            (0.07478, 0.86396, 2.18751, 5),
+            (0, 0.86396, 1.2, 0),
+            (0.07478, 0.87971, 2.18751, 5),
+            (0, 0.87971, 1.2, 0),
+            (0.07478, 0.89001, 2.18751, 5),
+            (0.07478, 0.85, 1.2, 0),
+            (0.28333, 0.86396, 2.18751, 5),
+            (0.07478, 0.86396, 1.2, 0),
+            (0.28333, 0.89001, 2.18751, 5),
+            (0.28333, 0.85, 1.2, 0),
+            (0.31332, 0.89001, 2.18751, 5),
+            (0.31332, 0.85, 1.2, 0),
+            (1.2, 0.89001, 2.18751, 5),
+            (0, 0.89001, 1.2, 0),
+            (0.07478, 0.91727, 1.8668, 5),
+            (0, 0.89001, 1.8668, 0),
+            (0.07478, 0.91727, 2.18751, 5),
+            (0, 0.91727, 1.2, 0),
+            (0.07478, 0.93, 2.18751, 5),
+            (0.07478, 0.89001, 1.2, 0),
+            (0.28333, 0.91727, 2.18751, 5),
+            (0.07478, 0.91727, 1.2, 0),
+            (0.28333, 0.93, 2.18751, 5),
+            (0.28333, 0.89001, 1.2, 0),
+            (0.31332, 0.93, 2.18751, 5),
+            (0.31332, 0.89001, 1.2, 0),
+            (1.2, 0.93, 2.18751, 5),
+            (0, 0.85, 2.18751, 0),
+            (0.07478, 0.86396, 3.49134, 5),
+            (0, 0.85, 3.49134, 0),
+            (0.07478, 0.86396, 4, 5),
+            (0, 0.86396, 2.18751, 0),
+            (0.07478, 0.87971, 4, 5),
+            (0, 0.87971, 2.18751, 0),
+            (0.07478, 0.89001, 4, 5),
+            (0.07478, 0.85, 2.18751, 0),
+            (0.28333, 0.86396, 4, 5),
+            (0.07478, 0.86396, 2.18751, 0),
+            (0.28333, 0.89001, 4, 5),
+            (0.28333, 0.85, 2.18751, 0),
+            (0.31332, 0.89001, 4, 5),
+            (0.31332, 0.85, 2.18751, 0),
+            (1.2, 0.89001, 4, 5),
+            (0, 0.89001, 2.18751, 0),
+            (0.07478, 0.91727, 3.49134, 5),
+            (0, 0.89001, 3.49134, 0),
+            (0.07478, 0.91727, 4, 5),
+            (0, 0.91727, 2.18751, 0),
+            (0.07478, 0.93, 3.49134, 5),
+            (0, 0.91727, 3.49134, 0),
+            (0.07478, 0.93, 4, 5),
+            (0.07478, 0.89001, 2.18751, 0),
+            (0.28333, 0.91727, 4, 5),
+            (0.07478, 0.91727, 2.18751, 0),
+            (0.28333, 0.93, 4, 5),
+            (0.28333, 0.89001, 2.18751, 0),
+            (0.31332, 0.93, 4, 5),
+            (0.31332, 0.89001, 2.18751, 0),
+            (1.2, 0.93, 4, 5),
+        ]
+        m.pw = PiecewiseLinearFunction(points=points, function=f)
+
+        # The big win is if the above runs, but we'll check the approximation
+        # computationally at least, to make sure that at all the points we gave,
+        # the pw linear approximation evaluates to the same value as the
+        # original nonlinear function.
+        for pt in points:
+            self.assertAlmostEqual(m.pw(*pt), f(*pt))

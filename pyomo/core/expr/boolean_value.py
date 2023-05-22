@@ -118,33 +118,108 @@ class BooleanValue(PyomoObject):
     def is_logical_type(self):
         return True
 
-    def equivalent_to(self, other):
-        """
-        Construct an EquivalenceExpression between this BooleanValue and its operand.
-        """
-        return _generate_logical_proposition(_equiv, self, other)
-
-    def land(self, other):
-        """
-        Construct an AndExpression (Logical And) between this BooleanValue and its operand.
-        """
-        return _generate_logical_proposition(_and, self, other)
-
-    def lor(self, other):
-        """
-        Construct an OrExpression (Logical OR) between this BooleanValue and its operand.
-        """
-        return _generate_logical_proposition(_or, self, other)
-
     def __invert__(self):
         """
         Construct a NotExpression using operator '~'
         """
         return _generate_logical_proposition(_inv, self, None)
 
+    def equivalent_to(self, other):
+        """
+        Construct an EquivalenceExpression between this BooleanValue and its operand.
+        """
+        ans = _generate_logical_proposition(_equiv, self, other)
+        if ans is NotImplemented:
+            raise TypeError(
+                "unsupported operand type for equivalent_to(): "
+                f"'{type(other).__name__}'"
+            )
+        return ans
+
+    def land(self, other):
+        """
+        Construct an AndExpression (Logical And) between this BooleanValue and `other`.
+        """
+        ans = _generate_logical_proposition(_and, self, other)
+        if ans is NotImplemented:
+            raise TypeError(
+                f"unsupported operand type for land(): '{type(other).__name__}'"
+            )
+        return ans
+
+    def __and__(self, other):
+        """
+        Construct an AndExpression using the '&' operator
+        """
+        return _generate_logical_proposition(_and, self, other)
+
+    def __rand__(self, other):
+        """
+        Construct an AndExpression using the '&' operator
+        """
+        return _generate_logical_proposition(_and, other, self)
+
+    def __iand__(self, other):
+        """
+        Construct an AndExpression using the '&' operator
+        """
+        return _generate_logical_proposition(_and, self, other)
+
+    def lor(self, other):
+        """
+        Construct an OrExpression (Logical OR) between this BooleanValue and `other`.
+        """
+        ans = _generate_logical_proposition(_or, self, other)
+        if ans is NotImplemented:
+            raise TypeError(
+                f"unsupported operand type for lor(): '{type(other).__name__}'"
+            )
+        return ans
+
+    def __or__(self, other):
+        """
+        Construct an OrExpression using the '|' operator
+        """
+        return _generate_logical_proposition(_or, self, other)
+
+    def __ror__(self, other):
+        """
+        Construct an OrExpression using the '|' operator
+        """
+        return _generate_logical_proposition(_or, other, self)
+
+    def __ior__(self, other):
+        """
+        Construct an OrExpression using the '|' operator
+        """
+        return _generate_logical_proposition(_or, self, other)
+
     def xor(self, other):
         """
-        Construct an EquivalenceExpression using method "xor"
+        Construct an XorExpression using method "xor"
+        """
+        ans = _generate_logical_proposition(_xor, self, other)
+        if ans is NotImplemented:
+            raise TypeError(
+                f"unsupported operand type for xor(): '{type(other).__name__}'"
+            )
+        return ans
+
+    def __xor__(self, other):
+        """
+        Construct an XorExpression using the '^' operator
+        """
+        return _generate_logical_proposition(_xor, self, other)
+
+    def __rxor__(self, other):
+        """
+        Construct an XorExpression using the '^' operator
+        """
+        return _generate_logical_proposition(_xor, other, self)
+
+    def __ixor__(self, other):
+        """
+        Construct an XorExpression using the '^' operator
         """
         return _generate_logical_proposition(_xor, self, other)
 
@@ -152,7 +227,12 @@ class BooleanValue(PyomoObject):
         """
         Construct an ImplicationExpression using method "implies"
         """
-        return _generate_logical_proposition(_impl, self, other)
+        ans = _generate_logical_proposition(_impl, self, other)
+        if ans is NotImplemented:
+            raise TypeError(
+                f"unsupported operand type for implies(): '{type(other).__name__}'"
+            )
+        return ans
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """

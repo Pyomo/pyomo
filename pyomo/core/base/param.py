@@ -270,6 +270,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     """
 
     DefaultMutable = False
+    _ComponentDataClass = _ParamData
 
     class NoValue(object):
         """A dummy type that is pickle-safe that we can use as the default

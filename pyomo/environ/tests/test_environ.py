@@ -144,6 +144,7 @@ class TestPyomoEnviron(unittest.TestCase):
             '__future__',
             'argparse',
             'ast',  # Imported on Windows
+            'backports_abc',  # Imported by cython on Linux
             'base64',  # Imported on Windows
             'cPickle',
             'csv',

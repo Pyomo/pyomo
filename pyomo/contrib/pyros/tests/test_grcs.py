@@ -2806,6 +2806,48 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
             ),
         )
 
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_two_stg_model_discrete_set(self):
+        """
+        Test PyROS successfully solves two-stage model with
+        multiple scenarios.
+        """
+        m = ConcreteModel()
+        m.x1 = Var(bounds=(0, 10))
+        m.x2 = Var(bounds=(0, 10))
+        m.u = Param(mutable=True, initialize=1.125)
+        m.con = Constraint(expr=sqrt(m.u) * m.x1 - m.u * m.x2 <= 2)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u) ** 2)
+
+        discrete_set = DiscreteScenarioSet(scenarios=[[0.25], [1.125], [2]])
+
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=discrete_set,
+            local_solver=global_solver,
+            global_solver=global_solver,
+            decision_rule_order=0,
+            solve_master_globally=True,
+            objective_focus=ObjectiveType.worst_case,
+        )
+
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg=(
+                "Failed to solve discrete set multiple scenarios instance to "
+                "robust optimality"
+            ),
+        )
+
 
 class testFactorModelUncertaintySetClass(unittest.TestCase):
     '''
@@ -4313,6 +4355,130 @@ class RegressionTest(unittest.TestCase):
             res.pyros_termination_condition,
             pyrosTerminationCondition.subsolver_error,
             msg=(
+                "Returned termination condition for separation error"
+                f"test is not {pyrosTerminationCondition.subsolver_error}."
+            ),
+        )
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_discrete_separation_subsolver_error(self):
+        """
+        Test PyROS for two-stage problem with discrete type set,
+        subsolver error status.
+        """
+        m = ConcreteModel()
+
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+
+        # upper bound induces subsolver error: separation
+        # max(x2 - log(m.q)) will force subsolver to q = 0
+        m.x2 = Var(initialize=2, bounds=(None, log(m.q)))
+
+        m.obj = Objective(expr=m.x1 + m.x2, sense=maximize)
+
+        discrete_set = DiscreteScenarioSet(scenarios=[(1,), (0,)])
+
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=discrete_set,
+            local_solver=local_solver,
+            global_solver=global_solver,
+            decision_rule_order=1,
+            tee=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.subsolver_error,
+            msg=(
+                "Returned termination condition for separation error"
+                f"test is not {pyrosTerminationCondition.subsolver_error}."
+            ),
+        )
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_pyros_math_domain_error(self):
+        """
+        Test PyROS on a two-stage problem, discrete
+        set type with a math domain error evaluating
+        performance constraint expressions in separation.
+        """
+        m = ConcreteModel()
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+        m.x2 = Var(initialize=2, bounds=(-m.q, log(m.q)))
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        box_set = BoxSet(bounds=[[0, 1]])
+
+        local_solver = SolverFactory("baron")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        with self.assertRaisesRegex(
+            expected_exception=ArithmeticError,
+            expected_regex=(
+                "Evaluation of performance constraint.*math domain error.*"
+            ),
+            msg="ValueError arising from math domain error not raised",
+        ):
+            # should raise math domain error:
+            # (1) lower bounding constraint on x2 solved first
+            #     in separation, q = 0 in worst case
+            # (2) now tries to evaluate log(q), but q = 0
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.q],
+                uncertainty_set=box_set,
+                local_solver=local_solver,
+                global_solver=global_solver,
+                decision_rule_order=1,
+                tee=True,
+            )
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_pyros_no_perf_cons(self):
+        """
+        Ensure PyROS properly accommodates models with no
+        performance constraints (such as effectively deterministic
+        models).
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.q = Param(mutable=True, initialize=1)
+
+        m.obj = Objective(expr=m.x * m.q)
+
+        pyros_solver = SolverFactory("pyros")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet(bounds=[[0, 1]]),
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            solve_master_globally=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg=(
                 f"Returned termination condition for separation error"
                 "test is not {pyrosTerminationCondition.subsolver_error}.",
             ),
@@ -4419,7 +4585,7 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     @unittest.skipUnless(
-        baron_version >= (23, 1, 5), "Test runs >90 minutes with Baron 22.9.30"
+        baron_version == (23, 1, 5), "Test runs >90 minutes with Baron 22.9.30"
     )
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()

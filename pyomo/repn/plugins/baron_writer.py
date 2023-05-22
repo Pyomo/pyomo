@@ -61,7 +61,7 @@ def _handle_PowExpression(visitor, node, values):
         if type(arg) in native_types:
             pass
         elif arg.is_fixed():
-            values[i] = ftoa(value(arg))
+            values[i] = ftoa(value(arg), True)
         else:
             unfixed_count += 1
 
@@ -174,12 +174,15 @@ class ToBaronVisitor(EXPR._ToStringVisitor):
         return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
-        iter_ = iter(node.args)
-        values = []
-        if node.constant:
-            next(iter_)
-            values.append(ftoa(node.constant, True))
-        values.extend(map(self._monomial_to_string, iter_))
+        values = [
+            self._monomial_to_string(arg)
+            if (
+                arg.__class__ is EXPR.MonomialTermExpression
+                and not arg.arg(1).is_fixed()
+            )
+            else ftoa(value(arg))
+            for arg in node.args
+        ]
         return node._to_string(values, False, self.smap)
 
 
