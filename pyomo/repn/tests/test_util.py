@@ -132,18 +132,6 @@ class TestRepnUtils(unittest.TestCase):
         try:
             pyomo.repn.util.HALT_ON_EVALUATION_ERROR = True
             with LoggingIntercept() as LOG:
-                with self.assertRaisesRegex(
-                    ValueError, 'Pyomo does not support complex numbers'
-                ):
-                    print(apply_node_operation(exp, [-1, 1 / 2]))
-            self.assertEqual(
-                LOG.getvalue(),
-                "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
-                "\tmessage: Pyomo does not support complex numbers\n"
-                "\texpression: x**0.5\n",
-            )
-
-            with LoggingIntercept() as LOG:
                 with self.assertRaisesRegex(ZeroDivisionError, 'division by zero'):
                     apply_node_operation(div, [1, 0])
             self.assertEqual(
@@ -155,18 +143,8 @@ class TestRepnUtils(unittest.TestCase):
 
             pyomo.repn.util.HALT_ON_EVALUATION_ERROR = False
             with LoggingIntercept() as LOG:
-                val = apply_node_operation(exp, [-1, 1 / 2])
-                self.assertTrue(math.isnan(val), f"{val} is not NaN")
-            self.assertEqual(
-                LOG.getvalue(),
-                "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
-                "\tmessage: Pyomo does not support complex numbers\n"
-                "\texpression: x**0.5\n",
-            )
-
-            with LoggingIntercept() as LOG:
                 val = apply_node_operation(div, [1, 0])
-                self.assertTrue(math.isnan(val), f"{val} is not NaN")
+                self.assertEqual(str(val), "InvalidNumber(nan)")
             self.assertEqual(
                 LOG.getvalue(),
                 "Exception encountered evaluating expression 'div(1, 0)'\n"

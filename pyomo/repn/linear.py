@@ -29,12 +29,17 @@ from pyomo.core.expr.current import (
     native_types,
     native_numeric_types,
 )
-from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
 from pyomo.core.expr import is_fixed
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
 import pyomo.core.kernel as kernel
-from pyomo.repn.util import ExprType, apply_node_operation
+from pyomo.repn.util import (
+    ExprType,
+    apply_node_operation,
+    complex_number_error,
+    InvalidNumber,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -303,7 +308,10 @@ _exit_node_handlers[DivisionExpression] = {
 
 def _handle_pow_constant_constant(visitor, node, *args):
     arg1, arg2 = args
-    return _CONSTANT, apply_node_operation(node, (arg1[1], arg2[1]))
+    ans = apply_node_operation(node, (arg1[1], arg2[1]))
+    if ans.__class__ in _complex_types:
+        ans = complex_number_error(ans, self, node)
+    return _CONSTANT, ans
 
 
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
@@ -345,7 +353,11 @@ _exit_node_handlers[PowExpression] = {
 
 
 def _handle_unary_constant(visitor, node, arg):
-    return _CONSTANT, apply_node_operation(node, (arg[1],))
+    ans = apply_node_operation(node, (arg[1],))
+    # Unary includes sqrt() which can return complex numbers
+    if ans.__class__ in _complex_types:
+        ans = complex_number_error(ans, self, node)
+    return _CONSTANT, ans
 
 
 def _handle_unary_nonlinear(visitor, node, arg):
@@ -441,16 +453,34 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 
+def _before_complex(visitor, child):
+    return False, (_CONSTANT, complex_number_error(child, visitor, child))
+
+
 def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
-            return False, (_CONSTANT, child())
+            ans = child()
+            if ans.__class__ in _complex_types:
+                ans = complex_number_error(ans, self, child)
+            if ans is None or ans != ans:
+                ans = InvalidNumber(nan)
+            return False, (_CONSTANT, ans)
         visitor.var_map[_id] = child
         visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
     ans.linear[_id] = 1
     return False, (_LINEAR, ans)
+
+
+def _before_param(visitor, child):
+    ans = child()
+    if ans.__class__ in _complex_types:
+        ans = complex_number_error(ans, self, child)
+    if ans is None or ans != ans:
+        ans = InvalidNumber(nan)
+    return False, (_CONSTANT, ans)
 
 
 def _before_npv(visitor, child):
@@ -465,10 +495,7 @@ def _before_npv(visitor, child):
     #     child = visitor.value_cache[_id] = child()
     # return False, (_CONSTANT, child)
     try:
-        tmp = child()
-        if tmp.__class__ is complex:
-            return True, None
-        return False, (_CONSTANT, tmp)
+        return False, (_CONSTANT, visitor._eval_expr(child))
     except:
         # If there was an exception evaluating the subexpression, then
         # we need to descend into it (in case there is something like 0 *
@@ -493,7 +520,7 @@ def _before_monomial(visitor, child):
         # else:
         #     arg1 = visitor.value_cache[_id] = arg1()
         try:
-            arg1 = arg1()
+            arg1 = visitor._eval_expr(arg1)
         except:
             # If there was an exception evaluating the subexpression,
             # then we need to descend into it (in case there is something
@@ -507,7 +534,7 @@ def _before_monomial(visitor, child):
     _id = id(arg2)
     if _id not in visitor.var_map:
         if arg2.fixed:
-            return False, (_CONSTANT, arg1 * arg2())
+            return False, (_CONSTANT, arg1 * visitor._eval_expr(arg2))
         visitor.var_map[_id] = arg2
         visitor.var_order[_id] = len(visitor.var_order)
     ans = visitor.Result()
@@ -527,7 +554,7 @@ def _before_linear(visitor, child):
             arg1, arg2 = arg._args_
             if arg1.__class__ not in native_types:
                 try:
-                    arg1 = arg1()
+                    arg1 = visitor._eval_expr(arg1)
                 except:
                     # If there was an exception evaluating the
                     # subexpression, then we need to descend into it (in
@@ -543,7 +570,7 @@ def _before_linear(visitor, child):
             _id = id(arg2)
             if _id not in var_map:
                 if arg2.fixed:
-                    const += arg1 * arg2()
+                    const += arg1 * visitor._eval_expr(arg2)
                     continue
                 var_map[_id] = arg2
                 var_order[_id] = next_i
@@ -555,7 +582,7 @@ def _before_linear(visitor, child):
                 linear[_id] = arg1
         elif arg.__class__ not in native_numeric_types:
             try:
-                const += arg()
+                const += visitor._eval_expr(arg)
             except:
                 # If there was an exception evaluating the
                 # subexpression, then we need to descend into it (in
@@ -606,7 +633,7 @@ def _before_external(visitor, child):
     ans = visitor.Result()
     if all(is_fixed(arg) for arg in child.args):
         try:
-            ans.constant = test()
+            ans.constant = visitor._eval_expr(child)
             return False, (_CONSTANT, ans)
         except:
             pass
@@ -622,12 +649,16 @@ def _register_new_before_child_dispatcher(visitor, child):
     dispatcher = _before_child_dispatcher
     child_type = child.__class__
     if child_type in native_numeric_types:
-        dispatcher[child_type] = _before_native
+        if isinstance(child_type, complex):
+            _complex_types.add(child_type)
+            dispatcher[child_type] = _before_complex
+        else:
+            dispatcher[child_type] = _before_native
     elif not child.is_expression_type():
         if child.is_potentially_variable():
             dispatcher[child_type] = _before_var
         else:
-            dispatcher[child_type] = _before_npv
+            dispatcher[child_type] = _before_param
     elif not child.is_potentially_variable():
         dispatcher[child_type] = _before_npv
         # If we descend into the named expression (because of an
@@ -664,10 +695,16 @@ _before_child_dispatcher = collections.defaultdict(
     lambda: _register_new_before_child_dispatcher
 )
 
+# For efficiency reasons, we will maintain a separate list of all
+# complex number types
+_complex_types = set((complex,))
+
 # Register an initial set of known expression types with the "before
 # child" expression handler lookup table.
 for _type in native_numeric_types:
     _before_child_dispatcher[_type] = _before_native
+# We do not support writing complex numbers out
+_before_child_dispatcher[complex] = _before_complex
 # general operators
 for _type in _exit_node_handlers:
     _before_child_dispatcher[_type] = _before_general_expression
@@ -711,6 +748,15 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         self.subexpression_cache = subexpression_cache
         self.var_map = var_map
         self.var_order = var_order
+        self._eval_expr_visitor = _EvaluationVisitor(True)
+
+    def _eval_expr(self, expr):
+        ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
+        if ans.__class__ not in native_types:
+            ans = value(ans)
+        if ans.__class__ in _complex_types:
+            return complex_number_error(ans, self, expr)
+        return ans
 
     def initializeWalker(self, expr):
         walk, result = self.beforeChild(None, expr, 0)

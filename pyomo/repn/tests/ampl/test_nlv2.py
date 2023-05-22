@@ -156,7 +156,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -171,7 +171,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -186,7 +186,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -201,7 +201,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -216,7 +216,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -403,13 +403,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((m.p ** (0.5), None, None))
         self.assertEqual(
             LOG.getvalue(),
-            "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
-            "\tmessage: Pyomo does not support complex numbers\n"
+            "Error encountered evaluating expression\n"
+            "\tmessage: Pyomo AMPLRepnVisitor does not support complex numbers\n"
             "\texpression: p**0.5\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertRegex(str(repn.const), r'InvalidNumber\(\([0-9.e+\-]*\+1j\)\)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -419,13 +419,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((m.p**m.x, None, None))
         self.assertEqual(
             LOG.getvalue(),
-            "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
-            "\tmessage: Pyomo does not support complex numbers\n"
+            "Error encountered evaluating expression\n"
+            "\tmessage: Pyomo AMPLRepnVisitor does not support complex numbers\n"
             "\texpression: p**x\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertRegex(str(repn.const), r'InvalidNumber\(\([0-9.e+\-]*\+1j\)\)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -445,7 +445,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -469,7 +469,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 

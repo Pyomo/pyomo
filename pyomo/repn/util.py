@@ -92,12 +92,80 @@ class FileDeterminism(enum.IntEnum):
         return super()._missing_(value)
 
 
+class InvalidNumber(object):
+    def __init__(self, value):
+        self.value = value
+
+    def duplicate(self, new_value):
+        return InvalidNumber(new_value)
+
+    def merge(self, other, new_val):
+        return InvalidNumber(new_value)
+
+    def __eq__(self, other):
+        return False
+
+    def __str__(self):
+        return f'InvalidNumber({self.value})'
+
+    def __repr__(self):
+        raise ValueError(f'Cannot emit {str(self)} in compiled representation')
+
+    def __format__(self, format_spec):
+        raise ValueError(f'Cannot emit {str(self)} in compiled representation')
+
+    def __add__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.merge(other, self.value + other.value)
+        else:
+            return self.duplicate(self.value + other)
+
+    def __sub__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.merge(other, self.value - other.value)
+        else:
+            return self.duplicate(self.value - other)
+
+    def __mul__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.merge(other, self.value * other.value)
+        else:
+            return self.duplicate(self.value * other)
+
+    def __div__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.merge(other, self.value / other.value)
+        else:
+            return self.duplicate(self.value / other)
+
+    def __pow__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.merge(other, self.value**other.value)
+        else:
+            return self.duplicate(self.value**other)
+
+    def __radd__(self, other):
+        return self.duplicate(other + self.value)
+
+    def __rsub__(self, other):
+        return self.duplicate(other - self.value)
+
+    def __rmul__(self, other):
+        return self.duplicate(other * self.value)
+
+    def __rdiv__(self, other):
+        return self.duplicate(other / self.value)
+
+    def __pow__(self, other):
+        return self.duplicate(other**self.value)
+
+
 def apply_node_operation(node, args):
     try:
-        tmp = node._apply_operation(args)
-        if tmp.__class__ is complex:
-            raise ValueError('Pyomo does not support complex numbers')
-        return tmp
+        ans = node._apply_operation(args)
+        if ans != ans and ans.__class__ is not InvalidNumber:
+            ans = InvalidNumber(ans)
+        return ans
     except:
         logger.warning(
             "Exception encountered evaluating expression "
@@ -106,7 +174,20 @@ def apply_node_operation(node, args):
         )
         if HALT_ON_EVALUATION_ERROR:
             raise
-        return nan
+        return InvalidNumber(nan)
+
+
+def complex_number_error(value, visitor, expr, node=""):
+    msg = f'Pyomo {visitor.__class__.__name__} does not support complex numbers'
+    logger.warning(
+        ' '.join(filter(None, ("Error encountered evaluating expression", node)))
+        + f"\n\tmessage: {msg}\n\texpression: {expr}"
+    )
+    if HALT_ON_EVALUATION_ERROR:
+        raise ValueError(
+            f'Pyomo {visitor.__class__.__name__} does not support complex numbers'
+        )
+    return InvalidNumber(value)
 
 
 def categorize_valid_components(

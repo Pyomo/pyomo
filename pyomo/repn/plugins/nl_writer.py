@@ -45,7 +45,7 @@ from pyomo.core.expr.current import (
     native_numeric_types,
     value,
 )
-from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
 from pyomo.core.base import (
     Block,
     Objective,
@@ -74,6 +74,7 @@ from pyomo.repn.util import (
     FileDeterminism_to_SortComponents,
     apply_node_operation,
     categorize_valid_components,
+    complex_number_error,
     initialize_var_map_from_column_order,
     ordered_active_constraints,
 )
@@ -1857,7 +1858,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        f"Encountered {mult}*{str(arg2[1])} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -1886,7 +1887,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        f"Encountered {str(mult)}*{arg2[1]} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -1934,7 +1935,10 @@ def handle_division_node(visitor, node, arg1, arg2):
 def handle_pow_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         if arg1[0] is _CONSTANT:
-            return _CONSTANT, apply_node_operation(node, (arg1[1], arg2[1]))
+            ans = apply_node_operation(node, (arg1[1], arg2[1]))
+            if ans.__class__ in _complex_types:
+                ans = complex_number_error(ans, visitor, node)
+            return _CONSTANT, ans
         elif not arg2[1]:
             return _CONSTANT, 1
         elif arg2[1] == 1:
@@ -2214,6 +2218,10 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 
+def _before_complex(visitor, child):
+    return False, (_CONSTANT, complex_number_error(child, visitor, child))
+
+
 def _before_string(visitor, child):
     visitor.encountered_string_arguments = True
     ans = AMPLRepn(child, None, None)
@@ -2225,9 +2233,23 @@ def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
-            return False, (_CONSTANT, child())
+            ans = child()
+            if ans.__class__ in _complex_types:
+                ans = complex_number_error(ans, self, node)
+            if ans is None or ans != ans:
+                ans = InvalidNumber(nan)
+            return False, (_CONSTANT, ans)
         visitor.var_map[_id] = child
     return False, (_MONOMIAL, _id, 1)
+
+
+def _before_param(visitor, child):
+    ans = child()
+    if ans.__class__ in _complex_types:
+        ans = complex_number_error(ans, self, child)
+    if ans is None or ans != ans:
+        ans = InvalidNumber(nan)
+    return False, (_CONSTANT, ans)
 
 
 def _before_npv(visitor, child):
@@ -2242,10 +2264,7 @@ def _before_npv(visitor, child):
     #     child = visitor.value_cache[_id] = child()
     # return False, (_CONSTANT, child)
     try:
-        tmp = False, (_CONSTANT, child())
-        if tmp[1][1].__class__ is complex:
-            return True, None
-        return tmp
+        return False, (_CONSTANT, visitor._eval_expr(child))
     except:
         # If there was an exception evaluating the subexpression, then
         # we need to descend into it (in case there is something like 0 *
@@ -2270,7 +2289,7 @@ def _before_monomial(visitor, child):
         # else:
         #     arg1 = visitor.value_cache[_id] = arg1()
         try:
-            arg1 = arg1()
+            arg1 = visitor._eval_expr(arg1)
         except:
             # If there was an exception evaluating the subexpression,
             # then we need to descend into it (in case there is something
@@ -2311,7 +2330,7 @@ def _before_linear(visitor, child):
         if arg.__class__ is MonomialTermExpression:
             c, v = arg.args
             if c.__class__ not in native_types:
-                c = c()
+                c = visitor._eval_expr(c)
             if v.fixed:
                 const += c * v.value
             elif c:
@@ -2325,7 +2344,7 @@ def _before_linear(visitor, child):
         elif arg.__class__ in native_types:
             const += arg
         else:
-            const += arg()
+            const += visitor._eval_expr(arg)
     if linear:
         return False, (_GENERAL, AMPLRepn(const, linear, None))
     else:
@@ -2350,9 +2369,11 @@ def _before_general_expression(visitor, child):
     return True, None
 
 
+_complex_types = set((complex,))
 # Register an initial set of known expression types with the "before
 # child" expression handler lookup table.
 _before_child_handlers = {_type: _before_native for _type in native_numeric_types}
+_before_child_handlers[complex] = _before_complex
 for _type in native_types:
     if issubclass(_type, str):
         _before_child_handlers[_type] = _before_string
@@ -2399,7 +2420,15 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.symbolic_solver_labels = symbolic_solver_labels
         self.use_named_exprs = use_named_exprs
         self.encountered_string_arguments = False
-        # self.value_cache = {}
+        self._eval_expr_visitor = _EvaluationVisitor(True)
+
+    def _eval_expr(self, expr):
+        ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
+        if ans.__class__ not in native_types:
+            ans = value(ans)
+        if ans.__class__ in _complex_types:
+            return complex_number_error(ans, self, expr)
+        return ans
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
@@ -2501,7 +2530,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         handlers = _before_child_handlers
         child_type = child.__class__
         if child_type in native_numeric_types:
-            handlers[child_type] = _before_native
+            if isinstance(child_type, complex):
+                _complex_types.add(child_type)
+                dispatcher[child_type] = _before_complex
+            else:
+                dispatcher[child_type] = _before_native
         elif issubclass(child_type, str):
             handlers[child_type] = _before_string
         elif child_type in native_types:
@@ -2510,7 +2543,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             if child.is_potentially_variable():
                 handlers[child_type] = _before_var
             else:
-                handlers[child_type] = _before_npv
+                handlers[child_type] = _before_param
         elif not child.is_potentially_variable():
             handlers[child_type] = _before_npv
             # If we descend into the named expression (because of an
