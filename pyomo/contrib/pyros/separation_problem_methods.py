@@ -153,12 +153,23 @@ def make_separation_problem(model_data, config):
     for c in separation_model.component_data_objects(Constraint):
         if any(v in uncertain_param_set for v in identify_mutable_parameters(c.expr)):
             if c.equality:
-                constraints.add(
-                    replace_expressions(expr=c.lower, substitution_map=substitution_map)
-                    == replace_expressions(
-                        expr=c.body, substitution_map=substitution_map
+                if c in separation_model.util.h_x_q_constraints:
+                    # ensure that constraints subject to
+                    # coefficient matching are not involved in
+                    # separation problem.
+                    # keeping them may induce numerical sensitivity
+                    # issues, possibly leading to incorrect result
+                    c.deactivate()
+                else:
+                    constraints.add(
+                        replace_expressions(
+                            expr=c.lower,
+                            substitution_map=substitution_map,
+                        )
+                        == replace_expressions(
+                            expr=c.body, substitution_map=substitution_map
+                        )
                     )
-                )
             elif c.lower is not None:
                 constraints.add(
                     replace_expressions(expr=c.lower, substitution_map=substitution_map)
