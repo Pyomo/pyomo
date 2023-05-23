@@ -457,6 +457,21 @@ class Test(unittest.TestCase):
             expression_to_string(m.c2.body, tc, smap=smap), ("x1 ** (-1.5)", False)
         )
 
+    def test_issue_2819(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.z = Var()
+        t = 0.55
+        m.x.fix(3.5)
+        e = (m.x - 4) ** 2 + (m.z - 1) ** 2 - t
+
+        tc = StorageTreeChecker(m)
+        smap = SymbolMap()
+        test = expression_to_string(e, tc, smap=smap)
+        self.assertEqual(
+            test, ('power((3.5 + (-4)), 2) + power((z + (-1)), 2) + (-0.55)', False)
+        )
+
 
 class TestGams_writer(unittest.TestCase):
     def _cleanup(self, fname):

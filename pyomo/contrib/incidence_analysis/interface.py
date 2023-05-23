@@ -31,6 +31,7 @@ from pyomo.common.dependencies import (
     plotly,
 )
 from pyomo.common.deprecation import deprecated
+from pyomo.contrib.incidence_analysis.config import IncidenceConfig
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
 from pyomo.contrib.incidence_analysis.triangularize import (
@@ -44,6 +45,7 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     RowPartition,
     ColPartition,
 )
+from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
@@ -61,13 +63,12 @@ def _check_unindexed(complist):
             )
 
 
-def get_incidence_graph(variables, constraints, include_fixed=True):
-    return get_bipartite_incidence_graph(
-        variables, constraints, include_fixed=include_fixed
-    )
+def get_incidence_graph(variables, constraints, **kwds):
+    config = IncidenceConfig(kwds)
+    return get_bipartite_incidence_graph(variables, constraints, **config)
 
 
-def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
+def get_bipartite_incidence_graph(variables, constraints, **kwds):
     """Return the bipartite incidence graph of Pyomo variables and constraints.
 
     Each node in the returned graph is an integer. The convention is that,
@@ -92,6 +93,7 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     ``networkx.Graph``
 
     """
+    config = IncidenceConfig(kwds)
     _check_unindexed(variables + constraints)
     N = len(variables)
     M = len(constraints)
@@ -100,7 +102,7 @@ def get_bipartite_incidence_graph(variables, constraints, include_fixed=True):
     graph.add_nodes_from(range(M, M + N), bipartite=1)
     var_node_map = ComponentMap((v, M + i) for i, v in enumerate(variables))
     for i, con in enumerate(constraints):
-        for var in identify_variables(con.expr, include_fixed=include_fixed):
+        for var in get_incident_variables(con.body, **config):
             if var in var_node_map:
                 graph.add_edge(i, var_node_map[var])
     return graph
@@ -162,16 +164,17 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
     return subgraph
 
 
-def _generate_variables_in_constraints(constraints, include_fixed=False):
+def _generate_variables_in_constraints(constraints, **kwds):
+    config = IncidenceConfig(kwds)
     known_vars = ComponentSet()
     for con in constraints:
-        for var in identify_variables(con.expr, include_fixed=include_fixed):
+        for var in get_incident_variables(con.body, **config):
             if var not in known_vars:
                 known_vars.add(var)
                 yield var
 
 
-def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
+def get_structural_incidence_matrix(variables, constraints, **kwds):
     """Return the incidence matrix of Pyomo constraints and variables
 
     Parameters
@@ -190,6 +193,7 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
         Entries are 1.0.
 
     """
+    config = IncidenceConfig(kwds)
     _check_unindexed(variables + constraints)
     N, M = len(variables), len(constraints)
     var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
@@ -198,7 +202,7 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     for i, con in enumerate(constraints):
         cols.extend(
             var_idx_map[v]
-            for v in identify_variables(con.expr, include_fixed=include_fixed)
+            for v in get_incident_variables(con.body, **config)
             if v in var_idx_map
         )
         rows.extend([i] * (len(cols) - len(rows)))
@@ -267,14 +271,13 @@ class IncidenceGraphInterface(object):
 
     """
 
-    def __init__(
-        self, model=None, active=True, include_fixed=False, include_inequality=True
-    ):
+    def __init__(self, model=None, active=True, include_inequality=True, **kwds):
         """Construct an IncidenceGraphInterface object"""
         # If the user gives us a model or an NLP, we assume they want us
         # to cache the incidence graph for fast analysis later on.
         # WARNING: This cache will become invalid if the user alters their
         # model.
+        self._config = IncidenceConfig(kwds)
         if model is None:
             self._incidence_graph = None
             self._variables = None
@@ -286,9 +289,7 @@ class IncidenceGraphInterface(object):
                 if include_inequality or isinstance(con.expr, EqualityExpression)
             ]
             self._variables = list(
-                _generate_variables_in_constraints(
-                    self._constraints, include_fixed=include_fixed
-                )
+                _generate_variables_in_constraints(self._constraints, **self._config)
             )
             self._var_index_map = ComponentMap(
                 (var, i) for i, var in enumerate(self._variables)
@@ -297,10 +298,7 @@ class IncidenceGraphInterface(object):
                 (con, i) for i, con in enumerate(self._constraints)
             )
             self._incidence_graph = get_bipartite_incidence_graph(
-                self._variables,
-                self._constraints,
-                # Note that include_fixed is not necessary here. We have
-                # already checked this condition above.
+                self._variables, self._constraints, **self._config
             )
         elif pyomo_nlp_available and isinstance(model, pyomo_nlp.PyomoNLP):
             if not active:
@@ -309,11 +307,11 @@ class IncidenceGraphInterface(object):
                     "nl interface (PyomoNLP).\nPlease set the `active` flag "
                     "to True."
                 )
-            if include_fixed:
+            if kwds:
                 raise ValueError(
-                    "Cannot get the Jacobian with respect to fixed variables "
-                    "from the nl interface (PyomoNLP).\nPlease set the "
-                    "`include_fixed` flag to False."
+                    "Incidence graph generation options, e.g. include_fixed, method,"
+                    " and linear_only, are not supported when generating a graph"
+                    " from a PyomoNLP."
                 )
             nlp = model
             self._variables = nlp.get_pyomo_variables()
@@ -453,9 +451,9 @@ class IncidenceGraphInterface(object):
 
     def _extract_subgraph(self, variables, constraints):
         if self._incidence_graph is None:
-            # Note that, as variables are explicitly specified, there
-            # is no need for an include_fixed argument.
-            return get_bipartite_incidence_graph(variables, constraints)
+            # Note that we pass along self._config here, so any kwds used
+            # in construction will apply to these incidence graphs.
+            return get_bipartite_incidence_graph(variables, constraints, **self._config)
         else:
             constraint_nodes = [self._con_index_map[con] for con in constraints]
 

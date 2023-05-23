@@ -112,7 +112,7 @@ Using these Boolean variables, we can define ``LogicalConstraint`` objects, anal
 
 .. doctest::
 
-    >>> m.p = LogicalConstraint(expr=m.Y[1].implies(land(m.Y[2], m.Y[3])).lor(m.Y[4]))
+    >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[2] & m.Y[3]) | m.Y[4])
     >>> m.p.pprint()
     p : Size=1, Index=None, Active=True
         Key  : Body                          : Active
@@ -126,13 +126,13 @@ Pyomo.GDP logical expression system supported operators and their usage are list
 +--------------+------------------------+-----------------------------------+--------------------------------+
 | Operator     | Operator               | Method                            | Function                       |
 +==============+========================+===================================+================================+
-| Conjunction  |                        | :code:`Y[1].land(Y[2])`           | :code:`land(Y[1],Y[2])`        |
-+--------------+------------------------+-----------------------------------+--------------------------------+
-| Disjunction  |                        | :code:`Y[1].lor(Y[2])`            | :code:`lor(Y[1],Y[2])`         |
-+--------------+------------------------+-----------------------------------+--------------------------------+
 | Negation     | :code:`~Y[1]`          |                                   | :code:`lnot(Y[1])`             |
 +--------------+------------------------+-----------------------------------+--------------------------------+
-| Exclusive OR |                        | :code:`Y[1].xor(Y[2])`            | :code:`xor(Y[1], Y[2])`        |
+| Conjunction  | :code:`Y[1] & Y[2]`    | :code:`Y[1].land(Y[2])`           | :code:`land(Y[1],Y[2])`        |
++--------------+------------------------+-----------------------------------+--------------------------------+
+| Disjunction  | :code:`Y[1] | Y[2]`    | :code:`Y[1].lor(Y[2])`            | :code:`lor(Y[1],Y[2])`         |
++--------------+------------------------+-----------------------------------+--------------------------------+
+| Exclusive OR | :code:`Y[1] ^ Y[2]`    | :code:`Y[1].xor(Y[2])`            | :code:`xor(Y[1], Y[2])`        |
 +--------------+------------------------+-----------------------------------+--------------------------------+
 | Implication  |                        | :code:`Y[1].implies(Y[2])`        | :code:`implies(Y[1], Y[2])`    |
 +--------------+------------------------+-----------------------------------+--------------------------------+
@@ -141,7 +141,7 @@ Pyomo.GDP logical expression system supported operators and their usage are list
 
 .. note::
 
-    We omit support for most infix operators, e.g. :code:`Y[1] >> Y[2]`, due to concerns about non-intuitive Python operator precedence.
+    We omit support for some infix operators, e.g. :code:`Y[1] >> Y[2]`, due to concerns about non-intuitive Python operator precedence.
     That is :code:`Y[1] | Y[2] >> Y[3]` would translate to :math:`Y_1 \lor (Y_2 \Rightarrow Y_3)` rather than :math:`(Y_1 \lor Y_2) \Rightarrow Y_3`
 
 In addition, the following constraint-programming-inspired operators are provided: ``exactly``, ``atmost``, and ``atleast``.
@@ -289,8 +289,8 @@ Composition of standard operators
 
 .. code::
 
-    m.p = LogicalConstraint(expr=lor(m.Y[1], m.Y[2]).implies(
-        land(m.Y[3], ~m.Y[4], m.Y[5].lor(m.Y[6])))
+    m.p = LogicalConstraint(expr=(m.Y[1] | m.Y[2]).implies(
+        m.Y[3] & ~m.Y[4] & (m.Y[5] | m.Y[6]))
     )
 
 Expressions within CP-type operators
