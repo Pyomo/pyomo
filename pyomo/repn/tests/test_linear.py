@@ -692,11 +692,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, 0)
         self.assertStructuredAlmostEqual(repn.linear, {})
-        assertExpressionsEqual(
-            self,
-            repn.nonlinear,
-            cos(m.x),
-        )
+        assertExpressionsEqual(self, repn.nonlinear, cos(m.x))
 
         m.x.fix(0)
 
@@ -858,7 +854,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, 0)
         self.assertStructuredAlmostEqual(repn.linear, {})
-        assertExpressionsEqual(self, repn.nonlinear, (m.x + 1)*(m.x + 1))
+        assertExpressionsEqual(self, repn.nonlinear, (m.x + 1) * (m.x + 1))
 
         cfg = VisitorConfig()
         visitor = LinearRepnVisitor(*cfg)
@@ -872,7 +868,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, 1)
         self.assertStructuredAlmostEqual(repn.linear, {id(m.x): 2})
-        assertExpressionsEqual(self, repn.nonlinear, m.x*m.x)
+        assertExpressionsEqual(self, repn.nonlinear, m.x * m.x)
 
     def test_product(self):
         m = ConcreteModel()
@@ -888,9 +884,9 @@ class TestLinear(unittest.TestCase):
         LE3 = MonomialTermExpression((3, m.x))
         LE6 = MonomialTermExpression((6, m.x))
         NL = (
-            2 * (7 * m.x ** 2)
-            + 4 * m.x ** 2 * (6 * m.x + 5 + 7 * m.x ** 2)
-            + (LE3) * (LE6 + 7 * m.x ** 2)
+            2 * (7 * m.x**2)
+            + 4 * m.x**2 * (6 * m.x + 5 + 7 * m.x**2)
+            + (LE3) * (LE6 + 7 * m.x**2)
         )
 
         self.assertEqual(cfg.subexpr, {})

@@ -115,14 +115,12 @@ class LinearRepn(object):
                 else:
                     ans = 0
             else:
-                ans = (
-                    LinearExpression(
-                        [
-                            MonomialTermExpression((coef, var_map[vid]))
-                            for vid, coef in self.linear.items()
-                            if coef
-                        ]
-                    )
+                ans = LinearExpression(
+                    [
+                        MonomialTermExpression((coef, var_map[vid]))
+                        for vid, coef in self.linear.items()
+                        if coef
+                    ]
                 )
             ans += self.constant
         else:
