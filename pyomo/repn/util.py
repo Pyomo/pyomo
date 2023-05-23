@@ -99,11 +99,38 @@ class InvalidNumber(object):
     def duplicate(self, new_value):
         return InvalidNumber(new_value)
 
-    def merge(self, other, new_val):
+    def merge(self, other, new_value):
         return InvalidNumber(new_value)
 
     def __eq__(self, other):
-        return False
+        if other.__class__ is InvalidNumber:
+            return self.value == other.value
+        else:
+            return self.value == other
+
+    def __lt__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.value < other.value
+        else:
+            return self.value < other
+
+    def __gt__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.value > other.value
+        else:
+            return self.value > other
+
+    def __le__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.value <= other.value
+        else:
+            return self.value <= other
+
+    def __ge__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.value >= other.value
+        else:
+            return self.value >= other
 
     def __str__(self):
         return f'InvalidNumber({self.value})'
@@ -113,6 +140,12 @@ class InvalidNumber(object):
 
     def __format__(self, format_spec):
         raise ValueError(f'Cannot emit {str(self)} in compiled representation')
+
+    def __neg__(self):
+        return self.duplicate(-self.value)
+
+    def __abs__(self):
+        return self.duplicate(abs(self.value))
 
     def __add__(self, other):
         if other.__class__ is InvalidNumber:
@@ -133,6 +166,12 @@ class InvalidNumber(object):
             return self.duplicate(self.value * other)
 
     def __div__(self, other):
+        if other.__class__ is InvalidNumber:
+            return self.merge(other, self.value / other.value)
+        else:
+            return self.duplicate(self.value / other)
+
+    def __truediv__(self, other):
         if other.__class__ is InvalidNumber:
             return self.merge(other, self.value / other.value)
         else:
