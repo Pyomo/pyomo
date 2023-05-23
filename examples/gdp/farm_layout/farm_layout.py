@@ -1,25 +1,61 @@
 """
-Farm layout example from Sawaya (2006)
+Farm layout example from Sawaya (2006). This is a GDP problem with some hyperbolic constraints to establish
+consistency of areas with length and width. The FLay05 and FLay06 instances may take some time to solve; the
+others should be fast. Note that the Sawaya paper contains a little bit of nonclarity: it references "height"
+variables which do not exist - we use "length" for the x-axis and "width" on the y-axis, and it also is
+unclear on the way the coordinates define the rectangles; we have decided that they are on the bottom-left
+and adapted the disjunction constraints to match.
 """
 
 from __future__ import division
 
 from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var, Constraint, NonNegativeReals
 
+# Format: areas, length lower bounds, width lower bounds, length overall upper bound, width overall upper bound
 farm_layout_model_examples = {
-    "Flay02": [
+    "FLay02": [
         {1: 40, 2: 50},
         {1: 1, 2: 1},
         {1: 1, 2: 1},
         30,
         30,
+    ],
+    "FLay03": [
+        {1: 40, 2: 50, 3: 60},
+        {1: 1, 2: 1, 3: 1},
+        {1: 1, 2: 1, 3: 1},
+        30,
+        30,
+    ],
+    "FLay04": [
+        {1: 40, 2: 50, 3: 60, 4: 35},
+        {1: 3, 2: 3, 3: 3, 4: 3},
+        {1: 3, 2: 3, 3: 3, 4: 3},
+        100,
+        100,
+    ],
+    "FLay05": [
+        {1: 40, 2: 50, 3: 60, 4: 35, 5: 75},
+        {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
+        {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
+        30,
+        30,
+    ],
+    "FLay06": [
+        {1: 40, 2: 50, 3: 60, 4: 35, 5: 75, 6: 20},
+        {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
+        {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
+        30,
+        30,
     ]
 }
 
-def build_model(areas, length_lbs, width_lbs, length_upper_overall, width_upper_overall):
-    """Build the model."""
+def build_model(params=farm_layout_model_examples["FLay03"]):
+    """Build the model. Default example gives FLay03 which is fairly small"""
     
     # Ensure good data was passed
+    assert len(params) == 5, "Params should be in the format: areas, length_lbs, width_lbs, length_upper_overall, width_upper, overall"
+    areas, length_lbs, width_lbs, length_upper_overall, width_upper_overall = params
     for a in areas:
         assert a > 0, "Area must be positive"
     
@@ -36,8 +72,8 @@ def build_model(areas, length_lbs, width_lbs, length_upper_overall, width_upper_
     m.overall_length_ub = Param(initialize=length_upper_overall, doc="Overall upper bound for length")
     m.overall_width_ub = Param(initialize=width_upper_overall, doc="Overall upper bound for width")
 
-    m.Length = Var(domain=NonNegativeReals, doc="Overall length we are minimizing")
-    m.Width = Var(domain=NonNegativeReals, doc="Overall width we are minimizing")
+    m.Length = Var(domain=NonNegativeReals, doc="Overall length of the farmland configuration")
+    m.Width = Var(domain=NonNegativeReals, doc="Overall width of the farmland configuration")
     
     m.perim = Objective(expr=2 * (m.Length + m.Width), doc="Perimeter of the farmland configuration")
 
@@ -47,9 +83,8 @@ def build_model(areas, length_lbs, width_lbs, length_upper_overall, width_upper_
     m.plot_width = Var(m.plots, bounds=(0, m.overall_width_ub), doc="Width of this plot")
 
     # Constraints
-
-    # I think this constraint is actually wrong in the paper. Shouldn't
-    # it be plot_length / 2, since plot_x is the middle of the rectangle?
+    
+    # Ensure consistency of Length with lengths and x-values of plots
     @m.Constraint(m.plots, doc="Length is consistent with lengths of plots")
     def length_consistency(m, p):
         return m.Length >= m.plot_x[p] + m.plot_length[p]
@@ -69,28 +104,28 @@ def build_model(areas, length_lbs, width_lbs, length_upper_overall, width_upper_
     )
     def no_overlap(m, p1, p2):
         return [
-            m.plot_x[p1] + m.plot_length[p1] / 2
-            <= (m.plot_x[p2] - m.plot_length[p2] / 2),
-            m.plot_y[p1] + m.plot_width[p1] / 2
-            <= (m.plot_y[p2] - m.plot_width[p2] / 2),
-            m.plot_x[p2] + m.plot_length[p2] / 2
-            <= (m.plot_x[p1] - m.plot_length[p1] / 2),
-            m.plot_y[p2] + m.plot_width[p2] / 2
-            <= (m.plot_y[p1] - m.plot_width[p1] / 2),
+            m.plot_x[p1] + m.plot_length[p1]
+            <= m.plot_x[p2],
+            m.plot_y[p1] + m.plot_width[p1]
+            <= m.plot_y[p2],
+            m.plot_x[p2] + m.plot_length[p2]
+            <= m.plot_x[p1],
+            m.plot_y[p2] + m.plot_width[p2]
+            <= m.plot_y[p1] 
         ]
     m.length_cons = Constraint(expr=m.Length <= m.overall_length_ub)
     m.width_cons = Constraint(expr=m.Width <= m.overall_width_ub)
 
-    # what do these do exactly? Shouldn't this be dividing by width_lbs ??
-    @m.Constraint(m.plots, doc="Length bounds?")
+    # This imposes a square-ness constraint. I'm not sure the justification for these 
+    # upper bounds in particular
+    @m.Constraint(m.plots, doc="Length bounds")
     def length_bounds(m, p):
         return (m.length_lbs[p], m.plot_length[p], m.plot_area[p] / m.length_lbs[p])
-    @m.Constraint(m.plots, doc="Width bounds?")
+    @m.Constraint(m.plots, doc="Width bounds")
     def width_bounds(m, p):
         return (m.width_lbs[p], m.plot_width[p],  m.plot_area[p] / m.width_lbs[p])
 
     # ensure compatibility between coordinates, l/w lower bounds, and overall upper bounds.
-    # But I think this is also wrong. Shouldn't it use L_i^L / 2 ?
     @m.Constraint(m.plots, doc="x-coordinate compatibility")
     def x_compat(m, p):
         return m.plot_x[p] <= m.overall_length_ub - m.length_lbs[p]
@@ -102,7 +137,7 @@ def build_model(areas, length_lbs, width_lbs, length_upper_overall, width_upper_
 
 
 def draw_model(m, title=None):
-    """Draw a model using matplotlib to illustrate what's going on. Pass 'title' kwarg to give chart a title"""
+    """Draw a model using matplotlib to illustrate what's going on. Pass 'title' arg to give chart a title"""
 
     # matplotlib setup
     import matplotlib as mpl
@@ -131,13 +166,14 @@ def draw_model(m, title=None):
         )
     )
 
+    # Now draw the plots
     for p in m.plots:
         print(f"drawing plot {p}: x={m.plot_x[p]()}, y={m.plot_y[p]()}, length={m.plot_length[p]()}, width={m.plot_width[p]()}")
         ax.add_patch(
             mpl.patches.Rectangle(
             (
-                m.plot_x[p]() - m.plot_length[p]() / 2,
-                m.plot_y[p]() - m.plot_width[p]() / 2,
+                m.plot_x[p](),
+                m.plot_y[p]()
             ),
             m.plot_length[p](),
             m.plot_width[p](),
@@ -146,8 +182,8 @@ def draw_model(m, title=None):
             )
         )
         ax.text(
-            m.plot_x[p](),
-            m.plot_y[p](),
+            m.plot_x[p]() + m.plot_length[p]() / 2,
+            m.plot_y[p]() + m.plot_width[p]() / 2,
             f"Plot {p}",
             horizontalalignment="center",
             verticalalignment="center",
@@ -159,16 +195,21 @@ if __name__ == "__main__":
     from pyomo.environ import SolverFactory
     from pyomo.core.base import TransformationFactory
 
-    # Set up a solver, for example scip and bigm works
+    # Set up a solver, for example scip and hull works.
+    # Note that these constraints are not linear or quadratic.
     solver = SolverFactory("scip")
-    transformer = TransformationFactory("gdp.bigm")
+    transformer = TransformationFactory("gdp.hull")
 
-    print("building model")
-    model = build_model(*farm_layout_model_examples["Flay02"])
-    print("applying transformer")
-    transformer.apply_to(model)
-    print("solving example problem")
-    solver.solve(model)
-    print(f"Found objective function value: {model.perim()}")
-    draw_model(model)
-    print()
+    # Try all the instances except FLay05 and FLay06, since they take a while.
+    for key in farm_layout_model_examples.keys():
+        if key not in ["FLay06", "FLay05"]:
+            print(f"solving example problem: {key}")
+            print("building model")
+            model = build_model(farm_layout_model_examples[key])
+            print("applying transformer")
+            transformer.apply_to(model)
+            print("solving model")
+            solver.solve(model)
+            print(f"Found objective function value: {model.perim()}")
+            draw_model(model, title=key)
+            print()
