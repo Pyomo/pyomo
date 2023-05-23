@@ -900,7 +900,10 @@ class _MindtPyAlgorithm(object):
             )
             # Add OA cut
             if add_oa_cuts:
-                if self.config.nlp_solver == 'cyipopt' and self.objective_sense == minimize:
+                if (
+                    self.config.nlp_solver == 'cyipopt'
+                    and self.objective_sense == minimize
+                ):
                     dual_values = (
                         list(-1 * m.dual[c] for c in MindtPy.constraint_list)
                         if config.calculate_dual_at_solution
@@ -1201,8 +1204,11 @@ class _MindtPyAlgorithm(object):
             for c in fixed_nlp.tmp_duals:
                 if fixed_nlp.dual.get(c, None) is None:
                     fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
-                elif self.config.nlp_solver == 'cyipopt' and self.objective_sense == minimize:
-                    fixed_nlp.dual[c] = - fixed_nlp.dual[c]
+                elif (
+                    self.config.nlp_solver == 'cyipopt'
+                    and self.objective_sense == minimize
+                ):
+                    fixed_nlp.dual[c] = -fixed_nlp.dual[c]
             dual_values = list(
                 fixed_nlp.dual[c] for c in fixed_nlp.MindtPy_utils.constraint_list
             )
