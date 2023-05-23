@@ -163,8 +163,7 @@ def make_separation_problem(model_data, config):
                 else:
                     constraints.add(
                         replace_expressions(
-                            expr=c.lower,
-                            substitution_map=substitution_map,
+                            expr=c.lower, substitution_map=substitution_map
                         )
                         == replace_expressions(
                             expr=c.body, substitution_map=substitution_map

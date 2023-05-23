@@ -4707,17 +4707,15 @@ class RegressionTest(unittest.TestCase):
         m.x1 = Var(bounds=[-1000, 1000])
         m.x2 = Var(bounds=[-1000, 1000])
         m.x3 = Var(bounds=[-1000, 1000])
-        m.con = Constraint(
-            expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u ** 2 <= 0,
-        )
+        m.con = Constraint(expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u**2 <= 0)
         m.eq_con = Constraint(
             expr=(
-                m.u ** 2 * (m.x2 - 1)
-                + m.u * (m.x1 ** 3 + 0.5)
+                m.u**2 * (m.x2 - 1)
+                + m.u * (m.x1**3 + 0.5)
                 - 5 * m.u * m.x1 * m.x2
                 + m.u * (m.x1 + 2)
                 == 0
-            ),
+            )
         )
         m.obj = Objective(expr=m.x1 + m.x2 / 2 + m.x3 / 3)
 
@@ -4725,7 +4723,7 @@ class RegressionTest(unittest.TestCase):
 
     @unittest.skipUnless(
         baron_license_is_valid and scip_available and scip_license_is_valid,
-        "Global solvers BARON and SCIP not both available and licensed"
+        "Global solvers BARON and SCIP not both available and licensed",
     )
     def test_coeff_matching_solver_insensitive(self):
         """
@@ -4777,7 +4775,7 @@ class RegressionTest(unittest.TestCase):
 
     @unittest.skipUnless(
         baron_license_is_valid and baron_version >= (23, 2, 27),
-        "BARON licensing and version requirements not met"
+        "BARON licensing and version requirements not met",
     )
     def test_coefficient_matching_partitioning_insensitive(self):
         """
