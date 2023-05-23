@@ -884,7 +884,7 @@ class TestLinear(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
 
-        e = (2 + 3*m.x + 4*m.x**2) * (5 + 6*m.x + 7*m.x**2)
+        e = (2 + 3 * m.x + 4 * m.x**2) * (5 + 6 * m.x + 7 * m.x**2)
 
         cfg = VisitorConfig()
         visitor = LinearRepnVisitor(*cfg)
@@ -894,7 +894,11 @@ class TestLinear(unittest.TestCase):
         LME1 = LinearExpression([MonomialTermExpression((1, m.x))])
         LME3 = LinearExpression([MonomialTermExpression((3, m.x))])
         LME6 = LinearExpression([MonomialTermExpression((6, m.x))])
-        NL = 2*(7*(LME1)**2) + 4*(LME1)**2*(6*m.x + 5 + 7*(LME1)**2) + (LME3)*(LME6 + 7*(LME1)**2)
+        NL = (
+            2 * (7 * (LME1) ** 2)
+            + 4 * (LME1) ** 2 * (6 * m.x + 5 + 7 * (LME1) ** 2)
+            + (LME3) * (LME6 + 7 * (LME1) ** 2)
+        )
 
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
