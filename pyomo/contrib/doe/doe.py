@@ -560,6 +560,10 @@ class DesignOfExperiments:
     def _create_block(self):
         """
         Create a pyomo Concrete model and add blocks with different parameter perturbation scenarios.
+        
+        Returns
+        -------
+        mod: Concrete Pyomo model
         """
 
         # create scenario information for block scenarios
@@ -863,13 +867,13 @@ class DesignOfExperiments:
 
         Return
         -------
-        m: the DOE model
+        model: the DOE model
         """
-        mod = self._create_block()
+        model = self._create_block()
 
         # variables for jacobian and FIM
-        mod.regression_parameters = pyo.Set(initialize=list(self.param.keys()))
-        mod.measured_variables = pyo.Set(initialize=self.measure_name)
+        model.regression_parameters = pyo.Set(initialize=list(self.param.keys()))
+        model.measured_variables = pyo.Set(initialize=self.measure_name)
 
         def identity_matrix(m, i, j):
             if i == j:
@@ -877,29 +881,29 @@ class DesignOfExperiments:
             else:
                 return 0
 
-        mod.sensitivity_jacobian = pyo.Var(
-            mod.regression_parameters, mod.measured_variables, initialize=0.1
+        model.sensitivity_jacobian = pyo.Var(
+            model.regression_parameters, model.measured_variables, initialize=0.1
         )
 
         if self.fim_initial:
             dict_fim_initialize = {}
-            for i, bu in enumerate(mod.regression_parameters):
-                for j, un in enumerate(mod.regression_parameters):
+            for i, bu in enumerate(model.regression_parameters):
+                for j, un in enumerate(model.regression_parameters):
                     dict_fim_initialize[(bu, un)] = self.fim_initial[i][j]
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
 
         if self.fim_initial:
-            mod.fim = pyo.Var(
-                mod.regression_parameters,
-                mod.regression_parameters,
+            model.fim = pyo.Var(
+                model.regression_parameters,
+                model.regression_parameters,
                 initialize=initialize_fim,
             )
         else:
-            mod.fim = pyo.Var(
-                mod.regression_parameters,
-                mod.regression_parameters,
+            model.fim = pyo.Var(
+                model.regression_parameters,
+                model.regression_parameters,
                 initialize=identity_matrix,
             )
 
@@ -919,29 +923,29 @@ class DesignOfExperiments:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if type(self.L_initial) != type(None):
-                mod.L_ele = pyo.Var(
-                    mod.regression_parameters,
-                    mod.regression_parameters,
+                model.L_ele = pyo.Var(
+                    model.regression_parameters,
+                    model.regression_parameters,
                     initialize=init_cho,
                 )
             # or initialize with the identity matrix
             else:
-                mod.L_ele = pyo.Var(
-                    mod.regression_parameters,
-                    mod.regression_parameters,
+                model.L_ele = pyo.Var(
+                    model.regression_parameters,
+                    model.regression_parameters,
                     initialize=identity_matrix,
                 )
 
             # loop over parameter name
-            for i, c in enumerate(mod.regression_parameters):
-                for j, d in enumerate(mod.regression_parameters):
+            for i, c in enumerate(model.regression_parameters):
+                for j, d in enumerate(model.regression_parameters):
                     # fix the 0 half of L matrix to be 0.0
                     if i < j:
-                        mod.L_ele[c, d].fix(0.0)
+                        model.L_ele[c, d].fix(0.0)
                     # Give LB to the diagonal entries
                     if self.L_LB:
                         if c == d:
-                            mod.L_ele[c, d].setlb(self.L_LB)
+                            model.L_ele[c, d].setlb(self.L_LB)
 
         # jacobian rule
         def jacobian_rule(m, p, n):
@@ -969,15 +973,15 @@ class DesignOfExperiments:
         # A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
         fim_initial_dict = {}
-        for i, bu in enumerate(mod.regression_parameters):
-            for j, un in enumerate(mod.regression_parameters):
+        for i, bu in enumerate(model.regression_parameters):
+            for j, un in enumerate(model.regression_parameters):
                 fim_initial_dict[(bu, un)] = self.prior_FIM[i][j]
 
         def read_prior(m, i, j):
             return fim_initial_dict[(i, j)]
 
-        mod.priorFIM = pyo.Expression(
-            mod.regression_parameters, mod.regression_parameters, rule=read_prior
+        model.priorFIM = pyo.Expression(
+            model.regression_parameters, model.regression_parameters, rule=read_prior
         )
 
         def fim_rule(m, p, q):
@@ -992,19 +996,19 @@ class DesignOfExperiments:
                     / self.measurement_vars.variance[n]
                     * m.sensitivity_jacobian[p, n]
                     * m.sensitivity_jacobian[q, n]
-                    for n in mod.measured_variables
+                    for n in model.measured_variables
                 )
                 + m.priorFIM[p, q] * self.fim_scale_constant_value
             )
 
-        mod.jacobian_constraint = pyo.Constraint(
-            mod.regression_parameters, mod.measured_variables, rule=jacobian_rule
+        model.jacobian_constraint = pyo.Constraint(
+            model.regression_parameters, model.measured_variables, rule=jacobian_rule
         )
-        mod.fim_constraint = pyo.Constraint(
-            mod.regression_parameters, mod.regression_parameters, rule=fim_rule
+        model.fim_constraint = pyo.Constraint(
+            model.regression_parameters, model.regression_parameters, rule=fim_rule
         )
 
-        return mod
+        return model
 
     def _add_objective(self, m):
         def cholesky_imp(m, c, d):
