@@ -38,6 +38,38 @@ class TestQuadratic(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
 
+        e = 2
+
+        cfg = VisitorConfig()
+        visitor = QuadraticRepnVisitor(*cfg)
+        visitor.expand_nonlinear_products = True
+        repn = visitor.walk_expression(e)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.quadratic, None)
+        self.assertEqual(repn.nonlinear, None)
+
+        e = 2 + 3 * m.x
+
+        cfg = VisitorConfig()
+        visitor = QuadraticRepnVisitor(*cfg)
+        visitor.expand_nonlinear_products = True
+        repn = visitor.walk_expression(e)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(repn.linear, {id(m.x): 3})
+        self.assertEqual(repn.quadratic, None)
+        self.assertEqual(repn.nonlinear, None)
+
         e = 2 + 3 * m.x + 4 * m.x**2
 
         cfg = VisitorConfig()
@@ -49,9 +81,9 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 2)
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x): 3})
-        self.assertStructuredAlmostEqual(repn.quadratic, {(id(m.x), id(m.x)): 4})
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(repn.linear, {id(m.x): 3})
+        self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 4})
         self.assertEqual(repn.nonlinear, None)
 
         e = (2 + 3 * m.x + 4 * m.x**2) * (5 + 6 * m.x + 7 * m.x**2)
@@ -71,7 +103,7 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 10)
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x): 27})
-        self.assertStructuredAlmostEqual(repn.quadratic, {(id(m.x), id(m.x)): 52})
+        self.assertEqual(repn.constant, 10)
+        self.assertEqual(repn.linear, {id(m.x): 27})
+        self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 52})
         assertExpressionsEqual(self, repn.nonlinear, NL)
