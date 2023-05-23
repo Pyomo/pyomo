@@ -950,6 +950,7 @@ class DesignOfExperiments:
         # jacobian rule
         def jacobian_rule(m, p, n):
             """
+            m: Pyomo model
             p: parameter
             n: response
             """
@@ -986,6 +987,7 @@ class DesignOfExperiments:
 
         def fim_rule(m, p, q):
             """
+            m: Pyomo model
             p: parameter
             q: parameter
             """
