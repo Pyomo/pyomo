@@ -181,7 +181,7 @@ class ToGamsVisitor(EXPR._ToStringVisitor):
         values = [
             self._monomial_to_string(arg)
             if arg.__class__ is EXPR.MonomialTermExpression
-            else ftoa(arg)
+            else ftoa(arg, True)
             for arg in node.args
         ]
         return node._to_string(values, False, self.smap)
@@ -623,20 +623,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write(
                     '%s.. %s =e= %s ;\n'
-                    % (constraint_names[-1], con_body_str, ftoa(con.upper))
+                    % (constraint_names[-1], con_body_str, ftoa(con.upper, False))
                 )
             else:
                 if con.has_lb():
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write(
                         '%s.. %s =l= %s ;\n'
-                        % (constraint_names[-1], ftoa(con.lower), con_body_str)
+                        % (constraint_names[-1], ftoa(con.lower, False), con_body_str)
                     )
                 if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write(
                         '%s.. %s =l= %s ;\n'
-                        % (constraint_names[-1], con_body_str, ftoa(con.upper))
+                        % (constraint_names[-1], con_body_str, ftoa(con.upper, False))
                     )
 
         obj = list(model.component_data_objects(Objective, active=True, sort=sort))

@@ -13,7 +13,7 @@ import itertools
 import logging
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.core import (
@@ -38,7 +38,7 @@ from pyomo.core import (
     value,
     Var,
 )
-from pyomo.core.base import Reference, Transformation, TransformationFactory
+from pyomo.core.base import Reference, TransformationFactory
 import pyomo.core.expr.current as EXPR
 from pyomo.core.util import target_list
 
@@ -76,7 +76,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         Chemical Engineering, vol. 76, 2015, pp. 98-103.
     """
 
-    CONFIG = ConfigBlock('gdp.mbigm')
+    CONFIG = ConfigDict('gdp.mbigm')
     CONFIG.declare(
         'targets',
         ConfigValue(
@@ -84,7 +84,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             domain=target_list,
             description="target or list of targets that will be relaxed",
             doc="""
-
         This specifies the list of components to relax. If None (default), the
         entire model is transformed. Note that if the transformation is done out
         of place, the list of targets should be attached to the model before it

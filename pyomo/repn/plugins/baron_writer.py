@@ -61,7 +61,7 @@ def _handle_PowExpression(visitor, node, values):
         if type(arg) in native_types:
             pass
         elif arg.is_fixed():
-            values[i] = ftoa(value(arg))
+            values[i] = ftoa(value(arg), True)
         else:
             unfixed_count += 1
 
