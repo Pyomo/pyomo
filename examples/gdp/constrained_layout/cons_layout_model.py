@@ -18,7 +18,7 @@ from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var
 # sep_penalty_matrix (as nested array)
 # Note that only the strict upper triangle of sep_penalty_matrix is used
 constrained_layout_model_examples = {
-    "Clay0203": [
+    "CLay0203": [
         {1: 5, 2: 7, 3: 3},
         {1: 6, 2: 5, 3: 3},
         {1: 15, 2: 50},
@@ -26,7 +26,7 @@ constrained_layout_model_examples = {
         {1: 6, 2: 5},
         [[0, 300, 240], [0, 0, 100]],
     ],
-    "Clay0204": [
+    "CLay0204": [
         {1: 5, 2: 7, 3: 3, 4: 2},
         {1: 6, 2: 5, 3: 3, 4: 3},
         {1: 15, 2: 50},
@@ -34,7 +34,7 @@ constrained_layout_model_examples = {
         {1: 6, 2: 10},
         [[0, 300, 240, 210], [0, 0, 100, 150], [0, 0, 0, 120]],
     ],
-    "Clay0205": [
+    "CLay0205": [
         {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
         {1: 6, 2: 5, 3: 3, 4: 3, 5: 7},
         {1: 15, 2: 50},
@@ -47,7 +47,7 @@ constrained_layout_model_examples = {
             [0, 0, 0, 0, 60],
         ],
     ],
-    "Clay0303": [
+    "CLay0303": [
         {1: 5, 2: 7, 3: 3},
         {1: 6, 2: 5, 3: 3},
         {1: 15, 2: 50, 3: 30},
@@ -55,7 +55,7 @@ constrained_layout_model_examples = {
         {1: 6, 2: 5, 3: 4},
         [[0, 300, 240], [0, 0, 100]],
     ],
-    "Clay0304": [
+    "CLay0304": [
         {1: 5, 2: 7, 3: 3, 4: 2},
         {1: 6, 2: 5, 3: 3, 4: 3},
         {1: 15, 2: 50, 3: 30},
@@ -63,7 +63,7 @@ constrained_layout_model_examples = {
         {1: 6, 2: 5, 3: 4},
         [[0, 300, 240, 210], [0, 0, 100, 150], [0, 0, 0, 120]],
     ],
-    "Clay0305": [
+    "CLay0305": [
         {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
         {1: 6, 2: 5, 3: 3, 4: 3, 5: 7},
         {1: 15, 2: 50, 3: 30},
@@ -80,7 +80,7 @@ constrained_layout_model_examples = {
 
 
 def build_constrained_layout_model(
-    params=constrained_layout_model_examples['Clay0203'], metric="l1"
+    params=constrained_layout_model_examples['CLay0203'], metric="l1"
 ):
     """Build the model."""
 
@@ -310,7 +310,7 @@ def draw_model(m, title=None):
                 ),
                 m.rect_length[r],
                 m.rect_height[r],
-                facecolor="#ebdc78",
+                facecolor="#fbec68",
                 edgecolor="#000000",
             )
         )
