@@ -105,16 +105,26 @@ class LinearRepn(object):
 
     def to_expression(self, visitor):
         if self.linear:
-            ans = (
-                LinearExpression(
-                    [
-                        MonomialTermExpression((coef, visitor.var_map[vid]))
-                        for vid, coef in self.linear.items()
-                        if coef
-                    ]
+            var_map = visitor.var_map
+            if len(self.linear) == 1:
+                vid, coef = next(iter(self.linear.items()))
+                if coef == 1:
+                    ans = var_map[vid]
+                elif coef:
+                    ans = MonomialTermExpression((coef, var_map[vid]))
+                else:
+                    ans = 0
+            else:
+                ans = (
+                    LinearExpression(
+                        [
+                            MonomialTermExpression((coef, var_map[vid]))
+                            for vid, coef in self.linear.items()
+                            if coef
+                        ]
+                    )
                 )
-                + self.constant
-            )
+            ans += self.constant
         else:
             ans = self.constant
         if self.nonlinear is not None:

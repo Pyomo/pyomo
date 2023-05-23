@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import math
-
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 
@@ -697,7 +695,7 @@ class TestLinear(unittest.TestCase):
         assertExpressionsEqual(
             self,
             repn.nonlinear,
-            cos(LinearExpression([MonomialTermExpression((1, m.x))])),
+            cos(m.x),
         )
 
         m.x.fix(0)
@@ -797,8 +795,6 @@ class TestLinear(unittest.TestCase):
         m.x = Var()
         m.p = Param(mutable=True, initialize=1)
 
-        LME = LinearExpression([MonomialTermExpression((1, m.x))])
-
         e = m.x**m.p
 
         cfg = VisitorConfig()
@@ -821,7 +817,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, 0)
         self.assertStructuredAlmostEqual(repn.linear, {})
-        assertExpressionsEqual(self, repn.nonlinear, LME**2)
+        assertExpressionsEqual(self, repn.nonlinear, m.x**2)
 
         m.x.fix(2)
 
@@ -851,8 +847,6 @@ class TestLinear(unittest.TestCase):
         m.x.unfix()
         e = (1 + m.x) ** 2
 
-        LME1 = LinearExpression([MonomialTermExpression((1, m.x)), 1])
-
         cfg = VisitorConfig()
         visitor = LinearRepnVisitor(*cfg)
         visitor.max_exponential_expansion = 2
@@ -864,7 +858,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, 0)
         self.assertStructuredAlmostEqual(repn.linear, {})
-        assertExpressionsEqual(self, repn.nonlinear, LME1 * LME1)
+        assertExpressionsEqual(self, repn.nonlinear, (m.x + 1)*(m.x + 1))
 
         cfg = VisitorConfig()
         visitor = LinearRepnVisitor(*cfg)
@@ -878,7 +872,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, 1)
         self.assertStructuredAlmostEqual(repn.linear, {id(m.x): 2})
-        assertExpressionsEqual(self, repn.nonlinear, LME * LME)
+        assertExpressionsEqual(self, repn.nonlinear, m.x*m.x)
 
     def test_product(self):
         m = ConcreteModel()
@@ -891,13 +885,12 @@ class TestLinear(unittest.TestCase):
         visitor.expand_nonlinear_products = True
         repn = visitor.walk_expression(e)
 
-        LME1 = LinearExpression([MonomialTermExpression((1, m.x))])
-        LME3 = LinearExpression([MonomialTermExpression((3, m.x))])
-        LME6 = LinearExpression([MonomialTermExpression((6, m.x))])
+        LE3 = MonomialTermExpression((3, m.x))
+        LE6 = MonomialTermExpression((6, m.x))
         NL = (
-            2 * (7 * (LME1) ** 2)
-            + 4 * (LME1) ** 2 * (6 * m.x + 5 + 7 * (LME1) ** 2)
-            + (LME3) * (LME6 + 7 * (LME1) ** 2)
+            2 * (7 * m.x ** 2)
+            + 4 * m.x ** 2 * (6 * m.x + 5 + 7 * m.x ** 2)
+            + (LE3) * (LE6 + 7 * m.x ** 2)
         )
 
         self.assertEqual(cfg.subexpr, {})
