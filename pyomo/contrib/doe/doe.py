@@ -770,7 +770,6 @@ class DesignOfExperiments:
             design_iter = self.design_vars.variable_names_value.copy()
             # update the controlled value of certain time points for certain design variables
             for i, names in enumerate(design_dimension_names):
-                # names = design_dimension_names[i]
                 # if the element is a list, all design variables in this list share the same values
                 if type(names) is list or type(names) is tuple:
                     for n in names:
