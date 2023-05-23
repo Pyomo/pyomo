@@ -310,6 +310,6 @@ Report a Bug
 If you find a bug in MindtPy, we will be grateful if you could
 
 - submit an `issue`_ in Pyomo repository  
-- directly contact David Bernal <bernalde@cmu.edu> and Zedong Peng <peng_zedong@126.com>.
+- directly contact David Bernal <dbernaln@purdue.edu> and Zedong Peng <zdpeng95@gmail.com>.
 
 .. _issue: https://github.com/Pyomo/pyomo/issues

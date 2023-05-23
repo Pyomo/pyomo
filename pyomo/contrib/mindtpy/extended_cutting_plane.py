@@ -43,8 +43,8 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
     This solver implementation has been developed by David Bernal <https://github.com/bernalde>
     and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann
-    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at
-    Carnegie Mellon University.
+    Research Group (http://egon.cheme.cmu.edu/) and the Benal Research Group (https://bernalde.github.io/)
+    at Carnegie Mellon University and Purdue University.
     """
 
     CONFIG = _get_MindtPy_ECP_config()
