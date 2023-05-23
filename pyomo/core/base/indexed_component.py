@@ -423,7 +423,7 @@ class IndexedComponent(Component):
         Parameters
         ----------
         sort: bool or SortComponents
-            Iterate over declared the component keys in a specified
+            Iterate over the declared component keys in a specified
             sorted order.  See :py:class:`SortComponents` for valid
             options and descriptions.
 
@@ -516,7 +516,7 @@ You can silence this warning by one of three ways:
         Parameters
         ----------
         sort: bool or SortComponents
-            Iterate over declared the component values in a specified
+            Iterate over the declared component values in a specified
             sorted order.  See :py:class:`SortComponents` for valid
             options and descriptions.
 
@@ -551,7 +551,7 @@ You can silence this warning by one of three ways:
         Parameters
         ----------
         sort: bool or SortComponents
-            Iterate over declared the component items in a specified
+            Iterate over the declared component items in a specified
             sorted order.  See :py:class:`SortComponents` for valid
             options and descriptions.
 
