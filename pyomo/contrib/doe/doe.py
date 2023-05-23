@@ -910,8 +910,8 @@ class DesignOfExperiments:
         # move the L matrix initial point to a dictionary
         if type(self.L_initial) != type(None):
             dict_cho = {}
-            for i, bu in enumerate(mod.regression_parameters):
-                for j, un in enumerate(mod.regression_parameters):
+            for i, bu in enumerate(model.regression_parameters):
+                for j, un in enumerate(model.regression_parameters):
                     dict_cho[(bu, un)] = self.L_initial[i][j]
 
         # use the L dictionary to initialize L matrix
