@@ -14,6 +14,7 @@ import sys
 from operator import itemgetter
 from itertools import filterfalse
 
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.current import (
     NegationExpression,
     ProductExpression,
@@ -25,6 +26,7 @@ from pyomo.core.expr.current import (
     MonomialTermExpression,
     LinearExpression,
     SumExpression,
+    NPV_SumExpression,
     ExternalFunctionExpression,
     native_types,
     native_numeric_types,
@@ -48,6 +50,8 @@ nan = float("nan")
 _CONSTANT = ExprType.CONSTANT
 _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
+
+_SumLikeExpression = {SumExpression, LinearExpression, NPV_SumExpression}
 
 
 def _merge_dict(dest_dict, mult, src_dict):
@@ -140,7 +144,8 @@ class LinearRepn(object):
             return
 
         mult = other.multiplier
-        self.constant += mult * other.constant
+        if other.constant:
+            self.constant += mult * other.constant
         if other.linear:
             _merge_dict(self.linear, mult, other.linear)
         if other.nonlinear is not None:
@@ -191,24 +196,27 @@ _exit_node_handlers[NegationExpression] = {
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
     _, arg1 = arg1
     _, arg2 = arg2
+    ans = arg1 * arg2
+    if ans != ans:
+        if not arg1 or not arg2:
+            deprecation_warning(
+                f"Encountered {str(arg1)}*{str(arg2)} in expression tree.  "
+                "Mapping the NaN result to 0 for compatibility "
+                "with the lp_v1 writer.  In the future, this NaN "
+                "will be preserved/emitted to comply with IEEE-754.",
+                version='6.5.1.dev0',
+            )
+            return _, 0
     return _, arg1 * arg2
 
 
 def _handle_product_constant_ANY(visitor, node, arg1, arg2):
-    _, arg1 = arg1
-    if not arg1 or arg1 != arg1:
-        # This catches both 0*arg2 and nan*arg2
-        return _CONSTANT, arg1
-    arg2[1].multiplier *= arg1
+    arg2[1].multiplier *= arg1[1]
     return arg2
 
 
 def _handle_product_ANY_constant(visitor, node, arg1, arg2):
-    _, arg2 = arg2
-    if not arg2 or arg2 != arg2:
-        # This catches both arg1*0 and arg1*nan
-        return _CONSTANT, arg2
-    arg1[1].multiplier *= arg2
+    arg1[1].multiplier *= arg2[1]
     return arg1
 
 
@@ -216,7 +224,7 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     ans = visitor.Result()
     if not visitor.expand_nonlinear_products:
         ans.nonlinear = to_expression(visitor, arg1) * to_expression(visitor, arg2)
-        return ans
+        return _GENERAL, ans
 
     # We are multiplying (A + Bx + C(x)) * (A + Bx + C(x))
     _, x1 = arg1
@@ -229,24 +237,24 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     if x2.constant:
         c = x2.constant
         if c == 1:
-            ans.linear = x1.linear
+            ans.linear = dict(x1.linear)
         else:
             ans.linear = {vid: c * coef for vid, coef in x1.linear.items()}
     if x1.constant:
         _merge_dict(ans.linear, x1.constant, x2.linear)
     ans.nonlinear = 0
+    if x1.constant and x2.nonlinear is not None:
+        # [AC]
+        ans.nonlinear += x1.constant * x2.nonlinear
     if x1.nonlinear is not None:
         # [CA] + [CB] + [CC]
         ans.nonlinear += x1.nonlinear * to_expression(visitor, arg2)
-    # [BB] + [BC]
     if x1.linear:
+        # [BB] + [BC]
         x1.constant = 0
         x1.nonlinear = None
         x2.constant = 0
         ans.nonlinear += to_expression(visitor, arg1) * to_expression(visitor, arg2)
-    # [AC]
-    if x1.constant and x2.nonlinear is not None:
-        ans.nonlinear += x1.constant * x2.nonlinear
     return _GENERAL, ans
 
 
@@ -269,17 +277,11 @@ _exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpress
 
 
 def _handle_division_constant_constant(visitor, node, arg1, arg2):
-    _, arg1 = arg1
-    _, arg2 = arg2
-    return _, arg1 / arg2
+    return _CONSTANT, apply_node_operation(node, (arg1[1], arg2[1]))
 
 
 def _handle_division_ANY_constant(visitor, node, arg1, arg2):
-    _, arg2 = arg2
-    if arg2 != arg2:
-        # This catches arg1/nan
-        return _CONSTANT, arg2
-    arg1[1].multiplier /= arg2
+    arg1[1].multiplier /= arg2[1]
     return arg1
 
 
@@ -310,17 +312,18 @@ def _handle_pow_constant_constant(visitor, node, *args):
     arg1, arg2 = args
     ans = apply_node_operation(node, (arg1[1], arg2[1]))
     if ans.__class__ in _complex_types:
-        ans = complex_number_error(ans, self, node)
+        ans = complex_number_error(ans, visitor, node)
     return _CONSTANT, ans
 
 
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
-    if arg2[1] == 1:
+    _, exp = arg2
+    if exp == 1:
         return arg1
-    elif arg2[1] <= visitor.max_exponential_expansion:
+    elif exp > 0 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
         _type, _arg = arg1
         ans = _type, _arg.duplicate()
-        for i in range(1, arg2[1]):
+        for i in range(1, exp):
             ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
                 visitor, None, ans, (_type, _arg.duplicate())
             )
@@ -356,7 +359,7 @@ def _handle_unary_constant(visitor, node, arg):
     ans = apply_node_operation(node, (arg[1],))
     # Unary includes sqrt() which can return complex numbers
     if ans.__class__ in _complex_types:
-        ans = complex_number_error(ans, self, node)
+        ans = complex_number_error(ans, visitor, node)
     return _CONSTANT, ans
 
 
@@ -462,10 +465,10 @@ def _before_var(visitor, child):
     if _id not in visitor.var_map:
         if child.fixed:
             ans = child()
-            if ans.__class__ in _complex_types:
-                ans = complex_number_error(ans, self, child)
             if ans is None or ans != ans:
                 ans = InvalidNumber(nan)
+            elif ans.__class__ in _complex_types:
+                ans = complex_number_error(ans, visitor, child)
             return False, (_CONSTANT, ans)
         visitor.var_map[_id] = child
         visitor.var_order[_id] = len(visitor.var_order)
@@ -476,10 +479,10 @@ def _before_var(visitor, child):
 
 def _before_param(visitor, child):
     ans = child()
-    if ans.__class__ in _complex_types:
-        ans = complex_number_error(ans, self, child)
     if ans is None or ans != ans:
         ans = InvalidNumber(nan)
+    elif ans.__class__ in _complex_types:
+        ans = complex_number_error(ans, visitor, child)
     return False, (_CONSTANT, ans)
 
 
@@ -528,7 +531,15 @@ def _before_monomial(visitor, child):
             return True, None
 
     # Trap multiplication by 0 and nan.
-    if not arg1 or arg1 != arg1:
+    if not arg1:
+        if arg2.fixed and arg2.value != arg2.value:
+            deprecation_warning(
+                f"Encountered {arg1}*{str(arg2.value)} in expression tree.  "
+                "Mapping the NaN result to 0 for compatibility "
+                "with the lp_v1 writer.  In the future, this NaN "
+                "will be preserved/emitted to comply with IEEE-754.",
+                version='6.5.1.dev0',
+            )
         return False, (_CONSTANT, arg1)
 
     _id = id(arg2)
@@ -562,10 +573,14 @@ def _before_linear(visitor, child):
                     # to map to 0)
                     return True, None
             if not arg1:
-                continue
-            elif arg1 != arg1:
-                # arg1 == NaN
-                const += arg1
+                if arg2.fixed and arg2.value != arg2.value:
+                    deprecation_warning(
+                        f"Encountered {arg1}*{str(arg2.value)} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the lp_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='6.5.1.dev0',
+                    )
                 continue
             _id = id(arg2)
             if _id not in var_map:
@@ -754,6 +769,8 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
         if ans.__class__ not in native_types:
             ans = value(ans)
+        if ans != ans:
+            return InvalidNumber(ans)
         if ans.__class__ in _complex_types:
             return complex_number_error(ans, self, expr)
         return ans
@@ -770,7 +787,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        if node.__class__ is SumExpression:
+        if node.__class__ in _SumLikeExpression:
             return node.args, self.Result()
         else:
             return node.args, []
@@ -793,6 +810,18 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                 zeros = list(filterfalse(itemgetter(1), ans.linear.items()))
                 for vid, coef in zeros:
                     del ans.linear[vid]
+            elif not mult:
+                if ans.constant != ans.constant or any(
+                    c != c for c in ans.linear.values()
+                ):
+                    deprecation_warning(
+                        f"Encountered {str(arg1)}*{str(arg2)} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the lp_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='6.5.1.dev0',
+                    )
+                return self.Result()
             else:
                 linear = ans.linear
                 zeros = []
@@ -805,6 +834,9 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                     del linear[vid]
                 if ans.nonlinear is not None:
                     ans.nonlinear *= mult
+                if ans.constant:
+                    ans.constant *= mult
+                ans.multiplier = 1
             return ans
         ans = self.Result()
         assert result[0] is _CONSTANT

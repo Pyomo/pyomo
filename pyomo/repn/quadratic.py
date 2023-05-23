@@ -207,8 +207,8 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
         # [BA], [CA]
         c = x2.constant
         if c == 1:
-            ans.linear = x1.linear
-            ans.quadratic = x1.quadratic
+            ans.linear = dict(x1.linear)
+            ans.quadratic = dict(x1.quadratic)
         else:
             ans.linear = {vid: c * coef for vid, coef in x1.linear.items()}
             if x1.quadratic:
@@ -221,7 +221,7 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
             if ans.quadratic:
                 _merge_dict(ans.quadratic, x1.constant, x2.quadratic)
             elif x1.constant == 1:
-                ans.quadratic = x2.quadratic
+                ans.quadratic = dict(x2.quadratic)
             else:
                 c = x1.constant
                 ans.quadratic = {k: c * coef for k, coef in x2.quadratic.items()}
