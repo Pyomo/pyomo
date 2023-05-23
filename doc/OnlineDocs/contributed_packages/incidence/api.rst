@@ -4,6 +4,8 @@ API Reference
 =============
 
 .. toctree::
+   incidence.rst
+   config.rst
    interface.rst
    matching.rst
    connected.rst

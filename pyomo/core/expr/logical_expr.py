@@ -67,18 +67,16 @@ relocated_module_attribute(
 
 
 def _generate_logical_proposition(etype, lhs, rhs):
-    if lhs.__class__ in native_types and lhs.__class__ not in native_logical_types:
-        raise TypeError(
-            "Cannot create Logical expression with lhs of type '%s'" % lhs.__class__
-        )
     if (
-        rhs.__class__ in native_types
-        and rhs.__class__ not in native_logical_types
-        and rhs is not None
+        lhs.__class__ in native_types and lhs.__class__ not in native_logical_types
+    ) and not isinstance(lhs, BooleanValue):
+        return NotImplemented
+    if (
+        (rhs.__class__ in native_types and rhs.__class__ not in native_logical_types)
+        and not isinstance(rhs, BooleanValue)
+        and not (rhs is None and etype == _inv)
     ):
-        raise TypeError(
-            "Cannot create Logical expression with rhs of type '%s'" % rhs.__class__
-        )
+        return NotImplemented
 
     if etype == _equiv:
         return EquivalenceExpression((lhs, rhs))
@@ -310,7 +308,7 @@ class XorExpression(BinaryBooleanExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 5
+    PRECEDENCE = 4
 
     def getname(self, *arg, **kwd):
         return 'xor'
@@ -392,7 +390,7 @@ class AndExpression(NaryBooleanExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 4
+    PRECEDENCE = 3
 
     def getname(self, *arg, **kwd):
         return 'and'
@@ -419,7 +417,7 @@ class OrExpression(NaryBooleanExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 4
+    PRECEDENCE = 5
 
     def getname(self, *arg, **kwd):
         return 'or'
