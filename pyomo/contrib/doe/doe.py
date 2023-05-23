@@ -560,7 +560,7 @@ class DesignOfExperiments:
     def _create_block(self):
         """
         Create a pyomo Concrete model and add blocks with different parameter perturbation scenarios.
-        
+
         Returns
         -------
         mod: Concrete Pyomo model
