@@ -641,9 +641,9 @@ def _before_expr_if(visitor, child):
         except:
             return True, None
         subexpr = LinearRepnVisitor(
-            self.subexpression_cache, self.var_map, self.var_order
+            visitor.subexpression_cache, visitor.var_map, visitor.var_order
         ).walk_expression(t if test else f)
-        if subexpr.nonlinear:
+        if subexpr.nonlinear is not None:
             return False, (_GENERAL, subexpr)
         elif subexpr.linear:
             return False, (_LINEAR, subexpr)
