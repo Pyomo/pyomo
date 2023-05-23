@@ -16,7 +16,7 @@ import sys
 
 from pyomo.common.collections import Sequence, ComponentMap
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, InvalidValueError
 from pyomo.core.base import (
     Var,
     Param,
@@ -136,10 +136,10 @@ class InvalidNumber(object):
         return f'InvalidNumber({self.value})'
 
     def __repr__(self):
-        raise ValueError(f'Cannot emit {str(self)} in compiled representation')
+        raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
 
     def __format__(self, format_spec):
-        raise ValueError(f'Cannot emit {str(self)} in compiled representation')
+        raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
 
     def __neg__(self):
         return self.duplicate(-self.value)
@@ -223,7 +223,7 @@ def complex_number_error(value, visitor, expr, node=""):
         + f"\n\tmessage: {msg}\n\texpression: {expr}"
     )
     if HALT_ON_EVALUATION_ERROR:
-        raise ValueError(
+        raise InvalidValueError(
             f'Pyomo {visitor.__class__.__name__} does not support complex numbers'
         )
     return InvalidNumber(value)
