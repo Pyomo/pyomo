@@ -119,8 +119,6 @@ from pyomo.core.base.set import (
 )
 from pyomo.core.base.misc import display
 from pyomo.core.base.block import (
-    SortComponents,
-    TraversalStrategy,
     Block,
     ScalarBlock,
     active_components,
@@ -128,6 +126,7 @@ from pyomo.core.base.block import (
     active_components_data,
     components_data,
 )
+from pyomo.core.base.enums import SortComponents, TraversalStrategy
 from pyomo.core.base.PyomoModel import (
     global_option,
     ModelSolution,

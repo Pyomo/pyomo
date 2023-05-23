@@ -350,7 +350,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     # We do not need to override keys(), as the __len__ override will
     # cause the base class keys() to correctly correctly handle default
     # values
-    # def keys(self, ordered=False):
+    # def keys(self, sort=None):
 
     @property
     def mutable(self):
