@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from .measurements import Measurements
-from .doe import DesignOfExperiments
-from .scenario import Scenario_generator
+from .measurements import MeasurementVariables, DesignVariables, VariablesWithIndices
+from .doe import DesignOfExperiments, CalculationMode, ObjectiveLib, ModelOptionLib
+from .scenario import ScenarioGenerator, FiniteDifferenceStep
 from .result import FisherResults, GridSearchResult

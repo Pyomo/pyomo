@@ -31,6 +31,7 @@ from pyomo.environ import (
     NonNegativeIntegers,
 )
 from pyomo.common.collections import ComponentSet
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set import (
     SetProduct,
@@ -139,6 +140,7 @@ class TestReferenceDict(unittest.TestCase):
         m = self.m
         rd = _ReferenceDict(m.b[:, 4].x[8, :])
 
+        self.assertEqual(list(rd), [(1, 10), (1, 11), (2, 10), (2, 11)])
         self.assertEqual(list(rd.keys()), [(1, 10), (1, 11), (2, 10), (2, 11)])
         self.assertEqual(
             list(rd.values()),
@@ -156,6 +158,120 @@ class TestReferenceDict(unittest.TestCase):
                 ((1, 11), m.b[1, 4].x[8, 11]),
                 ((2, 10), m.b[2, 4].x[8, 10]),
                 ((2, 11), m.b[2, 4].x[8, 11]),
+            ],
+        )
+
+    def test_ordered_iterators(self):
+        # Test slice; common indexing set
+        m = ConcreteModel()
+        m.I = Set(initialize=[3, 2])
+        m.b = Block([1, 0])
+        m.b[1].x = Var(m.I)
+        m.b[0].x = Var(m.I)
+        m.y = Reference(m.b[:].x[:])
+        self.assertEqual(list(m.y.index_set().subsets()), [m.b.index_set(), m.I])
+        self.assertEqual(list(m.y), [(1, 3), (1, 2), (0, 3), (0, 2)])
+        self.assertEqual(list(m.y.keys()), [(1, 3), (1, 2), (0, 3), (0, 2)])
+        self.assertEqual(
+            list(m.y.values()), [m.b[1].x[3], m.b[1].x[2], m.b[0].x[3], m.b[0].x[2]]
+        )
+        self.assertEqual(
+            list(m.y.items()),
+            [
+                ((1, 3), m.b[1].x[3]),
+                ((1, 2), m.b[1].x[2]),
+                ((0, 3), m.b[0].x[3]),
+                ((0, 2), m.b[0].x[2]),
+            ],
+        )
+        self.assertEqual(list(m.y.keys(True)), [(0, 2), (0, 3), (1, 2), (1, 3)])
+        self.assertEqual(
+            list(m.y.values(True)), [m.b[0].x[2], m.b[0].x[3], m.b[1].x[2], m.b[1].x[3]]
+        )
+        self.assertEqual(
+            list(m.y.items(True)),
+            [
+                ((0, 2), m.b[0].x[2]),
+                ((0, 3), m.b[0].x[3]),
+                ((1, 2), m.b[1].x[2]),
+                ((1, 3), m.b[1].x[3]),
+            ],
+        )
+
+        # Test slice; ReferenceSet indexing set
+        m = ConcreteModel()
+        m.b = Block([1, 0])
+        m.b[1].x = Var([3, 2])
+        m.b[0].x = Var([5, 4])
+        m.y = Reference(m.b[:].x[:])
+        self.assertIs(type(m.y.index_set()), FiniteSetOf)
+        self.assertEqual(list(m.y), [(1, 3), (1, 2), (0, 5), (0, 4)])
+        self.assertEqual(list(m.y.keys()), [(1, 3), (1, 2), (0, 5), (0, 4)])
+        self.assertEqual(
+            list(m.y.values()), [m.b[1].x[3], m.b[1].x[2], m.b[0].x[5], m.b[0].x[4]]
+        )
+        self.assertEqual(
+            list(m.y.items()),
+            [
+                ((1, 3), m.b[1].x[3]),
+                ((1, 2), m.b[1].x[2]),
+                ((0, 5), m.b[0].x[5]),
+                ((0, 4), m.b[0].x[4]),
+            ],
+        )
+        self.assertEqual(list(m.y.keys(True)), [(0, 4), (0, 5), (1, 2), (1, 3)])
+        self.assertEqual(
+            list(m.y.values(True)), [m.b[0].x[4], m.b[0].x[5], m.b[1].x[2], m.b[1].x[3]]
+        )
+        self.assertEqual(
+            list(m.y.items(True)),
+            [
+                ((0, 4), m.b[0].x[4]),
+                ((0, 5), m.b[0].x[5]),
+                ((1, 2), m.b[1].x[2]),
+                ((1, 3), m.b[1].x[3]),
+            ],
+        )
+
+        # Test dict, ReferenceSet indexing set
+        m = ConcreteModel()
+        m.b = Block([1, 0])
+        m.b[1].x = Var([3, 2])
+        m.b[0].x = Var([5, 4])
+        m.y = Reference(
+            {
+                (1, 3): m.b[1].x[3],
+                (0, 5): m.b[0].x[5],
+                (1, 2): m.b[1].x[2],
+                (0, 4): m.b[0].x[4],
+            }
+        )
+        self.assertIs(type(m.y.index_set()), FiniteSetOf)
+        self.assertEqual(list(m.y), [(1, 3), (0, 5), (1, 2), (0, 4)])
+        self.assertEqual(list(m.y.keys()), [(1, 3), (0, 5), (1, 2), (0, 4)])
+        self.assertEqual(
+            list(m.y.values()), [m.b[1].x[3], m.b[0].x[5], m.b[1].x[2], m.b[0].x[4]]
+        )
+        self.assertEqual(
+            list(m.y.items()),
+            [
+                ((1, 3), m.b[1].x[3]),
+                ((0, 5), m.b[0].x[5]),
+                ((1, 2), m.b[1].x[2]),
+                ((0, 4), m.b[0].x[4]),
+            ],
+        )
+        self.assertEqual(list(m.y.keys(True)), [(0, 4), (0, 5), (1, 2), (1, 3)])
+        self.assertEqual(
+            list(m.y.values(True)), [m.b[0].x[4], m.b[0].x[5], m.b[1].x[2], m.b[1].x[3]]
+        )
+        self.assertEqual(
+            list(m.y.items(True)),
+            [
+                ((0, 4), m.b[0].x[4]),
+                ((0, 5), m.b[0].x[5]),
+                ((1, 2), m.b[1].x[2]),
+                ((1, 3), m.b[1].x[3]),
             ],
         )
 
@@ -299,6 +415,30 @@ class TestReferenceDict(unittest.TestCase):
         self.assertFalse(hasattr(m.b[2, 5], 'z'))
         self.assertEqual(len(list(x.value for x in rd.values())), 2 - 1)
 
+    def test_deprecations(self):
+        m = self.m
+        rd = _ReferenceDict(m.b[:, :].z)
+
+        items = rd.items()
+        with LoggingIntercept() as LOG:
+            iteritems = rd.iteritems()
+        self.assertIs(type(items), type(iteritems))
+        self.assertEqual(list(items), list(iteritems))
+        self.assertIn(
+            "DEPRECATED: The iteritems method is deprecated. Use dict.items",
+            LOG.getvalue(),
+        )
+
+        values = rd.values()
+        with LoggingIntercept() as LOG:
+            itervalues = rd.itervalues()
+        self.assertIs(type(values), type(itervalues))
+        self.assertEqual(list(values), list(itervalues))
+        self.assertIn(
+            "DEPRECATED: The itervalues method is deprecated. Use dict.values",
+            LOG.getvalue(),
+        )
+
 
 class TestReferenceSet(unittest.TestCase):
     def test_str(self):
@@ -397,6 +537,114 @@ class TestReferenceSet(unittest.TestCase):
         self.assertIn((1, 1), rs)
         self.assertEqual(len(rd), 0)
         self.assertEqual(len(rs), 9)
+
+    def test_otdered_sorted_iter(self):
+        # Test ordered reference
+        m = ConcreteModel()
+
+        @m.Block([2, 1], [4, 5])
+        def b(b, i, j):
+            b.x = Var([8, 7], initialize=0)
+
+        rs = _ReferenceSet(m.b[...].x[:])
+        self.assertEqual(
+            list(rs),
+            [
+                (2, 4, 8),
+                (2, 4, 7),
+                (2, 5, 8),
+                (2, 5, 7),
+                (1, 4, 8),
+                (1, 4, 7),
+                (1, 5, 8),
+                (1, 5, 7),
+            ],
+        )
+
+        rs = _ReferenceSet(m.b[...].x[:])
+        self.assertEqual(
+            list(rs.ordered_iter()),
+            [
+                (2, 4, 8),
+                (2, 4, 7),
+                (2, 5, 8),
+                (2, 5, 7),
+                (1, 4, 8),
+                (1, 4, 7),
+                (1, 5, 8),
+                (1, 5, 7),
+            ],
+        )
+
+        rs = _ReferenceSet(m.b[...].x[:])
+        self.assertEqual(
+            list(rs.sorted_iter()),
+            [
+                (1, 4, 7),
+                (1, 4, 8),
+                (1, 5, 7),
+                (1, 5, 8),
+                (2, 4, 7),
+                (2, 4, 8),
+                (2, 5, 7),
+                (2, 5, 8),
+            ],
+        )
+
+        # Test unordered reference
+        m = ConcreteModel()
+        m.I = FiniteSetOf([2, 1])
+        m.J = FiniteSetOf([4, 5])
+        m.K = FiniteSetOf([8, 7])
+
+        @m.Block(m.I, m.J)
+        def b(b, i, j):
+            b.x = Var(m.K, initialize=0)
+
+        rs = _ReferenceSet(m.b[...].x[:])
+        self.assertEqual(
+            list(rs),
+            [
+                (2, 4, 8),
+                (2, 4, 7),
+                (2, 5, 8),
+                (2, 5, 7),
+                (1, 4, 8),
+                (1, 4, 7),
+                (1, 5, 8),
+                (1, 5, 7),
+            ],
+        )
+
+        rs = _ReferenceSet(m.b[...].x[:])
+        self.assertEqual(
+            list(rs.ordered_iter()),
+            [
+                (1, 4, 7),
+                (1, 4, 8),
+                (1, 5, 7),
+                (1, 5, 8),
+                (2, 4, 7),
+                (2, 4, 8),
+                (2, 5, 7),
+                (2, 5, 8),
+            ],
+        )
+
+        rs = _ReferenceSet(m.b[...].x[:])
+        self.assertEqual(
+            list(rs.sorted_iter()),
+            [
+                (1, 4, 7),
+                (1, 4, 8),
+                (1, 5, 7),
+                (1, 5, 8),
+                (2, 4, 7),
+                (2, 4, 8),
+                (2, 5, 7),
+                (2, 5, 8),
+            ],
+        )
 
 
 class TestReference(unittest.TestCase):
