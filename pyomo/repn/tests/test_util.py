@@ -335,18 +335,14 @@ class TestRepnUtils(unittest.TestCase):
             [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x],
         )
         MockConfig.file_determinism = FileDeterminism.SORT_INDICES
-        # TODO: this should be the correct baseline, but resolving it requires PR#2829
-        # [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         self.assertEqual(
             list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
-            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         )
         MockConfig.file_determinism = FileDeterminism.SORT_SYMBOLS
-        # TODO: this should be the correct baseline, but resolving it requires PR#2829
-        # [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
         self.assertEqual(
             list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
-            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
         )
 
         # column order from a list
@@ -360,20 +356,16 @@ class TestRepnUtils(unittest.TestCase):
         # verify no side effects
         self.assertEqual(MockConfig.column_order, ref)
         MockConfig.file_determinism = FileDeterminism.SORT_INDICES
-        # TODO: this should be the correct baseline, but resolving it requires PR#2829
-        # [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         self.assertEqual(
             list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
-            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         )
         # verify no side effects
         self.assertEqual(MockConfig.column_order, ref)
         MockConfig.file_determinism = FileDeterminism.SORT_SYMBOLS
-        # TODO: this should be the correct baseline, but resolving it requires PR#2829
-        # [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
         self.assertEqual(
             list(initialize_var_map_from_column_order(m, MockConfig, {}).values()),
-            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
         )
         # verify no side effects
         self.assertEqual(MockConfig.column_order, ref)
@@ -472,18 +464,14 @@ class TestRepnUtils(unittest.TestCase):
             [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         )
         MockConfig.file_determinism = FileDeterminism.SORT_INDICES
-        # TODO: this should be the correct baseline, but resolving it requires PR#2829
-        # [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         self.assertEqual(
             list(ordered_active_constraints(m, MockConfig)),
-            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         )
         MockConfig.file_determinism = FileDeterminism.SORT_SYMBOLS
-        # TODO: this should be the correct baseline, but resolving it requires PR#2829
-        # [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
         self.assertEqual(
             list(ordered_active_constraints(m, MockConfig)),
-            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
         )
 
         # row order from a list
@@ -497,20 +485,16 @@ class TestRepnUtils(unittest.TestCase):
         # verify no side effects
         self.assertEqual(MockConfig.row_order, ref)
         MockConfig.file_determinism = FileDeterminism.SORT_INDICES
-        # TODO: this should be the correct baseline, but resolving it requires PR#2829
-        # [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         self.assertEqual(
             list(ordered_active_constraints(m, MockConfig)),
-            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.c.x, m.c.y[5], m.b.x],
         )
         # verify no side effects
         self.assertEqual(MockConfig.row_order, ref)
         MockConfig.file_determinism = FileDeterminism.SORT_SYMBOLS
-        # TODO: this should be the correct baseline, but resolving it requires PR#2829
-        # [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
         self.assertEqual(
             list(ordered_active_constraints(m, MockConfig)),
-            [m.b.y[7], m.b.y[6], m.y[3], m.y[2], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
+            [m.b.y[6], m.b.y[7], m.y[2], m.y[3], m.c.y[4], m.x, m.b.x, m.c.x, m.c.y[5]],
         )
         # verify no side effects
         self.assertEqual(MockConfig.row_order, ref)
