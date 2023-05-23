@@ -39,6 +39,7 @@ Pyomo 6.6.0    (23 May 2023)
   - Add `gdp.bound_pretransformation` (#2824)
 - Contributed Packages
   - APPSI: Improve logging consistency across solvers (#2787)
+  - APPSI: Update `available` method in APPSI-Gurobi interface (#2828)
   - incidence_analysis: Remove strict usage of PyomoNLP (#2752)
   - incidence_analysis: Test `IndexedBlock` (#2789)
   - incidence_analysis: Use standard repn for incidence graph generation (#2834)
