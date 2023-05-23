@@ -68,6 +68,15 @@ else:
     baron_license_is_valid = False
     baron_version = (0, 0, 0)
 
+_scip = SolverFactory('scip')
+scip_available = _scip.available(exception_flag=False)
+if scip_available:
+    scip_license_is_valid = _scip.license_is_valid()
+    scip_version = _scip.version()
+else:
+    scip_license_is_valid = False
+    scip_version = (0, 0, 0)
+
 
 # @SolverFactory.register("time_delay_solver")
 class TimeDelaySolver(object):
@@ -4686,6 +4695,183 @@ class RegressionTest(unittest.TestCase):
             2,
             msg="Incorrect objective function value.",
         )
+
+    def create_mitsos_4_3(self):
+        """
+        Create instance of Problem 4_3 from Mitsos (2011)'s
+        Test Set of semi-infinite programs.
+        """
+        # construct the deterministic model
+        m = ConcreteModel()
+        m.u = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[-1000, 1000])
+        m.x2 = Var(bounds=[-1000, 1000])
+        m.x3 = Var(bounds=[-1000, 1000])
+        m.con = Constraint(
+            expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u ** 2 <= 0,
+        )
+        m.eq_con = Constraint(
+            expr=(
+                m.u ** 2 * (m.x2 - 1)
+                + m.u * (m.x1 ** 3 + 0.5)
+                - 5 * m.u * m.x1 * m.x2
+                + m.u * (m.x1 + 2)
+                == 0
+            ),
+        )
+        m.obj = Objective(expr=m.x1 + m.x2 / 2 + m.x3 / 3)
+
+        return m
+
+    @unittest.skipUnless(
+        baron_license_is_valid and scip_available and scip_license_is_valid,
+        "Global solvers BARON and SCIP not both available and licensed"
+    )
+    def test_coeff_matching_solver_insensitive(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching is insensitive to subsolver settings. Based
+        on Mitsos (2011) semi-infinite programming instance 4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        scip = SolverFactory("scip")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        solver_names = {"baron": baron, "scip": scip}
+        for name, solver in solver_names.items():
+            res = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[],
+                second_stage_variables=[m.x1, m.x2, m.x3],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                local_solver=solver,
+                global_solver=solver,
+                objective_focus=ObjectiveType.worst_case,
+                solve_master_globally=True,
+                bypass_local_separation=True,
+                robust_feasibility_tolerance=1e-4,
+            )
+            self.assertEqual(
+                first=res.iterations,
+                second=2,
+                msg=(
+                    "Iterations for Watson 43 instance solved with "
+                    f"subsolver {name} not as expected"
+                ),
+            )
+            np.testing.assert_allclose(
+                actual=res.final_objective_value,
+                desired=0.9781633,
+                rtol=0,
+                atol=5e-3,
+                err_msg=(
+                    "Final objective for Watson 43 instance solved with "
+                    f"subsolver {name} not as expected"
+                ),
+            )
+
+    @unittest.skipUnless(
+        baron_license_is_valid and baron_version >= (23, 2, 27),
+        "BARON licensing and version requirements not met"
+    )
+    def test_coefficient_matching_partitioning_insensitive(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching is insensitive to DOF partitioning. Model
+        is based on Mitsos (2011) semi-infinite programming instance
+        4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        partitionings = [
+            {"fsv": [m.x1, m.x2, m.x3], "ssv": []},
+            {"fsv": [], "ssv": [m.x1, m.x2, m.x3]},
+        ]
+        for partitioning in partitionings:
+            res = pyros_solver.solve(
+                model=m,
+                first_stage_variables=partitioning["fsv"],
+                second_stage_variables=partitioning["ssv"],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                local_solver=baron,
+                global_solver=baron,
+                objective_focus=ObjectiveType.worst_case,
+                solve_master_globally=True,
+                bypass_local_separation=True,
+                robust_feasibility_tolerance=1e-4,
+            )
+            self.assertEqual(
+                first=res.iterations,
+                second=2,
+                msg=(
+                    "Iterations for Watson 43 instance solved with "
+                    f"first-stage vars {[fsv.name for fsv in partitioning['fsv']]} "
+                    f"second-stage vars {[ssv.name for ssv in partitioning['ssv']]} "
+                    "not as expected"
+                ),
+            )
+            np.testing.assert_allclose(
+                actual=res.final_objective_value,
+                desired=0.9781633,
+                rtol=0,
+                atol=5e-3,
+                err_msg=(
+                    "Final objective for Watson 43 instance solved with "
+                    f"first-stage vars {[fsv.name for fsv in partitioning['fsv']]} "
+                    f"second-stage vars {[ssv.name for ssv in partitioning['ssv']]} "
+                    "not as expected"
+                ),
+            )
+
+    def test_coefficient_matching_raises_error_4_3(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching results in exception certifying robustness
+        cannot be certified where expected. Model
+        is based on Mitsos (2011) semi-infinite programming instance
+        4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        dr_orders = [1, 2]
+        for dr_order in dr_orders:
+            with self.assertRaisesRegex(
+                ValueError,
+                expected_regex=(
+                    "Equality constraint.*cannot be guaranteed to be robustly "
+                    "feasible.*"
+                ),
+            ):
+                res = pyros_solver.solve(
+                    model=m,
+                    first_stage_variables=[],
+                    second_stage_variables=[m.x1, m.x2, m.x3],
+                    uncertain_params=[m.u],
+                    uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                    local_solver=baron,
+                    global_solver=baron,
+                    objective_focus=ObjectiveType.worst_case,
+                    decision_rule_order=dr_order,
+                    solve_master_globally=True,
+                    bypass_local_separation=True,
+                    robust_feasibility_tolerance=1e-4,
+                )
 
     def test_coefficient_matching_robust_infeasible_proof_in_pyros(self):
         # Write the deterministic Pyomo model
