@@ -445,6 +445,7 @@ def _handle_expr_if_const(visitor, node, arg1, arg2, arg3):
 
 
 def _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3):
+    # Note: guaranteed that arg1 is not _CONSTANT
     ans = visitor.Result()
     ans.nonlinear = Expr_ifExpression(
         (
@@ -896,15 +897,20 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         if ans.__class__ is self.Result:
             mult = ans.multiplier
             if mult == 1:
+                # mult is identity: only thing to do is filter out zero coefficients
                 zeros = list(filterfalse(itemgetter(1), ans.linear.items()))
                 for vid, coef in zeros:
                     del ans.linear[vid]
             elif not mult:
+                # the mulltiplier has cleared out the entire expression.
+                # Warn if this is suppressing a NaN (unusual, and
+                # non-standard, but we will wait to remove this behavior
+                # for the time being)
                 if ans.constant != ans.constant or any(
                     c != c for c in ans.linear.values()
                 ):
                     deprecation_warning(
-                        f"Encountered {str(arg1)}*{str(arg2)} in expression tree.  "
+                        f"Encountered {str(mult)}*nan in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -912,6 +918,8 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                     )
                 return self.Result()
             else:
+                # mult not in {0, 1}: factor it into the constant,
+                # linear coefficients, and nonlinear term
                 linear = ans.linear
                 zeros = []
                 for vid, coef in linear.items():

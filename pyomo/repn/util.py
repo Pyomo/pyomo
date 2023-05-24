@@ -244,7 +244,7 @@ def categorize_valid_components(
 ):
     """Walk model and check for valid component types
 
-    This routine will walk the model and checck all component types.
+    This routine will walk the model and check all component types.
     Components types in the `valid` set are ignored, blocks with
     components in the `targets` set are collected, and all other
     component types are added to a dictionary of `unrecognized`

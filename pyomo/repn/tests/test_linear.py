@@ -47,7 +47,7 @@ class TestLinear(unittest.TestCase):
         m.y = Var()
         m.z = Var()
 
-        e = m.x + 2*m.y - m.x - m.z
+        e = m.x + 2 * m.y - m.x - m.z
 
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
@@ -976,9 +976,7 @@ class TestLinear(unittest.TestCase):
         visitor.expand_nonlinear_products = True
         with LoggingIntercept() as LOG:
             repn = visitor.walk_expression(e)
-        self.assertIn(
-            'Encountered 0*nan in expression tree.', LOG.getvalue()
-        )
+        self.assertIn('Encountered 0*nan in expression tree.', LOG.getvalue())
 
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.z): m.z})
@@ -1137,7 +1135,7 @@ class TestLinear(unittest.TestCase):
         m.y = Var()
         m.sq = ExternalFunction(fgh=sum_sq)
 
-        e = m.sq(2/m.x, 2*m.y)
+        e = m.sq(2 / m.x, 2 * m.y)
 
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(e)
