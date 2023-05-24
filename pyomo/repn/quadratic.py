@@ -77,26 +77,13 @@ class QuadraticRepn(object):
 
     def to_expression(self, visitor):
         var_map = visitor.var_map
-        if self.linear:
-            if len(self.linear) == 1:
-                vid, coef = next(iter(self.linear.items()))
-                if coef == 1:
-                    ans = var_map[vid]
-                elif coef:
-                    ans = MonomialTermExpression((coef, var_map[vid]))
-                else:
-                    ans = 0
-            else:
-                ans = LinearExpression(
-                    [
-                        MonomialTermExpression((coef, var_map[vid]))
-                        for vid, coef in self.linear.items()
-                        if coef
-                    ]
-                )
-            ans += self.constant
+        if self.nonlinear is not None:
+            # We want to start with the nonlinear term (and use
+            # assignment) in case the term is a non-numeric node (like a
+            # relational expression)
+            ans = self.nonlinear
         else:
-            ans = self.constant
+            ans = 0
         if self.quadratic:
             with mutable_expression() as e:
                 for (x1, x2), coef in self.quadratic.items():
@@ -104,10 +91,26 @@ class QuadraticRepn(object):
                         e += coef * var_map[x1] ** 2
                     else:
                         e += coef * (var_map[x1] * var_map[x2])
-                e += ans
-            ans = e
-        if self.nonlinear is not None:
-            ans += self.nonlinear
+            ans += e
+        if self.linear:
+            if len(self.linear) == 1:
+                vid, coef = next(iter(self.linear.items()))
+                if coef == 1:
+                    ans += var_map[vid]
+                elif coef:
+                    ans += MonomialTermExpression((coef, var_map[vid]))
+                else:
+                    pass
+            else:
+                ans += LinearExpression(
+                    [
+                        MonomialTermExpression((coef, var_map[vid]))
+                        for vid, coef in self.linear.items()
+                        if coef
+                    ]
+                )
+        if self.constant:
+            ans += self.constant
         if self.multiplier != 1:
             ans *= self.multiplier
         return ans

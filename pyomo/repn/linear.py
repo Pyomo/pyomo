@@ -104,29 +104,33 @@ class LinearRepn(object):
         return ans
 
     def to_expression(self, visitor):
+        if self.nonlinear is not None:
+            # We want to start with the nonlinear term (and use
+            # assignment) in case the term is a non-numeric node (like a
+            # relational expression)
+            ans = self.nonlinear
+        else:
+            ans = 0
         if self.linear:
             var_map = visitor.var_map
             if len(self.linear) == 1:
                 vid, coef = next(iter(self.linear.items()))
                 if coef == 1:
-                    ans = var_map[vid]
+                    ans += var_map[vid]
                 elif coef:
-                    ans = MonomialTermExpression((coef, var_map[vid]))
+                    ans += MonomialTermExpression((coef, var_map[vid]))
                 else:
-                    ans = 0
+                    pass
             else:
-                ans = LinearExpression(
+                ans += LinearExpression(
                     [
                         MonomialTermExpression((coef, var_map[vid]))
                         for vid, coef in self.linear.items()
                         if coef
                     ]
                 )
+        if self.constant:
             ans += self.constant
-        else:
-            ans = self.constant
-        if self.nonlinear is not None:
-            ans += self.nonlinear
         if self.multiplier != 1:
             ans *= self.multiplier
         return ans
