@@ -405,7 +405,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((m.p ** (0.5), None, None))
         self.assertEqual(
             LOG.getvalue(),
-            "Error encountered evaluating expression\n"
+            "Complex number returned from expression\n"
             "\tmessage: Pyomo AMPLRepnVisitor does not support complex numbers\n"
             "\texpression: p**0.5\n",
         )
@@ -421,7 +421,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((m.p**m.x, None, None))
         self.assertEqual(
             LOG.getvalue(),
-            "Error encountered evaluating expression\n"
+            "Complex number returned from expression\n"
             "\tmessage: Pyomo AMPLRepnVisitor does not support complex numbers\n"
             "\texpression: p**x\n",
         )

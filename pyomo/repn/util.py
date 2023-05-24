@@ -229,7 +229,7 @@ def apply_node_operation(node, args):
 def complex_number_error(value, visitor, expr, node=""):
     msg = f'Pyomo {visitor.__class__.__name__} does not support complex numbers'
     logger.warning(
-        ' '.join(filter(None, ("Error encountered evaluating expression", node)))
+        ' '.join(filter(None, ("Complex number returned from expression", node)))
         + f"\n\tmessage: {msg}\n\texpression: {expr}"
     )
     if HALT_ON_EVALUATION_ERROR:
