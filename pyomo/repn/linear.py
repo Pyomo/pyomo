@@ -434,8 +434,7 @@ _named_subexpression_types = [
 
 def _handle_expr_if_const(visitor, node, arg1, arg2, arg3):
     _type, _test = arg1
-    if _type is not _CONSTANT:
-        return _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3)
+    assert _type is _CONSTANT
     if _test:
         if _test != _test:
             # nan
