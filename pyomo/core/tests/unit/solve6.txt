@@ -1,49 +1,49 @@
 {
     "Problem": [
         {
-            "Lower bound": -1.66666666666667, 
-            "Number of constraints": 2, 
-            "Number of nonzeros": 6, 
-            "Number of objectives": 1, 
-            "Number of variables": 6, 
-            "Sense": "minimize", 
+            "Lower bound": -1.66666666666667,
+            "Number of constraints": 1,
+            "Number of nonzeros": 5,
+            "Number of objectives": 1,
+            "Number of variables": 5,
+            "Sense": "minimize",
             "Upper bound": -1.66666666666667
         }
-    ], 
+    ],
     "Solution": [
         {
-            "number of solutions": 1, 
+            "number of solutions": 1,
             "number of solutions displayed": 1
-        }, 
+        },
         {
-            "Constraint": "No values", 
+            "Constraint": "No values",
             "Objective": {
                 "b.obj": {
                     "Value": -1.66666666666667
                 }
-            }, 
+            },
             "Variable": {
                 "b.x[1]": {
                     "Value": -1.0
-                }, 
+                },
                 "b.x[2]": {
                     "Value": -1.0
-                }, 
+                },
                 "b.x[3]": {
                     "Value": -0.666666666666667
-                }, 
+                },
                 "b.x[4]": {
                     "Value": 1.0
-                }, 
+                },
                 "y": {
                     "Value": 1.0
                 }
             }
         }
-    ], 
+    ],
     "Solver": [
         {
-            "Error rc": 0, 
+            "Error rc": 0,
             "Status": "ok"
         }
     ]

@@ -2,10 +2,10 @@
     "Problem": [
         {
             "Lower bound": -1.33333333333333,
-            "Number of constraints": 2,
-            "Number of nonzeros": 5,
+            "Number of constraints": 1,
+            "Number of nonzeros": 4,
             "Number of objectives": 1,
-            "Number of variables": 5,
+            "Number of variables": 4,
             "Sense": "minimize",
             "Upper bound": -1.33333333333333
         }
