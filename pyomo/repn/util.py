@@ -175,12 +175,6 @@ class InvalidNumber(object):
         else:
             return self.duplicate(self.value * other)
 
-    def __div__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value / other.value)
-        else:
-            return self.duplicate(self.value / other)
-
     def __truediv__(self, other):
         if other.__class__ is InvalidNumber:
             return self.merge(other, self.value / other.value)
@@ -202,10 +196,10 @@ class InvalidNumber(object):
     def __rmul__(self, other):
         return self.duplicate(other * self.value)
 
-    def __rdiv__(self, other):
+    def __rtruediv__(self, other):
         return self.duplicate(other / self.value)
 
-    def __pow__(self, other):
+    def __rpow__(self, other):
         return self.duplicate(other**self.value)
 
 
