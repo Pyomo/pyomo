@@ -49,7 +49,7 @@ Pyomo 6.6.0    (23 May 2023)
   - incidence_analysis: Use standard repn for incidence graph generation (#2834)
   - Parmest: Update for pandas 2.0.0 release (#2795)
   - piecewise: Add contrib.piecewise package (#2708, #2768, #2766, #2797, #2798,
-  #2826)
+    #2826)
   - PyNumero: Refactor CyIpopt interface to subclass `cyipopt.Problem` (#2760)
   - PyNumero: Fix CyIpopt interface when `load_solutions=False` (#2820)
   - PyROS: Fixes to PyROS Separation Routine (#2815)
