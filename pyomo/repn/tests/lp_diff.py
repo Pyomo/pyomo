@@ -9,40 +9,18 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import os
 import re
 
 from difflib import SequenceMatcher, unified_diff
 
-import pyomo.core.expr.current as EXPR
+from pyomo.repn.tests.diffutils import compare_floats, load_baseline
 
 _strip_comment = re.compile(r'\s*\\.*')
 
 
-def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
-    base = base.split()
-    test = test.split()
-    if len(base) != len(test):
-        return False
-    for i, b in enumerate(base):
-        if b.strip() == test[i].strip():
-            continue
-        try:
-            b = float(b)
-            t = float(test[i])
-        except:
-            return False
-        if abs(b - t) < abstol:
-            continue
-        if abs((b - t) / max(abs(b), abs(t))) < reltol:
-            continue
-        return False
-    return True
-
-
 def _update_subsets(subset, base, test):
     for i, j in zip(*subset):
-        if _compare_floats(base[i], test[j]):
+        if compare_floats(base[i], test[j]):
             base[i] = test[j]
 
 
@@ -90,23 +68,7 @@ def lp_diff(base, test, baseline='baseline', testfile='testfile'):
 
 
 def load_lp_baseline(baseline, testfile, version='lp'):
-    with open(testfile, 'r') as FILE:
-        test = FILE.read()
-    if baseline.endswith('.lp'):
-        _tmp = [baseline[:-3]]
-    else:
-        _tmp = baseline.split('.lp.', 1)
-    _tmp.insert(1, f'expr{int(EXPR._mode)}')
-    _tmp.insert(2, version)
-    if not os.path.exists('.'.join(_tmp)):
-        _tmp.pop(1)
-        if not os.path.exists('.'.join(_tmp)):
-            _tmp = []
-    if _tmp:
-        baseline = '.'.join(_tmp)
-    with open(baseline, 'r') as FILE:
-        base = FILE.read()
-    return base, test, baseline, testfile
+    return load_baseline(baseline, testfile, 'lp', version)
 
 
 def load_and_compare_lp_baseline(baseline, testfile, version='lp'):

@@ -10,12 +10,11 @@
 #  ___________________________________________________________________________
 
 import itertools
-import os
 import re
 
 from difflib import SequenceMatcher, unified_diff
 
-import pyomo.core.expr.current as EXPR
+from pyomo.repn.tests.diffutils import compare_floats, load_baseline
 import pyomo.repn.plugins.nl_writer as nl_writer
 
 template = nl_writer.text_nl_debug_template
@@ -29,40 +28,19 @@ _norm_timesone = re.compile(r'(?m)^o2(\s*#\s*\*)?\nn1(.0)?\s*\n')
 _norm_double_negation = re.compile(r'(?m)^o16(\s*#\s*-)?\no16(\s*#\s*-)?\n')
 
 
-def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
-    base = base.split()
-    test = test.split()
-    if len(base) != len(test):
-        return False
-    for i, b in enumerate(base):
-        if b == test[i]:
-            continue
-        try:
-            b = float(b)
-            t = float(test[i])
-        except:
-            return False
-        if abs(b - t) < abstol:
-            continue
-        if abs((b - t) / max(abs(b), abs(t))) < reltol:
-            continue
-        return False
-    return True
-
-
 def _update_subsets(subset, base, test):
     for i, j in zip(*subset):
         # Try checking for numbers
         if base[i][0] == 'n' and test[j][0] == 'n':
-            if _compare_floats(base[i][1:], test[j][1:]):
+            if compare_floats(base[i][1:], test[j][1:]):
                 test[j] = base[i]
-        elif _compare_floats(base[i], test[j]):
+        elif compare_floats(base[i], test[j]):
             test[j] = base[i]
         else:
             # try stripping comments, but only if it results in a match
             base_nc = _strip_comment.sub('', base[i])
             test_nc = _strip_comment.sub('', test[j])
-            if _compare_floats(base_nc, test_nc):
+            if compare_floats(base_nc, test_nc):
                 if len(base_nc) > len(test_nc):
                     test[j] = base[i]
                 else:
@@ -107,7 +85,7 @@ def nl_diff(base, test, baseline='baseline', testfile='testfile'):
     base_nlines = list(x for x in enumerate(base) if x[1] and x[1][0] == 'n')
     if len(test_nlines) == len(base_nlines):
         for t_line, b_line in zip(test_nlines, base_nlines):
-            if _compare_floats(t_line[1][1:], b_line[1][1:]):
+            if compare_floats(t_line[1][1:], b_line[1][1:]):
                 test[t_line[0]] = base[b_line[0]]
 
     for group in SequenceMatcher(None, base, test).get_grouped_opcodes(3):
@@ -133,23 +111,7 @@ def nl_diff(base, test, baseline='baseline', testfile='testfile'):
 
 
 def load_nl_baseline(baseline, testfile, version='nl'):
-    with open(testfile, 'r') as FILE:
-        test = FILE.read()
-    if baseline.endswith('.nl'):
-        _tmp = [baseline[:-3]]
-    else:
-        _tmp = baseline.split('.nl.', 1)
-    _tmp.insert(1, f'expr{int(EXPR._mode)}')
-    _tmp.insert(2, version)
-    if not os.path.exists('.'.join(_tmp)):
-        _tmp.pop(1)
-        if not os.path.exists('.'.join(_tmp)):
-            _tmp = []
-    if _tmp:
-        baseline = '.'.join(_tmp)
-    with open(baseline, 'r') as FILE:
-        base = FILE.read()
-    return base, test, baseline, testfile
+    return load_baseline(baseline, testfile, 'nl', version)
 
 
 def load_and_compare_nl_baseline(baseline, testfile, version='nl'):
