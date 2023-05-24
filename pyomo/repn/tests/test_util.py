@@ -16,7 +16,7 @@ import pyomo.common.unittest as unittest
 from io import StringIO
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, InvalidValueError
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
     ConcreteModel,
@@ -32,11 +32,13 @@ from pyomo.environ import (
 )
 import pyomo.repn.util
 from pyomo.repn.util import (
-    ftoa,
     FileDeterminism,
-    categorize_valid_components,
-    apply_node_operation,
     FileDeterminism_to_SortComponents,
+    InvalidNumber,
+    apply_node_operation,
+    categorize_valid_components,
+    complex_number_error,
+    ftoa,
     initialize_var_map_from_column_order,
     ordered_active_constraints,
 )
@@ -118,14 +120,83 @@ class TestRepnUtils(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "5 is not a valid FileDeterminism"):
             FileDeterminism(5)
 
+    def test_InvalidNumber(self):
+        a = InvalidNumber(-3)
+        b = InvalidNumber(5)
+        c = InvalidNumber(5)
+
+        self.assertEqual((a + b).value, 2)
+        self.assertEqual((a - b).value, -8)
+        self.assertEqual((a * b).value, -15)
+        self.assertEqual((a / b).value, -0.6)
+        self.assertEqual((a**b).value, -(3**5))
+        self.assertEqual(abs(a).value, 3)
+        self.assertEqual(abs(b).value, 5)
+        self.assertEqual((-a).value, 3)
+        self.assertEqual((-b).value, -5)
+
+        self.assertEqual((a + 5).value, 2)
+        self.assertEqual((a - 5).value, -8)
+        self.assertEqual((a * 5).value, -15)
+        self.assertEqual((a / 5).value, -0.6)
+        self.assertEqual((a**5).value, -(3**5))
+
+        self.assertEqual((-3 + b).value, 2)
+        self.assertEqual((-3 - b).value, -8)
+        self.assertEqual((-3 * b).value, -15)
+        self.assertEqual((-3 / b).value, -0.6)
+        self.assertEqual(((-3) ** b).value, -(3**5))
+
+        self.assertTrue(a < b)
+        self.assertTrue(a <= b)
+        self.assertFalse(a > b)
+        self.assertFalse(a >= b)
+        self.assertFalse(a == b)
+        self.assertTrue(a != b)
+
+        self.assertFalse(c < b)
+        self.assertTrue(c <= b)
+        self.assertFalse(c > b)
+        self.assertTrue(c >= b)
+        self.assertTrue(c == b)
+        self.assertFalse(c != b)
+
+        self.assertTrue(a < 5)
+        self.assertTrue(a <= 5)
+        self.assertFalse(a > 5)
+        self.assertFalse(a >= 5)
+        self.assertFalse(a == 5)
+        self.assertTrue(a != 5)
+
+        self.assertTrue(3 < b)
+        self.assertTrue(3 <= b)
+        self.assertFalse(3 > b)
+        self.assertFalse(3 >= b)
+        self.assertFalse(3 == b)
+        self.assertTrue(3 != b)
+
+        # TODO: eventually these should raise exceptions
+        d = InvalidNumber('abc')
+        self.assertEqual(repr(b), "5")
+        self.assertEqual(repr(d), "'abc'")
+        self.assertEqual(f'{b}', "5")
+        self.assertEqual(f'{d}', "abc")
+
     def test_apply_operation(self):
         m = ConcreteModel()
         m.x = Var()
         div = 1 / m.x
+        mul = m.x * m.x
         exp = m.x ** (1 / 2)
 
         with LoggingIntercept() as LOG:
             self.assertEqual(apply_node_operation(exp, [4, 1 / 2]), 2)
+        self.assertEqual(LOG.getvalue(), "")
+
+        with LoggingIntercept() as LOG:
+            ans = apply_node_operation(mul, [float('inf'), 0])
+            self.assertIs(type(ans), InvalidNumber)
+            self.assertTrue(math.isnan(ans.value))
         self.assertEqual(LOG.getvalue(), "")
 
         _halt = pyomo.repn.util.HALT_ON_EVALUATION_ERROR
@@ -150,6 +221,57 @@ class TestRepnUtils(unittest.TestCase):
                 "Exception encountered evaluating expression 'div(1, 0)'\n"
                 "\tmessage: division by zero\n"
                 "\texpression: 1/x\n",
+            )
+
+        finally:
+            pyomo.repn.util.HALT_ON_EVALUATION_ERROR = _halt
+
+    def test_complex_number_error(self):
+        class Visitor(object):
+            pass
+
+        visitor = Visitor()
+
+        m = ConcreteModel()
+        m.x = Var()
+        exp = m.x ** (1 / 2)
+
+        _halt = pyomo.repn.util.HALT_ON_EVALUATION_ERROR
+        try:
+            pyomo.repn.util.HALT_ON_EVALUATION_ERROR = True
+            with LoggingIntercept() as LOG:
+                with self.assertRaisesRegex(
+                    InvalidValueError, 'Pyomo Visitor does not support complex numbers'
+                ):
+                    complex_number_error(1j, visitor, exp)
+            self.assertEqual(
+                LOG.getvalue(),
+                "Complex number returned from expression\n"
+                "\tmessage: Pyomo Visitor does not support complex numbers\n"
+                "\texpression: x**0.5\n",
+            )
+
+            with LoggingIntercept() as LOG:
+                with self.assertRaisesRegex(
+                    InvalidValueError, 'Pyomo Visitor does not support complex numbers'
+                ):
+                    complex_number_error(1j, visitor, exp, "'(-1)**(0.5)'")
+            self.assertEqual(
+                LOG.getvalue(),
+                "Complex number returned from expression '(-1)**(0.5)'\n"
+                "\tmessage: Pyomo Visitor does not support complex numbers\n"
+                "\texpression: x**0.5\n",
+            )
+
+            pyomo.repn.util.HALT_ON_EVALUATION_ERROR = False
+            with LoggingIntercept() as LOG:
+                val = complex_number_error(1j, visitor, exp)
+                self.assertEqual(str(val), "InvalidNumber(1j)")
+            self.assertEqual(
+                LOG.getvalue(),
+                "Complex number returned from expression\n"
+                "\tmessage: Pyomo Visitor does not support complex numbers\n"
+                "\texpression: x**0.5\n",
             )
 
         finally:
