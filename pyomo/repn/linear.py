@@ -220,7 +220,7 @@ def _handle_product_constant_constant(visitor, node, arg1, arg2):
                 "Mapping the NaN result to 0 for compatibility "
                 "with the lp_v1 writer.  In the future, this NaN "
                 "will be preserved/emitted to comply with IEEE-754.",
-                version='6.5.1.dev0',
+                version='6.6.0',
             )
             return _, 0
     return _, arg1 * arg2
@@ -628,7 +628,7 @@ def _before_monomial(visitor, child):
                 "Mapping the NaN result to 0 for compatibility "
                 "with the lp_v1 writer.  In the future, this NaN "
                 "will be preserved/emitted to comply with IEEE-754.",
-                version='6.5.1.dev0',
+                version='6.6.0',
             )
         return False, (_CONSTANT, arg1)
 
@@ -669,7 +669,7 @@ def _before_linear(visitor, child):
                         "Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
-                        version='6.5.1.dev0',
+                        version='6.6.0',
                     )
                 continue
             _id = id(arg2)
@@ -914,7 +914,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                         "Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
-                        version='6.5.1.dev0',
+                        version='6.6.0',
                     )
                 return self.Result()
             else:

@@ -1,4 +1,3 @@
-#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2008-2022
@@ -185,7 +184,7 @@ class PyomoNLP(AslNLP):
 
     @deprecated(
         msg='This method has been replaced with primals_names',
-        version='6.0.0.dev0',
+        version='6.0.0',
         remove_in='6.0',
     )
     def variable_names(self):
@@ -1109,7 +1108,7 @@ class PyomoGreyBoxNLP(NLP):
 
     @deprecated(
         msg='This method has been replaced with primals_names',
-        version='6.0.0.dev0',
+        version='6.0.0',
         remove_in='6.0',
     )
     def variable_names(self):

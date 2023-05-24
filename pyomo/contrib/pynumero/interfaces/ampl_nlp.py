@@ -773,7 +773,7 @@ class AmplNLP(AslNLP):
 
     @deprecated(
         msg='This method has been replaced with primals_names',
-        version='6.0.0.dev0',
+        version='6.0.0',
         remove_in='6.0',
     )
     def variable_names(self):
@@ -797,7 +797,7 @@ class AmplNLP(AslNLP):
 
     @deprecated(
         msg='This method has been replaced with primal_idx',
-        version='6.0.0.dev0',
+        version='6.0.0',
         remove_in='6.0',
     )
     def variable_idx(self, var_name):
