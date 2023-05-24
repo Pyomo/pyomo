@@ -696,7 +696,7 @@ class SumExpression(NumericExpression):
     @deprecated(
         "SumExpression.add() is deprecated.  Please use regular Python operators "
         "(infix '+' or inplace '+='.)",
-        version='6.5.1.dev0',
+        version='6.6.0',
     )
     def add(self, new_arg):
         self += new_arg

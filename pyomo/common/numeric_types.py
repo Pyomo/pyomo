@@ -44,7 +44,7 @@ _native_boolean_types = {int, bool, str, bytes}
 relocated_module_attribute(
     'native_boolean_types',
     'pyomo.common.numeric_types._native_boolean_types',
-    version='6.5.1.dev0',
+    version='6.6.0',
     msg="The native_boolean_types set will be removed in the future: the set "
     "contains types that were convertible to bool, and not types that should "
     "be treated as if they were bool (as was the case for the other "
@@ -96,7 +96,7 @@ def RegisterIntegerType(new_type):
 @deprecated(
     "The native_boolean_types set (and hence RegisterBooleanType) "
     "is deprecated.  Users likely should use RegisterLogicalType.",
-    version='6.5.1.dev0',
+    version='6.6.0',
 )
 def RegisterBooleanType(new_type):
     """

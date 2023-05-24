@@ -75,7 +75,7 @@ from pyomo.core.expr.expr_errors import TemplateExpressionError
 relocated_module_attribute(
     'native_boolean_types',
     'pyomo.common.numeric_types._native_boolean_types',
-    version='6.5.1.dev0',
+    version='6.6.0',
     f_globals=globals(),
     msg="The native_boolean_types set will be removed in the future: the set "
     "contains types that were convertible to bool, and not types that should "
@@ -85,19 +85,19 @@ relocated_module_attribute(
 relocated_module_attribute(
     'RegisterNumericType',
     'pyomo.common.numeric_types.RegisterNumericType',
-    version='6.5.1.dev0',
+    version='6.6.0',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'RegisterIntegerType',
     'pyomo.common.numeric_types.RegisterIntegerType',
-    version='6.5.1.dev0',
+    version='6.6.0',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'RegisterBooleanType',
     'pyomo.common.numeric_types.RegisterBooleanType',
-    version='6.5.1.dev0',
+    version='6.6.0',
     f_globals=globals(),
 )
 

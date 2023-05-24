@@ -438,7 +438,7 @@ class IndexedComponent(Component):
             deprecation_warning(
                 f"keys(ordered={ordered}) is deprecated.  "
                 "Please use `sort=SortComponents.ORDERED_INDICES`",
-                version='6.5.1.dev0',
+                version='6.6.0',
             )
             if ordered:
                 sort = sort | SortComponents.ORDERED_INDICES
@@ -529,7 +529,7 @@ You can silence this warning by one of three ways:
             deprecation_warning(
                 f"values(ordered={ordered}) is deprecated.  "
                 "Please use `sort=SortComponents.ORDERED_INDICES`",
-                version='6.5.1.dev0',
+                version='6.6.0',
             )
             if ordered:
                 sort = SortComponents(sort) | SortComponents.ORDERED_INDICES
@@ -564,7 +564,7 @@ You can silence this warning by one of three ways:
             deprecation_warning(
                 f"items(ordered={ordered}) is deprecated.  "
                 "Please use `sort=SortComponents.ORDERED_INDICES`",
-                version='6.5.1.dev0',
+                version='6.6.0',
             )
             if ordered:
                 sort = SortComponents(sort) | SortComponents.ORDERED_INDICES
