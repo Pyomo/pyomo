@@ -11,4 +11,4 @@
 
 from pyomo.common.deprecation import relocated_module
 
-relocated_module('pyomo.repn.tests.nl_diff', version='6.5.0.dev0', remove_in='6.5.1')
+relocated_module('pyomo.repn.tests.nl_diff', version='6.6.0', remove_in='6.6.1')
