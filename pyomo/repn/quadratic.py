@@ -30,7 +30,7 @@ from pyomo.core.expr.relational_expr import (
 )
 from pyomo.core.base.expression import ScalarExpression
 from . import linear
-from .linear import _merge_dict
+from .linear import _merge_dict, to_expression
 
 _CONSTANT = linear.ExprType.CONSTANT
 _LINEAR = linear.ExprType.LINEAR
@@ -211,8 +211,8 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
 def _handle_product_nonlinear(visitor, node, arg1, arg2):
     ans = visitor.Result()
     if not visitor.expand_nonlinear_products:
-        ans.nonlinear = arg1.to_expression(visitor) * arg2.to_expression(visitor)
-        return ans
+        ans.nonlinear = to_expression(visitor, arg1) * to_expression(visitor, arg2)
+        return _GENERAL, ans
 
     # We are multiplying (A + Bx + Cx^2 + D(x)) * (A + Bx + Cx^2 + Dx))
     _, x1 = arg1
