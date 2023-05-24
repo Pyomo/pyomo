@@ -34,6 +34,7 @@ def compare_floats(base, test, abstol=1e-14, reltol=1e-14):
         return False
     return True
 
+
 def load_baseline(baseline, testfile, extension, version):
     with open(testfile, 'r') as FILE:
         test = FILE.read()

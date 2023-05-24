@@ -116,7 +116,7 @@ class TestQuadratic(unittest.TestCase):
         visitor.expand_nonlinear_products = False
         repn = visitor.walk_expression(e)
 
-        NL = (4*m.x**2 + 3*m.x + 2)*(7*m.x**2 + 6*m.x + 5)
+        NL = (4 * m.x**2 + 3 * m.x + 2) * (7 * m.x**2 + 6 * m.x + 5)
 
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
@@ -129,7 +129,7 @@ class TestQuadratic(unittest.TestCase):
         print(NL)
         assertExpressionsEqual(self, repn.nonlinear, NL)
 
-        e = (1 + 2*m.x + 3*m.y) * (4 + 5*m.x + 6*m.y)
+        e = (1 + 2 * m.x + 3 * m.y) * (4 + 5 * m.x + 6 * m.y)
 
         cfg = VisitorConfig()
         repn = QuadraticRepnVisitor(*cfg).walk_expression(e)
@@ -140,7 +140,10 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 4)
         self.assertEqual(repn.linear, {id(m.x): 13, id(m.y): 18})
-        self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 10, (id(m.y), id(m.y)): 18, (id(m.x), id(m.y)): 27})
+        self.assertEqual(
+            repn.quadratic,
+            {(id(m.x), id(m.x)): 10, (id(m.y), id(m.y)): 18, (id(m.x), id(m.y)): 27},
+        )
         assertExpressionsEqual(self, repn.nonlinear, None)
 
     def test_sum(self):
@@ -213,7 +216,7 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.quadratic, {(id(m.y), id(m.y)): 1})
         assertExpressionsEqual(self, repn.nonlinear, m.y**3)
 
-        e += 2*m.x**4
+        e += 2 * m.x**4
 
         cfg = VisitorConfig()
         repn = QuadraticRepnVisitor(*cfg).walk_expression(e)
@@ -224,9 +227,9 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.constant, 5)
         self.assertEqual(repn.linear, {id(m.x): 1})
         self.assertEqual(repn.quadratic, {(id(m.y), id(m.y)): 1})
-        assertExpressionsEqual(self, repn.nonlinear, m.y**3 + 2*m.x**4)
+        assertExpressionsEqual(self, repn.nonlinear, m.y**3 + 2 * m.x**4)
 
-        e += 2*m.y
+        e += 2 * m.y
 
         cfg = VisitorConfig()
         repn = QuadraticRepnVisitor(*cfg).walk_expression(e)
@@ -237,9 +240,9 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.constant, 5)
         self.assertEqual(repn.linear, {id(m.x): 1, id(m.y): 2})
         self.assertEqual(repn.quadratic, {(id(m.y), id(m.y)): 1})
-        assertExpressionsEqual(self, repn.nonlinear, m.y**3 + 2*m.x**4)
+        assertExpressionsEqual(self, repn.nonlinear, m.y**3 + 2 * m.x**4)
 
-        e += 3*m.x*m.y
+        e += 3 * m.x * m.y
 
         cfg = VisitorConfig()
         repn = QuadraticRepnVisitor(*cfg).walk_expression(e)
@@ -250,4 +253,4 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.constant, 5)
         self.assertEqual(repn.linear, {id(m.x): 1, id(m.y): 2})
         self.assertEqual(repn.quadratic, {(id(m.y), id(m.y)): 1, (id(m.x), id(m.y)): 3})
-        assertExpressionsEqual(self, repn.nonlinear, m.y**3 + 2*m.x**4)
+        assertExpressionsEqual(self, repn.nonlinear, m.y**3 + 2 * m.x**4)
