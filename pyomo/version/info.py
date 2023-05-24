@@ -28,7 +28,7 @@ major = 6
 minor = 6
 micro = 0
 # releaselevel = 'invalid'
-releaselevel='final'
+releaselevel = 'final'
 serial = 0
 
 if releaselevel == 'final':
