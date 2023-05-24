@@ -223,6 +223,9 @@ class PiecewiseLinearToGDP(Transformation):
                 # function.
                 pw_expr.expr = substitute_var
 
+        # Deactivate so that modern writers don't complain
+        pw_linear_func.deactivate()
+
     def _transform_constraint(self, constraint, descend_into_expressions):
         if not descend_into_expressions:
             return

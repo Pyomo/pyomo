@@ -26,15 +26,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.common.dependencies import (
-    numpy as np,
-    numpy_available,
-    pandas as pd,
-    pandas_available,
-    matplotlib as plt,
-    matplotlib_available,
-)
-from pyomo.core.expr.numvalue import value
+from pyomo.common.dependencies import numpy as np, pandas as pd, matplotlib as plt
 
 from itertools import product
 import logging
@@ -44,24 +36,24 @@ from pyomo.opt import SolverStatus, TerminationCondition
 class FisherResults:
     def __init__(
         self,
-        para_name,
-        measure_object,
+        parameter_names,
+        measurements,
         jacobian_info=None,
         all_jacobian_info=None,
         prior_FIM=None,
         store_FIM=None,
         scale_constant_value=1,
         max_condition_number=1.0e12,
-        verbose=True,
     ):
         """Analyze the FIM result for a single run
 
         Parameters
         ----------
-        para_name:
+        parameter_names:
             A ``list`` of parameter names
-        measure_object:
-            measurement information object
+        measurements:
+            A ``MeasurementVariables`` which contains the Pyomo variable names and their corresponding indices and
+            bounds for experimental measurements
         jacobian_info:
             the jacobian for this measurement object
         all_jacobian_info:
@@ -74,14 +66,10 @@ class FisherResults:
             scale all elements in Jacobian matrix, default is 1.
         max_condition_number:
             max condition number
-        verbose:
-            if True, print statements are used
         """
-        self.para_name = para_name
-        self.measure_object = measure_object
-        self.measurement_variables = measure_object.measurement_name
-        self.measurement_timeset = measure_object.flatten_measure_timeset
-        self.flatten_all_measure = measure_object.flatten_measure_name
+        self.parameter_names = parameter_names
+        self.measurements = measurements
+        self.measurement_variables = measurements.variable_names
 
         if jacobian_info is None:
             self.jaco_information = all_jacobian_info
@@ -94,17 +82,14 @@ class FisherResults:
         self.scale_constant_value = scale_constant_value
         self.fim_scale_constant_value = scale_constant_value**2
         self.max_condition_number = max_condition_number
-        self.verbose = verbose
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logging.WARN)
 
-    def calculate_FIM(self, dv_values, result=None):
+    def result_analysis(self, result=None):
         """Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
         Parameters
         ----------
-        dv_values:
-            a ``dict`` where keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
         result:
             solver status returned by IPOPT
         """
@@ -112,17 +97,26 @@ class FisherResults:
         self.doe_result = None
 
         # get number of parameters
-        no_param = len(self.para_name)
-
-        # reform jacobian, split the overall Q into Q_r, each r is a flattened measurement name
-        Q_response_list, variance_list = self._jac_reform_3D(
-            self.jaco_information, Q_response=True
-        )
+        no_param = len(self.parameter_names)
 
         fim = np.zeros((no_param, no_param))
 
-        for i in range(len(Q_response_list)):
-            fim += (1 / variance_list[i]) * (Q_response_list[i] @ Q_response_list[i].T)
+        # convert dictionary to a numpy array
+        Q_all = []
+        for par in self.parameter_names:
+            Q_all.append(self.jaco_information[par])
+        n = len(self.parameter_names)
+
+        Q_all = np.array(list(self.jaco_information[p] for p in self.parameter_names)).T
+        # add the FIM for each measurement variables together
+        for i, mea_name in enumerate(self.measurement_variables):
+            fim += (
+                1
+                / self.measurements.variance[str(mea_name)]  # variance of measurement
+                * (
+                    Q_all[i, :].reshape(n, 1) @ Q_all[i, :].reshape(n, 1).T
+                )  # Q.T @ Q for each measurement variable
+            )
 
         # add prior information
         if self.prior_FIM is not None:
@@ -143,7 +137,7 @@ class FisherResults:
             )
 
         # call private methods
-        self._print_FIM_info(fim, dv_set=dv_values)
+        self._print_FIM_info(fim)
         if self.result is not None:
             self._get_solver_info()
 
@@ -154,21 +148,25 @@ class FisherResults:
     def subset(self, measurement_subset):
         """Create new FisherResults object corresponding to provided measurement_subset.
         This requires that measurement_subset is a true subset of the original measurement object.
-        Arguments:
-            measurement_subset: Instance of Measurements class
-        Returns:
-            new_result: New instance of FisherResults
+
+        Parameters
+        ----------
+        measurement_subset: Instance of Measurements class
+
+        Returns
+        -------
+        new_result: New instance of FisherResults
         """
 
         # Check that measurement_subset is a valid subset of self.measurement
-        self.measure_object.check_subset(measurement_subset)
+        self.measurements.check_subset(measurement_subset)
 
         # Split Jacobian (should already be 3D)
         small_jac = self._split_jacobian(measurement_subset)
 
         # create a new subject
-        FIM_subclass = FisherResults(
-            self.para_name,
+        FIM_subset = FisherResults(
+            self.parameter_names,
             measurement_subset,
             jacobian_info=small_jac,
             prior_FIM=self.prior_FIM,
@@ -177,75 +175,49 @@ class FisherResults:
             max_condition_number=self.max_condition_number,
         )
 
-        return FIM_subclass
+        return FIM_subset
 
     def _split_jacobian(self, measurement_subset):
         """
         Split jacobian
-        Args:
-            measure_subset: the object of the measurement subsets
 
-        Returns:
-            jaco_info: split Jacobian
+        Parameters
+        ----------
+        measurement_subset: the object of the measurement subsets
+
+        Returns
+        -------
+        jaco_info: split Jacobian
         """
         # create a dict for FIM. It has the same keys as the Jacobian dict.
         jaco_info = {}
 
-        # convert the form of jacobian for split
-        jaco_3D = self._jac_reform_3D(self.jacobian_info)
-
-        involved_flatten_index = measurement_subset.flatten_measure_name
-
         # reorganize the jacobian subset with the same form of the jacobian
         # loop over parameters
-        for p, par in enumerate(self.para_name):
+        for par in self.parameter_names:
             jaco_info[par] = []
-            # loop over flatten measurements
-            for n, nam in enumerate(involved_flatten_index):
-                if nam in self.flatten_all_measure:
-                    n_all_measure = self.flatten_all_measure.index(nam)
-                    # loop over time
-                    for d in range(len(jaco_3D[n_all_measure, p, :])):
-                        jaco_info[par].append(jaco_3D[n_all_measure, p, d])
+            # loop over measurements
+            for nam in measurement_subset.variable_names:
+                try:
+                    n_all_measure = self.measurement_variables.index(nam)
+                    jaco_info[par].append(self.all_jacobian_info[par][n_all_measure])
+                except:
+                    raise ValueError(
+                        "Measurement ", nam, " is not in original measurement set."
+                    )
+
         return jaco_info
 
-    def _jac_reform_3D(self, jac_original, Q_response=False):
-        """
-        Reform the Jacobian returned by _finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
-        """
-        # 3-D array form of jacobian [measurements, parameters, time]
-        self.measure_timeset = list(self.measurement_timeset.values())[0]
-        no_time = len(self.measure_timeset)
-        jac_3Darray = np.zeros(
-            (len(self.flatten_all_measure), len(self.para_name), no_time)
-        )
-        # reorganize the matrix
-        for m, mname in enumerate(self.flatten_all_measure):
-            for p, para in enumerate(self.para_name):
-                for t, tim in enumerate(self.measure_timeset):
-                    jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
-        if Q_response:
-            Qr_list = []
-            var_list = []
-            for m, mname in enumerate(self.flatten_all_measure):
-                Qr_list.append(jac_3Darray[m, :, :])
-                var_list.append(self.measure_object.flatten_variance[mname])
-
-            return Qr_list, var_list
-        else:
-            return jac_3Darray
-
-    def _print_FIM_info(self, FIM, dv_set=None):
+    def _print_FIM_info(self, FIM):
         """
         using a dictionary to store all FIM information
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
-        dv_set: design variable dictionary
 
-        Return:
-        ------
+        Returns
+        -------
         fim_info: a FIM dictionary containing the following key:value pairs
             ~['FIM']: a list of FIM itself
             ~[design variable name]: a list of design variable values at each time point
@@ -265,14 +237,6 @@ class FisherResults:
         self.eig_vals = eig
         self.eig_vecs = np.linalg.eig(FIM)[1]
 
-        dv_names = list(dv_set.keys())
-
-        FIM_dv_info = {}
-        FIM_dv_info[dv_names[0]] = dv_set[dv_names[0]]
-        FIM_dv_info[dv_names[1]] = dv_set[dv_names[1]]
-
-        self.dv_info = FIM_dv_info
-
         self.logger.info(
             'FIM: %s; \n Trace: %s; \n Determinant: %s;', self.FIM, self.trace, self.det
         )
@@ -284,13 +248,13 @@ class FisherResults:
         """
         Solution information. Only for optimization problem
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         m: model
         dv_set: design variable dictionary
 
-        Return:
-        ------
+        Returns
+        -------
         model_info: model solutions dictionary containing the following key:value pairs
             -['obj']: a scalar number of objective function value
             -['det']: a scalar number of determinant calculated by the model (different from FIM_info['det'] which
@@ -305,16 +269,16 @@ class FisherResults:
         # For trace, the scaling factor to trace is the scaling factor.
         if self.obj == 'det':
             self.obj_det = np.exp(value(m.obj)) / (self.fim_scale_constant_value) ** (
-                len(self.para_name)
+                len(self.parameter_names)
             )
         elif self.obj == 'trace':
             self.obj_trace = np.exp(value(m.obj)) / (self.fim_scale_constant_value)
 
-        dv_names = list(dv_set.keys())
+        design_variable_names = list(dv_set.keys())
         dv_times = list(dv_set.values())
 
         solution = {}
-        for d, dname in enumerate(dv_names):
+        for d, dname in enumerate(design_variable_names):
             sol = []
             if dv_times[d] is not None:
                 for t, time in enumerate(dv_times[d]):
@@ -330,7 +294,7 @@ class FisherResults:
     def _store_FIM(self):
         # if given store file name, store the FIM
         store_dict = {}
-        for i, name in enumerate(self.para_name):
+        for i, name in enumerate(self.parameter_names):
             store_dict[name] = self.FIM[i]
         FIM_store = pd.DataFrame(store_dict)
         FIM_store.to_csv(self.store_FIM, index=False)
@@ -363,10 +327,8 @@ class GridSearchResult:
         self,
         design_ranges,
         design_dimension_names,
-        design_control_time,
         FIM_result_list,
         store_optimality_name=None,
-        verbose=True,
     ):
         """
         This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
@@ -378,23 +340,17 @@ class GridSearchResult:
             a ``dict`` whose keys are design variable names, values are a list of design variable values to go over
         design_dimension_names:
             a ``list`` of design variables names
-        design_control_time:
-            a ``list`` of design control timesets
         FIM_result_list:
             a ``dict`` containing FIM results, keys are a tuple of design variable values, values are FIM result objects
         store_optimality_name:
             a .csv file name containing all four optimalities value
-        verbose:
-            if True, print statements
         """
         # design variables
         self.design_names = design_dimension_names
         self.design_ranges = design_ranges
-        self.design_control_time = design_control_time
         self.FIM_result_list = FIM_result_list
 
         self.store_optimality_name = store_optimality_name
-        self.verbose = verbose
 
     def extract_criteria(self):
         """
@@ -434,14 +390,12 @@ class GridSearchResult:
         # generate column names for the dataframe
         column_names = []
         # this count is for repeated design variable names which can happen in dynamic problems
-        count = 0
         for i in self.design_names:
-            # if a name is in the design variable name list more than once, name them as name_itself, name_itself2, ...
-            # this is because it can be erroneous when we extract values from a dataframe with two columns having the same name
-            if i in column_names:
-                count += 1
-                i = i + str(count + 1)
-            column_names.append(i)
+            # if design variables share the same value, use the first name as the column name
+            if type(i) is list:
+                column_names.append(i[0])
+            else:
+                column_names.append(i)
 
         # Each design criteria has a column to store values
         column_names.append('A')
@@ -449,6 +403,7 @@ class GridSearchResult:
         column_names.append('E')
         column_names.append('ME')
         # generate the dataframe
+        store_all_results = np.asarray(store_all_results)
         self.store_all_results_dataframe = pd.DataFrame(
             store_all_results, columns=column_names
         )
@@ -474,7 +429,7 @@ class GridSearchResult:
         Draw 1D sensitivity curve or 2D heatmap.
         It can be applied to results of any dimensions, but requires design variable values in other dimensions be fixed.
 
-        Parameters:
+        Parameters
         ----------
         fixed_design_dimensions: a dictionary, keys are the design variable names to be fixed, values are the value of it to be fixed.
         sensitivity_dimension: a list of design variable names to draw figures.
@@ -490,7 +445,7 @@ class GridSearchResult:
         font_tick: tick label font size
         log_scale: if True, the result matrix will be scaled by log10
 
-        Returns:
+        Returns
         --------
         None
         """
@@ -551,7 +506,7 @@ class GridSearchResult:
         """
         Draw 1D sensitivity curves for all design criteria
 
-        Parameters:
+        Parameters
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
@@ -560,7 +515,7 @@ class GridSearchResult:
         font_tick: tick label font size
         log_scale: if True, the result matrix will be scaled by log10
 
-        Returns:
+        Returns
         --------
         4 Figures of 1D sensitivity curves for each criteria
         """
@@ -656,7 +611,7 @@ class GridSearchResult:
         """
         Draw 2D heatmaps for all design criteria
 
-        Parameters:
+        Parameters
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
@@ -667,7 +622,7 @@ class GridSearchResult:
         font_tick: tick label font size
         log_scale: if True, the result matrix will be scaled by log10
 
-        Returns:
+        Returns
         --------
         4 Figures of 2D heatmap for each criteria
         """
@@ -678,6 +633,8 @@ class GridSearchResult:
         for i, nam in enumerate(self.design_names):
             if nam in self.sensitivity_dimension:
                 sensitivity_dict[nam] = self.design_ranges[i]
+            elif nam[0] in self.sensitivity_dimension:
+                sensitivity_dict[nam[0]] = self.design_ranges[i]
 
         x_range = sensitivity_dict[self.sensitivity_dimension[0]]
         y_range = sensitivity_dict[self.sensitivity_dimension[1]]

@@ -722,6 +722,8 @@ def substitute_ssv_in_dr_constraints(model, constraint):
     fsv = ComponentSet(model.util.first_stage_variables)
     if not hasattr(model, "dr_substituted_constraints"):
         model.dr_substituted_constraints = ConstraintList()
+
+    substitution_map = {}
     for eqn in dr_eqns:
         repn = generate_standard_repn(eqn.body, compute_values=False)
         new_expression = 0
@@ -742,9 +744,7 @@ def substitute_ssv_in_dr_constraints(model, constraint):
             for coeff, var in map_quad_coeff_to_var:
                 new_expression += coeff * var[0] * var[1]  # var here is a 2-tuple
 
-        model.no_ssv_dr_expr = Expression(expr=new_expression)
-        substitution_map = {}
-        substitution_map[id(repn.linear_vars[-1])] = model.no_ssv_dr_expr.expr
+        substitution_map[id(repn.linear_vars[-1])] = new_expression
 
     model.dr_substituted_constraints.add(
         replace_expressions(expr=constraint.lower, substitution_map=substitution_map)
@@ -753,7 +753,6 @@ def substitute_ssv_in_dr_constraints(model, constraint):
 
     # === Delete the original constraint
     model.del_component(constraint.name)
-    model.del_component("no_ssv_dr_expr")
 
     return model.dr_substituted_constraints[
         max(model.dr_substituted_constraints.keys())
@@ -825,6 +824,7 @@ def coefficient_matching(model, constraint, uncertain_params, config):
         constraint = substitute_ssv_in_dr_constraints(
             model=model, constraint=constraint
         )
+
         variables_in_constraint = ComponentSet(identify_variables(constraint.expr))
         params_in_constraint = ComponentSet(
             identify_mutable_parameters(constraint.expr)
