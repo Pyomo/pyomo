@@ -18,7 +18,7 @@ from pyomo.core.expr.current import Expr_if
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 from pyomo.repn.util import InvalidNumber
 
-from pyomo.environ import ConcreteModel, Param, Var, Expression, cos
+from pyomo.environ import ConcreteModel, Param, Var, Expression, ExternalFunction, cos
 
 nan = float('nan')
 
@@ -33,7 +33,56 @@ class VisitorConfig(object):
         return iter((self.subexpr, self.var_map, self.var_order))
 
 
+def sum_sq(args, fixed, fgh):
+    f = sum(arg**2 for arg in args)
+    g = [2 * arg for arg in args]
+    h = None
+    return f, g, h
+
+
 class TestLinear(unittest.TestCase):
+    def test_finalize(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+
+        e = m.x + 2*m.y - m.x - m.z
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y, id(m.z): m.z})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1, id(m.z): 2})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {id(m.y): 2, id(m.z): -1})
+        self.assertEqual(repn.nonlinear, None)
+
+        e *= 5
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y, id(m.z): m.z})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1, id(m.z): 2})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {id(m.y): 10, id(m.z): -5})
+        self.assertEqual(repn.nonlinear, None)
+
+        e = 5 * (m.y + m.z**2)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.y): m.y, id(m.z): m.z})
+        self.assertEqual(cfg.var_order, {id(m.y): 0, id(m.z): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {id(m.y): 5})
+        assertExpressionsEqual(self, repn.nonlinear, m.z**2 * 5)
+
     def test_scalars(self):
         m = ConcreteModel()
         m.x = Var()
@@ -452,8 +501,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
         m.x.set_value(nan)
@@ -469,8 +518,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
     def test_linear(self):
@@ -535,7 +584,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
+        self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
         self.assertEqual(repn.nonlinear, None)
 
         e += 10
@@ -547,7 +596,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 10)
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
+        self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
         self.assertEqual(repn.nonlinear, None)
 
         e += 10 * m.p
@@ -559,7 +608,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 50)
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
+        self.assertEqual(repn.linear, {id(m.x[0]): 3, id(m.x[1]): 6})
         self.assertEqual(repn.nonlinear, None)
 
         m.p = -1
@@ -628,7 +677,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_order, {id(m.x[2]): 0})
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, InvalidNumber(nan))
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x[2]): 1})
+        self.assertEqual(repn.linear, {id(m.x[2]): 1})
         self.assertEqual(repn.nonlinear, None)
 
         cfg = VisitorConfig()
@@ -642,7 +691,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_order, {id(m.x[2]): 0, id(m.x[0]): 1})
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, InvalidNumber(nan))
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x[2]): 1})
+        self.assertEqual(repn.linear, {id(m.x[2]): 1})
         self.assertEqual(repn.nonlinear, None)
 
         e = LinearExpression()
@@ -657,8 +706,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
         m.x[1].set_value(nan)
@@ -674,8 +723,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
     def test_trig(self):
@@ -690,8 +739,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
         assertExpressionsEqual(self, repn.nonlinear, cos(m.x))
 
         m.x.fix(0)
@@ -702,8 +751,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 1)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
     def test_named_expr(self):
@@ -799,8 +848,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x): 1})
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {id(m.x): 1})
         self.assertEqual(repn.nonlinear, None)
 
         m.p = 2
@@ -811,8 +860,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
         assertExpressionsEqual(self, repn.nonlinear, m.x**2)
 
         m.x.fix(2)
@@ -823,8 +872,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 4)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 4)
+        self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
         m.p = 1 / 2
@@ -837,7 +886,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, InvalidNumber(1j))
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
         m.x.unfix()
@@ -852,8 +901,8 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {})
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
         assertExpressionsEqual(self, repn.nonlinear, (m.x + 1) * (m.x + 1))
 
         cfg = VisitorConfig()
@@ -866,13 +915,15 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, 1)
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x): 2})
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(repn.linear, {id(m.x): 2})
         assertExpressionsEqual(self, repn.nonlinear, m.x * m.x)
 
     def test_product(self):
         m = ConcreteModel()
         m.x = Var()
+        m.y = Var()
+        m.z = Var()
 
         e = (2 + 3 * m.x + 4 * m.x**2) * (5 + 6 * m.x + 7 * m.x**2)
 
@@ -885,8 +936,8 @@ class TestLinear(unittest.TestCase):
         LE6 = MonomialTermExpression((6, m.x))
         NL = (
             2 * (7 * m.x**2)
-            + 4 * m.x**2 * (6 * m.x + 5 + 7 * m.x**2)
-            + (LE3) * (LE6 + 7 * m.x**2)
+            + 4 * m.x**2 * (7 * m.x**2 + 6 * m.x + 5)
+            + (LE3) * (7 * m.x**2 + LE6)
         )
 
         self.assertEqual(cfg.subexpr, {})
@@ -896,6 +947,46 @@ class TestLinear(unittest.TestCase):
         self.assertAlmostEqual(repn.constant, 10)
         self.assertEqual(repn.linear, {id(m.x): 27})
         assertExpressionsEqual(self, repn.nonlinear, NL)
+
+        m.x.fix(0)
+        m.y.fix(nan)
+        e = m.x * m.y
+
+        cfg = VisitorConfig()
+        visitor = LinearRepnVisitor(*cfg)
+        visitor.expand_nonlinear_products = True
+        with LoggingIntercept() as LOG:
+            repn = visitor.walk_expression(e)
+        self.assertIn(
+            'Encountered 0*InvalidNumber(nan) in expression tree.', LOG.getvalue()
+        )
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertAlmostEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        e = m.x * (m.y + 2 + m.z)
+
+        cfg = VisitorConfig()
+        visitor = LinearRepnVisitor(*cfg)
+        visitor.expand_nonlinear_products = True
+        with LoggingIntercept() as LOG:
+            repn = visitor.walk_expression(e)
+        self.assertIn(
+            'Encountered 0*nan in expression tree.', LOG.getvalue()
+        )
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.z): m.z})
+        self.assertEqual(cfg.var_order, {id(m.z): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertAlmostEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
 
     def test_expr_if(self):
         m = ConcreteModel()
@@ -954,14 +1045,131 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
-        # m.x.fix(None)
+        m.y.fix(None)
+        m.x.unfix()
 
-        # cfg = VisitorConfig()
-        # repn = LinearRepnVisitor(*cfg).walk_expression(e)
-        # self.assertEqual(cfg.subexpr, {})
-        # self.assertEqual(cfg.var_map, {})
-        # self.assertEqual(cfg.var_order, {})
-        # self.assertEqual(repn.multiplier, 1)
-        # self.assertStructuredAlmostEqual(repn.constant, 4)
-        # self.assertStructuredAlmostEqual(repn.linear, {})
-        # self.assertEqual(repn.nonlinear, None)
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        assertExpressionsEqual(self, repn.nonlinear, m.x**2)
+
+        m.y.unfix()
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.y): m.y, id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.y): 0, id(m.x): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        assertExpressionsEqual(
+            self, repn.nonlinear, Expr_if(IF=m.y >= 5, THEN=m.x, ELSE=m.x**2)
+        )
+
+    def test_division(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+
+        e = (2 * m.x + 1) / m.y
+        m.y.fix(2)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 1 / 2)
+        self.assertEqual(repn.linear, {id(m.x): 1})
+        self.assertEqual(repn.nonlinear, None)
+
+        e = m.y / (m.x + 1)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        assertExpressionsEqual(self, repn.nonlinear, 2 / (m.x + 1))
+
+    def test_negation(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+
+        e = -(m.x + 2)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, -2)
+        self.assertEqual(repn.linear, {id(m.x): -1})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.x.fix(3)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, -5)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+    def test_external(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.sq = ExternalFunction(fgh=sum_sq)
+
+        e = m.sq(2/m.x, 2*m.y)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertIs(repn.nonlinear, e)
+
+        m.x.fix(2)
+        m.y.fix(3)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 37)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.x.fix(0)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertIs(repn.nonlinear, e)
