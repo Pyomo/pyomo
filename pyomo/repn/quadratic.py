@@ -11,7 +11,7 @@
 
 import copy
 
-from pyomo.core.expr.current import (
+from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     ProductExpression,
     DivisionExpression,
@@ -21,8 +21,13 @@ from pyomo.core.expr.current import (
     Expr_ifExpression,
     LinearExpression,
     MonomialTermExpression,
+    mutable_expression,
 )
-from pyomo.core.expr.numeric_expr import mutable_expression
+from pyomo.core.expr.relational_expr import (
+    EqualityExpression,
+    InequalityExpression,
+    RangedExpression,
+)
 from pyomo.core.base.expression import ScalarExpression
 from . import linear
 from .linear import _merge_dict
@@ -347,6 +352,43 @@ for j in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL):
         _exit_node_handlers[Expr_ifExpression][
             _CONSTANT, j, k
         ] = linear._handle_expr_if_const
+
+#
+# RELATIONAL handlers
+#
+_exit_node_handlers[EqualityExpression].update(
+    {
+        (_CONSTANT, _QUADRATIC): linear._handle_equality_general,
+        (_LINEAR, _QUADRATIC): linear._handle_equality_general,
+        (_QUADRATIC, _QUADRATIC): linear._handle_equality_general,
+        (_GENERAL, _QUADRATIC): linear._handle_equality_general,
+        (_QUADRATIC, _CONSTANT): linear._handle_equality_general,
+        (_QUADRATIC, _LINEAR): linear._handle_equality_general,
+        (_QUADRATIC, _GENERAL): linear._handle_equality_general,
+    }
+)
+_exit_node_handlers[InequalityExpression].update(
+    {
+        (_CONSTANT, _QUADRATIC): linear._handle_inequality_general,
+        (_LINEAR, _QUADRATIC): linear._handle_inequality_general,
+        (_QUADRATIC, _QUADRATIC): linear._handle_inequality_general,
+        (_GENERAL, _QUADRATIC): linear._handle_inequality_general,
+        (_QUADRATIC, _CONSTANT): linear._handle_inequality_general,
+        (_QUADRATIC, _LINEAR): linear._handle_inequality_general,
+        (_QUADRATIC, _GENERAL): linear._handle_inequality_general,
+    }
+)
+_exit_node_handlers[RangedExpression].update(
+    {
+        (_CONSTANT, _QUADRATIC): linear._handle_ranged_general,
+        (_LINEAR, _QUADRATIC): linear._handle_ranged_general,
+        (_QUADRATIC, _QUADRATIC): linear._handle_ranged_general,
+        (_GENERAL, _QUADRATIC): linear._handle_ranged_general,
+        (_QUADRATIC, _CONSTANT): linear._handle_ranged_general,
+        (_QUADRATIC, _LINEAR): linear._handle_ranged_general,
+        (_QUADRATIC, _GENERAL): linear._handle_ranged_general,
+    }
+)
 
 
 class QuadraticRepnVisitor(linear.LinearRepnVisitor):

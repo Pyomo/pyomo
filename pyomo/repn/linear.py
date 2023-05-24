@@ -15,7 +15,8 @@ from operator import itemgetter
 from itertools import filterfalse
 
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.core.expr.current import (
+from pyomo.common.numeric_types import native_types, native_numeric_types
+from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     ProductExpression,
     DivisionExpression,
@@ -28,8 +29,11 @@ from pyomo.core.expr.current import (
     SumExpression,
     NPV_SumExpression,
     ExternalFunctionExpression,
-    native_types,
-    native_numeric_types,
+)
+from pyomo.core.expr.relational_expr import (
+    EqualityExpression,
+    InequalityExpression,
+    RangedExpression,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
 from pyomo.core.expr import is_fixed
@@ -462,6 +466,80 @@ _exit_node_handlers[Expr_ifExpression] = {
 for j in (_CONSTANT, _LINEAR, _GENERAL):
     for k in (_CONSTANT, _LINEAR, _GENERAL):
         _exit_node_handlers[Expr_ifExpression][_CONSTANT, j, k] = _handle_expr_if_const
+
+#
+# Relational expression handlers
+#
+
+
+def _handle_equality_const(visitor, node, arg1, arg2):
+    return _CONSTANT, arg1[1] == arg2[1]
+
+
+def _handle_equality_general(visitor, node, arg1, arg2):
+    ans = visitor.Result()
+    ans.nonlinear = EqualityExpression(
+        (to_expression(visitor, arg1), to_expression(visitor, arg2))
+    )
+    return _GENERAL, ans
+
+
+_exit_node_handlers[EqualityExpression] = {
+    (i, j): _handle_equality_general
+    for i in (_CONSTANT, _LINEAR, _GENERAL)
+    for j in (_CONSTANT, _LINEAR, _GENERAL)
+}
+_exit_node_handlers[EqualityExpression][_CONSTANT, _CONSTANT] = _handle_equality_const
+
+
+def _handle_inequality_const(visitor, node, arg1, arg2):
+    return _CONSTANT, arg1[1] <= arg2[1]
+
+
+def _handle_inequality_general(visitor, node, arg1, arg2):
+    ans = visitor.Result()
+    ans.nonlinear = InequalityExpression(
+        (to_expression(visitor, arg1), to_expression(visitor, arg2)), node.strict
+    )
+    return _GENERAL, ans
+
+
+_exit_node_handlers[InequalityExpression] = {
+    (i, j): _handle_inequality_general
+    for i in (_CONSTANT, _LINEAR, _GENERAL)
+    for j in (_CONSTANT, _LINEAR, _GENERAL)
+}
+_exit_node_handlers[InequalityExpression][
+    _CONSTANT, _CONSTANT
+] = _handle_inequality_const
+
+
+def _handle_ranged_const(visitor, node, arg1, arg2, arg3):
+    return _CONSTANT, arg1[1] <= arg2[1] <= arg3[1]
+
+
+def _handle_ranged_general(visitor, node, arg1, arg2, arg3):
+    ans = visitor.Result()
+    ans.nonlinear = RangedExpression(
+        (
+            to_expression(visitor, arg1),
+            to_expression(visitor, arg2),
+            to_expression(visitor, arg3),
+        ),
+        node.strict,
+    )
+    return _GENERAL, ans
+
+
+_exit_node_handlers[RangedExpression] = {
+    (i, j, k): _handle_ranged_general
+    for i in (_CONSTANT, _LINEAR, _GENERAL)
+    for j in (_CONSTANT, _LINEAR, _GENERAL)
+    for k in (_CONSTANT, _LINEAR, _GENERAL)
+}
+_exit_node_handlers[RangedExpression][
+    _CONSTANT, _CONSTANT, _CONSTANT
+] = _handle_ranged_const
 
 
 def _before_native(visitor, child):
