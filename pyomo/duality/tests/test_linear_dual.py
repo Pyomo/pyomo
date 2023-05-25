@@ -18,10 +18,10 @@ from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'pyomo', 'core'))
 
-from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+from pyomo.repn.tests.lp_diff import load_and_compare_lp_baseline
 from pyomo.scripting.util import cleanup
 import pyomo.scripting.pyomo_main as main
 
@@ -121,11 +121,11 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem + "_" + solver + '.lp')
 
     def check(self, problem, solver):
-        _prob, _solv = join(currdir, self.problem + '_result.lp'), self.referenceFile(
-            problem, solver
-        )
-        self.assertTrue(
-            cmp(_prob, _solv), msg="Files %s and %s differ" % (_prob, _solv)
+        self.assertEqual(
+            *load_and_compare_lp_baseline(
+                self.referenceFile(problem, solver),
+                join(currdir, self.problem + '_result.lp'),
+            )
         )
 
 

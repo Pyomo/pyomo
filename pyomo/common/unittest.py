@@ -53,7 +53,16 @@ def _floatOrCall(val):
     try:
         return float(val)
     except TypeError:
+        pass
+    try:
         return float(val())
+    except TypeError:
+        pass
+    try:
+        return val.value
+    except AttributeError:
+        # likely a complex
+        return val
 
 
 def assertStructuredAlmostEqual(

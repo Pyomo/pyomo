@@ -90,6 +90,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.z)
         m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
         m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0], m.d._autodisjuncts[1]]
+        TransformationFactory('gdp.bigm').apply_to(m)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             solver = SolverFactory('gdpopt.loa')

@@ -116,6 +116,14 @@ class DeveloperError(PyomoException, NotImplementedError):
         )
 
 
+class InvalidValueError(PyomoException, ValueError):
+    """
+    Exception class used for for value errors in compiled model representations
+    """
+
+    pass
+
+
 class IntervalException(PyomoException, ValueError):
     """
     Exception class used for errors in interval arithmetic.

@@ -16,8 +16,9 @@ import io
 import math
 import os
 
+import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
-from pyomo.repn.tests.ampl.nl_diff import nl_diff
+from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
@@ -34,6 +35,8 @@ from pyomo.environ import (
     Constraint,
     Expression,
 )
+
+_invalid_1j = r'InvalidNumber\((\([-+0-9.e]+\+)?1j\)?\)'
 
 
 class INFO(object):
@@ -155,7 +158,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -170,7 +173,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -185,7 +188,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -200,7 +203,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -215,7 +218,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -345,9 +348,9 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.p = Param(mutable=True, initialize=0)
         m.x = Var()
 
-        nl_writer.HALT_ON_EVALUATION_ERROR, tmp = (
+        repn_util.HALT_ON_EVALUATION_ERROR, tmp = (
             True,
-            nl_writer.HALT_ON_EVALUATION_ERROR,
+            repn_util.HALT_ON_EVALUATION_ERROR,
         )
         try:
             info = INFO()
@@ -390,7 +393,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
                 "\texpression: x**2/p\n",
             )
         finally:
-            nl_writer.HALT_ON_EVALUATION_ERROR = tmp
+            repn_util.HALT_ON_EVALUATION_ERROR = tmp
 
     def test_errors_negative_frac_pow(self):
         m = ConcreteModel()
@@ -402,13 +405,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((m.p ** (0.5), None, None))
         self.assertEqual(
             LOG.getvalue(),
-            "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
-            "\tmessage: Pyomo does not support complex numbers\n"
+            "Complex number returned from expression\n"
+            "\tmessage: Pyomo AMPLRepnVisitor does not support complex numbers\n"
             "\texpression: p**0.5\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertRegex(str(repn.const), _invalid_1j)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -418,13 +421,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((m.p**m.x, None, None))
         self.assertEqual(
             LOG.getvalue(),
-            "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
-            "\tmessage: Pyomo does not support complex numbers\n"
+            "Complex number returned from expression\n"
+            "\tmessage: Pyomo AMPLRepnVisitor does not support complex numbers\n"
             "\texpression: p**x\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertRegex(str(repn.const), _invalid_1j)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -444,7 +447,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -468,7 +471,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
