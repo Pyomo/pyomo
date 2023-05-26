@@ -1317,6 +1317,20 @@ class FbbtTestBase(object):
         self.assertAlmostEqual(m.y.lb, 0)
         self.assertAlmostEqual(m.y.ub, 3)
 
+    def test_named_expr(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, None))
+        m.y = pyo.Var(bounds=(1, 6))
+        m.e_const = pyo.Expression(expr=3)
+        m.e_var = pyo.Expression(expr=m.y + m.e_const)
+
+        m.c = pyo.Constraint(expr=m.x**2 == m.e_var)
+
+        self.tightener(m)
+        self.tightener(m)
+        self.assertAlmostEqual(m.x.lb, 2)
+        self.assertAlmostEqual(m.x.ub, 3)
+
 
 class TestFBBT(FbbtTestBase, unittest.TestCase):
     def setUp(self) -> None:
