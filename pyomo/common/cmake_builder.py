@@ -32,8 +32,10 @@ def handleReadonly(function, path, excinfo):
 def build_cmake_project(
     targets, package_name=None, description=None, user_args=[], parallel=None
 ):
-    import distutils.core
+    # Note: setuptools must be imported before distutils to avoid
+    # warnings / errors with recent setuptools distributions
     from setuptools import Extension
+    import distutils.core
     from distutils.command.build_ext import build_ext
 
     class _CMakeBuild(build_ext, object):
