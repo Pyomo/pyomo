@@ -1331,6 +1331,7 @@ class FbbtTestBase(object):
         self.assertAlmostEqual(m.x.lb, 2)
         self.assertAlmostEqual(m.x.ub, 3)
 
+
 class TestFBBT(FbbtTestBase, unittest.TestCase):
     def setUp(self) -> None:
         self.tightener = fbbt
