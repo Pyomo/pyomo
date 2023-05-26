@@ -444,7 +444,7 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
         is more conservative).
     """
     if node.expr.__class__ in native_types:
-        expr_lb = expr_up = node.expr
+        expr_lb = expr_ub = node.expr
     else:
         expr_lb, expr_ub = bnds_dict[node.expr]
     bnds_dict[node] = (expr_lb, expr_ub)
