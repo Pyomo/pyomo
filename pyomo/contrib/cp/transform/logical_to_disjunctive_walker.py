@@ -43,6 +43,11 @@ def _dispatch_boolean_var(visitor, node):
             z = visitor.z_vars.add()
             visitor.boolean_to_binary_map[node] = z
             node.associate_binary_var(z)
+    if node.fixed:
+        visitor.boolean_to_binary_map[node].fixed = True
+        visitor.boolean_to_binary_map[node].set_value(
+            int(node.value) if node.value is not None else None, skip_validation=True
+        )
     return False, visitor.boolean_to_binary_map[node]
 
 
