@@ -734,3 +734,21 @@ class MatrixConstraint(Mapping, IndexedConstraint):
 
     def __delitem__(self):
         raise NotImplementedError
+
+    #
+    # Pyomo components support an extended dict API
+    #
+    def keys(self, sort=None):
+        # The 0..n-1 indices are always ordered and sorted; we can
+        # ignore the `sort` argument
+        return super().keys()
+
+    def values(self, sort=None):
+        # The 0..n-1 indices are always ordered and sorted; we can
+        # ignore the `sort` argument
+        return super().values()
+
+    def items(self, sort=None):
+        # The 0..n-1 indices are always ordered and sorted; we can
+        # ignore the `sort` argument
+        return super().items()

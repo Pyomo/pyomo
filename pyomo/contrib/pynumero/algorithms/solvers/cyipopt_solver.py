@@ -47,17 +47,17 @@ cyipopt_interface, _ = attempt_import(
 relocated_module_attribute(
     "cyipopt_available",
     "pyomo.contrib.pynumero.interfaces.cyipopt_interface.cyipopt_available",
-    "6.5.1.dev0",
+    "6.6.0",
 )
 relocated_module_attribute(
     "CyIpoptProblemInterface",
     "pyomo.contrib.pynumero.interfaces.cyipopt_interface.CyIpoptProblemInterface",
-    "6.5.1.dev0",
+    "6.6.0",
 )
 relocated_module_attribute(
     "CyIpoptNLP",
     "pyomo.contrib.pynumero.interfaces.cyipopt_interface.CyIpoptNLP",
-    "6.5.1.dev0",
+    "6.6.0",
 )
 
 from pyomo.common.config import ConfigBlock, ConfigValue

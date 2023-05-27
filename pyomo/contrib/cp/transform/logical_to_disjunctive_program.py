@@ -27,6 +27,7 @@ from pyomo.core import (
     NonNegativeIntegers,
 )
 from pyomo.core.base.block import _BlockData
+from pyomo.core.base import SortComponents
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
 
@@ -87,7 +88,7 @@ class LogicalToDisjunctive(Transformation):
                 )
 
     def _transform_constraint(self, constraint, visitor, transBlocks):
-        for i in constraint.keys(ordered=True):
+        for i in constraint.keys(sort=SortComponents.ORDERED_INDICES):
             self._transform_constraintData(constraint[i], visitor, transBlocks)
         constraint.deactivate()
 

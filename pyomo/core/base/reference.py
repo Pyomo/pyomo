@@ -12,7 +12,6 @@
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
     UserDict,
-    OrderedDict,
     Mapping,
     MutableMapping,
     Set as collections_Set,
@@ -22,6 +21,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.core.base.set import DeclareGlobalSet, Set, SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.global_set import UnindexedComponent_set
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.indexed_component import IndexedComponent, normalize_index
 from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice,
@@ -299,12 +299,10 @@ class _ReferenceDict(MutableMapping):
         elif op == IndexedComponent_slice.slice_info:
             assert len(tmp._call_stack) == 1
             _iter = self._get_iter(tmp, key)
-            try:
-                next(_iter)
-                del _iter._iter_stack[0].component[_iter.get_last_index()]
-                return
-            except StopIteration:
-                raise KeyError("KeyError: %s" % (key,))
+            # The iterator should map all StopIteration exceptions to KeyErrors
+            next(_iter)
+            del _iter._iter_stack[0].component[_iter.get_last_index()]
+            return
         elif op == IndexedComponent_slice.get_attribute:
             # If the last attribute of the slice retrieves an attribute,
             # change it to delete the attribute
@@ -320,14 +318,17 @@ class _ReferenceDict(MutableMapping):
             pass
 
     def __iter__(self):
-        return self._slice.wildcard_keys()
+        return self._slice.wildcard_keys(SortComponents.UNSORTED)
 
     def __len__(self):
         # Note that unlike for regular dicts, len() of a _ReferenceDict
         # is very slow (linear time).
         return sum(1 for i in self._slice)
 
-    def items(self):
+    def keys(self, sort=SortComponents.UNSORTED):
+        return self._slice.wildcard_keys(sort)
+
+    def items(self, sort=SortComponents.UNSORTED):
         """Return the wildcard, value tuples for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -340,9 +341,9 @@ class _ReferenceDict(MutableMapping):
         still be linear and not quadratic time.
 
         """
-        return self._slice.wildcard_items()
+        return self._slice.wildcard_items(sort)
 
-    def values(self):
+    def values(self, sort=SortComponents.UNSORTED):
         """Return the values for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -355,7 +356,7 @@ class _ReferenceDict(MutableMapping):
         still be linear and not quadratic time.
 
         """
-        return iter(self._slice)
+        return self._slice.wildcard_values(sort)
 
     @deprecated('The iteritems method is deprecated. Use dict.items().', version='6.0')
     def iteritems(self):
@@ -427,7 +428,7 @@ class _ReferenceSet(collections_Set):
             return False
 
     def __iter__(self):
-        return self._slice.index_wildcard_keys()
+        return self._slice.index_wildcard_keys(False)
 
     def __len__(self):
         return sum(1 for _ in self)
@@ -445,6 +446,12 @@ class _ReferenceSet(collections_Set):
 
     def __str__(self):
         return "ReferenceSet(%s)" % (self._slice,)
+
+    def ordered_iter(self):
+        return self._slice.index_wildcard_keys(SortComponents.ORDERED_INDICES)
+
+    def sorted_iter(self):
+        return self._slice.index_wildcard_keys(SortComponents.SORTED_INDICES)
 
 
 def _identify_wildcard_sets(iter_stack, index):
@@ -699,7 +706,7 @@ def Reference(reference, ctype=NOTSET):
         index = SetOf(_data)
     elif isinstance(reference, Sequence):
         slice_idx = None
-        _data = _ReferenceDict_mapping(OrderedDict(enumerate(reference)))
+        _data = _ReferenceDict_mapping(dict(enumerate(reference)))
         _iter = _data.values()
         index = OrderedSetOf(_data)
     else:

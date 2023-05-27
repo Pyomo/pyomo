@@ -25,328 +25,304 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
-
-from pyomo.common.dependencies import (
-    numpy as np,
-    numpy_available,
-    pandas as pd,
-    pandas_available,
-    matplotlib as plt,
-    matplotlib_available,
-)
+import itertools
 
 
-class Measurements:
-    def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
+class VariablesWithIndices:
+    def __init__(self):
+        """This class provides utility methods for DesignVariables and MeasurementVariables to create
+        lists of Pyomo variable names with an arbitrary number of indices.
         """
-        This class stores information on which algebraic and differential
-        variables in the Pyomo model are considered measurements.
+        self.variable_names = []
+        self.variable_names_value = {}
+        self.lower_bounds = {}
+        self.upper_bounds = {}
 
-        This includes the functionality to specify indices for these
-        measurement variables.  For example, with a partial differential
-        algebraic equation model, these measurement index sets can
-        specify which spatial and temporal coordinates each measurement
-        is available.  Moreover, this class supports defining the
-        covariance matrix for all measurements.
+    def set_variable_name_list(self, variable_name_list):
+        """
+        Specify variable names with its full name.
 
         Parameters
         ----------
-        measurement_index_time:
-            a ``dict``, keys are measurement variable names,
-
-            * if there are extra indices, for e.g., Var[scenario, extra_index, time]:
-              values are a dictionary, keys are its extra index, values are its
-              measuring time points.
-            * if there are no extra indices, for e.g., Var[scenario, time]:
-              values are a list of measuring time point.
-
-            For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
-            so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
-        variance:
-            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index,
-            values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
-            For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
-            If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
-        ind_string:
-            a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
-            For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
-
+        variable_name_list: a ``list`` of ``string``, containing the variable names with indices,
+            for e.g. "C['CA', 23, 0]".
         """
-        self.measurement_all_info = measurement_index_time
-        self.ind_string = ind_string
-        # a list of measurement names
-        self.measurement_name = list(measurement_index_time.keys())
-        # begin flatten
-        self._name_and_index_generator(self.measurement_all_info)
-        self._generate_flatten_name(self.name_and_index)
-        self._generate_variance(
-            self.flatten_measure_name, variance, self.name_and_index
-        )
-        self._generate_flatten_timeset(
-            self.measurement_all_info, self.flatten_measure_name, self.name_and_index
-        )
-        self._model_measure_name()
+        self.variable_names.extend(variable_name_list)
 
-        # generate the overall measurement time points set, including the measurement time for all measurements
-        flatten_timepoint = list(self.flatten_measure_timeset.values())
-        overall_time = []
-        for i in flatten_timepoint:
-            overall_time += i
-            timepoint_overall_set = list(set(overall_time))
-        self.timepoint_overall_set = timepoint_overall_set
-
-    def _name_and_index_generator(self, all_info):
+    def add_variables(
+        self,
+        var_name,
+        indices=None,
+        time_index_position=None,
+        values=None,
+        lower_bounds=None,
+        upper_bounds=None,
+    ):
         """
-        Generate a dictionary, keys are the variable names, values are the indexes of this variable.
-        For e.g., name_and_index = {'C': ['CA', 'CB', 'CC']}
+        Used for generating string names with indices.
 
         Parameters
         ----------
-        all_info: a dictionary, keys are measurement variable names,
-            values are a dictionary, keys are its extra index, values are its measuring time points
-            values are a list of measuring time point if there is no extra index for this measurement
-            Note: all_info can be the self.measurement_all_info, but does not have to be it.
+        var_name: variable name in ``string``
+        indices: a ``dict`` containing indices
+            if default (None), no extra indices needed for all var in var_name
+            for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}.
+        time_index_position: an integer indicates which index is the time index
+            for e.g., 1 is the time index position in the indices example.
+        values: a ``list`` containing values which has the same shape of flattened variables
+            default choice is None, means there is no give nvalues
+        lower_bounds: a ``list `` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
+        upper_bounds: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
 
+        Returns
+        -------
+        if not defining values, return a set of variable names
+        if defining values, return a dictionary of variable names and its value
         """
-        measurement_name = list(all_info.keys())
-        # a list of measurement extra indexes
-        measurement_extra_index = []
-        # check if the measurement has extra indexes
-        for i in measurement_name:
-            if type(all_info[i]) is dict:
-                index_list = list(all_info[i].keys())
-                measurement_extra_index.append(index_list)
-            elif type(all_info[i]) is list:
-                measurement_extra_index.append(None)
-        # a dictionary, keys are measurement names, values are a list of extra indexes
-        self.name_and_index = dict(zip(measurement_name, measurement_extra_index))
+        added_names = self._generate_variable_names_with_indices(
+            var_name, indices=indices, time_index_position=time_index_position
+        )
 
-    def _generate_flatten_name(self, measure_name_and_index):
+        self._check_valid_input(
+            len(added_names),
+            var_name,
+            indices,
+            time_index_position,
+            values,
+            lower_bounds,
+            upper_bounds,
+        )
+
+        if values:
+            # this dictionary keys are special set, values are its value
+            self.variable_names_value.update(zip(added_names, values))
+
+        # if a scalar (int or float) is given, set it as the lower bound for all variables
+        if lower_bounds:
+            if type(lower_bounds) in [int, float]:
+                lower_bounds = [lower_bounds] * len(added_names)
+            self.lower_bounds.update(zip(added_names, lower_bounds))
+
+        if upper_bounds:
+            if type(upper_bounds) in [int, float]:
+                upper_bounds = [upper_bounds] * len(added_names)
+            self.upper_bounds.update(zip(added_names, upper_bounds))
+
+        return added_names
+
+    def _generate_variable_names_with_indices(
+        self, var_name, indices=None, time_index_position=None
+    ):
         """
-        Generate measurement flattened names
+        Used for generating string names with indices.
 
+        Parameters
+        ----------
+        var_name: a ``list`` of var names
+        indices: a ``dict`` containing indices
+            if default (None), no extra indices needed for all var in var_name
+            for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}.
+        time_index_position: an integer indicates which index is the time index
+            for e.g., 1 is the time index position in the indices example.
+        """
+        # first combine all indices into a list
+        all_index_list = []  # contains all index lists
+        if indices:
+            for index_pointer in indices:
+                all_index_list.append(indices[index_pointer])
+
+        # all index list for one variable, such as ["CA", 10, 1]
+        # exhaustively enumerate over the full product of indices. For e.g.,
+        # {0:["CA", "CB", "CC"], 1: [1,2,3]}
+        # becomes ["CA", 1], ["CA", 2], ..., ["CC", 2], ["CC", 3]
+        all_variable_indices = list(itertools.product(*all_index_list))
+
+        # list store all names added this time
+        added_names = []
+        # iterate over index combinations ["CA", 1], ["CA", 2], ..., ["CC", 2], ["CC", 3]
+        for index_instance in all_variable_indices:
+            var_name_index_string = var_name + "["
+            for i, idx in enumerate(index_instance):
+                # use repr() is different from using str()
+                # with repr(), "CA" is "CA", with str(), "CA" is CA. The first is not valid in our interface.
+                var_name_index_string += str(idx)
+
+                # if i is the last index, close the []. if not, add a "," for the next index.
+                if i == len(index_instance) - 1:
+                    var_name_index_string += "]"
+                else:
+                    var_name_index_string += ","
+
+            self.variable_names.append(var_name_index_string)
+            added_names.append(var_name_index_string)
+
+        return added_names
+
+    def _check_valid_input(
+        self,
+        len_indices,
+        var_name,
+        indices,
+        time_index_position,
+        values,
+        lower_bounds,
+        upper_bounds,
+    ):
+        """
+        Check if the measurement information provided are valid to use.
+        """
+        assert type(var_name) is str, "var_name should be a string."
+
+        if time_index_position not in indices:
+            raise ValueError("time index cannot be found in indices.")
+
+        # if given a list, check if bounds have the same length with flattened variable
+        if values and len(values) != len_indices:
+            raise ValueError("Values is of different length with indices.")
+
+        if (
+            lower_bounds
+            and type(lower_bounds) == list
+            and len(lower_bounds) != len_indices
+        ):
+            raise ValueError("Lowerbounds is of different length with indices.")
+
+        if (
+            upper_bounds
+            and type(upper_bounds) == list
+            and len(upper_bounds) != len_indices
+        ):
+            raise ValueError("Upperbounds is of different length with indices.")
+
+
+class MeasurementVariables(VariablesWithIndices):
+    def __init__(self):
+        """
+        This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements.
+        """
+        super().__init__()
+        self.variance = {}
+
+    def set_variable_name_list(self, variable_name_list, variance=1):
+        """
+        Specify variable names if given strings containing names and indices.
+
+        Parameters
+        ----------
+        variable_name_list: a ``list`` of ``string``, containing the variable names with indices,
+            for e.g. "C['CA', 23, 0]".
+        variance: a ``list`` of scalar numbers , which is the variance for this measurement.
+        """
+        super().set_variable_name_list(variable_name_list)
+
+        # add variance
+        if variance is not list:
+            variance = [variance] * len(variable_name_list)
+
+        self.variance.update(zip(variable_name_list, variance))
+
+    def add_variables(
+        self, var_name, indices=None, time_index_position=None, variance=1
+    ):
+        """
         Parameters
         -----------
-        measure_name_and_index: a dictionary, keys are measurement names, values are lists of extra indexes
-
-        Returns
-        -------
-        jac_involved_name: a list of flattened measurement names
-
+        var_name: a ``list`` of var names
+        indices: a ``dict`` containing indices
+            if default (None), no extra indices needed for all var in var_name
+            for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}.
+        time_index_position: an integer indicates which index is the time index
+            for e.g., 1 is the time index position in the indices example.
+        variance: a scalar number, which is the variance for this measurement.
         """
-        flatten_names = []
-        for j in measure_name_and_index.keys():
-            if measure_name_and_index[j] is not None:  # if it has extra index
-                for ind in measure_name_and_index[j]:
-                    flatten_name = j + self.ind_string + str(ind)
-                    flatten_names.append(flatten_name)
-            else:
-                flatten_names.append(j)
+        added_names = super().add_variables(
+            var_name=var_name, indices=indices, time_index_position=time_index_position
+        )
 
-        self.flatten_measure_name = flatten_names
+        # store variance
+        # if variance is a scalar number, repeat it for all added names
+        if variance is not list:
+            variance = [variance] * len(added_names)
+        self.variance.update(zip(added_names, variance))
 
-    def _generate_variance(self, flatten_measure_name, variance, name_and_index):
+    def check_subset(self, subset_object):
         """
-        Generate the variance dictionary
+        Check if subset_object is a subset of the current measurement object
 
         Parameters
         ----------
-        flatten_measure_name: flattened measurement names. For e.g., flattening {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
-        variance:
-            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index name,
-            values are its variance as a scalar number.
-            For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
-            If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
-            If there is no extra index, it is a dict, keys are measurement variable names, values are its variance as a scalar number.
-        name_and_index:
-            a dictionary, keys are measurement names, values are a list of extra indexes.
-
+        subset_object: a measurement object
         """
-        flatten_variance = {}
-        for i in flatten_measure_name:
-            if variance is None:
-                flatten_variance[i] = 1
-            else:
-                # split the flattened name if needed
-                if self.ind_string in i:
-                    measure_name = i.split(self.ind_string)[0]
-                    measure_index = i.split(self.ind_string)[1]
-                    if type(name_and_index[measure_name][0]) is int:
-                        measure_index = int(measure_index)
-                    flatten_variance[i] = variance[measure_name][measure_index]
-                else:
-                    flatten_variance[i] = variance[i]
-        self.flatten_variance = flatten_variance
+        for name in subset_object.variable_names:
+            if name not in self.variable_names:
+                raise ValueError("Measurement not in the set: ", name)
 
-    def _generate_flatten_timeset(self, all_info, flatten_measure_name, name_and_index):
+        return True
+
+
+class DesignVariables(VariablesWithIndices):
+    """
+    Define design variables
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def set_variable_name_list(self, variable_name_list):
         """
-        Generate flatten variables timeset. Return a dict where keys are the flattened variable names,
-        values are a list of measurement time.
+        Specify variable names with its full name.
 
+        Parameters
+        ----------
+        variable_name_list: a ``list`` of ``string``, containing the variable names with indices,
+            for e.g. "C['CA', 23, 0]".
         """
-        flatten_measure_timeset = {}
-        for i in flatten_measure_name:
-            # split the flattened name if needed
-            if self.ind_string in i:
-                measure_name = i.split(self.ind_string)[0]
-                measure_index = i.split(self.ind_string)[1]
-                if type(name_and_index[measure_name][0]) is int:
-                    measure_index = int(measure_index)
-                flatten_measure_timeset[i] = all_info[measure_name][measure_index]
-            else:
-                flatten_measure_timeset[i] = all_info[i]
-        self.flatten_measure_timeset = flatten_measure_timeset
+        super().set_variable_name_list(variable_name_list)
 
-    def _model_measure_name(self):
-        """Return pyomo string name"""
-        # store pyomo string name
-        measurement_names = []
-        # loop over measurement name
-        for mname in self.flatten_measure_name:
-            # check if there is extra index
-            if self.ind_string in mname:
-                measure_name = mname.split(self.ind_string)[0]
-                measure_index = mname.split(self.ind_string)[1]
-                for tim in self.flatten_measure_timeset[mname]:
-                    # get the measurement name in the model
-                    measurement_name = (
-                        measure_name + '[0,' + measure_index + ',' + str(tim) + ']'
-                    )
-                    measurement_names.append(measurement_name)
-            else:
-                for tim in self.flatten_measure_timeset[mname]:
-                    # get the measurement name in the model
-                    measurement_name = mname + '[0,' + str(tim) + ']'
-                    measurement_names.append(measurement_name)
-        self.model_measure_name = measurement_names
-
-    def SP_measure_name(
-        self, j, t, scenario_all=None, p=None, mode='sequential_finite', legal_t=True
+    def add_variables(
+        self,
+        var_name,
+        indices=None,
+        time_index_position=None,
+        values=None,
+        lower_bounds=None,
+        upper_bounds=None,
     ):
-        """Return pyomo string name for different modes
-
-        Arguments
-        ---------
-        j: flatten measurement name
-        t: time
-        scenario_all: all scenario object, only needed for simultaneous finite mode
-        p: parameter, only needed for simultaneous finite mode
-        mode: mode name, can be 'simultaneous_finite' or 'sequential_finite'
-        legal_t: if the time point is legal for this measurement. default is True
-
-        Returns
-        -------
-        up_C, lo_C: two measurement pyomo string names for simultaneous mode
-        legal_t: if the time point is legal for this measurement
-        string_name: one measurement pyomo string name for sequential
-
         """
-        if mode == 'simultaneous_finite':
-            # check extra index
-            if self.ind_string in j:
-                measure_name = j.split(self.ind_string)[0]
-                measure_index = j.split(self.ind_string)[1]
-                if type(self.name_and_index[measure_name][0]) is str:
-                    measure_index = '"' + measure_index + '"'
-                if t in self.flatten_measure_timeset[j]:
-                    up_C = (
-                        'm.'
-                        + measure_name
-                        + '['
-                        + str(scenario_all['jac-index'][p][0])
-                        + ','
-                        + measure_index
-                        + ','
-                        + str(t)
-                        + ']'
-                    )
-                    lo_C = (
-                        'm.'
-                        + measure_name
-                        + '['
-                        + str(scenario_all['jac-index'][p][1])
-                        + ','
-                        + measure_index
-                        + ','
-                        + str(t)
-                        + ']'
-                    )
-                else:
-                    legal_t = False
-            else:
-                up_C = (
-                    'm.'
-                    + j
-                    + '['
-                    + str(scenario_all['jac-index'][p][0])
-                    + ','
-                    + str(t)
-                    + ']'
-                )
-                lo_C = (
-                    'm.'
-                    + j
-                    + '['
-                    + str(scenario_all['jac-index'][p][1])
-                    + ','
-                    + str(t)
-                    + ']'
-                )
-
-            return up_C, lo_C, legal_t
-
-        elif mode == 'sequential_finite':
-            if self.ind_string in j:
-                measure_name = j.split(self.ind_string)[0]
-                measure_index = j.split(self.ind_string)[1]
-                if type(self.name_and_index[measure_name][0]) is str:
-                    measure_index = '"' + measure_index + '"'
-                if t in self.flatten_measure_timeset[j]:
-                    string_name = (
-                        'mod.'
-                        + measure_name
-                        + '[0,'
-                        + str((measure_index))
-                        + ','
-                        + str(t)
-                        + ']'
-                    )
-            else:
-                string_name = 'mod.' + j + '[0,' + str(t) + ']'
-
-            return string_name
-
-    def check_subset(self, subset, throw_error=True, valid_subset=True):
-        """
-        Check if the subset is correctly defined with right name, index and time.
 
         Parameters
         ----------
-        subset:
-            a ''dict'' where measurement name and index are involved in jacobian calculation
-        throw_error:
-            if the given subset is not a subset of the measurement set, throw error message
+        var_name: a ``list`` of var names
+        indices: a ``dict`` containing indices
+            if default (None), no extra indices needed for all var in var_name
+            for e.g., {0:["CA", "CB", "CC"], 1: [1,2,3]}.
+        time_index_position: an integer indicates which index is the time index
+            for e.g., 1 is the time index position in the indices example.
+        values: a ``list`` containing values which has the same shape of flattened variables
+            default choice is None, means there is no give nvalues
+        lower_bounds: a ``list`` of lower bounds. If given a scalar number, it is set as the lower bounds for all variables.
+        upper_bounds: a ``list`` of upper bounds. If given a scalar number, it is set as the upper bounds for all variables.
         """
-        flatten_subset = subset.flatten_measure_name
-        flatten_timeset = subset.flatten_measure_timeset
-        # loop over subset measurement names
-        for i in flatten_subset:
-            # check if subset measurement names are in the overall measurement names
-            if i not in self.flatten_measure_name:
-                valid_subset = False
-                if throw_error:
-                    raise ValueError(
-                        'This is not a legal subset of the measurement overall set!'
-                    )
-            else:
-                # check if subset measurement timepoints are in the overall measurement timepoints
-                for t in flatten_timeset[i]:
-                    if t not in self.flatten_measure_timeset[i]:
-                        valid_subset = False
-                        if throw_error:
-                            raise ValueError(
-                                'The time of {} is not included as measurements before.'.format(
-                                    t
-                                )
-                            )
-        return valid_subset
+        super().add_variables(
+            var_name=var_name,
+            indices=indices,
+            time_index_position=time_index_position,
+            values=values,
+            lower_bounds=lower_bounds,
+            upper_bounds=upper_bounds,
+        )
+
+    def update_values(self, new_value_dict):
+        """
+        Update values of variables. Used for defining values for design variables of different experiments.
+
+        Parameters
+        ----------
+        new_value_dict: a ``dict`` containing the new values for the variables.
+            for e.g., {"C['CA', 23, 0]": 0.5, "C['CA', 24, 0]": 0.6}
+        """
+        for key in new_value_dict:
+            if key not in self.variable_names:
+                raise ValueError("Variable not in the set: ", key)
+
+            self.variable_names_value[key] = new_value_dict[key]

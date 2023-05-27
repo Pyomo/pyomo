@@ -1721,6 +1721,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
     def test_rangeset_iter(self):
         i = RangeSet(0, 10, 2)
         self.assertEqual(tuple(i), (0, 2, 4, 6, 8, 10))
+        self.assertEqual(tuple(i.ordered_iter()), (0, 2, 4, 6, 8, 10))
+        self.assertEqual(tuple(i.sorted_iter()), (0, 2, 4, 6, 8, 10))
 
         i = RangeSet(ranges=(NR(0, 5, 2), NR(6, 10, 2)))
         self.assertEqual(tuple(i), (0, 2, 4, 6, 8, 10))
@@ -3796,6 +3798,9 @@ class TestSet(unittest.TestCase):
         def _verify(_s, _l):
             self.assertTrue(_s.isordered())
             self.assertTrue(_s.isfinite())
+            self.assertEqual(list(_s), list(reversed(list(reversed(_s)))))
+            self.assertEqual(list(_s.ordered_iter()), _l)
+            self.assertEqual(list(_s.sorted_iter()), sorted(_l))
             for i, v in enumerate(_l):
                 self.assertEqual(_s.at(i + 1), v)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
@@ -4904,6 +4909,26 @@ I : Size=2, Index=I_index, Ordered=Insertion
         )
         self.assertTrue(I._is_sorted)
 
+        # ordered_iter()()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.ordered_iter()),
+            ','.join(str(_) for _ in range(-i, i + 1)),
+        )
+        self.assertTrue(I._is_sorted)
+
+        # sorted_iter()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.sorted_iter()),
+            ','.join(str(_) for _ in range(-i, i + 1)),
+        )
+        self.assertTrue(I._is_sorted)
+
         # bounds()
         i += 1
         I.update((i, -i))
@@ -5014,6 +5039,103 @@ I : Size=2, Index=I_index, Ordered=Insertion
         self.assertFalse(I._is_sorted)
         self.assertEqual(I.ord(0), i + 1)
         self.assertTrue(I._is_sorted)
+
+    def test_sorted_operations(self):
+        I = UnindexedComponent_set
+        self.assertEqual(len(I), 1)
+        self.assertEqual(I.dimen, 0)
+
+        self.assertTrue(I.isdiscrete())
+        self.assertTrue(I.isfinite())
+        self.assertTrue(I.isordered())
+
+        with self.assertRaisesRegex(AttributeError, "has no attribute 'add'"):
+            I.add(1)
+        with self.assertRaisesRegex(AttributeError, "has no attribute 'set_value'"):
+            I.set_value(1)
+        with self.assertRaisesRegex(AttributeError, "has no attribute 'remove'"):
+            I.remove(val[0])
+        with self.assertRaisesRegex(AttributeError, "has no attribute 'discard'"):
+            I.discard(val[0])
+        with self.assertRaisesRegex(AttributeError, "has no attribute 'pop'"):
+            I.pop()
+        with self.assertRaisesRegex(AttributeError, "has no attribute 'clear'"):
+            I.clear()
+        with self.assertRaisesRegex(AttributeError, "has no attribute 'update'"):
+            I.update()
+
+        self.assertEqual(str(I), "UnindexedComponent_set")
+        self.assertEqual(','.join(str(_) for _ in I.ranges()), "{None}")
+
+        self.assertIsNone(I.construct())
+
+        val = I.data()
+        self.assertIs(type(val), tuple)
+        self.assertEqual(len(val), 1)
+        self.assertEqual(I.ordered_data(), val)
+        self.assertEqual(I.sorted_data(), val)
+        self.assertEqual(I.get(val[0], 100), val[0])
+        self.assertEqual(I.get(999, 100), 100)
+
+        self.assertEqual(tuple(I), val)
+        self.assertEqual(tuple(reversed(I)), val)
+        self.assertEqual(tuple(I.sorted_iter()), val)
+        self.assertEqual(tuple(I.ordered_iter()), val)
+
+        self.assertEqual(I.bounds(), (None, None))
+        self.assertEqual(I.get_interval(), (None, None, None))
+        self.assertEqual(I.subsets(), [I])
+
+        self.assertEqual(I.first(), val[0])
+        self.assertEqual(I.last(), val[0])
+        self.assertEqual(I.at(1), val[0])
+        with self.assertRaisesRegex(
+            IndexError, 'UnindexedComponent_set index out of range'
+        ):
+            I.at(999)
+        self.assertEqual(I.ord(val[0]), 1)
+        with self.assertRaisesRegex(
+            IndexError,
+            "Cannot identify position of 999 in Set UnindexedComponent_set: "
+            "item not in Set",
+        ):
+            I.ord(999)
+
+        with self.assertRaisesRegex(
+            IndexError, 'Cannot advance past the end of the Set'
+        ):
+            I.next(val[0])
+        with self.assertRaisesRegex(
+            IndexError,
+            "Cannot identify position of 999 in Set UnindexedComponent_set: "
+            "item not in Set",
+        ):
+            I.next(999)
+        self.assertEqual(I.nextw(val[0]), val[0])
+        with self.assertRaisesRegex(
+            IndexError,
+            "Cannot identify position of 999 in Set UnindexedComponent_set: "
+            "item not in Set",
+        ):
+            I.nextw(999)
+
+        with self.assertRaisesRegex(
+            IndexError, 'Cannot advance before the beginning of the Set'
+        ):
+            I.prev(val[0])
+        with self.assertRaisesRegex(
+            IndexError,
+            "Cannot identify position of 999 in Set UnindexedComponent_set: "
+            "item not in Set",
+        ):
+            I.prev(999)
+        self.assertEqual(I.prevw(val[0]), val[0])
+        with self.assertRaisesRegex(
+            IndexError,
+            "Cannot identify position of 999 in Set UnindexedComponent_set: "
+            "item not in Set",
+        ):
+            I.prevw(999)
 
     def test_process_setarg(self):
         m = AbstractModel()
