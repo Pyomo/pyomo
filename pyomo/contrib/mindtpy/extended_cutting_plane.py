@@ -32,7 +32,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
     applies a variety of decomposition-based approaches to solve Mixed-Integer
     Nonlinear Programming (MINLP) problems.
     This class includes:
-    
+
     - Extended Cutting Plane (ECP)
     """
 
