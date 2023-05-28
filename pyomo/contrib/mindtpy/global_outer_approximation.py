@@ -45,22 +45,17 @@ from pyomo.contrib.mindtpy.cut_generation import add_affine_cuts
 @SolverFactory.register(
     'mindtpy.goa', doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo'
 )
-class MindtPy_OA_Solver(_MindtPyAlgorithm):
+class MindtPy_GOA_Solver(_MindtPyAlgorithm):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
     The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver
     applies a variety of decomposition-based approaches to solve Mixed-Integer
     Nonlinear Programming (MINLP) problems.
-    These approaches include:
+    This class includes:
 
-    - Outer approximation (OA)
     - Global outer approximation (GOA)
-    - Regularized outer approximation (ROA)
-    - LP/NLP based branch-and-bound (LP/NLP)
     - Global LP/NLP based branch-and-bound (GLP/NLP)
-    - Regularized LP/NLP based branch-and-bound (RLP/NLP)
-    - Feasibility pump (FP)
     """
 
     CONFIG = _get_MindtPy_GOA_config()
