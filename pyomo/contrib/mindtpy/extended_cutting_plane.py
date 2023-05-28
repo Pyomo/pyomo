@@ -40,11 +40,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     - Global LP/NLP based branch-and-bound (GLP/NLP)
     - Regularized LP/NLP based branch-and-bound (RLP/NLP)
     - Feasibility pump (FP)
-
-    This solver implementation has been developed by David Bernal <https://github.com/bernalde>
-    and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Bernal Research Group 
-    (https://bernalde.github.io/) and the Grossmann Research Group (http://egon.cheme.cmu.edu/)
-    at Purdue University and Carnegie Mellon University.
     """
 
     CONFIG = _get_MindtPy_ECP_config()
