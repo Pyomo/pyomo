@@ -492,9 +492,9 @@ class TestComponentSlices(unittest.TestCase):
         m = self.m
 
         _slice = self.m.x[...]
-        self.assertEqual(list(_slice.wildcard_keys(False)), [7, 8, 9])
+        self.assertEqual(list(_slice.wildcard_keys()), [7, 8, 9])
         self.assertEqual(
-            list(_slice.wildcard_items(False)), [(7, m.x[7]), (8, m.x[8]), (9, m.x[9])]
+            list(_slice.wildcard_items()), [(7, m.x[7]), (8, m.x[8]), (9, m.x[9])]
         )
         self.assertEqual(list(_slice.expanded_keys()), [7, 8, 9])
         self.assertEqual(
@@ -503,11 +503,11 @@ class TestComponentSlices(unittest.TestCase):
 
         _slice = self.m.b[...]
         self.assertEqual(
-            list(_slice.wildcard_keys(False)),
+            list(_slice.wildcard_keys()),
             [(1, 4), (1, 5), (1, 6), (2, 4), (2, 5), (2, 6), (3, 4), (3, 5), (3, 6)],
         )
         self.assertEqual(
-            list(_slice.wildcard_items(False)),
+            list(_slice.wildcard_items()),
             [
                 ((1, 4), m.b[1, 4]),
                 ((1, 5), m.b[1, 5]),

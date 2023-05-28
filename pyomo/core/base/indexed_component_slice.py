@@ -338,15 +338,15 @@ class IndexedComponent_slice(object):
         _iter = _IndexedComponent_slice_iter(self, iter_over_index=True, sort=sort)
         return (_iter.get_last_index_wildcards() for _ in _iter)
 
-    def wildcard_keys(self, sort):
+    def wildcard_keys(self, sort=SortComponents.UNSORTED):
         _iter = _IndexedComponent_slice_iter(self, sort=sort)
         return (_iter.get_last_index_wildcards() for _ in _iter)
 
-    def wildcard_values(self, sort):
+    def wildcard_values(self, sort=SortComponents.UNSORTED):
         """Return an iterator over this slice"""
         return _IndexedComponent_slice_iter(self, sort=sort)
 
-    def wildcard_items(self, sort):
+    def wildcard_items(self, sort=SortComponents.UNSORTED):
         _iter = _IndexedComponent_slice_iter(self, sort=sort)
         return ((_iter.get_last_index_wildcards(), _) for _ in _iter)
 
