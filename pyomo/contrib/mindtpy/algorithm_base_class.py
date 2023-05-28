@@ -904,6 +904,7 @@ class _MindtPyAlgorithm(object):
                     self.config.nlp_solver == 'cyipopt'
                     and self.objective_sense == minimize
                 ):
+                    # TODO: recover the opposite dual when cyipopt issue #2831 is solved.
                     dual_values = (
                         list(-1 * m.dual[c] for c in MindtPy.constraint_list)
                         if config.calculate_dual_at_solution
@@ -1208,6 +1209,7 @@ class _MindtPyAlgorithm(object):
                     self.config.nlp_solver == 'cyipopt'
                     and self.objective_sense == minimize
                 ):
+                    # TODO: recover the opposite dual when cyipopt issue #2831 is solved.
                     fixed_nlp.dual[c] = -fixed_nlp.dual[c]
             dual_values = list(
                 fixed_nlp.dual[c] for c in fixed_nlp.MindtPy_utils.constraint_list

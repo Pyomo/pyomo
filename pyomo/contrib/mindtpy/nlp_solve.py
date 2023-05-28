@@ -189,6 +189,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None):
                 config.nlp_solver == 'cyipopt'
                 and solve_data.objective_sense == minimize
             ):
+                # TODO: recover the opposite dual when cyipopt issue #2831 is solved.
                 fixed_nlp.dual[c] = -fixed_nlp.dual[c]
         dual_values = list(
             fixed_nlp.dual[c] for c in fixed_nlp.MindtPy_utils.constraint_list
