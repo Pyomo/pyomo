@@ -989,8 +989,6 @@ J0 2
         OUT = io.StringIO()
         with LoggingIntercept() as LOG:
             nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
-        m.pprint()
-        print(OUT.getvalue())
         self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(
             *nl_diff(
