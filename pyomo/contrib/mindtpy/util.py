@@ -153,7 +153,8 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete
+        variables, by default False.
 
     Returns
     -------
@@ -208,12 +209,14 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete
+        variables, by default False.
 
     Returns
     -------
     Objective
         The norm1 objective function.
+
     """
     # skip objective_value variable and slack_var variables
     var_filter = (
@@ -453,7 +456,9 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     config : ConfigBlock
         The specific configurations for MindtPy.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default True.
+        Whether to only optimize on distance between the discrete
+        variables, by default True.
+
     """
     var_filter = (lambda v: v.is_integer()) if discrete_only else (lambda v: True)
     model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
