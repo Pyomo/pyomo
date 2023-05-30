@@ -2022,7 +2022,8 @@ endBlock{}
 
     def test_generate_documentation_StringFormatter(self):
         # This test verifies behavior with simple StringFormatters (in
-        # particular, the handling of newlines and indentation)
+        # particular, the handling of newlines and indentation reported
+        # in #IDAES/idaes-pse#1191)
         CONFIG = ExampleConfig()
         doc = CONFIG.generate_documentation(
             format=String_ConfigFormatter(
