@@ -575,6 +575,9 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
     elif solver_name in {'ipopt', 'appsi_ipopt'}:
         opt.options['max_cpu_time'] = remaining
         opt.options['constr_viol_tol'] = config.zero_tolerance
+    elif solver_name == 'cyipopt':
+        opt.config.options['max_cpu_time'] = float(remaining)
+        opt.config.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'gams':
         if solver_type == 'mip':
             opt.options['add_options'] = [
