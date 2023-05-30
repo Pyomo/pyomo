@@ -47,6 +47,21 @@ farm_layout_model_examples = {
         30,
         30,
     ],
+    # An example where the dimension constraints are strict enough that it cannot fit a square
+    "FLay03_alt_1": [
+        {1: 40, 2: 50, 3: 60},
+        {1: 5, 2: 5, 3: 5},
+        {1: 5, 2: 5, 3: 7},
+        30,
+        30,
+    ],
+    "FLay03_alt_2": [
+        {1: 40, 2: 50, 3: 60},
+        {1: 1, 2: 1, 3: 1},
+        {1: 1, 2: 1, 3: 1},
+        8,
+        30,
+    ],
 }
 
 
