@@ -933,8 +933,8 @@ class _MindtPyAlgorithm(object):
             MindtPy unable to handle the termination condition of the MILP main problem.
         """
         m = self.working_model.clone()
-        if config.calculate_dual_at_solution:
-            m.dual.deactivate()
+        if hasattr(m, 'dual') and isinstance(m.dual, Suffix):
+            m.del_component('dual')
         MindtPy = m.MindtPy_utils
         self.mip_subiter += 1
         config.logger.debug('Initialization: maximize value of binaries')
@@ -1623,7 +1623,7 @@ class _MindtPyAlgorithm(object):
                 self.update_attributes()
             if len(main_mip_results.solution) > 0:
                 self.mip.solutions.load_from(main_mip_results)
-        except (ValueError, AttributeError):
+        except (ValueError, AttributeError, RuntimeError):
             if config.single_tree:
                 config.logger.warning('Single tree terminate.')
                 if get_main_elapsed_time(self.timing) >= config.time_limit - 2:
@@ -1631,7 +1631,7 @@ class _MindtPyAlgorithm(object):
                     self.results.solver.termination_condition = tc.maxTimeLimit
                 if config.strategy == 'GOA' or config.add_no_good_cuts:
                     config.logger.warning(
-                        'ValueError: Cannot load a SolverResults object with bad status: error. '
+                        'Error: Cannot load a SolverResults object with bad status: error. '
                         'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
                         "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
                         'No integer solution is found, so the cplex solver will report an error status. '
@@ -2670,10 +2670,10 @@ class _MindtPyAlgorithm(object):
 
         self.mip = self.working_model.clone()
         next(self.mip.component_data_objects(Objective, active=True)).deactivate()
+        if hasattr(self.mip, 'dual') and isinstance(self.mip.dual, Suffix):
+            self.mip.del_component('dual')
 
         MindtPy = self.mip.MindtPy_utils
-        if config.calculate_dual_at_solution:
-            self.mip.dual.deactivate()
 
         if config.init_strategy == 'FP':
             MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(

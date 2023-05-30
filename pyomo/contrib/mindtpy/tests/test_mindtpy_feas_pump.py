@@ -17,7 +17,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from pyomo.contrib.mindtpy.tests.feasibility_pump1 import Feasibility_Pump1
 from pyomo.contrib.mindtpy.tests.feasibility_pump2 import Feasibility_Pump2
 
-required_solvers = ('ipopt', 'glpk', 'cplex')
+required_solvers = ('ipopt', 'appsi_highs', 'cplex')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:

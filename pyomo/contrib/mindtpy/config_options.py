@@ -538,6 +538,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
+                    'appsi_highs'
                 ]
             ),
             description='MIP subsolver name',
