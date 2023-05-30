@@ -26,9 +26,9 @@ _init_url = "$URL$"
 # main and needs a hard reference to "suitably new" development.
 major = 6
 minor = 6
-micro = 1
-# releaselevel = 'invalid'
-releaselevel = 'final'
+micro = 2
+releaselevel = 'invalid'
+# releaselevel = 'final'
 serial = 0
 
 if releaselevel == 'final':
