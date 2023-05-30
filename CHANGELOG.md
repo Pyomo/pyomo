@@ -1,6 +1,27 @@
 Pyomo CHANGELOG
 ===============
 
+
+-------------------------------------------------------------------------------
+Pyomo 6.6.1    (30 May 2023)
+-------------------------------------------------------------------------------
+
+- General
+  - Update cmake builder for recent setuptools (#2847)
+  - Fixing minor formatting for 6.6.0 release changes (#2842)
+  - Silence deprecation warnings (#2854)
+- Core
+  - Update indentation handling in `config.StringFormatter` (#2853)
+  - Restore slice API broken by #2829 (#2849)
+  - Resolve handling of {}**0 in `LinearRepn`/`QuadraticRepn` (#2857)
+- Solver Interfaces
+  - NL writer: resolve error identifying vars in indexed SOS (#2852)
+  - Manage Gurobi environments in GurobiDirect (#2680)
+- Contributed Packages
+  - cp: fix handling fixed BooleanVars in logical-to-disjunctive walker (#2850)
+  - FBBT: Fix typo when handling GeneralExpression objects (#2848)
+  - MindtPy: add support for cyipopt (#2830)
+
 -------------------------------------------------------------------------------
 Pyomo 6.6.0    (24 May 2023)
 -------------------------------------------------------------------------------
