@@ -1234,7 +1234,7 @@ class Estimator(object):
     def likelihood_ratio_test(
         self, obj_at_theta, obj_value, alphas, return_thresholds=False
     ):
-        """
+        r"""
         Likelihood ratio test to identify theta values within a confidence
         region using the :math:`\chi^2` distribution
 
