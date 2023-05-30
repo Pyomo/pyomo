@@ -450,7 +450,7 @@ AmplInterfaceStr::AmplInterfaceStr(char* nl, size_t size)
      nl_size(size)
 {}
 
-// THIS METHOD IS DIABLED FOR NOW
+// THIS METHOD IS DISABLED FOR NOW
 FILE* AmplInterfaceStr::open_nl(ASL_pfgh *asl, char* stub)
 {
    // Ignore the stub and use the cached NL file content

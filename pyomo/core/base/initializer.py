@@ -16,26 +16,28 @@ import inspect
 from collections.abc import Sequence
 from collections.abc import Mapping
 
-from pyomo.common.dependencies import (
-    numpy, numpy_available, pandas, pandas_available,
-)
+from pyomo.common.dependencies import numpy, numpy_available, pandas, pandas_available
 from pyomo.common.modeling import NOTSET
 from pyomo.core.pyomoobject import PyomoObject
 
 initializer_map = {}
 sequence_types = set()
 # initialize with function, method, and method-wrapper types.
-function_types = set([
-    type(PyomoObject.is_expression_type),
-    type(PyomoObject().is_expression_type),
-    type(PyomoObject.is_expression_type.__call__),
-])
+function_types = set(
+    [
+        type(PyomoObject.is_expression_type),
+        type(PyomoObject().is_expression_type),
+        type(PyomoObject.is_expression_type.__call__),
+    ]
+)
 
 
-def Initializer(arg,
-                allow_generators=False,
-                treat_sequences_as_mappings=True,
-                arg_not_specified=None):
+def Initializer(
+    arg,
+    allow_generators=False,
+    treat_sequences_as_mappings=True,
+    arg_not_specified=None,
+):
     """Standardized processing of Component keyword arguments
 
     Component keyword arguments accept a number of possible inputs, from
@@ -101,7 +103,8 @@ def Initializer(arg,
             _nargs -= 1
         if _nargs == 1 and _args.varargs is None:
             return ScalarCallInitializer(
-                arg, constant=not inspect.isgeneratorfunction(arg))
+                arg, constant=not inspect.isgeneratorfunction(arg)
+            )
         else:
             return IndexedCallInitializer(arg)
     if hasattr(arg, '__len__'):
@@ -133,10 +136,9 @@ def Initializer(arg,
             arg,
             allow_generators=allow_generators,
             treat_sequences_as_mappings=treat_sequences_as_mappings,
-            arg_not_specified=arg_not_specified
+            arg_not_specified=arg_not_specified,
         )
-    if ( inspect.isgenerator(arg) or
-         hasattr(arg, 'next') or hasattr(arg, '__next__') ):
+    if inspect.isgenerator(arg) or hasattr(arg, 'next') or hasattr(arg, '__next__'):
         # This catches generators and iterators (like enumerate()), but
         # skips "reusable" iterators like range() as well as Pyomo
         # (finite) Set objects [they were both caught by the
@@ -190,6 +192,7 @@ def Initializer(arg,
 
 class InitializerBase(object):
     """Base class for all Initializer objects"""
+
     __slots__ = ()
 
     verified = False
@@ -202,7 +205,7 @@ class InitializerBase(object):
         classes (where __slots__ are only declared on the most derived
         class).
         """
-        return {k:getattr(self, k) for k in self.__slots__}
+        return {k: getattr(self, k) for k in self.__slots__}
 
     def __setstate__(self, state):
         for key, val in state.items():
@@ -222,12 +225,14 @@ class InitializerBase(object):
         This will raise a RuntimeError if this initializer does not
         contain embedded indices
         """
-        raise RuntimeError("Initializer %s does not contain embedded indices"
-                           % (type(self).__name__,))
+        raise RuntimeError(
+            "Initializer %s does not contain embedded indices" % (type(self).__name__,)
+        )
 
 
 class ConstantInitializer(InitializerBase):
     """Initializer for constant values"""
+
     __slots__ = ('val', 'verified')
 
     def __init__(self, val):
@@ -243,6 +248,7 @@ class ConstantInitializer(InitializerBase):
 
 class ItemInitializer(InitializerBase):
     """Initializer for dict-like values supporting __getitem__()"""
+
     __slots__ = ('_dict',)
 
     def __init__(self, _dict):
@@ -263,7 +269,8 @@ class ItemInitializer(InitializerBase):
 
 class DataFrameInitializer(InitializerBase):
     """Initializer for pandas DataFrame values"""
-    __slots__ = ('_df', '_column',)
+
+    __slots__ = ('_df', '_column')
 
     def __init__(self, dataframe, column=None):
         self._df = dataframe
@@ -274,7 +281,8 @@ class DataFrameInitializer(InitializerBase):
         else:
             raise ValueError(
                 "Cannot construct DataFrameInitializer for DataFrame with "
-                "multiple columns without also specifying the data column")
+                "multiple columns without also specifying the data column"
+            )
 
     def __call__(self, parent, idx):
         return self._df.at[idx, self._column]
@@ -288,6 +296,7 @@ class DataFrameInitializer(InitializerBase):
 
 class IndexedCallInitializer(InitializerBase):
     """Initializer for functions and callable objects"""
+
     __slots__ = ('_fcn',)
 
     def __init__(self, _fcn):
@@ -311,6 +320,7 @@ class CountedCallGenerator(object):
     first argument past the parent block is a monotonically-increasing
     integer beginning at `start_at`.
     """
+
     def __init__(self, ctype, fcn, scalar, parent, idx, start_at):
         # Note: this is called by a component using data from a Set (so
         # any tuple-like type should have already been checked and
@@ -342,13 +352,14 @@ class CountedCallGenerator(object):
     repeatedly with an increasing count parameter until the rule returns
     %s.End.  None is not a valid return value in this case due to the
     likelihood that an error in the rule can incorrectly return None."""
-                % ((ctype.__name__,)*4))
+                % ((ctype.__name__,) * 4)
+            )
         return x
 
 
 class CountedCallInitializer(InitializerBase):
-    """Initializer for functions implementing the "counted call" API.
-    """
+    """Initializer for functions implementing the "counted call" API."""
+
     # Pyomo has a historical feature for some rules, where the number of
     # times[*1] the rule was called could be passed as an additional
     # argument between the block and the index.  This was primarily
@@ -369,7 +380,7 @@ class CountedCallInitializer(InitializerBase):
     #
     # [JDS 6/2019] We will support a slightly restricted but more
     # consistent form of the original implementation for backwards
-    # compatability, but I believe that we should deprecate this syntax
+    # compatibility, but I believe that we should deprecate this syntax
     # entirely.
     __slots__ = ('_fcn', '_is_counted_rule', '_scalar', '_ctype', '_start')
 
@@ -394,7 +405,7 @@ class CountedCallInitializer(InitializerBase):
                 return self._fcn(parent, idx)
         if self._is_counted_rule == True:
             return CountedCallGenerator(
-                self._ctype, self._fcn, self._scalar, parent, idx, self._start,
+                self._ctype, self._fcn, self._scalar, parent, idx, self._start
             )
 
         # Note that this code will only be called once, and only if
@@ -413,6 +424,7 @@ class CountedCallInitializer(InitializerBase):
 
 class ScalarCallInitializer(InitializerBase):
     """Initializer for functions taking only the parent block argument."""
+
     __slots__ = ('_fcn', '_constant')
 
     def __init__(self, _fcn, constant=True):
@@ -444,6 +456,7 @@ class DefaultInitializer(InitializerBase):
         the default value.
 
     """
+
     __slots__ = ('_initializer', '_default', '_exceptions')
 
     def __init__(self, initializer, default, exceptions):
@@ -494,6 +507,7 @@ class BoundInitializer(InitializerBase):
         length 2
 
     """
+
     __slots__ = ('_initializer',)
 
     def __new__(cls, arg=None, obj=NOTSET):
@@ -514,15 +528,17 @@ class BoundInitializer(InitializerBase):
         else:
             treat_sequences_as_mappings = False
         self._initializer = Initializer(
-            arg, treat_sequences_as_mappings=treat_sequences_as_mappings)
+            arg, treat_sequences_as_mappings=treat_sequences_as_mappings
+        )
 
     def __call__(self, parent, index):
         val = self._initializer(parent, index)
         if _bound_sequence_types[val.__class__]:
             return val
         if _bound_sequence_types[val.__class__] is None:
-            _bound_sequence_types[val.__class__] \
-                = isinstance(val, Sequence) and not isinstance(val, str)
+            _bound_sequence_types[val.__class__] = isinstance(
+                val, Sequence
+            ) and not isinstance(val, str)
             if _bound_sequence_types[val.__class__]:
                 return val
         return (val, val)

@@ -24,7 +24,6 @@ from pyomo.core.expr.numvalue import native_types
 
 
 class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
-
     def initializeWalker(self, expr):
         self._functions = []
         self._seen = set()
@@ -57,9 +56,7 @@ def identify_external_functions(expr):
 
 def add_local_external_functions(block):
     ef_exprs = []
-    for comp in block.component_data_objects(
-            (Constraint, Expression), active=True
-            ):
+    for comp in block.component_data_objects((Constraint, Expression), active=True):
         ef_exprs.extend(identify_external_functions(comp.expr))
     unique_functions = []
     fcn_set = set()
@@ -79,7 +76,7 @@ def add_local_external_functions(block):
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
-    """ This function creates a block to serve as a subsystem with the
+    """This function creates a block to serve as a subsystem with the
     specified variables and constraints. To satisfy certain writers, other
     variables that appear in the constraints must be added to the block as
     well. We call these the "input vars." They may be thought of as
@@ -120,7 +117,7 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
 
 
 def generate_subsystem_blocks(subsystems, include_fixed=False):
-    """ Generates blocks that contain subsystems of variables and constraints.
+    """Generates blocks that contain subsystems of variables and constraints.
 
     Arguments
     ---------
@@ -144,14 +141,14 @@ def generate_subsystem_blocks(subsystems, include_fixed=False):
 
 
 class TemporarySubsystemManager(object):
-    """ This class is a context manager for cases when we want to
+    """This class is a context manager for cases when we want to
     temporarily fix or deactivate certain variables or constraints
     in order to perform some solve or calculation with the resulting
     subsystem.
 
     """
 
-    def __init__(self, to_fix=None, to_deactivate=None, to_reset=None):
+    def __init__(self, to_fix=None, to_deactivate=None, to_reset=None, to_unfix=None):
         """
         Arguments
         ---------
@@ -167,6 +164,10 @@ class TemporarySubsystemManager(object):
             List of var data objects that should be reset to their
             original values on exit from this object's context context
             manager.
+        to_unfix: List
+            List of var data objects to be temporarily unfixed. These are
+            restored to their original status on exit from this object's
+            context manager.
 
         """
         if to_fix is None:
@@ -175,18 +176,31 @@ class TemporarySubsystemManager(object):
             to_deactivate = []
         if to_reset is None:
             to_reset = []
+        if to_unfix is None:
+            to_unfix = []
+        if not ComponentSet(to_fix).isdisjoint(ComponentSet(to_unfix)):
+            to_unfix_set = ComponentSet(to_unfix)
+            both = [var for var in to_fix if var in to_unfix_set]
+            var_names = "\n" + "\n".join([var.name for var in both])
+            raise RuntimeError(
+                f"Conflicting instructions: The following variables are present"
+                " in both to_fix and to_unfix lists: {var_names}"
+            )
         self._vars_to_fix = to_fix
         self._cons_to_deactivate = to_deactivate
         self._comps_to_set = to_reset
+        self._vars_to_unfix = to_unfix
         self._var_was_fixed = None
         self._con_was_active = None
         self._comp_original_value = None
+        self._var_was_unfixed = None
 
     def __enter__(self):
         to_fix = self._vars_to_fix
         to_deactivate = self._cons_to_deactivate
         to_set = self._comps_to_set
-        self._var_was_fixed = [(var, var.fixed) for var in to_fix]
+        to_unfix = self._vars_to_unfix
+        self._var_was_fixed = [(var, var.fixed) for var in to_fix + to_unfix]
         self._con_was_active = [(con, con.active) for con in to_deactivate]
         self._comp_original_value = [(comp, comp.value) for comp in to_set]
 
@@ -196,11 +210,18 @@ class TemporarySubsystemManager(object):
         for con in self._cons_to_deactivate:
             con.deactivate()
 
+        for var in self._vars_to_unfix:
+            # As of Pyomo 6.5, attempting to unfix an already unfixed var
+            # does not raise an exception. Here we rely on this behavior.
+            var.unfix()
+
         return self
 
     def __exit__(self, ex_type, ex_val, ex_bt):
         for var, was_fixed in self._var_was_fixed:
-            if not was_fixed:
+            if was_fixed:
+                var.fix()
+            else:
                 var.unfix()
         for con, was_active in self._con_was_active:
             if was_active:
@@ -210,7 +231,7 @@ class TemporarySubsystemManager(object):
 
 
 class ParamSweeper(TemporarySubsystemManager):
-    """ This class enables setting values of variables/parameters
+    """This class enables setting values of variables/parameters
     according to a provided sequence. Iterating over this object
     sets values to the next in the sequence, at which point a
     calculation may be performed and output values compared.
@@ -243,14 +264,15 @@ class ParamSweeper(TemporarySubsystemManager):
 
     """
 
-    def __init__(self,
-            n_scenario,
-            input_values,
-            output_values=None,
-            to_fix=None,
-            to_deactivate=None,
-            to_reset=None,
-            ):
+    def __init__(
+        self,
+        n_scenario,
+        input_values,
+        output_values=None,
+        to_fix=None,
+        to_deactivate=None,
+        to_reset=None,
+    ):
         """
         Parameters
         ----------
@@ -276,7 +298,7 @@ class ParamSweeper(TemporarySubsystemManager):
         self.output_values = output
         self.n_scenario = n_scenario
         self.initial_state_values = None
-        self._ip = -1 # Index pointer for iteration
+        self._ip = -1  # Index pointer for iteration
 
         if to_reset is None:
             # Input values will be set repeatedly by iterating over this
@@ -290,10 +312,8 @@ class ParamSweeper(TemporarySubsystemManager):
             to_reset.extend(var for var in output)
 
         super(ParamSweeper, self).__init__(
-                to_fix=to_fix,
-                to_deactivate=to_deactivate,
-                to_reset=to_reset,
-                )
+            to_fix=to_fix, to_deactivate=to_deactivate, to_reset=to_reset
+        )
 
     def __iter__(self):
         return self
@@ -317,8 +337,8 @@ class ParamSweeper(TemporarySubsystemManager):
                 var.set_value(val)
                 inputs[var] = val
 
-            outputs = ComponentMap([
-                (var, values[i]) for var, values in output_values.items()
-                ])
+            outputs = ComponentMap(
+                [(var, values[i]) for var, values in output_values.items()]
+            )
 
             return inputs, outputs

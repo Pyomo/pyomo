@@ -78,7 +78,7 @@ def _diff_PowExpression(node, val_dict, der_dict):
     der = der_dict[node]
     val1 = val_dict[arg1]
     val2 = val_dict[arg2]
-    der_dict[arg1] += der * val2 * val1**(val2 - 1)
+    der_dict[arg1] += der * val2 * val1 ** (val2 - 1)
     if arg2.__class__ not in nonpyomo_leaf_types:
         der_dict[arg2] += der * val1**val2 * log(val1)
 
@@ -96,8 +96,8 @@ def _diff_DivisionExpression(node, val_dict, der_dict):
     num = node.args[0]
     den = node.args[1]
     der = der_dict[node]
-    der_dict[num] += der * (1/val_dict[den])
-    der_dict[den] -= der * val_dict[num] / val_dict[den]**2
+    der_dict[num] += der * (1 / val_dict[den])
+    der_dict[den] -= der * val_dict[num] / val_dict[den] ** 2
 
 
 def _diff_NegationExpression(node, val_dict, der_dict):
@@ -202,7 +202,7 @@ def _diff_tan(node, val_dict, der_dict):
     assert len(node.args) == 1
     arg = node.args[0]
     der = der_dict[node]
-    der_dict[arg] += der / (cos(val_dict[arg])**2)
+    der_dict[arg] += der / (cos(val_dict[arg]) ** 2)
 
 
 def _diff_asin(node, val_dict, der_dict):
@@ -217,7 +217,7 @@ def _diff_asin(node, val_dict, der_dict):
     assert len(node.args) == 1
     arg = node.args[0]
     der = der_dict[node]
-    der_dict[arg] += der / (1 - val_dict[arg]**2)**0.5
+    der_dict[arg] += der / (1 - val_dict[arg] ** 2) ** 0.5
 
 
 def _diff_acos(node, val_dict, der_dict):
@@ -232,7 +232,7 @@ def _diff_acos(node, val_dict, der_dict):
     assert len(node.args) == 1
     arg = node.args[0]
     der = der_dict[node]
-    der_dict[arg] -= der / (1 - val_dict[arg]**2)**0.5
+    der_dict[arg] -= der / (1 - val_dict[arg] ** 2) ** 0.5
 
 
 def _diff_atan(node, val_dict, der_dict):
@@ -247,7 +247,7 @@ def _diff_atan(node, val_dict, der_dict):
     assert len(node.args) == 1
     arg = node.args[0]
     der = der_dict[node]
-    der_dict[arg] += der / (1 + val_dict[arg]**2)
+    der_dict[arg] += der / (1 + val_dict[arg] ** 2)
 
 
 def _diff_sqrt(node, val_dict, der_dict):
@@ -264,7 +264,7 @@ def _diff_sqrt(node, val_dict, der_dict):
     assert len(node.args) == 1
     arg = node.args[0]
     der = der_dict[node]
-    der_dict[arg] += der * 0.5 * val_dict[arg]**(-0.5)
+    der_dict[arg] += der * 0.5 * val_dict[arg] ** (-0.5)
 
 
 def _diff_abs(node, val_dict, der_dict):
@@ -313,7 +313,9 @@ def _diff_UnaryFunctionExpression(node, val_dict, der_dict):
     if node.getname() in _unary_map:
         _unary_map[node.getname()](node, val_dict, der_dict)
     else:
-        raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
+        raise DifferentiationException(
+            'Unsupported expression type for differentiation: {0}'.format(type(node))
+        )
 
 
 def _diff_GeneralExpression(node, val_dict, der_dict):
@@ -439,7 +441,9 @@ def _reverse_diff_helper(expr, numeric=True):
         elif e.is_named_expression_type():
             _diff_GeneralExpression(e, val_dict, der_dict)
         else:
-            raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(e)))
+            raise DifferentiationException(
+                'Unsupported expression type for differentiation: {0}'.format(type(e))
+            )
 
     return der_dict
 

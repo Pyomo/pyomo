@@ -32,21 +32,21 @@ import pyomo.common.tempfiles as tempfiles
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import (
-    TempfileManager, TempfileManagerClass, TempfileContextError,
+    TempfileManager,
+    TempfileManagerClass,
+    TempfileContextError,
 )
 
 try:
-    from pyutilib.component.config.tempfiles import (
-        TempfileManager as pyutilib_mngr
-    )
+    from pyutilib.component.config.tempfiles import TempfileManager as pyutilib_mngr
 except ImportError:
     pyutilib_mngr = None
 
 old_tempdir = TempfileManager.tempdir
 tempdir = None
 
-class Test_LegacyTestSuite(unittest.TestCase):
 
+class Test_LegacyTestSuite(unittest.TestCase):
     def setUp(self):
         global tempdir
         tempdir = tempfile.mkdtemp() + os.sep
@@ -58,7 +58,7 @@ class Test_LegacyTestSuite(unittest.TestCase):
         TempfileManager.pop()
         TempfileManager.tempdir = old_tempdir
         if os.path.exists(tempdir):
-           shutil.rmtree(tempdir)
+            shutil.rmtree(tempdir)
         tempdir = None
 
     def test_add1(self):
@@ -248,7 +248,6 @@ class Test_LegacyTestSuite(unittest.TestCase):
 
 
 class Test_TempfileManager(unittest.TestCase):
-
     def setUp(self):
         self.TM = TempfileManagerClass()
 
@@ -308,8 +307,9 @@ class Test_TempfileManager(unittest.TestCase):
         sub_fname = os.path.join(dname, "testfile")
         self.TM.add_tempfile(fname)
         with self.assertRaisesRegex(
-                IOError, "Temporary file does not exist: %s"
-                % sub_fname.replace('\\', '\\\\')):
+            IOError,
+            "Temporary file does not exist: %s" % sub_fname.replace('\\', '\\\\'),
+        ):
             self.TM.add_tempfile(sub_fname)
         self.TM.add_tempfile(sub_fname, exists=False)
         with open(sub_fname, "w") as FILE:
@@ -334,7 +334,8 @@ class Test_TempfileManager(unittest.TestCase):
             self.assertIsNone(self.TM.sequential_files())
         self.assertIn(
             "The TempfileManager.sequential_files() method has been removed",
-            LOG.getvalue().replace('\n',' '))
+            LOG.getvalue().replace('\n', ' '),
+        )
         self.assertIsNone(self.TM.unique_files())
 
     def test_gettempprefix(self):
@@ -414,7 +415,7 @@ class Test_TempfileManager(unittest.TestCase):
             LOG.getvalue().strip(),
             "TempfileManagerClass instance: un-popped tempfile "
             "contexts still exist during TempfileManager instance "
-            "shutdown"
+            "shutdown",
         )
 
         self.TM = TempfileManagerClass()
@@ -432,7 +433,7 @@ class Test_TempfileManager(unittest.TestCase):
             "Undeleted entries:\n\t%s\n"
             "TempfileManagerClass instance: un-popped tempfile "
             "contexts still exist during TempfileManager instance "
-            "shutdown" % fname
+            "shutdown" % fname,
         )
 
         # The TM is already shut down, so this should be a noop
@@ -459,7 +460,7 @@ class Test_TempfileManager(unittest.TestCase):
             "Undeleted entries:\n\t%s\n"
             "TempfileManagerClass instance: un-popped tempfile "
             "contexts still exist during TempfileManager instance "
-            "shutdown" % fname
+            "shutdown" % fname,
         )
 
     def test_tempfilemanager_as_context_manager(self):
@@ -481,7 +482,7 @@ class Test_TempfileManager(unittest.TestCase):
                 "the TempfileManager stack within a context manager "
                 "(i.e., `with TempfileManager:`) but was not popped "
                 "before the context manager exited.  Popping the "
-                "context to preserve the stack integrity."
+                "context to preserve the stack integrity.",
             )
 
     def test_tempfilecontext_as_context_manager(self):
@@ -493,8 +494,10 @@ class Test_TempfileManager(unittest.TestCase):
             self.assertFalse(os.path.exists(fname))
             self.assertEqual(LOG.getvalue(), "")
 
-    @unittest.skipIf(not sys.platform.lower().startswith('win'),
-                     "test only applies to Windows platforms")
+    @unittest.skipIf(
+        not sys.platform.lower().startswith('win'),
+        "test only applies to Windows platforms",
+    )
     def test_open_tempfile_windows(self):
         self.TM.push()
         fname = self.TM.create_tempfile()
@@ -503,7 +506,8 @@ class Test_TempfileManager(unittest.TestCase):
             _orig = tempfiles.deletion_errors_are_fatal
             tempfiles.deletion_errors_are_fatal = True
             with self.assertRaisesRegex(
-                    WindowsError, ".*process cannot access the file"):
+                WindowsError, ".*process cannot access the file"
+            ):
                 self.TM.pop()
         finally:
             tempfiles.deletion_errors_are_fatal = _orig
@@ -524,8 +528,7 @@ class Test_TempfileManager(unittest.TestCase):
             f.close()
             os.remove(fname)
 
-    @unittest.skipIf(pyutilib_mngr is None,
-                     "deprecation test requires pyutilib")
+    @unittest.skipIf(pyutilib_mngr is None, "deprecation test requires pyutilib")
     def test_deprecated_tempdir(self):
         self.TM.push()
         try:
@@ -539,25 +542,30 @@ class Test_TempfileManager(unittest.TestCase):
             self.assertIn(
                 "The use of the PyUtilib TempfileManager.tempdir "
                 "to specify the default location for Pyomo "
-                "temporary files", LOG.getvalue().replace("\n", " "))
+                "temporary files",
+                LOG.getvalue().replace("\n", " "),
+            )
 
             with LoggingIntercept() as LOG:
                 dname = self.TM.create_tempdir()
             self.assertIn(
                 "The use of the PyUtilib TempfileManager.tempdir "
                 "to specify the default location for Pyomo "
-                "temporary files", LOG.getvalue().replace("\n", " "))
+                "temporary files",
+                LOG.getvalue().replace("\n", " "),
+            )
         finally:
             self.TM.pop()
             pyutilib_mngr.tempdir = _orig
 
     def test_context(self):
         with self.assertRaisesRegex(
-                TempfileContextError,
-                "TempfileManager has no currently active context"):
+            TempfileContextError, "TempfileManager has no currently active context"
+        ):
             self.TM.context()
         ctx = self.TM.push()
         self.assertIs(ctx, self.TM.context())
+
 
 if __name__ == "__main__":
     unittest.main()

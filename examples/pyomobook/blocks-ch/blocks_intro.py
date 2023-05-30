@@ -69,6 +69,8 @@ model = None
 model = pyo.ConcreteModel()
 model.P = pyo.Param(initialize=3)
 model.T = pyo.RangeSet(model.P)
+
+
 # @blockrule2:
 def xyb_rule(b, t):
     b.x = pyo.Var()

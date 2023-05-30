@@ -11,27 +11,30 @@
 
 import logging
 
-from pyomo.core.base import (Transformation,
-                             TransformationFactory,
-                             Constraint,
-                             Var,
-                             Block,
-                             ComponentUID,
-                             SortComponents,
-                             value)
+from pyomo.core.base import (
+    Transformation,
+    TransformationFactory,
+    Constraint,
+    Var,
+    Block,
+    ComponentUID,
+    SortComponents,
+    value,
+)
 from pyomo.mpec.complementarity import Complementarity
 from pyomo.gdp import Disjunct
 
 logger = logging.getLogger('pyomo.core')
 
+
 #
-# This transformation reworks each Complementarity block to 
+# This transformation reworks each Complementarity block to
 # create a mixed-complementarity problem that can be written to an NL file.
 #
-@TransformationFactory.register('mpec.nl', doc="Transform a MPEC into a form suitable for the NL writer")
+@TransformationFactory.register(
+    'mpec.nl', doc="Transform a MPEC into a form suitable for the NL writer"
+)
 class MPEC4_Transformation(Transformation):
-
-
     def __init__(self):
         super(MPEC4_Transformation, self).__init__()
 
@@ -42,18 +45,24 @@ class MPEC4_Transformation(Transformation):
         free_vars = {}
         id_list = []
         # [ESJ 07/12/2019] Look on the whole model in case instance is a Block or a Disjunct
-        for vdata in instance.model().component_data_objects(Var, active=True,
-                                                             sort=SortComponents.deterministic,
-                                                             descend_into=(Block, Disjunct)):
-            id_list.append( id(vdata) )
+        for vdata in instance.model().component_data_objects(
+            Var,
+            active=True,
+            sort=SortComponents.deterministic,
+            descend_into=(Block, Disjunct),
+        ):
+            id_list.append(id(vdata))
             free_vars[id(vdata)] = vdata
         #
         # Iterate over the Complementarity components
         #
         cobjs = []
-        for cobj in instance.component_objects(Complementarity, active=True,
-                                               descend_into=(Block, Disjunct),
-                                               sort=SortComponents.deterministic):
+        for cobj in instance.component_objects(
+            Complementarity,
+            active=True,
+            descend_into=(Block, Disjunct),
+            sort=SortComponents.deterministic,
+        ):
             cobjs.append(cobj)
             for index in sorted(cobj.keys()):
                 _cdata = cobj[index]
@@ -67,13 +76,13 @@ class MPEC4_Transformation(Transformation):
         tdata = instance._transformation_data['mpec.nl']
         tdata.compl_cuids = []
         for cobj in cobjs:
-            tdata.compl_cuids.append( ComponentUID(cobj) )
+            tdata.compl_cuids.append(ComponentUID(cobj))
             cobj.parent_block().reclassify_component_type(cobj, Block)
 
-    #instance.pprint()
-    #self.print_nl_form(instance)
+    # instance.pprint()
+    # self.print_nl_form(instance)
 
-    def print_nl_form(self, instance):          #pragma:nocover
+    def print_nl_form(self, instance):  # pragma:nocover
         """
         Summarize the complementarity relations in this problem.
         """
@@ -81,9 +90,24 @@ class MPEC4_Transformation(Transformation):
         for vdata in instance.component_data_objects(Var, active=True):
             vmap[id(vdata)] = vdata
         print("-------------------- Complementary Relations ----------------------")
-        for bdata in instance.block_data_objects(active=True, sort=SortComponents.            deterministic):
-            for cobj in bdata.component_data_objects(Constraint, active=True,                 descend_into=False):
-                print("%s %s\t\t\t%s" % (getattr(cobj, '_complementarity', None), str(cobj.   lower)+" < "+str(cobj.body)+" < "+str(cobj.upper) , vmap.get(getattr(cobj, '_vid', None),     None)))
+        for bdata in instance.block_data_objects(
+            active=True, sort=SortComponents.deterministic
+        ):
+            for cobj in bdata.component_data_objects(
+                Constraint, active=True, descend_into=False
+            ):
+                print(
+                    "%s %s\t\t\t%s"
+                    % (
+                        getattr(cobj, '_complementarity', None),
+                        str(cobj.lower)
+                        + " < "
+                        + str(cobj.body)
+                        + " < "
+                        + str(cobj.upper),
+                        vmap.get(getattr(cobj, '_vid', None), None),
+                    )
+                )
         print("-------------------- Complementary Relations ----------------------")
 
     def to_common_form(self, cdata, free_vars):
@@ -92,7 +116,7 @@ class MPEC4_Transformation(Transformation):
         """
         _e1 = cdata._canonical_expression(cdata._args[0])
         _e2 = cdata._canonical_expression(cdata._args[1])
-        if False:                       #pragma:nocover
+        if False:  # pragma:nocover
             if _e1[0] is None:
                 print(None)
             else:
@@ -125,8 +149,13 @@ class MPEC4_Transformation(Transformation):
         if len(_e2) == 2:
             cdata.c = Constraint(expr=_e2)
             return
-        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
-            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % cdata.name)
+        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (
+            _e2[2] is None
+        ) != 2:
+            raise RuntimeError(
+                "Complementarity condition %s must have exactly two finite bounds"
+                % cdata.name
+            )
         #
         # Swap if the body of the second constraint is not a free variable
         #
@@ -179,4 +208,3 @@ class MPEC4_Transformation(Transformation):
             if var.ub is None or value(_e2[2]) > value(var.ub):
                 var.setub(_e2[2])
             cdata.c._complementarity += 2
-      

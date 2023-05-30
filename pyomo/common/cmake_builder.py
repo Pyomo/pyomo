@@ -19,18 +19,23 @@ import tempfile
 import pyomo.common.envvar as envvar
 from pyomo.common.fileutils import this_file_dir, find_executable
 
+
 def handleReadonly(function, path, excinfo):
     excvalue = excinfo[1]
     if excvalue.errno == errno.EACCES:
-        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
         function(path)
     else:
         raise
 
-def build_cmake_project(targets, package_name=None, description=None,
-                        user_args=[], parallel=None):
-    import distutils.core
+
+def build_cmake_project(
+    targets, package_name=None, description=None, user_args=[], parallel=None
+):
+    # Note: setuptools must be imported before distutils to avoid
+    # warnings / errors with recent setuptools distributions
     from setuptools import Extension
+    import distutils.core
     from distutils.command.build_ext import build_ext
 
     class _CMakeBuild(build_ext, object):
@@ -57,8 +62,7 @@ def build_cmake_project(targets, package_name=None, description=None,
                     # --parallel was only added in cmake 3.12.  Use an
                     # environment variable so that we don't have to bump
                     # the minimum cmake version.
-                    os.environ['CMAKE_BUILD_PARALLEL_LEVEL'] = str(
-                        cmake_ext.parallel)
+                    os.environ['CMAKE_BUILD_PARALLEL_LEVEL'] = str(cmake_ext.parallel)
 
                 cmake = find_executable('cmake')
                 if cmake is None:
@@ -69,11 +73,19 @@ def build_cmake_project(targets, package_name=None, description=None,
                     # harness should take care of dependencies and this
                     # will prevent repeated builds in MSVS
                     #
-                    #self.spawn(['cmake', '--build', '.',
+                    # self.spawn(['cmake', '--build', '.',
                     #            '--config', cmake_config])
-                    self.spawn([cmake, '--build', '.',
-                                '--target', 'install',
-                                '--config', cmake_config])
+                    self.spawn(
+                        [
+                            cmake,
+                            '--build',
+                            '.',
+                            '--target',
+                            'install',
+                            '--config',
+                            cmake_config,
+                        ]
+                    )
             finally:
                 # Restore stderr
                 sys.stderr.flush()
@@ -85,7 +97,8 @@ def build_cmake_project(targets, package_name=None, description=None,
         def __init__(self, target_dir, user_args, parallel):
             # don't invoke the original build_ext for this special extension
             super(CMakeExtension, self).__init__(
-                self.__class__.__qualname__, sources=[])
+                self.__class__.__qualname__, sources=[]
+            )
             self.target_dir = target_dir
             self.user_args = user_args
             self.parallel = parallel

@@ -109,10 +109,7 @@ def _test_iis(solver_name):
 
 
 def _validate_ilp(file_name):
-    lines_found = {
-        "c2: 100 x + y <= 0": False,
-        "c3: x >= 0.5": False,
-    }
+    lines_found = {"c2: 100 x + y <= 0": False, "c3: x >= 0.5": False}
     with open(file_name, "r") as f:
         for line in f.readlines():
             for k, v in lines_found.items():

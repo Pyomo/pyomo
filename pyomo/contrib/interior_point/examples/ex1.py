@@ -27,12 +27,12 @@ m.x = pyo.Var()
 m.y = pyo.Var()
 m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
 m.c1 = pyo.Constraint(expr=m.y == pyo.exp(m.x))
-m.c2 = pyo.Constraint(expr=m.y >= (m.x - 1)**2)
+m.c2 = pyo.Constraint(expr=m.y >= (m.x - 1) ** 2)
 interface = InteriorPointInterface(m)
 linear_solver = MumpsInterface(
-        # log_filename='lin_sol.log',
-        icntl_options={11: 1},  # Set error level to 1 (most detailed)
-        )
+    # log_filename='lin_sol.log',
+    icntl_options={11: 1}  # Set error level to 1 (most detailed)
+)
 
 ip_solver = InteriorPointSolver(linear_solver)
 x, duals_eq, duals_ineq = ip_solver.solve(interface)

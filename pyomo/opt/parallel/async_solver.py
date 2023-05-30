@@ -16,12 +16,10 @@ from pyomo.common import Factory
 from pyomo.opt.parallel.manager import AsynchronousActionManager
 
 
-
 SolverManagerFactory = Factory('solver manager')
 
 
 class AsynchronousSolverManager(AsynchronousActionManager):
-
     def __init__(self, **kwds):
         AsynchronousActionManager.__init__(self)
 
@@ -60,4 +58,3 @@ class AsynchronousSolverManager(AsynchronousActionManager):
 
     def __exit__(self, t, v, traceback):
         pass
-

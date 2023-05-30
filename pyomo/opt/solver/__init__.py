@@ -9,6 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.opt.solver.shellcmd import (ResultsFormat, OptSolver, SolverStatus,
-                                       SolverResults, SystemCallSolver)
+from pyomo.opt.solver.shellcmd import (
+    ResultsFormat,
+    OptSolver,
+    SolverStatus,
+    SolverResults,
+    SystemCallSolver,
+)
 from pyomo.opt.solver.ilmcmd import ILMLicensedSystemCallSolver

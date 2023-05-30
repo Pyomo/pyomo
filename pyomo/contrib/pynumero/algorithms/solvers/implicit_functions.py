@@ -13,10 +13,7 @@ from collections import namedtuple
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.dependencies import (
-    attempt_import,
-    numpy as np,
-)
+from pyomo.common.dependencies import attempt_import, numpy as np
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.objective import Objective
@@ -32,10 +29,10 @@ from pyomo.util.subsystems import (
 # Use attempt_import here due to unguarded NumPy import in these files
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 nlp_proj = attempt_import('pyomo.contrib.pynumero.interfaces.nlp_projections')[0]
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
     cyipopt_available,
     CyIpoptNLP,
-    CyIpoptSolver,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     FsolveNlpSolver,
@@ -43,14 +40,10 @@ from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     NewtonNlpSolver,
     SecantNewtonNlpSolver,
 )
-from pyomo.contrib.incidence_analysis.interface import (
-    get_structural_incidence_matrix,
-)
+from pyomo.contrib.incidence_analysis.interface import get_structural_incidence_matrix
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
-from pyomo.contrib.incidence_analysis.util import (
-    generate_strongly_connected_components,
-)
+from pyomo.contrib.incidence_analysis.util import generate_strongly_connected_components
 
 
 class NlpSolverBase(object):
@@ -77,6 +70,7 @@ class CyIpoptSolverWrapper(NlpSolverBase):
     NlpSolverBase API
 
     """
+
     def __init__(self, nlp, options=None, timer=None):
         self._cyipopt_nlp = CyIpoptNLP(nlp)
         self._cyipopt_solver = CyIpoptSolver(self._cyipopt_nlp, options=options)
@@ -93,6 +87,7 @@ class ScipySolverWrapper(NlpSolverBase):
     hybrid for "scalar-valued" NLPs.
 
     """
+
     def __init__(self, nlp, timer=None, options=None):
         if options is None:
             options = {}
@@ -109,21 +104,19 @@ class ScipySolverWrapper(NlpSolverBase):
         # There is currently no way to specify, e.g., different tolerances
         # for the two solvers. This can be updated if there is demand for it.
         newton_options = {
-            key: value for key, value in options.items()
+            key: value
+            for key, value in options.items()
             if key in SecantNewtonNlpSolver.OPTIONS
         }
         fsolve_options = {
-            key: value for key, value in options.items()
+            key: value
+            for key, value in options.items()
             if key in FsolveNlpSolver.OPTIONS
         }
         if nlp.n_primals() == 1:
-            solver = SecantNewtonNlpSolver(
-                nlp, timer=timer, options=newton_options
-            )
+            solver = SecantNewtonNlpSolver(nlp, timer=timer, options=newton_options)
         else:
-            solver = FsolveNlpSolver(
-                nlp, timer=timer, options=fsolve_options
-            )
+            solver = FsolveNlpSolver(nlp, timer=timer, options=fsolve_options)
         self._nlp = nlp
         self._options = options
         self._solver = solver
@@ -164,10 +157,7 @@ class PyomoImplicitFunctionBase(object):
         self._constraints = constraints
         self._parameters = parameters
         self._block_variables = variables + parameters
-        self._block = create_subsystem_block(
-            constraints,
-            self._block_variables,
-        )
+        self._block = create_subsystem_block(constraints, self._block_variables)
 
     def get_variables(self):
         return self._variables
@@ -260,9 +250,7 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
         self._nlp = pyomo_nlp.PyomoNLP(block)
         self._timer.stop("PyomoNLP")
         primals_ordering = [var.name for var in variables]
-        self._proj_nlp = nlp_proj.ProjectedExtendedNLP(
-            self._nlp, primals_ordering
-        )
+        self._proj_nlp = nlp_proj.ProjectedExtendedNLP(self._nlp, primals_ordering)
 
         self._timer.start("NlpSolver")
         if solver_class is None:
@@ -299,8 +287,7 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
         ]
         if any((var not in self._active_var_set) for var in variables):
             raise RuntimeError(
-                "Invalid model. All variables must appear in specified"
-                " constraints."
+                "Invalid model. All variables must appear in specified constraints."
             )
 
         # These are coordinates in the original NLP
@@ -345,10 +332,7 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
     def update_pyomo_model(self):
         primals = self._nlp.get_primals()
         for i, var in enumerate(self.get_variables()):
-            var.set_value(
-                primals[self._variable_coords[i]],
-                skip_validation=True,
-            )
+            var.set_value(primals[self._variable_coords[i]], skip_validation=True)
         for var, value in zip(self._parameters, self._parameter_values):
             var.set_value(value, skip_validation=True)
 
@@ -388,9 +372,9 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         super().__init__(variables, constraints, parameters)
 
         subsystem_list = [
-        # Switch order in list for compatibility with generate_subsystem_blocks
-            (cons, vars) for vars, cons
-                in self.partition_system(variables, constraints)
+            # Switch order in list for compatibility with generate_subsystem_blocks
+            (cons, vars)
+            for vars, cons in self.partition_system(variables, constraints)
         ]
 
         var_param_set = ComponentSet(variables + parameters)
@@ -419,7 +403,8 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             # calculate_variable_from_constraint. _calc_var_cutoff should be either
             # 0 or 1.
             self._solver_subsystem_list = [
-                (block, inputs) for block, inputs in self._subsystem_list
+                (block, inputs)
+                for block, inputs in self._subsystem_list
                 if len(block.vars) > self._calc_var_cutoff
             ]
 
@@ -449,23 +434,25 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             for block, inputs in self._solver_subsystem_list
         ]
         self._solver_proj_nlps = [
-            nlp_proj.ProjectedExtendedNLP(nlp, names) for nlp, names in
-            zip(self._solver_subsystem_nlps, self._solver_subsystem_var_names)
+            nlp_proj.ProjectedExtendedNLP(nlp, names)
+            for nlp, names in zip(
+                self._solver_subsystem_nlps, self._solver_subsystem_var_names
+            )
         ]
 
         # We will solve the ProjectedNLPs rather than the original NLPs
         self._timer.start("NlpSolver")
         self._nlp_solvers = [
-            self._solver_class(
-                nlp, timer=self._timer, options=self._solver_options
-            ) for nlp in self._solver_proj_nlps
+            self._solver_class(nlp, timer=self._timer, options=self._solver_options)
+            for nlp in self._solver_proj_nlps
         ]
         self._timer.stop("NlpSolver")
         self._solver_subsystem_input_coords = [
             # Coordinates in the NLP, not ProjectedNLP
             nlp.get_primal_indices(inputs)
-            for nlp, (subsystem, inputs) in
-            zip(self._solver_subsystem_nlps, self._solver_subsystem_list)
+            for nlp, (subsystem, inputs) in zip(
+                self._solver_subsystem_nlps, self._solver_subsystem_list
+            )
         ]
 
         self._n_variables = len(variables)
@@ -480,9 +467,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         # (subsystem_coord, primal_coord), which would eliminate the need to
         # store data in two locations. The current implementation is easier,
         # however.
-        self._global_values = np.array(
-            [var.value for var in variables + parameters]
-        )
+        self._global_values = np.array([var.value for var in variables + parameters])
         self._global_indices = ComponentMap(
             (var, i) for i, var in enumerate(variables + parameters)
         )
@@ -492,19 +477,17 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             # If I do not fix "constants" above, I get errors here
             # that only show up in the CLC models.
             # TODO: Add a test that covers this edge case.
-            np.array(
-                [self._global_indices[var] for var in inputs],
-                dtype=int,
-            ) for (_, inputs) in self._solver_subsystem_list
+            np.array([self._global_indices[var] for var in inputs], dtype=int)
+            for (_, inputs) in self._solver_subsystem_list
         ]
 
         # Cache the global array-coordinates of each subset of "output"
         # variables. These are used for updating after each solve.
         self._output_coords = [
             np.array(
-                [self._global_indices[var] for var in block.vars.values()],
-                dtype=int,
-            ) for (block, _) in self._solver_subsystem_list
+                [self._global_indices[var] for var in block.vars.values()], dtype=int
+            )
+            for (block, _) in self._solver_subsystem_list
         ]
 
         self._timer.stop("__init__")
@@ -560,7 +543,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         #
         # NOTE: Here I rely on the fact that the "global array" is in the
         # order (variables, parameters)
-        self._global_values[self._n_variables:] = values
+        self._global_values[self._n_variables :] = values
 
         #
         # Solve subsystems one-by-one
@@ -574,10 +557,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
                 # Update model values from global array.
                 for var in inputs:
                     idx = self._global_indices[var]
-                    var.set_value(
-                        self._global_values[idx],
-                        skip_validation=True,
-                    )
+                    var.set_value(self._global_values[idx], skip_validation=True)
                 # Solve using calculate_variable_from_constraint
                 var = block.vars[0]
                 con = block.cons[0]
@@ -628,7 +608,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         self._timer.stop("set_parameters")
 
     def evaluate_outputs(self):
-        return self._global_values[:self._n_variables]
+        return self._global_values[: self._n_variables]
 
     def update_pyomo_model(self):
         # NOTE: Here we rely on the fact that global_values is in the
@@ -638,12 +618,9 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
 
 
 class SccImplicitFunctionSolver(DecomposedImplicitFunctionBase):
-
     def partition_system(self, variables, constraints):
         self._timer.start("partition")
         igraph = IncidenceGraphInterface()
-        var_blocks, con_blocks = igraph.get_diagonal_blocks(
-            variables, constraints
-        )
+        var_blocks, con_blocks = igraph.get_diagonal_blocks(variables, constraints)
         self._timer.stop("partition")
         return zip(var_blocks, con_blocks)

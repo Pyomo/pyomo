@@ -9,13 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('Objective',
-           'simple_objective_rule',
-           '_ObjectiveData',
-           'minimize',
-           'maximize',
-           'simple_objectivelist_rule',
-           'ObjectiveList')
+__all__ = (
+    'Objective',
+    'simple_objective_rule',
+    '_ObjectiveData',
+    'minimize',
+    'maximize',
+    'simple_objectivelist_rule',
+    'ObjectiveList',
+)
 
 import sys
 import logging
@@ -32,13 +34,16 @@ from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
-    ActiveIndexedComponent, UnindexedComponent_set, rule_wrapper,
+    ActiveIndexedComponent,
+    UnindexedComponent_set,
+    rule_wrapper,
 )
-from pyomo.core.base.expression import (_ExpressionData,
-                                        _GeneralExpressionDataImpl)
+from pyomo.core.base.expression import _ExpressionData, _GeneralExpressionDataImpl
 from pyomo.core.base.set import Set
 from pyomo.core.base.initializer import (
-    Initializer, IndexedCallInitializer, CountedCallInitializer,
+    Initializer,
+    IndexedCallInitializer,
+    CountedCallInitializer,
 )
 from pyomo.core.base import minimize, maximize
 
@@ -50,6 +55,7 @@ Objective rules must return either a valid expression, numeric value, or
 Objective.Skip.  The most common cause of this error is forgetting to
 include the "return" statement at the end of your rule.
 """
+
 
 def simple_objective_rule(rule):
     """
@@ -67,6 +73,7 @@ def simple_objective_rule(rule):
     """
     return rule_wrapper(rule, {None: Objective.Skip})
 
+
 def simple_objectivelist_rule(rule):
     """
     This is a decorator that translates None into ObjectiveList.End.
@@ -83,9 +90,11 @@ def simple_objectivelist_rule(rule):
     """
     return rule_wrapper(rule, {None: ObjectiveList.End})
 
+
 #
 # This class is a pure interface
 #
+
 
 class _ObjectiveData(_ExpressionData):
     """
@@ -119,9 +128,10 @@ class _ObjectiveData(_ExpressionData):
         """Set the sense (direction) of this objective."""
         raise NotImplementedError
 
-class _GeneralObjectiveData(_GeneralExpressionDataImpl,
-                            _ObjectiveData,
-                            ActiveComponentData):
+
+class _GeneralObjectiveData(
+    _GeneralExpressionDataImpl, _ObjectiveData, ActiveComponentData
+):
     """
     This class defines the data for a single objective.
 
@@ -149,17 +159,17 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
     def __init__(self, expr=None, sense=minimize, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
         # Inlining ActiveComponentData.__init__
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
+        self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
         self._active = True
         self._sense = sense
 
-        if (self._sense != minimize) and \
-           (self._sense != maximize):
-            raise ValueError("Objective sense must be set to one of "
-                             "'minimize' (%s) or 'maximize' (%s). Invalid "
-                             "value: %s'" % (minimize, maximize, sense))
+        if (self._sense != minimize) and (self._sense != maximize):
+            raise ValueError(
+                "Objective sense must be set to one of "
+                "'minimize' (%s) or 'maximize' (%s). Invalid "
+                "value: %s'" % (minimize, maximize, sense)
+            )
 
     def set_value(self, expr):
         if expr is None:
@@ -174,6 +184,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
     def sense(self):
         """Access sense (direction) of this objective."""
         return self._sense
+
     @sense.setter
     def sense(self, sense):
         """Set the sense (direction) of this objective."""
@@ -184,9 +195,12 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
         if sense in {minimize, maximize}:
             self._sense = sense
         else:
-            raise ValueError("Objective sense must be set to one of "
-                             "'minimize' (%s) or 'maximize' (%s). Invalid "
-                             "value: %s'" % (minimize, maximize, sense))
+            raise ValueError(
+                "Objective sense must be set to one of "
+                "'minimize' (%s) or 'maximize' (%s). Invalid "
+                "value: %s'" % (minimize, maximize, sense)
+            )
+
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
@@ -244,27 +258,33 @@ class Objective(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Objective:
             return super(Objective, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             return ScalarObjective.__new__(ScalarObjective)
         else:
             return IndexedObjective.__new__(IndexedObjective)
 
     @overload
-    def __init__(self, *indexes, expr=None, rule=None, sense=minimize,
-                 name=None, doc=None): ...
+    def __init__(
+        self, *indexes, expr=None, rule=None, sense=minimize, name=None, doc=None
+    ):
+        ...
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)
-        _init = tuple( _arg for _arg in (
-            kwargs.pop('rule', None), kwargs.pop('expr', None)
-        ) if _arg is not None )
+        _init = tuple(
+            _arg
+            for _arg in (kwargs.pop('rule', None), kwargs.pop('expr', None))
+            if _arg is not None
+        )
         if len(_init) == 1:
             _init = _init[0]
         elif not _init:
             _init = None
         else:
-            raise ValueError("Duplicate initialization: Objective() only "
-                             "accepts one of 'rule=' and 'expr='")
+            raise ValueError(
+                "Duplicate initialization: Objective() only "
+                "accepts one of 'rule=' and 'expr='"
+            )
 
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
@@ -297,8 +317,8 @@ class Objective(ActiveIndexedComponent):
             if rule.constant() and self.is_indexed():
                 raise IndexError(
                     "Objective '%s': Cannot initialize multiple indices "
-                    "of an objective with a single expression" %
-                    (self.name,) )
+                    "of an objective with a single expression" % (self.name,)
+                )
 
             block = self.parent_block()
             if rule.contains_indices():
@@ -317,8 +337,7 @@ class Objective(ActiveIndexedComponent):
             else:
                 # Bypass the index validation and create the member directly
                 for index in self.index_set():
-                    ans = self._setitem_when_not_present(
-                        index, rule(block, index))
+                    ans = self._setitem_when_not_present(index, rule(block, index))
                     if ans is not None:
                         ans.set_sense(self._init_sense(block, index))
         except Exception:
@@ -326,10 +345,8 @@ class Objective(ActiveIndexedComponent):
             logger.error(
                 "Rule failed when generating expression for "
                 "Objective %s with index %s:\n%s: %s"
-                % (self.name,
-                   str(index),
-                   type(err).__name__,
-                   err))
+                % (self.name, str(index), type(err).__name__, err)
+            )
             raise
         finally:
             timer.report()
@@ -339,8 +356,7 @@ class Objective(ActiveIndexedComponent):
             raise KeyError(index)
 
         block = self.parent_block()
-        obj = self._setitem_when_not_present(
-            index, self.rule(block, index))
+        obj = self._setitem_when_not_present(index, self.rule(block, index))
         if obj is None:
             raise KeyError(index)
         obj.set_sense(self._init_sense(block, index))
@@ -352,17 +368,19 @@ class Objective(ActiveIndexedComponent):
         Return data that will be printed for this component.
         """
         return (
-            [("Size", len(self)),
-             ("Index", self._index_set if self.is_indexed() else None),
-             ("Active", self.active)
-             ],
+            [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+                ("Active", self.active),
+            ],
             self._data.items(),
-            ( "Active","Sense","Expression"),
-            lambda k, v: [ v.active,
-                           ("minimize" if (v.sense == minimize) else "maximize"),
-                           v.expr
-                           ]
-            )
+            ("Active", "Sense", "Expression"),
+            lambda k, v: [
+                v.active,
+                ("minimize" if (v.sense == minimize) else "maximize"),
+                v.expr,
+            ],
+        )
 
     def display(self, prefix="", ostream=None):
         """Provide a verbose display of this object"""
@@ -371,18 +389,26 @@ class Objective(ActiveIndexedComponent):
         tab = "    "
         if ostream is None:
             ostream = sys.stdout
-        ostream.write(prefix+self.local_name+" : ")
-        ostream.write(", ".join("%s=%s" % (k,v) for k,v in [
+        ostream.write(prefix + self.local_name + " : ")
+        ostream.write(
+            ", ".join(
+                "%s=%s" % (k, v)
+                for k, v in [
                     ("Size", len(self)),
                     ("Index", self._index_set if self.is_indexed() else None),
                     ("Active", self.active),
-                    ] ))
+                ]
+            )
+        )
 
         ostream.write("\n")
-        tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in self._data.items() if v.active),
-                        ( "Active","Value" ),
-                        lambda k, v: [ v.active, value(v), ] )
+        tabular_writer(
+            ostream,
+            prefix + tab,
+            ((k, v) for k, v in self._data.items() if v.active),
+            ("Active", "Value"),
+            lambda k, v: [v.active, value(v)],
+        )
 
 
 class ScalarObjective(_GeneralObjectiveData, Objective):
@@ -395,6 +421,7 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
         _GeneralObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
+
     #
     # Override abstract interface methods to first check for
     # construction
@@ -409,13 +436,15 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                     "Accessing the expression of ScalarObjective "
                     "'%s' before the Objective has been assigned "
                     "a sense or expression. There is currently "
-                    "nothing to access." % (self.name))
+                    "nothing to access." % (self.name)
+                )
             return _GeneralObjectiveData.expr.fget(self)
         raise ValueError(
             "Accessing the expression of objective '%s' "
             "before the Objective has been constructed (there "
-            "is currently no value to return)."
-            % (self.name))
+            "is currently no value to return)." % (self.name)
+        )
+
     @expr.setter
     def expr(self, expr):
         """Set the expression of this objective."""
@@ -430,13 +459,15 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                     "Accessing the sense of ScalarObjective "
                     "'%s' before the Objective has been assigned "
                     "a sense or expression. There is currently "
-                    "nothing to access." % (self.name))
+                    "nothing to access." % (self.name)
+                )
             return _GeneralObjectiveData.sense.fget(self)
         raise ValueError(
             "Accessing the sense of objective '%s' "
             "before the Objective has been constructed (there "
-            "is currently no value to return)."
-            % (self.name))
+            "is currently no value to return)." % (self.name)
+        )
+
     @sense.setter
     def sense(self, sense):
         """Set the sense (direction) of this objective."""
@@ -462,8 +493,8 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
             raise ValueError(
                 "Setting the value of objective '%s' "
                 "before the Objective has been constructed (there "
-                "is currently no object to set)."
-                % (self.name))
+                "is currently no object to set)." % (self.name)
+            )
         if not self._data:
             self._data[None] = self
         return super().set_value(expr)
@@ -477,8 +508,8 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
         raise ValueError(
             "Setting the sense of objective '%s' "
             "before the Objective has been constructed (there "
-            "is currently no object to set)."
-            % (self.name))
+            "is currently no object to set)." % (self.name)
+        )
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -489,8 +520,8 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
         if index is not None:
             raise ValueError(
                 "ScalarObjective object '%s' does not accept "
-                "index values other than None. Invalid value: %s"
-                % (self.name, index))
+                "index values other than None. Invalid value: %s" % (self.name, index)
+            )
         self.set_value(expr)
         return self
 
@@ -501,7 +532,6 @@ class SimpleObjective(metaclass=RenamedClass):
 
 
 class IndexedObjective(Objective):
-
     #
     # Leaving this method for backward compatibility reasons
     #
@@ -522,13 +552,13 @@ class ObjectiveList(IndexedObjective):
     an index value is not specified.
     """
 
-    class End(object): pass
+    class End(object):
+        pass
 
     def __init__(self, **kwargs):
         """Constructor"""
         if 'expr' in kwargs:
-            raise ValueError(
-                "ObjectiveList does not accept the 'expr' keyword")
+            raise ValueError("ObjectiveList does not accept the 'expr' keyword")
         _rule = kwargs.pop('rule', None)
         self._starting_index = kwargs.pop('starting_index', 1)
 
@@ -540,9 +570,7 @@ class ObjectiveList(IndexedObjective):
         # after the base class is set up so that is_indexed() is
         # reliable.
         if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(
-                self, self.rule, self._starting_index
-            )
+            self.rule = CountedCallInitializer(self, self.rule, self._starting_index)
 
     def construct(self, data=None):
         """
@@ -550,11 +578,10 @@ class ObjectiveList(IndexedObjective):
         """
         if self._constructed:
             return
-        self._constructed=True
+        self._constructed = True
 
         if is_debug_set(logger):
-            logger.debug("Constructing objective list %s"
-                         % (self.name))
+            logger.debug("Constructing objective list %s" % (self.name))
 
         self.index_set().construct()
 
@@ -577,4 +604,3 @@ class ObjectiveList(IndexedObjective):
                 sense = sense(self.parent_block(), next_idx)
             ans.set_sense(sense)
         return ans
-

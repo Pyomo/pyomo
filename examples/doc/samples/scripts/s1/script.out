@@ -9,9 +9,9 @@ Problem:
   Lower bound: 25.0
   Upper bound: 25.0
   Number of objectives: 1
-  Number of constraints: 2
-  Number of variables: 5
-  Number of nonzeros: 5
+  Number of constraints: 1
+  Number of variables: 4
+  Number of nonzeros: 4
   Sense: maximize
 # ----------------------------------------------------------
 #   Solver Information

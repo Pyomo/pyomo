@@ -13,10 +13,13 @@ from pyomo.environ import AbstractModel, RangeSet, Var, Objective, sum_product
 
 model = AbstractModel()
 
-model.A = RangeSet(1,4)
+model.A = RangeSet(1, 4)
 
 model.x = Var(model.A)
 
+
 def obj_rule(model):
     return sum_product(model.x)
+
+
 model.obj = Objective(rule=obj_rule)

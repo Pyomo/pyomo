@@ -23,8 +23,8 @@ from pyomo.common.config import ConfigDict, ConfigValue
 
 
 @TransformationFactory.register(
-        'contrib.remove_zero_terms',
-        doc="Remove terms 0 * var in constraints")
+    'contrib.remove_zero_terms', doc="Remove terms 0 * var in constraints"
+)
 class RemoveZeroTerms(IsomorphicTransformation):
     """Looks for :math:`0 v` in a constraint and removes it.
 
@@ -34,12 +34,16 @@ class RemoveZeroTerms(IsomorphicTransformation):
     .. note:: TODO: support nonlinear expressions
 
     """
+
     CONFIG = ConfigDict("RemoveZeroTerms")
-    CONFIG.declare("constraints_modified", ConfigValue(
-        default={},
-        description="A dictionary that maps the constraints modified during "
-        "the transformation to a tuple: (original_expr, modified_expr)"
-    ))
+    CONFIG.declare(
+        "constraints_modified",
+        ConfigValue(
+            default={},
+            description="A dictionary that maps the constraints modified during "
+            "the transformation to a tuple: (original_expr, modified_expr)",
+        ),
+    )
 
     def _apply_to(self, model, **kwargs):
         """Apply the transformation."""
@@ -47,26 +51,33 @@ class RemoveZeroTerms(IsomorphicTransformation):
         m = model
 
         for constr in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True):
+            ctype=Constraint, active=True, descend_into=True
+        ):
             repn = generate_standard_repn(constr.body)
             if not repn.is_linear() or repn.is_constant():
                 continue  # we currently only process linear constraints, and we
-                          # assume that trivial constraints have already been
-                          # deactivated or will be deactivated in a different
-                          # step
+                # assume that trivial constraints have already been
+                # deactivated or will be deactivated in a different
+                # step
 
             original_expr = constr.expr
             # get the index of all nonzero coefficient variables
             nonzero_vars_indx = [
-                i for i, _ in enumerate(repn.linear_vars)
+                i
+                for i, _ in enumerate(repn.linear_vars)
                 if not repn.linear_coefs[i] == 0
             ]
             const = repn.constant
 
             # reconstitute the constraint, including only variable terms with
             # nonzero coefficients
-            constr_body = quicksum(repn.linear_coefs[i] * repn.linear_vars[i]
-                                   for i in nonzero_vars_indx) + const
+            constr_body = (
+                quicksum(
+                    repn.linear_coefs[i] * repn.linear_vars[i]
+                    for i in nonzero_vars_indx
+                )
+                + const
+            )
             if constr.equality:
                 new_expr = constr_body == constr.upper
             elif constr.has_lb() and not constr.has_ub():
@@ -75,7 +86,6 @@ class RemoveZeroTerms(IsomorphicTransformation):
                 new_expr = constr_body <= constr.upper
             else:
                 # constraint is a bounded inequality of form a <= x <= b.
-                new_expr = EXPR.inequality( constr.lower, constr_body,
-                                            constr.upper)
+                new_expr = EXPR.inequality(constr.lower, constr_body, constr.upper)
             constr.set_value(new_expr)
             config.constraints_modified[constr] = (original_expr, new_expr)

@@ -11,7 +11,7 @@ interfaces.
 
 == Model Files ==
 
-Auxilliary files:
+Auxiliary files:
  * [source:pyomo.data.samples/trunk/pyomo/data/samples/comparisons/cutstock/cutstock_util.py cutstock_util.py] - Utilities functions used in these examples
 
 Model files:

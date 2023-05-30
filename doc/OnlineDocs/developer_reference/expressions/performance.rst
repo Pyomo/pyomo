@@ -50,7 +50,7 @@ For example, consider the following quadratic polynomial:
 .. literalinclude:: ../../tests/expr/performance_loop3.spy
 
 This quadratic polynomial is treated as a nonlinear expression
-unless the expression is explicilty processed to identify quadratic
+unless the expression is explicitly processed to identify quadratic
 terms.  This *lazy* identification of of quadratic terms allows
 Pyomo to tailor the search for quadratic terms only when they are
 explicitly needed.

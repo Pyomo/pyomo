@@ -14,6 +14,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import OrderedSet
 
+
 class testOrderedSet(unittest.TestCase):
     def test_constructor(self):
         a = OrderedSet()
@@ -21,7 +22,7 @@ class testOrderedSet(unittest.TestCase):
         self.assertEqual(list(a), [])
         self.assertEqual(str(a), 'OrderedSet()')
 
-        ref = [1,9,'a',4,2,None]
+        ref = [1, 9, 'a', 4, 2, None]
         a = OrderedSet(ref)
         self.assertEqual(len(a), 6)
         self.assertEqual(list(a), ref)
@@ -41,29 +42,29 @@ class testOrderedSet(unittest.TestCase):
         self.assertIn(None, a)
 
         a.add(0)
-        self.assertEqual(list(a), [None,1,0])
+        self.assertEqual(list(a), [None, 1, 0])
 
-        # Adding a member alrady in the set does not change the ordering
+        # Adding a member already in the set does not change the ordering
         a.add(1)
-        self.assertEqual(list(a), [None,1,0])
+        self.assertEqual(list(a), [None, 1, 0])
 
     def test_discard_remove_clear(self):
-        a = OrderedSet([1,3,2,4])
+        a = OrderedSet([1, 3, 2, 4])
         a.discard(3)
-        self.assertEqual(list(a), [1,2,4])
+        self.assertEqual(list(a), [1, 2, 4])
         a.discard(3)
-        self.assertEqual(list(a), [1,2,4])
+        self.assertEqual(list(a), [1, 2, 4])
 
         a.remove(2)
-        self.assertEqual(list(a), [1,4])
-        with self.assertRaisesRegex(KeyError,'2'):
+        self.assertEqual(list(a), [1, 4])
+        with self.assertRaisesRegex(KeyError, '2'):
             a.remove(2)
-        
+
         a.clear()
         self.assertEqual(list(a), [])
 
     def test_pickle(self):
-        ref = [1,9,'a',4,2,None]
+        ref = [1, 9, 'a', 4, 2, None]
         a = OrderedSet(ref)
         b = pickle.loads(pickle.dumps(a))
         self.assertEqual(a, b)
@@ -87,6 +88,6 @@ class testOrderedSet(unittest.TestCase):
         self.assertEqual(list(b), [3, 4, 'c', 'd'])
 
     def test_reversed(self):
-        a = OrderedSet([1,5,3])
+        a = OrderedSet([1, 5, 3])
         self.assertEqual(list(a), [1, 5, 3])
         self.assertEqual(list(reversed(a)), [3, 5, 1])

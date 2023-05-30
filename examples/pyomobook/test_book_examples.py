@@ -42,6 +42,11 @@ parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
+# Needed for testing (switches the matplotlib backend):
+from pyomo.common.dependencies import matplotlib_available
+
+bool(matplotlib_available)
+
 # Find all *.txt files, and use them to define baseline tests
 currdir = this_file_dir()
 datadir = currdir
@@ -134,7 +139,6 @@ package_dependencies = {
     # performance_ch'
     'test_performance_ch_wl': ['numpy', 'matplotlib'],
 }
-
 
 #
 # Initialize the availability data
@@ -305,7 +309,6 @@ for testdir in glob.glob(os.path.join(currdir, '*')):
     for file in list(glob.glob(os.path.join(testdir, '*.py'))) + list(
         glob.glob(os.path.join(testdir, '*', '*.py'))
     ):
-
         test_file = os.path.abspath(file)
         bname = os.path.basename(test_file)
         dir_ = os.path.dirname(test_file)

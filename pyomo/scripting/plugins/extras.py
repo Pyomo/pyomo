@@ -13,35 +13,39 @@ from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
 from pyomo.common.deprecation import deprecated
 
+
 def get_packages():
     packages = [
-        'sympy', 
-        'xlrd', 
-        'openpyxl', 
-        #('suds-jurko', 'suds'),
+        'sympy',
+        'xlrd',
+        'openpyxl',
+        # ('suds-jurko', 'suds'),
         ('PyYAML', 'yaml'),
-        'pypyodbc', 
-        'pymysql', 
-        #'openopt', 
-        #'FuncDesigner', 
-        #'DerApproximator', 
+        'pypyodbc',
+        'pymysql',
+        #'openopt',
+        #'FuncDesigner',
+        #'DerApproximator',
         ('ipython[notebook]', 'IPython'),
     ]
     return packages
 
+
 @deprecated(
-        "Use of the pyomo install-extras is deprecated."
-        "The current recommended course of action is to manually install "
-        "optional dependencies as needed.",
-        version='5.7.1')
+    "Use of the pyomo install-extras is deprecated."
+    "The current recommended course of action is to manually install "
+    "optional dependencies as needed.",
+    version='5.7.1',
+)
 def install_extras(args=[], quiet=False):
     #
     # Verify that pip is installed
     #
     try:
         import pip
+
         pip_version = pip.__version__.split('.')
-        for i,s in enumerate(pip_version):
+        for i, s in enumerate(pip_version):
             try:
                 pip_version[i] = int(s)
             except:
@@ -51,7 +55,7 @@ def install_extras(args=[], quiet=False):
         print("You must have 'pip' installed to run this script.")
         raise SystemExit
 
-    cmd = ['--disable-pip-version-check', 'install','--upgrade']
+    cmd = ['--disable-pip-version-check', 'install', '--upgrade']
     # Disable the PIP download cache
     if pip_version[0] >= 6:
         cmd.append('--no-cache-dir')
@@ -61,10 +65,10 @@ def install_extras(args=[], quiet=False):
 
     if not quiet:
         print(' ')
-        print('-'*60)
+        print('-' * 60)
         print("Installation Output Logs")
         print("  (A summary will be printed below)")
-        print('-'*60)
+        print('-' * 60)
         print(' ')
 
     results = {}
@@ -89,9 +93,9 @@ def install_extras(args=[], quiet=False):
     if not quiet:
         print(' ')
         print(' ')
-    print('-'*60)
+    print('-' * 60)
     print("Installation Summary")
-    print('-'*60)
+    print('-' * 60)
     print(' ')
     for package, result in sorted(results.items()):
         if result:
@@ -124,7 +128,8 @@ the command line.  For example:\n\n
 )
 
 _parser.add_argument(
-    '-q', '--quiet',
+    '-q',
+    '--quiet',
     action='store_true',
     dest='quiet',
     default=False,
@@ -134,7 +139,5 @@ _parser.add_argument(
     "--pip-args",
     dest="args",
     action="append",
-    help=("Arguments that are passed to the 'pip' command when "
-          "installing packages"),
+    help=("Arguments that are passed to the 'pip' command when installing packages"),
 )
-

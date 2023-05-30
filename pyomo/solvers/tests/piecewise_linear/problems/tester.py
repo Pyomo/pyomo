@@ -12,9 +12,9 @@
 from pyomo.environ import Var, maximize, value
 from pyomo.opt import SolverFactory
 
-opt = SolverFactory('cplexamp',solve_io='nl')
+opt = SolverFactory('cplexamp', solve_io='nl')
 
-kwds = {'pw_constr_type':'UB','pw_repn':'DCC','sense':maximize,'force_pw':True}
+kwds = {'pw_constr_type': 'UB', 'pw_repn': 'DCC', 'sense': maximize, 'force_pw': True}
 
 problem_names = []
 problem_names.append("piecewise_multi_vararray")
@@ -39,7 +39,7 @@ for problem_name in problem_names:
     model = p.define_model(**kwds)
     inst = model.create()
 
-    results = opt.solve(inst,tee=True)
+    results = opt.solve(inst, tee=True)
 
     inst.load(results)
 

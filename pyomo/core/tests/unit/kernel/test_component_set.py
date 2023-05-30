@@ -14,48 +14,38 @@ import pickle
 
 import pyomo.common.unittest as unittest
 from pyomo.common.collections import ComponentSet
-from pyomo.core.kernel.variable import (variable,
-                                        variable_dict,
-                                        variable_list)
-from pyomo.core.kernel.constraint import (constraint,
-                                          constraint_dict,
-                                          constraint_list)
-from pyomo.core.kernel.objective import (objective,
-                                         objective_dict,
-                                         objective_list)
-from pyomo.core.kernel.expression import (expression,
-                                          expression_dict,
-                                          expression_list)
-from pyomo.core.kernel.block import (block,
-                                     block_dict,
-                                     block_list)
+from pyomo.core.kernel.variable import variable, variable_dict, variable_list
+from pyomo.core.kernel.constraint import constraint, constraint_dict, constraint_list
+from pyomo.core.kernel.objective import objective, objective_dict, objective_list
+from pyomo.core.kernel.expression import expression, expression_dict, expression_list
+from pyomo.core.kernel.block import block, block_dict, block_list
 from pyomo.core.kernel.suffix import suffix
 
 
 class TestComponentSet(unittest.TestCase):
-
-    _components = [variable(),
-                   variable_dict(),
-                   variable_list(),
-                   constraint(),
-                   constraint_dict(),
-                   constraint_list(),
-                   objective(),
-                   objective_dict(),
-                   objective_list(),
-                   expression(),
-                   expression_dict(),
-                   expression_list(),
-                   block(),
-                   block_dict(),
-                   block_list(),
-                   suffix()]
+    _components = [
+        variable(),
+        variable_dict(),
+        variable_list(),
+        constraint(),
+        constraint_dict(),
+        constraint_list(),
+        objective(),
+        objective_dict(),
+        objective_list(),
+        expression(),
+        expression_dict(),
+        expression_list(),
+        block(),
+        block_dict(),
+        block_list(),
+        suffix(),
+    ]
 
     def test_pickle(self):
         c = ComponentSet()
         self.assertEqual(len(c), 0)
-        cup = pickle.loads(
-            pickle.dumps(c))
+        cup = pickle.loads(pickle.dumps(c))
         self.assertIsNot(cup, c)
         self.assertEqual(len(cup), 0)
 
@@ -63,8 +53,7 @@ class TestComponentSet(unittest.TestCase):
         c.add(v)
         self.assertEqual(len(c), 1)
         self.assertTrue(v in c)
-        cup = pickle.loads(
-            pickle.dumps(c))
+        cup = pickle.loads(pickle.dumps(c))
         vup = cup.pop()
         cup.add(vup)
         self.assertIsNot(cup, c)
@@ -82,8 +71,7 @@ class TestComponentSet(unittest.TestCase):
         self.assertIs(v.parent, b.V)
         self.assertIs(V.parent, b)
         self.assertIs(b.parent, None)
-        bup = pickle.loads(
-            pickle.dumps(b))
+        bup = pickle.loads(pickle.dumps(b))
         Vup = bup.V
         vup = Vup[0]
         cup = bup.c
@@ -135,8 +123,7 @@ class TestComponentSet(unittest.TestCase):
         ids_seen = set()
         for c in cset:
             ids_seen.add(id(c))
-        self.assertEqual(ids_seen,
-                         set(id(c) for c in self._components))
+        self.assertEqual(ids_seen, set(id(c) for c in self._components))
 
     def set_add(self):
         cset = ComponentSet()
@@ -145,7 +132,7 @@ class TestComponentSet(unittest.TestCase):
             self.assertTrue(c not in cset)
             cset.add(c)
             self.assertTrue(c in cset)
-            self.assertEqual(len(cset), i+1)
+            self.assertEqual(len(cset), i + 1)
         self.assertEqual(len(cset), len(self._components))
         for c in self._components:
             self.assertTrue(c in cset)
@@ -190,7 +177,7 @@ class TestComponentSet(unittest.TestCase):
         self.assertEqual(len(cset), len(self._components))
         for i, c in enumerate(self._components):
             cset.remove(c)
-            self.assertEqual(len(cset), len(self._components)-(i+1))
+            self.assertEqual(len(cset), len(self._components) - (i + 1))
         for c in self._components:
             self.assertTrue(c not in cset)
             with self.assertRaises(KeyError):
@@ -203,7 +190,7 @@ class TestComponentSet(unittest.TestCase):
         self.assertEqual(len(cset), len(self._components))
         for i, c in enumerate(self._components):
             cset.discard(c)
-            self.assertEqual(len(cset), len(self._components)-(i+1))
+            self.assertEqual(len(cset), len(self._components) - (i + 1))
         for c in self._components:
             self.assertTrue(c not in cset)
             cset.discard(c)
@@ -226,7 +213,7 @@ class TestComponentSet(unittest.TestCase):
         cset1 = ComponentSet([v1])
         v2 = variable()
         cset2 = ComponentSet([v2])
-        cset3 = ComponentSet([v1,v2])
+        cset3 = ComponentSet([v1, v2])
         empty = ComponentSet([])
         self.assertEqual(cset1 | cset2, cset3)
         self.assertEqual((cset1 | cset2) - cset3, empty)

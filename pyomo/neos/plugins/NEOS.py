@@ -18,6 +18,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 logger = logging.getLogger('pyomo.neos')
 
+
 @SolverFactory.register('_neos', 'Interface for solvers hosted on NEOS')
 class NEOSRemoteSolver(SystemCallSolver):
     """A wrapper class for NEOS Remote Solvers"""
@@ -37,12 +38,10 @@ class NEOSRemoteSolver(SystemCallSolver):
         populated by NEOS.
         """
         if self._log_file is None:
-           self._log_file = TempfileManager.\
-                            create_tempfile(suffix=".neos.log")
+            self._log_file = TempfileManager.create_tempfile(suffix=".neos.log")
         if self._soln_file is None:
-           self._soln_file = TempfileManager.\
-                             create_tempfile(suffix=".neos.sol")
-           self._results_file = self._soln_file
+            self._soln_file = TempfileManager.create_tempfile(suffix=".neos.sol")
+            self._results_file = self._soln_file
 
         # display the log/solver file names prior to execution. this is useful
         # in case something crashes unexpectedly, which is not without precedent.

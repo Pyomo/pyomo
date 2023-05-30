@@ -15,91 +15,103 @@ import gurobipy
 
 
 def create_pmedian_model():
-    d_dict = {(1, 1): 1.777356642700564,
-              (1, 2): 1.6698255595592497,
-              (1, 3): 1.099139603924817,
-              (1, 4): 1.3529705111901453,
-              (1, 5): 1.467907742900842,
-              (1, 6): 1.5346837414708774,
-              (2, 1): 1.9783090609123972,
-              (2, 2): 1.130315350158659,
-              (2, 3): 1.6712434682302661,
-              (2, 4): 1.3642294159473756,
-              (2, 5): 1.4888357071619858,
-              (2, 6): 1.2030122107340537,
-              (3, 1): 1.6661983755713592,
-              (3, 2): 1.227663031206932,
-              (3, 3): 1.4580640582967632,
-              (3, 4): 1.0407223975549575,
-              (3, 5): 1.9742897953778287,
-              (3, 6): 1.4874760742689066,
-              (4, 1): 1.4616138636373597,
-              (4, 2): 1.7141471558082002,
-              (4, 3): 1.4157281494999725,
-              (4, 4): 1.888011688001529,
-              (4, 5): 1.0232934487237717,
-              (4, 6): 1.8335062677845464,
-              (5, 1): 1.468494740997508,
-              (5, 2): 1.8114798126442795,
-              (5, 3): 1.9455914886158723,
-              (5, 4): 1.983088378194899,
-              (5, 5): 1.1761820755785306,
-              (5, 6): 1.698655759576308,
-              (6, 1): 1.108855711312383,
-              (6, 2): 1.1602637342062019,
-              (6, 3): 1.0928602740245892,
-              (6, 4): 1.3140620798928404,
-              (6, 5): 1.0165386843386672,
-              (6, 6): 1.854049125736362,
-              (7, 1): 1.2910160386456968,
-              (7, 2): 1.7800475863350327,
-              (7, 3): 1.5480965161255695,
-              (7, 4): 1.1943306766997612,
-              (7, 5): 1.2920382721805297,
-              (7, 6): 1.3194527773994338,
-              (8, 1): 1.6585982235379078,
-              (8, 2): 1.2315210354122292,
-              (8, 3): 1.6194303369953538,
-              (8, 4): 1.8953386098022103,
-              (8, 5): 1.8694342085696831,
-              (8, 6): 1.2938069356684523,
-              (9, 1): 1.4582048085805495,
-              (9, 2): 1.484979797871119,
-              (9, 3): 1.2803882693587225,
-              (9, 4): 1.3289569463506004,
-              (9, 5): 1.9842424240265042,
-              (9, 6): 1.0119441379208745,
-              (10, 1): 1.1429007682932852,
-              (10, 2): 1.6519772165446711,
-              (10, 3): 1.0749931799469326,
-              (10, 4): 1.2920787022811089,
-              (10, 5): 1.7934429721917704,
-              (10, 6): 1.9115931008709737}
+    d_dict = {
+        (1, 1): 1.777356642700564,
+        (1, 2): 1.6698255595592497,
+        (1, 3): 1.099139603924817,
+        (1, 4): 1.3529705111901453,
+        (1, 5): 1.467907742900842,
+        (1, 6): 1.5346837414708774,
+        (2, 1): 1.9783090609123972,
+        (2, 2): 1.130315350158659,
+        (2, 3): 1.6712434682302661,
+        (2, 4): 1.3642294159473756,
+        (2, 5): 1.4888357071619858,
+        (2, 6): 1.2030122107340537,
+        (3, 1): 1.6661983755713592,
+        (3, 2): 1.227663031206932,
+        (3, 3): 1.4580640582967632,
+        (3, 4): 1.0407223975549575,
+        (3, 5): 1.9742897953778287,
+        (3, 6): 1.4874760742689066,
+        (4, 1): 1.4616138636373597,
+        (4, 2): 1.7141471558082002,
+        (4, 3): 1.4157281494999725,
+        (4, 4): 1.888011688001529,
+        (4, 5): 1.0232934487237717,
+        (4, 6): 1.8335062677845464,
+        (5, 1): 1.468494740997508,
+        (5, 2): 1.8114798126442795,
+        (5, 3): 1.9455914886158723,
+        (5, 4): 1.983088378194899,
+        (5, 5): 1.1761820755785306,
+        (5, 6): 1.698655759576308,
+        (6, 1): 1.108855711312383,
+        (6, 2): 1.1602637342062019,
+        (6, 3): 1.0928602740245892,
+        (6, 4): 1.3140620798928404,
+        (6, 5): 1.0165386843386672,
+        (6, 6): 1.854049125736362,
+        (7, 1): 1.2910160386456968,
+        (7, 2): 1.7800475863350327,
+        (7, 3): 1.5480965161255695,
+        (7, 4): 1.1943306766997612,
+        (7, 5): 1.2920382721805297,
+        (7, 6): 1.3194527773994338,
+        (8, 1): 1.6585982235379078,
+        (8, 2): 1.2315210354122292,
+        (8, 3): 1.6194303369953538,
+        (8, 4): 1.8953386098022103,
+        (8, 5): 1.8694342085696831,
+        (8, 6): 1.2938069356684523,
+        (9, 1): 1.4582048085805495,
+        (9, 2): 1.484979797871119,
+        (9, 3): 1.2803882693587225,
+        (9, 4): 1.3289569463506004,
+        (9, 5): 1.9842424240265042,
+        (9, 6): 1.0119441379208745,
+        (10, 1): 1.1429007682932852,
+        (10, 2): 1.6519772165446711,
+        (10, 3): 1.0749931799469326,
+        (10, 4): 1.2920787022811089,
+        (10, 5): 1.7934429721917704,
+        (10, 6): 1.9115931008709737,
+    }
 
     model = pe.ConcreteModel()
     model.N = pe.Param(initialize=10)
-    model.Locations = pe.RangeSet(1,model.N)
+    model.Locations = pe.RangeSet(1, model.N)
     model.P = pe.Param(initialize=3)
     model.M = pe.Param(initialize=6)
-    model.Customers = pe.RangeSet(1,model.M)
-    model.d = pe.Param(model.Locations, model.Customers, initialize=d_dict, within=pe.Reals)
-    model.x = pe.Var(model.Locations, model.Customers, bounds=(0.0,1.0))
+    model.Customers = pe.RangeSet(1, model.M)
+    model.d = pe.Param(
+        model.Locations, model.Customers, initialize=d_dict, within=pe.Reals
+    )
+    model.x = pe.Var(model.Locations, model.Customers, bounds=(0.0, 1.0))
     model.y = pe.Var(model.Locations, within=pe.Binary)
 
     def rule(model):
-        return sum( model.d[n,m]*model.x[n,m] for n in model.Locations for m in model.Customers )
+        return sum(
+            model.d[n, m] * model.x[n, m]
+            for n in model.Locations
+            for m in model.Customers
+        )
+
     model.obj = pe.Objective(rule=rule)
 
     def rule(model, m):
-        return (sum( model.x[n,m] for n in model.Locations ), 1.0)
+        return (sum(model.x[n, m] for n in model.Locations), 1.0)
+
     model.single_x = pe.Constraint(model.Customers, rule=rule)
 
-    def rule(model, n,m):
-        return (None, model.x[n,m] - model.y[n], 0.0)
+    def rule(model, n, m):
+        return (None, model.x[n, m] - model.y[n], 0.0)
+
     model.bound_y = pe.Constraint(model.Locations, model.Customers, rule=rule)
 
     def rule(model):
-        return (sum( model.y[n] for n in model.Locations ) - model.P, 0.0)
+        return (sum(model.y[n] for n in model.Locations) - model.P, 0.0)
+
     model.num_facilities = pe.Constraint(rule=rule)
 
     return model
@@ -128,10 +140,8 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         p2 = self.m.p2.value
         p3 = self.m.p3.value
         p4 = self.m.p4.value
-        A = np.array([[1, -p1],
-                      [1, -p3]])
-        rhs = np.array([p2,
-                        p4])
+        A = np.array([[1, -p1], [1, -p3]])
+        rhs = np.array([p2, p4])
         sol = np.linalg.solve(A, rhs)
         x = float(sol[1])
         y = float(sol[0])
@@ -166,18 +176,6 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         opt.load_vars()
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)
-
-    def test_set_instance_not_available(self):
-        _avail = Gurobi._available
-        try:
-            Gurobi._available = Gurobi.Availability.NeedsCompiledExtension
-            with self.assertRaisesRegex(
-                    PyomoException,
-                    r'Solver pyomo.contrib.appsi.solvers.gurobi.Gurobi '
-                    r'is not available \(NeedsCompiledExtension\).'):
-                opt.set_instance(pe.ConcreteModel())
-        finally:
-            Gurobi._available = _avail
 
 
 class TestGurobiPersistent(unittest.TestCase):
@@ -216,19 +214,23 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var()
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.y)
-        m.con = pe.Constraint(expr=m.y >= m.a*m.x**2 + m.b*m.x + m.c)
+        m.con = pe.Constraint(expr=m.y >= m.a * m.x**2 + m.b * m.x + m.c)
 
         opt = Gurobi()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
-        self.assertAlmostEqual(m.y.value, m.a.value * m.x.value ** 2 + m.b.value * m.x.value + m.c.value)
+        self.assertAlmostEqual(
+            m.y.value, m.a.value * m.x.value**2 + m.b.value * m.x.value + m.c.value
+        )
 
         m.a.value = 2
         m.b.value = 4
         m.c.value = -1
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
-        self.assertAlmostEqual(m.y.value, m.a.value * m.x.value ** 2 + m.b.value * m.x.value + m.c.value)
+        self.assertAlmostEqual(
+            m.y.value, m.a.value * m.x.value**2 + m.b.value * m.x.value + m.c.value
+        )
 
     def test_quadratic_objective(self):
         m = pe.ConcreteModel()
@@ -236,21 +238,25 @@ class TestGurobiPersistent(unittest.TestCase):
         m.b = pe.Param(initialize=1, mutable=True)
         m.c = pe.Param(initialize=1, mutable=True)
         m.x = pe.Var()
-        m.obj = pe.Objective(expr=m.a*m.x**2 + m.b*m.x + m.c)
+        m.obj = pe.Objective(expr=m.a * m.x**2 + m.b * m.x + m.c)
 
         opt = Gurobi()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
-        self.assertAlmostEqual(res.best_feasible_objective,
-                               m.a.value * m.x.value ** 2 + m.b.value * m.x.value + m.c.value)
+        self.assertAlmostEqual(
+            res.best_feasible_objective,
+            m.a.value * m.x.value**2 + m.b.value * m.x.value + m.c.value,
+        )
 
         m.a.value = 2
         m.b.value = 4
         m.c.value = -1
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
-        self.assertAlmostEqual(res.best_feasible_objective,
-                               m.a.value * m.x.value ** 2 + m.b.value * m.x.value + m.c.value)
+        self.assertAlmostEqual(
+            res.best_feasible_objective,
+            m.a.value * m.x.value**2 + m.b.value * m.x.value + m.c.value,
+        )
 
     def test_var_bounds(self):
         m = pe.ConcreteModel()
@@ -284,7 +290,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var()
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.y)
-        m.con = pe.Constraint(expr=m.y >= m.a*m.x**2 + m.b*m.x + m.c)
+        m.con = pe.Constraint(expr=m.y >= m.a * m.x**2 + m.b * m.x + m.c)
 
         m.x.fix(1)
         opt = Gurobi()
@@ -300,7 +306,9 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x.unfix()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
-        self.assertAlmostEqual(m.y.value, m.a.value * m.x.value ** 2 + m.b.value * m.x.value + m.c.value)
+        self.assertAlmostEqual(
+            m.y.value, m.a.value * m.x.value**2 + m.b.value * m.x.value + m.c.value
+        )
 
     def test_linear_constraint_attr(self):
         m = pe.ConcreteModel()
@@ -336,12 +344,12 @@ class TestGurobiPersistent(unittest.TestCase):
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(0, 4))
         m.y = pe.Var(within=pe.Integers, bounds=(0, None))
-        m.obj = pe.Objective(expr=2*m.x + m.y)
+        m.obj = pe.Objective(expr=2 * m.x + m.y)
         m.cons = pe.ConstraintList()
 
         def _add_cut(xval):
             m.x.value = xval
-            return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
+            return m.cons.add(m.y >= taylor_series_expansion((m.x - 2) ** 2))
 
         _add_cut(0)
         _add_cut(4)
@@ -354,7 +362,7 @@ class TestGurobiPersistent(unittest.TestCase):
         def _my_callback(cb_m, cb_opt, cb_where):
             if cb_where == gurobipy.GRB.Callback.MIPSOL:
                 cb_opt.cbGetSolution(vars=[m.x, m.y])
-                if m.y.value < (m.x.value - 2)**2 - 1e-6:
+                if m.y.value < (m.x.value - 2) ** 2 - 1e-6:
                     cb_opt.cbLazy(_add_cut(m.x.value))
 
         opt.set_callback(_my_callback)
@@ -369,7 +377,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var()
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c = pe.Constraint(expr=m.y == (m.x-1)**2 - 2)
+        m.c = pe.Constraint(expr=m.y == (m.x - 1) ** 2 - 2)
         opt = Gurobi()
         opt.gurobi_options['nonconvex'] = 2
         opt.solve(m)
@@ -383,8 +391,8 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var()
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=0 <= -m.y + (m.x-1)**2 - 2)
-        m.c2 = pe.Constraint(expr=0 >= -m.y + (m.x-1)**2 - 2)
+        m.c1 = pe.Constraint(expr=0 <= -m.y + (m.x - 1) ** 2 - 2)
+        m.c2 = pe.Constraint(expr=0 >= -m.y + (m.x - 1) ** 2 - 2)
         opt = Gurobi()
         opt.gurobi_options['nonconvex'] = 2
         opt.solve(m)
@@ -440,7 +448,7 @@ class TestManualModel(unittest.TestCase):
         m.x = pe.Var(bounds=(-10, 10))
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=m.y >= 2*m.x + 1)
+        m.c1 = pe.Constraint(expr=m.y >= 2 * m.x + 1)
 
         opt = self.opt
         opt.set_instance(m)
@@ -603,7 +611,7 @@ class TestManualModel(unittest.TestCase):
 
     def test_update5(self):
         m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=[1,2,3], ordered=True)
+        m.a = pe.Set(initialize=[1, 2, 3], ordered=True)
         m.x = pe.Var(m.a, within=pe.Binary)
         m.y = pe.Var(within=pe.Binary)
         m.obj = pe.Objective(expr=m.y)
@@ -624,7 +632,7 @@ class TestManualModel(unittest.TestCase):
 
     def test_update6(self):
         m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=[1,2,3], ordered=True)
+        m.a = pe.Set(initialize=[1, 2, 3], ordered=True)
         m.x = pe.Var(m.a, within=pe.Binary)
         m.y = pe.Var(within=pe.Binary)
         m.obj = pe.Objective(expr=m.y)

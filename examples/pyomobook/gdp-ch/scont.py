@@ -10,6 +10,7 @@ model = pyo.ConcreteModel()
 model.x = pyo.Var(index, within=pyo.Reals, bounds=(0, 20))
 model.x_nonzero = pyo.Var(index, bounds=(0, 1))
 
+
 # Each disjunction is a semi-continuous variable
 #    x[k] == 0 or L[k] <= x[k] <= U[k]
 def d_0_rule(d, k):

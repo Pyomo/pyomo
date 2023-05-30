@@ -15,6 +15,7 @@ F_init[4] = [3, 5, 7]
 model.F = pyo.Set([2, 3, 4], initialize=F_init)
 # @:decl6
 
+
 # @decl8:
 def J_init(model, i, j):
     return range(0, i * j)

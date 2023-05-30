@@ -54,6 +54,7 @@ model.rho = Param(initialize=1)
 model.u1_ref = Param(initialize=2.0)
 model.y1_ref = Param(initialize=0.895814)
 
+
 ###
 # Model constraints
 ###
@@ -95,7 +96,6 @@ model.mole_frac_balance = Constraint(
 
 
 def _diffeq(m, n, t):
-
     if t == 1:
         return Constraint.Skip
     if n == 1:

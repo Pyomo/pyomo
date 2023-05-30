@@ -9,13 +9,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.kernel import block, variable, variable_list, block_list, piecewise, objective, constraint, constraint_list
+from pyomo.kernel import (
+    block,
+    variable,
+    variable_list,
+    block_list,
+    piecewise,
+    objective,
+    constraint,
+    constraint_list,
+)
 
-breakpoints = [0,1,3,5,6]
-values = [0,2,3,-3,-1]
+breakpoints = [0, 1, 3, 5, 6]
+values = [0, 2, 3, -3, -1]
+
 
 def define_model(**kwds):
-
     sense = kwds.pop("sense")
 
     m = block()
@@ -27,13 +36,10 @@ def define_model(**kwds):
         m.x.append(variable(lb=0, ub=6))
         m.Fx.append(variable())
         m.piecewise.append(
-             piecewise(breakpoints, values,
-                          input=m.x[i],
-                          output=m.Fx[i],
-                          **kwds))
+            piecewise(breakpoints, values, input=m.x[i], output=m.Fx[i], **kwds)
+        )
 
-    m.obj = objective(expr=sum(m.Fx),
-                          sense=sense)
+    m.obj = objective(expr=sum(m.Fx), sense=sense)
 
     # fix the answer for testing purposes
     m.set_answer = constraint_list()

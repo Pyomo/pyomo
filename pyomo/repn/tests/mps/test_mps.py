@@ -22,8 +22,8 @@ from pyomo.environ import ConcreteModel, Var, Objective, Constraint, ComponentMa
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 
-class TestMPSOrdering(unittest.TestCase):
 
+class TestMPSOrdering(unittest.TestCase):
     def _cleanup(self, fname):
         try:
             os.remove(fname)
@@ -33,20 +33,18 @@ class TestMPSOrdering(unittest.TestCase):
     def _get_fnames(self):
         class_name, test_name = self.id().split('.')[-2:]
         prefix = os.path.join(thisdir, test_name.replace("test_", "", 1))
-        return prefix+".mps.baseline", prefix+".mps.out"
+        return prefix + ".mps.baseline", prefix + ".mps.out"
 
     def _check_baseline(self, model, **kwds):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         io_options = {"symbolic_solver_labels": True}
         io_options.update(kwds)
-        model.write(test_fname,
-                    format="mps",
-                    io_options=io_options)
-        self.assertTrue(cmp(
-            test_fname,
-            baseline_fname),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        model.write(test_fname, format="mps", io_options=io_options)
+        self.assertTrue(
+            cmp(test_fname, baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname),
+        )
         self._cleanup(test_fname)
 
     # generates an expression in a randomized way so that
@@ -74,9 +72,17 @@ class TestMPSOrdering(unittest.TestCase):
         model.b = Var()
         model.c = Var()
 
-        terms = [model.a, model.b, model.c,
-                 (model.a, model.a), (model.b, model.b), (model.c, model.c),
-                 (model.a, model.b), (model.a, model.c), (model.b, model.c)]
+        terms = [
+            model.a,
+            model.b,
+            model.c,
+            (model.a, model.a),
+            (model.b, model.b),
+            (model.c, model.c),
+            (model.a, model.b),
+            (model.a, model.c),
+            (model.b, model.c),
+        ]
         model.obj = Objective(expr=self._gen_expression(terms))
         model.con = Constraint(expr=self._gen_expression(terms) <= 1)
         self._check_baseline(model)
@@ -87,9 +93,17 @@ class TestMPSOrdering(unittest.TestCase):
         model.b = Var()
         model.c = Var()
 
-        terms = [model.a, model.b, model.c,
-                 (model.a, model.a), (model.b, model.b), (model.c, model.c),
-                 (model.a, model.b), (model.a, model.c), (model.b, model.c)]
+        terms = [
+            model.a,
+            model.b,
+            model.c,
+            (model.a, model.a),
+            (model.b, model.b),
+            (model.c, model.c),
+            (model.a, model.b),
+            (model.a, model.c),
+            (model.b, model.c),
+        ]
         model.obj = Objective(expr=self._gen_expression(terms))
         model.con = Constraint(expr=self._gen_expression(terms) <= 1)
         # reverse the symbolic ordering
@@ -135,7 +149,7 @@ class TestMPSOrdering(unittest.TestCase):
         components["con1"] = Constraint(expr=model.a >= 0)
         components["con2"] = Constraint(expr=model.a <= 1)
         components["con3"] = Constraint(expr=(0, model.a, 1))
-        components["con4"] = Constraint([1,2], rule=lambda m, i: model.a == i)
+        components["con4"] = Constraint([1, 2], rule=lambda m, i: model.a == i)
 
         # add components in random order
         random_order = list(components.keys())
@@ -154,7 +168,7 @@ class TestMPSOrdering(unittest.TestCase):
         components["con1"] = Constraint(expr=model.a >= 0)
         components["con2"] = Constraint(expr=model.a <= 1)
         components["con3"] = Constraint(expr=(0, model.a, 1))
-        components["con4"] = Constraint([1,2], rule=lambda m, i: model.a == i)
+        components["con4"] = Constraint([1, 2], rule=lambda m, i: model.a == i)
 
         # add components in random order
         random_order = list(components.keys())
@@ -170,6 +184,7 @@ class TestMPSOrdering(unittest.TestCase):
         row_order[model.con4[1]] = 0
         row_order[model.con4[2]] = -1
         self._check_baseline(model, row_order=row_order)
+
 
 if __name__ == "__main__":
     unittest.main()

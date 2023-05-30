@@ -1,5 +1,5 @@
 from pulp import *
-from cutstock_util import*
+from cutstock_util import *
 
 # Reading in Data using the cutstock_util
 cutcount = getCutCount()
@@ -12,33 +12,35 @@ CutDemand = getCutDemand()
 CutsInPattern = getCutsInPattern()
 ########################################
 
-#Dictionary for PulpOR
-CutsInPattern = makeDict([Cuts,Patterns],CutsInPattern)
-CutDemand = makeDict([Cuts],CutDemand)
+# Dictionary for PulpOR
+CutsInPattern = makeDict([Cuts, Patterns], CutsInPattern)
+CutDemand = makeDict([Cuts], CutDemand)
 
 prob = LpProblem("CutStock Problem", LpMinimize)
 
-#Defining Variables
-SheetsCut = LpVariable("SheetsCut",0)
-TotalCost = LpVariable("TotalCost",0)
-PatternCount = LpVariable.dicts("PatternCount",Patterns, lowBound = 0)
-ExcessCuts = LpVariable.dicts("ExcessCuts",Cuts, lowBound = 0)
+# Defining Variables
+SheetsCut = LpVariable("SheetsCut", 0)
+TotalCost = LpVariable("TotalCost", 0)
+PatternCount = LpVariable.dicts("PatternCount", Patterns, lowBound=0)
+ExcessCuts = LpVariable.dicts("ExcessCuts", Cuts, lowBound=0)
 
-#objective
-prob += TotalCost,""
+# objective
+prob += TotalCost, ""
 
-#Constraints
-prob += TotalCost == PriceSheet*SheetsCut,"TotCost"
-prob += SheetsCut <= SheetsAvail,"RawAvail"
+# Constraints
+prob += TotalCost == PriceSheet * SheetsCut, "TotCost"
+prob += SheetsCut <= SheetsAvail, "RawAvail"
 prob += PatternCount == SheetsCut, "Sheets"
 for c in Cuts:
-    prob += lpSum([CutsInPattern[c][p]*PatternCount[p] for p in Patterns]) == CutDemand[c] + ExcessCuts[c],"CutReq" + str(c)
+    prob += lpSum(
+        [CutsInPattern[c][p] * PatternCount[p] for p in Patterns]
+    ) == CutDemand[c] + ExcessCuts[c], "CutReq" + str(c)
 
 
-#prob.writeLP("CutStock.lp")
+# prob.writeLP("CutStock.lp")
 prob.solve()
-print "Status:", LpStatus[prob.status]
-print "Minimum total cost:", prob.objective.value()
+print("Status:", LpStatus[prob.status])
+print("Minimum total cost:", prob.objective.value())
 for v in prob.variables():
     if v.varValue > 0:
-        print v.name, "=", v.varValue
+        print(v.name, "=", v.varValue)

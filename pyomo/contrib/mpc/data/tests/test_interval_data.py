@@ -29,17 +29,13 @@ import pyomo.environ as pyo
 import pyomo.dae as dae
 import pyomo.contrib.mpc as mpc
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
-from pyomo.contrib.mpc.data.interval_data import (
-    assert_disjoint_intervals,
-    IntervalData,
-)
+from pyomo.contrib.mpc.data.interval_data import assert_disjoint_intervals, IntervalData
 
 
 class TestIntervalData(unittest.TestCase):
-
     def _make_model(self):
         m = pyo.ConcreteModel()
-        m.time = pyo.Set(initialize=[0.1*i for i in range(11)])
+        m.time = pyo.Set(initialize=[0.1 * i for i in range(11)])
         m.comp = pyo.Set(initialize=["A", "B"])
         m.var = pyo.Var(m.time, m.comp, initialize=1.0)
         return m
@@ -47,10 +43,7 @@ class TestIntervalData(unittest.TestCase):
     def test_construct(self):
         m = self._make_model()
         intervals = [(0.0, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0],
-            m.var[:, "B"]: [3.0, 4.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0], m.var[:, "B"]: [3.0, 4.0]}
         interval_data = IntervalData(data, intervals)
 
         self.assertEqual(
@@ -62,24 +55,15 @@ class TestIntervalData(unittest.TestCase):
     def test_eq(self):
         m = self._make_model()
         intervals = [(0.0, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0],
-            m.var[:, "B"]: [3.0, 4.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0], m.var[:, "B"]: [3.0, 4.0]}
         interval_data_1 = IntervalData(data, intervals)
 
-        data = {
-            m.var[:, "A"]: [1.0, 2.0],
-            m.var[:, "B"]: [3.0, 4.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0], m.var[:, "B"]: [3.0, 4.0]}
         interval_data_2 = IntervalData(data, intervals)
 
         self.assertEqual(interval_data_1, interval_data_2)
 
-        data = {
-            m.var[:, "A"]: [1.0, 3.0],
-            m.var[:, "B"]: [3.0, 4.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 3.0], m.var[:, "B"]: [3.0, 4.0]}
         interval_data_3 = IntervalData(data, intervals)
 
         self.assertNotEqual(interval_data_1, interval_data_3)
@@ -87,10 +71,7 @@ class TestIntervalData(unittest.TestCase):
     def test_get_data_at_indices_multiple(self):
         m = self._make_model()
         intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         interval_data = IntervalData(data, intervals)
         data = interval_data.get_data_at_interval_indices([0, 2])
 
@@ -103,10 +84,7 @@ class TestIntervalData(unittest.TestCase):
     def test_get_data_at_indices_singleton(self):
         m = self._make_model()
         intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         interval_data = IntervalData(data, intervals)
         data = interval_data.get_data_at_interval_indices(1)
         pred_data = ScalarData({m.var[:, "A"]: 2.0, m.var[:, "B"]: 5.0})
@@ -115,10 +93,7 @@ class TestIntervalData(unittest.TestCase):
     def test_get_data_at_time_scalar(self):
         m = self._make_model()
         intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         interval_data = IntervalData(data, intervals)
 
         data = interval_data.get_data_at_time(0.1)
@@ -148,10 +123,7 @@ class TestIntervalData(unittest.TestCase):
     def test_to_serializable(self):
         m = self._make_model()
         intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         interval_data = IntervalData(data, intervals)
         json_data = interval_data.to_serializable()
         self.assertEqual(
@@ -159,30 +131,22 @@ class TestIntervalData(unittest.TestCase):
             (
                 {"var[*,A]": [1.0, 2.0, 3.0], "var[*,B]": [4.0, 5.0, 6.0]},
                 [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)],
-            )
+            ),
         )
 
     def test_concatenate(self):
         m = self._make_model()
         intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         interval_data_1 = IntervalData(data, intervals)
 
         intervals = [(1.0, 1.5), (2.0, 3.0)]
-        data = {
-            m.var[:, "A"]: [7.0, 8.0],
-            m.var[:, "B"]: [9.0, 10.0],
-        }
+        data = {m.var[:, "A"]: [7.0, 8.0], m.var[:, "B"]: [9.0, 10.0]}
         interval_data_2 = IntervalData(data, intervals)
 
         interval_data_1.concatenate(interval_data_2)
 
-        new_intervals = [
-            (0.0, 0.2), (0.2, 0.5), (0.5, 1.0), (1.0, 1.5), (2.0, 3.0)
-        ]
+        new_intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0), (1.0, 1.5), (2.0, 3.0)]
         new_values = {
             m.var[:, "A"]: [1.0, 2.0, 3.0, 7.0, 8.0],
             m.var[:, "B"]: [4.0, 5.0, 6.0, 9.0, 10.0],
@@ -193,28 +157,19 @@ class TestIntervalData(unittest.TestCase):
     def test_shift_time_points(self):
         m = self._make_model()
         intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         interval_data = IntervalData(data, intervals)
         interval_data.shift_time_points(1.0)
 
         intervals = [(1.0, 1.2), (1.2, 1.5), (1.5, 2.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         new_interval_data = IntervalData(data, intervals)
         self.assertEqual(interval_data, new_interval_data)
 
     def test_extract_variables(self):
         m = self._make_model()
         intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         interval_data = IntervalData(data, intervals, time_set=m.time)
         new_data = interval_data.extract_variables([m.var[:, "B"]])
         value_dict = {m.var[:, "B"]: [4.0, 5.0, 6.0]}
@@ -224,10 +179,7 @@ class TestIntervalData(unittest.TestCase):
     def test_extract_variables_exception(self):
         m = self._make_model()
         intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
-        data = {
-            m.var[:, "A"]: [1.0, 2.0, 3.0],
-            m.var[:, "B"]: [4.0, 5.0, 6.0],
-        }
+        data = {m.var[:, "A"]: [1.0, 2.0, 3.0], m.var[:, "B"]: [4.0, 5.0, 6.0]}
         interval_data = IntervalData(data, intervals, time_set=m.time)
         msg = "only accepts a list or tuple"
         with self.assertRaisesRegex(TypeError, msg):
@@ -235,7 +187,6 @@ class TestIntervalData(unittest.TestCase):
 
 
 class TestAssertDisjoint(unittest.TestCase):
-
     def test_disjoint(self):
         intervals = [(0, 1), (1, 2)]
         assert_disjoint_intervals(intervals)
@@ -260,7 +211,6 @@ class TestAssertDisjoint(unittest.TestCase):
 
 
 class TestLoadInputs(unittest.TestCase):
-
     def make_model(self):
         m = pyo.ConcreteModel()
         m.time = dae.ContinuousSet(initialize=[0, 1, 2, 3, 4, 5, 6])
@@ -325,14 +275,12 @@ class TestLoadInputs(unittest.TestCase):
         m = self.make_model()
         interface = mpc.DynamicModelInterface(m, m.time)
         inputs = mpc.IntervalData({"v": [1.0, 2.0]}, [(0, 3), (3, 6)])
-        interface.load_data(
-            inputs, prefer_left=False
-        )
+        interface.load_data(inputs, prefer_left=False)
         for t in m.time:
             if t < 3:
                 self.assertEqual(m.v[t].value, 1.0)
             elif t == 6:
-                # By default, prefering intervals to the right of time
+                # By default, preferring intervals to the right of time
                 # points will exclude the right endpoints of intervals.
                 self.assertEqual(m.v[t].value, 0.0)
             else:
@@ -342,9 +290,7 @@ class TestLoadInputs(unittest.TestCase):
         m = self.make_model()
         interface = mpc.DynamicModelInterface(m, m.time)
         inputs = mpc.IntervalData({"v": [1.0, 2.0]}, [(0, 3), (3, 6)])
-        interface.load_data(
-            inputs, prefer_left=False, exclude_right_endpoint=False
-        )
+        interface.load_data(inputs, prefer_left=False, exclude_right_endpoint=False)
         # Note that all time points have been set.
         for t in m.time:
             if t < 3:
@@ -355,9 +301,7 @@ class TestLoadInputs(unittest.TestCase):
     def load_inputs_invalid_time(self):
         m = self.make_model()
         interface = mpc.DynamicModelInterface(m, m.time)
-        inputs = mpc.IntervalData(
-            {"v": [1.0, 2.0, 3.0]}, [(0, 3), (3, 6), (6, 9)]
-        )
+        inputs = mpc.IntervalData({"v": [1.0, 2.0, 3.0]}, [(0, 3), (3, 6), (6, 9)])
         interface.load_data(inputs)
         for t in m.time:
             if t == 0:
@@ -370,26 +314,18 @@ class TestLoadInputs(unittest.TestCase):
     def load_inputs_exception(self):
         m = self.make_model()
         interface = mpc.DynamicModelInterface(m, m.time)
-        inputs = {
-            "_v": {(0, 3): 1.0, (3, 6): 2.0, (6, 9): 3.0},
-        }
-        inputs = mpc.IntervalData(
-            {"_v": [1.0, 2.0, 3.0]}, [(0, 3), (3, 6), (6, 9)]
-        )
+        inputs = {"_v": {(0, 3): 1.0, (3, 6): 2.0, (6, 9): 3.0}}
+        inputs = mpc.IntervalData({"_v": [1.0, 2.0, 3.0]}, [(0, 3), (3, 6), (6, 9)])
         with self.assertRaisesRegex(RuntimeError, "Cannot find"):
             interface.load_data(inputs)
 
 
 class TestIntervalFromTimeSeries(unittest.TestCase):
-
     def test_singleton(self):
         name = "name"
         series = mpc.TimeSeriesData({name: [2.0]}, [1.0])
         interval = mpc.data.convert.series_to_interval(series)
-        self.assertEqual(
-            interval,
-            IntervalData({name: [2.0]}, [(1.0, 1.0)]),
-        )
+        self.assertEqual(interval, IntervalData({name: [2.0]}, [(1.0, 1.0)]))
 
     def test_empty(self):
         name = "name"
@@ -402,19 +338,15 @@ class TestIntervalFromTimeSeries(unittest.TestCase):
         series = mpc.TimeSeriesData({name: [4.0, 5.0, 6.0]}, [1, 2, 3])
         interval = mpc.data.convert.series_to_interval(series)
         self.assertEqual(
-            interval,
-            mpc.IntervalData({name: [5.0, 6.0]}, [(1, 2), (2, 3)]),
+            interval, mpc.IntervalData({name: [5.0, 6.0]}, [(1, 2), (2, 3)])
         )
 
     def test_use_left_endpoint(self):
         name = "name"
         series = mpc.TimeSeriesData({name: [4.0, 5.0, 6.0]}, [1, 2, 3])
-        interval = mpc.data.convert.series_to_interval(
-            series, use_left_endpoints=True
-        )
+        interval = mpc.data.convert.series_to_interval(series, use_left_endpoints=True)
         self.assertEqual(
-            interval,
-            mpc.IntervalData({name: [4.0, 5.0]}, [(1, 2), (2, 3)]),
+            interval, mpc.IntervalData({name: [4.0, 5.0]}, [(1, 2), (2, 3)])
         )
 
 

@@ -29,60 +29,54 @@ class ScenarioSet(object):
         self._scens = list()  # use a df instead?
         self.name = name  #  might be ""
 
-
     def _firstscen(self):
         # Return the first scenario for testing and to get Theta names.
-        assert(len(self._scens) > 0)
+        assert len(self._scens) > 0
         return self._scens[0]
 
-
     def ScensIterator(self):
-        """ Usage: for scenario in ScensIterator()"""
+        """Usage: for scenario in ScensIterator()"""
         return iter(self._scens)
 
-
     def ScenarioNumber(self, scennum):
-        """ Returns the scenario with the given, zero-based number"""
+        """Returns the scenario with the given, zero-based number"""
         return self._scens[scennum]
 
-    
     def addone(self, scen):
-        """ Add a scenario to the set
+        """Add a scenario to the set
 
         Args:
             scen (ParmestScen): the scenario to add
         """
-        assert(isinstance(self._scens, list))
+        assert isinstance(self._scens, list)
         self._scens.append(scen)
 
-        
     def append_bootstrap(self, bootstrap_theta):
-        """ Append a boostrap theta df to the scenario set; equally likely
+        """Append a bootstrap theta df to the scenario set; equally likely
 
         Args:
-            boostrap_theta (dataframe): created by the bootstrap
+            bootstrap_theta (dataframe): created by the bootstrap
         Note: this can be cleaned up a lot with the list becomes a df,
               which is why I put it in the ScenarioSet class.
         """
-        assert(len(bootstrap_theta) > 0)
-        prob = 1. / len(bootstrap_theta)
+        assert len(bootstrap_theta) > 0
+        prob = 1.0 / len(bootstrap_theta)
 
         # dict of ThetaVal dicts
         dfdict = bootstrap_theta.to_dict(orient='index')
 
         for index, ThetaVals in dfdict.items():
-            name = "Boostrap"+str(index)
+            name = "Bootstrap" + str(index)
             self.addone(ParmestScen(name, ThetaVals, prob))
 
-
     def write_csv(self, filename):
-        """ write a csv file with the scenarios in the set
+        """write a csv file with the scenarios in the set
 
         Args:
             filename (str): full path and full name of file
         """
         if len(self._scens) == 0:
-            print ("Empty scenario set, not writing file={}".format(filename))
+            print("Empty scenario set, not writing file={}".format(filename))
             return
         with open(filename, "w") as f:
             f.write("Name,Probability")
@@ -97,25 +91,26 @@ class ScenarioSet(object):
 
 
 class ParmestScen(object):
-    """ A little container for scenarios; the Args are the attributes.
+    """A little container for scenarios; the Args are the attributes.
 
     Args:
         name (str): name for reporting; might be ""
         ThetaVals (dict): ThetaVals[name]=val
-        probability (float): probability of occurance "near" these ThetaVals
+        probability (float): probability of occurrence "near" these ThetaVals
     """
 
     def __init__(self, name, ThetaVals, probability):
         self.name = name
-        assert(isinstance(ThetaVals, dict))
+        assert isinstance(ThetaVals, dict)
         self.ThetaVals = ThetaVals
         self.probability = probability
+
 
 ############################################################
 
 
 class ScenarioCreator(object):
-    """ Create scenarios from parmest.
+    """Create scenarios from parmest.
 
     Args:
         pest (Estimator): the parmest object
@@ -127,7 +122,6 @@ class ScenarioCreator(object):
         self.pest = pest
         self.solvername = solvername
 
-
     def ScenariosFromExperiments(self, addtoSet):
         """Creates new self.Scenarios list using the experiments only.
 
@@ -137,27 +131,28 @@ class ScenarioCreator(object):
             a ScenarioSet
         """
 
-        assert(isinstance(addtoSet, ScenarioSet))
-        
-        senario_numbers = list(range(len(self.pest.callback_data)))
-        
-        prob = 1. / len(senario_numbers)
-        for exp_num in senario_numbers:
+        assert isinstance(addtoSet, ScenarioSet)
+
+        scenario_numbers = list(range(len(self.pest.callback_data)))
+
+        prob = 1.0 / len(scenario_numbers)
+        for exp_num in scenario_numbers:
             ##print("Experiment number=", exp_num)
-            model = self.pest._instance_creation_callback(exp_num,
-                                                        self.pest.callback_data)
+            model = self.pest._instance_creation_callback(
+                exp_num, self.pest.callback_data
+            )
             opt = pyo.SolverFactory(self.solvername)
             results = opt.solve(model)  # solves and updates model
             ## pyo.check_termination_optimal(results)
             ThetaVals = dict()
             for theta in self.pest.theta_names:
-                tvar = eval('model.'+theta)
+                tvar = eval('model.' + theta)
                 tval = pyo.value(tvar)
                 ##print("    theta, tval=", tvar, tval)
                 ThetaVals[theta] = tval
-            addtoSet.addone(ParmestScen("ExpScen"+str(exp_num), ThetaVals, prob))
-            
-    def ScenariosFromBoostrap(self, addtoSet, numtomake, seed=None):
+            addtoSet.addone(ParmestScen("ExpScen" + str(exp_num), ThetaVals, prob))
+
+    def ScenariosFromBootstrap(self, addtoSet, numtomake, seed=None):
         """Creates new self.Scenarios list using the experiments only.
 
         Args:
@@ -165,7 +160,7 @@ class ScenarioCreator(object):
             numtomake (int) : number of scenarios to create
         """
 
-        assert(isinstance(addtoSet, ScenarioSet))
+        assert isinstance(addtoSet, ScenarioSet)
 
         bootstrap_thetas = self.pest.theta_est_bootstrap(numtomake, seed=seed)
         addtoSet.append_bootstrap(bootstrap_thetas)

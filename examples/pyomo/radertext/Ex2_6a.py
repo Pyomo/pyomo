@@ -33,6 +33,7 @@ model.yCentralSensor = Var(within=NonNegativeIntegers)
 model.xMax = Var(model.Sensor, within=NonNegativeReals)
 model.yMax = Var(model.Sensor, within=NonNegativeReals)
 
+
 # Objective
 def CalcDist(M):
     return sum(M.xMax[s] + M.yMax[s] for s in M.Sensor)

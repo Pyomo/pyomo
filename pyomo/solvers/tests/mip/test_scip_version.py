@@ -27,25 +27,35 @@ import pyomo.solvers.plugins.solvers.SCIPAMPL
 currdir = this_file_dir()
 deleteFiles = True
 
-@unittest.skipIf('pypy_version_info' in dir(sys),
-                 "Skip SCIPAMPL tests on Pypy due to performance")
-class Test(unittest.TestCase):
 
+@unittest.skipIf(
+    'pypy_version_info' in dir(sys), "Skip SCIPAMPL tests on Pypy due to performance"
+)
+class Test(unittest.TestCase):
     def setUp(self):
         scip = SolverFactory('scip', solver_io='nl')
         type(scip)._known_versions = {}
         TempfileManager.push()
 
-        self.patch_run = unittest.mock.patch('pyomo.solvers.plugins.solvers.SCIPAMPL.subprocess.run')
+        self.patch_run = unittest.mock.patch(
+            'pyomo.solvers.plugins.solvers.SCIPAMPL.subprocess.run'
+        )
         # Executable cannot be partially mocked since it creates a PathData object.
-        self.patch_path = unittest.mock.patch.object(pyomo.common.fileutils.PathData, 'path', autospec=True)
-        self.patch_available = unittest.mock.patch.object(pyomo.common.fileutils.PathData, 'available', autospec=True)
+        self.patch_path = unittest.mock.patch.object(
+            pyomo.common.fileutils.PathData, 'path', autospec=True
+        )
+        self.patch_available = unittest.mock.patch.object(
+            pyomo.common.fileutils.PathData, 'available', autospec=True
+        )
 
         self.run = self.patch_run.start()
         self.path = self.patch_path.start()
         self.available = self.patch_available.start()
 
-        self.executable_paths = {"scip": join(currdir, "scip"), "scipampl": join(currdir, "scipampl")}
+        self.executable_paths = {
+            "scip": join(currdir, "scip"),
+            "scipampl": join(currdir, "scipampl"),
+        }
 
     def tearDown(self):
         self.patch_run.stop()
@@ -57,19 +67,23 @@ class Test(unittest.TestCase):
     def generate_stdout(self, solver, version):
         if solver == "scip":
             # Template from SCIP 8.0.0
-            stdout = "SCIP version {} [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 6.0.0] [GitHash: d9b84b0709]\n"\
-                     "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n"\
-                     "\n"\
-                     "External libraries:\n" \
-                     "   SoPlex 6.0.0    Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: f5cfa86b]"
+            stdout = (
+                "SCIP version {} [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 6.0.0] [GitHash: d9b84b0709]\n"
+                "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n"
+                "\n"
+                "External libraries:\n"
+                "   SoPlex 6.0.0    Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: f5cfa86b]"
+            )
 
             # Template from SCIPAMPL 7.0.3
         elif solver == "scipampl":
-            stdout = "SCIP version {} [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 5.0.2] [GitHash: 74c11e60cd]\n"\
-                     "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n"\
-                     "\n"\
-                     "External libraries:\n"\
-                     " Readline 8.0         GNU library for command line editing (gnu.org/s/readline)"
+            stdout = (
+                "SCIP version {} [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 5.0.2] [GitHash: 74c11e60cd]\n"
+                "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n"
+                "\n"
+                "External libraries:\n"
+                " Readline 8.0         GNU library for command line editing (gnu.org/s/readline)"
+            )
         else:
             raise ValueError("Unsupported solver for stdout generation.")
 
@@ -77,7 +91,6 @@ class Test(unittest.TestCase):
         return stdout.format(version)
 
     def set_solvers(self, scip=(8, 0, 0, 0), scipampl=(7, 0, 3, 0), fail=True):
-
         executables = {"scip": scip, "scipampl": scipampl}
 
         def get_executable(*args, **kwargs):
@@ -108,7 +121,9 @@ class Test(unittest.TestCase):
                 if solver_version is None:
                     raise FileNotFoundError()
                 else:
-                    return subprocess.CompletedProcess(args, 0, self.generate_stdout(solver_name, solver_version), None)
+                    return subprocess.CompletedProcess(
+                        args, 0, self.generate_stdout(solver_name, solver_version), None
+                    )
             if fail:
                 self.fail("Solver creation looked up a non scip executable.")
 

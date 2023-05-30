@@ -22,9 +22,9 @@ Problem:
   Lower bound: 2745.0
   Upper bound: 2745.0
   Number of objectives: 1
-  Number of constraints: 18
-  Number of variables: 16
-  Number of nonzeros: 40
+  Number of constraints: 17
+  Number of variables: 15
+  Number of nonzeros: 39
   Sense: minimize
 # ----------------------------------------------------------
 #   Solver Information

@@ -14,7 +14,10 @@ import pyomo.environ as pyo
 import os
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy, scipy_available
+    numpy as np,
+    numpy_available,
+    scipy,
+    scipy_available,
 )
 from pyomo.common.dependencies.scipy import sparse as spa
 
@@ -22,21 +25,20 @@ if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 from pyomo.contrib.pynumero.asl import AmplInterface
+
 if not AmplInterface.available():
     raise unittest.SkipTest(
-        "Pynumero needs the ASL extension to run CyIpoptSolver tests")
+        "Pynumero needs the ASL extension to run CyIpoptSolver tests"
+    )
 
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    cyipopt_available
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
+    cyipopt_available,
+    CyIpoptNLP,
 )
-if not cyipopt_available:
-    raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
 
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver, CyIpoptNLP
-)
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
 
 
 def create_model1():
@@ -72,13 +74,18 @@ def create_model3(G, A, b, c):
     model.con_ids = range(nl)
 
     model.x = pyo.Var(model.var_ids, initialize=0.0)
-    model.hessian_f = pyo.Param(model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j])
-    model.jacobian_c = pyo.Param(model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j])
+    model.hessian_f = pyo.Param(
+        model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j]
+    )
+    model.jacobian_c = pyo.Param(
+        model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j]
+    )
     model.rhs = pyo.Param(model.con_ids, mutable=True, rule=lambda m, i: b[i])
     model.grad_f = pyo.Param(model.var_ids, mutable=True, rule=lambda m, i: c[i])
 
     def equality_constraint_rule(m, i):
         return sum(m.jacobian_c[i, j] * m.x[j] for j in m.var_ids) == m.rhs[i]
+
     model.equalities = pyo.Constraint(model.con_ids, rule=equality_constraint_rule)
 
     def objective_rule(m):
@@ -92,6 +99,7 @@ def create_model3(G, A, b, c):
     model.obj = pyo.Objective(rule=objective_rule, sense=pyo.minimize)
 
     return model
+
 
 def create_model4():
     m = pyo.ConcreteModel()
@@ -108,7 +116,11 @@ def create_model6():
     model.x = pyo.Var(model.S, initialize=1.0)
 
     def f(model):
-        return model.x[1] ** 4 + (model.x[1] + model.x[2]) ** 2 + (-1.0 + pyo.exp(model.x[2])) ** 2
+        return (
+            model.x[1] ** 4
+            + (model.x[1] + model.x[2]) ** 2
+            + (-1.0 + pyo.exp(model.x[2])) ** 2
+        )
 
     model.f = pyo.Objective(rule=f)
     return model
@@ -120,16 +132,19 @@ def create_model9():
 
     p = 71
     wght = -0.1
-    hp2 = 0.5 * p ** 2
+    hp2 = 0.5 * p**2
 
     model.x = pyo.Var(pyo.RangeSet(1, p), pyo.RangeSet(1, p), initialize=0.0)
 
     def f(model):
-        return sum(0.5 * (model.x[i, j] - model.x[i, j - 1]) ** 2 + \
-                   0.5 * (model.x[i, j] - model.x[i - 1, j]) ** 2 + \
-                   hp2 * (model.x[i, j] - model.x[i, j - 1]) ** 4 + \
-                   hp2 * (model.x[i, j] - model.x[i - 1, j]) ** 4 \
-                   for i in range(2, p + 1) for j in range(2, p + 1)) + (wght * model.x[p, p])
+        return sum(
+            0.5 * (model.x[i, j] - model.x[i, j - 1]) ** 2
+            + 0.5 * (model.x[i, j] - model.x[i - 1, j]) ** 2
+            + hp2 * (model.x[i, j] - model.x[i, j - 1]) ** 4
+            + hp2 * (model.x[i, j] - model.x[i - 1, j]) ** 4
+            for i in range(2, p + 1)
+            for j in range(2, p + 1)
+        ) + (wght * model.x[p, p])
 
     model.f = pyo.Objective(rule=f)
 
@@ -140,8 +155,18 @@ def create_model9():
     return model
 
 
-class TestCyIpoptSolver(unittest.TestCase):
+@unittest.skipIf(cyipopt_available, "cyipopt is available")
+class TestCyIpoptNotAvailable(unittest.TestCase):
+    def test_not_available_exception(self):
+        model = create_model1()
+        nlp = PyomoNLP(model)
+        msg = "cyipopt is required"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            solver = CyIpoptSolver(CyIpoptNLP(nlp))
 
+
+@unittest.skipUnless(cyipopt_available, "cyipopt is not available")
+class TestCyIpoptSolver(unittest.TestCase):
     def test_model1(self):
         model = create_model1()
         nlp = PyomoNLP(model)
@@ -158,21 +183,24 @@ class TestCyIpoptSolver(unittest.TestCase):
     def test_model1_with_scaling(self):
         m = create_model1()
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        m.scaling_factor[m.o] = 1e-6 # scale the objective
+        m.scaling_factor[m.o] = 1e-6  # scale the objective
         m.scaling_factor[m.c] = 2.0  # scale the equality constraint
         m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
         m.scaling_factor[m.x[1]] = 4.0  # scale one of the x variables
 
         cynlp = CyIpoptNLP(PyomoNLP(m))
-        options={'nlp_scaling_method': 'user-scaling',
-                 'output_file': '_cyipopt-scaling.log',
-                 'file_print_level':10,
-                 'max_iter': 0}
+        options = {
+            'nlp_scaling_method': 'user-scaling',
+            'output_file': '_cyipopt-scaling.log',
+            'file_print_level': 10,
+            'max_iter': 0,
+        }
         solver = CyIpoptSolver(cynlp, options=options)
         x, info = solver.solve()
 
         with open('_cyipopt-scaling.log', 'r') as fd:
             solver_trace = fd.read()
+        cynlp.close()
         os.remove('_cyipopt-scaling.log')
 
         # check for the following strings in the log and then delete the log
@@ -215,7 +243,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         solver = CyIpoptSolver(CyIpoptNLP(nlp))
         x, info = solver.solve(tee=False)
         x_sol = np.array([2.0, -1.0, 1.0])
-        y_sol = np.array([-3.,  2.])
+        y_sol = np.array([-3.0, 2.0])
         self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
         nlp.set_primals(x)
         nlp.set_duals(y_sol)
@@ -228,4 +256,4 @@ class TestCyIpoptSolver(unittest.TestCase):
         solver = CyIpoptSolver(CyIpoptNLP(nlp), options={'max_iter': 1})
         x, info = solver.solve(tee=False)
         nlp.set_primals(x)
-        self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e+02, places=5)
+        self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)

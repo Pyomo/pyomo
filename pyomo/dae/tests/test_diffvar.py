@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# 
+#
 # Unit Tests for DerivativeVar Objects
 #
 
@@ -26,7 +26,6 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 
 class TestDerivativeVar(unittest.TestCase):
-
     # test valid declarations
     def test_valid(self):
         m = ConcreteModel()

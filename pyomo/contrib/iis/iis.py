@@ -1,6 +1,6 @@
 """
 This module contains functions for computing an irreducible infeasible set
-for a Pyomo MILP or LP using a specified commerical solver, one of CPLEX,
+for a Pyomo MILP or LP using a specified commercial solver, one of CPLEX,
 Gurobi, or Xpress.
 """
 
@@ -15,7 +15,7 @@ logger.setLevel(logging.INFO)
 def write_iis(pyomo_model, iis_file_name, solver=None, logger=logger):
     """
     Write an irreducible infeasible set for a Pyomo MILP or LP
-    using the specified commerical solver.
+    using the specified commercial solver.
 
     Arguments
     ---------

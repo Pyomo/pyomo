@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 def load():
     from . import interval_var
     from .repn import docplex_writer

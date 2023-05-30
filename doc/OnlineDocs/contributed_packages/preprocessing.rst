@@ -20,7 +20,7 @@ later be deprecated or combined, depending on their usefulness.
     var_aggregator.VariableAggregator
     bounds_to_vars.ConstraintToVarBoundTransform
     induced_linearity.InducedLinearity
-    constraint_tightener.TightenContraintFromVars
+    constraint_tightener.TightenConstraintFromVars
     deactivate_trivial_constraints.TrivialConstraintDeactivator
     detect_fixed_vars.FixedVarDetector
     equality_propagate.FixedVarPropagator
@@ -93,7 +93,7 @@ Constraint Bounds Tightener
 This transformation was developed by `Sunjeev Kale
 <https://github.com/sjkale>`_ at Carnegie Mellon University.
 
-.. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.TightenContraintFromVars
+.. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.TightenConstraintFromVars
     :members: apply_to, create_using
 
 Trivial Constraint Deactivation

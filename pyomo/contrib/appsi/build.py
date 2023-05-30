@@ -15,32 +15,35 @@ import os
 import sys
 import tempfile
 
+
 def handleReadonly(function, path, excinfo):
     excvalue = excinfo[1]
     if excvalue.errno == errno.EACCES:
-        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
         function(path)
     else:
         raise
+
 
 def get_appsi_extension(in_setup=False, appsi_root=None):
     from pybind11.setup_helpers import Pybind11Extension
 
     if appsi_root is None:
         from pyomo.common.fileutils import this_file_dir
+
         appsi_root = this_file_dir()
 
     sources = [
         os.path.join(appsi_root, 'cmodel', 'src', file_)
         for file_ in (
-                'interval.cpp',
-                'expression.cpp',
-                'common.cpp',
-                'nl_writer.cpp',
-                'lp_writer.cpp',
-                'model_base.cpp',
-                'fbbt_model.cpp',
-                'cmodel_bindings.cpp',
+            'interval.cpp',
+            'expression.cpp',
+            'common.cpp',
+            'nl_writer.cpp',
+            'lp_writer.cpp',
+            'model_base.cpp',
+            'fbbt_model.cpp',
+            'cmodel_bindings.cpp',
         )
     ]
 
@@ -56,6 +59,7 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
         # Assume all other platforms are GCC-like
         extra_args = ['-std=c++11']
     return Pybind11Extension(package_name, sources, extra_compile_args=extra_args)
+
 
 def build_appsi(args=[]):
     print('\n\n**** Building APPSI ****')
@@ -80,9 +84,12 @@ def build_appsi(args=[]):
                 if not self.inplace:
                     library = glob.glob("build/*/appsi_cmodel.*")[0]
                     target = os.path.join(
-                        PYOMO_CONFIG_DIR, 'lib',
+                        PYOMO_CONFIG_DIR,
+                        'lib',
                         'python%s.%s' % sys.version_info[:2],
-                        'site-packages', '.')
+                        'site-packages',
+                        '.',
+                    )
                     if not os.path.exists(target):
                         os.makedirs(target)
                     shutil.copy(library, target)
@@ -98,10 +105,8 @@ def build_appsi(args=[]):
         package_config = {
             'name': 'appsi_cmodel',
             'packages': [],
-            'ext_modules': [ get_appsi_extension(False) ],
-            'cmdclass': {
-                "build_ext": appsi_build_ext,
-            },
+            'ext_modules': [get_appsi_extension(False)],
+            'cmdclass': {"build_ext": appsi_build_ext},
         }
 
         dist = Distribution(package_config)

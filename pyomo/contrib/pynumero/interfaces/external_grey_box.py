@@ -62,7 +62,7 @@ To use this interface:
      ExternalGreyBoxModel, it will automatically create pyomo variables to
      represent the inputs and the outputs from the external model. You
      can implement a callback to modify the Pyomo block after it is
-     constructed. This also provides a mechanism to initalize variables,
+     constructed. This also provides a mechanism to initialize variables,
      etc.
 
    * Create a PyomoGreyBoxNLP and provide it with the Pyomo model
@@ -82,6 +82,7 @@ Note:
      solver)
 
 """
+
 
 class ExternalGreyBoxModel(object):
     """
@@ -131,19 +132,19 @@ class ExternalGreyBoxModel(object):
     """
 
     def n_inputs(self):
-        """ This method returns the number of inputs. You do not
+        """This method returns the number of inputs. You do not
         need to overload this method in derived classes.
         """
         return len(self.input_names())
 
     def n_equality_constraints(self):
-        """ This method returns the number of equality constraints.
+        """This method returns the number of equality constraints.
         You do not need to overload this method in derived classes.
         """
         return len(self.equality_constraint_names())
 
     def n_outputs(self):
-        """ This method returns the number of outputs. You do not
+        """This method returns the number of outputs. You do not
         need to overload this method in derived classes.
         """
         return len(self.output_names())
@@ -154,7 +155,9 @@ class ExternalGreyBoxModel(object):
         of this external model. These should be returned in the same order
         that they are to be used in set_input_values.
         """
-        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement the method: input_names')
+        raise NotImplementedError(
+            'Derived ExternalGreyBoxModel classes need to implement the method: input_names'
+        )
 
     def equality_constraint_names(self):
         """
@@ -190,11 +193,13 @@ class ExternalGreyBoxModel(object):
         """
         This method is called by the solver to set the current values
         for the input variables. The derived class must cache these if
-        necessary for any subsequent calls to evalute_outputs or
+        necessary for any subsequent calls to evaluate_outputs or
         evaluate_derivatives.
         """
-        raise NotImplementedError('Derived ExternalGreyBoxModel classes need'
-                                  ' to implement the method: set_input_values')
+        raise NotImplementedError(
+            'Derived ExternalGreyBoxModel classes need'
+            ' to implement the method: set_input_values'
+        )
 
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
         """
@@ -204,14 +209,18 @@ class ExternalGreyBoxModel(object):
         to evaluate_hessian_equality_constraints
         """
         # we should check these for efficiency
-        assert self.n_equality_constraints() == len(eq_con_multiplier_values) 
-        if not hasattr(self, 'evaluate_hessian_equality_constraints') \
-           or self.n_equality_constraints() == 0:
+        assert self.n_equality_constraints() == len(eq_con_multiplier_values)
+        if (
+            not hasattr(self, 'evaluate_hessian_equality_constraints')
+            or self.n_equality_constraints() == 0
+        ):
             return
-        
-        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement'
-                                  ' set_equality_constraint_multlipliers when they'
-                                  ' support Hessian computations.')
+
+        raise NotImplementedError(
+            'Derived ExternalGreyBoxModel classes need to implement'
+            ' set_equality_constraint_multipliers when they'
+            ' support Hessian computations.'
+        )
 
     def set_output_constraint_multipliers(self, output_con_multiplier_values):
         """
@@ -222,13 +231,17 @@ class ExternalGreyBoxModel(object):
         """
         # we should check these for efficiency
         assert self.n_outputs() == len(output_con_multiplier_values)
-        if not hasattr(self, 'evaluate_hessian_output_constraints') \
-           or self.n_outputs() == 0:
+        if (
+            not hasattr(self, 'evaluate_hessian_output_constraints')
+            or self.n_outputs() == 0
+        ):
             return
 
-        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement'
-                                  ' set_output_constraint_multlipliers when they'
-                                  ' support Hessian computations.')
+        raise NotImplementedError(
+            'Derived ExternalGreyBoxModel classes need to implement'
+            ' set_output_constraint_multipliers when they'
+            ' support Hessian computations.'
+        )
 
     def get_equality_constraint_scaling_factors(self):
         """
@@ -254,16 +267,19 @@ class ExternalGreyBoxModel(object):
         Compute the residuals from the model (using the values
         set in input_values) and return as a numpy array
         """
-        raise NotImplementedError('evaluate_equality_constraints called '
-                                  'but not implemented in the derived class.')
+        raise NotImplementedError(
+            'evaluate_equality_constraints called '
+            'but not implemented in the derived class.'
+        )
 
     def evaluate_outputs(self):
         """
         Compute the outputs from the model (using the values
         set in input_values) and return as a numpy array
         """
-        raise NotImplementedError('evaluate_outputs called '
-                                  'but not implemented in the derived class.')
+        raise NotImplementedError(
+            'evaluate_outputs called but not implemented in the derived class.'
+        )
 
     def evaluate_jacobian_equality_constraints(self):
         """
@@ -273,8 +289,10 @@ class ExternalGreyBoxModel(object):
         the order of the residual names and the cols in
         the order of the input variables.
         """
-        raise NotImplementedError('evaluate_jacobian_equality_constraints called '
-                                  'but not implemented in the derived class.')
+        raise NotImplementedError(
+            'evaluate_jacobian_equality_constraints called '
+            'but not implemented in the derived class.'
+        )
 
     def evaluate_jacobian_outputs(self):
         """
@@ -284,8 +302,10 @@ class ExternalGreyBoxModel(object):
         the order of the output variables and the cols in
         the order of the input variables.
         """
-        raise NotImplementedError('evaluate_equality_outputs called '
-                                  'but not implemented in the derived class.')
+        raise NotImplementedError(
+            'evaluate_equality_outputs called '
+            'but not implemented in the derived class.'
+        )
 
     #
     # Implement the following methods to provide support for
@@ -297,12 +317,7 @@ class ExternalGreyBoxModel(object):
 
 
 class ExternalGreyBoxBlockData(_BlockData):
-
-    def set_external_model(self,
-            external_grey_box_model,
-            inputs=None,
-            outputs=None,
-            ):
+    def set_external_model(self, external_grey_box_model, inputs=None, outputs=None):
         """
         Parameters
         ----------
@@ -329,7 +344,8 @@ class ExternalGreyBoxBlockData(_BlockData):
         if self._input_names is None or len(self._input_names) == 0:
             raise ValueError(
                 'No input_names specified for external_grey_box_model.'
-                ' Must specify at least one input.')
+                ' Must specify at least one input.'
+            )
 
         self._input_names_set = Set(initialize=self._input_names, ordered=True)
 
@@ -341,7 +357,7 @@ class ExternalGreyBoxBlockData(_BlockData):
                     "Dimension mismatch in provided input vars for external "
                     "model.\nExpected %s input vars, got %s."
                     % (ex_model.n_inputs(), len(inputs))
-                    )
+                )
             self.inputs = Reference(inputs)
 
         self._equality_constraint_names = ex_model.equality_constraint_names()
@@ -357,7 +373,7 @@ class ExternalGreyBoxBlockData(_BlockData):
                     "Dimension mismatch in provided output vars for external "
                     "model.\nExpected %s output vars, got %s."
                     % (ex_model.n_outputs(), len(outputs))
-                    )
+                )
             self.outputs = Reference(outputs)
 
         # call the callback so the model can set initialization, bounds, etc.
@@ -368,7 +384,6 @@ class ExternalGreyBoxBlockData(_BlockData):
 
 
 class ExternalGreyBoxBlock(Block):
-
     _ComponentDataClass = ExternalGreyBoxBlockData
 
     def __new__(cls, *args, **kwds):
@@ -395,8 +410,7 @@ class ExternalGreyBoxBlock(Block):
 
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
-            logger.debug("Constructing external grey box model %s"
-                         % (self.name))
+            logger.debug("Constructing external grey box model %s" % (self.name))
 
         super(ExternalGreyBoxBlock, self).construct(data)
 
