@@ -13,6 +13,7 @@ Pyomo 6.6.1    (30 May 2023)
 - Core
   - Update indentation handling in `config.StringFormatter` (#2853)
   - Restore slice API broken by #2829 (#2849)
+  - Resolve handling of {}**0 in `LinearRepn`/`QuadraticRepn` (#2857)
 - Solver Interfaces
   - NL writer: resolve error identifying vars in indexed SOS (#2852)
   - Manage Gurobi environments in GurobiDirect (#2680)
