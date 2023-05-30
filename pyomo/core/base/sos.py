@@ -131,7 +131,7 @@ class SOSConstraint(ActiveIndexedComponent):
       model = AbstractModel()
       model.A = Set()
       model.B = Set(A)
-      model.X = Set(B)
+      model.X = Var(B)
 
       model.C1 = SOSConstraint(model.A, var=model.X, set=model.B, sos=1)
 
