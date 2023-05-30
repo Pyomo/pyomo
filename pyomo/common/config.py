@@ -1307,7 +1307,6 @@ def _formatter_str_to_item_callback(pattern, formatter):
         else:
             self.out.write(_doc + '\n')
 
-
     return types.MethodType(_item_body_cb, formatter)
 
 

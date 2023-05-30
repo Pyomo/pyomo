@@ -2037,7 +2037,7 @@ endBlock{}
             width=66,
         )
 
-        #print(doc)
+        # print(doc)
         ref = """    option_1
         The first configuration option
 
@@ -2074,7 +2074,7 @@ endBlock{}
 """
         self.assertEqual(
             [_.rstrip() for _ in ref.splitlines()],
-            [_.rstrip() for _ in doc.splitlines()]
+            [_.rstrip() for _ in doc.splitlines()],
         )
 
     def test_block_get(self):
