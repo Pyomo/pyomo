@@ -90,6 +90,69 @@ class GlobalClass(object):
     pass
 
 
+def ExampleConfig():
+    CONFIG = ConfigDict()
+    CONFIG.declare(
+        'option_1',
+        ConfigValue(default=5, domain=int, doc='The first configuration option'),
+    )
+    SOLVER = CONFIG.declare('solver_options', ConfigDict())
+    SOLVER.declare(
+        'solver_option_1',
+        ConfigValue(
+            default=1,
+            domain=float,
+            doc='The first solver configuration option',
+            visibility=DEVELOPER_OPTION,
+        ),
+    )
+    SOLVER.declare(
+        'solver_option_2',
+        ConfigValue(
+            default=1,
+            domain=float,
+            doc="""The second solver configuration option
+
+        With a very long line containing
+        wrappable text in a long, silly paragraph
+        with little actual information.
+        #) but a bulleted list
+        #) with two bullets
+        """,
+        ),
+    )
+    SOLVER.declare(
+        'solver_option_3',
+        ConfigValue(
+            default=1,
+            domain=float,
+            doc="""
+            The third solver configuration option
+
+            This has a leading newline and a very long line containing
+            wrappable text in a long, silly paragraph with
+            little actual information.
+
+         .. and_a_list::
+            #) but a bulleted list
+            #) with two bullets """,
+        ),
+    )
+    CONFIG.declare(
+        'option_2',
+        ConfigValue(
+            default=5,
+            domain=int,
+            doc="""The second solver configuration option
+        with a very long line containing
+        wrappable text in a long, silly paragraph
+        with little actual information.
+        """,
+        ),
+    )
+    return CONFIG
+
+
 class TestConfigDomains(unittest.TestCase):
     def test_Bool(self):
         c = ConfigDict()
@@ -1732,7 +1795,7 @@ scenarios[1].detection""",
   endItem{scenario}
   startBlock{scenario}
     startItem{scenario file}
-item{This is the (long) documentation for the 'scenario file'
+      item{This is the (long) documentation for the 'scenario file'
 parameter.  It contains multiple lines, and some internal
 formatting; like a bulleted list:
   - item 1
@@ -1753,7 +1816,7 @@ formatting; like a bulleted list:
   endItem{scenarios}
   startBlock{scenarios}
     startItem{scenario file}
-item{This is the (long) documentation for the 'scenario file'
+      item{This is the (long) documentation for the 'scenario file'
 parameter.  It contains multiple lines, and some internal
 formatting; like a bulleted list:
   - item 1
@@ -1956,6 +2019,62 @@ endBlock{}
             cfg.generate_documentation(format="unknown")
 
         self.assertEqual(cfg.generate_documentation(format=ConfigFormatter()), '')
+
+    def test_generate_documentation_StringFormatter(self):
+        # This test verifies behavior with simple StringFormatters (in
+        # particular, the handling of newlines and indentation)
+        CONFIG = ExampleConfig()
+        doc = CONFIG.generate_documentation(
+            format=String_ConfigFormatter(
+                block_start="",  # %s\n",
+                block_end="",
+                item_start="%s\n",
+                item_body="%s",
+                item_end="\n",
+            ),
+            indent_spacing=4,
+            width=66,
+        )
+
+        #print(doc)
+        ref = """    option_1
+        The first configuration option
+
+    solver_options
+
+        solver_option_1
+            The first solver configuration option
+
+        solver_option_2
+            The second solver configuration option
+
+        With a very long line containing
+        wrappable text in a long, silly paragraph
+        with little actual information.
+        #) but a bulleted list
+        #) with two bullets
+
+        solver_option_3
+            The third solver configuration option
+
+            This has a leading newline and a very long line containing
+            wrappable text in a long, silly paragraph with
+            little actual information.
+
+         .. and_a_list::
+            #) but a bulleted list
+            #) with two bullets
+
+    option_2
+        The second solver configuration option with a very long
+        line containing wrappable text in a long, silly paragraph
+        with little actual information.
+
+"""
+        self.assertEqual(
+            [_.rstrip() for _ in ref.splitlines()],
+            [_.rstrip() for _ in doc.splitlines()]
+        )
 
     def test_block_get(self):
         self.assertTrue('scenario' in self.config)
@@ -2793,50 +2912,7 @@ c: 1.0
 
         @document_kwargs_from_configdict('CONFIG')
         class ExampleClass(object):
-            CONFIG = ConfigDict()
-            CONFIG.declare(
-                'option_1',
-                ConfigValue(
-                    default=5, domain=int, doc='The first configuration option'
-                ),
-            )
-            SOLVER = CONFIG.declare('solver_options', ConfigDict())
-            SOLVER.declare(
-                'solver_option_1',
-                ConfigValue(
-                    default=1,
-                    domain=float,
-                    doc='The first solver configuration option',
-                    visibility=DEVELOPER_OPTION,
-                ),
-            )
-            SOLVER.declare(
-                'solver_option_2',
-                ConfigValue(
-                    default=1,
-                    domain=float,
-                    doc="""The second solver configuration option
-
-                With a very long line containing
-                wrappable text in a long, silly paragraph
-                with little actual information.
-                #) but a bulleted list
-                #) with two bullets
-                """,
-                ),
-            )
-            CONFIG.declare(
-                'option_2',
-                ConfigValue(
-                    default=5,
-                    domain=int,
-                    doc="""The second solver configuration option
-                with a very long line containing
-                wrappable text in a long, silly paragraph
-                with little actual information.
-                """,
-                ),
-            )
+            CONFIG = ExampleConfig()
 
             @document_kwargs_from_configdict(CONFIG)
             def __init__(self):
@@ -2869,6 +2945,17 @@ solver_options: dict, optional
         #) but a bulleted list
         #) with two bullets
 
+    solver_option_3: float, default=1
+        The third solver configuration option
+
+           This has a leading newline and a very long line containing
+           wrappable text in a long, silly paragraph with little actual
+           information.
+
+        .. and_a_list::
+           #) but a bulleted list
+           #) with two bullets
+
 option_2: int, default=5
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
@@ -2892,6 +2979,17 @@ solver_options: dict, optional
         #) but a bulleted list
         #) with two bullets
 
+    solver_option_3: float, default=1
+        The third solver configuration option
+
+           This has a leading newline and a very long line containing
+           wrappable text in a long, silly paragraph with little actual
+           information.
+
+        .. and_a_list::
+           #) but a bulleted list
+           #) with two bullets
+
 option_2: int, default=5
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
@@ -2912,6 +3010,15 @@ solver_options: dict, optional
         With a very long line containing wrappable text in a long, silly paragraph with little actual information.
         #) but a bulleted list
         #) with two bullets
+
+    solver_option_3: float, default=1
+        The third solver configuration option
+
+           This has a leading newline and a very long line containing wrappable text in a long, silly paragraph with little actual information.
+
+        .. and_a_list::
+           #) but a bulleted list
+           #) with two bullets
 
 option_2: int, default=5
     The second solver configuration option with a very long line containing wrappable text in a long, silly paragraph with little actual information."""
