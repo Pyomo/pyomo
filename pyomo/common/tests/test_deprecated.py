@@ -59,7 +59,7 @@ class TestDeprecated(unittest.TestCase):
 
     def test_no_version_exception(self):
         with self.assertRaisesRegex(
-            DeveloperError, "@deprecated\(\): missing 'version' argument"
+            DeveloperError, r"@deprecated\(\): missing 'version' argument"
         ):
 
             @deprecated()
@@ -67,7 +67,7 @@ class TestDeprecated(unittest.TestCase):
                 pass
 
         with self.assertRaisesRegex(
-            DeveloperError, "@deprecated\(\): missing 'version' argument"
+            DeveloperError, r"@deprecated\(\): missing 'version' argument"
         ):
 
             @deprecated()
@@ -262,7 +262,7 @@ class TestDeprecated(unittest.TestCase):
         self.assertIs(type(foo), type)
         self.assertRegex(
             foo.__doc__,
-            r'.. deprecated:: test\n' r'   This class \(.*\.foo\) has been deprecated',
+            r'.. deprecated:: test\n   This class \(.*\.foo\) has been deprecated',
         )
 
         # Test the default argument
