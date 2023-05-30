@@ -1293,7 +1293,7 @@ def _formatter_str_to_item_callback(pattern, formatter):
         if not _doc:
             return ''
         wraplines = '\n ' not in _doc
-        _doc = _item_body_formatter(_doc).strip()
+        _doc = _item_body_formatter(_doc).rstrip()
         if not _doc:
             return ''
         _indent = indent + ' ' * self.indent_spacing
@@ -1302,8 +1302,11 @@ def _formatter_str_to_item_callback(pattern, formatter):
                 _doc, self.width, initial_indent=_indent, subsequent_indent=_indent
             )
             self.out.write(('\n'.join(doc_lines)).rstrip() + '\n')
+        elif _doc.lstrip() == _doc:
+            self.out.write(_indent + _doc + '\n')
         else:
-            self.out.write(_doc.rstrip() + '\n')
+            self.out.write(_doc + '\n')
+
 
     return types.MethodType(_item_body_cb, formatter)
 
