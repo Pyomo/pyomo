@@ -16,55 +16,67 @@ from pyomo.environ import (
     value,
 )
 
-# Circles2D3 is the original example described in the papers. Ruiz and Grossman 
-# (2012) discuss two more example instances, Circles2D36 and Circles3D36, but I 
+# Circles2D3 is the original example described in the papers. Ruiz and Grossman
+# (2012) discuss two more example instances, Circles2D36 and Circles3D36, but I
 # couldn't find them.
 # format: dimension, circle_centers, circle_rvals, circle_penalties, reference_point, upper_bound
 circles_model_examples = {
     "Circles2D3": [
         2,
-        #{1: [0, 0], 2: [4, 1], 3: [2, 4]},
-        {(1,1): 0, (1,2): 0,
-         (2,1): 4, (2,2): 1,
-         (3,1): 2, (3,2): 4},
+        # {1: [0, 0], 2: [4, 1], 3: [2, 4]},
+        {(1, 1): 0, (1, 2): 0, (2, 1): 4, (2, 2): 1, (3, 1): 2, (3, 2): 4},
         {1: 1, 2: 1, 3: 1},
         {1: 2, 2: 1, 3: 3},
         {1: 3, 2: 2},
-        8
+        8,
     ],
     # Here the solver has a local minimum to avoid by not choosing the closest point
     "Circles2D3_modified": [
         2,
-        {(1,1): 0, (1,2): 0,
-         (2,1): 4, (2,2): 1,
-         (3,1): 2, (3,2): 4},
+        {(1, 1): 0, (1, 2): 0, (2, 1): 4, (2, 2): 1, (3, 1): 2, (3, 2): 4},
         {1: 1, 2: 1, 3: 1},
         {1: 2, 2: 3, 3: 1},
         {1: 3, 2: 2},
-        8
+        8,
     ],
     # Here's a 3D model.
     "Circles3D4": [
         3,
         {
-            (1, 1): 0, (1, 2): 0, (1, 3): 0,
-            (2, 1): 2, (2, 2): 0, (2, 3): 1,
-            (3, 1): 3, (3, 2): 3, (3, 3): 3,
-            (4, 1): 1, (4, 2): 6, (4, 3): 1,
+            (1, 1): 0,
+            (1, 2): 0,
+            (1, 3): 0,
+            (2, 1): 2,
+            (2, 2): 0,
+            (2, 3): 1,
+            (3, 1): 3,
+            (3, 2): 3,
+            (3, 3): 3,
+            (4, 1): 1,
+            (4, 2): 6,
+            (4, 3): 1,
         },
         {1: 1, 2: 1, 3: 1, 4: 1},
         {1: 1, 2: 3, 3: 2, 4: 1},
         {1: 2, 2: 2, 3: 1},
-        10
-    ]
+        10,
+    ],
 }
+
 
 def build_model(data):
     """Build a model. By default you get Circles2D3, a small instance."""
 
     # Ensure good data was passed
     assert len(data) == 6, "Error processing data"
-    dimension, circle_centers, circle_rvals, circle_penalties, reference_point, upper_bound = data
+    (
+        dimension,
+        circle_centers,
+        circle_rvals,
+        circle_penalties,
+        reference_point,
+        upper_bound,
+    ) = data
 
     assert len(circle_rvals) == len(circle_penalties), "Error processing data"
     assert len(circle_centers) == len(circle_rvals) * dimension, "Error processing data"
@@ -75,37 +87,64 @@ def build_model(data):
     m.circles = RangeSet(len(circle_rvals), doc=f"{len(circle_rvals)} circles")
     m.idx = RangeSet(dimension, doc="n-dimensional indexing set for coordinates")
 
-    m.circ_centers = Param(m.circles, m.idx, initialize=circle_centers, doc="Center points of the circles")
-    m.circ_rvals = Param(m.circles, initialize=circle_rvals, doc="Squared radii of circles")
-    m.ref_point = Param(m.idx, initialize=reference_point, doc="Reference point for distance calculations")
-    m.circ_penalties = Param(m.circles, initialize=circle_penalties, doc="Penalty for being in each circle")
+    m.circ_centers = Param(
+        m.circles, m.idx, initialize=circle_centers, doc="Center points of the circles"
+    )
+    m.circ_rvals = Param(
+        m.circles, initialize=circle_rvals, doc="Squared radii of circles"
+    )
+    m.ref_point = Param(
+        m.idx,
+        initialize=reference_point,
+        doc="Reference point for distance calculations",
+    )
+    m.circ_penalties = Param(
+        m.circles, initialize=circle_penalties, doc="Penalty for being in each circle"
+    )
 
     # Choose a point to minimize objective
-    m.point = Var(m.idx, bounds=(0, upper_bound), doc="Chosen point at which we evaluate objective function")
+    m.point = Var(
+        m.idx,
+        bounds=(0, upper_bound),
+        doc="Chosen point at which we evaluate objective function",
+    )
 
     # Let's set up the "active penalty" this way
-    m.active_penalty = Var(bounds=(0, max(m.circ_penalties[i] for i in m.circles)), doc="Penalty for being in the current circle")
+    m.active_penalty = Var(
+        bounds=(0, max(m.circ_penalties[i] for i in m.circles)),
+        doc="Penalty for being in the current circle",
+    )
 
     # Disjunction: we must be in at least one circle (in fact exactly one since they are disjoint)
     @m.Disjunct(m.circles)
     def circle_disjunct(d, circ):
         m = d.model()
-        d.inside_circle = Constraint(expr=sum((m.point[i] - m.circ_centers[circ, i]) ** 2 for i in m.idx) <= m.circ_rvals[circ])
+        d.inside_circle = Constraint(
+            expr=sum((m.point[i] - m.circ_centers[circ, i]) ** 2 for i in m.idx)
+            <= m.circ_rvals[circ]
+        )
         d.penalty = Constraint(expr=m.active_penalty == m.circ_penalties[circ])
+
     @m.Disjunction()
     def circle_disjunction(m):
         return [m.circle_disjunct[i] for i in m.circles]
 
     # Objective function is Euclidean distance from reference point, plus a penalty depending on which circle we are in
-    m.cost = Objective(expr=sum((m.point[i] - m.ref_point[i]) ** 2 for i in m.idx) + m.active_penalty, doc="Distance from reference point plus penalty")   
+    m.cost = Objective(
+        expr=sum((m.point[i] - m.ref_point[i]) ** 2 for i in m.idx) + m.active_penalty,
+        doc="Distance from reference point plus penalty",
+    )
 
     return m
+
 
 def draw_model(m, title=None):
     """Draw a model using matplotlib to illustrate what's going on. Pass 'title' arg to give chart a title"""
 
     if len(m.idx) != 2:
-        print(f"Unable to draw: this drawing code only supports 2D models, but a {len(m.idx)}-dimensional model was passed.")
+        print(
+            f"Unable to draw: this drawing code only supports 2D models, but a {len(m.idx)}-dimensional model was passed."
+        )
         return
 
     # matplotlib setup
@@ -132,10 +171,7 @@ def draw_model(m, title=None):
 
         ax.add_patch(
             mpl.patches.Circle(
-                (x, y),
-                radius=r,
-                facecolor="#0d98e6",
-                edgecolor="#000000",
+                (x, y), radius=r, facecolor="#0d98e6", edgecolor="#000000"
             )
         )
         # the alignment appears to work by magic
@@ -181,7 +217,6 @@ def draw_model(m, title=None):
     plt.show()
 
 
-
 if __name__ == "__main__":
     from pyomo.environ import SolverFactory
     from pyomo.core.base import TransformationFactory
@@ -189,13 +224,20 @@ if __name__ == "__main__":
     # Set up a solver, for example scip and bigm works
     solver = SolverFactory("scip")
     transformer = TransformationFactory("gdp.bigm")
-    
 
     for key in circles_model_examples:
         model = build_model(circles_model_examples[key])
         print(f"Solving model {key}")
         transformer.apply_to(model)
         solver.solve(model)
-        pt_string ="(" + "".join(str(value(model.point[i])) + (", " if i != len(model.idx) else "") for i in model.idx) + ")"
+        pt_string = (
+            "("
+            + "".join(
+                str(value(model.point[i])) + (", " if i != len(model.idx) else "")
+                for i in model.idx
+            )
+            + ")"
+        )
         print(f"Optimal value found: {model.cost()} with chosen point {pt_string}")
         draw_model(model, title=key)
+        print()
