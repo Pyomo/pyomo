@@ -9,7 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import numpy as np
+
+
+logger = logging.getLogger("CALLBACK")
 
 
 class CyIpoptIntermediateCallbackBase(object):
@@ -142,65 +146,71 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
 
         # Print new line to clearly separate this information from the
         # previous iteration.
-        print()
+        logger.info("")
 
         # TODO: Reduce repeated code here
         i_max_xL = sorted_coords_x_L_viol[0]
         if abs(x_L_viol[i_max_xL]) >= threshold:
-            print("Lower bound violation")
-            print(self._get_header())
+            logger.info("Lower bound violation")
+            logger.info(self._get_header())
             for i in sorted_coords_x_L_viol[:self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(x_L_viol[i])
                 infeas_str = f"{infeas:.2e}"
-                print(infeas_str, name)
+                msg = infeas_str + " " + name
+                logger.info(msg)
 
         i_max_xU = sorted_coords_x_U_viol[0]
         if abs(x_U_viol[i_max_xU]) >= threshold:
-            print("Uppper bound violation")
-            print(self._get_header())
+            logger.info("Uppper bound violation")
+            logger.info(self._get_header())
             for i in sorted_coords_x_U_viol[:self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(x_U_viol[i])
                 infeas_str = f"{infeas:.2e}"
-                print(infeas_str, name)
+                msg = infeas_str + " " + name
+                logger.info(msg)
 
         i_max_compl_xL = sorted_coords_compl_x_L[0]
         if abs(x_L_viol[i_max_compl_xL]) >= threshold:
-            print("Lower bound complementarity")
-            print(self._get_header())
+            logger.info("Lower bound complementarity")
+            logger.info(self._get_header())
             for i in sorted_coords_compl_x_L[:self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(compl_x_L[i])
                 infeas_str = f"{infeas:.2e}"
-                print(infeas_str, name)
+                msg = infeas_str + " " + name
+                logger.info(msg)
 
         i_max_compl_xU = sorted_coords_compl_x_U[0]
         if abs(x_U_viol[i_max_xU]) >= threshold:
-            print("Upper bound complementarity")
-            print(self._get_header())
+            logger.info("Upper bound complementarity")
+            logger.info(self._get_header())
             for i in sorted_coords_compl_x_U[:self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(compl_x_U[i])
                 infeas_str = f"{infeas:.2e}"
-                print(infeas_str, name)
+                msg = infeas_str + " " + name
+                logger.info(msg)
 
         i_max_primal = sorted_coords_primal_infeas[0]
         if abs(primal_infeas[i_max_primal]) >= threshold:
-            print("Primal infeasibility")
-            print(self._get_header())
+            logger.info("Primal infeasibility")
+            logger.info(self._get_header())
             for i in sorted_coords_primal_infeas[:self._n_residuals]:
                 name = self._constraint_names[i]
                 infeas = abs(primal_infeas[i])
                 infeas_str = f"{infeas:.2e}"
-                print(infeas_str, name)
+                msg = infeas_str + " " + name
+                logger.info(msg)
 
         i_max_dual = sorted_coords_dual_infeas[0]
         if abs(dual_infeas[i_max_dual]) >= threshold:
-            print("Dual infeasibility")
-            print(self._get_header())
+            logger.info("Dual infeasibility")
+            logger.info(self._get_header())
             for i in sorted_coords_dual_infeas[:self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(dual_infeas[i])
                 infeas_str = f"{infeas:.2e}"
-                print(infeas_str, name)
+                msg = infeas_str + " " + name
+                logger.info(msg)
