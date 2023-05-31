@@ -22,6 +22,7 @@ f = numpy.array([2, 3, 5])
 model.F = Set(initialize=f)
 # @decl4
 
+
 # Initialize with a function that returns native Python data
 # @decl5
 def g(model):

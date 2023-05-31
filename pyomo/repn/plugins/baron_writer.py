@@ -61,7 +61,7 @@ def _handle_PowExpression(visitor, node, values):
         if type(arg) in native_types:
             pass
         elif arg.is_fixed():
-            values[i] = ftoa(value(arg))
+            values[i] = ftoa(value(arg), True)
         else:
             unfixed_count += 1
 
@@ -100,12 +100,13 @@ def _handle_AbsExpression(visitor, node, values):
 
 
 _plusMinusOne = {-1, 1}
+
+
 #
 # A visitor pattern that creates a string for an expression
 # that is compatible with the BARON syntax.
 #
 class ToBaronVisitor(EXPR._ToStringVisitor):
-
     _expression_handlers = {
         EXPR.PowExpression: _handle_PowExpression,
         EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,
@@ -173,12 +174,15 @@ class ToBaronVisitor(EXPR._ToStringVisitor):
         return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
-        iter_ = iter(node.args)
-        values = []
-        if node.constant:
-            next(iter_)
-            values.append(ftoa(node.constant, True))
-        values.extend(map(self._monomial_to_string, iter_))
+        values = [
+            self._monomial_to_string(arg)
+            if (
+                arg.__class__ is EXPR.MonomialTermExpression
+                and not arg.arg(1).is_fixed()
+            )
+            else ftoa(value(arg))
+            for arg in node.args
+        ]
         return node._to_string(values, False, self.smap)
 
 
@@ -198,7 +202,6 @@ def expression_to_string(expr, variables, smap):
 @WriterFactory.register('bar', 'Generate the corresponding BARON BAR file.')
 class ProblemWriter_bar(AbstractProblemWriter):
     def __init__(self):
-
         AbstractProblemWriter.__init__(self, ProblemFormat.bar)
 
     def _write_equations_section(
@@ -213,7 +216,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
         skip_trivial_constraints,
         sorter,
     ):
-
         referenced_variable_ids = OrderedSet()
 
         def _skip_trivial(constraint_data):
@@ -302,11 +304,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
         output_file.write("c_e_FIX_ONE_VAR_CONST__")
         order_counter += 1
         for block in all_blocks_list:
-
             for constraint_data in block.component_data_objects(
                 Constraint, active=True, sort=sorter, descend_into=False
             ):
-
                 if (not constraint_data.has_lb()) and (not constraint_data.has_ub()):
                     assert not constraint_data.equality
                     continue  # non-binding, so skip
@@ -314,7 +314,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 if (not _skip_trivial(constraint_data)) and (
                     constraint_data not in non_standard_eqns
                 ):
-
                     eqns.append(constraint_data)
 
                     con_symbol = symbol_map.createSymbol(constraint_data, c_labeler)
@@ -395,7 +394,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Equation Definition
         output_file.write('c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;\n')
         for constraint_data in itertools.chain(eqns, r_o_eqns, c_eqns, l_eqns):
-
             variables = OrderedSet()
             # print(symbol_map.byObject.keys())
             eqn_body = expression_to_string(
@@ -455,11 +453,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         n_objs = 0
         for block in all_blocks_list:
-
             for objective_data in block.component_data_objects(
                 Objective, active=True, sort=sorter, descend_into=False
             ):
-
                 n_objs += 1
                 if n_objs > 1:
                     raise ValueError(

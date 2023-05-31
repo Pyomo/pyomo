@@ -346,7 +346,7 @@ def default_config_block(solver, init=False):
         ConfigList(
             [],
             solver,  # ConfigValue(None, str, 'Solver', None),
-            'List of solvers.  The first solver in this list is the ' 'master solver.',
+            'List of solvers.  The first solver in this list is the main solver.',
             None,
         ),
     )

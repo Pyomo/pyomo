@@ -14,9 +14,12 @@ from pyomo.contrib.piecewise.tests import models
 import pyomo.contrib.piecewise.tests.common_tests as ct
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import (
-    assertExpressionsEqual, assertExpressionsStructurallyEqual)
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual,
+)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import Constraint, SolverFactory, Var
+
 
 class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
     def check_log_disjunct(self, d, pts, f, substitute_var, x):
@@ -29,16 +32,20 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             self.assertEqual(lamb.lb, 0)
             self.assertEqual(lamb.ub, 1)
         self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(self, d.convex_combo.expr,
-                               d.lambdas[0] + d.lambdas[1] == 1)
+        assertExpressionsEqual(
+            self, d.convex_combo.expr, d.lambdas[0] + d.lambdas[1] == 1
+        )
         self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(self, d.set_substitute.expr,
-                               substitute_var == f(x), places=7)
+        assertExpressionsEqual(
+            self, d.set_substitute.expr, substitute_var == f(x), places=7
+        )
         self.assertIsInstance(d.linear_combo, Constraint)
         self.assertEqual(len(d.linear_combo), 1)
         assertExpressionsEqual(
-            self, d.linear_combo[0].expr,
-            x == pts[0]*d.lambdas[0] + pts[1]*d.lambdas[1])
+            self,
+            d.linear_combo[0].expr,
+            x == pts[0] * d.lambdas[0] + pts[1] * d.lambdas[1],
+        )
 
     def check_paraboloid_disjunct(self, d, pts, f, substitute_var, x1, x2):
         self.assertEqual(len(d.component_map(Constraint)), 3)
@@ -50,21 +57,31 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             self.assertEqual(lamb.lb, 0)
             self.assertEqual(lamb.ub, 1)
         self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(self, d.convex_combo.expr,
-                               d.lambdas[0] + d.lambdas[1] + d.lambdas[2] == 1)
+        assertExpressionsEqual(
+            self, d.convex_combo.expr, d.lambdas[0] + d.lambdas[1] + d.lambdas[2] == 1
+        )
         self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(self, d.set_substitute.expr,
-                               substitute_var == f(x1, x2), places=7)
+        assertExpressionsEqual(
+            self, d.set_substitute.expr, substitute_var == f(x1, x2), places=7
+        )
         self.assertIsInstance(d.linear_combo, Constraint)
         self.assertEqual(len(d.linear_combo), 2)
         assertExpressionsEqual(
-            self, d.linear_combo[0].expr,
-            x1 == pts[0][0]*d.lambdas[0] + pts[1][0]*d.lambdas[1] +
-            pts[2][0]*d.lambdas[2])
+            self,
+            d.linear_combo[0].expr,
+            x1
+            == pts[0][0] * d.lambdas[0]
+            + pts[1][0] * d.lambdas[1]
+            + pts[2][0] * d.lambdas[2],
+        )
         assertExpressionsEqual(
-            self, d.linear_combo[1].expr,
-            x2 == pts[0][1]*d.lambdas[0] + pts[1][1]*d.lambdas[1] +
-            pts[2][1]*d.lambdas[2])
+            self,
+            d.linear_combo[1].expr,
+            x2
+            == pts[0][1] * d.lambdas[0]
+            + pts[1][1] * d.lambdas[1]
+            + pts[2][1] * d.lambdas[2],
+        )
 
     def check_pw_log(self, m):
         ##
@@ -90,8 +107,7 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
         self.assertIsInstance(log_block.pick_a_piece, Disjunction)
         self.assertEqual(len(log_block.pick_a_piece.disjuncts), 3)
         for i in range(2):
-            self.assertIs(log_block.pick_a_piece.disjuncts[i],
-                          log_block.disjuncts[i])
+            self.assertIs(log_block.pick_a_piece.disjuncts[i], log_block.disjuncts[i])
 
         # And check the substitute Var is in the objective now.
         self.assertIs(m.obj.expr.expr, log_block.substitute_var)
@@ -113,50 +129,49 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             paraboloid_block.disjuncts[3]: ([(0, 7), (0, 4), (3, 4)], m.g2),
         }
         for d, (pts, f) in disjuncts_dict.items():
-            self.check_paraboloid_disjunct(d, pts, f,
-                                           paraboloid_block.substitute_var,
-                                           m.x1, m.x2)
+            self.check_paraboloid_disjunct(
+                d, pts, f, paraboloid_block.substitute_var, m.x1, m.x2
+            )
 
         # Check the Disjunction
         self.assertIsInstance(paraboloid_block.pick_a_piece, Disjunction)
         self.assertEqual(len(paraboloid_block.pick_a_piece.disjuncts), 4)
         for i in range(3):
-            self.assertIs(paraboloid_block.pick_a_piece.disjuncts[i],
-                          paraboloid_block.disjuncts[i])
+            self.assertIs(
+                paraboloid_block.pick_a_piece.disjuncts[i],
+                paraboloid_block.disjuncts[i],
+            )
 
         # And check the substitute Var is in the objective now.
-        self.assertIs(m.indexed_c[0].body.args[0].expr,
-                      paraboloid_block.substitute_var)
+        self.assertIs(m.indexed_c[0].body.args[0].expr, paraboloid_block.substitute_var)
 
     def test_transformation_do_not_descend(self):
-       ct.check_transformation_do_not_descend(self,
-                                             'contrib.piecewise.inner_repn_gdp')
+        ct.check_transformation_do_not_descend(self, 'contrib.piecewise.inner_repn_gdp')
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
         ct.check_transformation_PiecewiseLinearFunction_targets(
-            self,
-            'contrib.piecewise.inner_repn_gdp')
+            self, 'contrib.piecewise.inner_repn_gdp'
+        )
 
     def test_descend_into_expressions(self):
-        ct.check_descend_into_expressions(self,
-                                         'contrib.piecewise.inner_repn_gdp')
+        ct.check_descend_into_expressions(self, 'contrib.piecewise.inner_repn_gdp')
 
     def test_descend_into_expressions_constraint_target(self):
         ct.check_descend_into_expressions_constraint_target(
-            self,
-            'contrib.piecewise.inner_repn_gdp')
+            self, 'contrib.piecewise.inner_repn_gdp'
+        )
 
     def test_descend_into_expressions_objective_target(self):
         ct.check_descend_into_expressions_objective_target(
-            self,
-            'contrib.piecewise.inner_repn_gdp')
+            self, 'contrib.piecewise.inner_repn_gdp'
+        )
 
-    @unittest.skipUnless(SolverFactory('gurobi').available(),
-                         'Gurobi is not available')
+    @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
     def test_solve_disaggregated_convex_combo_model(self):
         m = models.make_log_x_model()
         TransformationFactory(
-            'contrib.piecewise.disaggregated_convex_combination').apply_to(m)
+            'contrib.piecewise.disaggregated_convex_combination'
+        ).apply_to(m)
         SolverFactory('gurobi').solve(m)
 
         ct.check_log_x_model_soln(self, m)

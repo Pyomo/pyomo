@@ -39,7 +39,6 @@ _cleanup_expected_failures = True
 # added to a test class.
 #
 def create_method(model, solver, io, test_case):
-
     is_expected_failure = test_case.status == 'expected failure'
 
     #

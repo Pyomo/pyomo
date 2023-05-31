@@ -1,0 +1,18 @@
+\* Source Pyomo model name=unknown *\
+
+min 
+x1:
++1 x2
+
+s.t.
+
+c_u_x3_:
++ [
++1 x2 * x4
+]
+<= 0
+
+bounds
+   -inf <= x2 <= +inf
+   -inf <= x4 <= +inf
+end

@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [ 'Port' ]
+__all__ = ['Port']
 
 import logging, sys
 from weakref import ref as weakref_ref
@@ -26,8 +26,7 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.indexed_component import \
-    IndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.numvalue import as_numeric, value
 from pyomo.core.expr.current import identify_variables
@@ -61,8 +60,7 @@ class _PortData(ComponentData):
         # following constructors:
         #   - ComponentData
         #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
+        self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
 
         self.vars = {}
@@ -78,8 +76,9 @@ class _PortData(ComponentData):
             return self.vars[name]
         # Since the base classes don't support getattr, we can just
         # throw the "normal" AttributeError
-        raise AttributeError("'%s' object has no attribute '%s'"
-                             % (self.__class__.__name__, name))
+        raise AttributeError(
+            "'%s' object has no attribute '%s'" % (self.__class__.__name__, name)
+        )
 
     def arcs(self, active=None):
         """A list of Arcs in which this Port is a member"""
@@ -128,18 +127,17 @@ class _PortData(ComponentData):
 
     def is_binary(self):
         """Return True if all variables in the Port are binary"""
-        return len(self) and all(
-            v.is_binary() for v in self.iter_vars(expr_vars=True))
+        return len(self) and all(v.is_binary() for v in self.iter_vars(expr_vars=True))
 
     def is_integer(self):
         """Return True if all variables in the Port are integer"""
-        return len(self) and all(
-            v.is_integer() for v in self.iter_vars(expr_vars=True))
+        return len(self) and all(v.is_integer() for v in self.iter_vars(expr_vars=True))
 
     def is_continuous(self):
         """Return True if all variables in the Port are continuous"""
         return len(self) and all(
-            v.is_continuous() for v in self.iter_vars(expr_vars=True))
+            v.is_continuous() for v in self.iter_vars(expr_vars=True)
+        )
 
     def add(self, var, name=None, rule=None, **kwds):
         """
@@ -169,26 +167,32 @@ class _PortData(ComponentData):
             name = var.local_name
         if name in self.vars and self.vars[name] is not None:
             # don't throw warning if replacing an implicit (None) var
-            logger.warning("Implicitly replacing variable '%s' in Port '%s'.\n"
-                           "To avoid this warning, use Port.remove() first."
-                           % (name, self.name))
+            logger.warning(
+                "Implicitly replacing variable '%s' in Port '%s'.\n"
+                "To avoid this warning, use Port.remove() first." % (name, self.name)
+            )
         self.vars[name] = var
         if rule is None:
             rule = Port.Equality
         if rule is Port.Extensive:
             # avoid name collisions
-            if (name.endswith("_split") or name.endswith("_equality") or
-                    name == "splitfrac"):
+            if (
+                name.endswith("_split")
+                or name.endswith("_equality")
+                or name == "splitfrac"
+            ):
                 raise ValueError(
                     "Extensive variable '%s' on Port '%s' may not end "
-                    "with '_split' or '_equality'" % (name, self.name))
+                    "with '_split' or '_equality'" % (name, self.name)
+                )
         self._rules[name] = (rule, kwds)
 
     def remove(self, name):
         """Remove this member from the port"""
         if name not in self.vars:
-            raise ValueError("Cannot remove member '%s' not in Port '%s'"
-                             % (name, self.name))
+            raise ValueError(
+                "Cannot remove member '%s' not in Port '%s'" % (name, self.name)
+            )
         self.vars.pop(name)
         self._rules.pop(name)
 
@@ -264,8 +268,10 @@ class _PortData(ComponentData):
         arc expansion when using `Port.Extensive`.
         """
         if arc not in self.dests():
-            raise ValueError("Port '%s' is not a source of Arc '%s', cannot "
-                             "set split fraction" % (self.name, arc.name))
+            raise ValueError(
+                "Port '%s' is not a source of Arc '%s', cannot "
+                "set split fraction" % (self.name, arc.name)
+            )
         self._splitfracs[arc] = (val, fix)
 
     def get_split_fraction(self, arc):
@@ -280,7 +286,9 @@ class _PortData(ComponentData):
             return res
 
 
-@ModelComponentFactory.register("A bundle of variables that can be connected to other ports.")
+@ModelComponentFactory.register(
+    "A bundle of variables that can be connected to other ports."
+)
 class Port(IndexedComponent):
     """
     A collection of variables, which may be connected to other ports
@@ -337,9 +345,8 @@ class Port(IndexedComponent):
         return tmp
 
     def construct(self, data=None):
-        if is_debug_set(logger):  #pragma:nocover
-            logger.debug( "Constructing Port, name=%s, from data=%s"
-                          % (self.name, data) )
+        if is_debug_set(logger):  # pragma:nocover
+            logger.debug("Constructing Port, name=%s, from data=%s" % (self.name, data))
 
         if self._constructed:
             return
@@ -358,7 +365,7 @@ class Port(IndexedComponent):
         self._rule = None
         self._initialize = None
         self._implicit = None
-        self._extends = None # especially important as this is another port
+        self._extends = None  # especially important as this is another port
 
         timer.report()
 
@@ -373,8 +380,7 @@ class Port(IndexedComponent):
             if self._initialize:
                 self._add_from_container(tmp, self._initialize)
             if self._rule:
-                items = apply_indexed_rule(
-                    self, self._rule, self._parent(), idx)
+                items = apply_indexed_rule(self, self._rule, self._parent(), idx)
                 self._add_from_container(tmp, items)
 
     def _add_from_container(self, port, items):
@@ -403,6 +409,7 @@ class Port(IndexedComponent):
 
     def _pprint(self, ostream=None, verbose=False):
         """Print component information."""
+
         def _line_generator(k, v):
             for _k, _v in sorted(v.vars.items()):
                 if _v is None:
@@ -412,12 +419,16 @@ class Port(IndexedComponent):
                 else:
                     _len = 1
                 yield _k, _len, str(_v)
+
         return (
-            [("Size", len(self)),
-             ("Index", self._index_set if self.is_indexed() else None)],
-             self._data.items(),
-             ( "Name", "Size", "Variable"),
-             _line_generator)
+            [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+            ],
+            self._data.items(),
+            ("Name", "Size", "Variable"),
+            _line_generator,
+        )
 
     def display(self, prefix="", ostream=None):
         """
@@ -434,7 +445,8 @@ class Port(IndexedComponent):
         ostream.write("Size=" + str(len(self)))
 
         ostream.write("\n")
-        def _line_generator(k,v):
+
+        def _line_generator(k, v):
             for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _val = '-'
@@ -442,12 +454,19 @@ class Port(IndexedComponent):
                     _val = str(value(_v))
                 else:
                     _val = "{%s}" % (
-                        ', '.join('%r: %r' % (
-                            x, value(_v[x])) for x in sorted(_v._data)))
+                        ', '.join(
+                            '%r: %r' % (x, value(_v[x])) for x in sorted(_v._data)
+                        )
+                    )
                 yield _k, _val
-        tabular_writer(ostream, prefix+tab,
-                       ((k, v) for k, v in self._data.items()),
-                       ("Name", "Value"), _line_generator)
+
+        tabular_writer(
+            ostream,
+            prefix + tab,
+            ((k, v) for k, v in self._data.items()),
+            ("Name", "Value"),
+            _line_generator,
+        )
 
     @staticmethod
     def Equality(port, name, index_set):
@@ -458,8 +477,7 @@ class Port(IndexedComponent):
             Port._add_equality_constraint(arc, name, index_set)
 
     @staticmethod
-    def Extensive(port, name, index_set, include_splitfrac=None,
-            write_var_sum=True):
+    def Extensive(port, name, index_set, include_splitfrac=None, write_var_sum=True):
         """Arc Expansion procedure for extensive variable properties
 
         This procedure is the rule to use when variable quantities should
@@ -514,8 +532,13 @@ class Port(IndexedComponent):
 
         """
         port_parent = port.parent_block()
-        out_vars = Port._Split(port, name, index_set,
-            include_splitfrac=include_splitfrac, write_var_sum=write_var_sum)
+        out_vars = Port._Split(
+            port,
+            name,
+            index_set,
+            include_splitfrac=include_splitfrac,
+            write_var_sum=write_var_sum,
+        )
         in_vars = Port._Combine(port, name, index_set)
 
     @staticmethod
@@ -546,22 +569,27 @@ class Port(IndexedComponent):
 
         # Create constraint: var == sum of evars
         # Same logic as Port._Split
-        cname = unique_component_name(port_parent, "%s_%s_insum" %
-            (alphanum_label_from_name(port.local_name), name))
+        cname = unique_component_name(
+            port_parent,
+            "%s_%s_insum" % (alphanum_label_from_name(port.local_name), name),
+        )
         if index_set is not UnindexedComponent_set:
+
             def rule(m, *args):
                 return sum(evar[args] for evar in in_vars) == var[args]
+
         else:
+
             def rule(m):
                 return sum(evar for evar in in_vars) == var
+
         con = Constraint(index_set, rule=rule)
         port_parent.add_component(cname, con)
 
         return in_vars
 
     @staticmethod
-    def _Split(port, name, index_set, include_splitfrac=None,
-            write_var_sum=True):
+    def _Split(port, name, index_set, include_splitfrac=None, write_var_sum=True):
         port_parent = port.parent_block()
         var = port.vars[name]
         out_vars = []
@@ -578,7 +606,8 @@ class Port(IndexedComponent):
                 if splitfracspec[0] != 1 and splitfracspec[1] == True:
                     raise ValueError(
                         "Cannot fix splitfrac not at 1 for port '%s' with a "
-                        "single dest '%s'" % (port.name, dests[0].name))
+                        "single dest '%s'" % (port.name, dests[0].name)
+                    )
 
             if include_splitfrac is not True:
                 include_splitfrac = False
@@ -629,8 +658,9 @@ class Port(IndexedComponent):
                                     "(found arc '%s') because this port only "
                                     "has one variable. To have control over "
                                     "splitfracs, please pass the "
-                                    " include_splitfrac=True argument." %
-                                    (port.name, arc.name))
+                                    " include_splitfrac=True argument."
+                                    % (port.name, arc.name)
+                                )
                         include_splitfrac = False
                         continue
 
@@ -644,11 +674,15 @@ class Port(IndexedComponent):
             # Create constraint for this member using splitfrac.
             cname = "%s_split" % name
             if index_set is not UnindexedComponent_set:
+
                 def rule(m, *args):
                     return evar[args] == eblock.splitfrac * var[args]
+
             else:
+
                 def rule(m):
                     return evar == eblock.splitfrac * var
+
             con = Constraint(index_set, rule=rule)
             eblock.add_component(cname, con)
 
@@ -658,14 +692,20 @@ class Port(IndexedComponent):
         if write_var_sum:
             # Create var total sum constraint: var == sum of evars
             # Need to alphanum port name in case it is indexed.
-            cname = unique_component_name(port_parent, "%s_%s_outsum" %
-                (alphanum_label_from_name(port.local_name), name))
+            cname = unique_component_name(
+                port_parent,
+                "%s_%s_outsum" % (alphanum_label_from_name(port.local_name), name),
+            )
             if index_set is not UnindexedComponent_set:
+
                 def rule(m, *args):
                     return sum(evar[args] for evar in out_vars) == var[args]
+
             else:
+
                 def rule(m):
                     return sum(evar for evar in out_vars) == var
+
             con = Constraint(index_set, rule=rule)
             port_parent.add_component(cname, con)
         else:
@@ -676,11 +716,12 @@ class Port(IndexedComponent):
                     "ports with a single destination or a single Extensive "
                     "variable.\nSplit fractions are skipped in this case to "
                     "simplify the model.\nPlease use write_var_sum=True on "
-                    "this port (the default).")
-            cname = unique_component_name(port_parent,
-                "%s_frac_sum" % alphanum_label_from_name(port.local_name))
-            con = Constraint(expr=
-                sum(a.expanded_block.splitfrac for a in dests) == 1)
+                    "this port (the default)."
+                )
+            cname = unique_component_name(
+                port_parent, "%s_frac_sum" % alphanum_label_from_name(port.local_name)
+            )
+            con = Constraint(expr=sum(a.expanded_block.splitfrac for a in dests) == 1)
             port_parent.add_component(cname, con)
 
         return out_vars
@@ -695,11 +736,15 @@ class Port(IndexedComponent):
             return
         port1, port2 = arc.ports
         if index_set is not UnindexedComponent_set:
+
             def rule(m, *args):
                 return port1.vars[name][args] == port2.vars[name][args]
+
         else:
+
             def rule(m):
                 return port1.vars[name] == port2.vars[name]
+
         con = Constraint(index_set, rule=rule)
         eblock.add_component(cname, con)
 
@@ -714,8 +759,8 @@ class Port(IndexedComponent):
             evar = create_var(member, name, eblock, index_set)
         return evar
 
-class ScalarPort(Port, _PortData):
 
+class ScalarPort(Port, _PortData):
     def __init__(self, *args, **kwd):
         _PortData.__init__(self, component=self)
         Port.__init__(self, *args, **kwd)
@@ -729,4 +774,3 @@ class SimplePort(metaclass=RenamedClass):
 
 class IndexedPort(Port):
     pass
-

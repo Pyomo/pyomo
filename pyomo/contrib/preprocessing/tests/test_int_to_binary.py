@@ -18,6 +18,7 @@ from pyomo.common.log import LoggingIntercept
 import logging
 from io import StringIO
 
+
 class TestIntToBinary(unittest.TestCase):
     """Tests integer to binary variable reformulation."""
 
@@ -27,7 +28,10 @@ class TestIntToBinary(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.preprocessing', logging.INFO):
             xfrm('contrib.integer_to_binary').apply_to(m)
-        self.assertIn("Reformulating integer variables using the base2 strategy.", output.getvalue())
+        self.assertIn(
+            "Reformulating integer variables using the base2 strategy.",
+            output.getvalue(),
+        )
         reform_blk = m._int_to_binary_reform
         self.assertEqual(len(reform_blk.int_var_set), 1)
         reform_blk.new_binary_var[0, 0].value = 1

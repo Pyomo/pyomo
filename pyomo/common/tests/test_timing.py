@@ -64,8 +64,7 @@ class TestTiming(unittest.TestCase):
     def test_raw_transformation_timer(self):
         a = TransformationTimer(None)
         self.assertRegex(
-            str(a),
-            r"TransformationTimer object for NoneType; " r"[0-9\.]+ elapsed seconds",
+            str(a), r"TransformationTimer object for NoneType; [0-9\.]+ elapsed seconds"
         )
 
         v = _pseudo_component()
@@ -435,7 +434,6 @@ all                    1     [0-9.]+ +[0-9.]+ +100.0
 
 
 class TestFlattenHierarchicalTimer(unittest.TestCase):
-
     #
     # The following methods create some hierarchical timers, then
     # hand-code the total time of each timer in the data structure.

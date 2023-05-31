@@ -511,7 +511,6 @@ build_small_block_list_with_staticvariables.myblock = _get_small_block_wstaticva
 
 
 if __name__ == "__main__":
-
     #
     # Compare construction time of different variable
     # implementations

@@ -12,9 +12,11 @@
 from io import StringIO
 
 import pyomo.common.unittest as unittest
+import pyomo.core.expr.current as EXPR
 
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core import ConcreteModel, Var, Constraint
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.gdp.disjunct import AutoLinkedBooleanVar, AutoLinkedBinaryVar
@@ -515,7 +517,7 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant Pyomo " r"numeric value \(biv\) to bool",
+                r"Cannot convert non-constant Pyomo numeric value \(biv\) to bool",
             ):
                 bool(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
@@ -524,7 +526,7 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
                 TypeError,
-                r"Implicit conversion of Pyomo numeric " r"value \(biv\) to float",
+                r"Implicit conversion of Pyomo numeric value \(biv\) to float",
             ):
                 float(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
@@ -532,8 +534,7 @@ class TestAutoVars(unittest.TestCase):
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                TypeError,
-                r"Implicit conversion of Pyomo numeric " r"value \(biv\) to int",
+                TypeError, r"Implicit conversion of Pyomo numeric value \(biv\) to int"
             ):
                 int(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
@@ -605,12 +606,20 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertIs((m.iv + 1).args[0], m.biv)
+            e = m.iv + 1
+        assertExpressionsEqual(
+            self, e, EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), 1])
+        )
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertIs((m.iv - 1).args[0], m.biv)
+            e = m.iv - 1
+        assertExpressionsEqual(
+            self,
+            e,
+            EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), -1]),
+        )
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
@@ -630,12 +639,20 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertIs((1 + m.iv).args[1], m.biv)
+            e = 1 + m.iv
+        assertExpressionsEqual(
+            self, e, EXPR.LinearExpression([1, EXPR.MonomialTermExpression((1, m.biv))])
+        )
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertIs((1 - m.iv).args[1].args[1], m.biv)
+            e = 1 - m.iv
+        assertExpressionsEqual(
+            self,
+            e,
+            EXPR.LinearExpression([1, EXPR.MonomialTermExpression((-1, m.biv))]),
+        )
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
@@ -657,14 +674,20 @@ class TestAutoVars(unittest.TestCase):
         with LoggingIntercept(out):
             a = m.iv
             a += 1
-            self.assertIs(a.args[0], m.biv)
+        assertExpressionsEqual(
+            self, a, EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), 1])
+        )
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             a = m.iv
             a -= 1
-            self.assertIs(a.args[0], m.biv)
+        assertExpressionsEqual(
+            self,
+            a,
+            EXPR.LinearExpression([EXPR.MonomialTermExpression((1, m.biv)), -1]),
+        )
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()

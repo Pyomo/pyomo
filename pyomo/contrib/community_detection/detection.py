@@ -10,7 +10,15 @@ Original implementation developed by Rahul Joglekar in the Grossmann research gr
 from logging import getLogger
 
 from pyomo.common.dependencies import attempt_import
-from pyomo.core import ConcreteModel, ComponentMap, Block, Var, Constraint, Objective, ConstraintList
+from pyomo.core import (
+    ConcreteModel,
+    ComponentMap,
+    Block,
+    Var,
+    Constraint,
+    Objective,
+    ConstraintList,
+)
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.visitor import replace_expressions
@@ -25,11 +33,19 @@ logger = getLogger('pyomo.contrib.community_detection')
 
 # Attempt import of louvain community detection package
 community_louvain, community_louvain_available = attempt_import(
-    'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
+    'community',
+    error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.",
+)
 
 
-def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
-                       random_seed=None, use_only_active_components=True):
+def detect_communities(
+    model,
+    type_of_community_map='constraint',
+    with_objective=True,
+    weighted_graph=True,
+    random_seed=None,
+    use_only_active_components=True,
+):
     """
     Detects communities in a Pyomo optimization model
 
@@ -70,43 +86,63 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
 
     # Check that all arguments are of the correct type
     if not isinstance(model, ConcreteModel):
-        raise TypeError("Invalid model: 'model=%s' - model must be an instance of ConcreteModel" % model)
+        raise TypeError(
+            "Invalid model: 'model=%s' - model must be an instance of ConcreteModel"
+            % model
+        )
 
     if type_of_community_map not in ('bipartite', 'constraint', 'variable'):
         raise TypeError(
             "Invalid value for type_of_community_map: 'type_of_community_map=%s' - "
-            "Valid values: 'bipartite', 'constraint', 'variable'" % type_of_community_map)
+            "Valid values: 'bipartite', 'constraint', 'variable'"
+            % type_of_community_map
+        )
 
     if type(with_objective) != bool:
         raise TypeError(
-            "Invalid value for with_objective: 'with_objective=%s' - with_objective must be a Boolean" % with_objective)
+            "Invalid value for with_objective: 'with_objective=%s' - with_objective must be a Boolean"
+            % with_objective
+        )
 
     if type(weighted_graph) != bool:
         raise TypeError(
-            "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph must be a Boolean" % weighted_graph)
+            "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph must be a Boolean"
+            % weighted_graph
+        )
 
     if random_seed is not None:
         if type(random_seed) != int:
             raise TypeError(
                 "Invalid value for random_seed: 'random_seed=%s' - "
-                "random_seed must be a non-negative integer" % random_seed)
+                "random_seed must be a non-negative integer" % random_seed
+            )
         if random_seed < 0:
             raise ValueError(
                 "Invalid value for random_seed: 'random_seed=%s' - "
-                "random_seed must be a non-negative integer" % random_seed)
+                "random_seed must be a non-negative integer" % random_seed
+            )
 
-    if use_only_active_components is not True and use_only_active_components is not None:
+    if (
+        use_only_active_components is not True
+        and use_only_active_components is not None
+    ):
         raise TypeError(
             "Invalid value for use_only_active_components: 'use_only_active_components=%s' - "
-            "use_only_active_components must be True or None" % use_only_active_components)
+            "use_only_active_components must be True or None"
+            % use_only_active_components
+        )
 
     # Generate model_graph (a NetworkX graph based on the given Pyomo optimization model),
     # number_component_map (a dictionary to convert the communities into lists of Pyomo components
     # instead of number values), and constraint_variable_map (a dictionary that maps a constraint to the variables
     # it contains)
     model_graph, number_component_map, constraint_variable_map = generate_model_graph(
-        model, type_of_graph=type_of_community_map, with_objective=with_objective, weighted_graph=weighted_graph,
-        use_only_active_components=use_only_active_components)
+        model,
+        type_of_graph=type_of_community_map,
+        with_objective=with_objective,
+        weighted_graph=weighted_graph,
+        use_only_active_components=use_only_active_components,
+    )
 
     # # TODO - Add option for other community detection package
     # # Maybe something like this:
@@ -115,12 +151,16 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
 
     # Use Louvain community detection to find the communities - this returns a dictionary mapping
     # individual nodes to their communities
-    partition_of_graph = community_louvain.best_partition(model_graph, random_state=random_seed)
+    partition_of_graph = community_louvain.best_partition(
+        model_graph, random_state=random_seed
+    )
 
     # Now, use partition_of_graph to create a dictionary (community_map) that maps community keys to the nodes
     # in each community
     number_of_communities = len(set(partition_of_graph.values()))
-    community_map = {nth_community: [] for nth_community in range(number_of_communities)}
+    community_map = {
+        nth_community: [] for nth_community in range(number_of_communities)
+    }
     for node in partition_of_graph:
         nth_community = partition_of_graph[node]
         community_map[nth_community].append(node)
@@ -156,10 +196,25 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
 
         for community_key in community_map:
             constraint_list = sorted(community_map[community_key])
-            variable_list = [constraint_variable_map[numbered_constraint] for numbered_constraint in constraint_list]
-            variable_list = sorted(set([node for variable_sublist in variable_list for node in variable_sublist]))
-            variable_list = [number_component_map[variable] for variable in variable_list]
-            constraint_list = [number_component_map[constraint] for constraint in constraint_list]
+            variable_list = [
+                constraint_variable_map[numbered_constraint]
+                for numbered_constraint in constraint_list
+            ]
+            variable_list = sorted(
+                set(
+                    [
+                        node
+                        for variable_sublist in variable_list
+                        for node in variable_sublist
+                    ]
+                )
+            )
+            variable_list = [
+                number_component_map[variable] for variable in variable_list
+            ]
+            constraint_list = [
+                number_component_map[constraint] for constraint in constraint_list
+            ]
             community_map[community_key] = (constraint_list, variable_list)
 
     elif type_of_community_map == 'variable':
@@ -170,11 +225,20 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
             variable_list = sorted(community_map[community_key])
             constraint_list = []
             for numbered_variable in variable_list:
-                constraint_list.extend([constraint_key for constraint_key in constraint_variable_map if
-                                        numbered_variable in constraint_variable_map[constraint_key]])
+                constraint_list.extend(
+                    [
+                        constraint_key
+                        for constraint_key in constraint_variable_map
+                        if numbered_variable in constraint_variable_map[constraint_key]
+                    ]
+                )
             constraint_list = sorted(set(constraint_list))
-            constraint_list = [number_component_map[constraint] for constraint in constraint_list]
-            variable_list = [number_component_map[variable] for variable in variable_list]
+            constraint_list = [
+                number_component_map[constraint] for constraint in constraint_list
+            ]
+            variable_list = [
+                number_component_map[variable] for variable in variable_list
+            ]
             community_map[community_key] = (constraint_list, variable_list)
 
     # Thus, each key in community_map now maps to a tuple of two lists, a constraint list and a variable list (in that
@@ -185,14 +249,26 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
     if number_of_communities == 0:
         logger.error("in detect_communities: Empty community map was returned")
     if number_of_communities == 1:
-        logger.warning("Community detection found that with the given parameters, the model could not be decomposed - "
-                       "only one community was found")
+        logger.warning(
+            "Community detection found that with the given parameters, the model could not be decomposed - "
+            "only one community was found"
+        )
 
     # Return an instance of CommunityMap class which contains the community_map along with other relevant information
     # for the community_map
-    return CommunityMap(community_map, type_of_community_map, with_objective, weighted_graph, random_seed,
-                        use_only_active_components, model, model_graph, number_component_map, constraint_variable_map,
-                        partition_of_graph)
+    return CommunityMap(
+        community_map,
+        type_of_community_map,
+        with_objective,
+        weighted_graph,
+        random_seed,
+        use_only_active_components,
+        model,
+        model_graph,
+        number_component_map,
+        constraint_variable_map,
+        partition_of_graph,
+    )
 
 
 class CommunityMap(object):
@@ -209,9 +285,20 @@ class CommunityMap(object):
     visualize_model_graph
     """
 
-    def __init__(self, community_map, type_of_community_map, with_objective, weighted_graph, random_seed,
-                 use_only_active_components, model, graph, graph_node_mapping, constraint_variable_map,
-                 graph_partition):
+    def __init__(
+        self,
+        community_map,
+        type_of_community_map,
+        with_objective,
+        weighted_graph,
+        random_seed,
+        use_only_active_components,
+        model,
+        graph,
+        graph_node_mapping,
+        constraint_variable_map,
+        graph_partition,
+    ):
         """
         Constructor method for the CommunityMap class
 
@@ -280,8 +367,10 @@ class CommunityMap(object):
         # Create str_community_map and give it values that are the strings of the components in community_map
         str_community_map = dict()
         for key in self.community_map:
-            str_community_map[key] = ([str(component) for component in self.community_map[key][0]],
-                                      [str(component) for component in self.community_map[key][1]])
+            str_community_map[key] = (
+                [str(component) for component in self.community_map[key][0]],
+                [str(component) for component in self.community_map[key][1]],
+            )
 
         # Return str_community_map, which is identical to community_map except it has the strings of all of the Pyomo
         # components instead of the actual components
@@ -314,7 +403,9 @@ class CommunityMap(object):
     def items(self):
         return self.community_map.items()
 
-    def visualize_model_graph(self, type_of_graph='constraint', filename=None, pos=None):
+    def visualize_model_graph(
+        self, type_of_graph='constraint', filename=None, pos=None
+    ):
         """
         This function draws a graph of the communities for a Pyomo model.
 
@@ -346,12 +437,15 @@ class CommunityMap(object):
 
         # Check that all arguments are of the correct type
 
-        assert type_of_graph in ('bipartite', 'constraint', 'variable'), \
-            "Invalid graph type specified: 'type_of_graph=%s' - Valid values: " \
+        assert type_of_graph in ('bipartite', 'constraint', 'variable'), (
+            "Invalid graph type specified: 'type_of_graph=%s' - Valid values: "
             "'bipartite', 'constraint', 'variable'" % type_of_graph
+        )
 
-        assert isinstance(filename, (type(None), str)), "Invalid value for filename: 'filename=%s' - filename " \
-                                                        "must be a string" % filename
+        assert isinstance(filename, (type(None), str)), (
+            "Invalid value for filename: 'filename=%s' - filename "
+            "must be a string" % filename
+        )
 
         # No assert statement for pos; the NetworkX function can handle issues with the pos argument
 
@@ -360,18 +454,31 @@ class CommunityMap(object):
         if type_of_graph != self.type_of_community_map:
             # Use the generate_model_graph function to create a NetworkX graph of the given model (along with
             # number_component_map and constraint_variable_map, which will be used to help with drawing the graph)
-            model_graph, number_component_map, constraint_variable_map = generate_model_graph(
-                self.model, type_of_graph=type_of_graph, with_objective=self.with_objective,
-                weighted_graph=self.weighted_graph, use_only_active_components=self.use_only_active_components)
+            (
+                model_graph,
+                number_component_map,
+                constraint_variable_map,
+            ) = generate_model_graph(
+                self.model,
+                type_of_graph=type_of_graph,
+                with_objective=self.with_objective,
+                weighted_graph=self.weighted_graph,
+                use_only_active_components=self.use_only_active_components,
+            )
         else:
             # This is the case where, as mentioned above, we can use the networkX graph that was made to create
             # the CommunityMap object
-            model_graph, number_component_map, constraint_variable_map = self.graph, self.graph_node_mapping, \
-                                                                         self.constraint_variable_map
+            model_graph, number_component_map, constraint_variable_map = (
+                self.graph,
+                self.graph_node_mapping,
+                self.constraint_variable_map,
+            )
 
         # This line creates the "reverse" of the number_component_map above, since mapping the Pyomo
         # components to their nodes in the networkX graph is more convenient in this function
-        component_number_map = ComponentMap((comp, number) for number, comp in number_component_map.items())
+        component_number_map = ComponentMap(
+            (comp, number) for number, comp in number_component_map.items()
+        )
 
         # Create a deep copy of the community_map attribute to avoid destructively modifying it
         numbered_community_map = copy.deepcopy(self.community_map)
@@ -380,15 +487,25 @@ class CommunityMap(object):
         # numbers that correspond to their nodes/edges in the NetworkX graph, model_graph
         for key in self.community_map:
             numbered_community_map[key] = (
-                [component_number_map[component] for component in self.community_map[key][0]],
-                [component_number_map[component] for component in self.community_map[key][1]])
+                [
+                    component_number_map[component]
+                    for component in self.community_map[key][0]
+                ],
+                [
+                    component_number_map[component]
+                    for component in self.community_map[key][1]
+                ],
+            )
 
         # Based on type_of_graph, which specifies what Pyomo modeling components are to be drawn as nodes in the graph
         # illustration, we will now get the node list and the color list, which describes how to color nodes
         # according to their communities (which is based on community_map)
         if type_of_graph == 'bipartite':
-            list_of_node_lists = [list_of_nodes for list_tuple in numbered_community_map.values() for list_of_nodes in
-                                  list_tuple]
+            list_of_node_lists = [
+                list_of_nodes
+                for list_tuple in numbered_community_map.values()
+                for list_of_nodes in list_tuple
+            ]
 
             # list_of_node_lists is (as it implies) a list of lists, so we will use the list comprehension
             # below to flatten the list and get our one-dimensional node list
@@ -402,7 +519,9 @@ class CommunityMap(object):
                 not_found = True
                 for community_key in numbered_community_map:
                     if not_found and node in (
-                            numbered_community_map[community_key][0] + numbered_community_map[community_key][1]):
+                        numbered_community_map[community_key][0]
+                        + numbered_community_map[community_key][1]
+                    ):
                         color_list.append(community_key)
                         not_found = False
 
@@ -413,16 +532,21 @@ class CommunityMap(object):
                 # consistent with the else case
                 top_nodes = nx.bipartite.sets(model_graph)[1]
             else:
-                top_nodes = {node for node in model_graph.nodes() if node in constraint_variable_map}
+                top_nodes = {
+                    node
+                    for node in model_graph.nodes()
+                    if node in constraint_variable_map
+                }
 
             if pos is None:  # The case where the user has not provided their own layout
                 pos = nx.bipartite_layout(model_graph, top_nodes)
 
         else:  # This covers the case that type_of_community_map is 'constraint' or 'variable'
-
             # Constraints are in the first list of the tuples in community map and variables are in the second list
             position = 0 if type_of_graph == 'constraint' else 1
-            list_of_node_lists = list(i[position] for i in numbered_community_map.values())
+            list_of_node_lists = list(
+                i[position] for i in numbered_community_map.values()
+            )
 
             # list_of_node_lists is (as it implies) a list of lists, so we will use the list comprehension
             # below to flatten the list and get our one-dimensional node list
@@ -435,7 +559,10 @@ class CommunityMap(object):
             for node in node_list:
                 not_found = True
                 for community_key in numbered_community_map:
-                    if not_found and node in numbered_community_map[community_key][position]:
+                    if (
+                        not_found
+                        and node in numbered_community_map[community_key][position]
+                    ):
                         color_list.append(community_key)
                         not_found = False
 
@@ -448,14 +575,23 @@ class CommunityMap(object):
 
         # Create the figure and draw the graph
         fig = plt.figure()
-        nx.draw_networkx_nodes(model_graph, pos, nodelist=node_list, node_size=40, cmap=color_map,
-                               node_color=color_list)
+        nx.draw_networkx_nodes(
+            model_graph,
+            pos,
+            nodelist=node_list,
+            node_size=40,
+            cmap=color_map,
+            node_color=color_list,
+        )
         nx.draw_networkx_edges(model_graph, pos, alpha=0.5)
 
         # Make the main title
         graph_type = type_of_graph.capitalize()
         community_map_type = self.type_of_community_map.capitalize()
-        main_graph_title = "%s graph - colored using %s community map" % (graph_type, community_map_type)
+        main_graph_title = "%s graph - colored using %s community map" % (
+            graph_type,
+            community_map_type,
+        )
 
         main_font_size = 14
         plt.suptitle(main_graph_title, fontsize=main_font_size)
@@ -464,7 +600,8 @@ class CommunityMap(object):
         subtitle_naming_dict = {
             'bipartite': 'Nodes are variables and constraints & Edges are variables in a constraint',
             'constraint': 'Nodes are constraints & Edges are common variables',
-            'variable': 'Nodes are variables & Edges are shared constraints'}
+            'variable': 'Nodes are variables & Edges are shared constraints',
+        }
 
         # Make the subtitle
         subtitle_font_size = 11
@@ -496,7 +633,9 @@ class CommunityMap(object):
         structured_model = ConcreteModel()
 
         # Create N blocks (where N is the number of communities found within the model)
-        structured_model.b = Block([0, len(self.community_map) - 1, 1])  # values given for (start, stop, step)
+        structured_model.b = Block(
+            [0, len(self.community_map) - 1, 1]
+        )  # values given for (start, stop, step)
 
         # Initialize a ComponentMap that will map a variable from the model (for example, old_model.x1) used to
         # create the CommunityMap to a list of variables in various blocks that were created based on this
@@ -517,11 +656,15 @@ class CommunityMap(object):
             for stored_variable in variables_in_community:
                 # Construct a new_variable whose attributes are determined by querying the variable from the
                 # original model
-                new_variable = Var(domain=stored_variable.domain, bounds=stored_variable.bounds)
+                new_variable = Var(
+                    domain=stored_variable.domain, bounds=stored_variable.bounds
+                )
 
                 # Add this new_variable to its block/community and name it using the string of the variable from the
                 # original model
-                structured_model.b[community_key].add_component(str(stored_variable), new_variable)
+                structured_model.b[community_key].add_component(
+                    str(stored_variable), new_variable
+                )
 
                 # Since there could be multiple variables 'x1' (such as
                 # structured_model.b[0].x1, structured_model.b[3].x1, etc), we need to create equality constraints
@@ -529,8 +672,9 @@ class CommunityMap(object):
 
                 # Here we update blocked_variable_map to keep track of what equality constraints need to be made
                 variable_in_new_model = structured_model.find_component(new_variable)
-                blocked_variable_map[stored_variable] = blocked_variable_map.get(stored_variable,
-                                                                                 []) + [variable_in_new_model]
+                blocked_variable_map[stored_variable] = blocked_variable_map.get(
+                    stored_variable, []
+                ) + [variable_in_new_model]
 
         # Now that we have all of our variables within the model, we will initialize a dictionary that used to
         # replace variables within constraints to other variables (in our case, this will convert variables from the
@@ -543,10 +687,10 @@ class CommunityMap(object):
 
             # Loop through all of the constraints (from the original model) in the given community
             for stored_constraint in constraints_in_community:
-
                 # Now, loop through all of the variables within the given constraint expression
-                for variable_in_stored_constraint in identify_variables(stored_constraint.expr):
-
+                for variable_in_stored_constraint in identify_variables(
+                    stored_constraint.expr
+                ):
                     # Loop through each of the "blocked" variables that a variable is mapped to and update
                     # replace_variables_in_expression_map if a variable has a "blocked" form in the given community
 
@@ -555,48 +699,77 @@ class CommunityMap(object):
                     # blocked versions of the variable x1 exist (which depends on the community map))
 
                     variable_in_current_block = False
-                    for blocked_variable in blocked_variable_map[variable_in_stored_constraint]:
+                    for blocked_variable in blocked_variable_map[
+                        variable_in_stored_constraint
+                    ]:
                         if 'b[%d]' % community_key in str(blocked_variable):
                             # Update replace_variables_in_expression_map accordingly
-                            replace_variables_in_expression_map[id(variable_in_stored_constraint)] = blocked_variable
+                            replace_variables_in_expression_map[
+                                id(variable_in_stored_constraint)
+                            ] = blocked_variable
                             variable_in_current_block = True
 
                     if not variable_in_current_block:
                         # Create a version of the given variable outside of blocks then add it to
                         # replace_variables_in_expression_map
 
-                        new_variable = Var(domain=variable_in_stored_constraint.domain,
-                                           bounds=variable_in_stored_constraint.bounds)
+                        new_variable = Var(
+                            domain=variable_in_stored_constraint.domain,
+                            bounds=variable_in_stored_constraint.bounds,
+                        )
 
                         # Add the new variable just as we did above (but now it is not in any blocks)
-                        structured_model.add_component(str(variable_in_stored_constraint), new_variable)
+                        structured_model.add_component(
+                            str(variable_in_stored_constraint), new_variable
+                        )
 
                         # Update blocked_variable_map to keep track of what equality constraints need to be made
-                        variable_in_new_model = structured_model.find_component(new_variable)
-                        blocked_variable_map[variable_in_stored_constraint] = blocked_variable_map.get(
-                            variable_in_stored_constraint, []) + [variable_in_new_model]
+                        variable_in_new_model = structured_model.find_component(
+                            new_variable
+                        )
+                        blocked_variable_map[
+                            variable_in_stored_constraint
+                        ] = blocked_variable_map.get(
+                            variable_in_stored_constraint, []
+                        ) + [
+                            variable_in_new_model
+                        ]
 
                         # Update replace_variables_in_expression_map accordingly
-                        replace_variables_in_expression_map[id(variable_in_stored_constraint)] = variable_in_new_model
+                        replace_variables_in_expression_map[
+                            id(variable_in_stored_constraint)
+                        ] = variable_in_new_model
 
                 # TODO - Is there a better way to check whether something is actually an objective? (as done below)
                 # Check to see whether 'stored_constraint' is actually an objective (since constraints and objectives
                 # grouped together)
-                if self.with_objective and isinstance(stored_constraint, (_GeneralObjectiveData, Objective)):
+                if self.with_objective and isinstance(
+                    stored_constraint, (_GeneralObjectiveData, Objective)
+                ):
                     # If the constraint is actually an objective, we add it to the block as an objective
                     new_objective = Objective(
-                        expr=replace_expressions(stored_constraint.expr, replace_variables_in_expression_map))
-                    structured_model.b[community_key].add_component(str(stored_constraint), new_objective)
+                        expr=replace_expressions(
+                            stored_constraint.expr, replace_variables_in_expression_map
+                        )
+                    )
+                    structured_model.b[community_key].add_component(
+                        str(stored_constraint), new_objective
+                    )
 
                 else:
                     # Construct a constraint based on the expression within stored_constraint and the dict we have
                     # created for the purpose of replacing the variables within the constraint expression
                     new_constraint = Constraint(
-                        expr=replace_expressions(stored_constraint.expr, replace_variables_in_expression_map))
+                        expr=replace_expressions(
+                            stored_constraint.expr, replace_variables_in_expression_map
+                        )
+                    )
 
                     # Add this new constraint to the corresponding community/block with its name as the string of the
                     # constraint from the original model
-                    structured_model.b[community_key].add_component(str(stored_constraint), new_constraint)
+                    structured_model.b[community_key].add_component(
+                        str(stored_constraint), new_constraint
+                    )
 
         # If with_objective was set to False, that means we might have missed an objective function within the
         # original model
@@ -604,45 +777,68 @@ class CommunityMap(object):
             # Construct a new dictionary for replacing the variables (replace_variables_in_objective_map) which will
             # be specific to the variables in the objective function, since there is the possibility that the
             # objective contains variables we have not yet seen (and thus not yet added to our new model)
-            for objective_function in self.model.component_data_objects(ctype=Objective,
-                                                                        active=self.use_only_active_components,
-                                                                        descend_into=True):
-
+            for objective_function in self.model.component_data_objects(
+                ctype=Objective,
+                active=self.use_only_active_components,
+                descend_into=True,
+            ):
                 for variable_in_objective in identify_variables(objective_function):
                     # Add all of the variables in the objective function (not within any blocks)
 
                     # Check to make sure a form of the variable has not already been made outside of the blocks
-                    if structured_model.find_component(str(variable_in_objective)) is None:
-
-                        new_variable = Var(domain=variable_in_objective.domain, bounds=variable_in_objective.bounds)
-                        structured_model.add_component(str(variable_in_objective), new_variable)
+                    if (
+                        structured_model.find_component(str(variable_in_objective))
+                        is None
+                    ):
+                        new_variable = Var(
+                            domain=variable_in_objective.domain,
+                            bounds=variable_in_objective.bounds,
+                        )
+                        structured_model.add_component(
+                            str(variable_in_objective), new_variable
+                        )
 
                         # Again we update blocked_variable_map to keep track of what
                         # equality constraints need to be made
-                        variable_in_new_model = structured_model.find_component(new_variable)
-                        blocked_variable_map[variable_in_objective] = blocked_variable_map.get(
-                            variable_in_objective, []) + [variable_in_new_model]
+                        variable_in_new_model = structured_model.find_component(
+                            new_variable
+                        )
+                        blocked_variable_map[
+                            variable_in_objective
+                        ] = blocked_variable_map.get(variable_in_objective, []) + [
+                            variable_in_new_model
+                        ]
 
                         # Update the dictionary that we will use to replace the variables
-                        replace_variables_in_expression_map[id(variable_in_objective)] = variable_in_new_model
+                        replace_variables_in_expression_map[
+                            id(variable_in_objective)
+                        ] = variable_in_new_model
 
                     else:
-                        for version_of_variable in blocked_variable_map[variable_in_objective]:
+                        for version_of_variable in blocked_variable_map[
+                            variable_in_objective
+                        ]:
                             if 'b[' not in str(version_of_variable):
-                                replace_variables_in_expression_map[id(variable_in_objective)] = version_of_variable
+                                replace_variables_in_expression_map[
+                                    id(variable_in_objective)
+                                ] = version_of_variable
 
                 # Now we will construct a new objective function based on the one from the original model and then
                 # add it to the new model just as we have done before
                 new_objective = Objective(
-                    expr=replace_expressions(objective_function.expr, replace_variables_in_expression_map))
+                    expr=replace_expressions(
+                        objective_function.expr, replace_variables_in_expression_map
+                    )
+                )
                 structured_model.add_component(str(objective_function), new_objective)
 
         # Now, we need to create equality constraints for all of the different "versions" of a variable (such
         # as x1, b[0].x1, b[2].x2, etc.)
 
         # Create a constraint list for the equality constraints
-        structured_model.equality_constraint_list = ConstraintList(doc="Equality Constraints for the different "
-                                                                       "forms of a given variable")
+        structured_model.equality_constraint_list = ConstraintList(
+            doc="Equality Constraints for the different forms of a given variable"
+        )
 
         # Loop through blocked_variable_map and create constraints accordingly
         for variable, duplicate_variables in blocked_variable_map.items():
@@ -654,7 +850,9 @@ class CommunityMap(object):
 
             # Loop through the list of two-variable tuples and create an equality constraint for those two variables
             for variable_1, variable_2 in equalities_to_make:
-                structured_model.equality_constraint_list.add(expr=variable_1 == variable_2)
+                structured_model.equality_constraint_list.add(
+                    expr=variable_1 == variable_2
+                )
 
         # Return 'structured_model', which is essentially identical to the original model but now has all of the
         # variables, constraints, and objectives placed into blocks based on the nature of the CommunityMap

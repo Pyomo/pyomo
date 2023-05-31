@@ -210,7 +210,6 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     def _transform_disjunctionData(
         self, obj, index, parent_disjunct=None, root_disjunct=None
     ):
-
         (transBlock, xorConstraint) = self._setup_transform_disjunctionData(
             obj, root_disjunct
         )

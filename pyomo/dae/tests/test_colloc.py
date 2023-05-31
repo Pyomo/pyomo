@@ -12,8 +12,7 @@
 from __future__ import print_function
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (Var, Set, ConcreteModel, 
-                           TransformationFactory, pyomo)
+from pyomo.environ import Var, Set, ConcreteModel, TransformationFactory, pyomo
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
@@ -21,9 +20,10 @@ from pyomo.repn import generate_standard_repn
 
 from io import StringIO
 
-from pyomo.common.log import  LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 
 from os.path import abspath, dirname, normpath, join
+
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
 
@@ -49,24 +49,37 @@ class TestCollocation(unittest.TestCase):
         m.v1 = Var(m.t)
         m.dv1 = DerivativeVar(m.v1)
         m.s = Set(initialize=[1, 2, 3], ordered=True)
-        
-    # test collocation discretization with radau points 
+
+    # test collocation discretization with radau points
     # on var indexed by single ContinuousSet
     def test_disc_single_index_radau(self):
         m = self.m.clone()
         disc = TransformationFactory('dae.collocation')
         disc.apply_to(m, nfe=5, ncp=3)
-         
+
         self.assertTrue(hasattr(m, 'dv1_disc_eq'))
         self.assertTrue(len(m.dv1_disc_eq) == 15)
         self.assertTrue(len(m.v1) == 16)
 
-        expected_tau_points = [0.0, 0.1550510257216822,
-                               0.64494897427831788, 1.0]
-        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102,
-                                3.289898, 4.0, 4.310102, 5.289898, 6.0,
-                                6.310102, 7.289898, 8.0, 8.310102, 9.289898,
-                                10]
+        expected_tau_points = [0.0, 0.1550510257216822, 0.64494897427831788, 1.0]
+        expected_disc_points = [
+            0,
+            0.310102,
+            1.289898,
+            2.0,
+            2.310102,
+            3.289898,
+            4.0,
+            4.310102,
+            5.289898,
+            6.0,
+            6.310102,
+            7.289898,
+            8.0,
+            8.310102,
+            9.289898,
+            10,
+        ]
         disc_info = m.t.get_discretization_info()
 
         self.assertTrue(disc_info['scheme'] == 'LAGRANGE-RADAU')
@@ -81,21 +94,25 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m._pyomo_dae_reclassified_derivativevars[0] is m.dv1)
 
-        repn_baseline = {id(m.dv1[2.0]): 1.0,
-                         id(m.v1[0]): 1.5,
-                         id(m.v1[0.310102]): -2.76599,
-                         id(m.v1[1.289898]): 3.76599,
-                         id(m.v1[2.0]): -2.5}
+        repn_baseline = {
+            id(m.dv1[2.0]): 1.0,
+            id(m.v1[0]): 1.5,
+            id(m.v1[0.310102]): -2.76599,
+            id(m.v1[1.289898]): 3.76599,
+            id(m.v1[2.0]): -2.5,
+        }
 
         repn = generate_standard_repn(m.dv1_disc_eq[2.0].body)
         repn_gen = repn_to_rounded_dict(repn, 5)
         self.assertEqual(repn_baseline, repn_gen)
 
-        repn_baseline = {id(m.dv1[4.0]): 1.0,
-                         id(m.v1[2.0]): 1.5,
-                         id(m.v1[2.310102]): -2.76599,
-                         id(m.v1[3.289898]): 3.76599,
-                         id(m.v1[4.0]): -2.5}
+        repn_baseline = {
+            id(m.dv1[4.0]): 1.0,
+            id(m.v1[2.0]): 1.5,
+            id(m.v1[2.310102]): -2.76599,
+            id(m.v1[3.289898]): 3.76599,
+            id(m.v1[4.0]): -2.5,
+        }
 
         repn = generate_standard_repn(m.dv1_disc_eq[4.0].body)
         repn_gen = repn_to_rounded_dict(repn, 5)
@@ -108,7 +125,7 @@ class TestCollocation(unittest.TestCase):
         m.dv1dt2 = DerivativeVar(m.v1, wrt=(m.t, m.t))
         disc = TransformationFactory('dae.collocation')
         disc.apply_to(m, nfe=2, ncp=2)
-         
+
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
         self.assertTrue(len(m.dv1dt2_disc_eq) == 4)
         self.assertTrue(len(m.v1) == 5)
@@ -117,19 +134,23 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
 
-        repn_baseline = {id(m.dv1dt2[5.0]): 1,
-                         id(m.v1[0]): -0.24,
-                         id(m.v1[1.666667]): 0.36,
-                         id(m.v1[5.0]): -0.12}
+        repn_baseline = {
+            id(m.dv1dt2[5.0]): 1,
+            id(m.v1[0]): -0.24,
+            id(m.v1[1.666667]): 0.36,
+            id(m.v1[5.0]): -0.12,
+        }
 
         repn = generate_standard_repn(m.dv1dt2_disc_eq[5.0].body)
         repn_gen = repn_to_rounded_dict(repn, 5)
         self.assertEqual(repn_baseline, repn_gen)
 
-        repn_baseline = {id(m.dv1dt2[10]): 1,
-                         id(m.v1[5.0]): -0.24,
-                         id(m.v1[6.666667]): 0.36,
-                         id(m.v1[10]): -0.12}
+        repn_baseline = {
+            id(m.dv1dt2[10]): 1,
+            id(m.v1[5.0]): -0.24,
+            id(m.v1[6.666667]): 0.36,
+            id(m.v1[10]): -0.12,
+        }
 
         repn = generate_standard_repn(m.dv1dt2_disc_eq[10.0].body)
         repn_gen = repn_to_rounded_dict(repn, 5)
@@ -138,35 +159,58 @@ class TestCollocation(unittest.TestCase):
     # test second order derivative with single collocation point
     def test_disc_second_order_1cp(self):
         m = ConcreteModel()
-        m.t = ContinuousSet(bounds=(0,1))
-        m.t2 = ContinuousSet(bounds=(0,10))
+        m.t = ContinuousSet(bounds=(0, 1))
+        m.t2 = ContinuousSet(bounds=(0, 10))
         m.v = Var(m.t, m.t2)
         m.dv = DerivativeVar(m.v, wrt=(m.t, m.t2))
         TransformationFactory('dae.collocation').apply_to(m, nfe=2, ncp=1)
 
         self.assertTrue(hasattr(m, 'dv_disc_eq'))
         self.assertTrue(len(m.dv_disc_eq) == 4)
-        self.assertTrue(len(m.v) == 9)                        
+        self.assertTrue(len(m.v) == 9)
 
-    # test collocation discretization with legendre points 
+    # test collocation discretization with legendre points
     # on var indexed by single ContinuousSet
     def test_disc_single_index_legendre(self):
         m = self.m.clone()
         disc = TransformationFactory('dae.collocation')
         disc.apply_to(m, nfe=5, ncp=3, scheme='LAGRANGE-LEGENDRE')
-         
+
         self.assertTrue(hasattr(m, 'dv1_disc_eq'))
         self.assertTrue(hasattr(m, 'v1_t_cont_eq'))
         self.assertTrue(len(m.dv1_disc_eq) == 15)
         self.assertTrue(len(m.v1_t_cont_eq) == 5)
         self.assertTrue(len(m.v1) == 21)
 
-        expected_tau_points = [0.0, 0.11270166537925834, 0.49999999999999989,
-                               0.88729833462074226]
-        expected_disc_points = [0, 0.225403, 1.0, 1.774597, 2.0, 2.225403,
-                                3.0, 3.774597, 4.0, 4.225403, 5.0, 5.774597,
-                                6.0, 6.225403, 7.0, 7.774597, 8.0,
-                                8.225403, 9.0, 9.774597, 10]
+        expected_tau_points = [
+            0.0,
+            0.11270166537925834,
+            0.49999999999999989,
+            0.88729833462074226,
+        ]
+        expected_disc_points = [
+            0,
+            0.225403,
+            1.0,
+            1.774597,
+            2.0,
+            2.225403,
+            3.0,
+            3.774597,
+            4.0,
+            4.225403,
+            5.0,
+            5.774597,
+            6.0,
+            6.225403,
+            7.0,
+            7.774597,
+            8.0,
+            8.225403,
+            9.0,
+            9.774597,
+            10,
+        ]
         disc_info = m.t.get_discretization_info()
 
         self.assertTrue(disc_info['scheme'] == 'LAGRANGE-LEGENDRE')
@@ -181,21 +225,25 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
 
-        repn_baseline = {id(m.dv1[3.0]): 1,
-                         id(m.v1[2.0]): -1.5,
-                         id(m.v1[2.225403]): 2.86374,
-                         id(m.v1[3.0]): -1.0,
-                         id(m.v1[3.774597]): -0.36374}
+        repn_baseline = {
+            id(m.dv1[3.0]): 1,
+            id(m.v1[2.0]): -1.5,
+            id(m.v1[2.225403]): 2.86374,
+            id(m.v1[3.0]): -1.0,
+            id(m.v1[3.774597]): -0.36374,
+        }
 
         repn = generate_standard_repn(m.dv1_disc_eq[3.0].body)
         repn_gen = repn_to_rounded_dict(repn, 5)
         self.assertEqual(repn_baseline, repn_gen)
 
-        repn_baseline = {id(m.dv1[5.0]): 1,
-                         id(m.v1[4.0]): -1.5,
-                         id(m.v1[4.225403]): 2.86374,
-                         id(m.v1[5.0]): -1.0,
-                         id(m.v1[5.774597]): -0.36374}
+        repn_baseline = {
+            id(m.dv1[5.0]): 1,
+            id(m.v1[4.0]): -1.5,
+            id(m.v1[4.225403]): 2.86374,
+            id(m.v1[5.0]): -1.0,
+            id(m.v1[5.774597]): -0.36374,
+        }
 
         repn = generate_standard_repn(m.dv1_disc_eq[5.0].body)
         repn_gen = repn_to_rounded_dict(repn, 5)
@@ -208,7 +256,7 @@ class TestCollocation(unittest.TestCase):
         m.dv1dt2 = DerivativeVar(m.v1, wrt=(m.t, m.t))
         disc = TransformationFactory('dae.collocation')
         disc.apply_to(m, nfe=2, ncp=2, scheme='LAGRANGE-LEGENDRE')
-         
+
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
         self.assertTrue(hasattr(m, 'v1_t_cont_eq'))
         self.assertTrue(len(m.dv1dt2_disc_eq) == 4)
@@ -219,19 +267,23 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
 
-        repn_baseline = {id(m.dv1dt2[1.056624]): 1,
-                         id(m.v1[0]): -0.48,
-                         id(m.v1[1.056624]): 0.65569,
-                         id(m.v1[3.943376]): -0.17569}
+        repn_baseline = {
+            id(m.dv1dt2[1.056624]): 1,
+            id(m.v1[0]): -0.48,
+            id(m.v1[1.056624]): 0.65569,
+            id(m.v1[3.943376]): -0.17569,
+        }
 
         repn = generate_standard_repn(m.dv1dt2_disc_eq[1.056624].body)
         repn_gen = repn_to_rounded_dict(repn, 5)
         self.assertEqual(repn_baseline, repn_gen)
 
-        repn_baseline = {id(m.dv1dt2[6.056624]): 1,
-                         id(m.v1[5.0]): -0.48,
-                         id(m.v1[6.056624]): 0.65569,
-                         id(m.v1[8.943376]): -0.17569}
+        repn_baseline = {
+            id(m.dv1dt2[6.056624]): 1,
+            id(m.v1[5.0]): -0.48,
+            id(m.v1[6.056624]): 0.65569,
+            id(m.v1[8.943376]): -0.17569,
+        }
 
         repn = generate_standard_repn(m.dv1dt2_disc_eq[6.056624].body)
         repn_gen = repn_to_rounded_dict(repn, 5)
@@ -251,13 +303,25 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(len(m.dv2_disc_eq) == 45)
         self.assertTrue(len(m.v2) == 48)
 
-        expected_tau_points = [0.0, 0.1550510257216822,
-                               0.64494897427831788,
-                               1.0]
-        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102,
-                                3.289898,
-                                4.0, 4.310102, 5.289898, 6.0, 6.310102,
-                                7.289898, 8.0, 8.310102, 9.289898, 10]
+        expected_tau_points = [0.0, 0.1550510257216822, 0.64494897427831788, 1.0]
+        expected_disc_points = [
+            0,
+            0.310102,
+            1.289898,
+            2.0,
+            2.310102,
+            3.289898,
+            4.0,
+            4.310102,
+            5.289898,
+            6.0,
+            6.310102,
+            7.289898,
+            8.0,
+            8.310102,
+            9.289898,
+            10,
+        ]
         disc_info = m.t.get_discretization_info()
 
         self.assertTrue(disc_info['scheme'] == 'LAGRANGE-RADAU')
@@ -268,8 +332,7 @@ class TestCollocation(unittest.TestCase):
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
-        self.assertTrue(
-            hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv2 in m._pyomo_dae_reclassified_derivativevars)
 
@@ -292,7 +355,7 @@ class TestCollocation(unittest.TestCase):
 
         expected_t_disc_points = [0, 1.666667, 5.0, 6.666667, 10]
         expected_t2_disc_points = [0, 0.833333, 2.5, 3.333333, 5]
-        
+
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_t_disc_points[idx])
 
@@ -325,13 +388,25 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(len(m.dv3_disc_eq) == 45)
         self.assertTrue(len(m.v3) == 48)
 
-        expected_tau_points = [0.0, 0.1550510257216822,
-                               0.64494897427831788,
-                               1.0]
-        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102,
-                                3.289898,
-                                4.0, 4.310102, 5.289898, 6.0, 6.310102,
-                                7.289898, 8.0, 8.310102, 9.289898, 10]
+        expected_tau_points = [0.0, 0.1550510257216822, 0.64494897427831788, 1.0]
+        expected_disc_points = [
+            0,
+            0.310102,
+            1.289898,
+            2.0,
+            2.310102,
+            3.289898,
+            4.0,
+            4.310102,
+            5.289898,
+            6.0,
+            6.310102,
+            7.289898,
+            8.0,
+            8.310102,
+            9.289898,
+            10,
+        ]
         disc_info = m.t.get_discretization_info()
 
         self.assertTrue(disc_info['scheme'] == 'LAGRANGE-RADAU')
@@ -342,8 +417,7 @@ class TestCollocation(unittest.TestCase):
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
-        self.assertTrue(
-            hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv2 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv3 in m._pyomo_dae_reclassified_derivativevars)
@@ -393,13 +467,25 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(len(m.dv1_disc_eq) == 15)
         self.assertTrue(len(m.v1) == 16)
 
-        expected_tau_points = [0.0, 0.1550510257216822,
-                               0.64494897427831788,
-                               1.0]
-        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102,
-                                3.289898,
-                                4.0, 4.310102, 5.289898, 6.0, 6.310102,
-                                7.289898, 8.0, 8.310102, 9.289898, 10]
+        expected_tau_points = [0.0, 0.1550510257216822, 0.64494897427831788, 1.0]
+        expected_disc_points = [
+            0,
+            0.310102,
+            1.289898,
+            2.0,
+            2.310102,
+            3.289898,
+            4.0,
+            4.310102,
+            5.289898,
+            6.0,
+            6.310102,
+            7.289898,
+            8.0,
+            8.310102,
+            9.289898,
+            10,
+        ]
         disc_info = m.t.get_discretization_info()
 
         self.assertTrue(disc_info['scheme'] == 'LAGRANGE-RADAU')
@@ -434,12 +520,35 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(len(m.dv1_disc_eq) == 15)
         self.assertTrue(len(m.v1) == 21)
 
-        expected_tau_points = [0.0, 0.11270166537925834, 0.49999999999999989,
-                               0.88729833462074226]
-        expected_disc_points = [0, 0.225403, 1.0, 1.774597, 2.0, 2.225403,
-                                3.0, 3.774597, 4.0, 4.225403, 5.0, 5.774597,
-                                6.0, 6.225403, 7.0, 7.774597, 8.0, 8.225403,
-                                9.0, 9.774597, 10]
+        expected_tau_points = [
+            0.0,
+            0.11270166537925834,
+            0.49999999999999989,
+            0.88729833462074226,
+        ]
+        expected_disc_points = [
+            0,
+            0.225403,
+            1.0,
+            1.774597,
+            2.0,
+            2.225403,
+            3.0,
+            3.774597,
+            4.0,
+            4.225403,
+            5.0,
+            5.774597,
+            6.0,
+            6.225403,
+            7.0,
+            7.774597,
+            8.0,
+            8.225403,
+            9.0,
+            9.774597,
+            10,
+        ]
 
         disc_info = m.t.get_discretization_info()
 

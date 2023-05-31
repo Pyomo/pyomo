@@ -146,6 +146,7 @@ class RunAllNEOSSolvers(object):
     def test_minto(self):
         self._run('minto')
 
+    @unittest.skip('[23 May 23] MOSEK Jobs have inexplicably started failing')
     def test_mosek(self):
         self._run('mosek')
 

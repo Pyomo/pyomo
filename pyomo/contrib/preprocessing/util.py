@@ -18,4 +18,5 @@ class SuppressConstantObjectiveWarning(LoggingIntercept):
 
     def __init__(self):
         super(SuppressConstantObjectiveWarning, self).__init__(
-            StringIO(), 'pyomo.core', logging.WARNING)
+            StringIO(), 'pyomo.core', logging.WARNING
+        )

@@ -35,6 +35,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
 import logging
 
+import pyomo.core.expr.current as EXPR
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
@@ -143,11 +144,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # check or constraint is an or (upper bound is None)
         orcons = m._pyomo_gdp_bigm_reformulation.component("disjunction_xor")
         self.assertIsInstance(orcons, Constraint)
-        self.assertIs(m.d[0].binary_indicator_var, orcons.body.arg(0))
-        self.assertIs(m.d[1].binary_indicator_var, orcons.body.arg(1))
-        repn = generate_standard_repn(orcons.body)
-        ct.check_linear_coef(self, repn, m.d[0].binary_indicator_var, 1)
-        ct.check_linear_coef(self, repn, m.d[1].binary_indicator_var, 1)
+        assertExpressionsEqual(
+            self,
+            orcons.body,
+            EXPR.LinearExpression(
+                [
+                    EXPR.MonomialTermExpression((1, m.d[0].binary_indicator_var)),
+                    EXPR.MonomialTermExpression((1, m.d[1].binary_indicator_var)),
+                ]
+            ),
+        )
         self.assertEqual(orcons.lower, 1)
         self.assertIsNone(orcons.upper)
 
@@ -1313,7 +1319,7 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
             )
         self.assertRegex(
             log.getvalue(),
-            r".*Constraint 'b.simpledisj1.c\[1\]' " r"has not been transformed.",
+            r".*Constraint 'b.simpledisj1.c\[1\]' has not been transformed.",
         )
 
         # and the rest of the container was transformed
@@ -1916,7 +1922,37 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         cons1ub = cons1[1]
         self.assertEqual(cons1lb.lower, 0)
         self.assertIsNone(cons1lb.upper)
-        self.assertIs(cons1lb.body, m.z)
+        assertExpressionsEqual(
+            self,
+            cons1lb.body,
+            EXPR.SumExpression(
+                [
+                    m.z,
+                    EXPR.NegationExpression(
+                        (
+                            EXPR.ProductExpression(
+                                (
+                                    0.0,
+                                    EXPR.LinearExpression(
+                                        [
+                                            1,
+                                            EXPR.MonomialTermExpression(
+                                                (
+                                                    -1,
+                                                    m.disjunct[1]
+                                                    .innerdisjunct[0]
+                                                    .binary_indicator_var,
+                                                )
+                                            ),
+                                        ]
+                                    ),
+                                )
+                            ),
+                        )
+                    ),
+                ]
+            ),
+        )
         self.assertIsNone(cons1ub.lower)
         self.assertEqual(cons1ub.upper, 0)
         self.check_bigM_constraint(
@@ -2153,7 +2189,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         )
 
     def test_hierarchical_badly_ordered_targets(self):
-        m = models.makeHierarchicalNested_DeclOrderMatchesInstantationOrder()
+        m = models.makeHierarchicalNested_DeclOrderMatchesInstantiationOrder()
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m, targets=[m.disjunction_block, m.disjunct_block.disj2])
 
@@ -2165,7 +2201,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
     def test_decl_order_opposite_instantiation_order(self):
         # In this test, we create the same problem as above, but we don't even
         # need targets!
-        m = models.makeHierarchicalNested_DeclOrderOppositeInstantationOrder()
+        m = models.makeHierarchicalNested_DeclOrderOppositeInstantiationOrder()
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m)
 
@@ -2251,7 +2287,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
             )
         self.assertRegex(
             out.getvalue(),
-            r".*Constraint 'evil\[1\].b.anotherblock.c' " r"has not been transformed.",
+            r".*Constraint 'evil\[1\].b.anotherblock.c' has not been transformed.",
         )
         evil1 = bigm.get_transformed_constraints(m.evil[1].bb[1].c)
         self.assertEqual(len(evil1), 2)

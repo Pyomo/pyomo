@@ -43,7 +43,6 @@ W = 5600
 
 
 def create_base_cutting_stock(demand, W):
-
     initial_patterns = dict()
 
     ## cutting stock base problem
@@ -85,7 +84,6 @@ def create_base_cutting_stock(demand, W):
 
 
 def solve_cutting_stock(demand, W, solver, iterations=30):
-
     cs, ks, patterns = create_base_cutting_stock(demand, W)
 
     if '_persistent' not in solver:
@@ -100,7 +98,6 @@ def solve_cutting_stock(demand, W, solver, iterations=30):
     ks_s.set_instance(ks)
 
     for _ in range(iterations):
-
         cs_s.solve()
 
         duals = {width: cs.dual[cs.demand[width]] for width in demand}

@@ -51,11 +51,10 @@ def _get_bound(exp):
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
-@WriterFactory.register('cpxlp', 'Generate the corresponding CPLEX LP file')
-@WriterFactory.register('lp', 'Generate the corresponding CPLEX LP file')
+@WriterFactory.register('cpxlp_v1', 'Generate the corresponding CPLEX LP file')
+@WriterFactory.register('lp_v1', 'Generate the corresponding CPLEX LP file')
 class ProblemWriter_cpxlp(AbstractProblemWriter):
     def __init__(self):
-
         AbstractProblemWriter.__init__(self, ProblemFormat.cpxlp)
 
         # The LP writer tracks which variables are
@@ -86,7 +85,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         self.ub_string_template = " <= %" + self._precision_string + "\n"
 
     def __call__(self, model, output_filename, solver_capability, io_options):
-
         # Make sure not to modify the user's dictionary,
         # they may be reusing it outside of this call
         io_options = dict(io_options)
@@ -192,7 +190,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         file_determinism,
         force_objective_constant=False,
     ):
-
         """
         Return a expression as a string in LP format.
 
@@ -353,7 +350,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 output.append("\n")
 
         if constant and not is_objective:
-            # If we made it to here we are outputing
+            # If we made it to here we are outputting
             # trivial constraints place 0 *
             # ONE_VAR_CONSTANT on this side of the
             # constraint for the benefit of solvers like
@@ -406,7 +403,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             if vardata.fixed:
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
-                    "currently not supported. Deactive this constraint in order to "
+                    "currently not supported. Deactivate this constraint in order to "
                     "proceed." % (soscondata.name, vardata.name)
                 )
             self._referenced_variable_ids[id(vardata)] = vardata
@@ -428,7 +425,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         force_objective_constant=False,
         include_all_variable_bounds=False,
     ):
-
         eq_string_template = self.eq_string_template
         leq_string_template = self.leq_string_template
         geq_string_template = self.geq_string_template
@@ -561,7 +557,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         numObj = 0
         onames = []
         for block in all_blocks:
-
             gen_obj_repn = getattr(block, "_gen_obj_repn", None)
             if gen_obj_repn is not None:
                 gen_obj_repn = bool(gen_obj_repn)
@@ -573,7 +568,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             for objective_data in block.component_data_objects(
                 Objective, active=True, sort=sortOrder, descend_into=False
             ):
-
                 numObj += 1
                 onames.append(objective_data.name)
                 if numObj > 1:
@@ -660,7 +654,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         def constraint_generator():
             for block in all_blocks:
-
                 gen_con_repn = getattr(block, "_gen_con_repn", None)
                 if gen_con_repn is not None:
                     gen_con_repn = bool(gen_con_repn)
@@ -672,7 +665,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 for constraint_data in block.component_data_objects(
                     Constraint, active=True, sort=sortOrder, descend_into=False
                 ):
-
                     if (not constraint_data.has_lb()) and (
                         not constraint_data.has_ub()
                     ):
@@ -846,11 +838,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         sos2 = solver_capability("sos2")
         writtenSOS = False
         for block in all_blocks:
-
             for soscondata in block.component_data_objects(
                 SOSConstraint, active=True, sort=sortOrder, descend_into=False
             ):
-
                 create_symbol_func(symbol_map, soscondata, labeler)
 
                 level = soscondata.level
@@ -888,7 +878,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         integer_vars = []
         binary_vars = []
         for vardata in variable_list:
-
             # TODO: We could just loop over the set of items in
             #       self._referenced_variable_ids, except this is
             #       a dictionary that is hashed by id(vardata)
@@ -956,13 +945,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     output.append(" <= +inf\n")
 
         if len(integer_vars) > 0:
-
             output.append("general\n")
             for var_name in integer_vars:
                 output.append('  %s\n' % var_name)
 
         if len(binary_vars) > 0:
-
             output.append("binary\n")
             for var_name in binary_vars:
                 output.append('  %s\n' % var_name)

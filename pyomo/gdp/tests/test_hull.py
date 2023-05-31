@@ -34,7 +34,11 @@ from pyomo.environ import (
     TerminationCondition,
     Reference,
 )
-from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
+from pyomo.core.expr.compare import (
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual,
+)
+import pyomo.core.expr.current as EXPR
 from pyomo.core.base import constraint
 from pyomo.repn import generate_standard_repn
 
@@ -145,16 +149,87 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # This is a weak test, but as good as any to ensure that the
         # substitution was done correctly
         EPS_1 = 1 - EPS
-        self.assertEqual(
-            str(cons.body),
-            "(%s*d[0].binary_indicator_var + %s)*("
-            "_pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]."
-            "disaggregatedVars.x"
-            "/(%s*d[0].binary_indicator_var + %s) + "
-            "(_pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]."
-            "disaggregatedVars.y/"
-            "(%s*d[0].binary_indicator_var + %s))**2) - "
-            "14.0*d[0].binary_indicator_var" % (EPS_1, EPS, EPS_1, EPS, EPS_1, EPS),
+        _disj = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        assertExpressionsEqual(
+            self,
+            cons.body,
+            EXPR.SumExpression(
+                [
+                    EXPR.ProductExpression(
+                        (
+                            EXPR.LinearExpression(
+                                [
+                                    EXPR.MonomialTermExpression(
+                                        (EPS_1, m.d[0].binary_indicator_var)
+                                    ),
+                                    EPS,
+                                ]
+                            ),
+                            EXPR.SumExpression(
+                                [
+                                    EXPR.DivisionExpression(
+                                        (
+                                            _disj.disaggregatedVars.x,
+                                            EXPR.LinearExpression(
+                                                [
+                                                    EXPR.MonomialTermExpression(
+                                                        (
+                                                            EPS_1,
+                                                            m.d[0].binary_indicator_var,
+                                                        )
+                                                    ),
+                                                    EPS,
+                                                ]
+                                            ),
+                                        )
+                                    ),
+                                    EXPR.PowExpression(
+                                        (
+                                            EXPR.DivisionExpression(
+                                                (
+                                                    _disj.disaggregatedVars.y,
+                                                    EXPR.LinearExpression(
+                                                        [
+                                                            EXPR.MonomialTermExpression(
+                                                                (
+                                                                    EPS_1,
+                                                                    m.d[
+                                                                        0
+                                                                    ].binary_indicator_var,
+                                                                )
+                                                            ),
+                                                            EPS,
+                                                        ]
+                                                    ),
+                                                )
+                                            ),
+                                            2,
+                                        )
+                                    ),
+                                ]
+                            ),
+                        )
+                    ),
+                    EXPR.NegationExpression(
+                        (
+                            EXPR.ProductExpression(
+                                (
+                                    0.0,
+                                    EXPR.LinearExpression(
+                                        [
+                                            1,
+                                            EXPR.MonomialTermExpression(
+                                                (-1, m.d[0].binary_indicator_var)
+                                            ),
+                                        ]
+                                    ),
+                                )
+                            ),
+                        )
+                    ),
+                    EXPR.MonomialTermExpression((-14.0, m.d[0].binary_indicator_var)),
+                ]
+            ),
         )
 
     def test_transformed_constraints_linear(self):
@@ -810,7 +885,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             )
         self.assertRegex(
             log.getvalue(),
-            r".*Constraint 'b.simpledisj1.c\[1\]' has not " r"been transformed.",
+            r".*Constraint 'b.simpledisj1.c\[1\]' has not been transformed.",
         )
 
         # this fixes a[2] to 0, so we should get the disggregated var
@@ -2330,7 +2405,10 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         c = cons[0]
         # hull transformation of z1 >= 1
         assertExpressionsStructurallyEqual(
-            self, c.expr, dis_z1 >= m.d[1].binary_indicator_var
+            self,
+            c.expr,
+            dis_z1 - (1 - m.d[1].binary_indicator_var) * 0
+            >= m.d[1].binary_indicator_var,
         )
 
         # then d[4]:
@@ -2500,7 +2578,9 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(cons), 1)
         cons = cons[0]
         assertExpressionsStructurallyEqual(
-            self, cons.expr, z3d >= m.d[4].binary_indicator_var
+            self,
+            cons.expr,
+            z3d - (1 - m.d[4].binary_indicator_var) * 0 >= m.d[4].binary_indicator_var,
         )
 
         self.assertFalse(m.bwahaha.active)

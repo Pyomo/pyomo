@@ -11,8 +11,11 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_available
+    numpy as np,
+    numpy_available,
+    scipy_available,
 )
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
@@ -20,13 +23,14 @@ from scipy.sparse import coo_matrix, bmat
 
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense, is_symmetric_sparse
 
+
 class TestSparseUtils(unittest.TestCase):
-
     def setUp(self):
-
         row = np.array([0, 1, 4, 1, 2, 7, 2, 3, 5, 3, 4, 5, 4, 7, 5, 6, 6, 7])
         col = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7])
-        data = np.array([27, 5, 12, 56, 66, 34, 94, 31, 41, 7, 98, 72, 24, 33, 78, 47, 98, 41])
+        data = np.array(
+            [27, 5, 12, 56, 66, 34, 94, 31, 41, 7, 98, 72, 24, 33, 78, 47, 98, 41]
+        )
 
         off_diagonal_mask = row != col
         new_row = np.concatenate([row, col[off_diagonal_mask]])
@@ -51,7 +55,6 @@ class TestSparseUtils(unittest.TestCase):
         self.block11 = m
 
     def test_is_symmetric_dense(self):
-
         m = self.block00.toarray()
         self.assertTrue(is_symmetric_dense(m))
         self.assertTrue(is_symmetric_dense(2))

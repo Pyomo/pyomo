@@ -1,13 +1,17 @@
 import numpy as np
 import scipy.sparse as sp
 from scipy.linalg import hilbert
-from pyomo.contrib.pynumero.linalg.mumps_interface import MumpsCentralizedAssembledLinearSolver
+from pyomo.contrib.pynumero.linalg.mumps_interface import (
+    MumpsCentralizedAssembledLinearSolver,
+)
 
 
 def main():
     # create the matrix and the right hand sides
     N = 1000
-    A = sp.coo_matrix(hilbert(N) + np.identity(N))  # a well-condition, symmetric, positive-definite matrix with off-diagonal entries
+    A = sp.coo_matrix(
+        hilbert(N) + np.identity(N)
+    )  # a well-condition, symmetric, positive-definite matrix with off-diagonal entries
     true_x1 = np.arange(N)
     true_x2 = np.array(list(reversed(np.arange(N))))
     b1 = A * true_x1
@@ -44,14 +48,20 @@ def main():
     assert np.allclose(x1, true_x1)
 
     # Set options
-    solver = MumpsCentralizedAssembledLinearSolver(icntl_options={11: 2}) # compute error stats
-    solver.set_cntl(2, 1e-4) # set the stopping criteria for iterative refinement
-    solver.set_icntl(10, 5) # set the maximum number of iterations for iterative refinement to 5
+    solver = MumpsCentralizedAssembledLinearSolver(
+        icntl_options={11: 2}
+    )  # compute error stats
+    solver.set_cntl(2, 1e-4)  # set the stopping criteria for iterative refinement
+    solver.set_icntl(
+        10, 5
+    )  # set the maximum number of iterations for iterative refinement to 5
     x1, res = solver.solve(A, b1)
     assert np.allclose(x1, true_x1)
 
     # Get information after the solve
-    print('Number of iterations of iterative refinement performed: ', solver.get_infog(15))
+    print(
+        'Number of iterations of iterative refinement performed: ', solver.get_infog(15)
+    )
     print('scaled residual: ', solver.get_rinfog(6))
 
 

@@ -22,9 +22,9 @@ Problem:
   Lower bound: 2.81
   Upper bound: 2.81
   Number of objectives: 1
-  Number of constraints: 4
-  Number of variables: 10
-  Number of nonzeros: 10
+  Number of constraints: 3
+  Number of variables: 9
+  Number of nonzeros: 9
   Sense: minimize
 # ----------------------------------------------------------
 #   Solver Information

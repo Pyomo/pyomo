@@ -36,7 +36,7 @@ model.n = Var(within=NonNegativeReals)
 
 # See documentation on Piecewise component by typing
 # help(Piecewise) in a python terminal after importing pyomo.core
-# Using BigM constraints with binary variables to represent the piecwise constraints
+# Using BigM constraints with binary variables to represent the piecewise constraints
 model.con = Piecewise(
     model.Z,
     model.X,  # range and domain variables

@@ -3,9 +3,20 @@ PyROS CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+PyROS 1.2.7    26 Apr 2023
+-------------------------------------------------------------------------------
+- Refurbish separation problem routines and data structures
+- Ensure implementation of separation scenario selection heuristic
+  is consistent with original intent
+- Fix local and global separation solve time accumulators
+- Prefer TicTocTimer for solve time accumulators
+
+
+-------------------------------------------------------------------------------
 PyROS 1.2.6    07 Dec 2022
 -------------------------------------------------------------------------------
 - Add more judicious enforcement of PyROS time limit.
+- Update PyROS solver and webpage docs
 
 
 -------------------------------------------------------------------------------
@@ -38,7 +49,7 @@ PyROS 1.2.2    09 Nov 2022
 -------------------------------------------------------------------------------
 PyROS 1.2.1    05 Oct 2022
 -------------------------------------------------------------------------------
-- Fix subordinate optimizer SolverResults solve time acess routines.
+- Fix subordinate optimizer SolverResults solve time access routines.
 
 
 -------------------------------------------------------------------------------

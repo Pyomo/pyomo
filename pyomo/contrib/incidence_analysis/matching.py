@@ -44,9 +44,7 @@ def maximum_matching(matrix_or_graph, top_nodes=None):
     if isinstance(matrix_or_graph, nx.Graph):
         graph_provided = True
         if top_nodes is None:
-            raise RuntimeError(
-                "top_nodes argument must be set if a graph is provided."
-            )
+            raise RuntimeError("top_nodes argument must be set if a graph is provided.")
         M = len(top_nodes)
         N = len(matrix_or_graph.nodes) - M
         bg = matrix_or_graph
@@ -77,12 +75,10 @@ def maximum_matching(matrix_or_graph, top_nodes=None):
         top_node_set = set(top_nodes)
         # If a graph was provided, we return a mapping from "top nodes"
         # to their matched "bottom nodes"
-        max_matching = {
-            n0: n1 for n0, n1 in matching.items() if n0 in top_node_set
-        }
+        max_matching = {n0: n1 for n0, n1 in matching.items() if n0 in top_node_set}
     else:
         # If a matrix was provided, we return a mapping from row indices
         # to column indices.
-        max_matching = {n0: n1-M for n0, n1 in matching.items() if n0 < M}
+        max_matching = {n0: n1 - M for n0, n1 in matching.items() if n0 < M}
 
     return max_matching

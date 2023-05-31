@@ -77,6 +77,7 @@ from pyomo.common.config import (
 )
 from pyomo.common.log import LoggingIntercept
 
+
 # Utility to redirect display() to a string
 def _display(obj, *args):
     test = StringIO()
@@ -2327,7 +2328,7 @@ Scenario definition:
         ).declare_as_argument(group=(subp, 'Node information'))
         self.config.initialize_argparse(parser)
 
-        # Note that the output for argparse changes in diffeent versions
+        # Note that the output for argparse changes in different versions
         # (in particular, "options:" vs "optional arguments:").  We will
         # only test for a subset of the output that should stay consistent.
         help = parser.format_help()
@@ -2379,7 +2380,7 @@ Node information:
         parser = argparse.ArgumentParser(prog='tester')
         c.initialize_argparse(parser)
 
-        # Note that the output for argparse changes in diffeent versions
+        # Note that the output for argparse changes in different versions
         # (in particular, "options:" vs "optional arguments:").  We will
         # only test for a subset of the output that should stay consistent.
         self.assertIn(

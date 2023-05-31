@@ -796,7 +796,6 @@ class PyomoDataPortal(unittest.TestCase):
 
 
 class TestOnlyTextPortal(unittest.TestCase):
-
     suffix = '.tab'
     skiplist = []
 
@@ -899,7 +898,7 @@ class TestOnlyTextPortal(unittest.TestCase):
         self.assertEqual(dp.data('W'), {'A1': 4.3, 'A2': 4.4, 'A3': 4.5})
 
     def test_tableXW_3(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         self.check_skiplist('tableXW_3')
         dp = DataPortal()
         dp.load(index='A', param=('X', 'W'), **self.create_options('XW'))
@@ -908,7 +907,7 @@ class TestOnlyTextPortal(unittest.TestCase):
         self.assertEqual(dp.data('W'), {'A1': 4.3, 'A2': 4.4, 'A3': 4.5})
 
     def test_tableXW_4(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
+        # Like test_tableXW_1, except that set A is defined in the load statement and all values are mapped.
         self.check_skiplist('tableXW_4')
         dp = DataPortal()
         dp.load(
@@ -1003,7 +1002,6 @@ class TestOnlyTextPortal(unittest.TestCase):
 
 
 class TestOnlyCsvPortal(TestOnlyTextPortal):
-
     suffix = '.csv'
 
     def create_options(self, name):
@@ -1015,7 +1013,6 @@ class TestOnlyCsvPortal(TestOnlyTextPortal):
 
 
 class TestOnlyXmlPortal(TestOnlyTextPortal):
-
     suffix = '.xml'
     skiplist = ['tableD', 'tableT', 'tableU']
 
@@ -1028,7 +1025,6 @@ class TestOnlyXmlPortal(TestOnlyTextPortal):
 
 
 class TestOnlyJsonPortal(TestOnlyTextPortal):
-
     suffix = '.json'
     skiplist = ['tableD', 'tableT', 'tableU', 'tableXW_4']
 
@@ -1135,7 +1131,6 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
 
 @unittest.skipIf(not yaml_interface, "No YAML interface available")
 class TestOnlyYamlPortal(TestOnlyJsonPortal):
-
     suffix = '.yaml'
 
     def create_options(self, name):
@@ -1147,7 +1142,6 @@ class TestOnlyYamlPortal(TestOnlyJsonPortal):
 
 
 class TestTextPortal(unittest.TestCase):
-
     suffix = '.tab'
     skiplist = []
 
@@ -1314,7 +1308,7 @@ class TestTextPortal(unittest.TestCase):
         self.assertEqual(instance.W.extract_values(), {'A1': 4.3, 'A2': 4.4, 'A3': 4.5})
 
     def test_tableXW_3(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         self.check_skiplist('tableXW_3')
         model = AbstractModel()
         model.A = Set()
@@ -1328,7 +1322,7 @@ class TestTextPortal(unittest.TestCase):
         self.assertEqual(instance.W.extract_values(), {'A1': 4.3, 'A2': 4.4, 'A3': 4.5})
 
     def test_tableXW_4(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
+        # Like test_tableXW_1, except that set A is defined in the load statement and all values are mapped.
         self.check_skiplist('tableXW_4')
         model = AbstractModel()
         model.B = Set()
@@ -1499,7 +1493,6 @@ class TestTextPortal(unittest.TestCase):
 
 
 class TestCsvPortal(TestTextPortal):
-
     suffix = '.csv'
 
     def create_options(self, name):
@@ -1511,7 +1504,6 @@ class TestCsvPortal(TestTextPortal):
 
 
 class TestXmlPortal(TestTextPortal):
-
     suffix = '.xml'
     skiplist = ['tableD', 'tableT', 'tableU']
 
@@ -1524,7 +1516,6 @@ class TestXmlPortal(TestTextPortal):
 
 
 class TestJsonPortal(TestTextPortal):
-
     suffix = '.json'
     skiplist = ['tableD', 'tableT', 'tableU', 'tableXW_4']
 
@@ -1538,7 +1529,6 @@ class TestJsonPortal(TestTextPortal):
 
 @unittest.skipIf(not yaml_interface, "YAML interface not available")
 class TestYamlPortal(TestTextPortal):
-
     suffix = '.yaml'
     skiplist = ['tableD', 'tableT', 'tableU', 'tableXW_4']
 
@@ -1551,7 +1541,6 @@ class TestYamlPortal(TestTextPortal):
 
 
 class LoadTests(object):
-
     skiplist = []
 
     #
@@ -1718,7 +1707,7 @@ class LoadTests(object):
         os.remove(currdir + 'loadXW.dat')
 
     def test_tableXW_3(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         self.check_skiplist('tableXW_3')
         with capture_output(currdir + 'loadXW.dat'):
             print("load " + self.filename('XW') + " : A=[A] X W;")
@@ -1733,7 +1722,7 @@ class LoadTests(object):
         os.remove(currdir + 'loadXW.dat')
 
     def test_tableXW_4(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
+        # Like test_tableXW_1, except that set A is defined in the load statement and all values are mapped.
         self.check_skiplist('tableXW_4')
         with capture_output(currdir + 'loadXW.dat'):
             print("load " + self.filename('XW') + " : B=[A] R=X S=W;")
@@ -1845,17 +1834,14 @@ class LoadTests(object):
 
 
 class TestTextLoad(LoadTests, unittest.TestCase):
-
     suffix = 'tab'
 
 
 class TestCsvLoad(LoadTests, unittest.TestCase):
-
     suffix = 'csv'
 
 
 class TestXmlLoad(LoadTests, unittest.TestCase):
-
     suffix = 'xml'
     skiplist = ['tableD', 'tableT', 'tableU']
 
@@ -1922,25 +1908,21 @@ class Spreadsheet(LoadTests):
 
 @unittest.skipIf(not xls_interface, "No XLS interface available")
 class TestSpreadsheetXLS(Spreadsheet, unittest.TestCase):
-
     _filename = 'excel.xls'
 
 
 @unittest.skipIf(not xlsx_interface, "No XLSX interface available")
 class TestSpreadsheetXLSX(Spreadsheet, unittest.TestCase):
-
     _filename = 'excel.xlsx'
 
 
 @unittest.skipIf(not xlsb_interface, "No XLSB interface available")
 class TestSpreadsheetXLSB(Spreadsheet, unittest.TestCase):
-
     _filename = 'excel.xlsb'
 
 
 @unittest.skipIf(not xlsm_interface, "No XLSM interface available")
 class TestSpreadsheetXLSM(Spreadsheet, unittest.TestCase):
-
     _filename = 'excel.xlsm'
 
 
@@ -2110,7 +2092,7 @@ class TestTableCmd(unittest.TestCase):
         os.remove(currdir + 'loadXW.dat')
 
     def test_tableXW_3_1(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         with capture_output(currdir + 'loadXW.dat'):
             print(
                 "table columns=3 A={1} X(A)={2} W(A)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;"
@@ -2126,7 +2108,7 @@ class TestTableCmd(unittest.TestCase):
         os.remove(currdir + 'loadXW.dat')
 
     def test_tableXW_3_2(self):
-        # Like test_tableXW_1, except that set A is defined in the load statment.
+        # Like test_tableXW_1, except that set A is defined in the load statement.
         with capture_output(currdir + 'loadXW.dat'):
             print("table A={A} X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model = AbstractModel()

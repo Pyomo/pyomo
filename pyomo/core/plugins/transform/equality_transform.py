@@ -16,7 +16,10 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.util import collectAbstractComponents
 
 
-@TransformationFactory.register("core.add_slack_vars", doc="Create an equivalent model by introducing slack variables to eliminate inequality constraints.")
+@TransformationFactory.register(
+    "core.add_slack_vars",
+    doc="Create an equivalent model by introducing slack variables to eliminate inequality constraints.",
+)
 class EqualityTransform(IsomorphicTransformation):
     """
     Creates a new, equivalent model by introducing slack and excess variables
@@ -69,8 +72,7 @@ class EqualityTransform(IsomorphicTransformation):
             # con._data on-the-fly.
             #
             indices = con._data.keys()
-            for (ndx, cdata) in [(ndx, con._data[ndx]) for ndx in indices]:
-
+            for ndx, cdata in [(ndx, con._data[ndx]) for ndx in indices]:
                 qualified_con_name = create_name(con_name, ndx)
 
                 # Do nothing with equality constraints
@@ -79,30 +81,26 @@ class EqualityTransform(IsomorphicTransformation):
 
                 # Add an excess variable if the lower bound exists
                 if cdata.lower is not None:
-
                     # Make the excess variable
                     excess_name = "%s_%s" % (qualified_con_name, excess_suffix)
-                    equality.__setattr__(excess_name,
-                                         Var(within=NonNegativeReals))
+                    equality.__setattr__(excess_name, Var(within=NonNegativeReals))
 
                     # Make a new lower bound constraint
                     lb_name = "%s_%s" % (create_name("", ndx), lb_suffix)
                     excess = equality.__getattribute__(excess_name)
-                    new_expr = (cdata.lower == cdata.body - excess)
+                    new_expr = cdata.lower == cdata.body - excess
                     con.add(lb_name, new_expr)
 
                 # Add a slack variable if the lower bound exists
                 if cdata.upper is not None:
-
                     # Make the excess variable
                     slack_name = "%s_%s" % (qualified_con_name, slack_suffix)
-                    equality.__setattr__(slack_name,
-                                         Var(within=NonNegativeReals))
+                    equality.__setattr__(slack_name, Var(within=NonNegativeReals))
 
                     # Make a new upper bound constraint
                     ub_name = "%s_%s" % (create_name("", ndx), ub_suffix)
                     slack = equality.__getattribute__(slack_name)
-                    new_expr = (cdata.upper == cdata.body + slack)
+                    new_expr = cdata.upper == cdata.body + slack
                     con.add(ub_name, new_expr)
 
                 # Since we explicitly `continue` for equality constraints, we

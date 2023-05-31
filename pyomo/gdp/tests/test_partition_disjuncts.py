@@ -524,12 +524,12 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         )
 
     def test_hierarchical_nested_badly_ordered_targets(self):
-        m = models.makeHierarchicalNested_DeclOrderMatchesInstantationOrder()
+        m = models.makeHierarchicalNested_DeclOrderMatchesInstantiationOrder()
 
         # If we don't preprocess targets by actually finding who is nested in
         # who, this would force the Disjunct to be transformed before its
         # Disjunction because they are hidden on blocks. Then this would fail
-        # because the partition doesn't specify what to do with the auxilary
+        # because the partition doesn't specify what to do with the auxiliary
         # variables created by the inner disjunction. If we correctly descend
         # into Blocks and order according to the nesting structure, all will be
         # well.
@@ -543,7 +543,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.check_hierarchical_nested_model(m)
 
     def test_hierarchical_nested_decl_order_opposite_instantiation_order(self):
-        m = models.makeHierarchicalNested_DeclOrderOppositeInstantationOrder()
+        m = models.makeHierarchicalNested_DeclOrderOppositeInstantiationOrder()
         TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
@@ -1776,7 +1776,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         disj1 = b.disjunction.disjuncts[0]
 
         self.assertEqual(len(disj1.component_map(Constraint)), 2)
-        # has indicator_var and two sets of auxilary variables, plus a reference
+        # has indicator_var and two sets of auxiliary variables, plus a reference
         # to the indicator_var on the original Disjunct
         self.assertEqual(len(disj1.component_map(Var)), 4)
         self.assertEqual(len(disj1.component_map(Constraint)), 2)

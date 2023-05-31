@@ -16,7 +16,9 @@ from pyomo.core.expr.taylor_series import taylor_series_expansion
 try:
     import gurobipy
 
-    m = gurobipy.Model()
+    with gurobipy.Env():
+        pass
+
     gurobipy_available = True
 except:
     gurobipy_available = False
@@ -374,7 +376,7 @@ class TestGurobiPersistent(unittest.TestCase):
         self.assertRaises(RuntimeError, opt.add_column, m, z, -2, [m.c, z], [1])
 
         m.y = pyo.Var()
-        # len(coefficents) == len(constraints)
+        # len(coefficients) == len(constraints)
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1, 2])
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c, z], [1])
 

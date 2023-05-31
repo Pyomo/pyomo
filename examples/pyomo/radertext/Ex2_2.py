@@ -30,12 +30,14 @@ model.RequiredWorkers = Param(model.StartTime, within=NonNegativeIntegers)
 # Variables
 model.NumWorkers = Var(model.StartTime, within=NonNegativeIntegers)
 
+
 # Objective
 def CalcTotalWorkers(M):
     return sum(M.NumWorkers[i] for i in M.StartTime)
 
 
 model.TotalWorkers = Objective(rule=CalcTotalWorkers, sense=minimize)
+
 
 # Constraints
 def EnsureWorkforce(M, i):

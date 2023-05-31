@@ -30,7 +30,6 @@ class UnknownDataManager(object):
 
 
 class DataManagerFactoryClass(Factory):
-
     #
     # This is the custom __call__ method
     #

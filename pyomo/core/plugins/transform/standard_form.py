@@ -15,7 +15,9 @@ from pyomo.core.plugins.transform.nonnegative_transform import NonNegativeTransf
 from pyomo.core.plugins.transform.equality_transform import EqualityTransform
 
 
-@TransformationFactory.register("core.standard_form", doc="Create an equivalent LP model in standard form.")
+@TransformationFactory.register(
+    "core.standard_form", doc="Create an equivalent LP model in standard form."
+)
 class StandardForm(IsomorphicTransformation):
     """
     Produces a standard-form representation of the model. This form has
@@ -41,7 +43,7 @@ class StandardForm(IsomorphicTransformation):
 
     def _create_using(self, model, **kwds):
         """
-        Tranform a model to standard form
+        Transform a model to standard form
         """
 
         # Optional naming schemes to pass to EqualityTransform
@@ -63,7 +65,7 @@ class StandardForm(IsomorphicTransformation):
         # (that aren't equality constraints) we call it first.
         #
         # EqualityTransform introduces new variables, but they are
-        # constrainted to be nonnegative.
+        # constrained to be nonnegative.
         sf = nonneg(model, **nn_kwds)
         sf = equality(sf, **eq_kwds)
 

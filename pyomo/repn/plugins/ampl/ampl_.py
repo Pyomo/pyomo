@@ -64,14 +64,14 @@ def set_pyomo_amplfunc_env(external_libs):
     # sometime between 2010 and 2012, the ASL added support for
     # simple quoted strings: the first non-whitespace character
     # can be either " or '.  When that is detected, the ASL
-    # parser will continue to the next occurance of that
+    # parser will continue to the next occurrence of that
     # character (i.e., no escaping is allowed).  We will use
     # that same logic here to quote any strings with spaces
     # ... bearing in mind that this will only work with solvers
     # compiled against versions of the ASL more recent than
     # ~2012.
     #
-    # We are (arbitrarily) chosing to use newline as the field
+    # We are (arbitrarily) choosing to use newline as the field
     # separator.
     env_str = ''
     for _lib in external_libs:
@@ -124,6 +124,7 @@ _intrinsic_function_operators = {
     'ceil': 'o14',
     'floor': 'o13',
 }
+
 
 # build string templates
 def _build_op_template():
@@ -254,7 +255,6 @@ class ModelSOS(object):
             return not bool(len(self.ids))
 
     def __init__(self, ampl_var_id, varID_map):
-
         self.ampl_var_id = ampl_var_id
         self.sosno = self.AmplSuffix('sosno')
         self.ref = self.AmplSuffix('ref')
@@ -262,7 +262,6 @@ class ModelSOS(object):
         self.varID_map = varID_map
 
     def count_constraint(self, soscondata):
-
         ampl_var_id = self.ampl_var_id
         varID_map = self.varID_map
 
@@ -288,7 +287,7 @@ class ModelSOS(object):
             sign_tag = -1
         else:
             raise ValueError(
-                "SOSContraint '%s' has sos type='%s', "
+                "SOSConstraint '%s' has sos type='%s', "
                 "which is not supported by the NL file interface"
                 % (soscondata.name, level)
             )
@@ -314,7 +313,6 @@ class ModelSOS(object):
 
 
 class RepnWrapper(object):
-
     __slots__ = ('repn', 'linear_vars', 'nonlinear_vars')
 
     def __init__(self, repn, linear, nonlinear):
@@ -334,7 +332,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._varID_map = None
 
     def __call__(self, model, filename, solver_capability, io_options):
-
         # Rebuild the OP template (as the expression tree system may
         # have been switched)
         _op_template, _op_comment = _build_op_template()
@@ -490,7 +487,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             self_varID_map = self._varID_map
             quadratic_vars = []
             quadratic_coefs = []
-            for (i, (v1, v2)) in sorted(
+            for i, (v1, v2) in sorted(
                 enumerate(old_quadratic_vars),
                 key=lambda x: (
                     self_varID_map[id(x[1][0])],
@@ -556,7 +553,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # We are assuming that _Constant_* expression objects
             # have been preprocessed to form constant values.
             #
-            elif exp.__class__ is EXPR.SumExpression:
+            elif (
+                exp.__class__ is EXPR.SumExpression
+                or exp.__class__ is EXPR.LinearExpression
+            ):
                 nary_sum_str, binary_sum_str, coef_term_str = self._op_string[
                     EXPR.SumExpressionBase
                 ]
@@ -688,9 +688,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
             elif exp_type is EXPR.Expr_ifExpression:
                 OUTPUT.write(self._op_string[EXPR.Expr_ifExpression])
-                self._print_nonlinear_terms_NL(exp._if)
-                self._print_nonlinear_terms_NL(exp._then)
-                self._print_nonlinear_terms_NL(exp._else)
+                for arg in exp.args:
+                    self._print_nonlinear_terms_NL(arg)
 
             elif exp_type is EXPR.InequalityExpression:
                 and_str, lt_str, le_str = self._op_string[EXPR.InequalityExpression]
@@ -774,7 +773,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         include_all_variable_bounds=False,
         export_nonlinear_variables=False,
     ):
-
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
 
@@ -890,7 +888,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ObjNonlinearVars = set()
         ObjNonlinearVarsInt = set()
         for block in all_blocks_list:
-
             gen_obj_repn = getattr(block, "_gen_obj_repn", None)
             if gen_obj_repn is not None:
                 gen_obj_repn = bool(gen_obj_repn)
@@ -920,7 +917,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         # Note that this is fragile:
                         # generate_standard_repn can leave nonlinear
                         # terms in both quadratic and nonlinear fields.
-                        # However, when this was writen the assumption
+                        # However, when this was written the assumption
                         # is that generate_standard_repn is only called
                         # with quadratic=True for QCQPs (by the LP
                         # writer).  So, quadratic and nonlinear_expr
@@ -1023,7 +1020,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
             for constraint_data in block.component_data_objects(
                 Constraint, active=True, sort=sorter, descend_into=False
             ):
-
                 if (not constraint_data.has_lb()) and (not constraint_data.has_ub()):
                     assert not constraint_data.equality
                     continue  # non-binding, so skip
@@ -1046,7 +1042,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         # Note that this is fragile:
                         # generate_standard_repn can leave nonlinear
                         # terms in both quadratic and nonlinear fields.
-                        # However, when this was writen the assumption
+                        # However, when this was written the assumption
                         # is that generate_standard_repn is only called
                         # with quadratic=True for QCQPs (by the LP
                         # writer).  So, quadratic and nonlinear_expr
@@ -1480,7 +1476,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "S" lines
         #
 
-        # Tranlate the SOSConstraint component into ampl suffixes
+        # Translate the SOSConstraint component into ampl suffixes
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         modelSOS = ModelSOS(self_ampl_var_id, self_varID_map)
@@ -1607,7 +1603,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
             mod_s_lines = []
             for suffix in suffixes:
                 for component_data, suffix_value in suffix.items():
-
                     try:
                         symbol = symbol_map_byObject[id(component_data)]
                         type_tag = symbol[0]
@@ -1736,7 +1731,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "O" lines
         #
         for obj_ID, (obj, wrapped_repn) in Objectives_dict.items():
-
             k = 0
             if not obj.is_minimizing():
                 k = 1
@@ -1784,7 +1778,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if 'dual' in suffix_dict:
             s_lines = []
             for dual_suffix in suffix_dict['dual']:
-
                 for constraint_data, suffix_value in dual_suffix.items():
                     try:
                         # a constraint might not be referenced
@@ -1969,7 +1962,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "G" lines
         #
         for obj_ID, (obj, wrapped_repn) in Objectives_dict.items():
-
             grad_entries = {}
             for idx, obj_var in enumerate(wrapped_repn.linear_vars):
                 grad_entries[

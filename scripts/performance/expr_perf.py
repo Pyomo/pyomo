@@ -1025,7 +1025,6 @@ def print_results(factors_, ans_, output):
 # Performance results are a mapping: name -> seconds
 #
 def runall(factors, res, output=True):
-
     if True:
         factors_ = tuple(factors + ['ManyLinear', 'Loop 2'])
         ans_ = res[factors_] = measure(many_linear(NTerms, 2), n=N)

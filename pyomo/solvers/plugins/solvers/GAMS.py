@@ -865,7 +865,7 @@ class GAMSShell(_GAMSSolver):
         command = [exe, output, "o=" + lst, "curdir=" + tmpdir]
         if tee and not logfile:
             # default behaviour of gams is to print to console, for
-            # compatability with windows and *nix we want to explicitly log to
+            # compatibility with windows and *nix we want to explicitly log to
             # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
             command.append("lo=3")
         elif not tee and not logfile:

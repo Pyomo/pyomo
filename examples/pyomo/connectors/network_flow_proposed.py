@@ -69,6 +69,7 @@ model.nodes = Block(model.NODES, rule=node_rule)
 model.network_src = Constraint(model.PIPES, rule=_src_rule)
 model.network_sink = Constraint(model.PIPES, rule=_sink_rule)
 
+
 # Solve so the minimum pressure in the network is 0
 def _obj(model):
     return sum(model.nodes[n].pressure for n in model.NODES)

@@ -20,7 +20,10 @@ from pyomo.common import DeveloperError
 from pyomo.common.autoslots import AutoSlots, fast_deepcopy
 from pyomo.common.collections import OrderedDict
 from pyomo.common.deprecation import (
-    deprecated, deprecation_warning, relocated_module_attribute)
+    deprecated,
+    deprecation_warning,
+    relocated_module_attribute,
+)
 from pyomo.common.factory import Factory
 from pyomo.common.formatting import tabular_writer, StreamIndenter
 from pyomo.common.modeling import NOTSET
@@ -32,18 +35,21 @@ from pyomo.core.base.global_set import UnindexedComponent_index
 logger = logging.getLogger('pyomo.core')
 
 relocated_module_attribute(
-    'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
-    version='5.7.2')
+    'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID', version='5.7.2'
+)
 
 _ref_types = {type(None), weakref_ref}
 
-class ModelComponentFactoryClass(Factory):
 
+class ModelComponentFactoryClass(Factory):
     def register(self, doc=None):
         def fn(cls):
-            return super(ModelComponentFactoryClass, self).register(
-                cls.__name__, doc)(cls)
+            return super(ModelComponentFactoryClass, self).register(cls.__name__, doc)(
+                cls
+            )
+
         return fn
+
 
 ModelComponentFactory = ModelComponentFactoryClass('model component')
 
@@ -53,26 +59,25 @@ def name(component, index=NOTSET, fully_qualified=False, relative_to=None):
     Return a string representation of component for a specific
     index value.
     """
-    base = component.getname(
-        fully_qualified=fully_qualified, relative_to=relative_to
-    )
+    base = component.getname(fully_qualified=fully_qualified, relative_to=relative_to)
     if index is NOTSET:
         return base
     else:
         if index not in component.index_set():
-            raise KeyError( "Index %s is not valid for component %s"
-                            % (index, component.name) )
-        return base + index_repr( index )
+            raise KeyError(
+                "Index %s is not valid for component %s" % (index, component.name)
+            )
+        return base + index_repr(index)
 
 
-@deprecated(msg="The cname() function has been renamed to name()",
-            version='5.6.9')
+@deprecated(msg="The cname() function has been renamed to name()", version='5.6.9')
 def cname(*args, **kwds):
     return name(*args, **kwds)
 
 
 class CloneError(pyomo.common.errors.PyomoException):
     pass
+
 
 class _ComponentBase(PyomoObject):
     """A base class for Component and ComponentData
@@ -81,6 +86,7 @@ class _ComponentBase(PyomoObject):
     expected for all Component-like objects.  They are centralized here
     to avoid repeated code in the Component and ComponentData classes.
     """
+
     __slots__ = ()
 
     _PPRINT_INDENT = "    "
@@ -132,8 +138,8 @@ class _ComponentBase(PyomoObject):
             # will check that id(self) is not in __block_scope__: if it
             # is, then this is the top-level block and we need to do the
             # normal deepcopy.  We defer this check until now for
-            # efficiency reasons beause we expect that (for sane models)
-            # the bulk of the ccomponents we will encounter will be *in*
+            # efficiency reasons because we expect that (for sane models)
+            # the bulk of the components we will encounter will be *in*
             # scope.
             if not _in_scope and id(self) not in _scope:
                 # component is out-of-scope.  shallow copy only
@@ -212,9 +218,9 @@ class _ComponentBase(PyomoObject):
                 # Note: this implementation avoids deepcopying the
                 # temporary 'state' list, significantly speeding things
                 # up.
-                memo[id(comp)].__setstate__([
-                    fast_deepcopy(field, memo) for field in comp.__getstate__()
-                ])
+                memo[id(comp)].__setstate__(
+                    [fast_deepcopy(field, memo) for field in comp.__getstate__()]
+                )
             return memo[id(self)]
         except:
             pass
@@ -244,10 +250,12 @@ class _ComponentBase(PyomoObject):
                 for slot, value in zip(comp.__auto_slots__.slots, state)
             ]
             if comp.__auto_slots__.has_dict:
-                new_state.append({
-                    slot: _deepcopy_field(memo, slot, value)
-                    for slot, value in state[-1].items()
-                })
+                new_state.append(
+                    {
+                        slot: _deepcopy_field(memo, slot, value)
+                        for slot, value in state[-1].items()
+                    }
+                )
             memo[id(comp)].__setstate__(new_state)
         return memo[id(self)]
 
@@ -270,7 +278,8 @@ class _ComponentBase(PyomoObject):
                 memo.popitem()
             # warn the user
             if '__block_scope__' not in memo:
-                logger.warning("""
+                logger.warning(
+                    """
                     Uncopyable field encountered when deep
                     copying outside the scope of Block.clone().
                     There is a distinct possibility that the new
@@ -278,7 +287,8 @@ class _ComponentBase(PyomoObject):
                     situation, either use Block.clone() or set
                     'paranoid' mode by adding '__paranoid__' ==
                     True to the memo before calling
-                    copy.deepcopy.""")
+                    copy.deepcopy."""
+                )
             if self.model() is self:
                 what = 'Model'
             else:
@@ -287,7 +297,8 @@ class _ComponentBase(PyomoObject):
                 "Unable to clone Pyomo component attribute.\n"
                 "%s '%s' contains an uncopyable field '%s' (%s).  "
                 "Setting field to `None` on new object"
-                % ( what, self.name, slot_name, type(value) ))
+                % (what, self.name, slot_name, type(value))
+            )
             # If this is an abstract model, then we are probably
             # in the middle of create_instance, and the model
             # that will eventually become the concrete model is
@@ -302,16 +313,19 @@ class _ComponentBase(PyomoObject):
                     "missing data from the original abstract model "
                     "and likely will not construct correctly.  "
                     "Consider changing how you initialize this "
-                    "component or using a ConcreteModel."
-                    % ( slot_name, self.name ))
+                    "component or using a ConcreteModel." % (slot_name, self.name)
+                )
         # Drop the offending field value.  The user has been warned.
         return None
 
-    @deprecated("""The cname() method has been renamed to getname().
+    @deprecated(
+        """The cname() method has been renamed to getname().
     The preferred method of obtaining a component name is to use the
     .name property, which returns the fully qualified component name.
     The .local_name property will return the component name only within
-    the context of the immediate parent container.""", version='5.0')
+    the context of the immediate parent container.""",
+        version='5.0',
+    )
     def cname(self, *args, **kwds):
         return self.getname(*args, **kwds)
 
@@ -333,11 +347,20 @@ class _ComponentBase(PyomoObject):
             _name = comp.local_name
         else:
             # restrict output to only this data object
-            _data = iter( ((self.index(), self),) )
+            _data = iter(((self.index(), self),))
             _name = "{Member of %s}" % (comp.local_name,)
         self._pprint_base_impl(
-            ostream, verbose, prefix, _name, comp.doc,
-            comp.is_constructed(), _attr, _data, _header, _fcn)
+            ostream,
+            verbose,
+            prefix,
+            _name,
+            comp.doc,
+            comp.is_constructed(),
+            _attr,
+            _data,
+            _header,
+            _fcn,
+        )
 
     @property
     def name(self):
@@ -352,7 +375,8 @@ class _ComponentBase(PyomoObject):
         raise ValueError(
             "The .name attribute is now a property method "
             "that returns the fully qualified component name. "
-            "Assignment is not allowed.")
+            "Assignment is not allowed."
+        )
 
     @property
     def local_name(self):
@@ -371,16 +395,28 @@ class _ComponentBase(PyomoObject):
         """Set the active attribute to the given value"""
         raise AttributeError(
             "Setting the 'active' flag on a component that does not "
-            "support deactivation is not allowed.")
+            "support deactivation is not allowed."
+        )
 
-    def _pprint_base_impl(self, ostream, verbose, prefix, _name, _doc,
-                          _constructed, _attr, _data, _header, _fcn):
+    def _pprint_base_impl(
+        self,
+        ostream,
+        verbose,
+        prefix,
+        _name,
+        _doc,
+        _constructed,
+        _attr,
+        _data,
+        _header,
+        _fcn,
+    ):
         if ostream is None:
             ostream = sys.stdout
         if prefix:
             ostream = StreamIndenter(ostream, prefix)
 
-        # FIXME: HACK for backwards compatability with suppressing the
+        # FIXME: HACK for backwards compatibility with suppressing the
         # header for the top block
         if not _attr and self.parent_block() is None:
             _name = ''
@@ -396,16 +432,16 @@ class _ComponentBase(PyomoObject):
             _attr.append(('ReferenceTo', self.referent))
 
         if _name:
-            ostream.write(_name+" : ")
+            ostream.write(_name + " : ")
         if _doc:
-            ostream.write(_doc+'\n')
+            ostream.write(_doc + '\n')
         if _attr:
-            ostream.write(", ".join("%s=%s" % (k,v) for k,v in _attr))
+            ostream.write(", ".join("%s=%s" % (k, v) for k, v in _attr))
         if _attr or _name or _doc:
             ostream.write("\n")
 
         if not _constructed:
-            # HACK: for backwards compatability, Abstract blocks will
+            # HACK: for backwards compatibility, Abstract blocks will
             # still print their assigned components.  Should we instead
             # always pprint unconstructed components (possibly
             # suppressing the table header if the table is empty)?
@@ -422,7 +458,7 @@ class _ComponentBase(PyomoObject):
             if _fcn2 is not None:
                 _data_dict = dict(_data)
                 _data = _data_dict.items()
-            tabular_writer( ostream, '', _data, _header, _fcn )
+            tabular_writer(ostream, '', _data, _header, _fcn)
             if _fcn2 is not None:
                 for _key in sorted_robust(_data_dict):
                     _fcn2(ostream, _key, _data_dict[_key])
@@ -455,44 +491,47 @@ class Component(_ComponentBase):
 
     __autoslot_mappers__ = {'_parent': AutoSlots.weakref_mapper}
 
-    def __init__ (self, **kwds):
+    def __init__(self, **kwds):
         #
         # Get arguments
         #
         self._ctype = kwds.pop('ctype', None)
-        self.doc    = kwds.pop('doc', None)
-        self._name  = kwds.pop('name', str(type(self).__name__))
+        self.doc = kwds.pop('doc', None)
+        self._name = kwds.pop('name', str(type(self).__name__))
         if kwds:
             raise ValueError(
                 "Unexpected keyword options found while constructing '%s':\n\t%s"
-                % ( type(self).__name__, ','.join(sorted(kwds.keys())) ))
+                % (type(self).__name__, ','.join(sorted(kwds.keys())))
+            )
         #
         # Verify that ctype has been specified.
         #
         if self._ctype is None:
             raise DeveloperError(
-                "Must specify a component type for class %s!"
-                % ( type(self).__name__, ) )
+                "Must specify a component type for class %s!" % (type(self).__name__,)
+            )
         #
-        self._constructed   = False
-        self._parent        = None    # Must be a weakref
+        self._constructed = False
+        self._parent = None  # Must be a weakref
 
     @property
     def ctype(self):
         """Return the class type for this component"""
         return self._ctype
 
-    @deprecated("Component.type() method has been replaced by the "
-                ".ctype property.", version='5.7')
+    @deprecated(
+        "Component.type() method has been replaced by the .ctype property.",
+        version='5.7',
+    )
     def type(self):
         """Return the class type for this component"""
         return self.ctype
 
-    def construct(self, data=None):                     #pragma:nocover
+    def construct(self, data=None):  # pragma:nocover
         """API definition for constructing components"""
         pass
 
-    def is_constructed(self):                           #pragma:nocover
+    def is_constructed(self):  # pragma:nocover
         """Return True if this class has been constructed"""
         return self._constructed
 
@@ -522,8 +561,13 @@ class Component(_ComponentBase):
     def pprint(self, ostream=None, verbose=False, prefix=""):
         """Print component information"""
         self._pprint_base_impl(
-            ostream, verbose, prefix, self.local_name, self.doc,
-            self.is_constructed(), *self._pprint()
+            ostream,
+            verbose,
+            prefix,
+            self.local_name,
+            self.doc,
+            self.is_constructed(),
+            *self._pprint()
         )
 
     def display(self, ostream=None, verbose=False, prefix=""):
@@ -574,7 +618,7 @@ class Component(_ComponentBase):
             Generate full name from nested block names
 
         relative_to: Block
-            Generate fully_qualified names reletive to the specified block.
+            Generate fully_qualified names relative to the specified block.
         """
         local_name = self._name
         if fully_qualified:
@@ -582,12 +626,16 @@ class Component(_ComponentBase):
             if relative_to is None:
                 relative_to = self.model()
             if pb is not None and pb is not relative_to:
-                ans = pb.getname(fully_qualified, name_buffer, relative_to) \
-                      + "." + name_repr(local_name)
+                ans = (
+                    pb.getname(fully_qualified, name_buffer, relative_to)
+                    + "."
+                    + name_repr(local_name)
+                )
             elif pb is None and relative_to != self.model():
                 raise RuntimeError(
                     "The relative_to argument was specified but not found "
-                    "in the block hierarchy: %s" % str(relative_to))
+                    "in the block hierarchy: %s" % str(relative_to)
+                )
             else:
                 ans = name_repr(local_name)
         else:
@@ -602,7 +650,9 @@ class Component(_ComponentBase):
                 "is no longer a quadratic operation. Additionally, note that "
                 "use of this argument poses risks if the buffer contains "
                 "names relative to different Blocks in the model hierarchy or "
-                "a mixture of local and fully_qualified names.", version='TODO')
+                "a mixture of local and fully_qualified names.",
+                version='TODO',
+            )
             name_buffer[id(self)] = ans
         return ans
 
@@ -611,7 +661,7 @@ class Component(_ComponentBase):
         """Get the fully qualifed component name."""
         return self.getname(fully_qualified=True)
 
-    # Allow setting a componet's name if it is not owned by a parent
+    # Allow setting a component's name if it is not owned by a parent
     # block (this supports, e.g., naming a model)
     @name.setter
     def name(self, val):
@@ -621,7 +671,8 @@ class Component(_ComponentBase):
             raise ValueError(
                 "The .name attribute is not settable when the component "
                 "is assigned to a Block.\nTriggered by attempting to set "
-                "component '%s' to name '%s'" % (self.name,val))
+                "component '%s' to name '%s'" % (self.name, val)
+            )
 
     def is_indexed(self):
         """Return true if this component is indexed"""
@@ -631,7 +682,10 @@ class Component(_ComponentBase):
         """Clear the suffix value for this component data"""
         if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
-            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(
+                self.model()
+            ):
                 if suffix_or_name == name_:
                     suffix_.clear_value(self, expand=expand)
                     break
@@ -642,7 +696,10 @@ class Component(_ComponentBase):
         """Set the suffix value for this component data"""
         if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
-            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(
+                self.model()
+            ):
                 if suffix_or_name == name_:
                     suffix_.set_value(self, value, expand=expand)
                     break
@@ -653,7 +710,10 @@ class Component(_ComponentBase):
         """Get the suffix value for this component data"""
         if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
-            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(
+                self.model()
+            ):
                 if suffix_or_name == name_:
                     return suffix_.get(self, default)
         else:
@@ -681,16 +741,15 @@ class ActiveComponent(Component):
     @active.setter
     def active(self, value):
         """Set the active attribute to the given value"""
-        raise AttributeError(
-            "Assignment not allowed. Use the (de)activate methods." )
+        raise AttributeError("Assignment not allowed. Use the (de)activate methods.")
 
     def activate(self):
         """Set the active attribute to True"""
-        self._active=True
+        self._active = True
 
     def deactivate(self):
         """Set the active attribute to False"""
-        self._active=False
+        self._active = False
 
 
 class ComponentData(_ComponentBase):
@@ -710,9 +769,9 @@ class ComponentData(_ComponentBase):
     Private class attributes:
         _component      A weakref to the component that owns this data object
         _index          The index of this data object
-        """
+    """
 
-    __slots__ = ('_component', '_index', '__weakref__',)
+    __slots__ = ('_component', '_index', '__weakref__')
     __autoslot_mappers__ = {'_component': AutoSlots.weakref_mapper}
 
     # NOTE: This constructor is in-lined in the constructors for the following
@@ -742,8 +801,10 @@ class ComponentData(_ComponentBase):
             return None
         return _parent._ctype
 
-    @deprecated("Component.type() method has been replaced by the "
-                ".ctype property.", version='5.7')
+    @deprecated(
+        "Component.type() method has been replaced by the .ctype property.",
+        version='5.7',
+    )
     def type(self):
         """Return the class type for this component"""
         return self.ctype
@@ -755,7 +816,7 @@ class ComponentData(_ComponentBase):
         return self._component()
 
     def parent_block(self):
-        """Return the parent of the component that owns this data. """
+        """Return the parent of the component that owns this data."""
         # This is a re-implementation of parent_component(), duplicated
         # for effficiency to avoid the method call
         if self._component is None:
@@ -769,7 +830,7 @@ class ComponentData(_ComponentBase):
         return comp._parent()
 
     def model(self):
-        """Return the model of the component that owns this data. """
+        """Return the model of the component that owns this data."""
         ans = self.parent_block()
         if ans is None:
             return None
@@ -789,16 +850,19 @@ class ComponentData(_ComponentBase):
         to the parent component's index set.
         """
         parent = self.parent_component()
-        if ( parent is not None and
-             self._index is not NOTSET and
-             parent[self._index] is not self ):
+        if (
+            parent is not None
+            and self._index is not NOTSET
+            and parent[self._index] is not self
+        ):
             # This error message is a bit goofy, but we can't call self.name
             # here--it's an infinite loop!
             raise DeveloperError(
                 "The '_data' dictionary and '_index' attribute are out of "
                 "sync for indexed %s '%s': The %s entry in the '_data' "
                 "dictionary does not map back to this component data object."
-                % (parent.ctype.__name__, parent.name, self._index))
+                % (parent.ctype.__name__, parent.name, self._index)
+            )
         return self._index
 
     def __str__(self):
@@ -824,7 +888,9 @@ class ComponentData(_ComponentBase):
                 "is no longer a quadratic operation. Additionally, note that "
                 "use of this argument poses risks if the buffer contains "
                 "names relative to different Blocks in the model hierarchy or "
-                "a mixture of local and fully_qualified names.", version='TODO')
+                "a mixture of local and fully_qualified names.",
+                version='TODO',
+            )
             if id(self) in name_buffer:
                 # Return the name if it is in the buffer
                 return name_buffer[id(self)]
@@ -836,7 +902,8 @@ class ComponentData(_ComponentBase):
             # Component.getname() method
             #
             return super(ComponentData, self).getname(
-                fully_qualified, name_buffer, relative_to)
+                fully_qualified, name_buffer, relative_to
+            )
         elif c is not None:
             #
             # Get the name of the parent component
@@ -866,8 +933,10 @@ class ComponentData(_ComponentBase):
             #
             return base + index_repr(self.index())
         #
-        raise RuntimeError("Fatal error: cannot find the component data in "
-                           "the owning component's _data dictionary.")
+        raise RuntimeError(
+            "Fatal error: cannot find the component data in "
+            "the owning component's _data dictionary."
+        )
 
     def is_indexed(self):
         """Return true if this component is indexed"""
@@ -877,7 +946,10 @@ class ComponentData(_ComponentBase):
         """Set the suffix value for this component data"""
         if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
-            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(
+                self.model()
+            ):
                 if suffix_or_name == name_:
                     suffix_.clear_value(self, expand=expand)
                     break
@@ -888,7 +960,10 @@ class ComponentData(_ComponentBase):
         """Set the suffix value for this component data"""
         if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
-            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(
+                self.model()
+            ):
                 if suffix_or_name == name_:
                     suffix_.set_value(self, value, expand=expand)
                     break
@@ -899,7 +974,10 @@ class ComponentData(_ComponentBase):
         """Get the suffix value for this component data"""
         if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
-            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(
+                self.model()
+            ):
                 if suffix_or_name == name_:
                     return suffix_.get(self, default)
         else:
@@ -929,7 +1007,7 @@ class ActiveComponentData(ComponentData):
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ( '_active', )
+    __slots__ = ('_active',)
 
     def __init__(self, component):
         super(ActiveComponentData, self).__init__(component)
@@ -943,8 +1021,7 @@ class ActiveComponentData(ComponentData):
     @active.setter
     def active(self, value):
         """Set the active attribute to a specified value."""
-        raise AttributeError(
-            "Assignment not allowed. Use the (de)activate method" )
+        raise AttributeError("Assignment not allowed. Use the (de)activate method")
 
     def activate(self):
         """Set the active attribute to True"""

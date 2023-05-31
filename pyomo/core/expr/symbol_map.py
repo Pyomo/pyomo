@@ -141,12 +141,7 @@ class SymbolMap(object):
         #
         # Create a new symbol, performing an error check if it is a duplicate
         #
-        if labeler is None:
-            if self.default_labeler is not None:
-                labeler = self.default_labeler
-            else:
-                labeler = str
-        symbol = labeler(obj, *args)
+        symbol = (labeler or self.default_labeler or str)(obj, *args)
         if symbol in self.bySymbol:
             # The labeler can have side-effects, including registering
             # this symbol in the symbol map
@@ -155,7 +150,8 @@ class SymbolMap(object):
             raise RuntimeError(
                 "Duplicate symbol '%s' already associated with "
                 "component '%s' (conflicting component: '%s')"
-                % (symbol, self.bySymbol[symbol].name, obj.name) )
+                % (symbol, self.bySymbol[symbol].name, obj.name)
+            )
         self.bySymbol[symbol] = obj
         self.byObject[obj_id] = symbol
         return symbol
@@ -180,8 +176,9 @@ class SymbolMap(object):
                     % (
                         name,
                         "UNKNOWN" if old_object is None else old_object.name,
-                        obj.name
-                    ))
+                        obj.name,
+                    )
+                )
         else:
             #
             # Add the alias

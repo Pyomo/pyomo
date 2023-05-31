@@ -100,7 +100,6 @@ def _handle_AbsExpression(visitor, node, values):
 # that is compatible with the GAMS syntax.
 #
 class ToGamsVisitor(EXPR._ToStringVisitor):
-
     _expression_handlers = {
         EXPR.PowExpression: _handle_PowExpression,
         EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,
@@ -179,12 +178,12 @@ class ToGamsVisitor(EXPR._ToStringVisitor):
         return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
-        iter_ = iter(node.args)
-        values = []
-        if node.constant:
-            next(iter_)
-            values.append(ftoa(node.constant, True))
-        values.extend(map(self._monomial_to_string, iter_))
+        values = [
+            self._monomial_to_string(arg)
+            if arg.__class__ is EXPR.MonomialTermExpression
+            else ftoa(arg, True)
+            for arg in node.args
+        ]
         return node._to_string(values, False, self.smap)
 
 
@@ -601,7 +600,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # encountered will be added to the var_list due to the labeler
         # defined above.
         for con in model.component_data_objects(Constraint, active=True, sort=sort):
-
             if not con.has_lb() and not con.has_ub():
                 assert not con.equality
                 continue  # non-binding, so skip
@@ -625,20 +623,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write(
                     '%s.. %s =e= %s ;\n'
-                    % (constraint_names[-1], con_body_str, ftoa(con.upper))
+                    % (constraint_names[-1], con_body_str, ftoa(con.upper, False))
                 )
             else:
                 if con.has_lb():
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write(
                         '%s.. %s =l= %s ;\n'
-                        % (constraint_names[-1], ftoa(con.lower), con_body_str)
+                        % (constraint_names[-1], ftoa(con.lower, False), con_body_str)
                     )
                 if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write(
                         '%s.. %s =l= %s ;\n'
-                        % (constraint_names[-1], con_body_str, ftoa(con.upper))
+                        % (constraint_names[-1], con_body_str, ftoa(con.upper, False))
                     )
 
         obj = list(model.component_data_objects(Objective, active=True, sort=sort))
@@ -649,7 +647,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             )
         obj = obj[0]
         if linear:
-            if obj.expr.polynomial_degree() not in linear_degree:
+            if obj.polynomial_degree() not in linear_degree:
                 linear = False
         obj_expr_str, obj_discontinuous = expression_to_string(
             obj.expr, tc, smap=symbolMap, output_fixed_variables=output_fixed_variables

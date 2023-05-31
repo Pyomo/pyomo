@@ -14,7 +14,9 @@ __all__ = ['RangeSet']
 from .set import RangeSet
 
 from pyomo.common.deprecation import deprecation_warning
+
 deprecation_warning(
     'The pyomo.core.base.rangeset module is deprecated.  '
     'Import RangeSet objects from pyomo.core.base.set or pyomo.core.',
-    version='5.7')
+    version='5.7',
+)

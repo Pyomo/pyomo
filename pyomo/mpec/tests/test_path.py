@@ -33,7 +33,6 @@ solvers = pyomo.opt.check_available_solvers('path')
 
 
 class CommonTests:
-
     solve = True
     solver = 'path'
 

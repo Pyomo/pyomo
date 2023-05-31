@@ -74,16 +74,80 @@ gurobipy, gurobipy_available = attempt_import(
 )
 
 
+def _set_options(model_or_env, options):
+    # Set a parameters from the dictionary 'options' on the given gurobipy
+    # model or environment.
+    for key, option in options.items():
+        # When options come from the pyomo command, all
+        # values are string types, so we try to cast
+        # them to a numeric value in the event that
+        # setting the parameter fails.
+        try:
+            model_or_env.setParam(key, option)
+        except TypeError:
+            # we place the exception handling for
+            # checking the cast of option to a float in
+            # another function so that we can simply
+            # call raise here instead of except
+            # TypeError as e / raise e, because the
+            # latter does not preserve the Gurobi stack
+            # trace
+            if not _is_numeric(option):
+                raise
+            model_or_env.setParam(key, float(option))
+
+
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
+    """A direct interface to Gurobi using gurobipy.
 
-    _verified_license = None
-    _import_messages = ''
+    :param manage_env: Set to True if this solver instance should create and
+        manage its own Gurobi environment (defaults to False)
+    :type manage_env: bool
+    :param options: Dictionary of Gurobi parameters to set
+    :type options: dict
+
+    If ``manage_env`` is set to True, the ``GurobiDirect`` object creates a local
+    Gurobi environment and manage all associated Gurobi resources. Importantly,
+    this enables Gurobi licenses to be freed and connections terminated when the
+    solver context is exited::
+
+        with SolverFactory('gurobi', solver_io='python', manage_env=True) as opt:
+            opt.solve(model)
+
+        # All Gurobi models and environments are freed
+
+    If ``manage_env`` is set to False (the default), the ``GurobiDirect`` object
+    uses the global default Gurobi environment::
+
+        with SolverFactory('gurobi', solver_io='python') as opt:
+            opt.solve(model)
+
+        # Only models created by `opt` are freed, the global default
+        # environment remains active
+
+    ``manage_env=True`` is required when setting license or connection parameters
+    programmatically. The ``options`` argument is used to pass parameters to the
+    Gurobi environment. For example, to connect to a Gurobi Cluster Manager::
+
+        options = {
+            "CSManager": "<url>",
+            "CSAPIAccessID": "<access-id>",
+            "CSAPISecret": "<api-key>",
+        }
+        with SolverFactory(
+            'gurobi', solver_io='python', manage_env=True, options=options
+        ) as opt:
+            opt.solve(model)  # Model solved on compute server
+        # Compute server connection terminated
+    """
+
     _name = None
     _version = 0
     _version_major = 0
+    _default_env_started = False
 
-    def __init__(self, **kwds):
+    def __init__(self, manage_env=False, **kwds):
         if 'type' not in kwds:
             kwds['type'] = 'gurobi_direct'
         super(GurobiDirect, self).__init__(**kwds)
@@ -101,7 +165,7 @@ class GurobiDirect(DirectSolver):
         self._max_obj_degree = 2
         self._max_constraint_degree = 2
 
-        # Note: Undefined capabilites default to None
+        # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -122,7 +186,29 @@ class GurobiDirect(DirectSolver):
         # version of gurobi is supported (and stored as a class attribute)
         del self._version
 
+        self._manage_env = manage_env
+        self._env = None
+        self._env_options = None
+        self._solver_model = None
+
     def available(self, exception_flag=True):
+        """Returns True if the solver is available.
+
+        :param exception_flag: If True, raise an exception instead of returning
+            False if the solver is unavailable (defaults to False)
+        :type exception_flag: bool
+
+        In general, ``available()`` does not need to be called by the user, as
+        the check is run automatically when solving a model. However it is useful
+        for a simple retry loop when using a shared Gurobi license::
+
+            with SolverFactory('gurobi', solver_io='python') as opt:
+                while not available(exception_flag=False):
+                    time.sleep(1)
+                opt.solve(model)
+
+        """
+        # First check gurobipy is imported
         if not gurobipy_available:
             if exception_flag:
                 gurobipy.log_import_warning(logger=__name__)
@@ -130,28 +216,25 @@ class GurobiDirect(DirectSolver):
                     "No Python bindings available for %s solver plugin" % (type(self),)
                 )
             return False
-        if self._verified_license is None:
-            with capture_output(capture_fd=True) as OUT:
-                try:
-                    # verify that we can get a Gurobi license
-                    # Gurobipy writes out license file information when creating
-                    # the environment
-                    m = gurobipy.Model()
-                    m.dispose()
-                    GurobiDirect._verified_license = True
-                except Exception as e:
-                    GurobiDirect._import_messages += (
-                        "\nCould not create Model - gurobi message=%s\n" % (e,)
-                    )
-                    GurobiDirect._verified_license = False
-            if OUT.getvalue():
-                GurobiDirect._import_messages += "\n" + OUT.getvalue()
-        if exception_flag and not self._verified_license:
-            logger.warning(GurobiDirect._import_messages)
+
+        # Ensure environment is started to check for a valid license
+        with capture_output(capture_fd=True) as OUT:
+            try:
+                self._init_env()
+                return True
+            except gurobipy.GurobiError as e:
+                msg = "Could not create Model - gurobi message=%s\n" % (e,)
+        if OUT.getvalue():
+            msg += "\n" + OUT.getvalue()
+        # Didn't return, so environment start failed
+        if exception_flag:
+            logger.warning(msg)
             raise ApplicationError(
-                "Could not create a gurobipy Model for %s solver plugin" % (type(self),)
+                "Could not create Model for %s solver plugin - gurobi message=%s"
+                % (type(self), msg)
             )
-        return self._verified_license
+        else:
+            return False
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
@@ -166,38 +249,16 @@ class GurobiDirect(DirectSolver):
             self._solver_model.setParam('LogFile', self._log_file)
             print("Solver log file: " + self._log_file)
 
-        # Options accepted by gurobi (case insensitive):
-        # ['Cutoff', 'IterationLimit', 'NodeLimit', 'SolutionLimit', 'TimeLimit',
-        #  'FeasibilityTol', 'IntFeasTol', 'MarkowitzTol', 'MIPGap', 'MIPGapAbs',
-        #  'OptimalityTol', 'PSDTol', 'Method', 'PerturbValue', 'ObjScale', 'ScaleFlag',
-        #  'SimplexPricing', 'Quad', 'NormAdjust', 'BarIterLimit', 'BarConvTol',
-        #  'BarCorrectors', 'BarOrder', 'Crossover', 'CrossoverBasis', 'BranchDir',
-        #  'Heuristics', 'MinRelNodes', 'MIPFocus', 'NodefileStart', 'NodefileDir',
-        #  'NodeMethod', 'PumpPasses', 'RINS', 'SolutionNumber', 'SubMIPNodes', 'Symmetry',
-        #  'VarBranch', 'Cuts', 'CutPasses', 'CliqueCuts', 'CoverCuts', 'CutAggPasses',
-        #  'FlowCoverCuts', 'FlowPathCuts', 'GomoryPasses', 'GUBCoverCuts', 'ImpliedCuts',
-        #  'MIPSepCuts', 'MIRCuts', 'NetworkCuts', 'SubMIPCuts', 'ZeroHalfCuts', 'ModKCuts',
-        #  'Aggregate', 'AggFill', 'PreDual', 'DisplayInterval', 'IISMethod', 'InfUnbdInfo',
-        #  'LogFile', 'PreCrush', 'PreDepRow', 'PreMIQPMethod', 'PrePasses', 'Presolve',
-        #  'ResultFile', 'ImproveStartTime', 'ImproveStartGap', 'Threads', 'Dummy', 'OutputFlag']
-        for key, option in self.options.items():
-            # When options come from the pyomo command, all
-            # values are string types, so we try to cast
-            # them to a numeric value in the event that
-            # setting the parameter fails.
-            try:
-                self._solver_model.setParam(key, option)
-            except TypeError:
-                # we place the exception handling for
-                # checking the cast of option to a float in
-                # another function so that we can simply
-                # call raise here instead of except
-                # TypeError as e / raise e, because the
-                # latter does not preserve the Gurobi stack
-                # trace
-                if not _is_numeric(option):
-                    raise
-                self._solver_model.setParam(key, float(option))
+        # Only pass along changed parameters to the model
+        if self._env_options:
+            new_options = {
+                key: option
+                for key, option in self.options.items()
+                if key not in self._env_options or self._env_options[key] != option
+            }
+        else:
+            new_options = self.options
+        _set_options(self._solver_model, new_options)
 
         if self._version_major >= 5:
             for suffix in self._suffixes:
@@ -295,6 +356,101 @@ class GurobiDirect(DirectSolver):
 
         self._needs_updated = True
 
+    def close_global(self):
+        """Frees all Gurobi models used by this solver, and frees the global
+        default Gurobi environment.
+
+        The default environment is used by all ``GurobiDirect`` solvers started
+        with ``manage_env=False`` (the default). To guarantee that all Gurobi
+        resources are freed, all instantiated ``GurobiDirect`` solvers must also
+        be correctly closed.
+
+        The following example will free all Gurobi resources assuming the user did
+        not create any other models (e.g. via another ``GurobiDirect`` object with
+        ``manage_env=False``)::
+
+            opt = SolverFactory('gurobi', solver_io='python')
+            try:
+                opt.solve(model)
+            finally:
+                opt.close_global()
+            # All Gurobi models created by `opt` are freed and the default
+            # Gurobi environment is closed
+        """
+        self.close()
+        with capture_output(capture_fd=True):
+            gurobipy.disposeDefaultEnv()
+        GurobiDirect._default_env_started = False
+
+    def _init_env(self):
+        if self._manage_env:
+            # Ensure an environment is active for this instance
+            if self._env is None:
+                assert self._solver_model is None
+                env = gurobipy.Env(empty=True)
+                _set_options(env, self.options)
+                env.start()
+                # Successful start (no errors): store the environment
+                self._env = env
+                self._env_options = dict(self.options)
+        else:
+            # Ensure the (global) default env is started
+            if not GurobiDirect._default_env_started:
+                m = gurobipy.Model()
+                m.close()
+                GurobiDirect._default_env_started = True
+
+    def _create_model(self, model):
+        self._init_env()
+        if self._solver_model is not None:
+            self._solver_model.close()
+        if model.name is not None:
+            self._solver_model = gurobipy.Model(model.name, env=self._env)
+        else:
+            self._solver_model = gurobipy.Model(env=self._env)
+
+    def close(self):
+        """Frees local Gurobi resources used by this solver instance.
+
+        All Gurobi models created by the solver are freed. If the solver was
+        created with ``manage_env=True``, this method also closes the Gurobi
+        environment used by this solver instance. Calling ``.close()`` achieves
+        the same result as exiting the solver context (although using context
+        managers is preferred where possible)::
+
+            opt = SolverFactory('gurobi', solver_io='python', manage_env=True)
+            try:
+                opt.solve(model)
+            finally:
+                opt.close()
+            # Gurobi models and environments created by `opt` are freed
+
+        As with the context manager, if ``manage_env=False`` (the default) was
+        used, only the Gurobi models created by this solver are freed. The
+        default global Gurobi environment will still be active::
+
+            opt = SolverFactory('gurobi', solver_io='python')
+            try:
+                opt.solve(model)
+            finally:
+                opt.close()
+            # Gurobi models created by `opt` are freed; however the
+            # default/global Gurobi environment is still active
+        """
+
+        if self._solver_model is not None:
+            self._solver_model.close()
+            self._solver_model = None
+        if self._manage_env:
+            if self._env is not None:
+                self._env.close()
+                self._env = None
+                self._env_options = None
+
+    def __exit__(self, t, v, traceback):
+        super().__exit__(t, v, traceback)
+        self.close()
+
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
@@ -303,10 +459,7 @@ class GurobiDirect(DirectSolver):
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._solver_var_to_pyomo_var_map = ComponentMap()
         try:
-            if model.name is not None:
-                self._solver_model = gurobipy.Model(model.name)
-            else:
-                self._solver_model = gurobipy.Model()
+            self._create_model(model)
         except Exception:
             e = sys.exc_info()[1]
             msg = (
@@ -739,7 +892,7 @@ class GurobiDirect(DirectSolver):
         # be the case, both in LP and MIP contexts.
         if self._save_results:
             """
-            This code in this if statement is only needed for backwards compatability. It is more efficient to set
+            This code in this if statement is only needed for backwards compatibility. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
             if gprob.SolCount > 0:
@@ -815,7 +968,6 @@ class GurobiDirect(DirectSolver):
                             soln_constraints[name]["Slack"] = val
         elif self._load_solutions:
             if gprob.SolCount > 0:
-
                 self.load_vars()
 
                 if extract_reduced_costs:

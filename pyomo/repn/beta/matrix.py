@@ -62,7 +62,6 @@ def compile_block_linear_constraints(
     verbose=False,
     descend_into=True,
 ):
-
     if verbose:
         print("")
         print(
@@ -147,34 +146,28 @@ def compile_block_linear_constraints(
     nrows = 0
     SparseMat_pRows = [0]
     for block in all_blocks:
-
         if hasattr(block, '_repn'):
             del block._repn
 
         for constraint in block.component_objects(
             Constraint, active=True, sort=sortOrder, descend_into=False
         ):
-
             assert not isinstance(constraint, MatrixConstraint)
 
             if len(constraint) == 0:
-
                 empty_constraint_containers_to_remove.append((block, constraint))
 
             else:
-
                 singleton = isinstance(constraint, ScalarConstraint)
 
                 # Note that as we may be removing items from the _data
                 # dictionary, we need to make a copy of the items list
                 # before iterating:
                 for index, constraint_data in list(constraint.items()):
-
                     if (
                         constraint_data.body.__class__ in native_numeric_types
                         or constraint_data.body.polynomial_degree() <= 1
                     ):
-
                         # collect for removal
                         if singleton:
                             constraint_containers_to_remove.append((block, constraint))
@@ -673,7 +666,6 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
 
 @ModelComponentFactory.register("A set of constraint expressions in Ax=b form.")
 class MatrixConstraint(Mapping, IndexedConstraint):
-
     #
     # Bound types
     # (make sure the maximum value here
@@ -689,7 +681,6 @@ class MatrixConstraint(Mapping, IndexedConstraint):
     def __init__(
         self, nrows, ncols, nnz, prows, jcols, vals, ranges, range_types, varmap
     ):
-
         assert len(prows) == nrows + 1
         assert len(jcols) == nnz
         assert len(vals) == nnz
@@ -743,3 +734,21 @@ class MatrixConstraint(Mapping, IndexedConstraint):
 
     def __delitem__(self):
         raise NotImplementedError
+
+    #
+    # Pyomo components support an extended dict API
+    #
+    def keys(self, sort=None):
+        # The 0..n-1 indices are always ordered and sorted; we can
+        # ignore the `sort` argument
+        return super().keys()
+
+    def values(self, sort=None):
+        # The 0..n-1 indices are always ordered and sorted; we can
+        # ignore the `sort` argument
+        return super().values()
+
+    def items(self, sort=None):
+        # The 0..n-1 indices are always ordered and sorted; we can
+        # ignore the `sort` argument
+        return super().items()

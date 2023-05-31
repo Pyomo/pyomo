@@ -20,6 +20,7 @@ from pyomo.environ import (
     Var,
     Constraint,
     Param,
+    ExternalFunction,
     value,
     exp,
     NonNegativeReals,
@@ -28,6 +29,7 @@ from pyomo.environ import (
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 from pyomo.core.expr.calculus.derivatives import differentiate
+from pyomo.core.expr.sympy_tools import sympy_available
 
 
 all_diff_modes = [
@@ -35,6 +37,13 @@ all_diff_modes = [
     differentiate.Modes.reverse_symbolic,
     differentiate.Modes.reverse_numeric,
 ]
+
+
+def sum_sq(args, fixed, fgh):
+    f = sum(arg**2 for arg in args)
+    g = [2 * arg for arg in args]
+    h = None
+    return f, g, h
 
 
 class Test_calc_var(unittest.TestCase):
@@ -120,7 +129,7 @@ class Test_calc_var(unittest.TestCase):
             self.assertEqual(value(m.x), 3)
         with self.assertRaisesRegex(
             ValueError,
-            "Constraint 'tuple' is a Ranged Inequality " "with a variable upper bound.",
+            "Constraint 'tuple' is a Ranged Inequality with a variable upper bound.",
         ):
             calculate_variable_from_constraint(m.x, (15, 5 * m.x, m.x))
 
@@ -265,7 +274,7 @@ class Test_calc_var(unittest.TestCase):
             with self.assertRaises(TypeError):
                 calculate_variable_from_constraint(m.x, m.f, linesearch=False)
         self.assertIn(
-            'Encountered an error evaluating the expression ' 'at the initial guess',
+            'Encountered an error evaluating the expression at the initial guess',
             output.getvalue(),
         )
 
@@ -290,7 +299,7 @@ class Test_calc_var(unittest.TestCase):
                 # calculate_variable_from_constraint
                 calculate_variable_from_constraint(m.x, m.c, linesearch=False)
         self.assertIn(
-            "Newton's method encountered an error evaluating " "the expression.",
+            "Newton's method encountered an error evaluating the expression.",
             output.getvalue(),
         )
 
@@ -358,7 +367,7 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(m.x, m.c1)
         self.assertEqual(
             LOG.getvalue().strip(),
-            "Setting Var 'x' to a numeric value `10` outside the " "bounds (0, 1).",
+            "Setting Var 'x' to a numeric value `10` outside the bounds (0, 1).",
         )
         self.assertEqual(value(m.x), 10)
 
@@ -366,7 +375,7 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(m.x, m.c2)
         self.assertEqual(
             LOG.getvalue().strip(),
-            "Setting Var 'x' to a numeric value `2.0` outside the " "bounds (0, 1).",
+            "Setting Var 'x' to a numeric value `2.0` outside the bounds (0, 1).",
         )
         self.assertEqual(value(m.x), 2)
 
@@ -390,7 +399,7 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(m.x, m.c3)
         self.assertRegex(
             LOG.getvalue().strip(),
-            r"Setting Var 'x' to a value `[0-9\.]+` \(float\) not in " "domain Binary.",
+            r"Setting Var 'x' to a value `[0-9\.]+` \(float\) not in domain Binary.",
         )
         self.assertAlmostEqual(value(m.x), 3.5, 3)
 
@@ -406,3 +415,34 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.x, m.c)
 
         self.assertAlmostEqual(value(m.x), 0.214597, 5)
+
+    def test_external_function(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.sq = ExternalFunction(fgh=sum_sq)
+        m.c = Constraint(expr=m.sq(m.x - 3) == 0)
+
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            calculate_variable_from_constraint(m.x, m.c)
+        self.assertAlmostEqual(value(m.x), 3, 3)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Calculating symbolic derivative of expression failed. "
+            "Reverting to numeric differentiation\n",
+        )
+
+    @unittest.skipUnless(sympy_available, 'test expects that sympy is available')
+    def test_external_function_explicit_sympy(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.sq = ExternalFunction(fgh=sum_sq)
+        m.c = Constraint(expr=m.sq(m.x - 3) == 0)
+
+        with self.assertRaisesRegex(
+            TypeError,
+            r"Expressions containing external functions are not convertible "
+            r"to sympy expressions \(found 'f\(x0 - 3",
+        ):
+            calculate_variable_from_constraint(
+                m.x, m.c, diff_mode=differentiate.Modes.sympy
+            )

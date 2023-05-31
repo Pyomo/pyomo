@@ -171,7 +171,6 @@ or that there is a bug in the ODBC connector.
 
 @DataManagerFactory.register('pyodbc', "%s database interface" % 'pyodbc')
 class pyodbc_db_Table(db_Table):
-
     _drivers = {
         'mdb': ["Microsoft Access Driver (*.mdb)"],
         'xls': [

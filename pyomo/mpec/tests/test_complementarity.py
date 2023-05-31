@@ -37,7 +37,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.mpec import Complementarity, complements, ComplementarityList
 from pyomo.opt import ProblemFormat
 from pyomo.repn.plugins.nl_writer import FileDeterminism
-from pyomo.repn.tests.ampl.nl_diff import load_and_compare_nl_baseline
+from pyomo.repn.tests.nl_diff import load_and_compare_nl_baseline
 
 currdir = this_file_dir()
 
@@ -407,12 +407,10 @@ class CCTests(object):
 
 
 class CCTests_none(CCTests, unittest.TestCase):
-
     xfrm = None
 
 
 class CCTests_nl(CCTests, unittest.TestCase):
-
     xfrm = 'mpec.nl'
 
     def _print(self, model):
@@ -420,17 +418,14 @@ class CCTests_nl(CCTests, unittest.TestCase):
 
 
 class CCTests_standard_form(CCTests, unittest.TestCase):
-
     xfrm = 'mpec.standard_form'
 
 
 class CCTests_simple_nonlinear(CCTests, unittest.TestCase):
-
     xfrm = 'mpec.simple_nonlinear'
 
 
 class CCTests_simple_disjunction(CCTests, unittest.TestCase):
-
     xfrm = 'mpec.simple_disjunction'
 
 

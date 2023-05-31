@@ -32,7 +32,6 @@ class BaronTest(unittest.TestCase):
     def test_log10(self):
         # Tests the special transformation for log10
         with SolverFactory("baron") as opt:
-
             m = ConcreteModel()
             m.x = Var()
             m.c = Constraint(expr=log10(m.x) >= 2)
@@ -47,7 +46,6 @@ class BaronTest(unittest.TestCase):
     def test_abs(self):
         # Tests the special transformation for abs
         with SolverFactory("baron") as opt:
-
             m = ConcreteModel()
             m.x = Var(bounds=(-100, 1))
             m.c = Constraint(expr=abs(m.x) >= 2)
@@ -62,7 +60,6 @@ class BaronTest(unittest.TestCase):
     def test_pow(self):
         # Tests the special transformation for x ^ y (both variables)
         with SolverFactory("baron") as opt:
-
             m = ConcreteModel()
             m.x = Var(bounds=(10, 100))
             m.y = Var(bounds=(1, 10))

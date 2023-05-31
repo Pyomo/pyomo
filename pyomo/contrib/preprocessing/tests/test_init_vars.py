@@ -1,7 +1,6 @@
 """Tests initialization of uninitialized variables."""
 import pyomo.common.unittest as unittest
-from pyomo.environ import (ConcreteModel, TransformationFactory,
-                           value, Var)
+from pyomo.environ import ConcreteModel, TransformationFactory, value, Var
 
 
 class TestInitVars(unittest.TestCase):
@@ -30,8 +29,7 @@ class TestInitVars(unittest.TestCase):
         self.assertEqual(value(m.v5), 2)
         self.assertEqual(value(m.v6), 3)
 
-        TransformationFactory('contrib.init_vars_midpoint').apply_to(
-            m, overwrite=True)
+        TransformationFactory('contrib.init_vars_midpoint').apply_to(m, overwrite=True)
         self.assertEqual(value(m.v1), 0)
         self.assertEqual(value(m.v2), 2)
         self.assertEqual(value(m.v3), 2)
@@ -62,8 +60,7 @@ class TestInitVars(unittest.TestCase):
         self.assertEqual(value(m.v5), 2)
         self.assertEqual(value(m.v6), 3)
 
-        TransformationFactory('contrib.init_vars_zero').apply_to(
-            m, overwrite=True)
+        TransformationFactory('contrib.init_vars_zero').apply_to(m, overwrite=True)
         self.assertEqual(value(m.v1), 0)
         self.assertEqual(value(m.v2), 2)
         self.assertEqual(value(m.v3), -2)

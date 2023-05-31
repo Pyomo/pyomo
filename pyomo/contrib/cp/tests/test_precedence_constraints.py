@@ -12,9 +12,11 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
-    BeforeExpression, AtExpression
+    BeforeExpression,
+    AtExpression,
 )
 from pyomo.environ import ConcreteModel, LogicalConstraint
+
 
 class TestPrecedenceRelationships(unittest.TestCase):
     def get_model(self):
@@ -64,8 +66,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
 
     def test_start_after_end(self):
         m = self.get_model()
-        m.c = LogicalConstraint(expr=m.a.start_time.after(m.b.end_time,
-                                                          delay=2))
+        m.c = LogicalConstraint(expr=m.a.start_time.after(m.b.end_time, delay=2))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
         self.assertEqual(len(m.c.expr.args), 3)
@@ -103,8 +104,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
 
     def test_end_before_start(self):
         m = self.get_model()
-        m.c = LogicalConstraint(expr=m.a.end_time.before(m.b.start_time,
-                                                         delay=3))
+        m.c = LogicalConstraint(expr=m.a.end_time.before(m.b.start_time, delay=3))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
         self.assertEqual(len(m.c.expr.args), 3)
@@ -116,8 +116,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
 
     def test_end_at_start(self):
         m = self.get_model()
-        m.c = LogicalConstraint(expr=m.a.end_time.at(m.b.start_time,
-                                                     delay=4))
+        m.c = LogicalConstraint(expr=m.a.end_time.at(m.b.start_time, delay=4))
 
         self.assertIsInstance(m.c.expr, AtExpression)
         self.assertEqual(len(m.c.expr.args), 3)
@@ -129,8 +128,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
 
     def test_end_after_start(self):
         m = self.get_model()
-        m.c = LogicalConstraint(expr=m.a.end_time.after(m.b.start_time,
-                                                        delay=-2))
+        m.c = LogicalConstraint(expr=m.a.end_time.after(m.b.start_time, delay=-2))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
         self.assertEqual(len(m.c.expr.args), 3)
@@ -142,8 +140,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
 
     def test_end_before_end(self):
         m = self.get_model()
-        m.c = LogicalConstraint(expr=m.a.end_time.before(m.b.end_time,
-                                                         delay=-5))
+        m.c = LogicalConstraint(expr=m.a.end_time.before(m.b.end_time, delay=-5))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
         self.assertEqual(len(m.c.expr.args), 3)

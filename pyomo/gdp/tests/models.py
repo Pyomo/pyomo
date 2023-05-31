@@ -993,7 +993,7 @@ def instantiate_hierarchical_nested_model(m):
     )
 
 
-def makeHierarchicalNested_DeclOrderMatchesInstantationOrder():
+def makeHierarchicalNested_DeclOrderMatchesInstantiationOrder():
     """Here, we put the disjunctive components on Blocks, but we do it in the
     same order that we declared the blocks, that is, on each block, decl order
     matches instantiation order."""
@@ -1007,7 +1007,7 @@ def makeHierarchicalNested_DeclOrderMatchesInstantationOrder():
     return m
 
 
-def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
+def makeHierarchicalNested_DeclOrderOppositeInstantiationOrder():
     """Here, we declare the Blocks in the opposite order. This means that
     decl order will be *opposite* instantiation order, which means that we
     can break our targets preprocessing without even using targets if we

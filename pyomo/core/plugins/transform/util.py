@@ -79,11 +79,10 @@ def collectAbstractComponents(model):
 
     # Iterate over all model components
     for comp in cp._ctypes:
-
         # Collect all Constraint objects
         if issubclass(comp, Constraint):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this constraint's attributes
                 data = {}
 
@@ -99,7 +98,7 @@ def collectAbstractComponents(model):
         # Collect all Objective objects
         if issubclass(comp, Objective):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this objective's attributes
                 data = {}
 
@@ -115,7 +114,7 @@ def collectAbstractComponents(model):
         # Collect all Var objects
         if issubclass(comp, Var):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this variable's attributes
                 data = {}
 
@@ -134,7 +133,7 @@ def collectAbstractComponents(model):
         # Collect all Set objects
         if issubclass(comp, Set):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this variable's attributes
                 data = {}
 
@@ -150,7 +149,7 @@ def collectAbstractComponents(model):
         # Collect all Param objects
         if issubclass(comp, Param):
             comps = cp.component_map(comp, active=True)
-            for (name, obj) in [(name, comps[name]) for name in comps]:
+            for name, obj in [(name, comps[name]) for name in comps]:
                 # Query this variable's attributes
                 data = {}
 
@@ -173,6 +172,7 @@ def collectAbstractComponents(model):
 
     return master
 
+
 def _getAbstractIndices(comp):
     """
     Returns the index or index set of this component
@@ -184,26 +184,30 @@ def _getAbstractIndices(comp):
         # Unindexed constraint
         return {None: None}
 
+
 def _getAbstractRule(comp):
     """
     Returns the rule defining this component
     """
     return comp.rule
 
+
 def _getAbstractDomain(comp):
     """
     Returns the domain of this component
     """
-    return getattr(comp,'domain', None)
+    return getattr(comp, 'domain', None)
+
 
 def _getAbstractBounds(comp):
     """
     Returns the bounds of this component
     """
-    if getattr(comp,'bounds',None) is None:
+    if getattr(comp, 'bounds', None) is None:
         return (None, None)
     else:
         return comp.bounds
+
 
 def _getAbstractInitialize(comp):
     """
@@ -215,6 +219,7 @@ def _getAbstractInitialize(comp):
     else:
         return None
 
+
 try:
     from functools import partial as _partial
 except ImportError:
@@ -225,6 +230,7 @@ except ImportError:
         partially applied
 
         """
+
         def closure(*cargs, **ckwds):
             # Collect positional arguments
             tmp_args = list(args)
@@ -235,7 +241,9 @@ except ImportError:
 
             # Call the original function
             return f(*tmp_args, **tmp_kwds)
+
         return closure
+
 
 def partial(*args, **kwargs):
     """
@@ -250,6 +258,7 @@ def partial(*args, **kwargs):
 
     func.__deepcopy__ = _partial_deepcopy
     return func
+
 
 def process_canonical_repn(expr):
     """

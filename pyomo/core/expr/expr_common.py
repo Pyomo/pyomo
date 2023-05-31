@@ -14,7 +14,7 @@ import enum
 from pyomo.common.backports import nullcontext
 from pyomo.common.deprecation import deprecated
 
-TO_STRING_VERBOSE=False
+TO_STRING_VERBOSE = False
 
 _add = 1
 _sub = 2
@@ -26,16 +26,16 @@ _abs = 7
 _inplace = 10
 _unary = _neg
 
-_radd =         -_add
-_iadd = _inplace+_add
-_rsub =         -_sub
-_isub = _inplace+_sub
-_rmul =         -_mul
-_imul = _inplace+_mul
-_rdiv =         -_div
-_idiv = _inplace+_div
-_rpow =         -_pow
-_ipow = _inplace+_pow
+_radd = -_add
+_iadd = _inplace + _add
+_rsub = -_sub
+_isub = _inplace + _sub
+_rmul = -_mul
+_imul = _inplace + _mul
+_rdiv = -_div
+_idiv = _inplace + _div
+_rpow = -_pow
+_ipow = _inplace + _pow
 
 _eq = 0
 _le = 1
@@ -48,6 +48,7 @@ _inv = 2
 _equiv = 3
 _xor = 4
 _impl = 5
+
 
 class OperatorAssociativity(enum.IntEnum):
     """Enum for indicating the associativity of an operator.
@@ -71,19 +72,23 @@ class ExpressionType(enum.Enum):
     LOGICAL = 2
 
 
-@deprecated("""The clone counter has been removed and will always return 0.
+@deprecated(
+    """The clone counter has been removed and will always return 0.
 
 Beginning with Pyomo5 expressions, expression cloning (detangling) no
 longer occurs automatically within expression generation.  As a result,
 the 'clone counter' has lost its utility and is no longer supported.
-This context manager will always report 0.""", version='6.4.3')
+This context manager will always report 0.""",
+    version='6.4.3',
+)
 class clone_counter(nullcontext):
-    """ Context manager for counting cloning events.
+    """Context manager for counting cloning events.
 
     This context manager counts the number of times that the
     :func:`clone_expression <pyomo.core.expr.current.clone_expression>`
     function is executed.
     """
+
     _count = 0
 
     def __init__(self):
@@ -91,6 +96,5 @@ class clone_counter(nullcontext):
 
     @property
     def count(self):
-        """A property that returns the clone count value.
-        """
+        """A property that returns the clone count value."""
         return clone_counter._count

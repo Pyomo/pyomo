@@ -22,7 +22,9 @@ logger = logging.getLogger('pyomo.core')
 
 from pyomo.common.errors import PyomoException, DeveloperError
 from pyomo.common.deprecation import (
-    deprecation_warning, RenamedClass, relocated_module_attribute,
+    deprecation_warning,
+    RenamedClass,
+    relocated_module_attribute,
 )
 from .numvalue import (
     native_types,
@@ -33,39 +35,48 @@ from .numvalue import (
     is_potentially_variable,
 )
 from .base import ExpressionBase
-from .boolean_value import (
-    BooleanValue,
-    BooleanConstant,
-)
-from .expr_common import (
-    _and, _or, _equiv, _inv, _xor, _impl, ExpressionType
-)
+from .boolean_value import BooleanValue, BooleanConstant
+from .expr_common import _and, _or, _equiv, _inv, _xor, _impl, ExpressionType
 
 import operator
 
 relocated_module_attribute(
     'EqualityExpression',
     'pyomo.core.expr.relational_expr.EqualityExpression',
-    version='6.4.3', f_globals=globals())
+    version='6.4.3',
+    f_globals=globals(),
+)
 relocated_module_attribute(
     'InequalityExpression',
     'pyomo.core.expr.relational_expr.InequalityExpression',
-    version='6.4.3', f_globals=globals())
+    version='6.4.3',
+    f_globals=globals(),
+)
 relocated_module_attribute(
     'RangedExpression',
     'pyomo.core.expr.relational_expr.RangedExpression',
-    version='6.4.3', f_globals=globals())
+    version='6.4.3',
+    f_globals=globals(),
+)
 relocated_module_attribute(
     'inequality',
     'pyomo.core.expr.relational_expr.inequality',
-    version='6.4.3', f_globals=globals())
+    version='6.4.3',
+    f_globals=globals(),
+)
 
 
 def _generate_logical_proposition(etype, lhs, rhs):
-    if lhs.__class__ in native_types and lhs.__class__ not in native_logical_types:
-        raise TypeError("Cannot create Logical expression with lhs of type '%s'" % lhs.__class__)
-    if rhs.__class__ in native_types and rhs.__class__ not in native_logical_types and rhs is not None:
-        raise TypeError("Cannot create Logical expression with rhs of type '%s'" % rhs.__class__)
+    if (
+        lhs.__class__ in native_types and lhs.__class__ not in native_logical_types
+    ) and not isinstance(lhs, BooleanValue):
+        return NotImplemented
+    if (
+        (rhs.__class__ in native_types and rhs.__class__ not in native_logical_types)
+        and not isinstance(rhs, BooleanValue)
+        and not (rhs is None and etype == _inv)
+    ):
+        return NotImplemented
 
     if etype == _equiv:
         return EquivalenceExpression((lhs, rhs))
@@ -81,7 +92,9 @@ def _generate_logical_proposition(etype, lhs, rhs):
     elif etype == _or:
         return lor(lhs, rhs)
     else:
-        raise ValueError("Unknown logical proposition type '%s'" % etype)  # pragma: no cover
+        raise ValueError(
+            "Unknown logical proposition type '%s'" % etype
+        )  # pragma: no cover
 
 
 class BooleanExpression(ExpressionBase, BooleanValue):
@@ -112,7 +125,7 @@ class BooleanExpression(ExpressionBase, BooleanValue):
         Returns: Either a list or tuple (depending on the node storage
             model) containing only the child nodes of this node
         """
-        return self._args_[:self.nargs()]
+        return self._args_[: self.nargs()]
 
 
 class BooleanExpressionBase(metaclass=RenamedClass):
@@ -199,7 +212,7 @@ def exactly(n, *args):
     Usage: exactly(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = ExactlyExpression([n, ] + list(_flattened(args)))
+    result = ExactlyExpression([n] + list(_flattened(args)))
     return result
 
 
@@ -211,7 +224,7 @@ def atmost(n, *args):
     Usage: atmost(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtMostExpression([n, ] + list(_flattened(args)))
+    result = AtMostExpression([n] + list(_flattened(args)))
     return result
 
 
@@ -223,7 +236,7 @@ def atleast(n, *args):
     Usage: atleast(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtLeastExpression([n, ] + list(_flattened(args)))
+    result = AtLeastExpression([n] + list(_flattened(args)))
     return result
 
 
@@ -231,6 +244,7 @@ class UnaryBooleanExpression(BooleanExpression):
     """
     Abstract class for single-argument logical expressions.
     """
+
     def nargs(self):
         """
         Returns number of arguments in expression
@@ -242,6 +256,7 @@ class NotExpression(UnaryBooleanExpression):
     """
     This is the node for a NotExpression, this node should have exactly one child
     """
+
     PRECEDENCE = 2
 
     def getname(self, *arg, **kwd):
@@ -258,6 +273,7 @@ class BinaryBooleanExpression(BooleanExpression):
     """
     Abstract class for binary logical expressions.
     """
+
     def nargs(self):
         """
         Return the number of argument the expression has
@@ -270,6 +286,7 @@ class EquivalenceExpression(BinaryBooleanExpression):
     Logical equivalence statement: Y_1 iff Y_2.
 
     """
+
     __slots__ = ()
 
     PRECEDENCE = 6
@@ -288,9 +305,10 @@ class XorExpression(BinaryBooleanExpression):
     """
     Logical Exclusive OR statement: Y_1 ⊻ Y_2
     """
+
     __slots__ = ()
 
-    PRECEDENCE = 5
+    PRECEDENCE = 4
 
     def getname(self, *arg, **kwd):
         return 'xor'
@@ -306,6 +324,7 @@ class ImplicationExpression(BinaryBooleanExpression):
     """
     Logical Implication statement: Y_1 --> Y_2.
     """
+
     __slots__ = ()
 
     PRECEDENCE = 6
@@ -326,6 +345,7 @@ class NaryBooleanExpression(BooleanExpression):
 
     This class should never be initialized.
     """
+
     __slots__ = ('_nargs',)
 
     def __init__(self, args):
@@ -367,9 +387,10 @@ class AndExpression(NaryBooleanExpression):
     """
     This is the node for AndExpression.
     """
+
     __slots__ = ()
 
-    PRECEDENCE = 4
+    PRECEDENCE = 3
 
     def getname(self, *arg, **kwd):
         return 'and'
@@ -393,9 +414,10 @@ class OrExpression(NaryBooleanExpression):
     """
     This is the node for OrExpression.
     """
+
     __slots__ = ()
 
-    PRECEDENCE = 4
+    PRECEDENCE = 5
 
     def getname(self, *arg, **kwd):
         return 'or'
@@ -425,6 +447,7 @@ class ExactlyExpression(NaryBooleanExpression):
     Usage: exactly(1, True, False, False) --> True
 
     """
+
     __slots__ = ()
 
     PRECEDENCE = 9
@@ -449,6 +472,7 @@ class AtMostExpression(NaryBooleanExpression):
     Usage: atmost(1, True, False, False) --> True
 
     """
+
     __slots__ = ()
 
     PRECEDENCE = 9
@@ -473,6 +497,7 @@ class AtLeastExpression(NaryBooleanExpression):
     Usage: atleast(1, True, False, False) --> True
 
     """
+
     __slots__ = ()
 
     PRECEDENCE = 9

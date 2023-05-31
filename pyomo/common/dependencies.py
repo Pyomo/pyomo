@@ -591,7 +591,7 @@ def _perform_import(
 def declare_deferred_modules_as_importable(globals_dict):
     """Make all DeferredImportModules in ``globals_dict`` importable
 
-    This function will go throught the specified ``globals_dict``
+    This function will go throughout the specified ``globals_dict``
     dictionary and add any instances of :py:class:`DeferredImportModule`
     that it finds (and any of their deferred submodules) to
     ``sys.modules`` so that the modules can be imported through the
@@ -693,7 +693,7 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
-    numeric_types.RegisterBooleanType(np.bool_)
+    numeric_types.RegisterLogicalType(np.bool_)
     for t in (
         np.int_,
         np.intc,
@@ -708,10 +708,16 @@ def _finalize_numpy(np, available):
         np.uint64,
     ):
         numeric_types.RegisterIntegerType(t)
-        numeric_types.RegisterBooleanType(t)
-    for t in (np.float_, np.float16, np.float32, np.float64, np.ndarray):
+        # We have deprecated RegisterBooleanType, so we will mock up the
+        # registration here (to bypass the deprecation warning) until we
+        # finally remove all support for it
+        numeric_types._native_boolean_types.add(t)
+    for t in (np.float_, np.float16, np.float32, np.float64):
         numeric_types.RegisterNumericType(t)
-        numeric_types.RegisterBooleanType(t)
+        # We have deprecated RegisterBooleanType, so we will mock up the
+        # registration here (to bypass the deprecation warning) until we
+        # finally remove all support for it
+        numeric_types._native_boolean_types.add(t)
 
 
 dill, dill_available = attempt_import('dill')

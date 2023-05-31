@@ -17,6 +17,7 @@ import os
 import sys
 from os.path import abspath, dirname, normpath, join
 from pyomo.common.fileutils import import_file
+from pyomo.repn.tests.lp_diff import load_and_compare_lp_baseline
 
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
@@ -26,7 +27,6 @@ try:
 except:
     import types as new
 
-from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
@@ -176,7 +176,6 @@ class CommonTests:
 
 
 class Reformulate(unittest.TestCase, CommonTests):
-
     solve = False
 
     def tearDown(self):
@@ -192,11 +191,11 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem + "_" + solver + '.lp')
 
     def check(self, problem, solver):
-        _prob, _solv = join(currdir, self.problem + '_result.lp'), self.referenceFile(
-            problem, solver
-        )
-        self.assertTrue(
-            cmp(_prob, _solv), msg="Files %s and %s differ" % (_prob, _solv)
+        self.assertEqual(
+            *load_and_compare_lp_baseline(
+                self.referenceFile(problem, solver),
+                join(currdir, self.problem + '_result.lp'),
+            )
         )
         if os.path.exists(join(currdir, self.problem + '_result.lp')):
             os.remove(join(currdir, self.problem + '_result.lp'))

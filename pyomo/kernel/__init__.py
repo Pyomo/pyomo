@@ -277,6 +277,7 @@ def _block_data_objects(self, **kwds):
 block.block_data_objects = _block_data_objects
 del _block_data_objects
 
+
 # Note sure where this gets used or why we need it
 def _valid_problem_types(self):
     import pyomo.opt

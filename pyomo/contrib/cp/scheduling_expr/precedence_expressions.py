@@ -11,6 +11,7 @@
 
 from pyomo.core.expr.logical_expr import BooleanExpression
 
+
 class PrecedenceExpression(BooleanExpression):
     def nargs(self):
         return 3
@@ -40,6 +41,7 @@ class BeforeExpression(PrecedenceExpression):
         delay: A (possibly negative) integer value representing the number of
                time periods delay in the precedence relationship
     """
+
     def _to_string(self, values, verbose, smap):
         return self._to_string_impl(values, "<=")
 
@@ -54,5 +56,6 @@ class AtExpression(PrecedenceExpression):
         delay: A (possibly negative) integer value representing the number of
                time periods delay in the precedence relationship
     """
+
     def _to_string(self, values, verbose, smap):
         return self._to_string_impl(values, "==")

@@ -28,6 +28,7 @@ import pyomo.opt.base.results
 
 logger = logging.getLogger('pyomo.opt')
 
+
 # The version string is first searched for trunk/Trunk, and if
 # found a tuple of infinities is returned. Otherwise, the first
 # match of number[.number] where [.number] can repeat 1-3 times
@@ -181,6 +182,7 @@ class SolverFactoryClass(Factory):
 
 
 SolverFactory = SolverFactoryClass('solver type')
+
 
 #
 # TODO: It is impossible to load CBC with NL file-io using this function,
@@ -589,7 +591,6 @@ class OptSolver(object):
             self._options_string_to_dict(kwds.pop('options_string', ''))
         )
         try:
-
             # we're good to go.
             initial_time = time.time()
 
@@ -684,7 +685,6 @@ class OptSolver(object):
         return result
 
     def _presolve(self, *args, **kwds):
-
         self._log_file = kwds.pop("logfile", None)
         self._soln_file = kwds.pop("solnfile", None)
         self._select_index = kwds.pop("select", 0)

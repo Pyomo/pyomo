@@ -87,6 +87,7 @@ t_LPAREN = r"\("
 t_RPAREN = r"\)"
 t_ASTERISK = r"\*"
 
+
 #
 # Notes on PLY tokenization
 #   - token functions (beginning with "t_") are prioritized in the order
@@ -179,6 +180,7 @@ def t_QUOTEDSTRING(t):
 
 
 # t_NONWORD   = r"[^\.A-Za-z0-9,;:=<>\*\(\)\#{}\[\] \n\t\r]+"
+
 
 # Error handling rule
 def t_error(t):
@@ -509,11 +511,11 @@ dat_lexer = None
 dat_yaccer = None
 dat_yaccer_tabfile = None
 
+
 #
 # The function that performs the parsing
 #
 def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
-
     global dat_lexer
     global dat_yaccer
     global dat_yaccer_tabfile

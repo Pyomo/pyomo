@@ -12,15 +12,32 @@
 from pyomo.common.errors import MouseTrap
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
-    LogicalToDisjunctive)
+    LogicalToDisjunctive,
+)
 from pyomo.contrib.cp.transform.logical_to_disjunctive_walker import (
-    LogicalToDisjunctiveVisitor
+    LogicalToDisjunctiveVisitor,
 )
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import (
-    atmost, atleast, exactly, Block, BooleanVar, Binary, ConcreteModel,
-    Expression, Integers, land, lnot, lor, LogicalConstraint, Param, value,
-    Var, TransformationFactory)
+    atmost,
+    atleast,
+    exactly,
+    Block,
+    BooleanVar,
+    Binary,
+    ConcreteModel,
+    Expression,
+    Integers,
+    land,
+    lnot,
+    lor,
+    LogicalConstraint,
+    Param,
+    value,
+    Var,
+    TransformationFactory,
+)
+
 
 class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
     def make_model(self):
@@ -50,20 +67,17 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         self.assertEqual(len(m.z), 4)
         # !z4 v a v b v c
         assertExpressionsEqual(
-            self, m.cons[1].expr, 1 - m.z[4] + m.z[1] + m.z[2] + m.z[3] >= 1)
+            self, m.cons[1].expr, 1 - m.z[4] + m.z[1] + m.z[2] + m.z[3] >= 1
+        )
         # z4 v !a
-        assertExpressionsEqual(
-            self, m.cons[2].expr, m.z[4] + (1 - m.z[1]) >= 1)
+        assertExpressionsEqual(self, m.cons[2].expr, m.z[4] + (1 - m.z[1]) >= 1)
         # z4 v !b
-        assertExpressionsEqual(
-            self, m.cons[3].expr, m.z[4] + (1 - m.z[2]) >= 1)
+        assertExpressionsEqual(self, m.cons[3].expr, m.z[4] + (1 - m.z[2]) >= 1)
         # z4 v !c
-        assertExpressionsEqual(
-            self, m.cons[4].expr, m.z[4] + (1 - m.z[3]) >= 1)
+        assertExpressionsEqual(self, m.cons[4].expr, m.z[4] + (1 - m.z[3]) >= 1)
 
         # z4 is constrained to be 'True'
-        assertExpressionsEqual(
-            self, m.cons[5].expr, m.z[4] >= 1)
+        assertExpressionsEqual(self, m.cons[5].expr, m.z[4] >= 1)
 
     def test_logical_and(self):
         m = self.make_model()
@@ -81,14 +95,10 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
 
         self.assertEqual(len(m.cons), 4)
         self.assertEqual(len(m.z), 4)
-        assertExpressionsEqual(
-            self, m.cons[1].expr, m.z[4] <= m.z[1])
-        assertExpressionsEqual(
-            self, m.cons[2].expr, m.z[4] <= m.z[2])
-        assertExpressionsEqual(
-            self, m.cons[3].expr, m.z[4] <= m.z[3])
-        assertExpressionsEqual(
-            self, m.cons[4].expr, m.z[4] >= 1)
+        assertExpressionsEqual(self, m.cons[1].expr, m.z[4] <= m.z[1])
+        assertExpressionsEqual(self, m.cons[2].expr, m.z[4] <= m.z[2])
+        assertExpressionsEqual(self, m.cons[3].expr, m.z[4] <= m.z[3])
+        assertExpressionsEqual(self, m.cons[4].expr, m.z[4] >= 1)
 
     def test_logical_not(self):
         m = self.make_model()
@@ -102,10 +112,8 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         self.assertIs(m.a.get_associated_binary(), m.z[1])
         self.assertEqual(len(m.cons), 2)
         self.assertEqual(len(m.z), 2)
-        assertExpressionsEqual(
-            self, m.cons[1].expr, m.z[2] == 1 - m.z[1])
-        assertExpressionsEqual(
-            self, m.cons[2].expr, m.z[2] >= 1)
+        assertExpressionsEqual(self, m.cons[1].expr, m.z[2] == 1 - m.z[1])
+        assertExpressionsEqual(self, m.cons[2].expr, m.z[2] >= 1)
 
     def test_implication(self):
         m = self.make_model()
@@ -126,11 +134,11 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         assertExpressionsEqual(self, m.cons[2].expr, m.z[4] <= m.z[3])
         # z5 = a -> z4
         # which means z5 = !a v z4
-        assertExpressionsEqual(self, m.cons[3].expr,
-                               (1 - m.z[5]) + (1 - m.z[1]) + m.z[4] >= 1)
+        assertExpressionsEqual(
+            self, m.cons[3].expr, (1 - m.z[5]) + (1 - m.z[1]) + m.z[4] >= 1
+        )
         # z5 >= 1 - z1
-        assertExpressionsEqual(self, m.cons[4].expr,
-                               m.z[5] + (1 - (1 - m.z[1])) >= 1)
+        assertExpressionsEqual(self, m.cons[4].expr, m.z[5] + (1 - (1 - m.z[1])) >= 1)
         # z5 >= z4
         assertExpressionsEqual(self, m.cons[5].expr, m.z[5] + (1 - m.z[4]) >= 1)
 
@@ -152,23 +160,19 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         self.assertEqual(len(m.cons), 9)
 
         assertExpressionsEqual(
-            self, m.cons[1].expr, (1 - m.z[3]) + (1 - m.z[1]) + m.z[2] >= 1)
-        assertExpressionsEqual(
-            self, m.cons[2].expr, 1 - (1 - m.z[1]) + m.z[3] >= 1)
-        assertExpressionsEqual(
-            self, m.cons[3].expr, m.z[3] + (1 - m.z[2]) >= 1)
+            self, m.cons[1].expr, (1 - m.z[3]) + (1 - m.z[1]) + m.z[2] >= 1
+        )
+        assertExpressionsEqual(self, m.cons[2].expr, 1 - (1 - m.z[1]) + m.z[3] >= 1)
+        assertExpressionsEqual(self, m.cons[3].expr, m.z[3] + (1 - m.z[2]) >= 1)
 
         assertExpressionsEqual(
-            self, m.cons[4].expr, (1 - m.z[4]) + (1 - m.z[2]) + m.z[1] >= 1)
-        assertExpressionsEqual(
-            self, m.cons[5].expr, m.z[4] + (1 - m.z[1]) >= 1)
-        assertExpressionsEqual(
-            self, m.cons[6].expr, 1 - (1 - m.z[2]) + m.z[4] >= 1)
+            self, m.cons[4].expr, (1 - m.z[4]) + (1 - m.z[2]) + m.z[1] >= 1
+        )
+        assertExpressionsEqual(self, m.cons[5].expr, m.z[4] + (1 - m.z[1]) >= 1)
+        assertExpressionsEqual(self, m.cons[6].expr, 1 - (1 - m.z[2]) + m.z[4] >= 1)
 
-        assertExpressionsEqual(
-            self, m.cons[7].expr, m.z[5] <= m.z[3])
-        assertExpressionsEqual(
-            self, m.cons[8].expr, m.z[5] <= m.z[4])
+        assertExpressionsEqual(self, m.cons[7].expr, m.z[5] <= m.z[3])
+        assertExpressionsEqual(self, m.cons[8].expr, m.z[5] <= m.z[4])
 
         assertExpressionsEqual(self, m.cons[9].expr, m.z[5] >= 1)
 
@@ -192,18 +196,22 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         self.assertEqual(len(m.disjunctions), 1)
 
         assertExpressionsEqual(
-            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[2] == 1)
+            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[2] == 1
+        )
         assertExpressionsEqual(
             self,
             m.disjuncts[1].disjunction.disjuncts[0].constraint[1].expr,
-            m.z[1] + m.z[2] <= 0)
+            m.z[1] + m.z[2] <= 0,
+        )
         assertExpressionsEqual(
             self,
             m.disjuncts[1].disjunction.disjuncts[1].constraint[1].expr,
-            m.z[1] + m.z[2] >= 2)
+            m.z[1] + m.z[2] >= 2,
+        )
 
-        assertExpressionsEqual(self, m.cons[1].expr,
-                               m.disjuncts[0].binary_indicator_var >= 1)
+        assertExpressionsEqual(
+            self, m.cons[1].expr, m.disjuncts[0].binary_indicator_var >= 1
+        )
 
     def test_at_most(self):
         m = self.make_model()
@@ -229,20 +237,19 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         self.assertEqual(len(m.disjunctions), 1)
 
         # z3 = a ^ b
-        assertExpressionsEqual(
-            self, m.cons[1].expr, m.z[3] <= a)
-        assertExpressionsEqual(
-            self, m.cons[2].expr, m.z[3] <= b)
+        assertExpressionsEqual(self, m.cons[1].expr, m.z[3] <= a)
+        assertExpressionsEqual(self, m.cons[2].expr, m.z[3] <= b)
 
         # atmost in disjunctive form
         assertExpressionsEqual(
-            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[3] + m.z[4] <= 2)
+            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[3] + m.z[4] <= 2
+        )
         assertExpressionsEqual(
-            self,
-            m.disjuncts[1].constraint.expr,
-            m.z[1] + m.z[3] + m.z[4] >= 3)
-        assertExpressionsEqual(self, m.cons[3].expr,
-                               m.disjuncts[0].binary_indicator_var >= 1)
+            self, m.disjuncts[1].constraint.expr, m.z[1] + m.z[3] + m.z[4] >= 3
+        )
+        assertExpressionsEqual(
+            self, m.cons[3].expr, m.disjuncts[0].binary_indicator_var >= 1
+        )
 
     def test_at_least(self):
         m = self.make_model()
@@ -266,14 +273,15 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
 
         # atleast in disjunctive form
         assertExpressionsEqual(
-            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[2] + m.z[3] >= 2)
+            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[2] + m.z[3] >= 2
+        )
         assertExpressionsEqual(
-            self,
-            m.disjuncts[1].constraint.expr,
-            m.z[1] + m.z[2] + m.z[3] <= 1)
+            self, m.disjuncts[1].constraint.expr, m.z[1] + m.z[2] + m.z[3] <= 1
+        )
 
-        assertExpressionsEqual(self, m.cons[1].expr,
-                               m.disjuncts[0].binary_indicator_var >= 1)
+        assertExpressionsEqual(
+            self, m.cons[1].expr, m.disjuncts[0].binary_indicator_var >= 1
+        )
 
     def test_no_need_to_walk(self):
         m = self.make_model()
@@ -321,19 +329,21 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         m.z = visitor.z_vars
 
         with self.assertRaisesRegex(
-                MouseTrap,
-                r"The first argument 'x' to "
-                r"'atleast\(x: \[a, b, c\]\)' is potentially variable. "
-                r"This may be a mathematically coherent expression; However "
-                r"it is not yet supported to convert it to a disjunctive "
-                r"program."):
+            MouseTrap,
+            r"The first argument 'x' to "
+            r"'atleast\(x: \[a, b, c\]\)' is potentially variable. "
+            r"This may be a mathematically coherent expression; However "
+            r"it is not yet supported to convert it to a disjunctive "
+            r"program.",
+            normalize_whitespace=True,
+        ):
             visitor.walk_expression(e)
 
     def test_numeric_expression_in_at_most(self):
         m = self.make_model()
         m.x = Var([1, 2], bounds=(0, 10), domain=Integers)
         m.y = Var(domain=Integers)
-        m.e = Expression(expr=m.x[1]*m.x[2])
+        m.e = Expression(expr=m.x[1] * m.x[2])
         e = atmost(m.e + m.y, m.a, m.b, m.c)
 
         visitor = LogicalToDisjunctiveVisitor()
@@ -341,20 +351,22 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         m.z = visitor.z_vars
 
         with self.assertRaisesRegex(
-                MouseTrap,
-                r"The first argument '\(x\[1\]\*x\[2\]\) \+ y' to "
-                r"'atmost\(\(x\[1\]\*x\[2\]\) \+ y: \[a, b, c\]\)' is "
-                r"potentially variable. "
-                r"This may be a mathematically coherent expression; However "
-                r"it is not yet supported to convert it to a disjunctive "
-                r"program"):
+            MouseTrap,
+            r"The first argument '\(x\[1\]\*x\[2\]\) \+ y' to "
+            r"'atmost\(\(x\[1\]\*x\[2\]\) \+ y: \[a, b, c\]\)' is "
+            r"potentially variable. "
+            r"This may be a mathematically coherent expression; However "
+            r"it is not yet supported to convert it to a disjunctive "
+            r"program",
+            normalize_whitespace=True,
+        ):
             visitor.walk_expression(e)
 
     def test_named_expression_in_at_most(self):
         m = self.make_model()
         m.x = Var([1, 2], bounds=(0, 10), domain=Integers)
         m.y = Var(domain=Integers)
-        m.e = Expression(expr=m.x[1]*m.x[2])
+        m.e = Expression(expr=m.x[1] * m.x[2])
         e = atmost(m.e, m.a, m.b, m.c)
 
         visitor = LogicalToDisjunctiveVisitor()
@@ -362,13 +374,15 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         m.z = visitor.z_vars
 
         with self.assertRaisesRegex(
-                MouseTrap,
-                r"The first argument 'e' to "
-                r"'atmost\(\(x\[1\]\*x\[2\]\): \[a, b, c\]\)' is "
-                r"potentially variable. "
-                r"This may be a mathematically coherent expression; However "
-                r"it is not yet supported to convert it to a disjunctive "
-                r"program"):
+            MouseTrap,
+            r"The first argument 'e' to "
+            r"'atmost\(\(x\[1\]\*x\[2\]\): \[a, b, c\]\)' is "
+            r"potentially variable. "
+            r"This may be a mathematically coherent expression; However "
+            r"it is not yet supported to convert it to a disjunctive "
+            r"program",
+            normalize_whitespace=True,
+        ):
             visitor.walk_expression(e)
 
     def test_relational_expr_as_boolean_atom(self):
@@ -378,11 +392,14 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         visitor = LogicalToDisjunctiveVisitor()
 
         with self.assertRaisesRegex(
-                MouseTrap,
-                "The RelationalExpression '3  <=  x' was used as a Boolean "
-                "term in a logical proposition. This is not yet supported "
-                "when transforming to disjunctive form."):
+            MouseTrap,
+            "The RelationalExpression '3 <= x' was used as a Boolean "
+            "term in a logical proposition. This is not yet supported "
+            "when transforming to disjunctive form.",
+            normalize_whitespace=True,
+        ):
             visitor.walk_expression(e)
+
 
 class TestLogicalToDisjunctiveTransformation(unittest.TestCase):
     def make_model(self):
@@ -398,71 +415,73 @@ class TestLogicalToDisjunctiveTransformation(unittest.TestCase):
         m.block = Block()
         m.block.c1 = LogicalConstraint(expr=m.a.land(m.b[1]))
         m.block.c2 = LogicalConstraint(
-            expr=exactly(m.p2[2], m.a, m.b[1], m.b[2].lor(m.b[1])))
+            expr=exactly(m.p2[2], m.a, m.b[1], m.b[2].lor(m.b[1]))
+        )
 
-        m.c1 = LogicalConstraint(
-            expr=atmost(m.p + m.p2[1], m.a, m.b[1], m.b[2]))
+        m.c1 = LogicalConstraint(expr=atmost(m.p + m.p2[1], m.a, m.b[1], m.b[2]))
 
         return m
 
     def check_and_constraints(self, a, b1, z, transBlock):
+        assertExpressionsEqual(self, transBlock.transformed_constraints[1].expr, z <= a)
         assertExpressionsEqual(
-            self,
-            transBlock.transformed_constraints[1].expr,
-            z <= a)
-        assertExpressionsEqual(
-            self,
-            transBlock.transformed_constraints[2].expr,
-            z <= b1)
-        assertExpressionsEqual(
-            self, transBlock.transformed_constraints[3].expr, z >= 1)
+            self, transBlock.transformed_constraints[2].expr, z <= b1
+        )
+        assertExpressionsEqual(self, transBlock.transformed_constraints[3].expr, z >= 1)
 
     def check_block_c1_transformed(self, m, transBlock):
         self.assertFalse(m.block.c1.active)
         self.assertIs(m.a.get_associated_binary(), transBlock.auxiliary_vars[1])
-        self.assertIs(m.b[1].get_associated_binary(),
-                      transBlock.auxiliary_vars[2])
-        self.check_and_constraints(transBlock.auxiliary_vars[1],
-                                   transBlock.auxiliary_vars[2],
-                                   transBlock.auxiliary_vars[3], transBlock)
+        self.assertIs(m.b[1].get_associated_binary(), transBlock.auxiliary_vars[2])
+        self.check_and_constraints(
+            transBlock.auxiliary_vars[1],
+            transBlock.auxiliary_vars[2],
+            transBlock.auxiliary_vars[3],
+            transBlock,
+        )
 
     def check_block_exactly(self, a, b1, b2, z4, transBlock):
         m = transBlock.model()
 
         # z[4] = b[2] v b[1]
         assertExpressionsEqual(
-            self,
-            transBlock.transformed_constraints[4].expr,
-            (1 - z4) + b2 + b1 >= 1)
+            self, transBlock.transformed_constraints[4].expr, (1 - z4) + b2 + b1 >= 1
+        )
         assertExpressionsEqual(
-            self,
-            transBlock.transformed_constraints[5].expr,
-            z4 + (1 - b2) >= 1)
+            self, transBlock.transformed_constraints[5].expr, z4 + (1 - b2) >= 1
+        )
         assertExpressionsEqual(
-            self,
-            transBlock.transformed_constraints[6].expr,
-            z4 + (1 - b1) >= 1)
+            self, transBlock.transformed_constraints[6].expr, z4 + (1 - b1) >= 1
+        )
 
         # exactly in disjunctive form
         assertExpressionsEqual(
             self,
             transBlock.auxiliary_disjuncts[0].constraint.expr,
-            a + b1 + z4 == m.p2[2])
+            a + b1 + z4 == m.p2[2],
+        )
         assertExpressionsEqual(
             self,
-            transBlock.auxiliary_disjuncts[1].disjunction.disjuncts[0].\
-            constraint[1].expr,
-            a + b1 + z4 <= m.p2[2] - 1)
+            transBlock.auxiliary_disjuncts[1]
+            .disjunction.disjuncts[0]
+            .constraint[1]
+            .expr,
+            a + b1 + z4 <= m.p2[2] - 1,
+        )
         assertExpressionsEqual(
             self,
-            transBlock.auxiliary_disjuncts[1].disjunction.disjuncts[1].\
-            constraint[1].expr,
-            a + b1 + z4 >= m.p2[2] + 1)
+            transBlock.auxiliary_disjuncts[1]
+            .disjunction.disjuncts[1]
+            .constraint[1]
+            .expr,
+            a + b1 + z4 >= m.p2[2] + 1,
+        )
 
         assertExpressionsEqual(
             self,
             transBlock.transformed_constraints[7].expr,
-            transBlock.auxiliary_disjuncts[0].binary_indicator_var >= 1)
+            transBlock.auxiliary_disjuncts[0].binary_indicator_var >= 1,
+        )
 
     def check_block_transformed(self, m):
         self.assertFalse(m.block.c2.active)
@@ -474,8 +493,7 @@ class TestLogicalToDisjunctiveTransformation(unittest.TestCase):
 
         self.check_block_c1_transformed(m, transBlock)
 
-        self.assertIs(m.b[2].get_associated_binary(),
-                      transBlock.auxiliary_vars[4])
+        self.assertIs(m.b[2].get_associated_binary(), transBlock.auxiliary_vars[4])
 
         z4 = transBlock.auxiliary_vars[5]
         a = transBlock.auxiliary_vars[1]
@@ -486,8 +504,8 @@ class TestLogicalToDisjunctiveTransformation(unittest.TestCase):
     def test_constraint_target(self):
         m = self.make_model()
         TransformationFactory('contrib.logical_to_disjunctive').apply_to(
-            m,
-            targets=[m.block.c1])
+            m, targets=[m.block.c1]
+        )
 
         transBlock = m.block._logical_to_disjunctive
         self.assertEqual(len(transBlock.auxiliary_vars), 3)
@@ -501,16 +519,15 @@ class TestLogicalToDisjunctiveTransformation(unittest.TestCase):
     def test_block_target(self):
         m = self.make_model()
         TransformationFactory('contrib.logical_to_disjunctive').apply_to(
-            m,
-            targets=[m.block])
+            m, targets=[m.block]
+        )
 
         self.check_block_transformed(m)
         self.assertTrue(m.c1.active)
 
     def test_transform_block(self):
         m = self.make_model()
-        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
-            m.block)
+        TransformationFactory('contrib.logical_to_disjunctive').apply_to(m.block)
 
         self.check_block_transformed(m)
         self.assertTrue(m.c1.active)
@@ -535,16 +552,19 @@ class TestLogicalToDisjunctiveTransformation(unittest.TestCase):
         assertExpressionsEqual(
             self,
             transBlock.auxiliary_disjuncts[0].constraint.expr,
-            a + b1 + b2 <= 1 + m.p2[1])
+            a + b1 + b2 <= 1 + m.p2[1],
+        )
         assertExpressionsEqual(
             self,
             transBlock.auxiliary_disjuncts[1].constraint.expr,
-            a + b1 + b2 >= 1 + m.p2[1] + 1)
+            a + b1 + b2 >= 1 + m.p2[1] + 1,
+        )
 
         assertExpressionsEqual(
             self,
             transBlock.transformed_constraints[1].expr,
-            transBlock.auxiliary_disjuncts[0].binary_indicator_var >= 1)
+            transBlock.auxiliary_disjuncts[0].binary_indicator_var >= 1,
+        )
 
         # and everything on the block is transformed too
         transBlock = m.block._logical_to_disjunctive
@@ -552,7 +572,5 @@ class TestLogicalToDisjunctiveTransformation(unittest.TestCase):
         self.assertEqual(len(transBlock.transformed_constraints), 7)
         self.assertEqual(len(transBlock.auxiliary_disjuncts), 2)
         self.assertEqual(len(transBlock.auxiliary_disjunctions), 1)
-        self.check_and_constraints(a, b1, transBlock.auxiliary_vars[1],
-                                   transBlock)
-        self.check_block_exactly(a, b1, b2, transBlock.auxiliary_vars[2],
-                                 transBlock)
+        self.check_and_constraints(a, b1, transBlock.auxiliary_vars[1], transBlock)
+        self.check_block_exactly(a, b1, b2, transBlock.auxiliary_vars[2], transBlock)

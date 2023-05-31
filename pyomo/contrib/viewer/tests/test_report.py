@@ -113,7 +113,7 @@ class TestReportFunctions(unittest.TestCase):
     def test_get_residual(self):
         dat = uidata.UIData(self.m)
         # so that the model viewer doesn't run slow on large models,
-        # you have to explicilty ask for constraints and expressions
+        # you have to explicitly ask for constraints and expressions
         # to be calculated. Getting the residual before calculation
         # should just give None
         assert rpt.get_residual(dat, self.m.c3) is None
@@ -182,14 +182,7 @@ class TestReportFunctions(unittest.TestCase):
     def test_active_equality_set(self):
         self.m.c4.deactivate()
         assert rpt.active_equality_set(self.m) == ComponentSet(
-            [
-                self.m.c1,
-                self.m.c2,
-                self.m.c3,
-                self.m.c5,
-                self.m.c6,
-                self.m.c7,
-            ]
+            [self.m.c1, self.m.c2, self.m.c3, self.m.c5, self.m.c6, self.m.c7]
         )
         self.m.c4.activate()
         assert rpt.active_equality_set(self.m) == ComponentSet(

@@ -10,9 +10,11 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
-    PiecewiseLinearExpression)
+    PiecewiseLinearExpression,
+)
 from pyomo.core import Expression
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+
 
 class PiecewiseLinearToMIP(StreamBasedExpressionVisitor):
     """
@@ -28,6 +30,7 @@ class PiecewiseLinearToMIP(StreamBasedExpressionVisitor):
         transBlock (Block): transformation Block to pass to the above
             callback
     """
+
     def __init__(self, transform_pw_linear_expression, transBlock):
         self.transform_pw_linear_expression = transform_pw_linear_expression
         self.transBlock = transBlock
@@ -45,7 +48,8 @@ class PiecewiseLinearToMIP(StreamBasedExpressionVisitor):
         if node.__class__ is PiecewiseLinearExpression:
             parent = node.pw_linear_function
             substitute_var = self.transform_pw_linear_expression(
-                node, parent, self.transBlock)
+                node, parent, self.transBlock
+            )
             parent._expressions[id(node)] = substitute_var
         return node
 

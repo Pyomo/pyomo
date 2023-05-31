@@ -1,33 +1,33 @@
 {
     "Problem": [
         {
-            "Lower bound": 0.0, 
-            "Number of constraints": 6, 
-            "Number of nonzeros": 9, 
-            "Number of objectives": 1, 
-            "Number of variables": 5, 
-            "Sense": "minimize", 
+            "Lower bound": 0.0,
+            "Number of constraints": 5,
+            "Number of nonzeros": 8,
+            "Number of objectives": 1,
+            "Number of variables": 4,
+            "Sense": "minimize",
             "Upper bound": 0.0
         }
-    ], 
+    ],
     "Solution": [
         {
-            "number of solutions": 1, 
+            "number of solutions": 1,
             "number of solutions displayed": 1
-        }, 
+        },
         {
-            "Constraint": "No values", 
-            "Gap": 0.0, 
-            "Message": null, 
-            "Objective": {}, 
-            "Problem": {}, 
+            "Constraint": "No values",
+            "Gap": 0.0,
+            "Message": null,
+            "Objective": {},
+            "Problem": {},
             "Variable": {}
         }
-    ], 
+    ],
     "Solver": [
         {
-            "Error rc": 0, 
-            "Status": "ok", 
+            "Error rc": 0,
+            "Status": "ok",
             "Termination condition": "optimal"
         }
     ]
