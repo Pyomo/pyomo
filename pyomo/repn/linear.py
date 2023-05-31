@@ -336,10 +336,10 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
     _, exp = arg2
     if exp == 1:
         return arg1
-    elif exp > 0 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
+    elif exp > 1 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
         _type, _arg = arg1
         ans = _type, _arg.duplicate()
-        for i in range(1, exp):
+        for i in range(1, int(exp)):
             ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
                 visitor, None, ans, (_type, _arg.duplicate())
             )
