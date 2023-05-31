@@ -1035,7 +1035,7 @@ class DesignOfExperiments:
             return m.trace == sum(m.fim[j, j] for j in m.regression_parameters)
 
         def det_general(m):
-            """Calculate determinant. Can be applied to FIM of any size.
+            r"""Calculate determinant. Can be applied to FIM of any size.
             det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
             """

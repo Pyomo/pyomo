@@ -344,6 +344,8 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
                 visitor, None, ans, (_type, _arg.duplicate())
             )
         return ans
+    elif exp == 0:
+        return _CONSTANT, 1
     else:
         return _handle_pow_nonlinear(visitor, node, arg1, arg2)
 
