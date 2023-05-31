@@ -254,3 +254,40 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.linear, {id(m.x): 1, id(m.y): 2})
         self.assertEqual(repn.quadratic, {(id(m.y), id(m.y)): 1, (id(m.x), id(m.y)): 3})
         assertExpressionsEqual(self, repn.nonlinear, m.y**3 + 2 * m.x**4)
+
+    def test_pow(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+
+        # Check **{int}
+        cfg = VisitorConfig()
+        repn = QuadraticRepnVisitor(*cfg).walk_expression((1 + 3 * m.x + 4 * m.y) ** 2)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(repn.linear, {id(m.x): 6, id(m.y): 8})
+        self.assertEqual(
+            repn.quadratic,
+            {(id(m.x), id(m.x)): 9, (id(m.y), id(m.y)): 16, (id(m.x), id(m.y)): 24},
+        )
+        self.assertEqual(repn.nonlinear, None)
+
+        # Check **{int}
+        cfg = VisitorConfig()
+        repn = QuadraticRepnVisitor(*cfg).walk_expression(
+            (1 + 3 * m.x + 4 * m.y) ** 2.0
+        )
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(repn.linear, {id(m.x): 6, id(m.y): 8})
+        self.assertEqual(
+            repn.quadratic,
+            {(id(m.x), id(m.x)): 9, (id(m.y), id(m.y)): 16, (id(m.x), id(m.y)): 24},
+        )
+        self.assertEqual(repn.nonlinear, None)
