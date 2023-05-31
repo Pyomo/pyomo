@@ -262,7 +262,7 @@ class TestQuadratic(unittest.TestCase):
 
         # Check **{int}
         cfg = VisitorConfig()
-        repn = QuadraticRepnVisitor(*cfg).walk_expression((1 + 3*m.x + 4*m.y)**2)
+        repn = QuadraticRepnVisitor(*cfg).walk_expression((1 + 3 * m.x + 4 * m.y) ** 2)
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
         self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
@@ -277,7 +277,9 @@ class TestQuadratic(unittest.TestCase):
 
         # Check **{int}
         cfg = VisitorConfig()
-        repn = QuadraticRepnVisitor(*cfg).walk_expression((1 + 3*m.x + 4*m.y)**2.0)
+        repn = QuadraticRepnVisitor(*cfg).walk_expression(
+            (1 + 3 * m.x + 4 * m.y) ** 2.0
+        )
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
         self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
