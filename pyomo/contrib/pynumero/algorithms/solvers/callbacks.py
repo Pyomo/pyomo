@@ -52,7 +52,10 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
     """
 
     def __init__(
-        self, infeasibility_threshold=1e8, n_residuals=5, scaled=False
+        self,
+        infeasibility_threshold=1e8,
+        n_residuals=5,
+        scaled=False,
     ):
         self._infeasibility_threshold = infeasibility_threshold
         self._n_residuals = n_residuals
@@ -146,6 +149,8 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         # Print new line to clearly separate this information from the
         # previous iteration.
         logger.info("")
+        logger.info(f"INFEASIBILITIES FOR ITERATION {iter_count}")
+        logger.info("------------------------------" + "-"*len(str(iter_count)))
 
         # TODO: Reduce repeated code here
         i_max_xL = sorted_coords_x_L_viol[0]
@@ -213,3 +218,5 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
+
+        logger.info("------------------------------" + "-"*len(str(iter_count)))
