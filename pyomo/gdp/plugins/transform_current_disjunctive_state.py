@@ -98,10 +98,9 @@ class TransformCurrentDisjunctiveState(Transformation):
 
         if config.reverse is None:
             reverse_dict = {'_disjunctions': set(), '_disjuncts': {}}
-            reverse_token = ReverseTransformationToken(self.__class__,
-                                                       model,
-                                                       targets,
-                                                       reverse_dict)
+            reverse_token = ReverseTransformationToken(
+                self.__class__, model, targets, reverse_dict
+            )
             disjunction_transform = self._transform_disjunction
         else:
             reverse_token = config.reverse
@@ -122,15 +121,20 @@ class TransformCurrentDisjunctiveState(Transformation):
             return reverse_token
 
     def _transform_block(self, block, reverse_dict, disjunction_transform):
+        # We iterate through inactive ones as well in case this is a reverse
+        # transformation. We will check for active status in the
+        # disjunction_transform function.
         for disjunction in block.component_data_objects(
             Disjunction,
-            active=True,
+            active=None,
             descend_into=(Block, Disjunct),
             sort=SortComponents.deterministic,
         ):
             disjunction_transform(disjunction, reverse_dict)
 
     def _transform_disjunction(self, disjunction, reverse_dict):
+        if not disjunction.active:
+            return
         no_val = set()
         true_val = set()
         false_val = set()

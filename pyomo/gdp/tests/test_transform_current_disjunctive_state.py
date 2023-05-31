@@ -160,6 +160,15 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
 
         self.assertFalse(m.disjunction2.active)
 
+        # disjunction1 should be untransformed
+        self.assertTrue(m.disjunction1.active)
+        self.assertTrue(m.d1.active)
+        self.assertTrue(m.d2.active)
+        self.assertIs(m.d1.ctype, Disjunct)
+        self.assertIs(m.d2.ctype, Disjunct)
+        self.assertIsNone(m.d1.indicator_var.value)
+        self.assertIsNone(m.d2.indicator_var.value)
+
         TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
             m, reverse=reverse
         )
