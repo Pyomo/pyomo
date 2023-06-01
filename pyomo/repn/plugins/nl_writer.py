@@ -684,7 +684,7 @@ class _NLWriter_impl(object):
         # variable order because the SOS constraint *could* reference a
         # variable not yet seen in the model.
         for block in component_map[SOSConstraint]:
-            for sos in block.component_objects(
+            for sos in block.component_data_objects(
                 SOSConstraint, active=True, descend_into=False, sort=sorter
             ):
                 for v in sos.variables:

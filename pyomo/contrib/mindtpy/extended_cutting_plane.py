@@ -24,27 +24,16 @@ from pyomo.opt import TerminationCondition as tc
 @SolverFactory.register(
     'mindtpy.ecp', doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo'
 )
-class MindtPy_OA_Solver(_MindtPyAlgorithm):
+class MindtPy_ECP_Solver(_MindtPyAlgorithm):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
     The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver
     applies a variety of decomposition-based approaches to solve Mixed-Integer
     Nonlinear Programming (MINLP) problems.
-    These approaches include:
+    This class includes:
 
-    - Outer approximation (OA)
-    - Global outer approximation (GOA)
-    - Regularized outer approximation (ROA)
-    - LP/NLP based branch-and-bound (LP/NLP)
-    - Global LP/NLP based branch-and-bound (GLP/NLP)
-    - Regularized LP/NLP based branch-and-bound (RLP/NLP)
-    - Feasibility pump (FP)
-
-    This solver implementation has been developed by David Bernal <https://github.com/bernalde>
-    and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann
-    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at
-    Carnegie Mellon University.
+    - Extended Cutting Plane (ECP)
     """
 
     CONFIG = _get_MindtPy_ECP_config()

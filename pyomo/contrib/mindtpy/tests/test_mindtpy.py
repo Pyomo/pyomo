@@ -317,6 +317,30 @@ class TestMindtPy(unittest.TestCase):
                     value(model.objective.expr), model.optimal_value, places=1
                 )
 
+    @unittest.skipUnless(
+        SolverFactory('cyipopt').available(exception_flag=False),
+        "APPSI_IPOPT not available.",
+    )
+    def test_OA_cyipopt(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            for model in nonconvex_model_list:
+                results = opt.solve(
+                    model,
+                    strategy='OA',
+                    mip_solver=required_solvers[1],
+                    nlp_solver='cyipopt',
+                    heuristic_nonconvex=True,
+                )
+
+                self.assertIn(
+                    results.solver.termination_condition,
+                    [TerminationCondition.optimal, TerminationCondition.feasible],
+                )
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1
+                )
+
     def test_OA_integer_to_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
