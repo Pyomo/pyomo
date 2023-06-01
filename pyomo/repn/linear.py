@@ -36,7 +36,7 @@ from pyomo.core.expr.relational_expr import (
     RangedExpression,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
-from pyomo.core.expr import is_fixed
+from pyomo.core.expr import is_fixed, value
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
 import pyomo.core.kernel as kernel
@@ -756,7 +756,7 @@ def _register_new_before_child_dispatcher(visitor, child):
     dispatcher = _before_child_dispatcher
     child_type = child.__class__
     if child_type in native_numeric_types:
-        if isinstance(child_type, complex):
+        if issubclass(child_type, complex):
             _complex_types.add(child_type)
             dispatcher[child_type] = _before_complex
         else:
@@ -775,7 +775,7 @@ def _register_new_before_child_dispatcher(visitor, child):
         if pv_base_type not in dispatcher:
             try:
                 child.__class__ = pv_base_type
-                _register_new_before_child_dispatcher(self, child)
+                _register_new_before_child_dispatcher(visitor, child)
             finally:
                 child.__class__ = child_type
         if pv_base_type in visitor.exit_node_handlers:
