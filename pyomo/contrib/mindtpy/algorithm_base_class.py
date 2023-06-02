@@ -34,13 +34,6 @@ from pyomo.opt import (
     SolutionStatus,
     SolverStatus,
 )
-from pyomo.contrib.mindtpy.util import (
-    generate_norm2sq_objective_function,
-    set_solver_options,
-    generate_norm_constraint,
-    fp_converged,
-    add_orthogonality_cuts,
-)
 from pyomo.core import (
     minimize,
     maximize,
@@ -74,7 +67,6 @@ from pyomo.contrib.mindtpy.util import (
     generate_norm2sq_objective_function,
     generate_norm_inf_objective_function,
     generate_lag_objective_function,
-    set_solver_options,
     GurobiPersistent4MindtPy,
     MindtPySolveData,
     setup_results_object,
@@ -83,6 +75,12 @@ from pyomo.contrib.mindtpy.util import (
     epigraph_reformulation,
     add_var_bound,
     copy_var_list_values_from_solution_pool,
+    generate_norm_constraint,
+    fp_converged,
+    add_orthogonality_cuts,
+    set_solver_mipgap,
+    set_solver_constraint_violation_tolerance,
+    set_solver_timelimit,
 )
 
 single_tree, single_tree_available = attempt_import('pyomo.contrib.mindtpy.single_tree')
@@ -279,10 +277,10 @@ class _MindtPyAlgorithm(object):
                     'Your model is a NLP (nonlinear program). '
                     'Using NLP solver %s to solve.' % config.nlp_solver
                 )
-                nlpopt = SolverFactory(config.nlp_solver)
-                # TODO: rewrite
-                set_solver_options(nlpopt, self.timing, config, solver_type='nlp')
-                nlpopt.solve(
+                set_solver_timelimit(
+                    self.nlp_opt, config.nlp_solver, self.timing, config
+                )
+                self.nlp_opt.solve(
                     self.original_model,
                     tee=config.nlp_solver_tee,
                     **config.nlp_solver_args,
@@ -293,11 +291,12 @@ class _MindtPyAlgorithm(object):
                     'Your model is an LP (linear program). '
                     'Using LP solver %s to solve.' % config.mip_solver
                 )
-                mainopt = SolverFactory(config.mip_solver)
-                if isinstance(mainopt, PersistentSolver):
-                    mainopt.set_instance(self.original_model)
-                set_solver_options(mainopt, self.timing, config, solver_type='mip')
-                results = mainopt.solve(
+                if isinstance(self.mip_opt, PersistentSolver):
+                    self.mip_opt.set_instance(self.original_model)
+                set_solver_timelimit(
+                    self.mip_opt, config.mip_solver, self.timing, config
+                )
+                results = self.mip_opt.solve(
                     self.original_model,
                     tee=config.mip_solver_tee,
                     load_solutions=False,
@@ -329,21 +328,30 @@ class _MindtPyAlgorithm(object):
         """
         util_block = getattr(model, self.util_block_name)
         var_set = ComponentSet()
-        util_block.constraint_list = list(model.component_data_objects(
-                                        ctype=Constraint, active=True,
-                                        descend_into=(Block)))
+        util_block.constraint_list = list(
+            model.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block)
+            )
+        )
         util_block.linear_constraint_list = list(
-                c for c in model.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=(Block))
-                if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree)
+            c
+            for c in model.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block)
+            )
+            if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree
+        )
         util_block.nonlinear_constraint_list = list(
-                c for c in model.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=(Block))
-                if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree)
+            c
+            for c in model.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block)
+            )
+            if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree
+        )
         util_block.objective_list = list(
-                model.component_data_objects(
-                    ctype=Objective, active=True,
-                    descend_into=(Block)))
+            model.component_data_objects(
+                ctype=Objective, active=True, descend_into=(Block)
+            )
+        )
 
         # Identify the non-fixed variables in (potentially) active constraints and
         # objective functions
@@ -836,10 +844,9 @@ class _MindtPyAlgorithm(object):
         MindtPy = m.MindtPy_utils
         TransformationFactory('core.relax_integer_vars').apply_to(m)
         nlp_args = dict(config.nlp_solver_args)
-        nlpopt = SolverFactory(config.nlp_solver)
-        set_solver_options(nlpopt, self.timing, config, solver_type='nlp')
+        set_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
         with SuppressInfeasibleWarning():
-            results = nlpopt.solve(
+            results = self.nlp_opt.solve(
                 m, tee=config.nlp_solver_tee, load_solutions=False, **nlp_args
             )
             if len(results.solution) > 0:
@@ -965,12 +972,11 @@ class _MindtPyAlgorithm(object):
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-        mipopt = SolverFactory(config.mip_solver)
-        if isinstance(mipopt, PersistentSolver):
-            mipopt.set_instance(m)
+        if isinstance(self.mip_opt, PersistentSolver):
+            self.mip_opt.set_instance(m)
         mip_args = dict(config.mip_solver_args)
-        set_solver_options(mipopt, self.timing, config, solver_type='mip')
-        results = mipopt.solve(
+        set_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
+        results = self.mip_opt.solve(
             m, tee=config.mip_solver_tee, load_solutions=False, **mip_args
         )
         if len(results.solution) > 0:
@@ -1086,14 +1092,11 @@ class _MindtPyAlgorithm(object):
             results.solver.termination_condition = tc.infeasible
             return self.fixed_nlp, results
         # Solve the NLP
-        nlpopt = SolverFactory(config.nlp_solver)
         nlp_args = dict(config.nlp_solver_args)
-        # TODO: Can we move set_solver_options outside of this function?
-        # if not, we can define this function as a method
-        set_solver_options(nlpopt, self.timing, config, solver_type='nlp')
+        set_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
         with SuppressInfeasibleWarning():
             with time_code(self.timing, 'fixed subproblem'):
-                results = nlpopt.solve(
+                results = self.nlp_opt.solve(
                     self.fixed_nlp,
                     tee=config.nlp_solver_tee,
                     load_solutions=False,
@@ -1359,13 +1362,14 @@ class _MindtPyAlgorithm(object):
             MindtPy.feas_obj = Objective(
                 expr=MindtPy.feas_opt.slack_var, sense=minimize
             )
-        nlpopt = SolverFactory(config.nlp_solver)
         nlp_args = dict(config.nlp_solver_args)
-        set_solver_options(nlpopt, self.timing, config, solver_type='nlp')
+        set_solver_timelimit(
+            self.feasibility_nlp_opt, config.nlp_solver, self.timing, config
+        )
         with SuppressInfeasibleWarning():
             try:
                 with time_code(self.timing, 'feasibility subproblem'):
-                    feas_soln = nlpopt.solve(
+                    feas_soln = self.feasibility_nlp_opt.solve(
                         feas_subproblem,
                         tee=config.nlp_solver_tee,
                         load_solutions=config.nlp_solver != 'appsi_ipopt',
@@ -1380,7 +1384,7 @@ class _MindtPyAlgorithm(object):
                     if not nlp_var.fixed and not nlp_var.is_binary():
                         nlp_var.set_value(orig_val, skip_validation=True)
                 with time_code(self.timing, 'feasibility subproblem'):
-                    feas_soln = nlpopt.solve(
+                    feas_soln = self.feasibility_nlp_opt.solve(
                         feas_subproblem,
                         tee=config.nlp_solver_tee,
                         load_solutions=config.nlp_solver != 'appsi_ipopt',
@@ -1524,15 +1528,12 @@ class _MindtPyAlgorithm(object):
                 and MindtPy.component('mip_obj') is None
             ):
                 MindtPy.objective_list[-1].activate()
-            mainopt = SolverFactory(config.mip_solver)
             # determine if persistent solver is called.
-            if isinstance(mainopt, PersistentSolver):
-                mainopt.set_instance(self.mip, symbolic_solver_labels=True)
-            if config.use_tabu_list:
-                self.set_up_tabulist_callback(mainopt)
+            if isinstance(self.mip_opt, PersistentSolver):
+                self.mip_opt.set_instance(self.mip, symbolic_solver_labels=True)
             mip_args = dict(config.mip_solver_args)
-            set_solver_options(mainopt, self.timing, config, solver_type='mip')
-            main_mip_results = mainopt.solve(
+            set_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
+            main_mip_results = self.mip_opt.solve(
                 self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
             )
             if config.use_tabu_list:
@@ -1558,7 +1559,7 @@ class _MindtPyAlgorithm(object):
             ):
                 self.results.solver.termination_condition = tc.optimal
 
-    def set_up_tabulist_callback(self, mainopt):
+    def set_up_tabulist_callback(self):
         """Set up the tabulist using IncumbentCallback
 
         Parameters
@@ -1566,23 +1567,23 @@ class _MindtPyAlgorithm(object):
         mainopt : solver
             The MIP solver.
         """
-        tabulist = mainopt._solver_model.register_callback(
+        tabulist = self.mip_opt._solver_model.register_callback(
             tabu_list.IncumbentCallback_cplex
         )
         self.solve_data = MindtPySolveData()
         self.export_attributes()
         tabulist.solve_data = self.solve_data
-        tabulist.opt = mainopt
+        tabulist.opt = self.mip_opt
         tabulist.config = self.config
-        mainopt._solver_model.parameters.preprocessing.reduce.set(1)
+        self.mip_opt._solver_model.parameters.preprocessing.reduce.set(1)
         # If the callback is used to reject incumbents, the user must set the
         # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
         # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
-        mainopt._solver_model.set_warning_stream(None)
-        mainopt._solver_model.set_log_stream(None)
-        mainopt._solver_model.set_error_stream(None)
+        self.mip_opt._solver_model.set_warning_stream(None)
+        self.mip_opt._solver_model.set_log_stream(None)
+        self.mip_opt._solver_model.set_error_stream(None)
 
-    def set_up_lazy_OA_callback(self, mainopt):
+    def set_up_lazy_OA_callback(self):
         """Set up the lazy OA using LazyConstraintCallback
 
         Parameters
@@ -1591,7 +1592,7 @@ class _MindtPyAlgorithm(object):
             The MIP solver.
         """
         if self.config.mip_solver == 'cplex_persistent':
-            lazyoa = mainopt._solver_model.register_callback(
+            lazyoa = self.mip_opt._solver_model.register_callback(
                 single_tree.LazyOACallback_cplex
             )
             # pass necessary data and parameters to lazyoa
@@ -1600,12 +1601,16 @@ class _MindtPyAlgorithm(object):
             self.export_attributes()
             lazyoa.solve_data = self.solve_data
             lazyoa.config = self.config
-            lazyoa.opt = mainopt
-            mainopt._solver_model.set_warning_stream(None)
-            mainopt._solver_model.set_log_stream(None)
-            mainopt._solver_model.set_error_stream(None)
+            lazyoa.opt = self.mip_opt
+            self.mip_opt._solver_model.set_warning_stream(None)
+            self.mip_opt._solver_model.set_log_stream(None)
+            self.mip_opt._solver_model.set_error_stream(None)
         if self.config.mip_solver == 'gurobi_persistent':
-            mainopt.set_callback(single_tree.LazyOACallback_gurobi)
+            self.mip_opt.set_callback(single_tree.LazyOACallback_gurobi)
+            self.solve_data = MindtPySolveData()
+            self.export_attributes()
+            self.mip_opt.solve_data = self.solve_data
+            self.mip_opt.config = self.config
 
     ##########################################################################################################################################
     # mip_solve.py
@@ -1629,10 +1634,10 @@ class _MindtPyAlgorithm(object):
 
         # setup main problem
         self.setup_main(config)
-        mainopt, mip_args = self.set_up_mip_solver(config)
+        mip_args = self.set_up_mip_solver(config)
 
         try:
-            main_mip_results = mainopt.solve(
+            main_mip_results = self.mip_opt.solve(
                 self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
             )
             # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
@@ -1655,9 +1660,9 @@ class _MindtPyAlgorithm(object):
                     )
             return None, None
         if config.solution_pool:
-            main_mip_results._solver_model = mainopt._solver_model
+            main_mip_results._solver_model = self.mip_opt._solver_model
             main_mip_results._pyomo_var_to_solver_var_map = (
-                mainopt._pyomo_var_to_solver_var_map
+                self.mip_opt._pyomo_var_to_solver_var_map
             )
         if main_mip_results.solver.termination_condition is tc.optimal:
             if config.single_tree and not config.add_no_good_cuts:
@@ -1688,9 +1693,9 @@ class _MindtPyAlgorithm(object):
         """
         # setup main problem
         self.setup_fp_main(config)
-        mainopt, mip_args = self.set_up_mip_solver(config)
+        mip_args = self.set_up_mip_solver(config)
 
-        main_mip_results = mainopt.solve(
+        main_mip_results = self.mip_opt.solve(
             self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
         )
         # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
@@ -1726,10 +1731,12 @@ class _MindtPyAlgorithm(object):
 
         # setup main problem
         self.setup_regularization_main(config)
-        mainopt, mip_args = self.set_up_mip_solver(config, regularization_problem=True)
 
-        main_mip_results = mainopt.solve(
-            self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
+        main_mip_results = self.regularization_mip_opt.solve(
+            self.mip,
+            tee=config.mip_solver_tee,
+            load_solutions=False,
+            **dict(config.mip_solver_args),
         )
         if len(main_mip_results.solution) > 0:
             self.mip.solutions.load_from(main_mip_results)
@@ -1779,37 +1786,11 @@ class _MindtPyAlgorithm(object):
         mainopt : SolverFactory
             The customized MIP solver.
         """
-        # Deactivate extraneous IMPORT/EXPORT suffixes
-        if config.nlp_solver in {'ipopt', 'cyipopt'}:
-            getattr(self.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
-            getattr(self.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
-        if regularization_problem:
-            mainopt = SolverFactory(config.mip_regularization_solver)
-        else:
-            if config.mip_solver == 'gurobi_persistent' and config.single_tree:
-                mainopt = GurobiPersistent4MindtPy()
-                self.solve_data = MindtPySolveData()
-                self.export_attributes()
-                mainopt.solve_data = self.solve_data
-                mainopt.config = config
-            else:
-                mainopt = SolverFactory(config.mip_solver)
-
         # determine if persistent solver is called.
-        if isinstance(mainopt, PersistentSolver):
-            mainopt.set_instance(self.mip, symbolic_solver_labels=True)
-        if config.single_tree and not regularization_problem:
-            self.set_up_lazy_OA_callback(mainopt)
-        if config.use_tabu_list:
-            self.set_up_tabulist_callback(mainopt)
-
-        set_solver_options(
-            mainopt,
-            self.timing,
-            config,
-            solver_type='mip',
-            regularization=regularization_problem,
-        )
+        if isinstance(self.mip_opt, PersistentSolver):
+            self.mip_opt.set_instance(self.mip, symbolic_solver_labels=True)
+        if config.single_tree or config.use_tabu_list:
+            self.export_attributes()
         mip_args = dict(config.mip_solver_args)
         if config.mip_solver in {
             'cplex',
@@ -1818,7 +1799,7 @@ class _MindtPyAlgorithm(object):
             'gurobi_persistent',
         }:
             mip_args['warmstart'] = True
-        return mainopt, mip_args
+        return mip_args
 
     # The following functions deal with handling the solution we get from the above MIP solver function
 
@@ -2041,12 +2022,11 @@ class _MindtPyAlgorithm(object):
         MindtPy.objective_bound = Constraint(
             expr=(-config.obj_bound, MindtPy.mip_obj.expr, config.obj_bound)
         )
-        mainopt = SolverFactory(config.mip_solver)
-        if isinstance(mainopt, PersistentSolver):
-            mainopt.set_instance(main_mip)
-        set_solver_options(mainopt, self.timing, config, solver_type='mip')
+        if isinstance(self.mip_opt, PersistentSolver):
+            self.mip_opt.set_instance(main_mip)
+        set_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
         with SuppressInfeasibleWarning():
-            main_mip_results = mainopt.solve(
+            main_mip_results = self.mip_opt.solve(
                 main_mip,
                 tee=config.mip_solver_tee,
                 load_solutions=False,
@@ -2467,12 +2447,11 @@ class _MindtPyAlgorithm(object):
             results.solver.termination_condition = tc.infeasible
             return fp_nlp, results
         # Solve the NLP
-        nlpopt = SolverFactory(config.nlp_solver)
         nlp_args = dict(config.nlp_solver_args)
-        set_solver_options(nlpopt, self.timing, config, solver_type='nlp')
+        set_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
         with SuppressInfeasibleWarning():
             with time_code(self.timing, 'fp subproblem'):
-                results = nlpopt.solve(
+                results = self.nlp_opt.solve(
                     fp_nlp, tee=config.nlp_solver_tee, load_solutions=False, **nlp_args
                 )
                 if len(results.solution) > 0:
@@ -2689,6 +2668,10 @@ class _MindtPyAlgorithm(object):
         next(self.mip.component_data_objects(Objective, active=True)).deactivate()
         if hasattr(self.mip, 'dual') and isinstance(self.mip.dual, Suffix):
             self.mip.del_component('dual')
+        # Deactivate extraneous IMPORT/EXPORT suffixes
+        if config.nlp_solver in {'ipopt', 'cyipopt'}:
+            getattr(self.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
+            getattr(self.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
 
         MindtPy = self.mip.MindtPy_utils
 
@@ -2704,6 +2687,114 @@ class _MindtPyAlgorithm(object):
         self.fixed_nlp = self.working_model.clone()
         TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
         add_feas_slacks(self.fixed_nlp, config)
+
+    def initialize_subsolvers(self):
+        """Initialize and set options for MIP and NLP subsolvers."""
+        config = self.config
+        if config.mip_solver == 'gurobi_persistent' and config.single_tree:
+            self.mip_opt = GurobiPersistent4MindtPy()
+        else:
+            self.mip_opt = SolverFactory(config.mip_solver)
+        self.regularization_mip_opt = SolverFactory(config.mip_regularization_solver)
+        self.nlp_opt = SolverFactory(config.nlp_solver)
+        self.feasibility_nlp_opt = SolverFactory(config.nlp_solver)
+
+        # determine if persistent solver is called.
+        # if isinstance(mainopt, PersistentSolver):
+        #     mainopt.set_instance(self.mip, symbolic_solver_labels=True)
+        if config.single_tree:
+            self.set_up_lazy_OA_callback()
+        if config.use_tabu_list:
+            self.set_up_tabulist_callback()
+
+        set_solver_mipgap(self.mip_opt, config.mip_solver, config)
+        set_solver_mipgap(
+            self.regularization_mip_opt, config.mip_regularization_solver, config
+        )
+
+        set_solver_constraint_violation_tolerance(
+            self.nlp_opt, config.nlp_solver, config
+        )
+        set_solver_constraint_violation_tolerance(
+            self.feasibility_nlp_opt, config.nlp_solver, config
+        )
+
+        self.set_appsi_solver_update_config()
+
+        if config.mip_solver == 'gurobi_persistent' and config.single_tree:
+            # PreCrush: Controls presolve reductions that affect user cuts
+            # You should consider setting this parameter to 1 if you are using callbacks to add your own cuts.
+            self.mip_opt.options['PreCrush'] = 1
+            self.mip_opt.options['LazyConstraints'] = 1
+
+        # set thread
+        if config.threads > 0:
+            self.mip_opt.options['threads'] = config.threads
+        if config.regularization_mip_threads > 0:
+            self.regularization_mip_opt['threads'] = config.threads
+
+        # regularization solver
+        if config.mip_regularization_solver == 'cplex':
+            if config.solution_limit is not None:
+                self.regularization_mip_opt.options[
+                    'mip limits solutions'
+                ] = config.solution_limit
+            self.regularization_mip_opt.options['mip strategy presolvenode'] = 3
+            # TODO: need to discuss if this option should be added.
+            if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
+                self.regularization_mip_opt.options['optimalitytarget'] = 3
+        elif config.mip_regularization_solver == 'gurobi':
+            if config.solution_limit is not None:
+                self.regularization_mip_opt.options[
+                    'SolutionLimit'
+                ] = config.solution_limit
+            self.regularization_mip_opt.options['Presolve'] = 2
+
+    def set_appsi_solver_update_config(self):
+        """Set update config for APPSI solvers."""
+        config = self.config
+        if config.mip_solver in {'appsi_cplex', 'appsi_gurobi', 'appsi_highs'}:
+            # mip main problem
+            self.mip_opt.update_config.check_for_new_or_removed_constraints = True
+            self.mip_opt.update_config.check_for_new_or_removed_vars = True  # TODO
+            self.mip_opt.update_config.check_for_new_or_removed_params = False
+            self.mip_opt.update_config.check_for_new_objective = True
+            self.mip_opt.update_config.update_constraints = True
+            self.mip_opt.update_config.update_vars = True
+            self.mip_opt.update_config.update_params = False
+            self.mip_opt.update_config.update_named_expressions = False
+            self.mip_opt.update_config.update_objective = False
+            self.mip_opt.update_config.treat_fixed_vars_as_params = True
+
+        if config.nlp_solver == 'appsi_ipopt':
+            # fixed-nlp
+            self.nlp_opt.update_config.check_for_new_or_removed_constraints = False
+            self.nlp_opt.update_config.check_for_new_or_removed_vars = False
+            self.nlp_opt.update_config.check_for_new_or_removed_params = False
+            self.nlp_opt.update_config.check_for_new_objective = False
+            # we will deactivate trival constraints, do we need to update constraints?
+            self.nlp_opt.update_config.update_constraints = True
+            self.nlp_opt.update_config.update_vars = True
+            self.nlp_opt.update_config.update_params = False
+            self.nlp_opt.update_config.update_named_expressions = False
+            self.nlp_opt.update_config.update_objective = False
+            self.nlp_opt.update_config.treat_fixed_vars_as_params = False
+
+            # TODO check the config of feasibility_nlp_solver
+            self.feasibility_nlp_opt.update_config.check_for_new_or_removed_constraints = (
+                True
+            )
+            self.feasibility_nlp_opt.update_config.check_for_new_or_removed_vars = True
+            self.feasibility_nlp_opt.update_config.check_for_new_or_removed_params = (
+                True
+            )
+            self.feasibility_nlp_opt.update_config.check_for_new_objective = True
+            self.feasibility_nlp_opt.update_config.update_constraints = True
+            self.feasibility_nlp_opt.update_config.update_vars = True
+            self.feasibility_nlp_opt.update_config.update_params = True
+            self.feasibility_nlp_opt.update_config.update_named_expressions = True
+            self.feasibility_nlp_opt.update_config.update_objective = True
+            self.feasibility_nlp_opt.update_config.treat_fixed_vars_as_params = True
 
     def solve(self, model, **kwds):
         """Solve the model.
@@ -2739,6 +2830,7 @@ class _MindtPyAlgorithm(object):
             config.logger, new_logging_level
         ):
             self._log_solver_intro_message()
+            self.initialize_subsolvers()
 
             # Validate the model to ensure that MindtPy is able to solve it.
             if not self.model_is_valid():

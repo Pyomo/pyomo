@@ -123,7 +123,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         """
         super().init_rNLP(config, add_oa_cuts=False)
 
-
     def algorithm_should_terminate(self):
         """Checks if the algorithm should terminate at the given point.
 

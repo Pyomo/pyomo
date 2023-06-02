@@ -566,6 +566,9 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
             opt.options['mip_strategy_presolvenode'] = 3
             if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                 opt.options['optimalitytarget'] = 3
+    elif solver_name == 'appsi_highs':
+        opt.config.time_limit = remaining
+        opt.config.mip_gap = config.mip_solver_mipgap
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
         opt.options['mipgap'] = config.mip_solver_mipgap
@@ -628,6 +631,137 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
                         )
                     opt.options['add_options'].append('$offecho')
                     opt.options['add_options'].append('GAMS_MODEL.optfile=1')
+
+
+def set_solver_timelimit(opt, solver_name, timing, config):
+    """Set timelimit for subsolvers.
+
+    Parameters
+    ----------
+    opt : Solvers
+        The solver object.
+    solver_name : String
+        The name of solver.
+    timing : Timing
+        Timing
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    """
+    elapsed = get_main_elapsed_time(timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
+    if solver_name in {
+        'cplex',
+        'appsi_cplex',
+        'cplex_persistent',
+        'gurobi',
+        'gurobi_persistent',
+        'appsi_gurobi',
+    }:
+        opt.options['timelimit'] = remaining
+    elif solver_name == 'appsi_highs':
+        opt.config.time_limit = remaining
+    elif solver_name == 'cyipopt':
+        opt.config.options['max_cpu_time'] = float(remaining)
+    elif solver_name == 'glpk':
+        opt.options['tmlim'] = remaining
+    elif solver_name == 'baron':
+        opt.options['MaxTime'] = remaining
+    elif solver_name in {'ipopt', 'appsi_ipopt'}:
+        opt.options['max_cpu_time'] = remaining
+    elif solver_name == 'gams':
+        opt.options['add_options'].append('option reslim=%s;' % remaining)
+
+
+def set_solver_mipgap(opt, solver_name, config):
+    """Set mipgap for subsolvers.
+
+    Parameters
+    ----------
+    opt : Solvers
+        The solver object.
+    solver_name : String
+        The name of solver.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    """
+    if solver_name in {'cplex', 'gurobi', 'gurobi_persistent', 'appsi_gurobi', 'glpk'}:
+        opt.options['mipgap'] = config.mip_solver_mipgap
+    elif solver_name == 'cplex_persistent':
+        opt._solver_model.parameters.mip.tolerances.mipgap.set(config.mip_solver_mipgap)
+    elif solver_name == 'appsi_cplex':
+        opt.options['mip_tolerances_mipgap'] = config.mip_solver_mipgap
+    elif solver_name == 'appsi_highs':
+        opt.config.mip_gap = config.mip_solver_mipgap
+    elif solver_name == 'gams':
+        opt.options['add_options'].append('option optcr=%s;' % config.mip_solver_mipgap)
+
+
+# if isinstance(solver.options["add_options"], list):
+#     solver.options["add_options"].append(reslim_str)
+# else:
+#     solver.options["add_options"] = [reslim_str]
+
+
+def set_solver_constraint_violation_tolerance(opt, solver_name, config):
+    """Set constraint violation tolerance for solvers.
+
+    Parameters
+    ----------
+    opt : Solvers
+        The solver object.
+    solver_name : String
+        The name of solver.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    """
+    if solver_name == 'baron':
+        opt.options['AbsConFeasTol'] = config.zero_tolerance
+    elif solver_name in {'ipopt', 'appsi_ipopt'}:
+        opt.options['constr_viol_tol'] = config.zero_tolerance
+    elif solver_name == 'cyipopt':
+        opt.config.options['constr_viol_tol'] = config.zero_tolerance
+    elif solver_name == 'gams':
+        if config.nlp_solver_args['solver'] in {
+            'ipopt',
+            'ipopth',
+            'msnlp',
+            'conopt',
+            'baron',
+        }:
+            if config.nlp_solver_args['solver'] == 'ipopt':
+                opt.options['add_options'].append('$onecho > ipopt.opt')
+                opt.options['add_options'].append(
+                    'constr_viol_tol ' + str(config.zero_tolerance)
+                )
+            elif config.nlp_solver_args['solver'] == 'ipopth':
+                opt.options['add_options'].append('$onecho > ipopth.opt')
+                opt.options['add_options'].append(
+                    'constr_viol_tol ' + str(config.zero_tolerance)
+                )
+                # TODO: Ipopt warmstart option
+                # opt.options['add_options'].append('warm_start_init_point       yes\n'
+                #                                   'warm_start_bound_push       1e-9\n'
+                #                                   'warm_start_bound_frac       1e-9\n'
+                #                                   'warm_start_slack_bound_frac 1e-9\n'
+                #                                   'warm_start_slack_bound_push 1e-9\n'
+                #                                   'warm_start_mult_bound_push  1e-9\n')
+            elif config.nlp_solver_args['solver'] == 'conopt':
+                opt.options['add_options'].append('$onecho > conopt.opt')
+                opt.options['add_options'].append(
+                    'RTNWMA ' + str(config.zero_tolerance)
+                )
+            elif config.nlp_solver_args['solver'] == 'msnlp':
+                opt.options['add_options'].append('$onecho > msnlp.opt')
+                opt.options['add_options'].append(
+                    'feasibility_tolerance ' + str(config.zero_tolerance)
+                )
+            elif config.nlp_solver_args['solver'] == 'baron':
+                opt.options['add_options'].append('$onecho > baron.opt')
+                opt.options['add_options'].append(
+                    'AbsConFeasTol ' + str(config.zero_tolerance)
+                )
+            opt.options['add_options'].append('$offecho')
+            opt.options['add_options'].append('GAMS_MODEL.optfile=1')
 
 
 def get_integer_solution(model, string_zero=False):
