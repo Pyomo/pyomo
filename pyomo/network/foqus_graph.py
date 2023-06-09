@@ -557,7 +557,7 @@ class FOQUSGraph(object):
             2. Look at strongly connected components instead of whole
             graph. This would cut back on the size of graph we are
             looking at. The flowsheets are rarely one strongly
-            conneted component.
+            connected component.
 
             3. When you add an edge to a tear set you could reduce the
             size of the problem in the branch by only looking at
@@ -565,7 +565,7 @@ class FOQUSGraph(object):
 
             4. This returns all equally good optimal tear sets. That
             may not really be necessary. For very large flowsheets,
-            there could be an extremely large number of optimial tear
+            there could be an extremely large number of optimal tear
             edge sets.
         """
 

@@ -773,7 +773,7 @@ class _SetData(_SetDataBase):
         # Note: this method assumes that at least one range is continuous.
         #
         # Note: I'd like to use set() for ranges, since we will be
-        # randomly removing elelments from the list; however, since we
+        # randomly removing elements from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
         # routine nondeterministic.  Not a hoge issue for the result,
         # but problemmatic for code coverage.

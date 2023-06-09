@@ -27,6 +27,7 @@
 
 
 from pyomo.common.dependencies import numpy as np, pandas as pd, matplotlib as plt
+from pyomo.core.expr.numvalue import value
 
 from itertools import product
 import logging
@@ -197,13 +198,13 @@ class FisherResults:
         for par in self.parameter_names:
             jaco_info[par] = []
             # loop over measurements
-            for nam in measurement_subset.variable_names:
+            for name in measurement_subset.variable_names:
                 try:
-                    n_all_measure = self.measurement_variables.index(nam)
+                    n_all_measure = self.measurement_variables.index(name)
                     jaco_info[par].append(self.all_jacobian_info[par][n_all_measure])
                 except:
                     raise ValueError(
-                        "Measurement ", nam, " is not in original measurement set."
+                        "Measurement ", name, " is not in original measurement set."
                     )
 
         return jaco_info
@@ -630,11 +631,11 @@ class GridSearchResult:
         # achieve the design variable ranges this figure needs
         # create a dictionary for sensitivity dimensions
         sensitivity_dict = {}
-        for i, nam in enumerate(self.design_names):
-            if nam in self.sensitivity_dimension:
-                sensitivity_dict[nam] = self.design_ranges[i]
-            elif nam[0] in self.sensitivity_dimension:
-                sensitivity_dict[nam[0]] = self.design_ranges[i]
+        for i, name in enumerate(self.design_names):
+            if name in self.sensitivity_dimension:
+                sensitivity_dict[name] = self.design_ranges[i]
+            elif name[0] in self.sensitivity_dimension:
+                sensitivity_dict[name[0]] = self.design_ranges[i]
 
         x_range = sensitivity_dict[self.sensitivity_dimension[0]]
         y_range = sensitivity_dict[self.sensitivity_dimension[1]]
