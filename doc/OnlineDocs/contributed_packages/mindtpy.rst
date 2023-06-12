@@ -3,7 +3,7 @@ MindtPy Solver
 
 The Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy) solver
 allows users to solve Mixed-Integer Nonlinear Programs (MINLP) using decomposition algorithms.
-These decomposition algorithms usually rely on the solution of Mixed-Intger Linear Programs
+These decomposition algorithms usually rely on the solution of Mixed-Integer Linear Programs
 (MILP) and Nonlinear Programs (NLP).
 
 The following algorithms are currently available in MindtPy:

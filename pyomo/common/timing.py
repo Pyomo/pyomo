@@ -465,7 +465,7 @@ def _clear_timers_except(timer, to_retain):
 
     Parameters
     ----------
-    timer: HierarchicalTimer or _HierarchichalHelper
+    timer: HierarchicalTimer or _HierarchicalHelper
         The timer whose dict of "sub-timers" will be pruned
 
     to_retain: set
