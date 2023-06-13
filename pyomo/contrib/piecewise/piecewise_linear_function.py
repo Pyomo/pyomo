@@ -132,7 +132,7 @@ class PiecewiseLinearFunctionData(_BlockData):
     def map_transformation_var(self, pw_expr, v):
         """
         Records on the PiecewiseLinearFunction object that the transformed
-        form of the PiecewiseLinarExpression object pw_expr is the Var v.
+        form of the PiecewiseLinearExpression object pw_expr is the Var v.
         """
         self._transformed_exprs[self._expressions[id(pw_expr)]] = v
 
