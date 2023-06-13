@@ -116,7 +116,7 @@ class ReverseTransformationToken(object):
     to the model.
 
     We store the transformation that created it, so that we have some basic
-    error checking when the user attemps to revert, and we store a dictionary
+    error checking when the user attempts to revert, and we store a dictionary
     that can be whatever the transformation wants/needs in order to revert
     itself.
 
