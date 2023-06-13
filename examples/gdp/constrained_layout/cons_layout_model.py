@@ -18,64 +18,64 @@ from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var
 # sep_penalty_matrix (as nested array)
 # Note that only the strict upper triangle of sep_penalty_matrix is used
 constrained_layout_model_examples = {
-    "CLay0203": [
-        {1: 5, 2: 7, 3: 3},
-        {1: 6, 2: 5, 3: 3},
-        {1: 15, 2: 50},
-        {1: 10, 2: 80},
-        {1: 6, 2: 5},
-        [[0, 300, 240], [0, 0, 100]],
-    ],
-    "CLay0204": [
-        {1: 5, 2: 7, 3: 3, 4: 2},
-        {1: 6, 2: 5, 3: 3, 4: 3},
-        {1: 15, 2: 50},
-        {1: 10, 2: 80},
-        {1: 6, 2: 10},
-        [[0, 300, 240, 210], [0, 0, 100, 150], [0, 0, 0, 120]],
-    ],
-    "CLay0205": [
-        {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
-        {1: 6, 2: 5, 3: 3, 4: 3, 5: 7},
-        {1: 15, 2: 50},
-        {1: 10, 2: 80},
-        {1: 6, 2: 10},
-        [
+    "CLay0203": {
+        'rect_lengths': {1: 5, 2: 7, 3: 3},
+        'rect_heights': {1: 6, 2: 5, 3: 3},
+        'circ_xvals': {1: 15, 2: 50},
+        'circ_yvals': {1: 10, 2: 80},
+        'circ_rvals': {1: 6, 2: 5},
+        'sep_penalty_matrix': [[0, 300, 240], [0, 0, 100]],
+    },
+    "CLay0204": {
+        'rect_lengths': {1: 5, 2: 7, 3: 3, 4: 2},
+        'rect_heights': {1: 6, 2: 5, 3: 3, 4: 3},
+        'circ_xvals': {1: 15, 2: 50},
+        'circ_yvals': {1: 10, 2: 80},
+        'circ_rvals': {1: 6, 2: 10},
+        'sep_penalty_matrix': [[0, 300, 240, 210], [0, 0, 100, 150], [0, 0, 0, 120]],
+    },
+    "CLay0205": {
+        'rect_lengths': {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
+        'rect_heights': {1: 6, 2: 5, 3: 3, 4: 3, 5: 7},
+        'circ_xvals': {1: 15, 2: 50},
+        'circ_yvals': {1: 10, 2: 80},
+        'circ_rvals': {1: 6, 2: 10},
+        'sep_penalty_matrix': [
             [0, 300, 240, 210, 50],
             [0, 0, 100, 150, 30],
             [0, 0, 0, 120, 25],
             [0, 0, 0, 0, 60],
         ],
-    ],
-    "CLay0303": [
-        {1: 5, 2: 7, 3: 3},
-        {1: 6, 2: 5, 3: 3},
-        {1: 15, 2: 50, 3: 30},
-        {1: 10, 2: 80, 3: 50},
-        {1: 6, 2: 5, 3: 4},
-        [[0, 300, 240], [0, 0, 100]],
-    ],
-    "CLay0304": [
-        {1: 5, 2: 7, 3: 3, 4: 2},
-        {1: 6, 2: 5, 3: 3, 4: 3},
-        {1: 15, 2: 50, 3: 30},
-        {1: 10, 2: 80, 3: 50},
-        {1: 6, 2: 5, 3: 4},
-        [[0, 300, 240, 210], [0, 0, 100, 150], [0, 0, 0, 120]],
-    ],
-    "CLay0305": [
-        {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
-        {1: 6, 2: 5, 3: 3, 4: 3, 5: 7},
-        {1: 15, 2: 50, 3: 30},
-        {1: 10, 2: 80, 3: 50},
-        {1: 6, 2: 10, 3: 4},
-        [
+    },
+    "CLay0303": {
+        'rect_lengths': {1: 5, 2: 7, 3: 3},
+        'rect_heights': {1: 6, 2: 5, 3: 3},
+        'circ_xvals': {1: 15, 2: 50, 3: 30},
+        'circ_yvals': {1: 10, 2: 80, 3: 50},
+        'circ_rvals': {1: 6, 2: 5, 3: 4},
+        'sep_penalty_matrix': [[0, 300, 240], [0, 0, 100]],
+    },
+    "CLay0304": {
+        'rect_lengths': {1: 5, 2: 7, 3: 3, 4: 2},
+        'rect_heights': {1: 6, 2: 5, 3: 3, 4: 3},
+        'circ_xvals': {1: 15, 2: 50, 3: 30},
+        'circ_yvals': {1: 10, 2: 80, 3: 50},
+        'circ_rvals': {1: 6, 2: 5, 3: 4},
+        'sep_penalty_matrix': [[0, 300, 240, 210], [0, 0, 100, 150], [0, 0, 0, 120]],
+    },
+    "CLay0305": {
+        'rect_lengths': {1: 5, 2: 7, 3: 3, 4: 2, 5: 9},
+        'rect_heights': {1: 6, 2: 5, 3: 3, 4: 3, 5: 7},
+        'circ_xvals': {1: 15, 2: 50, 3: 30},
+        'circ_yvals': {1: 10, 2: 80, 3: 50},
+        'circ_rvals': {1: 6, 2: 10, 3: 4},
+        'sep_penalty_matrix': [
             [0, 300, 240, 210, 50],
             [0, 0, 100, 150, 30],
             [0, 0, 0, 120, 25],
             [0, 0, 0, 0, 60],
         ],
-    ],
+    },
 }
 
 
@@ -88,14 +88,12 @@ def build_constrained_layout_model(
     assert len(params) == 6
 
     # Get all the parameters out
-    (
-        rect_lengths,
-        rect_heights,
-        circ_xvals,
-        circ_yvals,
-        circ_rvals,
-        sep_penalty_matrix,
-    ) = params
+    rect_lengths = params['rect_lengths']
+    rect_heights = params['rect_heights']
+    circ_xvals = params['circ_xvals']
+    circ_yvals = params['circ_yvals']
+    circ_rvals = params['circ_rvals']
+    sep_penalty_matrix = params['sep_penalty_matrix']
 
     assert len(rect_lengths) == len(
         rect_heights
@@ -290,7 +288,6 @@ def draw_model(m, title=None):
                 edgecolor="#000000",
             )
         )
-        # the alignment appears to work by magic
         ax.text(
             m.circle_x[c],
             m.circle_y[c] + m.circle_r[c] + 1.5,
