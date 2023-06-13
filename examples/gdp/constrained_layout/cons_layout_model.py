@@ -11,7 +11,7 @@ with each other.
 """
 from __future__ import division
 
-from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var
+from pyomo.environ import ConcreteModel, Objective, Param, RangeSet, Set, Var, value
 
 # Constrained layout model examples. These are from Nicolas Sawaya (2006).
 # Format: rect_lengths, rect_heights, circ_xvals, circ_yvals, circ_rvals (as dicts),
@@ -199,19 +199,19 @@ def build_constrained_layout_model(
     # signed distances.
     @m.Constraint(m.rect_pairs, doc="x-distance between rectangles")
     def dist_x_defn_1(m, r1, r2):
-        return m.dist_x[(r1, r2)] >= m.rect_x[r2] - m.rect_x[r1]
+        return m.dist_x[r1, r2] >= m.rect_x[r2] - m.rect_x[r1]
 
     @m.Constraint(m.rect_pairs, doc="x-distance between rectangles")
     def dist_x_defn_2(m, r1, r2):
-        return m.dist_x[(r1, r2)] >= m.rect_x[r1] - m.rect_x[r2]
+        return m.dist_x[r1, r2] >= m.rect_x[r1] - m.rect_x[r2]
 
     @m.Constraint(m.rect_pairs, doc="y-distance between rectangles")
     def dist_y_defn_1(m, r1, r2):
-        return m.dist_y[(r1, r2)] >= m.rect_y[r2] - m.rect_y[r1]
+        return m.dist_y[r1, r2] >= m.rect_y[r2] - m.rect_y[r1]
 
     @m.Constraint(m.rect_pairs, doc="y-distance between rectangles")
     def dist_y_defn_2(m, r1, r2):
-        return m.dist_y[(r1, r2)] >= m.rect_y[r1] - m.rect_y[r2]
+        return m.dist_y[r1, r2] >= m.rect_y[r1] - m.rect_y[r2]
 
     @m.Disjunction(
         m.rect_pairs,
@@ -258,7 +258,7 @@ def build_constrained_layout_model(
 
 
 def draw_model(m, title=None):
-    """Draw a model using matplotlib to illustrate what's going on. Pass 'title' kwarg to give chart a title"""
+    """Draw a model using matplotlib to illustrate what's going on. Pass 'title' argument to give chart a title"""
 
     # matplotlib setup
     import matplotlib as mpl
@@ -297,13 +297,13 @@ def draw_model(m, title=None):
 
     for r in m.rectangles:
         print(
-            f"drawing rectangle {r}: x={m.rect_x[r]()}, y={m.rect_y[r]()} (center), L={m.rect_length[r]}, H={m.rect_height[r]}"
+            f"drawing rectangle {r}: x={value(m.rect_x[r])}, y={value(m.rect_y[r])} (center), L={m.rect_length[r]}, H={m.rect_height[r]}"
         )
         ax.add_patch(
             mpl.patches.Rectangle(
                 (
-                    m.rect_x[r]() - m.rect_length[r] / 2,
-                    m.rect_y[r]() - m.rect_height[r] / 2,
+                    value(m.rect_x[r]) - m.rect_length[r] / 2,
+                    value(m.rect_y[r]) - m.rect_height[r] / 2,
                 ),
                 m.rect_length[r],
                 m.rect_height[r],
@@ -312,8 +312,8 @@ def draw_model(m, title=None):
             )
         )
         ax.text(
-            m.rect_x[r](),
-            m.rect_y[r](),
+            value(m.rect_x[r]),
+            value(m.rect_y[r]),
             f"R{r}",
             horizontalalignment="center",
             verticalalignment="center",
@@ -325,14 +325,13 @@ def draw_model(m, title=None):
 
 # Solve some example problems and draw some pictures
 if __name__ == "__main__":
-    from pyomo.environ import SolverFactory
-    from pyomo.core.base import TransformationFactory
+    from pyomo.environ import SolverFactory, TransformationFactory
 
     # Set up a solver, for example scip and bigm works
     solver = SolverFactory("scip")
     transformer = TransformationFactory("gdp.bigm")
 
-    # Do all of them
+    # Do all of the possible problems
     for d in ["l1", "l2"]:
         for key in constrained_layout_model_examples.keys():
             print(f"Solving example problem: {key}")
@@ -342,5 +341,5 @@ if __name__ == "__main__":
             transformer.apply_to(model)
             solver.solve(model)
             print(f"Found objective function value: {model.min_dist_cost()}")
-            draw_model(model, title=(key if d == "l1" else f"{key} ({d} distance)"))
+            draw_model(model, title=(f"{key} ({d} distance)"))
             print()
