@@ -95,9 +95,9 @@ jobs:
           PACKAGES: mpi4py openmpi
 
         - os: ubuntu-latest
-          python: 3.7
-          other: /slim
-          slim: 1
+          python: 3.8
+          other: /singletest
+          category: neos
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
