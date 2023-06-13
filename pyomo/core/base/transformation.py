@@ -149,7 +149,8 @@ class ReverseTransformationToken(object):
                 "Attempting to reverse transformation of class '%s' "
                 "using a token created by a transformation of class "
                 "'%s'. Cannot revert transformation with a token from "
-                "another transformation." % (cls, self._transformation))
+                "another transformation." % (cls, self._transformation)
+            )
         if model is not self._model:
             raise MouseTrap(
                 "A reverse transformation was called on model '%s', but the "
