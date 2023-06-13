@@ -28,7 +28,7 @@ from pyomo.environ import (
     ExternalFunction,
     value,
 )
-from .nl_diff import load_and_compare_nl_baseline
+from ..nl_diff import load_and_compare_nl_baseline
 
 import pyomo.repn.plugins.ampl.ampl_ as ampl_
 import pyomo.repn.plugins.nl_writer as nl_writer
@@ -71,7 +71,7 @@ class _NLWriter_suite(object):
         model.c = Constraint(expr=model.x == model.y**2)
 
         model.y.fix(3)
-        test_fname = "export_nonlinear_variables"
+        test_fname = os.path.join(self.tempdir, "export_nonlinear_variables")
         model.write(
             test_fname,
             format=self._nl_version,

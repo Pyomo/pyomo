@@ -138,6 +138,7 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
             ProblemFormat.cpxlp,
             [ProblemFormat.cpxlp],
             has_capability=lambda x: True,
+            symbolic_solver_labels=True,
         )
         return solver
 
@@ -170,7 +171,7 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
             priorities_file,
             "* ENCODING=ISO-8859-1\n"
             "NAME             Priority Order\n"
-            "  x1 10\n"
+            "  x 10\n"
             "ENDATA\n",
         )
 
@@ -198,7 +199,7 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
             priorities_file,
             "* ENCODING=ISO-8859-1\n"
             "NAME             Priority Order\n"
-            " DN x1 10\n"
+            " DN x 10\n"
             "ENDATA\n",
         )
 
@@ -237,7 +238,7 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
             priorities_file,
             "* ENCODING=ISO-8859-1\n"
             "NAME             Priority Order\n"
-            "  x1 10\n"
+            "  x 10\n"
             "ENDATA\n",
         )
 
@@ -263,7 +264,7 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
     def get_mock_model_with_priorities(self):
         m = ConcreteModel()
         m.x = Var(domain=Integers)
-        m.s = RangeSet(10)
+        m.s = RangeSet(0, 9)
         m.y = Var(m.s, domain=Integers)
         m.o = Objective(expr=m.x + sum(m.y), sense=minimize)
         m.c = Constraint(expr=m.x >= 1)
@@ -278,13 +279,15 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
         m.priority.set_value(m.y, 2, expand=False)
         m.direction.set_value(m.y, BranchDirection.down, expand=True)
 
-        m.direction.set_value(m.y[10], BranchDirection.up)
+        m.direction.set_value(m.y[9], BranchDirection.up)
         return m
 
     def test_use_variable_priorities(self):
         model = self.get_mock_model_with_priorities()
         with SolverFactory("_mock_cplex") as opt:
-            opt._presolve(model, priorities=True, keepfiles=True)
+            opt._presolve(
+                model, priorities=True, keepfiles=True, symbolic_solver_labels=True
+            )
 
             with open(opt._priorities_file_name, "r") as ord_file:
                 priorities_file = ord_file.read()
@@ -294,17 +297,17 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
             (
                 "* ENCODING=ISO-8859-1\n"
                 "NAME             Priority Order\n"
-                "  x1 1\n"
-                " DN x2 2\n"
-                " DN x3 2\n"
-                " DN x4 2\n"
-                " DN x5 2\n"
-                " DN x6 2\n"
-                " DN x7 2\n"
-                " DN x8 2\n"
-                " DN x9 2\n"
-                " DN x10 2\n"
-                " UP x11 2\n"
+                "  x 1\n"
+                " DN y(0) 2\n"
+                " DN y(1) 2\n"
+                " DN y(2) 2\n"
+                " DN y(3) 2\n"
+                " DN y(4) 2\n"
+                " DN y(5) 2\n"
+                " DN y(6) 2\n"
+                " DN y(7) 2\n"
+                " DN y(8) 2\n"
+                " UP y(9) 2\n"
                 "ENDATA\n"
             ),
         )

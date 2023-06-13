@@ -269,7 +269,7 @@ class DataPortal(object):
             dp[namespace, name]
 
         Args:
-            *args (str): A tuple of arguents.
+            *args (str): A tuple of arguments.
 
         Returns:
             If a single argument is given, then the data associated

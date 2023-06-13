@@ -773,7 +773,7 @@ class _SetData(_SetDataBase):
         # Note: this method assumes that at least one range is continuous.
         #
         # Note: I'd like to use set() for ranges, since we will be
-        # randomly removing elelments from the list; however, since we
+        # randomly removing elements from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
         # routine nondeterministic.  Not a hoge issue for the result,
         # but problemmatic for code coverage.
@@ -1198,6 +1198,12 @@ class _FiniteSetMixin(object):
     def __reversed__(self):
         return reversed(self.data())
 
+    def sorted_iter(self):
+        return iter(sorted_robust(self))
+
+    def ordered_iter(self):
+        return self.sorted_iter()
+
     def isdiscrete(self):
         """Returns True if this set admits only discrete members"""
         return True
@@ -1300,6 +1306,12 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     def _iter_impl(self):
         return iter(self._values)
+
+    def __reversed__(self):
+        try:
+            return reversed(self._values)
+        except:
+            return reversed(self.data())
 
     def __len__(self):
         """
@@ -1503,6 +1515,9 @@ class _OrderedSetMixin(object):
 
     def ordered_data(self):
         return self.data()
+
+    def ordered_iter(self):
+        return iter(self)
 
     def first(self):
         return self.at(1)
@@ -1734,6 +1749,12 @@ class _SortedSetMixin(object):
     """"""
 
     __slots__ = ()
+
+    def ordered_iter(self):
+        return iter(self)
+
+    def sorted_iter(self):
+        return iter(self)
 
 
 class _SortedSetData(_SortedSetMixin, _OrderedSetData):
@@ -2509,6 +2530,12 @@ class FiniteSetOf(_FiniteSetMixin, SetOf):
 
     def _iter_impl(self):
         return iter(self._ref)
+
+    def __reversed__(self):
+        try:
+            return reversed(self._ref)
+        except:
+            return reversed(self.data())
 
 
 class UnorderedSetOf(metaclass=RenamedClass):

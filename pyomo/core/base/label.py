@@ -134,7 +134,7 @@ class NumericLabeler(object):
 
 
 #
-# TODO: [JDS] I would like to rename TextLabeler to LPLabeler - as it
+# TODO: [JDS] I would like to rename TextLabeler to LPFileLabeler - as it
 # generated LP-file-compliant labels - and make the CNameLabeler the
 # TextLabeler.  This makes sense as the name() is the closest thing we
 # have to a human-readable canonical text naming convention (the
@@ -148,7 +148,7 @@ class CNameLabeler(object):
         return obj.getname(True)
 
 
-class TextLabeler(object):
+class LPFileLabeler(object):
     def __call__(self, obj):
         return cpxlp_label_from_name(obj.getname(True))
 
@@ -160,6 +160,9 @@ class TextLabeler(object):
     )
     def remove_obj(self, obj):
         pass
+
+
+TextLabeler = LPFileLabeler
 
 
 class AlphaNumericTextLabeler(object):

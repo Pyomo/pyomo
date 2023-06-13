@@ -498,6 +498,12 @@ class LazyOACallback_cplex(
             for c in fixed_nlp.tmp_duals:
                 if fixed_nlp.dual.get(c, None) is None:
                     fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
+                elif (
+                    config.nlp_solver == 'cyipopt'
+                    and solve_data.objective_sense == minimize
+                ):
+                    # TODO: recover the opposite dual when cyipopt issue #2831 is solved.
+                    fixed_nlp.dual[c] = -fixed_nlp.dual[c]
             dual_values = list(
                 fixed_nlp.dual[c] for c in fixed_nlp.MindtPy_utils.constraint_list
             )

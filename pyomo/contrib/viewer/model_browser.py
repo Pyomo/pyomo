@@ -430,7 +430,7 @@ class ComponentDataModel(myqt.QAbstractItemModel):
         function. Entering into this don't specify any args.
         """
         # Blocks are special they define the hierarchy of the model, so first
-        # check for blocks. Other component can be handled togeter
+        # check for blocks. Other component can be handled together
         if o is None and len(self.rootItems) > 0:  # top level object (no parent)
             parent = self.rootItems[0]  # should be single root node for now
             o = parent.data  # start with root node
@@ -493,7 +493,7 @@ class ComponentDataModel(myqt.QAbstractItemModel):
             o: A Pyomo component to add to the tree
         """
         # Blocks are special they define the hierarchy of the model, so first
-        # check for blocks. Other component can be handled togeter
+        # check for blocks. Other component can be handled together
         if isinstance(
             o, Block._ComponentDataClass
         ):  # single block or element of indexed block

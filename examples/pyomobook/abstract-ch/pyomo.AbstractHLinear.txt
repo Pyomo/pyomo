@@ -22,9 +22,9 @@ Problem:
   Lower bound: 3.83388751714678
   Upper bound: 3.83388751714678
   Number of objectives: 1
-  Number of constraints: 2
-  Number of variables: 3
-  Number of nonzeros: 3
+  Number of constraints: 1
+  Number of variables: 2
+  Number of nonzeros: 2
   Sense: maximize
 # ----------------------------------------------------------
 #   Solver Information

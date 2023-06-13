@@ -141,12 +141,7 @@ class SymbolMap(object):
         #
         # Create a new symbol, performing an error check if it is a duplicate
         #
-        if labeler is None:
-            if self.default_labeler is not None:
-                labeler = self.default_labeler
-            else:
-                labeler = str
-        symbol = labeler(obj, *args)
+        symbol = (labeler or self.default_labeler or str)(obj, *args)
         if symbol in self.bySymbol:
             # The labeler can have side-effects, including registering
             # this symbol in the symbol map

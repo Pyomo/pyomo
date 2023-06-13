@@ -176,7 +176,7 @@ def set_up_mip_solver(solve_data, config, regularization_problem):
         The customized MIP solver.
     """
     # Deactivate extraneous IMPORT/EXPORT suffixes
-    if config.nlp_solver == 'ipopt':
+    if config.nlp_solver in {'ipopt', 'cyipopt'}:
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
     if regularization_problem:

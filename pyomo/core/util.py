@@ -94,7 +94,7 @@ def quicksum(args, start=0, linear=None):
     if linear is not None:
         deprecation_warning(
             "The quicksum(linear=...) argument is deprecated and ignored.",
-            version='6.5.1.dev0',
+            version='6.6.0',
         )
 
     #

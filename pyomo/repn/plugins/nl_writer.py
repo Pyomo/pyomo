@@ -9,10 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import enum
 import logging
 import os
-import sys
 from collections import deque
 from operator import itemgetter, attrgetter, setitem
 
@@ -47,7 +45,7 @@ from pyomo.core.expr.current import (
     native_numeric_types,
     value,
 )
-from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
 from pyomo.core.base import (
     Block,
     Objective,
@@ -63,7 +61,6 @@ from pyomo.core.base import (
     SortComponents,
     minimize,
 )
-from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
@@ -71,6 +68,16 @@ import pyomo.core.kernel as kernel
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
 
+from pyomo.repn.util import (
+    ExprType,
+    FileDeterminism,
+    FileDeterminism_to_SortComponents,
+    apply_node_operation,
+    categorize_valid_components,
+    complex_number_error,
+    initialize_var_map_from_column_order,
+    ordered_active_constraints,
+)
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
 ### FIXME: Remove the following as soon as non-active components no
@@ -86,21 +93,11 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
-nan = float('nan')
-
-HALT_ON_EVALUATION_ERROR = False
 
 
-class _CONSTANT(object):
-    pass
-
-
-class _MONOMIAL(object):
-    pass
-
-
-class _GENERAL(object):
-    pass
+_CONSTANT = ExprType.CONSTANT
+_MONOMIAL = ExprType.MONOMIAL
+_GENERAL = ExprType.GENERAL
 
 
 # TODO: make a proper base class
@@ -151,74 +148,6 @@ class NLWriterInfo(object):
         self.external_function_libraries = extlib
         self.row_labels = row_lbl
         self.column_labels = col_lbl
-
-
-class FileDeterminism(enum.IntEnum):
-    NONE = 0
-    DEPRECATED_KEYS = 1
-    DEPRECATED_KEYS_AND_NAMES = 2
-    ORDERED = 10
-    SORT_INDICES = 20
-    SORT_SYMBOLS = 30
-
-
-def _activate_nl_writer_version(n):
-    """DEBUGGING TOOL to switch the "default" NL writer"""
-    doc = WriterFactory.doc('nl')
-    WriterFactory.unregister('nl')
-    WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
-
-
-def _apply_node_operation(node, args):
-    try:
-        tmp = (_CONSTANT, node._apply_operation(args))
-        if tmp[1].__class__ is complex:
-            raise ValueError('Pyomo does not support complex numbers')
-        return tmp
-    except:
-        logger.warning(
-            "Exception encountered evaluating expression "
-            "'%s(%s)'\n\tmessage: %s\n\texpression: %s"
-            % (node.name, ", ".join(map(str, args)), str(sys.exc_info()[1]), node)
-        )
-        if HALT_ON_EVALUATION_ERROR:
-            raise
-        return (_CONSTANT, nan)
-
-
-def categorize_valid_components(
-    model, active=True, sort=None, valid=set(), targets=set()
-):
-    assert active in (True, None)
-    unrecognized = {}
-    component_map = {k: [] for k in targets}
-    for block in model.block_data_objects(active=active, descend_into=True, sort=sort):
-        local_ctypes = block.collect_ctypes(active=None, descend_into=False)
-        for ctype in local_ctypes:
-            if ctype in kernel.base._kernel_ctype_backmap:
-                ctype = kernel.base._kernel_ctype_backmap[ctype]
-            if ctype in targets:
-                component_map[ctype].append(block)
-                continue
-            if ctype in valid:
-                continue
-            # TODO: we should rethink the definition of "active" for
-            # Components that are not subclasses of ActiveComponent
-            if not issubclass(ctype, ActiveComponent) and not issubclass(
-                ctype, kernel.base.ICategorizedObject
-            ):
-                continue
-            if ctype not in unrecognized:
-                unrecognized[ctype] = []
-            unrecognized[ctype].extend(
-                block.component_data_objects(
-                    ctype=ctype,
-                    active=active,
-                    descend_into=False,
-                    sort=SortComponents.unsorted,
-                )
-            )
-    return component_map, {k: v for k, v in unrecognized.items() if v}
 
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
@@ -523,19 +452,6 @@ class _NLWriter_impl(object):
         self.next_V_line_id = 0
         self.pause_gc = None
 
-        if config.file_determinism in (
-            FileDeterminism.DEPRECATED_KEYS,
-            FileDeterminism.DEPRECATED_KEYS_AND_NAMES,
-        ):
-            old = config.file_determinism
-            config.file_determinism = 10 * (old + 1)
-            new = config.file_determinism
-            deprecation_warning(
-                f'{str(old)} ({int(old)}) is deprecated.  '
-                f'Please use {str(new)} ({int(new)})',
-                version='6.5.0',
-            )
-
     def __enter__(self):
         assert AMPLRepn.ActiveVisitor is None
         AMPLRepn.ActiveVisitor = self.visitor
@@ -555,12 +471,7 @@ class _NLWriter_impl(object):
             timing_logger.isEnabledFor(logging.DEBUG) and timing_logger.hasHandlers()
         )
 
-        sorter = SortComponents.unsorted
-        if self.config.file_determinism >= FileDeterminism.SORT_INDICES:
-            sorter = sorter | SortComponents.indices
-            if self.config.file_determinism >= FileDeterminism.SORT_SYMBOLS:
-                sorter = sorter | SortComponents.alphabetical
-
+        sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
         component_map, unknown = categorize_valid_components(
             model,
             active=True,
@@ -572,10 +483,8 @@ class _NLWriter_impl(object):
                 Var,
                 Param,
                 Expression,
-                ExternalFunction,
-                Suffix,
-                SOSConstraint,
                 # FIXME: Non-active components should not report as Active
+                ExternalFunction,
                 Set,
                 RangeSet,
                 Port,
@@ -600,32 +509,10 @@ class _NLWriter_impl(object):
         symbolic_solver_labels = self.symbolic_solver_labels
         visitor = self.visitor
         ostream = self.ostream
-        var_map = self.var_map
 
-        if self.config.column_order == True:
-            self.config.column_order = list(
-                model.component_data_objects(Var, descend_into=True, sort=sorter)
-            )
-        elif self.config.file_determinism > FileDeterminism.ORDERED:
-            # We will pre-gather the variables so that their order
-            # matches the file_determinism flag.  This is a little
-            # cumbersome, but is implemented this way for consistency
-            # with the original NL writer.
-            if self.config.column_order is None:
-                self.config.column_order = []
-            self.config.column_order.extend(
-                model.component_data_objects(Var, descend_into=True, sort=sorter)
-            )
-        if self.config.column_order is not None:
-            # Note that Vars that appear twice (e.g., through a
-            # Reference) will be sorted with the FIRST occurrence.
-            for var in self.config.column_order:
-                if var.is_indexed():
-                    for _v in var.values():
-                        if not _v.fixed:
-                            var_map[id(_v)] = _v
-                elif not var.fixed:
-                    var_map[id(var)] = var
+        var_map = self.var_map
+        initialize_var_map_from_column_order(model, self.config, var_map)
+        timer.toc('Initialized column order', level=logging.DEBUG)
 
         #
         # Tabulate the model expressions
@@ -665,7 +552,7 @@ class _NLWriter_impl(object):
         # required for solvers like PATH.
         n_complementarity_range = 0
         n_complementarity_nz_var_lb = 0
-        for con in model.component_data_objects(Constraint, active=True, sort=sorter):
+        for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
@@ -732,33 +619,14 @@ class _NLWriter_impl(object):
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
 
-        if self.config.row_order:
-            # Note: this relies on two things: 1) dict are ordered, and
-            # 2) updating an entry in a dict does not change its
-            # ordering.
-            row_order = {}
-            for con in self.config.row_order:
-                if con.is_indexed():
-                    for c in con.values():
-                        row_order[id(c)] = c
-                else:
-                    row_order[id(con)] = con
-            for c in constraints:
-                row_order[id(c)] = c
-            for c in linear_cons:
-                row_order[id(c)] = c
-            # map the implicit dict ordering to an explicit 0..n ordering
-            row_order = {_id: i for i, _id in enumerate(row_order.keys())}
-            constraints.sort(key=itemgetter(row_order))
-            linear_cons.sort(key=itemgetter(row_order))
-        else:
-            row_order = {}
-
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
         n_nonlinear_cons = len(constraints)
         constraints.extend(linear_cons)
         n_cons = len(constraints)
+
+        # initialize an empty row order, to be populated later if we need it
+        row_order = {}
 
         #
         # Collect constraints and objectives into the groupings
@@ -816,7 +684,7 @@ class _NLWriter_impl(object):
         # variable order because the SOS constraint *could* reference a
         # variable not yet seen in the model.
         for block in component_map[SOSConstraint]:
-            for sos in block.component_objects(
+            for sos in block.component_data_objects(
                 SOSConstraint, active=True, descend_into=False, sort=sorter
             ):
                 for v in sos.variables:
@@ -1990,7 +1858,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        f"Encountered {mult}*{str(arg2[1])} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -2019,7 +1887,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        f"Encountered {str(mult)}*{arg2[1]} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -2041,20 +1909,20 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            tmp = _apply_node_operation(node, (arg1[2], div))
-            if tmp[1] != tmp[1]:
+            tmp = apply_node_operation(node, (arg1[2], div))
+            if tmp != tmp:
                 # This catches if the coefficient division results in nan
-                return tmp
-            return (_MONOMIAL, arg1[1], tmp[1])
+                return _CONSTANT, tmp
+            return (_MONOMIAL, arg1[1], tmp)
         elif arg1[0] is _GENERAL:
-            tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
+            tmp = apply_node_operation(node, (arg1[1].mult, div))
             if tmp != tmp:
                 # This catches if the multiplier division results in nan
                 return _CONSTANT, tmp
             arg1[1].mult = tmp
             return arg1
         elif arg1[0] is _CONSTANT:
-            return _apply_node_operation(node, (arg1[1], div))
+            return _CONSTANT, apply_node_operation(node, (arg1[1], div))
     elif arg1[0] is _CONSTANT and not arg1[1]:
         return _CONSTANT, 0
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
@@ -2067,7 +1935,10 @@ def handle_division_node(visitor, node, arg1, arg2):
 def handle_pow_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         if arg1[0] is _CONSTANT:
-            return _apply_node_operation(node, (arg1[1], arg2[1]))
+            ans = apply_node_operation(node, (arg1[1], arg2[1]))
+            if ans.__class__ in _complex_types:
+                ans = complex_number_error(ans, visitor, node)
+            return _CONSTANT, ans
         elif not arg2[1]:
             return _CONSTANT, 1
         elif arg2[1] == 1:
@@ -2086,7 +1957,7 @@ def handle_abs_node(visitor, node, arg1):
 
 def handle_unary_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
-        return _apply_node_operation(node, (arg1[1],))
+        return _CONSTANT, apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name]
     )
@@ -2283,7 +2154,7 @@ def handle_external_function_node(visitor, node, *args):
         for arg in args
     ):
         arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const for arg in args]
-        return _apply_node_operation(node, arg_list)
+        return _CONSTANT, apply_node_operation(node, arg_list)
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:
             raise RuntimeError(
@@ -2347,6 +2218,10 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 
+def _before_complex(visitor, child):
+    return False, (_CONSTANT, complex_number_error(child, visitor, child))
+
+
 def _before_string(visitor, child):
     visitor.encountered_string_arguments = True
     ans = AMPLRepn(child, None, None)
@@ -2358,9 +2233,23 @@ def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
-            return False, (_CONSTANT, child())
+            ans = child()
+            if ans is None or ans != ans:
+                ans = InvalidNumber(nan)
+            elif ans.__class__ in _complex_types:
+                ans = complex_number_error(ans, self, node)
+            return False, (_CONSTANT, ans)
         visitor.var_map[_id] = child
     return False, (_MONOMIAL, _id, 1)
+
+
+def _before_param(visitor, child):
+    ans = child()
+    if ans is None or ans != ans:
+        ans = InvalidNumber(nan)
+    elif ans.__class__ in _complex_types:
+        ans = complex_number_error(ans, self, child)
+    return False, (_CONSTANT, ans)
 
 
 def _before_npv(visitor, child):
@@ -2375,10 +2264,7 @@ def _before_npv(visitor, child):
     #     child = visitor.value_cache[_id] = child()
     # return False, (_CONSTANT, child)
     try:
-        tmp = False, (_CONSTANT, child())
-        if tmp[1][1].__class__ is complex:
-            return True, None
-        return tmp
+        return False, (_CONSTANT, visitor._eval_expr(child))
     except:
         # If there was an exception evaluating the subexpression, then
         # we need to descend into it (in case there is something like 0 *
@@ -2403,7 +2289,7 @@ def _before_monomial(visitor, child):
         # else:
         #     arg1 = visitor.value_cache[_id] = arg1()
         try:
-            arg1 = arg1()
+            arg1 = visitor._eval_expr(arg1)
         except:
             # If there was an exception evaluating the subexpression,
             # then we need to descend into it (in case there is something
@@ -2422,7 +2308,7 @@ def _before_monomial(visitor, child):
                 version='6.4.3',
             )
             _prod = 0
-        return (_CONSTANT, _prod)
+        return False, (_CONSTANT, _prod)
 
     # Trap multiplication by 0.
     if not arg1:
@@ -2444,7 +2330,7 @@ def _before_linear(visitor, child):
         if arg.__class__ is MonomialTermExpression:
             c, v = arg.args
             if c.__class__ not in native_types:
-                c = c()
+                c = visitor._eval_expr(c)
             if v.fixed:
                 const += c * v.value
             elif c:
@@ -2458,7 +2344,7 @@ def _before_linear(visitor, child):
         elif arg.__class__ in native_types:
             const += arg
         else:
-            const += arg()
+            const += visitor._eval_expr(arg)
     if linear:
         return False, (_GENERAL, AMPLRepn(const, linear, None))
     else:
@@ -2483,9 +2369,11 @@ def _before_general_expression(visitor, child):
     return True, None
 
 
+_complex_types = set((complex,))
 # Register an initial set of known expression types with the "before
 # child" expression handler lookup table.
 _before_child_handlers = {_type: _before_native for _type in native_numeric_types}
+_before_child_handlers[complex] = _before_complex
 for _type in native_types:
     if issubclass(_type, str):
         _before_child_handlers[_type] = _before_string
@@ -2532,7 +2420,15 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.symbolic_solver_labels = symbolic_solver_labels
         self.use_named_exprs = use_named_exprs
         self.encountered_string_arguments = False
-        # self.value_cache = {}
+        self._eval_expr_visitor = _EvaluationVisitor(True)
+
+    def _eval_expr(self, expr):
+        ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
+        if ans.__class__ not in native_types:
+            ans = value(ans)
+        if ans.__class__ in _complex_types:
+            return complex_number_error(ans, self, expr)
+        return ans
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
@@ -2634,7 +2530,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         handlers = _before_child_handlers
         child_type = child.__class__
         if child_type in native_numeric_types:
-            handlers[child_type] = _before_native
+            if isinstance(child_type, complex):
+                _complex_types.add(child_type)
+                dispatcher[child_type] = _before_complex
+            else:
+                dispatcher[child_type] = _before_native
         elif issubclass(child_type, str):
             handlers[child_type] = _before_string
         elif child_type in native_types:
@@ -2643,7 +2543,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             if child.is_potentially_variable():
                 handlers[child_type] = _before_var
             else:
-                handlers[child_type] = _before_npv
+                handlers[child_type] = _before_param
         elif not child.is_potentially_variable():
             handlers[child_type] = _before_npv
             # If we descend into the named expression (because of an

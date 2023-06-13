@@ -257,42 +257,46 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._last_results_object: Optional[GurobiResults] = None
 
     def available(self):
-        if self._available is None:
-            self._check_license()
-        return self._available
+        if not gurobipy_available:  # this triggers the deferred import
+            return self.Availability.NotFound
+        elif self._available == self.Availability.BadVersion:
+            return self.Availability.BadVersion
+        else:
+            return self._check_license()
 
-    @classmethod
-    def _check_license(cls):
+    def _check_license(self):
+        avail = False
         try:
             # Gurobipy writes out license file information when creating
             # the environment
             with capture_output(capture_fd=True):
                 m = gurobipy.Model()
-                m.dispose()
-        except ImportError:
-            # Triggered if this is the first time the deferred import of
-            # gurobipy is resolved. _import_gurobipy will have already
-            # set _available appropriately.
-            return
+            if self._solver_model is None:
+                self._solver_model = m
+            avail = True
         except gurobipy.GurobiError:
-            cls._available = Gurobi.Availability.BadLicense
-            return
+            avail = False
+
+        if avail:
+            if self._available is None:
+                res = Gurobi._check_full_license()
+                self._available = res
+                return res
+            else:
+                return self._available
+        else:
+            return self.Availability.BadLicense
+
+    @classmethod
+    def _check_full_license(cls):
         m = gurobipy.Model()
         m.setParam('OutputFlag', 0)
         try:
-            # As of 3/2021, the limited-size Gurobi license was limited
-            # to 2000 variables.
             m.addVars(range(2001))
-            m.setParam('OutputFlag', 0)
             m.optimize()
-            cls._available = Gurobi.Availability.FullLicense
+            return cls.Availability.FullLicense
         except gurobipy.GurobiError:
-            cls._available = Gurobi.Availability.LimitedLicense
-        finally:
-            m.dispose()
-            del m
-            with capture_output(capture_fd=True):
-                gurobipy.disposeDefaultEnv()
+            return cls.Availability.LimitedLicense
 
     def release_license(self):
         self._reinit()
