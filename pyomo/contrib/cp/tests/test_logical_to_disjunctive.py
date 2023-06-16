@@ -844,9 +844,9 @@ class TestLogicalToDisjunctiveTransformation(unittest.TestCase):
         TransformationFactory('contrib.logical_to_disjunctive').apply_to(m)
         TransformationFactory('gdp.bigm').apply_to(m)
 
-        # Should be 1 (we forced it), but we get 0!
         SolverFactory('gurobi').solve(m)
 
         update_boolean_vars_from_binary(m)
+        # Should be 1 (we forced it)
         self.assertEqual(value(m.obj), 1)
         self.assertTrue(value(m.t))
