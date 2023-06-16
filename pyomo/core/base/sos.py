@@ -106,48 +106,125 @@ class _SOSConstraintData(ActiveComponentData):
 @ModelComponentFactory.register("SOS constraint expressions.")
 class SOSConstraint(ActiveIndexedComponent):
     """
-    Represents an SOS-n constraint.
+    Implements constraints for indexed special ordered sets (SOS).
 
-    Usage:
-    model.C1 = SOSConstraint(
-                             [...],
-                             var=VAR,
-                             [set=SET OR index=SET],
-                             [sos=N OR level=N]
-                             [weights=WEIGHTS]
-                             )
-        [...]   Any number of sets used to index SET
-        VAR     The set of variables making up the SOS. Indexed by SET.
-        SET     The set used to index VAR. SET is optionally indexed by
-                the [...] sets. If SET is not specified, VAR is indexed
-                over the set(s) it was defined with.
-        N       This constraint is an SOS-N constraint. Defaults to 1.
-        WEIGHTS A Param representing the variables weights in the SOS sets.
-                A simple counter is used to generate weights when this keyword
-                is not used.
+    Parameters
+    ----------
+    var : pyo.Var
+        The set of variables from which the SOS(s) will be created.
+    sos : int
+        The type of SOS.
+    index : pyo.Set, list (non-indexed SOS) or dict (indexed SOS), optional
+        A data structure with the indexes for the variables that are to be 
+        members of the SOS(s). The indexes can be provided as a pyomo Set: 
+        either indexed, if the SOS is indexed; or non-indexed, otherwise. 
+        Alternatively, the indexes can be provided as a list, for a non-indexed
+        SOS, or as a dict, for indexed SOS(s).
+    weights : pyo.Param or dict, optional
+        A data structure with the weights for each member of the SOS(s). These
+        can be provided as pyo.Param or as a dict. If not provided, these will
+        be determined automatically using their position in the structure.
 
-    Example:
+    Examples
+    -------
+    
+    1 - An SOS of type n made up of all members of given pyomo Var component.
+    
+    >>> # the set that indexes the variables
+    >>> model.A = pyo.Set() 
+    >>> # the variables under consideration
+    >>> model.x = pyo.Var(model.A)
+    >>> # the sos constraint
+    >>> model.mysos = pyo.SOSConstraint(var=model.x, sos=n)
+    
+    2 - An SOS of type n made up of all members of given pyomo Var component, 
+    each with a specific weight.
+    
+    >>> # the set that indexes the variables
+    >>> model.A = pyo.Set()    
+    >>> # the variables under consideration    
+    >>> model.x = pyo.Var(model.A)        
+    >>> # the weights for each variable used in the sos constraints
+    >>> model.mysosweights = pyo.Param(model.A)
+    >>> # the sos constraint
+    >>> model.mysos = pyo.SOSConstraint(
+    ...     var=model.x, 
+    ...     sos=n, 
+    ...     weights=model.mysosweights
+    ...     )
+    
+    3 - An SOS of type n made up of selected members of a given Var component.
+    
+    >>> # the set that indexes the variables
+    >>> model.A = pyo.Set()
+    >>> # the variables under consideration  
+    >>> model.x = pyo.Var(model.A)
+    >>> # the set that indexes the variables actually used in the constraint
+    >>> model.B = pyo.Set(within=model.A)
+    >>> # the sos constraint
+    >>> model.mysos = pyo.SOSConstraint(var=model.x, sos=n, index=model.B)
+    
+    4 - An SOS of type n made up of selected members of a given Var component,
+    each with a specific weight.
+    
+    >>> # the set that indexes the variables
+    >>> model.A = pyo.Set()
+    >>> # the variables under consideration  
+    >>> model.x = pyo.Var(model.A)
+    >>> # the set that indexes the variables actually used in the constraint
+    >>> model.B = pyo.Set(within=model.A)
+    >>> # the weights for each variable used in the sos constraints
+    >>> model.mysosweights = pyo.Param(model.B)
+    >>> # the sos constraint
+    >>> model.mysos = pyo.SOSConstraint(
+    ...     var=model.x, 
+    ...     sos=n, 
+    ...     index=model.B,
+    ...     weights=model.mysosweights
+    ...     )
+    
+    5 - A set of SOS(s) of type n made up of members of a pyomo Var component.
+        
+    >>> # the set that indexes the variables
+    >>> model.A = pyo.Set()         
+    >>> # the variables under consideration
+    >>> model.x = pyo.Var(model.A)  
+    >>> # the set indexing the sos constraints
+    >>> model.B = pyo.Set()         
+    >>> # the sets containing the variable indexes for each constraint
+    >>> model.mysosvarindexset = pyo.Set(model.B) 
+    >>> # the sos constraints
+    >>> model.mysos = pyo.SOSConstraint(
+    ...     model.B, 
+    ...     var=model.y,
+    ...     sos=n,
+    ...     index=model.mysosvarindexset
+    ...     )
+    
+    6 - A set of SOS(s)  of type n made up of members of a pyomo Var component, 
+    each with a specific weight.
+    
+    >>> # the set that indexes the variables
+    >>> model.A = pyo.Set()
+    >>> # the variables under consideration
+    >>> model.x = pyo.Var(model.A)
+    >>> # the set indexing the sos constraints
+    >>> model.B = pyo.Set()
+    >>> # the sets containing the variable indexes for each constraint
+    >>> model.mysosvarindexset = pyo.Set(model.B)
+    >>> # the set that indexes the variables used in the sos constraints
+    >>> model.C = pyo.Set(within=model.A)
+    >>> # the weights for each variable used in the sos constraints
+    >>> model.mysosweights = pyo.Param(model.C)
+    >>> # the sos constraints
+    >>> model.mysos = pyo.SOSConstraint(
+    ...     model.B, 
+    ...     var=model.y,
+    ...     sos=n, 
+    ...     index=model.mysosvarindexset,
+    ...     weights=model.mysosweights, 
+    ...     )
 
-      model = AbstractModel()
-      model.A = Set()
-      model.B = Set(A)
-      model.X = Var(B)
-
-      model.C1 = SOSConstraint(model.A, var=model.X, set=model.B, sos=1)
-
-    This constraint actually creates one SOS-1 constraint for each
-    element of model.A (e.g., if |A| == N, there are N constraints).
-    In each constraint, model.X is indexed by the elements of
-    model.B[a], where 'a' is the current index of model.A.
-
-      model = AbstractModel()
-      model.A = Set()
-      model.X = Var(model.A)
-
-      model.C2 = SOSConstraint(var=model.X, sos=2)
-
-    This produces exactly one SOS-2 constraint using all the variables
-    in model.X.
     """
 
     Skip = (1000,)
