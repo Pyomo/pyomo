@@ -13,6 +13,7 @@ solver_available = bool(check_available_solvers(solver_name))
 # *****************************************************************************
 # *****************************************************************************
 
+
 class TestSOS(unittest.TestCase):
     @unittest.skipIf(not solver_available, "The solver is not available.")
     def test_nonindexedsos(self, show_output: bool = False):
@@ -183,6 +184,7 @@ class TestSOS(unittest.TestCase):
             assert math.isclose(pyo.value(problem.OBJ), exp_res, abs_tol=abs_tol)
 
         # *********************************************************************
+
 
 # *****************************************************************************
 # *****************************************************************************
