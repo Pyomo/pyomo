@@ -188,7 +188,7 @@ class SOSConstraint(ActiveIndexedComponent):
     ...     weights=model.mysosweights
     ...     )
 
-    5 - A set of SOS(s) of type **N** made up of members of a pyomo Var 
+    5 - A set of SOS(s) of type **N** made up of members of a pyomo Var
     component.
 
     >>> # the set that indexes the variables
