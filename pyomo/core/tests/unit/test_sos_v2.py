@@ -516,7 +516,7 @@ def problem_indexed_sosn(case: int == 0, n: int = 1, use_rule: bool = False):
             def rule_mysos(m, b):
                 return (
                     [m.y[a] for a in index[b]],
-                    [i + 1 for i, _ in enumerate(index[b])]
+                    [i + 1 for i, _ in enumerate(index[b])],
                 )
 
             model.mysos = pyo.SOSConstraint(model.B, rule=rule_mysos, sos=n)
@@ -534,7 +534,7 @@ def problem_indexed_sosn(case: int == 0, n: int = 1, use_rule: bool = False):
             def rule_mysos(m, b):
                 return (
                     [m.y[a] for a in m.mysosindex[b]],
-                    [i + 1 for i, _ in enumerate(m.mysosindex[b])]
+                    [i + 1 for i, _ in enumerate(m.mysosindex[b])],
                 )
 
             model.mysos = pyo.SOSConstraint(model.B, rule=rule_mysos, sos=n)
@@ -574,8 +574,8 @@ def problem_indexed_sosn(case: int == 0, n: int = 1, use_rule: bool = False):
                 3: 18.0,
                 2: 3,
                 5: 7,
-                6: 10  # weights define adjacency
-            }
+                6: 10,  # weights define adjacency
+            },
         )
 
         if use_rule:
@@ -583,7 +583,7 @@ def problem_indexed_sosn(case: int == 0, n: int = 1, use_rule: bool = False):
             def rule_mysos(m, b):
                 return (
                     [m.y[a] for a in m.mysosindex[b]],
-                    [m.mysosweights[a] for a in m.mysosindex[b]]
+                    [m.mysosweights[a] for a in m.mysosindex[b]],
                 )
 
             model.mysos = pyo.SOSConstraint(model.B, rule=rule_mysos, sos=n)
@@ -594,7 +594,7 @@ def problem_indexed_sosn(case: int == 0, n: int = 1, use_rule: bool = False):
                 var=model.y,
                 sos=n,
                 index=model.mysosindex,
-                weights=model.mysosweights
+                weights=model.mysosweights,
             )
 
     else:
