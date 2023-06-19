@@ -23,6 +23,8 @@ Non-indexed Special Ordered Sets
 A single SOS of type **N** involving all members of a pyomo Var component can 
 be declared in one line:
 
+.. currentmodule:: pyomo.environ
+
 .. doctest::
    :hide:
 
@@ -137,8 +139,8 @@ Param component (``model.mysosweights``) and an additional set (``model.C``):
 Declaring Special Ordered Sets using rules
 ----------------------------------------
 
-Another way to declare an SOS is through rules. This option allows users to spe
-cify the variables and weights through a method via the ``rule`` parameter. If 
+Another way to declare an SOS is through rules. This option allows users to 
+specify the variables and weights through a method via the ``rule`` parameter. If 
 this parameter is used, a tuple of two lists should to be returned: the first
 for the variables in the SOS and the second for the respective weights.
 
