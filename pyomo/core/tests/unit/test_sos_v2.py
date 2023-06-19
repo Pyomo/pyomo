@@ -432,11 +432,7 @@ def problem_nonindexed_sosn(case: int == 0, n: int = 1, use_rule: bool = False):
             model.mysos = pyo.SOSConstraint(rule=rule_mysos, sos=n)
 
         else:
-            model.mysos = pyo.SOSConstraint(
-                var=model.y,
-                sos=n,
-                weights=weights,
-            )
+            model.mysos = pyo.SOSConstraint(var=model.y,sos=n,weights=weights)
 
     elif case == 6:
         # index is not provided, but the weights are provided as a dict
@@ -454,9 +450,7 @@ def problem_nonindexed_sosn(case: int == 0, n: int = 1, use_rule: bool = False):
 
         else:
             model.mysos = pyo.SOSConstraint(
-                var=model.y,
-                sos=n,
-                weights=model.mysosweights,
+                var=model.y,sos=n,weights=model.mysosweights,
             )
 
     else:
