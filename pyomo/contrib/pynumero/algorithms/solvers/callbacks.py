@@ -161,7 +161,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
 
         i_max_xU = sorted_coords_x_U_viol[0]
         if abs(x_U_viol[i_max_xU]) >= threshold:
-            logger.info("Uppper bound violation")
+            logger.info("Upper bound violation")
             logger.info(self._get_header())
             for i in sorted_coords_x_U_viol[: self._n_residuals]:
                 name = self._variable_names[i]
