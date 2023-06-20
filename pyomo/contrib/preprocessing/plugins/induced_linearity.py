@@ -387,7 +387,7 @@ def detect_effectively_discrete_vars(block, equality_tolerance):
         if constr.lower is None or constr.upper is None:
             continue  # skip inequality constraints
         if fabs(value(constr.lower) - value(constr.upper)) > equality_tolerance:
-            continue  # not equality constriant. Skip.
+            continue  # not equality constraint. Skip.
         if constr.body.polynomial_degree() not in (1, 0):
             continue  # skip nonlinear expressions
         repn = generate_standard_repn(constr.body)

@@ -36,7 +36,7 @@ from pyomo.core.expr.relational_expr import (
     RangedExpression,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
-from pyomo.core.expr import is_fixed
+from pyomo.core.expr import is_fixed, value
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
 import pyomo.core.kernel as kernel
@@ -336,10 +336,10 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
     _, exp = arg2
     if exp == 1:
         return arg1
-    elif exp > 0 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
+    elif exp > 1 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
         _type, _arg = arg1
         ans = _type, _arg.duplicate()
-        for i in range(1, exp):
+        for i in range(1, int(exp)):
             ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
                 visitor, None, ans, (_type, _arg.duplicate())
             )
@@ -756,7 +756,7 @@ def _register_new_before_child_dispatcher(visitor, child):
     dispatcher = _before_child_dispatcher
     child_type = child.__class__
     if child_type in native_numeric_types:
-        if isinstance(child_type, complex):
+        if issubclass(child_type, complex):
             _complex_types.add(child_type)
             dispatcher[child_type] = _before_complex
         else:
@@ -775,7 +775,7 @@ def _register_new_before_child_dispatcher(visitor, child):
         if pv_base_type not in dispatcher:
             try:
                 child.__class__ = pv_base_type
-                _register_new_before_child_dispatcher(self, child)
+                _register_new_before_child_dispatcher(visitor, child)
             finally:
                 child.__class__ = child_type
         if pv_base_type in visitor.exit_node_handlers:
