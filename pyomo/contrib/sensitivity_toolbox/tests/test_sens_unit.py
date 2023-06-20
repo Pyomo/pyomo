@@ -811,7 +811,7 @@ class TestSensitivityInterface(unittest.TestCase):
             'p1': [-1.0, 0.0],
             'p2': [0.0, -1.0],
         }
-        np.testing.assert_almost_equal(gradient_f, np.hstack(ref_f[v] for v in col))
+        np.testing.assert_almost_equal(gradient_f, np.hstack([ref_f[v] for v in col]))
         np.testing.assert_almost_equal(
             gradient_c.toarray(), np.vstack([ref_c[v] for v in col]).transpose()
         )
