@@ -537,8 +537,8 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
         if regularization == True:
             if solver_name == 'cplex':
                 if config.solution_limit is not None:
-                    opt.options['mip limits solutions'] = config.solution_limit
-                opt.options['mip strategy presolvenode'] = 3
+                    opt.options['mip_limits_solutions'] = config.solution_limit
+                opt.options['mip_strategy_presolvenode'] = 3
                 # TODO: need to discuss if this option should be added.
                 if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                     opt.options['optimalitytarget'] = 3
@@ -548,7 +548,7 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
                 opt.options['Presolve'] = 2
     elif solver_name == 'cplex_persistent':
         opt.options['timelimit'] = remaining
-        opt._solver_model.parameters.mip.tolerances.mipgap.set(config.mip_solver_mipgap)
+        opt.options['mipgap'] = config.mip_solver_mipgap
         if regularization is True:
             if config.solution_limit is not None:
                 opt._solver_model.parameters.mip.limits.solutions.set(
@@ -684,22 +684,21 @@ def set_solver_mipgap(opt, solver_name, config):
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
-    if solver_name in {'cplex', 'gurobi', 'gurobi_persistent', 'appsi_gurobi', 'glpk'}:
+    if solver_name in {
+        'cplex',
+        'cplex_persistent',
+        'gurobi',
+        'gurobi_persistent',
+        'appsi_gurobi',
+        'glpk',
+    }:
         opt.options['mipgap'] = config.mip_solver_mipgap
-    elif solver_name == 'cplex_persistent':
-        opt._solver_model.parameters.mip.tolerances.mipgap.set(config.mip_solver_mipgap)
     elif solver_name == 'appsi_cplex':
         opt.options['mip_tolerances_mipgap'] = config.mip_solver_mipgap
     elif solver_name == 'appsi_highs':
         opt.config.mip_gap = config.mip_solver_mipgap
     elif solver_name == 'gams':
         opt.options['add_options'].append('option optcr=%s;' % config.mip_solver_mipgap)
-
-
-# if isinstance(solver.options["add_options"], list):
-#     solver.options["add_options"].append(reslim_str)
-# else:
-#     solver.options["add_options"] = [reslim_str]
 
 
 def set_solver_constraint_violation_tolerance(opt, solver_name, config):
@@ -874,7 +873,7 @@ class GurobiPersistent4MindtPy(GurobiPersistent):
                 where (int): an enum member of gurobipy.GRB.Callback.
             """
             self._callback_func(
-                self._pyomo_model, self, where, self.solve_data, self.config
+                self._pyomo_model, self, where, self.mindtpy_object, self.config
             )
 
         return f

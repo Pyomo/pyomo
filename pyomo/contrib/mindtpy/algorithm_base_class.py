@@ -1536,8 +1536,6 @@ class _MindtPyAlgorithm(object):
             main_mip_results = self.mip_opt.solve(
                 self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
             )
-            if config.use_tabu_list:
-                self.update_attributes()
             if len(main_mip_results.solution) > 0:
                 self.mip.solutions.load_from(main_mip_results)
 
@@ -1570,12 +1568,10 @@ class _MindtPyAlgorithm(object):
         tabulist = self.mip_opt._solver_model.register_callback(
             tabu_list.IncumbentCallback_cplex
         )
-        self.solve_data = MindtPySolveData()
-        self.export_attributes()
-        tabulist.solve_data = self.solve_data
         tabulist.opt = self.mip_opt
         tabulist.config = self.config
-        self.mip_opt._solver_model.parameters.preprocessing.reduce.set(1)
+        tabulist.mindtpy_object = self
+        self.mip_opt.options['preprocessing_reduce'] = 1
         # If the callback is used to reject incumbents, the user must set the
         # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
         # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
@@ -1597,19 +1593,15 @@ class _MindtPyAlgorithm(object):
             )
             # pass necessary data and parameters to lazyoa
             lazyoa.main_mip = self.mip
-            self.solve_data = MindtPySolveData()
-            self.export_attributes()
-            lazyoa.solve_data = self.solve_data
             lazyoa.config = self.config
             lazyoa.opt = self.mip_opt
+            lazyoa.mindtpy_object = self
             self.mip_opt._solver_model.set_warning_stream(None)
             self.mip_opt._solver_model.set_log_stream(None)
             self.mip_opt._solver_model.set_error_stream(None)
         if self.config.mip_solver == 'gurobi_persistent':
             self.mip_opt.set_callback(single_tree.LazyOACallback_gurobi)
-            self.solve_data = MindtPySolveData()
-            self.export_attributes()
-            self.mip_opt.solve_data = self.solve_data
+            self.mip_opt.mindtpy_object = self
             self.mip_opt.config = self.config
 
     ##########################################################################################################################################
@@ -1641,8 +1633,6 @@ class _MindtPyAlgorithm(object):
                 self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
             )
             # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
-            if config.single_tree or config.use_tabu_list:
-                self.update_attributes()
             if len(main_mip_results.solution) > 0:
                 self.mip.solutions.load_from(main_mip_results)
         except (ValueError, AttributeError, RuntimeError):
@@ -1789,8 +1779,10 @@ class _MindtPyAlgorithm(object):
         # determine if persistent solver is called.
         if isinstance(self.mip_opt, PersistentSolver):
             self.mip_opt.set_instance(self.mip, symbolic_solver_labels=True)
-        if config.single_tree or config.use_tabu_list:
-            self.export_attributes()
+        if config.single_tree:
+            self.set_up_lazy_OA_callback()
+        if config.use_tabu_list:
+            self.set_up_tabulist_callback()
         mip_args = dict(config.mip_solver_args)
         if config.mip_solver in {
             'cplex',
@@ -2251,14 +2243,6 @@ class _MindtPyAlgorithm(object):
                 + config.level_coef * self.dual_bound
             )
 
-    def export_attributes(self):
-        for name, val in self.__dict__.items():
-            setattr(self.solve_data, name, val)
-
-    def update_attributes(self):
-        for name, val in self.solve_data.__dict__.items():
-            self.__dict__[name] = val
-
     def update_result(self):
         if self.objective_sense == minimize:
             self.results.problem.lower_bound = self.dual_bound
@@ -2699,14 +2683,6 @@ class _MindtPyAlgorithm(object):
         self.nlp_opt = SolverFactory(config.nlp_solver)
         self.feasibility_nlp_opt = SolverFactory(config.nlp_solver)
 
-        # determine if persistent solver is called.
-        # if isinstance(mainopt, PersistentSolver):
-        #     mainopt.set_instance(self.mip, symbolic_solver_labels=True)
-        if config.single_tree:
-            self.set_up_lazy_OA_callback()
-        if config.use_tabu_list:
-            self.set_up_tabulist_callback()
-
         set_solver_mipgap(self.mip_opt, config.mip_solver, config)
         set_solver_mipgap(
             self.regularization_mip_opt, config.mip_regularization_solver, config
@@ -2756,7 +2732,7 @@ class _MindtPyAlgorithm(object):
         if config.mip_solver in {'appsi_cplex', 'appsi_gurobi', 'appsi_highs'}:
             # mip main problem
             self.mip_opt.update_config.check_for_new_or_removed_constraints = True
-            self.mip_opt.update_config.check_for_new_or_removed_vars = True  # TODO
+            self.mip_opt.update_config.check_for_new_or_removed_vars = True
             self.mip_opt.update_config.check_for_new_or_removed_params = False
             self.mip_opt.update_config.check_for_new_objective = True
             self.mip_opt.update_config.update_constraints = True

@@ -13,17 +13,17 @@ class IncumbentCallback_cplex(IncumbentCallback):
         TODO: need to handle GOA same integer combination check in lazyconstraint callback in single_tree.py
         TODO: integer_var_value_tuple can be replaced by solve_data.curr_int_sol
         """
-        solve_data = self.solve_data
+        mindtpy_object = self.mindtpy_object
         opt = self.opt
         config = self.config
         if config.single_tree:
             self.reject()
         else:
             temp = []
-            for var in solve_data.mip.MindtPy_utils.discrete_variable_list:
+            for var in mindtpy_object.mip.MindtPy_utils.discrete_variable_list:
                 value = self.get_values(opt._pyomo_var_to_solver_var_map[var])
                 temp.append(int(round(value)))
             integer_var_value = tuple(temp)
 
-            if integer_var_value in set(solve_data.integer_list):
+            if integer_var_value in set(mindtpy_object.integer_list):
                 self.reject()
