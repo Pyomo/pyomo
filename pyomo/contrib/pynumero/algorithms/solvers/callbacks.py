@@ -51,12 +51,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
 
     """
 
-    def __init__(
-        self,
-        infeasibility_threshold=1e8,
-        n_residuals=5,
-        scaled=False,
-    ):
+    def __init__(self, infeasibility_threshold=1e8, n_residuals=5, scaled=False):
         self._infeasibility_threshold = infeasibility_threshold
         self._n_residuals = n_residuals
         self._scaled = scaled
