@@ -6,7 +6,7 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs, Copt
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 import os
@@ -25,11 +25,18 @@ all_solvers = [
     ('cplex', Cplex),
     ('cbc', Cbc),
     ('highs', Highs),
+    ('copt', Copt),
 ]
-mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
+mip_solvers = [
+    ('gurobi', Gurobi),
+    ('cplex', Cplex),
+    ('cbc', Cbc),
+    ('highs', Highs),
+    ('copt', Copt),
+]
 nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex)]
-miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex)]
+qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('copt', Copt)]
+miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('copt', Copt)]
 
 
 """

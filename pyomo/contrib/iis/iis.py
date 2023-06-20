@@ -1,7 +1,7 @@
 """
 This module contains functions for computing an irreducible infeasible set
-for a Pyomo MILP or LP using a specified commercial solver, one of CPLEX,
-Gurobi, or Xpress.
+for a Pyomo MILP or LP using a specified commerical solver, one of CPLEX,
+Gurobi, Xpress or COPT.
 """
 
 import abc
@@ -24,8 +24,8 @@ def write_iis(pyomo_model, iis_file_name, solver=None, logger=logger):
         iis_file_name:str
             A file name to write the IIS to, e.g., infeasible_model.ilp
         solver:str
-            Specify the solver to use, one of "cplex", "gurobi", or "xpress".
-            If None, the tool will use the first solver available.
+            Specify the solver to use, one of "cplex", "gurobi", "xpress" or
+            "copt". If None, the tool will use the first solver available.
         logger:logging.Logger
             A logger for messages. Uses pyomo.contrib.iis logger by default.
 
@@ -127,10 +127,20 @@ class XpressIIS(_IISBase):
             return _remove_suffix(file_name, ".lp") + ".lp"
 
 
+class CoptIIS(_IISBase):
+    def compute(self):
+        self._solver._solver_model.computeIIS()
+
+    def write(self, file_name):
+        self._solver._solver_model.writeIIS(file_name)
+        return file_name
+
+
 _solver_map = {
     "cplex_persistent": CplexConflict,
     "gurobi_persistent": GurobiIIS,
     "xpress_persistent": XpressIIS,
+    "copt_persistent": CoptIIS,
 }
 
 
