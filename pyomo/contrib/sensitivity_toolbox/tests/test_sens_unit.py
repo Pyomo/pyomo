@@ -743,7 +743,7 @@ class TestSensitivityInterface(unittest.TestCase):
         dsdp, col = get_dsdp(m, variable_name, theta)
         ref = {'x1': [1.0, 0.0], 'x2': [0.0, 1.0], 'p1': [1.0, 0.0], 'p2': [0.0, 1.0]}
         np.testing.assert_almost_equal(
-            dsdp.toarray(), np.vstack(ref[c] for c in col).transpose()
+            dsdp.toarray(), np.vstack([ref[c] for c in col]).transpose()
         )
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
@@ -813,7 +813,7 @@ class TestSensitivityInterface(unittest.TestCase):
         }
         np.testing.assert_almost_equal(gradient_f, np.hstack(ref_f[v] for v in col))
         np.testing.assert_almost_equal(
-            gradient_c.toarray(), np.vstack(ref_c[v] for v in col).transpose()
+            gradient_c.toarray(), np.vstack([ref_c[v] for v in col]).transpose()
         )
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
