@@ -150,14 +150,14 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         # previous iteration.
         logger.info("")
         logger.info(f"INFEASIBILITIES FOR ITERATION {iter_count}")
-        logger.info("------------------------------" + "-"*len(str(iter_count)))
+        logger.info("------------------------------" + "-" * len(str(iter_count)))
 
         # TODO: Reduce repeated code here
         i_max_xL = sorted_coords_x_L_viol[0]
         if abs(x_L_viol[i_max_xL]) >= threshold:
             logger.info("Lower bound violation")
             logger.info(self._get_header())
-            for i in sorted_coords_x_L_viol[:self._n_residuals]:
+            for i in sorted_coords_x_L_viol[: self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(x_L_viol[i])
                 infeas_str = f"{infeas:.2e}"
@@ -168,7 +168,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         if abs(x_U_viol[i_max_xU]) >= threshold:
             logger.info("Uppper bound violation")
             logger.info(self._get_header())
-            for i in sorted_coords_x_U_viol[:self._n_residuals]:
+            for i in sorted_coords_x_U_viol[: self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(x_U_viol[i])
                 infeas_str = f"{infeas:.2e}"
@@ -179,7 +179,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         if abs(x_L_viol[i_max_compl_xL]) >= threshold:
             logger.info("Lower bound complementarity")
             logger.info(self._get_header())
-            for i in sorted_coords_compl_x_L[:self._n_residuals]:
+            for i in sorted_coords_compl_x_L[: self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(compl_x_L[i])
                 infeas_str = f"{infeas:.2e}"
@@ -190,7 +190,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         if abs(x_U_viol[i_max_xU]) >= threshold:
             logger.info("Upper bound complementarity")
             logger.info(self._get_header())
-            for i in sorted_coords_compl_x_U[:self._n_residuals]:
+            for i in sorted_coords_compl_x_U[: self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(compl_x_U[i])
                 infeas_str = f"{infeas:.2e}"
@@ -201,7 +201,7 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         if abs(primal_infeas[i_max_primal]) >= threshold:
             logger.info("Primal infeasibility")
             logger.info(self._get_header())
-            for i in sorted_coords_primal_infeas[:self._n_residuals]:
+            for i in sorted_coords_primal_infeas[: self._n_residuals]:
                 name = self._constraint_names[i]
                 infeas = abs(primal_infeas[i])
                 infeas_str = f"{infeas:.2e}"
@@ -212,11 +212,11 @@ class InfeasibilityCallback(CyIpoptIntermediateCallbackBase):
         if abs(dual_infeas[i_max_dual]) >= threshold:
             logger.info("Dual infeasibility")
             logger.info(self._get_header())
-            for i in sorted_coords_dual_infeas[:self._n_residuals]:
+            for i in sorted_coords_dual_infeas[: self._n_residuals]:
                 name = self._variable_names[i]
                 infeas = abs(dual_infeas[i])
                 infeas_str = f"{infeas:.2e}"
                 msg = infeas_str + " " + name
                 logger.info(msg)
 
-        logger.info("------------------------------" + "-"*len(str(iter_count)))
+        logger.info("------------------------------" + "-" * len(str(iter_count)))

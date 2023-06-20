@@ -373,13 +373,13 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         obj_value,
         inf_pr,
         inf_du,
-        mu, 
+        mu,
         d_norm,
         regularization_size,
         alpha_du,
         alpha_pr,
         ls_trials,
-    ):  
+    ):
         if self._intermediate_callback is not None:
             # This is the call signature that we expect a user's callback
             # function to implement. Compared to the CyIpopt callback, we
