@@ -28,13 +28,14 @@ class TestAssumedBehavior(unittest.TestCase):
       uninitialized variables
 
     """
+
     def test_uninitialized_value_error_message(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2])
         m.x[1].set_value(5)
         msg = "No value for uninitialized NumericValue"
         with self.assertRaisesRegex(ValueError, msg):
-            pyo.value(1 + m.x[1]*m.x[2])
+            pyo.value(1 + m.x[1] * m.x[2])
 
 
 class _TestIncidence(object):
