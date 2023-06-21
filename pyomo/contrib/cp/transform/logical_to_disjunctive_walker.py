@@ -107,6 +107,7 @@ def _dispatch_and(visitor, node, *args):
     z = visitor.z_vars.add()
     for arg in args:
         visitor.constraints.add(arg >= z)
+    visitor.constraints.add(len(args) - sum(args) >= 1 - z)
     return z
 
 
@@ -152,7 +153,7 @@ def _get_integer_value(n, node):
 
 
 def _dispatch_exactly(visitor, node, *args):
-    # z = sum(args[1:] == args[0]
+    # z = sum(args[1:]) == args[0]
     # This is currently implemented as:
     # [sum(args[1:] = n] v [[sum(args[1:]) < n] v [sum(args[1:]) > n]]
     M = len(args) - 1
