@@ -2571,9 +2571,22 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         )
         assertExpressionsStructurallyEqual(self, simplified, z3d - z2d)
 
-        # hull transformation of z3 >= 1
+        # hull transformation of 1 - z3 <= 2 - (z1 + z2)
         cons = hull.get_transformed_constraints(
             m.d[4]._logical_to_disjunctive.transformed_constraints[9]
+        )
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        assertExpressionsStructurallyEqual(
+            self,
+            cons.expr,
+            1 - z3d - (2 - (z1d + z2d)) - (1 - m.d[4].binary_indicator_var) * (-1)
+            <= 0 * m.d[4].binary_indicator_var,
+        )
+
+        # hull transformation of z3 >= 1
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[10]
         )
         self.assertEqual(len(cons), 1)
         cons = cons[0]
