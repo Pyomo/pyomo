@@ -50,10 +50,10 @@ def generate_strongly_connected_components(
 
     Yields
     ------
-    ``_BlockData``
+    Tuple of ``_BlockData``, list-of-variables
         Blocks containing the variables and constraints of every strongly
-        connected component, in a topological order, as well as the
-        "input variables" for that block
+        connected component, in a topological order. The variables are the
+        "input variables" for that block.
 
     """
     if variables is None:
