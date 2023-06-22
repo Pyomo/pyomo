@@ -58,9 +58,7 @@ def generate_strongly_connected_components(
     """
     if variables is None:
         variables = list(
-            _generate_variables_in_constraints(
-                constraints, include_fixed=include_fixed
-            )
+            _generate_variables_in_constraints(constraints, include_fixed=include_fixed)
         )
 
     assert len(variables) == len(constraints)
