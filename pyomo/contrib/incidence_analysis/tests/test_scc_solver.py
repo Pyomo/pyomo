@@ -350,7 +350,7 @@ class TestGenerateSCC(unittest.TestCase):
         """
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1.0)
-        m.eq1 = pyo.Constraint(expr=m.x[1] + 2 * m.x[2] + 0*m.x[3] == 7)
+        m.eq1 = pyo.Constraint(expr=m.x[1] + 2 * m.x[2] + 0 * m.x[3] == 7)
         m.eq2 = pyo.Constraint(expr=m.x[1] + pyo.log(m.x[1]) == 0)
         blocks = generate_strongly_connected_components([m.eq1, m.eq2])
         blocks = [bl for (bl, _) in blocks]
@@ -475,7 +475,7 @@ class TestSolveSCC(unittest.TestCase):
         """
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3], initialize=1.0)
-        m.eq1 = pyo.Constraint(expr=m.x[1] + 2 * m.x[2] + 0*m.x[3] == 7)
+        m.eq1 = pyo.Constraint(expr=m.x[1] + 2 * m.x[2] + 0 * m.x[3] == 7)
         m.eq2 = pyo.Constraint(expr=m.x[1] + pyo.log(m.x[1]) == 0)
         results = solve_strongly_connected_components(m)
 
