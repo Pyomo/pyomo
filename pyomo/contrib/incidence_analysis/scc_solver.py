@@ -21,7 +21,11 @@ from pyomo.util.subsystems import (
     TemporarySubsystemManager,
     generate_subsystem_blocks,
 )
-from pyomo.contrib.incidence_analysis.interface import IncidenceGraphInterface
+from pyomo.contrib.incidence_analysis.interface import (
+    IncidenceGraphInterface,
+    _generate_variables_in_constraints,
+)
+
 
 _log = logging.getLogger(__name__)
 
@@ -57,13 +61,11 @@ def generate_strongly_connected_components(
 
     """
     if variables is None:
-        var_set = ComponentSet()
-        variables = []
-        for con in constraints:
-            for var in identify_variables(con.expr, include_fixed=include_fixed):
-                if var not in var_set:
-                    variables.append(var)
-                    var_set.add(var)
+        variables = list(
+            _generate_variables_in_constraints(
+                constraints, include_fixed=include_fixed
+            )
+        )
 
     assert len(variables) == len(constraints)
     igraph = IncidenceGraphInterface()
@@ -119,14 +121,9 @@ def solve_strongly_connected_components(
         calc_var_kwds = {}
 
     constraints = list(block.component_data_objects(Constraint, active=True))
-    var_set = ComponentSet()
-    variables = []
-    for con in constraints:
-        for var in identify_variables(con.expr, include_fixed=False):
-            # Because we are solving, we do not want to include fixed variables
-            if var not in var_set:
-                variables.append(var)
-                var_set.add(var)
+    variables = list(
+        _generate_variables_in_constraints(constraints, include_fixed=False)
+    )
 
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
