@@ -11,13 +11,9 @@
 
 import logging
 
-from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
-from pyomo.common.collections import ComponentSet
-from pyomo.core.expr.visitor import identify_variables
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import (
-    create_subsystem_block,
     TemporarySubsystemManager,
     generate_subsystem_blocks,
 )
