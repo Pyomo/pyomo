@@ -111,10 +111,11 @@ def solve_strongly_connected_components(
     if calc_var_kwds is None:
         calc_var_kwds = {}
 
-    constraints = list(block.component_data_objects(Constraint, active=True))
-    variables = list(
-        _generate_variables_in_constraints(constraints, include_fixed=False)
+    igraph = IncidenceGraphInterface(
+        block, active=True, include_fixed=False, include_inequality=False
     )
+    constraints = igraph.constraints
+    variables = igraph.variables
 
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)
