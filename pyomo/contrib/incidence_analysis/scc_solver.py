@@ -13,10 +13,7 @@ import logging
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
-from pyomo.util.subsystems import (
-    TemporarySubsystemManager,
-    generate_subsystem_blocks,
-)
+from pyomo.util.subsystems import TemporarySubsystemManager, generate_subsystem_blocks
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
     _generate_variables_in_constraints,
