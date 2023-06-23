@@ -427,7 +427,8 @@ class SAS94(SASAbc):
 
         # Prepare the solver results
         results = self.results = self._create_results_from_status(
-            self._macro.get("STATUS", "ERROR"), self._macro.get("SOLUTION_STATUS","ERROR")
+            self._macro.get("STATUS", "ERROR"),
+            self._macro.get("SOLUTION_STATUS", "ERROR"),
         )
 
         if "Objective Sense            Maximization" in self._lst:

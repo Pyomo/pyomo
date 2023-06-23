@@ -13,15 +13,8 @@ from pyomo.environ import (
     minimize,
     Suffix,
 )
-from pyomo.opt.results import (
-    SolverStatus,
-    TerminationCondition,
-    ProblemSense,
-)
-from pyomo.opt import (
-    SolverFactory,
-    check_available_solvers,
-)
+from pyomo.opt.results import SolverStatus, TerminationCondition, ProblemSense
+from pyomo.opt import SolverFactory, check_available_solvers
 
 
 CAS_OPTIONS = {
