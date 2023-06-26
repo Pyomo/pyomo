@@ -1724,10 +1724,12 @@ class _MindtPyAlgorithm(object):
 
         if isinstance(self.regularization_mip_opt, PersistentSolver):
             self.regularization_mip_opt.set_instance(self.mip)
-        set_solver_timelimit(self.regularization_mip_opt,
-                             config.mip_regularization_solver,
-                             self.timing, 
-                             config)
+        set_solver_timelimit(
+            self.regularization_mip_opt,
+            config.mip_regularization_solver,
+            self.timing,
+            config,
+        )
         main_mip_results = self.regularization_mip_opt.solve(
             self.mip,
             tee=config.mip_solver_tee,
@@ -2323,8 +2325,7 @@ class _MindtPyAlgorithm(object):
         )
 
     def check_subsolver_validity(self):
-        """Check if the subsolvers are available and licensed.
-        """
+        """Check if the subsolvers are available and licensed."""
         if not self.mip_opt.available():
             raise ValueError(self.config.mip_solver + ' is not available.')
         if not self.mip_opt.license_is_valid():
@@ -2335,13 +2336,16 @@ class _MindtPyAlgorithm(object):
             raise ValueError(self.config.nlp_solver + ' is not licensed.')
         if self.config.add_regularization is not None:
             if not self.regularization_mip_opt.available():
-                raise ValueError(self.config.mip_regularization_solver + ' is not available.')
+                raise ValueError(
+                    self.config.mip_regularization_solver + ' is not available.'
+                )
             if not self.regularization_mip_opt.license_is_valid():
-                raise ValueError(self.config.mip_regularization_solver + ' is not licensed.')
+                raise ValueError(
+                    self.config.mip_regularization_solver + ' is not licensed.'
+                )
 
     def check_config(self):
-        """Checks if the configuration options make sense.
-        """
+        """Checks if the configuration options make sense."""
         config = self.config
         # configuration confirmation
         if config.init_strategy == 'FP':
@@ -2966,8 +2970,9 @@ class _MindtPyAlgorithm(object):
                     )
                     if self.curr_int_sol not in set(self.integer_list):
                         fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-                        self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
-
+                        self.handle_nlp_subproblem_tc(
+                            fixed_nlp, fixed_nlp_result, config
+                        )
 
             if self.algorithm_should_terminate(config, check_cycling=True):
                 self.last_iter_cuts = False
