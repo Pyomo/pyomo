@@ -2322,13 +2322,25 @@ class _MindtPyAlgorithm(object):
             working_model_variable_list, original_model_variable_list, config=config
         )
 
+    def check_subsolver_validity(self):
+        """Check if the subsolvers are available and licensed.
+        """
+        if not self.mip_opt.available():
+            raise ValueError(self.config.mip_solver + ' is not available.')
+        if not self.mip_opt.license_is_valid():
+            raise ValueError(self.config.mip_solver + ' is not licensed.')
+        if not self.nlp_opt.available():
+            raise ValueError(self.config.nlp_solver + ' is not available.')
+        if not self.nlp_opt.license_is_valid():
+            raise ValueError(self.config.nlp_solver + ' is not licensed.')
+        if self.config.add_regularization is not None:
+            if not self.regularization_mip_opt.available():
+                raise ValueError(self.config.mip_regularization_solver + ' is not available.')
+            if not self.regularization_mip_opt.license_is_valid():
+                raise ValueError(self.config.mip_regularization_solver + ' is not licensed.')
+
     def check_config(self):
         """Checks if the configuration options make sense.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
         config = self.config
         # configuration confirmation
@@ -2694,6 +2706,7 @@ class _MindtPyAlgorithm(object):
         self.nlp_opt = SolverFactory(config.nlp_solver)
         self.feasibility_nlp_opt = SolverFactory(config.nlp_solver)
 
+        self.check_subsolver_validity()
         set_solver_mipgap(self.mip_opt, config.mip_solver, config)
         set_solver_mipgap(
             self.regularization_mip_opt, config.mip_regularization_solver, config
