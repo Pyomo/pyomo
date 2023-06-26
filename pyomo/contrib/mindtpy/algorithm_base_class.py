@@ -1628,27 +1628,27 @@ class _MindtPyAlgorithm(object):
         self.setup_main(config)
         mip_args = self.set_up_mip_solver(config)
 
-        try:
-            main_mip_results = self.mip_opt.solve(
-                self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
-            )
-            # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
-            if len(main_mip_results.solution) > 0:
-                self.mip.solutions.load_from(main_mip_results)
-        except (ValueError, AttributeError, RuntimeError):
-            if config.single_tree:
-                config.logger.warning('Single tree terminate.')
-                if get_main_elapsed_time(self.timing) >= config.time_limit - 2:
-                    config.logger.warning('due to the timelimit.')
-                    self.results.solver.termination_condition = tc.maxTimeLimit
-                if config.strategy == 'GOA' or config.add_no_good_cuts:
-                    config.logger.warning(
-                        'Error: Cannot load a SolverResults object with bad status: error. '
-                        'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
-                        "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
-                        'No integer solution is found, so the cplex solver will report an error status. '
-                    )
-            return None, None
+        # try:
+        main_mip_results = self.mip_opt.solve(
+            self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
+        )
+        # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
+        if len(main_mip_results.solution) > 0:
+            self.mip.solutions.load_from(main_mip_results)
+        # except (ValueError, AttributeError, RuntimeError):
+        #     if config.single_tree:
+        #         config.logger.warning('Single tree terminate.')
+        #         if get_main_elapsed_time(self.timing) >= config.time_limit - 2:
+        #             config.logger.warning('due to the timelimit.')
+        #             self.results.solver.termination_condition = tc.maxTimeLimit
+        #         if config.strategy == 'GOA' or config.add_no_good_cuts:
+        #             config.logger.warning(
+        #                 'Error: Cannot load a SolverResults object with bad status: error. '
+        #                 'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
+        #                 "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
+        #                 'No integer solution is found, so the cplex solver will report an error status. '
+        #             )
+        #     return None, None
         if config.solution_pool:
             main_mip_results._solver_model = self.mip_opt._solver_model
             main_mip_results._pyomo_var_to_solver_var_map = (
@@ -1722,6 +1722,12 @@ class _MindtPyAlgorithm(object):
         # setup main problem
         self.setup_regularization_main(config)
 
+        if isinstance(self.regularization_mip_opt, PersistentSolver):
+            self.regularization_mip_opt.set_instance(self.mip)
+        set_solver_timelimit(self.regularization_mip_opt,
+                             config.mip_regularization_solver,
+                             self.timing, 
+                             config)
         main_mip_results = self.regularization_mip_opt.solve(
             self.mip,
             tee=config.mip_solver_tee,
@@ -2062,8 +2068,13 @@ class _MindtPyAlgorithm(object):
             config.logger.info('Regularization problem infeasible.')
         elif main_mip_results.solver.termination_condition is tc.unbounded:
             config.logger.info(
-                'Regularization problem ubounded.'
+                'Regularization problem unbounded.'
                 'Sometimes solving MIQP in cplex, unbounded means infeasible.'
+            )
+        elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
+            config.logger.info(
+                'Regularization problem is infeasible or unbounded.'
+                'It might happen when using Cplex to solve MIQP.'
             )
         elif main_mip_results.solver.termination_condition is tc.unknown:
             config.logger.info(
@@ -2928,7 +2939,22 @@ class _MindtPyAlgorithm(object):
 
             # Regularization is activated after the first feasible solution is found.
             if config.add_regularization is not None:
-                self.add_regularization(main_mip)
+                if not config.single_tree:
+                    self.add_regularization()
+
+                # TODO: add descriptions for the following code
+                if config.single_tree:
+                    self.curr_int_sol = get_integer_solution(self.mip, string_zero=True)
+                    copy_var_list_values(
+                        main_mip.MindtPy_utils.variable_list,
+                        self.fixed_nlp.MindtPy_utils.variable_list,
+                        config,
+                        skip_fixed=False,
+                    )
+                    if self.curr_int_sol not in set(self.integer_list):
+                        fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
+                        self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
+
 
             if self.algorithm_should_terminate(config, check_cycling=True):
                 self.last_iter_cuts = False
@@ -3022,9 +3048,9 @@ class _MindtPyAlgorithm(object):
         solution_name_obj = solution_name_obj[: config.num_solution_iteration]
         return solution_name_obj
 
-    def add_regularization(self, main_mip):
+    def add_regularization(self):
         config = self.config
-        if self.best_solution_found is not None and not config.single_tree:
+        if self.best_solution_found is not None:
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if self.dual_bound != self.dual_bound_progress[0]:
                 with time_code(self.timing, 'regularization main'):
@@ -3035,19 +3061,6 @@ class _MindtPyAlgorithm(object):
                 self.handle_regularization_main_tc(
                     regularization_main_mip, regularization_main_mip_results, config
                 )
-
-        # TODO: add descriptions for the following code
-        if config.single_tree:
-            self.curr_int_sol = get_integer_solution(self.mip, string_zero=True)
-            copy_var_list_values(
-                main_mip.MindtPy_utils.variable_list,
-                self.fixed_nlp.MindtPy_utils.variable_list,
-                config,
-                skip_fixed=False,
-            )
-            if self.curr_int_sol not in set(self.integer_list):
-                fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-                self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
 
     def bounds_converged(self):
         # Check bound convergence

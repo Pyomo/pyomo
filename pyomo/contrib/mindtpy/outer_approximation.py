@@ -54,9 +54,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 config.logger.info('Set regularization_mip_threads equal to threads')
             if config.single_tree:
                 config.add_cuts_at_incumbent = True
-                # if no method is activated by users, we will use use_bb_tree_incumbent by default
-                if not (config.reduce_level_coef or config.use_bb_tree_incumbent):
-                    config.use_bb_tree_incumbent = True
             if config.mip_regularization_solver is None:
                 config.mip_regularization_solver = config.mip_solver
         if config.single_tree:

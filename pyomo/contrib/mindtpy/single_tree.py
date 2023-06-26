@@ -12,7 +12,6 @@
 from pyomo.common.dependencies import attempt_import
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
-from pyomo.contrib.mindtpy.mip_solve import solve_main
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
@@ -652,126 +651,6 @@ class LazyOACallback_cplex(
                 'condition of {}'.format(termination_condition)
             )
 
-    def handle_lazy_regularization_problem(
-        self, main_mip, main_mip_results, mindtpy_object, config
-    ):
-        """Handles the termination condition of the regularization main problem in RLP/NLP.
-
-        Parameters
-        ----------
-        main_mip : Pyomo model
-            The MIP main problem.
-        main_mip_results : SolverResults
-            Results from solving the regularization MIP problem.
-        mindtpy_object : MindtPyObject
-            Data container that holds solve-instance data.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
-
-        Raises
-        ------
-        ValueError
-            MindtPy unable to handle the termination condition of the regularization problem.
-        ValueError
-            MindtPy unable to handle the termination condition of the regularization problem.
-        """
-        if main_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
-            mindtpy_object.handle_main_optimal(main_mip, config, update_bound=False)
-        elif main_mip_results.solver.termination_condition in {
-            tc.infeasible,
-            tc.infeasibleOrUnbounded,
-        }:
-            config.logger.info(
-                mindtpy_object.log_note_formatter.format(
-                    mindtpy_object.mip_iter,
-                    'Reg ' + mindtpy_object.regularization_mip_type,
-                    'infeasible',
-                )
-            )
-            if config.reduce_level_coef:
-                config.level_coef = config.level_coef / 2
-                main_mip, main_mip_results = solve_main(
-                    mindtpy_object, config, regularization_problem=True
-                )
-                if main_mip_results.solver.termination_condition in {
-                    tc.optimal,
-                    tc.feasible,
-                }:
-                    mindtpy_object.handle_main_optimal(
-                        main_mip, config, update_bound=False
-                    )
-                elif main_mip_results.solver.termination_condition is tc.infeasible:
-                    config.logger.info(
-                        'regularization problem still infeasible with reduced level_coef. '
-                        'NLP subproblem is generated based on the incumbent solution of the main problem.'
-                    )
-                elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
-                    config.logger.info(
-                        'Regularization problem failed to converge within the time limit.'
-                    )
-                    mindtpy_object.results.solver.termination_condition = (
-                        tc.maxTimeLimit
-                    )
-                elif main_mip_results.solver.termination_condition is tc.unbounded:
-                    config.logger.info(
-                        'Regularization problem ubounded.'
-                        'Sometimes solving MIQP using cplex, unbounded means infeasible.'
-                    )
-                elif main_mip_results.solver.termination_condition is tc.unknown:
-                    config.logger.info(
-                        'Termination condition of the regularization problem is unknown.'
-                    )
-                    if main_mip_results.problem.lower_bound != float('-inf'):
-                        config.logger.info('Solution limit has been reached.')
-                        mindtpy_object.handle_main_optimal(
-                            main_mip, config, update_bound=False
-                        )
-                    else:
-                        config.logger.info(
-                            'No solution obtained from the regularization subproblem.'
-                            'Please set mip_solver_tee to True for more information.'
-                            'The solution of the OA main problem will be adopted.'
-                        )
-                else:
-                    raise ValueError(
-                        'MindtPy unable to handle regularization problem termination condition '
-                        'of %s. Solver message: %s'
-                        % (
-                            main_mip_results.solver.termination_condition,
-                            main_mip_results.solver.message,
-                        )
-                    )
-            elif config.use_bb_tree_incumbent:
-                config.logger.debug(
-                    'Fixed subproblem will be generated based on the incumbent solution of the main problem.'
-                )
-        elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
-            config.logger.info(
-                'Regularization problem failed to converge within the time limit.'
-            )
-            mindtpy_object.results.solver.termination_condition = tc.maxTimeLimit
-        elif main_mip_results.solver.termination_condition is tc.unbounded:
-            config.logger.info(
-                'Regularization problem ubounded.'
-                'Sometimes solving MIQP using cplex, unbounded means infeasible.'
-            )
-        elif main_mip_results.solver.termination_condition is tc.unknown:
-            config.logger.info(
-                'Termination condition of the regularization problem is unknown.'
-            )
-            if main_mip_results.problem.lower_bound != float('-inf'):
-                config.logger.info('Solution limit has been reached.')
-                mindtpy_object.handle_main_optimal(main_mip, config, update_bound=False)
-        else:
-            raise ValueError(
-                'MindtPy unable to handle regularization problem termination condition '
-                'of %s. Solver message: %s'
-                % (
-                    main_mip_results.solver.termination_condition,
-                    main_mip_results.solver.message,
-                )
-            )
-
     def __call__(self):
         """This is an inherent function in LazyConstraintCallback in cplex.
 
@@ -823,12 +702,7 @@ class LazyOACallback_cplex(
                 mindtpy_object.primal_bound_improved = False
                 return
             if mindtpy_object.dual_bound != mindtpy_object.dual_bound_progress[0]:
-                main_mip, main_mip_results = solve_main(
-                    mindtpy_object, config, regularization_problem=True
-                )
-                self.handle_lazy_regularization_problem(
-                    main_mip, main_mip_results, mindtpy_object, config
-                )
+                mindtpy_object.add_regularization()
         if (
             abs(mindtpy_object.primal_bound - mindtpy_object.dual_bound)
             <= config.absolute_bound_tolerance
@@ -968,12 +842,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_object, config):
                 mindtpy_object.primal_bound_improved = False
                 return
             if mindtpy_object.dual_bound != mindtpy_object.dual_bound_progress[0]:
-                main_mip, main_mip_results = solve_main(
-                    mindtpy_object, config, regularization_problem=True
-                )
-                mindtpy_object.handle_regularization_main_tc(
-                    main_mip, main_mip_results, config
-                )
+                mindtpy_object.add_regularization()
 
         if (
             abs(mindtpy_object.primal_bound - mindtpy_object.dual_bound)

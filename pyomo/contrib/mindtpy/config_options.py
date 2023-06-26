@@ -843,22 +843,6 @@ def _add_roa_configs(CONFIG):
         ),
     )
     CONFIG.declare(
-        'reduce_level_coef',
-        ConfigValue(
-            default=False,
-            description='Whether to reduce level coefficient in ROA single tree when regularization problem is infeasible.',
-            domain=bool,
-        ),
-    )
-    CONFIG.declare(
-        'use_bb_tree_incumbent',
-        ConfigValue(
-            default=False,
-            description='Whether to use the incumbent solution of branch & bound tree in ROA single tree when regularization problem is infeasible.',
-            domain=bool,
-        ),
-    )
-    CONFIG.declare(
         'sqp_lag_scaling_coef',
         ConfigValue(
             default='fixed',
