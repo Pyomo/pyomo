@@ -2776,7 +2776,7 @@ class _MindtPyAlgorithm(object):
             self.nlp_opt.update_config.check_for_new_or_removed_vars = False
             self.nlp_opt.update_config.check_for_new_or_removed_params = False
             self.nlp_opt.update_config.check_for_new_objective = False
-            # we will deactivate trival constraints, do we need to update constraints?
+            # TODO: we will deactivate trivial constraints, do we need to update constraints?
             self.nlp_opt.update_config.update_constraints = True
             self.nlp_opt.update_config.update_vars = True
             self.nlp_opt.update_config.update_params = False
