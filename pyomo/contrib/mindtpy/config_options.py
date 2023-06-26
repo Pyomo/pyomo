@@ -526,7 +526,7 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare(
         'mip_solver',
         ConfigValue(
-            default='glpk',
+            default='appsi_highs',
             domain=In(
                 [
                     'gurobi',
