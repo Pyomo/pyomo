@@ -838,7 +838,7 @@ the corresponding values for the dynamic variable profiles.
       value or using fix()
 
 Specifying Time-Varying Inputs
-*****************************
+******************************
 The :py:class:`Simulator<pyomo.dae.Simulator>` supports simulation of a system
 of ODE's or DAE's with time-varying parameters or control inputs. Time-varying
 inputs can be specified using a Pyomo ``Suffix``. We currently only support

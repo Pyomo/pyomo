@@ -210,7 +210,7 @@ _component_data_handlers = {
     RangeSet: None,
     # TODO: Piecewise: _assert_units_consistent_piecewise,
     # TODO: SOSConstraint: _assert_units_consistent_sos,
-    # TODO: LogicalConstriant: _assert_units_consistent_logical,
+    # TODO: LogicalConstraint: _assert_units_consistent_logical,
     BuildAction: None,
     BuildCheck: None,
     # complementarities that are not in normal form are not working yet

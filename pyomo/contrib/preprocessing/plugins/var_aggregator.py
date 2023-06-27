@@ -46,7 +46,7 @@ def _get_equality_linked_variables(constraint):
         if repn.linear_coefs[i] != 0
     )
     if len(nonzero_coef_vars) != 2:
-        # Expect two variables with nonzero cofficient in constraint;
+        # Expect two variables with nonzero coefficient in constraint;
         # otherwise, return empty tuple.
         return ()
     if sorted(coef for coef in repn.linear_coefs if coef != 0) != [-1, 1]:
@@ -93,7 +93,7 @@ def _fix_equality_fixed_variables(model, scaling_tolerance=1e-10):
         # get the coefficient and variable object
         coef, var = next(nonzero_coef_vars)
         if next(nonzero_coef_vars, None) is not None:
-            # Expect one variable with nonzero cofficient in constraint;
+            # Expect one variable with nonzero coefficient in constraint;
             # otherwise, skip.
             continue
         # Constant term on the constraint body

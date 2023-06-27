@@ -122,7 +122,7 @@ class Connector(IndexedComponent):
     The idea behind a Connector is to create a bundle of variables that
     can be manipulated as a single variable within constraints.  While
     Connectors inherit from variable (mostly so that the expression
-    infrastucture can manipulate them), they are not actual variables
+    infrastructure can manipulate them), they are not actual variables
     that are exposed to the solver.  Instead, a preprocessor
     (ConnectorExpander) will look for expressions that involve
     connectors and replace the single constraint with a list of
