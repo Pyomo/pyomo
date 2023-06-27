@@ -260,9 +260,7 @@ class SOSConstraint(ActiveIndexedComponent):
     >>> model.x = pyo.Var(model.A, domain=pyo.NonNegativeReals)
     >>> # the rule method creating the constraint
     >>> def rule_mysos(m):
-    ...     var_list = [m.x[a] for a in m.x]
-    ...     weight_list = [i+1 for i in range(len(var_list))]
-    ...     return (var_list, weight_list)
+    ...     return [m.x[a] for a in m.x]
     >>> # the sos constraint(s)
     >>> model.mysos = pyo.SOSConstraint(rule=rule_mysos, sos=N)
 
