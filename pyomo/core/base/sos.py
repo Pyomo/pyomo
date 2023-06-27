@@ -122,14 +122,14 @@ class SOSConstraint(ActiveIndexedComponent):
         SOS, or as a dict, for indexed SOS(s).
     weights : pyomo.environ.Param or dict, optional
         A data structure with the weights for each member of the SOS(s). These
-        can be provided as pyomo Param or as a dict. If not provided, the 
-        weights will be determined automatically using the var index set.       
+        can be provided as pyomo Param or as a dict. If not provided, the
+        weights will be determined automatically using the var index set.
     rule : optional
         A method returning a 2-tuple with lists of variables and the respective
         weights in the same order, or a list of variables whose weights are
         then determined from their position within the list or, alternatively,
-        pyomo.environ.Constraint.Skip if the constraint should be not be 
-        included in the model/instance. This parameter cannot be used in 
+        pyomo.environ.Constraint.Skip if the constraint should be not be
+        included in the model/instance. This parameter cannot be used in
         combination with var, index or weights.
 
     Examples
