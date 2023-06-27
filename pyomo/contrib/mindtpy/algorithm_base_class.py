@@ -1628,27 +1628,27 @@ class _MindtPyAlgorithm(object):
         self.setup_main(config)
         mip_args = self.set_up_mip_solver(config)
 
-        # try:
-        main_mip_results = self.mip_opt.solve(
-            self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
-        )
-        # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
-        if len(main_mip_results.solution) > 0:
-            self.mip.solutions.load_from(main_mip_results)
-        # except (ValueError, AttributeError, RuntimeError):
-        #     if config.single_tree:
-        #         config.logger.warning('Single tree terminate.')
-        #         if get_main_elapsed_time(self.timing) >= config.time_limit - 2:
-        #             config.logger.warning('due to the timelimit.')
-        #             self.results.solver.termination_condition = tc.maxTimeLimit
-        #         if config.strategy == 'GOA' or config.add_no_good_cuts:
-        #             config.logger.warning(
-        #                 'Error: Cannot load a SolverResults object with bad status: error. '
-        #                 'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
-        #                 "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
-        #                 'No integer solution is found, so the cplex solver will report an error status. '
-        #             )
-        #     return None, None
+        try:
+            main_mip_results = self.mip_opt.solve(
+                self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
+            )
+            # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
+            if len(main_mip_results.solution) > 0:
+                self.mip.solutions.load_from(main_mip_results)
+        except (ValueError, AttributeError, RuntimeError):
+            if config.single_tree:
+                config.logger.warning('Single tree terminate.')
+                if get_main_elapsed_time(self.timing) >= config.time_limit - 2:
+                    config.logger.warning('due to the timelimit.')
+                    self.results.solver.termination_condition = tc.maxTimeLimit
+                if config.strategy == 'GOA' or config.add_no_good_cuts:
+                    config.logger.warning(
+                        'Error: Cannot load a SolverResults object with bad status: error. '
+                        'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
+                        "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
+                        'No integer solution is found, so the cplex solver will report an error status. '
+                    )
+            return None, None
         if config.solution_pool:
             main_mip_results._solver_model = self.mip_opt._solver_model
             main_mip_results._pyomo_var_to_solver_var_map = (
