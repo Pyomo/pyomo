@@ -112,29 +112,35 @@ class SOSConstraint(ActiveIndexedComponent):
     ----------
     sos : int
         The type of SOS.
-    var : pyo.Var
-        The set of variables from which the SOS(s) will be created.
-    index : pyo.Set, list (non-indexed SOS) or dict (indexed SOS), optional
+    var : pyomo.environ.Var
+        The group of variables from which the SOS(s) will be created.
+    index : pyomo.environ.Set, list or dict, optional
         A data structure with the indexes for the variables that are to be
         members of the SOS(s). The indexes can be provided as a pyomo Set:
         either indexed, if the SOS is indexed; or non-indexed, otherwise.
         Alternatively, the indexes can be provided as a list, for a non-indexed
         SOS, or as a dict, for indexed SOS(s).
-    weights : pyo.Param or dict, optional
+    weights : pyomo.environ.Param or dict, optional
         A data structure with the weights for each member of the SOS(s). These
-        can be provided as pyo.Param or as a dict. If not provided, these will
-        be determined automatically using their position in the structure.
+        can be provided as pyo.Param or as a dict. If not provided, the weights
+        will be determined automatically using the var index set.     
     rule : optional
         A method returning a 2-tuple with lists of variables and the respective
-        weights in the same order or, alternatively, pyo.Constraint.Skip if the
-        constraint should be not be included in the model/instance. This parame
-        ter cannot be used in combination with var, index or weights.
+        weights in the same order, or a list of variables whose weights are
+        then determined from their position within the list or, alternatively,
+        pyomo.environ.Constraint.Skip if the constraint should be not be 
+        included in the model/instance. This parameter cannot be used in 
+        combination with var, index or weights.
 
     Examples
     -------
 
-    1 - An SOS of type **N** made up of all members of a pyomo Var component.
+    1 - An SOS of type **N** made up of all members of a pyomo Var component:
 
+    >>> # import pyomo
+    >>> import pyomo.environ as pyo
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -143,7 +149,7 @@ class SOSConstraint(ActiveIndexedComponent):
     >>> model.mysos = pyo.SOSConstraint(var=model.x, sos=N)
 
     2 - An SOS of type **N** made up of all members of a pyomo Var component,
-    each with a specific weight.
+    each with a specific weight:
 
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
@@ -158,7 +164,7 @@ class SOSConstraint(ActiveIndexedComponent):
     ...     weights=model.mysosweights
     ...     )
 
-    3 - An SOS of type **N** made up of selected members of a Var component.
+    3 - An SOS of type **N** made up of selected members of a Var component:
 
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
@@ -170,7 +176,7 @@ class SOSConstraint(ActiveIndexedComponent):
     >>> model.mysos = pyo.SOSConstraint(var=model.x, sos=N, index=model.B)
 
     4 - An SOS of type **N** made up of selected members of a Var component,
-    each with a specific weight.
+    each with a specific weight:
 
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
@@ -189,7 +195,7 @@ class SOSConstraint(ActiveIndexedComponent):
     ...     )
 
     5 - A set of SOS(s) of type **N** made up of members of a pyomo Var
-    component.
+    component:
 
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
@@ -208,7 +214,7 @@ class SOSConstraint(ActiveIndexedComponent):
     ...     )
 
     6 - A set of SOS(s) of type **N** made up of members of a pyomo Var
-    component, each with a specific weight.
+    component, each with a specific weight:
 
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
@@ -231,7 +237,7 @@ class SOSConstraint(ActiveIndexedComponent):
     ...     weights=model.mysosweights,
     ...     )
 
-    7 - A simple SOS of type **N** created using the rule parameter.
+    7 - A simple SOS of type **N** created using the rule parameter:
 
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
@@ -245,8 +251,23 @@ class SOSConstraint(ActiveIndexedComponent):
     >>> # the sos constraint(s)
     >>> model.mysos = pyo.SOSConstraint(rule=rule_mysos, sos=N)
 
-    8 - A set of SOS(s) of type **N** involving members of distinct pyomo Var
-    components, each with a specific weight. This requires the rule parameter.
+    8 - A simple SOS of type **N** created using the rule parameter, in which
+    the weights are determined automatically:
+
+    >>> # the set that indexes the variables
+    >>> model.A = pyo.Set()
+    >>> # the variables under consideration
+    >>> model.x = pyo.Var(model.A, domain=pyo.NonNegativeReals)
+    >>> # the rule method creating the constraint
+    >>> def rule_mysos(m):
+    ...     var_list = [m.x[a] for a in m.x]
+    ...     weight_list = [i+1 for i in range(len(var_list))]
+    ...     return (var_list, weight_list)
+    >>> # the sos constraint(s)
+    >>> model.mysos = pyo.SOSConstraint(rule=rule_mysos, sos=N)
+
+    9 - A set of SOS(s) of type **N** involving members of distinct pyomo Var
+    components, each with a specific weight. This requires the rule parameter:
 
     >>> # the set that indexes the x variables
     >>> model.A = pyo.Set()
