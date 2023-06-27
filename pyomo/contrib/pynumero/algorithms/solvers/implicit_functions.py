@@ -621,6 +621,6 @@ class SccImplicitFunctionSolver(DecomposedImplicitFunctionBase):
     def partition_system(self, variables, constraints):
         self._timer.start("partition")
         igraph = IncidenceGraphInterface()
-        var_blocks, con_blocks = igraph.get_diagonal_blocks(variables, constraints)
+        var_blocks, con_blocks = igraph.block_triangularize(variables, constraints)
         self._timer.stop("partition")
         return zip(var_blocks, con_blocks)
