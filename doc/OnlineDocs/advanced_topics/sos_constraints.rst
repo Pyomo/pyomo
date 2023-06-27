@@ -25,14 +25,12 @@ be declared in one line:
 
 .. currentmodule:: pyomo.environ
 
-.. doctest::
-   :hide:
-
-   >>> import pyomo.environ as pyo
-   >>> model = pyo.AbstractModel()
-
 .. testcode::
 
+   # import pyomo
+   import pyomo.environ as pyo
+   # declare the model
+   model = pyo.AbstractModel()
    # the type of SOS
    N = 1 # or 2, 3, ...
    # the set that indexes the variables
@@ -41,11 +39,6 @@ be declared in one line:
    model.x = pyo.Var(model.A)
    # the sos constraint
    model.mysos = pyo.SOSConstraint(var=model.x, sos=N)
-
-.. doctest::
-   :hide:
-
-   >>> del model
 
 In the example above, the weight of each variable is determined automatically
 based on their position/order in the pyomo Var component (``model.x``). 
@@ -57,7 +50,6 @@ Alternatively, the weights can be specified through a pyomo Param component
 .. doctest::
    :hide:
 
-   >>> import pyomo.environ as pyo
    >>> model = pyo.AbstractModel()
 
 .. testcode::
@@ -75,11 +67,6 @@ Alternatively, the weights can be specified through a pyomo Param component
        weights=model.mysosweights
        )
 
-.. doctest::
-   :hide:
-
-   >>> del model
-
 Indexed Special Ordered Sets
 ----------------------------
 
@@ -90,7 +77,6 @@ Multiple SOS of type **N** involving members of a pyomo Var component
 .. doctest::
    :hide:
 
-   >>> import pyomo.environ as pyo
    >>> model = pyo.AbstractModel()
 
 .. testcode::
@@ -111,11 +97,6 @@ Multiple SOS of type **N** involving members of a pyomo Var component
        index=model.mysosvarindexset
        )
 
-.. doctest::
-   :hide:
-
-   >>> del model
-
 In the example above, the weights are determined automatically from the 
 position of the variables. Alternatively, they can be specified through a pyomo
 Param component (``model.mysosweights``) and an additional set (``model.C``):
@@ -123,7 +104,6 @@ Param component (``model.mysosweights``) and an additional set (``model.C``):
 .. doctest::
    :hide:
 
-   >>> import pyomo.environ as pyo
    >>> model = pyo.AbstractModel()
 
 .. testcode::
@@ -149,23 +129,47 @@ Param component (``model.mysosweights``) and an additional set (``model.C``):
        weights=model.mysosweights,
        )
 
-.. doctest::
-   :hide:
-
-   >>> del model
-
 Declaring Special Ordered Sets using rules
 ------------------------------------------
 
-Another way to declare an SOS is through rules. This option allows users to 
-specify the variables and weights through a method via the ``rule`` parameter. If 
-this parameter is used, a tuple of two lists should to be returned: the first
-for the variables in the SOS and the second for the respective weights.
+Arguably the best way to declare an SOS is through rules. This option allows 
+users to specify the variables and weights through a method provided via the 
+``rule`` parameter. If this parameter is used, users must specify a method that
+returns one of the following options:
+
+- a list of the variables in the SOS, whose respective weights are then determined based on their position;
+
+- a tuple of two lists, the first for the variables in the SOS and the second for the respective weights;
+
+- or, pyomo.environ.Constraint.Skip, if the SOS is not to be declared.
+
+If one is content on having the weights determined based on the position of the
+variables, then the following example using the ``rule`` parameter is sufficient:
 
 .. doctest::
    :hide:
 
-   >>> import pyomo.environ as pyo
+   >>> model = pyo.AbstractModel()
+
+.. testcode::
+
+   # the set that indexes the variables
+   model.A = pyo.Set()
+   # the variables under consideration
+   model.x = pyo.Var(model.A, domain=pyo.NonNegativeReals)
+   # the rule method creating the constraint
+   def rule_mysos(m):
+       return [m.x[a] for a in m.x]
+   # the sos constraint(s)
+   model.mysos = pyo.SOSConstraint(rule=rule_mysos, sos=N)
+   
+   
+If the weights must be determined in some other way, then the following example
+illustrates how they can be specified for each member of the SOS using the ``rule`` parameter:
+
+.. doctest::
+   :hide:
+
    >>> model = pyo.AbstractModel()
 
 .. testcode::
@@ -181,11 +185,6 @@ for the variables in the SOS and the second for the respective weights.
        return (var_list, weight_list)
    # the sos constraint(s)
    model.mysos = pyo.SOSConstraint(rule=rule_mysos, sos=N)
-
-.. doctest::
-   :hide:
-
-   >>> del model
    
 The ``rule`` parameter also allows users to create SOS comprising variables 
 from different pyomo Var components, as shown below:
@@ -193,7 +192,6 @@ from different pyomo Var components, as shown below:
 .. doctest::
    :hide:
 
-   >>> import pyomo.environ as pyo
    >>> model = pyo.AbstractModel()
 
 .. testcode::
@@ -230,11 +228,6 @@ from different pyomo Var components, as shown below:
        sos=N
        )
 
-.. doctest::
-   :hide:
-
-   >>> del model
-
 Compatible solvers
 ------------------
 
@@ -257,7 +250,6 @@ Full example with non-indexed SOS constraint
 .. doctest::
    :hide:
 
-   >>> import pyomo.environ as pyo
    >>> model = pyo.AbstractModel()
 
 .. testcode::
@@ -269,7 +261,7 @@ Full example with non-indexed SOS constraint
    model = pyo.ConcreteModel()
    model.x = pyo.Var([1], domain=pyo.NonNegativeReals, bounds=(0,40))
    model.A = pyo.Set(initialize=[1,2,4,6])
-   model.y = pyo.Var(model.A, domain=pyo.NonNegativeReals)
+   model.y = pyo.Var(model.A, domain=pyo.NonNegativeReals, bounds=(0,2))
    model.OBJ = pyo.Objective(
        expr=(1*model.x[1]+
              2*model.y[1]+
@@ -277,10 +269,6 @@ Full example with non-indexed SOS constraint
              -0.1*model.y[4]+
              0.5*model.y[6])
        )
-   model.ConstraintY1_ub = pyo.Constraint(expr = model.y[1] <= 2)
-   model.ConstraintY2_ub = pyo.Constraint(expr = model.y[2] <= 2)
-   model.ConstraintY4_ub = pyo.Constraint(expr = model.y[4] <= 2)
-   model.ConstraintY6_ub = pyo.Constraint(expr = model.y[6] <= 2)
    model.ConstraintYmin = pyo.Constraint(
        expr = (model.x[1]+
                model.y[1]+
