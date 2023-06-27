@@ -2731,7 +2731,7 @@ class _MindtPyAlgorithm(object):
             self.mip_opt.options['PreCrush'] = 1
             self.mip_opt.options['LazyConstraints'] = 1
 
-        # set thread
+        # set threads
         if config.threads > 0:
             self.mip_opt.options['threads'] = config.threads
         if config.regularization_mip_threads > 0:
