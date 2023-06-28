@@ -141,6 +141,8 @@ class SOSConstraint(ActiveIndexedComponent):
     >>> import pyomo.environ as pyo
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -153,6 +155,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -170,6 +174,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -184,6 +190,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -205,6 +213,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -216,7 +226,7 @@ class SOSConstraint(ActiveIndexedComponent):
     >>> # the sos constraints
     >>> model.mysos = pyo.SOSConstraint(
     ...     model.B,
-    ...     var=model.y,
+    ...     var=model.x,
     ...     sos=N,
     ...     index=model.mysosvarindexset
     ...     )
@@ -226,6 +236,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -241,7 +253,7 @@ class SOSConstraint(ActiveIndexedComponent):
     >>> # the sos constraints
     >>> model.mysos = pyo.SOSConstraint(
     ...     model.B,
-    ...     var=model.y,
+    ...     var=model.x,
     ...     sos=N,
     ...     index=model.mysosvarindexset,
     ...     weights=model.mysosweights,
@@ -251,6 +263,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -268,6 +282,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -283,6 +299,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     >>> # declare the model
     >>> model = pyo.AbstractModel()
+    >>> # define the SOS type
+    >>> N = 1 # 2, 3, ...
     >>> # the set that indexes the x variables
     >>> model.A = pyo.Set()
     >>> # the set that indexes the y variables
