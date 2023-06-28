@@ -151,6 +151,8 @@ class SOSConstraint(ActiveIndexedComponent):
     2 - An SOS of type **N** made up of all members of a pyomo Var component,
     each with a specific weight:
 
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -166,6 +168,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     3 - An SOS of type **N** made up of selected members of a Var component:
 
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -178,6 +182,8 @@ class SOSConstraint(ActiveIndexedComponent):
     4 - An SOS of type **N** made up of selected members of a Var component,
     each with a specific weight:
 
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -197,6 +203,8 @@ class SOSConstraint(ActiveIndexedComponent):
     5 - A set of SOS(s) of type **N** made up of members of a pyomo Var
     component:
 
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -216,6 +224,8 @@ class SOSConstraint(ActiveIndexedComponent):
     6 - A set of SOS(s) of type **N** made up of members of a pyomo Var
     component, each with a specific weight:
 
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -239,6 +249,8 @@ class SOSConstraint(ActiveIndexedComponent):
 
     7 - A simple SOS of type **N** created using the rule parameter:
 
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -254,6 +266,8 @@ class SOSConstraint(ActiveIndexedComponent):
     8 - A simple SOS of type **N** created using the rule parameter, in which
     the weights are determined automatically:
 
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the variables
     >>> model.A = pyo.Set()
     >>> # the variables under consideration
@@ -267,6 +281,8 @@ class SOSConstraint(ActiveIndexedComponent):
     9 - A set of SOS(s) of type **N** involving members of distinct pyomo Var
     components, each with a specific weight. This requires the rule parameter:
 
+    >>> # declare the model
+    >>> model = pyo.AbstractModel()
     >>> # the set that indexes the x variables
     >>> model.A = pyo.Set()
     >>> # the set that indexes the y variables
