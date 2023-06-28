@@ -141,7 +141,7 @@ returns one of the following options:
 
 - a tuple of two lists, the first for the variables in the SOS and the second for the respective weights;
 
-- or, pyomo.environ.Constraint.Skip, if the SOS is not to be declared.
+- or, pyomo.environ.SOSConstraint.Skip, if the SOS is not to be declared.
 
 If one is content on having the weights determined based on the position of the
 variables, then the following example using the ``rule`` parameter is sufficient:
