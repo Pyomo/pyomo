@@ -66,6 +66,7 @@ def _load_dll(name, timeout=10):
         return False, None
 
     import multiprocessing
+
     if _load_dll.pool is None:
         try:
             _load_dll.pool = multiprocessing.Pool(1)
@@ -75,6 +76,7 @@ def _load_dll(name, timeout=10):
             # launched within a dask server).  Fall back on a serial
             # process (and live with the risk that the import hangs).
             import multiprocessing.dummy
+
             _load_dll.pool = multiprocessing.dummy.Pool(1)
     job = _load_dll.pool.apply_async(_attempt_ctypes_cdll, (name,))
     try:
