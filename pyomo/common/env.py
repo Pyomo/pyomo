@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import ctypes
-import multiprocessing
 import os
 
 
@@ -65,8 +64,18 @@ def _load_dll(name, timeout=10):
     """
     if not ctypes.util.find_library(name):
         return False, None
+
+    import multiprocessing
     if _load_dll.pool is None:
-        _load_dll.pool = multiprocessing.Pool(1)
+        try:
+            _load_dll.pool = multiprocessing.Pool(1)
+        except AssertionError:
+            # multiprocessing will fail with an assertion error if this
+            # Python process is a daemonic process (e.g., it was
+            # launched within a dask server).  Fall back on a serial
+            # process (and live with the risk that the import hangs).
+            import multiprocessing.dummy
+            _load_dll.pool = multiprocessing.dummy.Pool(1)
     job = _load_dll.pool.apply_async(_attempt_ctypes_cdll, (name,))
     try:
         result = job.get(timeout)
