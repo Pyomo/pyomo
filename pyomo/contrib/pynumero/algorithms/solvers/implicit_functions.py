@@ -9,13 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections import namedtuple
-
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.dependencies import attempt_import, numpy as np
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.var import Var
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.expr.visitor import identify_variables
@@ -30,20 +26,16 @@ from pyomo.util.subsystems import (
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 nlp_proj = attempt_import('pyomo.contrib.pynumero.interfaces.nlp_projections')[0]
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
-from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
-    cyipopt_available,
-    CyIpoptNLP,
-)
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import CyIpoptNLP
 from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     FsolveNlpSolver,
-    RootNlpSolver,
     NewtonNlpSolver,
     SecantNewtonNlpSolver,
 )
-from pyomo.contrib.incidence_analysis.interface import get_structural_incidence_matrix
-from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
-from pyomo.contrib.incidence_analysis.util import generate_strongly_connected_components
+from pyomo.contrib.incidence_analysis.scc_solver import (
+    generate_strongly_connected_components,
+)
 
 
 class NlpSolverBase(object):
