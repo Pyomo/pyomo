@@ -38,7 +38,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
 )
 from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
 from pyomo.contrib.incidence_analysis.scc_solver import (
-    generate_strongly_connected_components
+    generate_strongly_connected_components,
 )
 
 
