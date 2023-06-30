@@ -9,13 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections import namedtuple
-
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.dependencies import attempt_import, numpy as np
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.var import Var
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.expr.visitor import identify_variables
