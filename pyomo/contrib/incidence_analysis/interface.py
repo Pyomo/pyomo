@@ -19,8 +19,6 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
-from pyomo.core.base.reference import Reference
-from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.current import EqualityExpression
 from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
