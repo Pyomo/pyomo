@@ -9,6 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import os
+
+from pyomo.common.fileutils import import_file, this_file_dir
 from pyomo.environ import Var, maximize, value
 from pyomo.opt import SolverFactory
 
@@ -34,14 +37,12 @@ problem_names.append("step_vararray")
 problem_names = ['convex_var']
 
 for problem_name in problem_names:
-    p = __import__(problem_name)
+    p = import_file(os.path.join(this_file_dir(), problem_name) + '.py')
 
     model = p.define_model(**kwds)
-    inst = model.create()
+    inst = model.create_instance()
 
     results = opt.solve(inst, tee=True)
-
-    inst.load(results)
 
     res = dict()
     for block in inst.block_data_objects(active=True):
