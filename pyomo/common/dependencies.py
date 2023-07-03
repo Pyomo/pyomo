@@ -14,9 +14,13 @@ import inspect
 import importlib
 import logging
 import sys
+import warnings
 
 from .deprecation import deprecated, deprecation_warning, in_testing_environment
 from . import numeric_types
+
+
+SUPPRESS_DEPENDENCY_WARNINGS = False
 
 
 class DeferredImportError(ImportError):
@@ -563,10 +567,17 @@ def _perform_import(
     import_error = None
     version_error = None
     try:
-        if importer is None:
-            module = importlib.import_module(name)
-        else:
-            module = importer()
+        with warnings.catch_warnings():
+            # Temporarily suppress all warnings: we assume we are
+            # importing a third-party package here and we don't want to
+            # see them?
+            if SUPPRESS_DEPENDENCY_WARNINGS and not name.startswith('pyomo.'):
+                warnings.resetwarnings()
+                warnings.simplefilter("ignore")
+            if importer is None:
+                module = importlib.import_module(name)
+            else:
+                module = importer()
         if minimum_version is None or check_min_version(module, minimum_version):
             if callback is not None:
                 callback(module, True)
