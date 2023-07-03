@@ -732,6 +732,7 @@ def _finalize_numpy(np, available):
 
 
 dill, dill_available = attempt_import('dill')
+mpi4py, mpi4py_available = attempt_import('mpi4py')
 networkx, networkx_available = attempt_import('networkx')
 numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
 pandas, pandas_available = attempt_import('pandas')
