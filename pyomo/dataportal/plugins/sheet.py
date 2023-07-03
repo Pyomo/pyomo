@@ -18,12 +18,9 @@ from pyomo.dataportal import TableData
 # )
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.common.errors import ApplicationError
-from pyomo.common.dependencies import pyutilib, pyutilib_available
+from pyomo.common.dependencies import attempt_import
 
-if pyutilib_available:
-    from pyutilib.excel.spreadsheet import ExcelSpreadsheet, Interfaces
-else:
-    raise (RuntimeError('PyUtilib is required to use pyomo.dataportal.plugins.sheet.'))
+spreadsheet, spreadsheet_available = attempt_import('pyutilib.excel.spreadsheet')
 
 
 def _attempt_open_excel():
@@ -58,7 +55,7 @@ class SheetTable(TableData):
             self.sheet = self._data
         else:
             try:
-                self.sheet = ExcelSpreadsheet(self.filename, ctype=self.ctype)
+                self.sheet = spreadsheet.ExcelSpreadsheet(self.filename, ctype=self.ctype)
             except ApplicationError:
                 raise
 
@@ -98,9 +95,9 @@ class SheetTable(TableData):
 @DataManagerFactory.register("xls", "Excel XLS file interface")
 class SheetTable_xls(SheetTable):
     def __init__(self):
-        if Interfaces()['win32com'].available and _attempt_open_excel():
+        if spreadsheet.Interfaces()['win32com'].available and _attempt_open_excel():
             SheetTable.__init__(self, ctype='win32com')
-        elif Interfaces()['xlrd'].available:
+        elif spreadsheet.Interfaces()['xlrd'].available:
             SheetTable.__init__(self, ctype='xlrd')
         else:
             raise RuntimeError(
@@ -108,7 +105,7 @@ class SheetTable_xls(SheetTable):
             )
 
     def available(self):
-        _inter = Interfaces()
+        _inter = spreadsheet.Interfaces()
         return (_inter['win32com'].available and _attempt_open_excel()) or _inter[
             'xlrd'
         ].available
@@ -137,9 +134,9 @@ class SheetTable_xls(SheetTable):
 @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
 class SheetTable_xlsx(SheetTable):
     def __init__(self):
-        if Interfaces()['win32com'].available and _attempt_open_excel():
+        if spreadsheet.Interfaces()['win32com'].available and _attempt_open_excel():
             SheetTable.__init__(self, ctype='win32com')
-        elif Interfaces()['openpyxl'].available:
+        elif spreadsheet.Interfaces()['openpyxl'].available:
             SheetTable.__init__(self, ctype='openpyxl')
         else:
             raise RuntimeError(
@@ -147,7 +144,7 @@ class SheetTable_xlsx(SheetTable):
             )
 
     def available(self):
-        _inter = Interfaces()
+        _inter = spreadsheet.Interfaces()
         return (_inter['win32com'].available and _attempt_open_excel()) or _inter[
             'openpyxl'
         ].available
@@ -197,9 +194,9 @@ class SheetTable_xlsx(SheetTable):
 @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
 class SheetTable_xlsm(SheetTable):
     def __init__(self):
-        if Interfaces()['win32com'].available and _attempt_open_excel():
+        if spreadsheet.Interfaces()['win32com'].available and _attempt_open_excel():
             SheetTable.__init__(self, ctype='win32com')
-        elif Interfaces()['openpyxl'].available:
+        elif spreadsheet.Interfaces()['openpyxl'].available:
             SheetTable.__init__(self, ctype='openpyxl')
         else:
             raise RuntimeError(
@@ -207,7 +204,7 @@ class SheetTable_xlsm(SheetTable):
             )
 
     def available(self):
-        _inter = Interfaces()
+        _inter = spreadsheet.Interfaces()
         return (_inter['win32com'].available and _attempt_open_excel()) or _inter[
             'openpyxl'
         ].available
