@@ -22,7 +22,12 @@ where m_{i,j} are sparse matrices
 
 """
 
-from scipy.sparse.sputils import get_index_dtype
+try:
+    from scipy.sparse._sputils import get_index_dtype
+except ImportError:
+    # fall back on sputils for scipy<1.11.1
+    from scipy.sparse.sputils import get_index_dtype
+
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
 from scipy.sparse import isspmatrix
