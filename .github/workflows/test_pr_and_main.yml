@@ -92,9 +92,9 @@ jobs:
           PACKAGES: mpi4py openmpi
 
         - os: ubuntu-latest
-          python: 3.7
-          other: /slim
-          slim: 1
+          python: 3.11
+          other: /singletest
+          category: "neos or importtest"
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -108,10 +108,17 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
-        - os: ubuntu-latest
+        - os: windows-latest
           python: 3.8
-          other: /singletest
-          category: neos
+          other: /pip
+          skip_doctest: 1
+          TARGET: win
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.7
+          other: /slim
+          slim: 1
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -127,13 +134,6 @@ jobs:
           python: pypy-3.9
           skip_doctest: 1
           TARGET: linux
-          PYENV: pip
-
-        - os: windows-latest
-          python: 3.8
-          other: /pip
-          skip_doctest: 1
-          TARGET: win
           PYENV: pip
 
     steps:
@@ -629,8 +629,8 @@ jobs:
       if: matrix.mpi == 0
       run: |
         CATEGORY=
-        for cat in ${{matrix.category}}; do
-            CATEGORY+=" -m $cat"
+        if test -n "${{matrix.category}}"; do
+            CATEGORY=" -m '${{matrix.category}}'"
         done
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning $CATEGORY \

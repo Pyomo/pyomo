@@ -95,9 +95,9 @@ jobs:
           PACKAGES: mpi4py openmpi
 
         - os: ubuntu-latest
-          python: 3.8
+          python: 3.11
           other: /singletest
-          category: neos
+          category: "neos or importtest"
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -611,8 +611,8 @@ jobs:
       if: matrix.mpi == 0
       run: |
         CATEGORY=
-        for cat in ${{matrix.category}}; do
-            CATEGORY+=" -m $cat"
+        if test -n "${{matrix.category}}"; do
+            CATEGORY=" -m '${{matrix.category}}'"
         done
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning $CATEGORY \
