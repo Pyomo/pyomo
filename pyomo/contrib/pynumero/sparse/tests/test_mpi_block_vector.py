@@ -177,7 +177,7 @@ class TestMPIBlockVector(unittest.TestCase):
         if rank == 1:
             v.set_block(1, np.array([]))
         if rank == 2:
-            v.set_block(2, np.array([5, 6, 3, 4]))
+            v.set_block(2, np.array([5, 6, 3]))
         self.assertAlmostEqual(v.min(), 3)
         self.assertAlmostEqual(v.max(), 12)
 
