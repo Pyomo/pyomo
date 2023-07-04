@@ -22,7 +22,6 @@ where m_{i,j} are sparse matrices
 
 """
 
-from scipy.sparse.sputils import get_index_dtype
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
 from scipy.sparse import isspmatrix
@@ -393,9 +392,8 @@ class BlockMatrix(BaseBlockMatrix):
 
         # create pointers for COO matrix (row, col, data)
         data = np.empty(nonzeros, dtype=dtype)
-        idx_dtype = get_index_dtype(maxval=max(shape))
-        row = -np.ones(nonzeros, dtype=idx_dtype)
-        col = -np.ones(nonzeros, dtype=idx_dtype)
+        row = -np.ones(nonzeros, dtype=int)
+        col = -np.ones(nonzeros, dtype=int)
 
         # populate COO pointers
         nnz = 0
