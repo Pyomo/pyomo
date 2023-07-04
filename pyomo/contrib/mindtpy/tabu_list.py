@@ -15,7 +15,9 @@ from pyomo.common.dependencies import attempt_import
 cplex, cplex_available = attempt_import('cplex')
 
 
-class IncumbentCallback_cplex(cplex.callbacks.IncumbentCallback if cplex_available else object):
+class IncumbentCallback_cplex(
+    cplex.callbacks.IncumbentCallback if cplex_available else object
+):
     """Inherent class in Cplex to call Incumbent callback."""
 
     def __call__(self):

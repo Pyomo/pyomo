@@ -63,7 +63,7 @@ try:
     os.chdir(os.path.join(PYOMO_ROOT_DIR, 'pyomo'))
     modules = sorted(
         os.path.join('pyomo', os.path.splitext(fname)[0]).replace(os.path.sep, '.')
-        for fname in glob.glob(os.path.join('**','*.py'), recursive=True)
+        for fname in glob.glob(os.path.join('**', '*.py'), recursive=True)
         if not fname.endswith('__init__.py')
     )
     modules = list(filterfalse(_DO_NOT_IMPORT_MODULES.__contains__, modules))
@@ -81,6 +81,7 @@ except unittest.case.SkipTest as e:
     # suppress the exception, but print the message
     print(e)
 """
+
 
 class TestPackageLayout(unittest.TestCase):
     def test_for_init_files(self):
@@ -126,9 +127,9 @@ class TestPackageLayout(unittest.TestCase):
         # python modules are a least importable.  This is important to
         # be tested on the newest Python version (in part to catch
         # deprecation warnings before they become fatal parse errors).
-        module_file = os.path.join(
-            PYOMO_ROOT_DIR, module.replace('.', os.path.sep)
-        ) + '.py'
+        module_file = (
+            os.path.join(PYOMO_ROOT_DIR, module.replace('.', os.path.sep)) + '.py'
+        )
         # we need to delete the .pyc file, because some things (like
         # invalid docstrings) only toss the warning when the module is
         # initially byte-compiled.
@@ -144,6 +145,7 @@ class TestPackageLayout(unittest.TestCase):
             # of the testing harness for auto-registered test cases)
             from pyomo.common.fileutils import import_file
             import warnings
+
             try:
                 _dep_warn = dependencies.SUPPRESS_DEPENDENCY_WARNINGS
                 dependencies.SUPPRESS_DEPENDENCY_WARNINGS = True

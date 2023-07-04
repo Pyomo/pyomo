@@ -55,7 +55,9 @@ class SheetTable(TableData):
             self.sheet = self._data
         else:
             try:
-                self.sheet = spreadsheet.ExcelSpreadsheet(self.filename, ctype=self.ctype)
+                self.sheet = spreadsheet.ExcelSpreadsheet(
+                    self.filename, ctype=self.ctype
+                )
             except ApplicationError:
                 raise
 
