@@ -611,7 +611,7 @@ jobs:
       if: matrix.mpi == 0
       run: |
         CATEGORY=
-        if test -n "${{matrix.category}}"; do
+        if test -n "${{matrix.category}}"; then
             CATEGORY=" -m '${{matrix.category}}'"
         done
         $PYTHON_EXE -m pytest -v \
