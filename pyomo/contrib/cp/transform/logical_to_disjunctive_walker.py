@@ -43,6 +43,11 @@ def _dispatch_boolean_var(visitor, node):
             z = visitor.z_vars.add()
             visitor.boolean_to_binary_map[node] = z
             node.associate_binary_var(z)
+    if node.fixed:
+        visitor.boolean_to_binary_map[node].fixed = True
+        visitor.boolean_to_binary_map[node].set_value(
+            int(node.value) if node.value is not None else None, skip_validation=True
+        )
     return False, visitor.boolean_to_binary_map[node]
 
 
@@ -102,6 +107,7 @@ def _dispatch_and(visitor, node, *args):
     z = visitor.z_vars.add()
     for arg in args:
         visitor.constraints.add(arg >= z)
+    visitor.constraints.add(len(args) - sum(args) >= 1 - z)
     return z
 
 
@@ -147,7 +153,7 @@ def _get_integer_value(n, node):
 
 
 def _dispatch_exactly(visitor, node, *args):
-    # z = sum(args[1:] == args[0]
+    # z = sum(args[1:]) == args[0]
     # This is currently implemented as:
     # [sum(args[1:] = n] v [[sum(args[1:]) < n] v [sum(args[1:]) > n]]
     M = len(args) - 1

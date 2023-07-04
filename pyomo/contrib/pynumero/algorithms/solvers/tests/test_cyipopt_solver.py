@@ -33,15 +33,12 @@ if not AmplInterface.available():
 
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import cyipopt_available
-
-if not cyipopt_available:
-    raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
-
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver,
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
+    cyipopt_available,
     CyIpoptNLP,
 )
+
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
 
 
 def create_model1():
@@ -158,6 +155,17 @@ def create_model9():
     return model
 
 
+@unittest.skipIf(cyipopt_available, "cyipopt is available")
+class TestCyIpoptNotAvailable(unittest.TestCase):
+    def test_not_available_exception(self):
+        model = create_model1()
+        nlp = PyomoNLP(model)
+        msg = "cyipopt is required"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            solver = CyIpoptSolver(CyIpoptNLP(nlp))
+
+
+@unittest.skipUnless(cyipopt_available, "cyipopt is not available")
 class TestCyIpoptSolver(unittest.TestCase):
     def test_model1(self):
         model = create_model1()
@@ -192,6 +200,7 @@ class TestCyIpoptSolver(unittest.TestCase):
 
         with open('_cyipopt-scaling.log', 'r') as fd:
             solver_trace = fd.read()
+        cynlp.close()
         os.remove('_cyipopt-scaling.log')
 
         # check for the following strings in the log and then delete the log

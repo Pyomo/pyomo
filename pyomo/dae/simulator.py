@@ -97,7 +97,8 @@ def _check_productexpression(expr, i):
             stack.append((curr.arg(0), e_))
             stack.append((curr.arg(1), -e_))
         elif (
-            type(curr) is EXPR.GetItemExpression and type(curr.arg(0)) is DerivativeVar
+            isinstance(curr, EXPR.GetItemExpression)
+            and type(curr.arg(0)) is DerivativeVar
         ):
             dv = (curr, e_)
         else:
@@ -131,7 +132,7 @@ def _check_negationexpression(expr, i):
     """
     arg = expr.arg(i).arg(0)
 
-    if type(arg) is EXPR.GetItemExpression and type(arg.arg(0)) is DerivativeVar:
+    if isinstance(arg, EXPR.GetItemExpression) and type(arg.arg(0)) is DerivativeVar:
         return [arg, -expr.arg(1 - i)]
 
     if type(arg) is EXPR.ProductExpression:
@@ -141,7 +142,8 @@ def _check_negationexpression(expr, i):
         if not (type(lhs) in native_numeric_types or not lhs.is_potentially_variable()):
             return None
         if not (
-            type(rhs) is EXPR.GetItemExpression and type(rhs.arg(0)) is DerivativeVar
+            isinstance(rhs, EXPR.GetItemExpression)
+            and type(rhs.arg(0)) is DerivativeVar
         ):
             return None
 
@@ -169,7 +171,8 @@ def _check_viewsumexpression(expr, i):
         if dv is not None:
             items.append(item)
         elif (
-            type(item) is EXPR.GetItemExpression and type(item.arg(0)) is DerivativeVar
+            isinstance(item, EXPR.GetItemExpression)
+            and type(item.arg(0)) is DerivativeVar
         ):
             dv = item
         elif type(item) is EXPR.ProductExpression:
@@ -180,7 +183,7 @@ def _check_viewsumexpression(expr, i):
             if (
                 type(lhs) in native_numeric_types or not lhs.is_potentially_variable()
             ) and (
-                type(rhs) is EXPR.GetItemExpression
+                isinstance(rhs, EXPR.GetItemExpression)
                 and type(rhs.arg(0)) is DerivativeVar
             ):
                 dv = rhs
@@ -218,7 +221,7 @@ class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
         if type(child) is IndexTemplate:
             return False, child
 
-        if type(child) is EXPR.GetItemExpression:
+        if isinstance(child, EXPR.GetItemExpression):
             _id = _GetItemIndexer(child)
             if _id not in self.templatemap:
                 self.templatemap[_id] = Param(mutable=True)
@@ -284,7 +287,7 @@ class Substitute_Pyomo2Casadi_Visitor(EXPR.ExpressionReplacementVisitor):
 
     def beforeChild(self, node, child, child_idx):
         """Replace a node if it's a _GetItemExpression."""
-        if type(child) is EXPR.GetItemExpression:
+        if isinstance(child, EXPR.GetItemExpression):
             _id = _GetItemIndexer(child)
             if _id not in self.templatemap:
                 name = "%s[%s]" % (_id.base.name, ','.join(str(x) for x in _id.args))
@@ -523,12 +526,12 @@ class Simulator:
                 # separable RHS
                 args = None
                 # Case 1: m.dxdt[t] = RHS
-                if type(tempexp.arg(0)) is EXPR.GetItemExpression:
+                if isinstance(tempexp.arg(0), EXPR.GetItemExpression):
                     args = _check_getitemexpression(tempexp, 0)
 
                 # Case 2: RHS = m.dxdt[t]
                 if args is None:
-                    if type(tempexp.arg(1)) is EXPR.GetItemExpression:
+                    if isinstance(tempexp.arg(1), EXPR.GetItemExpression):
                         args = _check_getitemexpression(tempexp, 1)
 
                 # Case 3: m.p*m.dxdt[t] = RHS

@@ -30,6 +30,7 @@ from pyomo.common.config import (
     NonNegativeFloat,
     NonNegativeInt,
 )
+from pyomo.common.numeric_types import native_types
 
 logger = logging.getLogger(__name__)
 
@@ -110,28 +111,10 @@ def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    arg0 = node.arg(0)
-    lb, ub = bnds_dict[arg0]
-    for i in range(1, node.nargs()):
-        arg = node.arg(i)
-        lb2, ub2 = bnds_dict[arg]
-        lb, ub = interval.add(lb, ub, lb2, ub2)
-    bnds_dict[node] = (lb, ub)
-
-
-def _prop_bnds_leaf_to_root_LinearExpression(
-    node: numeric_expr.LinearExpression, bnds_dict, feasibility_tol
-):
-    """
-    This is very similar to sum expression
-    """
-    lb, ub = bnds_dict[node.constant]
-    for coef, v in zip(node.linear_coefs, node.linear_vars):
-        coef_bnds = bnds_dict[coef]
-        v_bnds = bnds_dict[v]
-        term_bounds = interval.mul(*coef_bnds, *v_bnds)
-        lb, ub = interval.add(lb, ub, *term_bounds)
-    bnds_dict[node] = (lb, ub)
+    bnds = (0, 0)
+    for arg in node.args:
+        bnds = interval.add(*bnds, *bnds_dict[arg])
+    bnds_dict[node] = bnds
 
 
 def _prop_bnds_leaf_to_root_DivisionExpression(node, bnds_dict, feasibility_tol):
@@ -460,7 +443,10 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    expr_lb, expr_ub = bnds_dict[node.expr]
+    if node.expr.__class__ in native_types:
+        expr_lb = expr_ub = node.expr
+    else:
+        expr_lb, expr_ub = bnds_dict[node.expr]
     bnds_dict[node] = (expr_lb, expr_ub)
 
 
@@ -488,7 +474,7 @@ _prop_bnds_leaf_to_root_map[
 ] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
 _prop_bnds_leaf_to_root_map[
     numeric_expr.LinearExpression
-] = _prop_bnds_leaf_to_root_LinearExpression
+] = _prop_bnds_leaf_to_root_SumExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.AbsExpression] = _prop_bnds_leaf_to_root_abs
 
 _prop_bnds_leaf_to_root_map[
@@ -576,28 +562,25 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict, feasibility_tol):
         is more conservative).
     """
     # first accumulate bounds
-    accumulated_bounds = list()
-    accumulated_bounds.append(bnds_dict[node.arg(0)])
-    lb0, ub0 = bnds_dict[node]
-    for i in range(1, node.nargs()):
-        _lb0, _ub0 = accumulated_bounds[i - 1]
-        _lb1, _ub1 = bnds_dict[node.arg(i)]
-        accumulated_bounds.append(interval.add(_lb0, _ub0, _lb1, _ub1))
-    if lb0 > accumulated_bounds[node.nargs() - 1][0]:
-        accumulated_bounds[node.nargs() - 1] = (
-            lb0,
-            accumulated_bounds[node.nargs() - 1][1],
-        )
-    if ub0 < accumulated_bounds[node.nargs() - 1][1]:
-        accumulated_bounds[node.nargs() - 1] = (
-            accumulated_bounds[node.nargs() - 1][0],
-            ub0,
-        )
+    bnds = (0, 0)
+    accumulated_bounds = [bnds]
+    for arg in node.args:
+        bnds = interval.add(*bnds, *bnds_dict[arg])
+        accumulated_bounds.append(bnds)
 
-    for i in reversed(range(1, node.nargs())):
-        lb0, ub0 = accumulated_bounds[i]
-        lb1, ub1 = accumulated_bounds[i - 1]
-        lb2, ub2 = bnds_dict[node.arg(i)]
+    # Tighten based on parent (this) node
+    lb0, ub0 = bnds_dict[node]
+    if lb0 > bnds[0]:
+        bnds = (lb0, bnds[1])
+    if ub0 < bnds[1]:
+        bnds = (bnds[0], ub0)
+    accumulated_bounds[-1] = bnds
+
+    # propagate to the children
+    lb0, ub0 = accumulated_bounds[-1]
+    for i, arg in enumerate(reversed(node.args)):
+        lb1, ub1 = accumulated_bounds[-2 - i]
+        lb2, ub2 = bnds_dict[arg]
         _lb1, _ub1 = interval.sub(lb0, ub0, lb2, ub2)
         _lb2, _ub2 = interval.sub(lb0, ub0, lb1, ub1)
         if _lb1 > lb1:
@@ -608,60 +591,8 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict, feasibility_tol):
             lb2 = _lb2
         if _ub2 < ub2:
             ub2 = _ub2
-        accumulated_bounds[i - 1] = (lb1, ub1)
-        bnds_dict[node.arg(i)] = (lb2, ub2)
-    lb, ub = bnds_dict[node.arg(0)]
-    _lb, _ub = accumulated_bounds[0]
-    if _lb > lb:
-        lb = _lb
-    if _ub < ub:
-        ub = _ub
-    bnds_dict[node.arg(0)] = (lb, ub)
-
-
-def _prop_bnds_root_to_leaf_LinearExpression(
-    node: numeric_expr.LinearExpression, bnds_dict: ComponentMap, feasibility_tol: float
-):
-    """
-    This is very similar to SumExpression.
-    """
-    # first accumulate bounds
-    accumulated_bounds = list()
-    accumulated_bounds.append(bnds_dict[node.constant])
-    lb0, ub0 = bnds_dict[node]
-    for coef, v in zip(node.linear_coefs, node.linear_vars):
-        _lb0, _ub0 = accumulated_bounds[-1]
-        _lb_coef, _ub_coef = bnds_dict[coef]
-        _lb_v, _ub_v = bnds_dict[v]
-        _lb_term, _ub_term = interval.mul(_lb_coef, _ub_coef, _lb_v, _ub_v)
-        accumulated_bounds.append(interval.add(_lb0, _ub0, _lb_term, _ub_term))
-    if lb0 > accumulated_bounds[-1][0]:
-        accumulated_bounds[-1] = (lb0, accumulated_bounds[-1][1])
-    if ub0 < accumulated_bounds[-1][1]:
-        accumulated_bounds[-1] = (accumulated_bounds[-1][0], ub0)
-
-    for i in reversed(range(len(node.linear_coefs))):
-        lb0, ub0 = accumulated_bounds[i + 1]
-        lb1, ub1 = accumulated_bounds[i]
-        coef = node.linear_coefs[i]
-        v = node.linear_vars[i]
-        coef_bnds = bnds_dict[coef]
-        v_bnds = bnds_dict[v]
-        lb2, ub2 = interval.mul(*coef_bnds, *v_bnds)
-        _lb1, _ub1 = interval.sub(lb0, ub0, lb2, ub2)
-        _lb2, _ub2 = interval.sub(lb0, ub0, lb1, ub1)
-        if _lb1 > lb1:
-            lb1 = _lb1
-        if _ub1 < ub1:
-            ub1 = _ub1
-        if _lb2 > lb2:
-            lb2 = _lb2
-        if _ub2 < ub2:
-            ub2 = _ub2
-        accumulated_bounds[i] = (lb1, ub1)
-        bnds_dict[v] = interval.div(
-            lb2, ub2, *coef_bnds, feasibility_tol=feasibility_tol
-        )
+        lb0, ub0 = lb1, ub1
+        bnds_dict[arg] = (lb2, ub2)
 
 
 def _prop_bnds_root_to_leaf_DivisionExpression(node, bnds_dict, feasibility_tol):
@@ -1095,8 +1026,9 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    expr_lb, expr_ub = bnds_dict[node]
-    bnds_dict[node.expr] = (expr_lb, expr_ub)
+    if node.expr.__class__ not in native_types:
+        expr_lb, expr_ub = bnds_dict[node]
+        bnds_dict[node.expr] = (expr_lb, expr_ub)
 
 
 _prop_bnds_root_to_leaf_map = dict()
@@ -1123,7 +1055,7 @@ _prop_bnds_root_to_leaf_map[
 ] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
 _prop_bnds_root_to_leaf_map[
     numeric_expr.LinearExpression
-] = _prop_bnds_root_to_leaf_LinearExpression
+] = _prop_bnds_root_to_leaf_SumExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.AbsExpression] = _prop_bnds_root_to_leaf_abs
 
 _prop_bnds_root_to_leaf_map[
@@ -1218,19 +1150,6 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
             # and return the value.
             val = value(node)
             self.bnds_dict[node] = (val, val)
-            return True, None
-
-        if node.__class__ is numeric_expr.LinearExpression:
-            const_val = value(node.constant)
-            self.bnds_dict[node.constant] = (const_val, const_val)
-            for coef in node.linear_coefs:
-                coef_val = value(coef)
-                self.bnds_dict[coef] = (coef_val, coef_val)
-            for v in node.linear_vars:
-                self.visiting_potential_leaf(v)
-            _prop_bnds_leaf_to_root_LinearExpression(
-                node, self.bnds_dict, self.feasibility_tol
-            )
             return True, None
 
         if node.__class__ is numeric_expr.ExternalFunctionExpression:
@@ -1353,14 +1272,6 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                 raise InfeasibleConstraintException(
                     'Detected an infeasible constraint.'
                 )
-            return True, None
-
-        if node.__class__ is numeric_expr.LinearExpression:
-            _prop_bnds_root_to_leaf_LinearExpression(
-                node, self.bnds_dict, self.feasibility_tol
-            )
-            for v in node.linear_vars:
-                self.visiting_potential_leaf(v)
             return True, None
 
         if node.__class__ is numeric_expr.ExternalFunctionExpression:

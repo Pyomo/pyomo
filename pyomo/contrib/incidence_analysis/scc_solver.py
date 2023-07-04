@@ -11,17 +11,14 @@
 
 import logging
 
-from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
-from pyomo.common.collections import ComponentSet
-from pyomo.core.expr.visitor import identify_variables
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
-from pyomo.util.subsystems import (
-    create_subsystem_block,
-    TemporarySubsystemManager,
-    generate_subsystem_blocks,
+from pyomo.util.subsystems import TemporarySubsystemManager, generate_subsystem_blocks
+from pyomo.contrib.incidence_analysis.interface import (
+    IncidenceGraphInterface,
+    _generate_variables_in_constraints,
 )
-from pyomo.contrib.incidence_analysis.interface import IncidenceGraphInterface
+
 
 _log = logging.getLogger(__name__)
 
@@ -50,20 +47,16 @@ def generate_strongly_connected_components(
 
     Yields
     ------
-    ``_BlockData``
+    Tuple of ``_BlockData``, list-of-variables
         Blocks containing the variables and constraints of every strongly
-        connected component, in a topological order, as well as the
-        "input variables" for that block
+        connected component, in a topological order. The variables are the
+        "input variables" for that block.
 
     """
     if variables is None:
-        var_set = ComponentSet()
-        variables = []
-        for con in constraints:
-            for var in identify_variables(con.expr, include_fixed=include_fixed):
-                if var not in var_set:
-                    variables.append(var)
-                    var_set.add(var)
+        variables = list(
+            _generate_variables_in_constraints(constraints, include_fixed=include_fixed)
+        )
 
     assert len(variables) == len(constraints)
     igraph = IncidenceGraphInterface()
@@ -118,15 +111,11 @@ def solve_strongly_connected_components(
     if calc_var_kwds is None:
         calc_var_kwds = {}
 
-    constraints = list(block.component_data_objects(Constraint, active=True))
-    var_set = ComponentSet()
-    variables = []
-    for con in constraints:
-        for var in identify_variables(con.expr, include_fixed=False):
-            # Because we are solving, we do not want to include fixed variables
-            if var not in var_set:
-                variables.append(var)
-                var_set.add(var)
+    igraph = IncidenceGraphInterface(
+        block, active=True, include_fixed=False, include_inequality=False
+    )
+    constraints = igraph.constraints
+    variables = igraph.variables
 
     res_list = []
     log_blocks = _log.isEnabledFor(logging.DEBUG)

@@ -16,8 +16,9 @@ import io
 import math
 import os
 
+import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
-from pyomo.repn.tests.ampl.nl_diff import nl_diff
+from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
@@ -34,6 +35,9 @@ from pyomo.environ import (
     Constraint,
     Expression,
 )
+import pyomo.environ as pyo
+
+_invalid_1j = r'InvalidNumber\((\([-+0-9.e]+\+)?1j\)?\)'
 
 
 class INFO(object):
@@ -155,7 +159,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -170,7 +174,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -181,11 +185,11 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 3*x/p\n",
+            "\texpression: 3/p\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -200,7 +204,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -215,7 +219,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -345,9 +349,9 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         m.p = Param(mutable=True, initialize=0)
         m.x = Var()
 
-        nl_writer.HALT_ON_EVALUATION_ERROR, tmp = (
+        repn_util.HALT_ON_EVALUATION_ERROR, tmp = (
             True,
-            nl_writer.HALT_ON_EVALUATION_ERROR,
+            repn_util.HALT_ON_EVALUATION_ERROR,
         )
         try:
             info = INFO()
@@ -390,7 +394,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
                 "\texpression: x**2/p\n",
             )
         finally:
-            nl_writer.HALT_ON_EVALUATION_ERROR = tmp
+            repn_util.HALT_ON_EVALUATION_ERROR = tmp
 
     def test_errors_negative_frac_pow(self):
         m = ConcreteModel()
@@ -402,13 +406,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((m.p ** (0.5), None, None))
         self.assertEqual(
             LOG.getvalue(),
-            "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
-            "\tmessage: Pyomo does not support complex numbers\n"
+            "Complex number returned from expression\n"
+            "\tmessage: Pyomo AMPLRepnVisitor does not support complex numbers\n"
             "\texpression: p**0.5\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertRegex(str(repn.const), _invalid_1j)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -418,13 +422,13 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((m.p**m.x, None, None))
         self.assertEqual(
             LOG.getvalue(),
-            "Exception encountered evaluating expression 'pow(-1, 0.5)'\n"
-            "\tmessage: Pyomo does not support complex numbers\n"
+            "Complex number returned from expression\n"
+            "\tmessage: Pyomo AMPLRepnVisitor does not support complex numbers\n"
             "\texpression: p**x\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertRegex(str(repn.const), _invalid_1j)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -444,7 +448,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -464,11 +468,11 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 3*x/p\n",
+            "\texpression: 3/p\n",
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertTrue(math.isnan(repn.const))
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -952,6 +956,76 @@ k1
 J0 2
 0 5
 1 10
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_indexed_sos_constraints(self):
+        # This tests the example from issue #2827
+        m = pyo.ConcreteModel()
+        m.A = pyo.Set(initialize=[1])
+        m.B = pyo.Set(initialize=[1, 2, 3])
+        m.C = pyo.Set(initialize=[1])
+
+        m.param_cx = pyo.Param(m.A, initialize={1: 1})
+        m.param_cy = pyo.Param(m.B, initialize={1: 2, 2: 3, 3: 1})
+
+        m.x = pyo.Var(m.A, domain=pyo.NonNegativeReals, bounds=(0, 40))
+        m.y = pyo.Var(m.B, domain=pyo.NonNegativeIntegers)
+
+        @m.Objective()
+        def OBJ(m):
+            return sum(m.param_cx[a] * m.x[a] for a in m.A) + sum(
+                m.param_cy[b] * m.y[b] for b in m.B
+            )
+
+        m.y[3].bounds = (2, 3)
+
+        m.mysos = pyo.SOSConstraint(
+            m.C, var=m.y, sos=1, index={1: [2, 3]}, weights={2: 25.0, 3: 18.0}
+        )
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT, symbolic_solver_labels=True)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0        # problem unknown
+ 4 0 1 0 0      # vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0    # nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0    # network constraints: nonlinear, linear
+ 0 0 0  # nonlinear vars in constraints, objectives, both
+ 0 0 0 1        # linear network variables; functions; arith, flags
+ 0 3 0 0 0      # discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 4    # nonzeros in Jacobian, obj. gradient
+ 3 4    # max name lengths: constraints, variables
+ 0 0 0 0 0      # common exprs: b,c,o,c1,o1
+S0 2 sosno
+2 1
+3 1
+S0 2 ref
+2 25.0
+3 18.0
+O0 0    #OBJ
+n0
+x0      # initial guess
+r       #0 ranges (rhs's)
+b       #4 bounds (on variables)
+0 0 40  #x[1]
+2 0     #y[1]
+2 0     #y[2]
+0 2 3   #y[3]
+k3      #intermediate Jacobian column lengths
+0
+0
+0
+G0 4    #OBJ
+0 1
+1 2
+2 3
+3 1
 """,
                 OUT.getvalue(),
             )

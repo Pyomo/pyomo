@@ -241,9 +241,11 @@ def solve_master_feasibility_problem(model_data, config):
     else:
         solver = config.local_solver
 
+    timer = TicTocTimer()
     orig_setting, custom_setting_present = adjust_solver_time_settings(
         model_data.timing, solver, config
     )
+    timer.tic(msg=None)
     try:
         results = solver.solve(model, tee=config.tee, load_solutions=False)
     except ApplicationError:
@@ -256,6 +258,8 @@ def solve_master_feasibility_problem(model_data, config):
             f"{model_data.iteration}"
         )
         raise
+    else:
+        setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
     finally:
         revert_solver_max_time_adjustment(
             solver, orig_setting, custom_setting_present, config

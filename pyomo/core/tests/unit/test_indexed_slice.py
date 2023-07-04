@@ -540,9 +540,9 @@ class TestComponentSlices(unittest.TestCase):
         )
 
         _slice = self.m.b[1, :]
-        self.assertEqual(list(_slice.wildcard_keys()), [4, 5, 6])
+        self.assertEqual(list(_slice.wildcard_keys(False)), [4, 5, 6])
         self.assertEqual(
-            list(_slice.wildcard_items()),
+            list(_slice.wildcard_items(False)),
             [(4, m.b[1, 4]), (5, m.b[1, 5]), (6, m.b[1, 6])],
         )
         self.assertEqual(list(_slice.expanded_keys()), [(1, 4), (1, 5), (1, 6)])

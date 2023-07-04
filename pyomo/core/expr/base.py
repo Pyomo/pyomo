@@ -11,6 +11,8 @@
 
 import enum
 
+from pyomo.common.numeric_types import native_types
+from pyomo.core.pyomoobject import PyomoObject
 from . import expr_common as common
 from .visitor import (
     expression_to_string,
@@ -21,7 +23,7 @@ from .visitor import (
 )
 
 
-class ExpressionBase(object):
+class ExpressionBase(PyomoObject):
     """The base class for all Pyomo expression systems.
 
     This class is used to define nodes in a general expression tree.
@@ -246,7 +248,7 @@ class ExpressionBase(object):
 
         This method provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.  In the simplest
-        case, this simply returns::
+        case, this returns::
 
             self.__class__(args)
 
@@ -394,3 +396,61 @@ class ExpressionBase(object):
             f"Derived expression ({self.__class__}) failed to "
             "implement _apply_operation()"
         )
+
+
+class NPV_Mixin(object):
+    __slots__ = ()
+
+    def is_potentially_variable(self):
+        return False
+
+    def create_node_with_local_data(self, args, classtype=None):
+        assert classtype is None
+        try:
+            npv_args = all(
+                type(arg) in native_types or not arg.is_potentially_variable()
+                for arg in args
+            )
+        except AttributeError:
+            # We can hit this during expression replacement when the new
+            # type is not a PyomoObject type, but is not in the
+            # native_types set.  We will play it safe and clear the NPV flag
+            npv_args = False
+        if npv_args:
+            return super().create_node_with_local_data(args, None)
+        else:
+            return super().create_node_with_local_data(
+                args, self.potentially_variable_base_class()
+            )
+
+    def potentially_variable_base_class(self):
+        cls = list(self.__class__.__bases__)
+        cls.remove(NPV_Mixin)
+        assert len(cls) == 1
+        return cls[0]
+
+
+class ExpressionArgs_Mixin(object):
+    __slots__ = ('_args_',)
+
+    def __init__(self, args):
+        self._args_ = args
+
+    def nargs(self):
+        return len(self._args_)
+
+    @property
+    def args(self):
+        """
+        Return the child nodes
+
+        Returns
+        -------
+        list or tuple:
+            Sequence containing only the child nodes of this node.  The
+            return type depends on the node storage model.  Users are
+            not permitted to change the returned data (even for the case
+            of data returned as a list), as that breaks the promise of
+            tree immutability.
+        """
+        return self._args_

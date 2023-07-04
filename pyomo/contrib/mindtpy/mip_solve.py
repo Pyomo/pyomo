@@ -176,7 +176,7 @@ def set_up_mip_solver(solve_data, config, regularization_problem):
         The customized MIP solver.
     """
     # Deactivate extraneous IMPORT/EXPORT suffixes
-    if config.nlp_solver == 'ipopt':
+    if config.nlp_solver in {'ipopt', 'cyipopt'}:
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
     if regularization_problem:
@@ -401,7 +401,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
         # In ROA, if the objective function is linear(or quadratic when quadratic_strategy = 1 or 2), the original objective function is used in the MIP problem.
         # In the MIP projection problem, we need to reactivate the epigraph constraint(objective_constr).
         if (
-            MindtPy.objective_list[0].expr.polynomial_degree()
+            MindtPy.objective_list[0].polynomial_degree()
             in solve_data.mip_objective_polynomial_degree
         ):
             MindtPy.objective_constr.activate()

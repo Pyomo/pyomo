@@ -53,7 +53,16 @@ def _floatOrCall(val):
     try:
         return float(val)
     except TypeError:
+        pass
+    try:
         return float(val())
+    except TypeError:
+        pass
+    try:
+        return val.value
+    except AttributeError:
+        # likely a complex
+        return val
 
 
 def assertStructuredAlmostEqual(
@@ -459,7 +468,7 @@ class _AssertRaisesContext_NormalizeWhitespace(_unittest.case._AssertRaisesConte
         finally:
             self.expected_regex = _save_re
 
-        exc_value = re.sub('(?s)\s+', ' ', str(exc_value))
+        exc_value = re.sub(r'(?s)\s+', ' ', str(exc_value))
         if not _save_re.search(exc_value):
             self._raiseFailure(
                 '"{}" does not match "{}"'.format(_save_re.pattern, exc_value)

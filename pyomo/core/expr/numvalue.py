@@ -23,11 +23,16 @@ __all__ = (
     'polynomial_degree',
 )
 
+import collections
 import sys
 import logging
 
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import (
+    deprecated,
+    deprecation_warning,
+    relocated_module_attribute,
+)
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.expr_common import (
     _add,
@@ -52,48 +57,68 @@ from pyomo.core.expr.expr_common import (
     _eq,
     ExpressionType,
 )
+import pyomo.common.numeric_types as _numeric_types
 
-# TODO: update imports of these objects to pull from numeric_types
+# TODO: update Pyomo to import these objects from common.numeric_types
+#   (and not from here)
 from pyomo.common.numeric_types import (
     nonpyomo_leaf_types,
     native_types,
     native_numeric_types,
     native_integer_types,
-    native_boolean_types,
     native_logical_types,
-    RegisterNumericType,
-    RegisterIntegerType,
-    RegisterBooleanType,
     pyomo_constant_types,
 )
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 
+relocated_module_attribute(
+    'native_boolean_types',
+    'pyomo.common.numeric_types._native_boolean_types',
+    version='6.6.0',
+    f_globals=globals(),
+    msg="The native_boolean_types set will be removed in the future: the set "
+    "contains types that were convertible to bool, and not types that should "
+    "be treated as if they were bool (as was the case for the other "
+    "native_*_types sets).  Users likely should use native_logical_types.",
+)
+relocated_module_attribute(
+    'RegisterNumericType',
+    'pyomo.common.numeric_types.RegisterNumericType',
+    version='6.6.0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'RegisterIntegerType',
+    'pyomo.common.numeric_types.RegisterIntegerType',
+    version='6.6.0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'RegisterBooleanType',
+    'pyomo.common.numeric_types.RegisterBooleanType',
+    version='6.6.0',
+    f_globals=globals(),
+)
+
 logger = logging.getLogger('pyomo.core')
 
 
-def _generate_sum_expression(etype, _self, _other):
-    raise RuntimeError(
-        "incomplete import of Pyomo expression system"
-    )  # pragma: no cover
+# Stub in the dispatchers
+def _incomplete_import(*args):
+    raise RuntimeError("incomplete import of Pyomo expression system")
 
 
-def _generate_mul_expression(etype, _self, _other):
-    raise RuntimeError(
-        "incomplete import of Pyomo expression system"
-    )  # pragma: no cover
-
-
-def _generate_other_expression(etype, _self, _other):
-    raise RuntimeError(
-        "incomplete import of Pyomo expression system"
-    )  # pragma: no cover
+_add_dispatcher = collections.defaultdict(_incomplete_import)
+_mul_dispatcher = collections.defaultdict(_incomplete_import)
+_div_dispatcher = collections.defaultdict(_incomplete_import)
+_pow_dispatcher = collections.defaultdict(_incomplete_import)
+_neg_dispatcher = collections.defaultdict(_incomplete_import)
+_abs_dispatcher = collections.defaultdict(_incomplete_import)
 
 
 def _generate_relational_expression(etype, lhs, rhs):
-    raise RuntimeError(
-        "incomplete import of Pyomo expression system"
-    )  # pragma: no cover
+    raise RuntimeError("incomplete import of Pyomo expression system")
 
 
 ##------------------------------------------------------------------------
@@ -474,9 +499,20 @@ def check_if_numeric_type(obj):
 
     """
     obj_class = obj.__class__
+    # Do not re-evaluate known native types
+    if obj_class in native_types:
+        return obj_class in native_numeric_types
+
     try:
         obj_plus_0 = obj + 0
         obj_p0_class = obj_plus_0.__class__
+        # ensure that the object is comparable to 0 in a meaningful way
+        # (among other things, this prevents numpy.ndarray objects from
+        # being added to native_numeric_types)
+        if not ((obj < 0) ^ (obj >= 0)):
+            return False
+        # Native types *must* be hashable
+        hash(obj)
     except:
         return False
     if obj_p0_class is obj_class or obj_p0_class in native_numeric_types:
@@ -485,19 +521,17 @@ def check_if_numeric_type(obj):
         # numeric type: add it to the native numeric types
         # so that future lookups will be faster.
         #
-        RegisterNumericType(obj_class)
+        _numeric_types.RegisterNumericType(obj_class)
         #
         # Generate a warning, since Pyomo's management of third-party
         # numeric types is more robust when registering explicitly.
         #
         logger.warning(
-            """Dynamically registering the following numeric type:
-    %s
+            f"""Dynamically registering the following numeric type:
+    {obj_class.__module__}.{obj_class.__name__}
 Dynamic registration is supported for convenience, but there are known
 limitations to this approach.  We recommend explicitly registering
-numeric types using the following functions:
-    RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()."""
-            % (obj_class.__name__,)
+numeric types using RegisterNumericType() or RegisterIntegerType()."""
         )
         return True
     else:
@@ -743,7 +777,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self + other
         """
-        return _generate_sum_expression(_add, self, other)
+        return _add_dispatcher[self.__class__, other.__class__](self, other)
 
     def __sub__(self, other):
         """
@@ -753,7 +787,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self - other
         """
-        return _generate_sum_expression(_sub, self, other)
+        return self.__add__(-other)
 
     def __mul__(self, other):
         """
@@ -763,7 +797,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self * other
         """
-        return _generate_mul_expression(_mul, self, other)
+        return _mul_dispatcher[self.__class__, other.__class__](self, other)
 
     def __div__(self, other):
         """
@@ -773,7 +807,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self / other
         """
-        return _generate_mul_expression(_div, self, other)
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
 
     def __truediv__(self, other):
         """
@@ -783,7 +817,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self / other
         """
-        return _generate_mul_expression(_div, self, other)
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
 
     def __pow__(self, other):
         """
@@ -793,7 +827,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self ** other
         """
-        return _generate_other_expression(_pow, self, other)
+        return _pow_dispatcher[self.__class__, other.__class__](self, other)
 
     def __radd__(self, other):
         """
@@ -803,7 +837,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other + self
         """
-        return _generate_sum_expression(_radd, self, other)
+        return _add_dispatcher[other.__class__, self.__class__](other, self)
 
     def __rsub__(self, other):
         """
@@ -813,7 +847,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other - self
         """
-        return _generate_sum_expression(_rsub, self, other)
+        return other + (-self)
 
     def __rmul__(self, other):
         """
@@ -825,7 +859,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
         when other is not a :class:`NumericValue <pyomo.core.expr.numvalue.NumericValue>` object.
         """
-        return _generate_mul_expression(_rmul, self, other)
+        return _mul_dispatcher[other.__class__, self.__class__](other, self)
 
     def __rdiv__(self, other):
         """Binary division
@@ -834,7 +868,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other / self
         """
-        return _generate_mul_expression(_rdiv, self, other)
+        return _div_dispatcher[other.__class__, self.__class__](other, self)
 
     def __rtruediv__(self, other):
         """
@@ -844,7 +878,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other / self
         """
-        return _generate_mul_expression(_rdiv, self, other)
+        return _div_dispatcher[other.__class__, self.__class__](other, self)
 
     def __rpow__(self, other):
         """
@@ -854,7 +888,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other ** self
         """
-        return _generate_other_expression(_rpow, self, other)
+        return _pow_dispatcher[other.__class__, self.__class__](other, self)
 
     def __iadd__(self, other):
         """
@@ -864,7 +898,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self += other
         """
-        return _generate_sum_expression(_iadd, self, other)
+        return _add_dispatcher[self.__class__, other.__class__](self, other)
 
     def __isub__(self, other):
         """
@@ -874,7 +908,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self -= other
         """
-        return _generate_sum_expression(_isub, self, other)
+        return self.__iadd__(-other)
 
     def __imul__(self, other):
         """
@@ -884,7 +918,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self *= other
         """
-        return _generate_mul_expression(_imul, self, other)
+        return _mul_dispatcher[self.__class__, other.__class__](self, other)
 
     def __idiv__(self, other):
         """
@@ -894,7 +928,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self /= other
         """
-        return _generate_mul_expression(_idiv, self, other)
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
 
     def __itruediv__(self, other):
         """
@@ -904,7 +938,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self /= other
         """
-        return _generate_mul_expression(_idiv, self, other)
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
 
     def __ipow__(self, other):
         """
@@ -914,7 +948,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self **= other
         """
-        return _generate_other_expression(_ipow, self, other)
+        return _pow_dispatcher[self.__class__, other.__class__](self, other)
 
     def __neg__(self):
         """
@@ -924,7 +958,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             - self
         """
-        return _generate_sum_expression(_neg, self, None)
+        return _neg_dispatcher[self.__class__](self)
 
     def __pos__(self):
         """
@@ -943,7 +977,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             abs(self)
         """
-        return _generate_other_expression(_abs, self, None)
+        return _abs_dispatcher[self.__class__](self)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return NumericNDArray.__array_ufunc__(None, ufunc, method, *inputs, **kwargs)
@@ -1027,6 +1061,8 @@ ZeroConstant = as_numeric(0)
 # Note: the "if numpy_available" in the class definition also ensures
 # that the numpy types are registered if numpy is in fact available
 #
+
+
 class NumericNDArray(np.ndarray if numpy_available else object):
     """An ndarray subclass that stores Pyomo numeric expressions"""
 

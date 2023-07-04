@@ -530,7 +530,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 ):  # CPLEX 11.2 and subsequent versions have two Variables sections in the log file output.
                     results.problem.number_of_variables = int(tokens[2])
             # In CPLEX 11 (and presumably before), there was only a single line output to
-            # indicate the constriant count, e.g., "Linear constraints : 16 [Less: 7, Greater: 6, Equal: 3]".
+            # indicate the constraint count, e.g., "Linear constraints : 16 [Less: 7, Greater: 6, Equal: 3]".
             # In CPLEX 11.2 (or somewhere in between 11 and 11.2 - I haven't bothered to track it down
             # in that detail), there is another instance of this line prefix in the min/max problem statistics
             # block - which we don't care about. In this case, the line looks like: "Linear constraints :" and

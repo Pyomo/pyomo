@@ -80,7 +80,7 @@ _parser = _extension_builder.create_parser(
         func=_extension_builder.call,
         help='Build compiled extension modules',
         add_help=False,
-        description='This builds all registered (compileable) extension modules',
+        description='This builds all registered (compilable) extension modules',
     )
 )
 

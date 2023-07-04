@@ -668,6 +668,12 @@ def _get_bool_valued_expr(arg):
 
 
 def _handle_monomial_expr(visitor, node, arg1, arg2):
+    # Monomial terms show up a lot.  This handles some common
+    # simplifications (necessary in part for the unit tests)
+    if arg2[1].__class__ in EXPR.native_types:
+        return _GENERAL, arg1[1] * arg2[1]
+    elif arg1[1] == 1:
+        return arg2
     return (_GENERAL, cp.times(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)))
 
 
@@ -913,7 +919,13 @@ def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
+        EXPR.Structural_GetItemExpression: _handle_getitem,
+        EXPR.Numeric_GetItemExpression: _handle_getitem,
+        EXPR.Boolean_GetItemExpression: _handle_getitem,
         EXPR.GetAttrExpression: _handle_getattr,
+        EXPR.Structural_GetAttrExpression: _handle_getattr,
+        EXPR.Numeric_GetAttrExpression: _handle_getattr,
+        EXPR.Boolean_GetAttrExpression: _handle_getattr,
         CallExpression: _handle_call,
         EXPR.NegationExpression: _handle_negation_node,
         EXPR.ProductExpression: _handle_product_node,
@@ -922,6 +934,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         EXPR.AbsExpression: _handle_abs_node,
         EXPR.MonomialTermExpression: _handle_monomial_expr,
         EXPR.SumExpression: _handle_sum_node,
+        EXPR.LinearExpression: _handle_sum_node,
         MinExpression: _handle_min_node,
         MaxExpression: _handle_max_node,
         NotExpression: _handle_not_node,

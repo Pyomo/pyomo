@@ -553,7 +553,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # We are assuming that _Constant_* expression objects
             # have been preprocessed to form constant values.
             #
-            elif exp.__class__ is EXPR.SumExpression:
+            elif (
+                exp.__class__ is EXPR.SumExpression
+                or exp.__class__ is EXPR.LinearExpression
+            ):
                 nary_sum_str, binary_sum_str, coef_term_str = self._op_string[
                     EXPR.SumExpressionBase
                 ]
@@ -685,9 +688,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
             elif exp_type is EXPR.Expr_ifExpression:
                 OUTPUT.write(self._op_string[EXPR.Expr_ifExpression])
-                self._print_nonlinear_terms_NL(exp._if)
-                self._print_nonlinear_terms_NL(exp._then)
-                self._print_nonlinear_terms_NL(exp._else)
+                for arg in exp.args:
+                    self._print_nonlinear_terms_NL(arg)
 
             elif exp_type is EXPR.InequalityExpression:
                 and_str, lt_str, le_str = self._op_string[EXPR.InequalityExpression]
