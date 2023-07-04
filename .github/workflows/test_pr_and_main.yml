@@ -631,7 +631,7 @@ jobs:
         CATEGORY=
         if test -n "${{matrix.category}}"; then
             CATEGORY=" -m '${{matrix.category}}'"
-        done
+        fi
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning $CATEGORY \
             pyomo `pwd`/pyomo-model-libraries \
