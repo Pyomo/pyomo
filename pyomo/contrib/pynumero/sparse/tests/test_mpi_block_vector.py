@@ -181,6 +181,16 @@ class TestMPIBlockVector(unittest.TestCase):
         self.assertAlmostEqual(v.min(), 3)
         self.assertAlmostEqual(v.max(), 12)
 
+        if rank == 0:
+            v.set_block(0, np.array([np.inf, np.inf, np.inf, np.inf]))
+        if rank == 2:
+            v.set_block(2, np.array([np.inf, np.inf, np.inf]))
+        self.assertEqual(v.min(), np.inf)
+        self.assertEqual(v.max(), np.inf)
+        v *= -1
+        self.assertEqual(v.min(), -np.inf)
+        self.assertEqual(v.max(), -np.inf)
+
     def test_max(self):
         v = MPIBlockVector(2, [0, 1], comm)
         rank = comm.Get_rank()
