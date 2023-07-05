@@ -190,7 +190,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var(bounds=(-5, 5))
         m.y = pe.Var(bounds=(-5, 5))
         m.obj = pe.Objective(expr=-m.x**2 - m.y)
-        m.c1 = pe.Constraint(expr=m.y <= -2*m.x + 1)
+        m.c1 = pe.Constraint(expr=m.y <= -2 * m.x + 1)
         m.c2 = pe.Constraint(expr=m.y <= m.x - 2)
         opt = Gurobi()
         opt.gurobi_options['nonconvex'] = 2
@@ -209,7 +209,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var(bounds=(-5, 5))
         m.y = pe.Var(bounds=(-5, 5))
         m.obj = pe.Objective(expr=-m.x**2 - m.y)
-        m.c1 = pe.Constraint(expr=m.y <= -2*m.x + 1)
+        m.c1 = pe.Constraint(expr=m.y <= -2 * m.x + 1)
         m.c2 = pe.Constraint(expr=m.y <= m.x - 2)
         opt = Gurobi()
         opt.gurobi_options['nonconvex'] = 2
