@@ -37,23 +37,20 @@ problem_names.append("step_vararray")
 
 problem_names = ['convex_var']
 
-if not opt.available():
-    print(f"Solver ({solver_name}) is not available")
-    problem_names = []
+if __name__ == '__main__':
+    for problem_name in problem_names:
+        p = import_file(os.path.join(this_file_dir(), problem_name) + '.py')
 
-for problem_name in problem_names:
-    p = import_file(os.path.join(this_file_dir(), problem_name) + '.py')
+        model = p.define_model(**kwds)
+        inst = model.create_instance()
 
-    model = p.define_model(**kwds)
-    inst = model.create_instance()
+        results = opt.solve(inst, tee=True)
 
-    results = opt.solve(inst, tee=True)
-
-    res = dict()
-    for block in inst.block_data_objects(active=True):
-        for variable in block.component_map(Var, active=True).values():
-            for var in variable.values():
-                name = var.name
-                if (name[:2] == 'Fx') or (name[:1] == 'x'):
-                    res[name] = value(var)
-    print(res)
+        res = dict()
+        for block in inst.block_data_objects(active=True):
+            for variable in block.component_map(Var, active=True).values():
+                for var in variable.values():
+                    name = var.name
+                    if (name[:2] == 'Fx') or (name[:1] == 'x'):
+                        res[name] = value(var)
+        print(res)
