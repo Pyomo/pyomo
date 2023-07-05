@@ -8,14 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-
-try:
-    from scipy.sparse._sputils import isscalarlike
-except ImportError:
-    # fall back on sputils for scipy<1.11.1
-    from scipy.sparse.sputils import isscalarlike
-
+from scipy.sparse.sputils import isscalarlike
 from scipy.sparse import tril, triu, isspmatrix
 
 import numpy as np
