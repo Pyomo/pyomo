@@ -612,7 +612,7 @@ jobs:
       run: |
         CATEGORY=
         if test -n "${{matrix.category}}"; then
-            CATEGORY=" -m '${{matrix.category}}'"
+            CATEGORY=' -m "${{matrix.category}}"'
         fi
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning $CATEGORY \
