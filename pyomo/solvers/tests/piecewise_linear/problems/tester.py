@@ -15,7 +15,8 @@ from pyomo.common.fileutils import import_file, this_file_dir
 from pyomo.environ import Var, maximize, value
 from pyomo.opt import SolverFactory
 
-opt = SolverFactory('cplexamp', solve_io='nl')
+solver_name = 'cplexamp'
+opt = SolverFactory(solver_name, solve_io='nl')
 
 kwds = {'pw_constr_type': 'UB', 'pw_repn': 'DCC', 'sense': maximize, 'force_pw': True}
 
@@ -35,6 +36,10 @@ problem_names.append("step_var")
 problem_names.append("step_vararray")
 
 problem_names = ['convex_var']
+
+if not opt.available():
+    print(f"Solver ({solver_name}) is not available")
+    problem_names = []
 
 for problem_name in problem_names:
     p = import_file(os.path.join(this_file_dir(), problem_name) + '.py')
