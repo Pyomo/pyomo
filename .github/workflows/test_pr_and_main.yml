@@ -94,7 +94,7 @@ jobs:
         - os: ubuntu-latest
           python: 3.11
           other: /singletest
-          category: "neos or importtest"
+          category: "-m 'neos or importtest'"
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -628,12 +628,8 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        CATEGORY=
-        if test -n "${{matrix.category}}"; then
-            CATEGORY=' -m "${{matrix.category}}"'
-        fi
         $PYTHON_EXE -m pytest -v \
-            -W ignore::Warning $CATEGORY \
+            -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples/pyomobook --junitxml="TEST-pyomo.xml"
 
