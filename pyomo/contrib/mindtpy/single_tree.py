@@ -181,6 +181,10 @@ class LazyOACallback_cplex(
                         sense='L',
                         rhs=cplex_rhs,
                     )
+                    if self.get_solution_source() == 119:
+                        mindtpy_object.mip_start_lazy_oa_cuts.append([cplex.SparsePair(
+                            ind=cplex_expr.variables, val=cplex_expr.coefficients
+                        ), 'L', cplex_rhs])
                 else:  # Inequality constraint (possibly two-sided)
                     if (
                         constr.has_ub()
@@ -207,6 +211,10 @@ class LazyOACallback_cplex(
                             sense='L',
                             rhs=value(constr.upper) + cplex_rhs,
                         )
+                        if self.get_solution_source() == 119:
+                            mindtpy_object.mip_start_lazy_oa_cuts.append([cplex.SparsePair(
+                                ind=cplex_expr.variables, val=cplex_expr.coefficients
+                            ), 'L', value(constr.upper) + cplex_rhs])
                     if (
                         constr.has_lb()
                         and (
@@ -236,6 +244,10 @@ class LazyOACallback_cplex(
                             sense='G',
                             rhs=value(constr.lower) + cplex_rhs,
                         )
+                        if self.get_solution_source() == 119:
+                            mindtpy_object.mip_start_lazy_oa_cuts.append([cplex.SparsePair(
+                                ind=cplex_expr.variables, val=cplex_expr.coefficients
+                            ), 'G', value(constr.lower) + cplex_rhs])
 
     def add_lazy_affine_cuts(self, mindtpy_object, config, opt):
         """Adds affine cuts using MCPP.
@@ -662,13 +674,23 @@ class LazyOACallback_cplex(
         main_mip = self.main_mip
         mindtpy_object = self.mindtpy_object
 
-        # TODO: check why same solution visited twice.
-
         config.logger.debug(
             "Solution source: %s (111 node_solution, 117 heuristic_solution, 119 mipstart_solution)".format(
                 self.get_solution_source()
             )
         )
+
+        # The solution found in mip start process might be revisited in branch and bound.
+        # Lazy constraints separated when processing a MIP start will be discarded after that MIP start has been processed.
+        # This means that the callback may have to separate the same constraint again for the next MIP start or for a solution that is found later in the solution process.
+        # https://www.ibm.com/docs/en/icos/12.8.0.0?topic=SSSA5P_12.8.0/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.LazyConstraintCallback-class.htm
+        if (
+            self.get_solution_source() != 119
+            and mindtpy_object.mip_start_lazy_oa_cuts != []
+        ):
+            for constraint, sense, rhs in mindtpy_object.mip_start_lazy_oa_cuts:
+                self.add(constraint, sense, rhs)
+            mindtpy_object.mip_start_lazy_oa_cuts == []
 
         if mindtpy_object.should_terminate:
             self.abort()
@@ -738,9 +760,8 @@ class LazyOACallback_cplex(
                     )
                     self.add_lazy_no_good_cuts(var_values, mindtpy_object, config, opt)
                 return
-            # TODO: check why this need to be commented. This previously worked well.
-            # elif config.strategy == 'OA':
-            #     return
+            elif config.strategy == 'OA':
+                return
         else:
             mindtpy_object.integer_list.append(mindtpy_object.curr_int_sol)
 
@@ -860,7 +881,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_object, config):
             cb_opt._solver_model.terminate()
             return
 
-        # # check if the same integer combination is obtained.
+        # check if the same integer combination is obtained.
         mindtpy_object.curr_int_sol = get_integer_solution(
             mindtpy_object.fixed_nlp, string_zero=True
         )

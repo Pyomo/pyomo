@@ -139,6 +139,7 @@ class _MindtPyAlgorithm(object):
         self.stored_bound = {}
         self.num_no_good_cuts_added = {}
         self.last_iter_cuts = False
+        self.mip_start_lazy_oa_cuts = []
 
     # Support use as a context manager under current solver API
     def __enter__(self):
