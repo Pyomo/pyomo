@@ -183,9 +183,16 @@ class LazyOACallback_cplex(
                     )
                     # 119 means mipstart_solution
                     if self.get_solution_source() == 119:
-                        mindtpy_object.mip_start_lazy_oa_cuts.append([cplex.SparsePair(
-                            ind=cplex_expr.variables, val=cplex_expr.coefficients
-                        ), 'L', cplex_rhs])
+                        mindtpy_object.mip_start_lazy_oa_cuts.append(
+                            [
+                                cplex.SparsePair(
+                                    ind=cplex_expr.variables,
+                                    val=cplex_expr.coefficients,
+                                ),
+                                'L',
+                                cplex_rhs,
+                            ]
+                        )
                 else:  # Inequality constraint (possibly two-sided)
                     if (
                         constr.has_ub()
@@ -213,9 +220,16 @@ class LazyOACallback_cplex(
                             rhs=value(constr.upper) + cplex_rhs,
                         )
                         if self.get_solution_source() == 119:
-                            mindtpy_object.mip_start_lazy_oa_cuts.append([cplex.SparsePair(
-                                ind=cplex_expr.variables, val=cplex_expr.coefficients
-                            ), 'L', value(constr.upper) + cplex_rhs])
+                            mindtpy_object.mip_start_lazy_oa_cuts.append(
+                                [
+                                    cplex.SparsePair(
+                                        ind=cplex_expr.variables,
+                                        val=cplex_expr.coefficients,
+                                    ),
+                                    'L',
+                                    value(constr.upper) + cplex_rhs,
+                                ]
+                            )
                     if (
                         constr.has_lb()
                         and (
@@ -246,9 +260,16 @@ class LazyOACallback_cplex(
                             rhs=value(constr.lower) + cplex_rhs,
                         )
                         if self.get_solution_source() == 119:
-                            mindtpy_object.mip_start_lazy_oa_cuts.append([cplex.SparsePair(
-                                ind=cplex_expr.variables, val=cplex_expr.coefficients
-                            ), 'G', value(constr.lower) + cplex_rhs])
+                            mindtpy_object.mip_start_lazy_oa_cuts.append(
+                                [
+                                    cplex.SparsePair(
+                                        ind=cplex_expr.variables,
+                                        val=cplex_expr.coefficients,
+                                    ),
+                                    'G',
+                                    value(constr.lower) + cplex_rhs,
+                                ]
+                            )
 
     def add_lazy_affine_cuts(self, mindtpy_object, config, opt):
         """Adds affine cuts using MCPP.
