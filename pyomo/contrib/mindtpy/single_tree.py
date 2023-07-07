@@ -181,6 +181,7 @@ class LazyOACallback_cplex(
                         sense='L',
                         rhs=cplex_rhs,
                     )
+                    # 119 means mipstart_solution
                     if self.get_solution_source() == 119:
                         mindtpy_object.mip_start_lazy_oa_cuts.append([cplex.SparsePair(
                             ind=cplex_expr.variables, val=cplex_expr.coefficients
@@ -680,7 +681,7 @@ class LazyOACallback_cplex(
             )
         )
 
-        # The solution found in mip start process might be revisited in branch and bound.
+        # The solution found in MIP start process might be revisited in branch and bound.
         # Lazy constraints separated when processing a MIP start will be discarded after that MIP start has been processed.
         # This means that the callback may have to separate the same constraint again for the next MIP start or for a solution that is found later in the solution process.
         # https://www.ibm.com/docs/en/icos/12.8.0.0?topic=SSSA5P_12.8.0/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.LazyConstraintCallback-class.htm
