@@ -933,7 +933,7 @@ class PersistentBase(abc.ABC):
 
     def set_instance(self, model):
         saved_update_config = self.update_config
-        self.__init__()
+        self.__init__(only_child_vars=self._only_child_vars)
         self.update_config = saved_update_config
         self._model = model
         if self.use_extensions and cmodel_available:
