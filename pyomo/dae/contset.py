@@ -11,10 +11,10 @@
 
 import logging
 import bisect
+from pyomo.common.numeric_types import native_numeric_types
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.set import SortedScalarSet
 from pyomo.core.base.component import ModelComponentFactory
-from pyomo.core.base.numvalue import native_numeric_types
 
 logger = logging.getLogger('pyomo.dae')
 __all__ = ['ContinuousSet']
