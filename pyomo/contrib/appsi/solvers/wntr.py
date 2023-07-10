@@ -38,7 +38,6 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 wntr, wntr_available = attempt_import('wntr')
-import wntr
 import logging
 import time
 import sys
