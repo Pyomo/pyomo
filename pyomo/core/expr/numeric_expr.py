@@ -45,6 +45,7 @@ from .numvalue import (
     value,
     is_potentially_variable,
     check_if_numeric_type,
+    value,
 )
 
 from .visitor import (
@@ -57,6 +58,11 @@ from .visitor import (
 )
 
 _zero_one_optimizations = {1}
+
+
+# Stub in the dispatchers
+def _generate_relational_expression(etype, lhs, rhs):
+    raise RuntimeError("incomplete import of Pyomo expression system")
 
 
 def enable_expression_optimizations(zero=None, one=None):
@@ -162,6 +168,497 @@ class linear_expression(mutable_expression):
     :py:class:`mutable_expression` provided for backwards compatibility.
 
     """
+
+
+class NumericValue(PyomoObject):
+    """
+    This is the base class for numeric values used in Pyomo.
+    """
+
+    __slots__ = ()
+
+    # This is required because we define __eq__
+    __hash__ = None
+
+    def getname(self, fully_qualified=False, name_buffer=None):
+        """
+        If this is a component, return the component's name on the owning
+        block; otherwise return the value converted to a string
+        """
+        _base = super(NumericValue, self)
+        if hasattr(_base, 'getname'):
+            return _base.getname(fully_qualified, name_buffer)
+        else:
+            return str(type(self))
+
+    @property
+    def name(self):
+        return self.getname(fully_qualified=True)
+
+    @property
+    def local_name(self):
+        return self.getname(fully_qualified=False)
+
+    def is_numeric_type(self):
+        """Return True if this class is a Pyomo numeric object"""
+        return True
+
+    def is_constant(self):
+        """Return True if this numeric value is a constant value"""
+        return False
+
+    def is_fixed(self):
+        """Return True if this is a non-constant value that has been fixed"""
+        return False
+
+    def is_potentially_variable(self):
+        """Return True if variables can appear in this expression"""
+        return False
+
+    @deprecated(
+        "is_relational() is deprecated in favor of "
+        "is_expression_type(ExpressionType.RELATIONAL)",
+        version='6.4.3',
+    )
+    def is_relational(self):
+        """
+        Return True if this numeric value represents a relational expression.
+        """
+        return False
+
+    def is_indexed(self):
+        """Return True if this numeric value is an indexed object"""
+        return False
+
+    def polynomial_degree(self):
+        """
+        Return the polynomial degree of the expression.
+
+        Returns:
+            :const:`None`
+        """
+        return self._compute_polynomial_degree(None)
+
+    def _compute_polynomial_degree(self, values):
+        """
+        Compute the polynomial degree of this expression given
+        the degree values of its children.
+
+        Args:
+            values (list): A list of values that indicate the degree
+                of the children expression.
+
+        Returns:
+            :const:`None`
+        """
+        return None
+
+    def __bool__(self):
+        """Coerce the value to a bool
+
+        Numeric values can be coerced to bool only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
+
+        Raises:
+            PyomoException
+
+        """
+        # Note that we want to implement __bool__, as scalar numeric
+        # components (e.g., Param, Var) implement __len__ (since they
+        # are implicit containers), and Python falls back on __len__ if
+        # __bool__ is not defined.
+        if self.is_constant():
+            return bool(self())
+        raise PyomoException(
+            """
+Cannot convert non-constant Pyomo numeric value (%s) to bool.
+This error is usually caused by using a Var, unit, or mutable Param in a
+Boolean context such as an "if" statement. For example,
+    >>> m.x = Var()
+    >>> if not m.x:
+    ...     pass
+would cause this exception.""".strip()
+            % (self,)
+        )
+
+    def __float__(self):
+        """Coerce the value to a floating point
+
+        Numeric values can be coerced to float only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
+
+        Raises:
+            TypeError
+
+        """
+        if self.is_constant():
+            return float(self())
+        raise TypeError(
+            """
+Implicit conversion of Pyomo numeric value (%s) to float is disabled.
+This error is often the result of using Pyomo components as arguments to
+one of the Python built-in math module functions when defining
+expressions. Avoid this error by using Pyomo-provided math functions or
+explicitly resolving the numeric value using the Pyomo value() function.
+""".strip()
+            % (self,)
+        )
+
+    def __int__(self):
+        """Coerce the value to an integer
+
+        Numeric values can be coerced to int only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
+
+        Raises:
+            TypeError
+
+        """
+        if self.is_constant():
+            return int(self())
+        raise TypeError(
+            """
+Implicit conversion of Pyomo numeric value (%s) to int is disabled.
+This error is often the result of using Pyomo components as arguments to
+one of the Python built-in math module functions when defining
+expressions. Avoid this error by using Pyomo-provided math functions or
+explicitly resolving the numeric value using the Pyomo value() function.
+""".strip()
+            % (self,)
+        )
+
+    def __lt__(self, other):
+        """
+        Less than operator
+
+        This method is called when Python processes statements of the form::
+
+            self < other
+            other > self
+        """
+        return _generate_relational_expression(_lt, self, other)
+
+    def __gt__(self, other):
+        """
+        Greater than operator
+
+        This method is called when Python processes statements of the form::
+
+            self > other
+            other < self
+        """
+        return _generate_relational_expression(_lt, other, self)
+
+    def __le__(self, other):
+        """
+        Less than or equal operator
+
+        This method is called when Python processes statements of the form::
+
+            self <= other
+            other >= self
+        """
+        return _generate_relational_expression(_le, self, other)
+
+    def __ge__(self, other):
+        """
+        Greater than or equal operator
+
+        This method is called when Python processes statements of the form::
+
+            self >= other
+            other <= self
+        """
+        return _generate_relational_expression(_le, other, self)
+
+    def __eq__(self, other):
+        """
+        Equal to operator
+
+        This method is called when Python processes the statement::
+
+            self == other
+        """
+        return _generate_relational_expression(_eq, self, other)
+
+    def __add__(self, other):
+        """
+        Binary addition
+
+        This method is called when Python processes the statement::
+
+            self + other
+        """
+        return _add_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __sub__(self, other):
+        """
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            self - other
+        """
+        return self.__add__(-other)
+
+    def __mul__(self, other):
+        """
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            self * other
+        """
+        return _mul_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __div__(self, other):
+        """
+        Binary division
+
+        This method is called when Python processes the statement::
+
+            self / other
+        """
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __truediv__(self, other):
+        """
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+
+            self / other
+        """
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __pow__(self, other):
+        """
+        Binary power
+
+        This method is called when Python processes the statement::
+
+            self ** other
+        """
+        return _pow_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __radd__(self, other):
+        """
+        Binary addition
+
+        This method is called when Python processes the statement::
+
+            other + self
+        """
+        return _add_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __rsub__(self, other):
+        """
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            other - self
+        """
+        return other + (-self)
+
+    def __rmul__(self, other):
+        """
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            other * self
+
+        when other is not a :class:`NumericValue <pyomo.core.expr.numvalue.NumericValue>` object.
+        """
+        return _mul_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __rdiv__(self, other):
+        """Binary division
+
+        This method is called when Python processes the statement::
+
+            other / self
+        """
+        return _div_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __rtruediv__(self, other):
+        """
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+
+            other / self
+        """
+        return _div_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __rpow__(self, other):
+        """
+        Binary power
+
+        This method is called when Python processes the statement::
+
+            other ** self
+        """
+        return _pow_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __iadd__(self, other):
+        """
+        Binary addition
+
+        This method is called when Python processes the statement::
+
+            self += other
+        """
+        return _add_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __isub__(self, other):
+        """
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            self -= other
+        """
+        return self.__iadd__(-other)
+
+    def __imul__(self, other):
+        """
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            self *= other
+        """
+        return _mul_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __idiv__(self, other):
+        """
+        Binary division
+
+        This method is called when Python processes the statement::
+
+            self /= other
+        """
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __itruediv__(self, other):
+        """
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+
+            self /= other
+        """
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __ipow__(self, other):
+        """
+        Binary power
+
+        This method is called when Python processes the statement::
+
+            self **= other
+        """
+        return _pow_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __neg__(self):
+        """
+        Negation
+
+        This method is called when Python processes the statement::
+
+            - self
+        """
+        return _neg_dispatcher[self.__class__](self)
+
+    def __pos__(self):
+        """
+        Positive expression
+
+        This method is called when Python processes the statement::
+
+            + self
+        """
+        return self
+
+    def __abs__(self):
+        """Absolute value
+
+        This method is called when Python processes the statement::
+
+            abs(self)
+        """
+        return _abs_dispatcher[self.__class__](self)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return NumericNDArray.__array_ufunc__(None, ufunc, method, *inputs, **kwargs)
+
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
+        """Return a string representation of the expression tree.
+
+        Args:
+            verbose (bool): If :const:`True`, then the string
+                representation consists of nested functions.  Otherwise,
+                the string representation is an infix algebraic equation.
+                Defaults to :const:`False`.
+            labeler: An object that generates string labels for
+                non-constant in the expression tree.  Defaults to
+                :const:`None`.
+            smap: A SymbolMap instance that stores string labels for
+                non-constant nodes in the expression tree.  Defaults to
+                :const:`None`.
+            compute_values (bool): If :const:`True`, then fixed
+                expressions are evaluated and the string representation
+                of the resulting value is returned.
+
+        Returns:
+            A string representation for the expression tree.
+
+        """
+        if compute_values and self.is_fixed():
+            try:
+                return str(self())
+            except:
+                pass
+        if not self.is_constant():
+            if smap is not None:
+                return smap.getSymbol(self, labeler)
+            elif labeler is not None:
+                return labeler(self)
+        return str(self)
+
+
+#
+# Note: the "if numpy_available" in the class definition also ensures
+# that the numpy types are registered if numpy is in fact available
+#
+# TODO: Move this to a separate module to support avoiding the numpy
+# import if numpy is not actually used.
+class NumericNDArray(np.ndarray if numpy_available else object):
+    """An ndarray subclass that stores Pyomo numeric expressions"""
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if method == '__call__':
+            # Convert all incoming types to ndarray (to prevent recursion)
+            args = [np.asarray(i) for i in inputs]
+            # Set the return type to be an 'object'.  This prevents the
+            # logical operators from casting the result to a bool.  This
+            # requires numpy >= 1.6
+            kwargs['dtype'] = object
+
+        # Delegate to the base ufunc, but return an instance of this
+        # class so that additional operators hit this method.
+        ans = getattr(ufunc, method)(*args, **kwargs)
+        if isinstance(ans, np.ndarray):
+            if ans.size == 1:
+                return ans[0]
+            return ans.view(NumericNDArray)
+        else:
+            return ans
 
 
 # -------------------------------------------------------

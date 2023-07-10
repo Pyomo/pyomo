@@ -27,22 +27,12 @@ from . import (
     current,
 )
 
-# FIXME: remove circular dependencies between numvalue and numeric_expr
 #
-# We unfortunately have circular dependencies between the numvalue
-# module (which defines the base class for all numeric expression
-# components, and implements the operator overloading methods) and the
-# numeric_expr module (the dispatchers and the expression node
-# definitions)
-numvalue._add_dispatcher = numeric_expr._add_dispatcher
-numvalue._neg_dispatcher = numeric_expr._neg_dispatcher
-numvalue._mul_dispatcher = numeric_expr._mul_dispatcher
-numvalue._div_dispatcher = numeric_expr._div_dispatcher
-numvalue._abs_dispatcher = numeric_expr._abs_dispatcher
-numvalue._pow_dispatcher = numeric_expr._pow_dispatcher
+# FIXME: remove circular dependencies between relational_expr and numeric_expr
+#
 
 # Initialize numvalue functions
-numvalue._generate_relational_expression = (
+numeric_expr._generate_relational_expression = (
     relational_expr._generate_relational_expression
 )
 
