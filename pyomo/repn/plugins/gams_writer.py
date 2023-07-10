@@ -24,6 +24,7 @@ from pyomo.core.expr.numvalue import (
     native_numeric_types,
     nonpyomo_leaf_types,
 )
+from pyomo.core.expr.visitor import _ToStringVisitor
 from pyomo.core.base import (
     SymbolMap,
     ShortNameLabeler,
@@ -99,7 +100,7 @@ def _handle_AbsExpression(visitor, node, values):
 # A visitor pattern that creates a string for an expression
 # that is compatible with the GAMS syntax.
 #
-class ToGamsVisitor(EXPR._ToStringVisitor):
+class ToGamsVisitor(_ToStringVisitor):
     _expression_handlers = {
         EXPR.PowExpression: _handle_PowExpression,
         EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,
