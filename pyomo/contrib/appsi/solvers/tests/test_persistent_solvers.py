@@ -70,7 +70,9 @@ fixed variables
 @unittest.skipUnless(numpy_available, 'numpy is not available')
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
-    def test_remove_variable_and_objective(self, name: str, opt_class: Type[PersistentSolver]):
+    def test_remove_variable_and_objective(
+        self, name: str, opt_class: Type[PersistentSolver]
+    ):
         # this test is for issue #2888
         opt: PersistentSolver = opt_class()
         if not opt.available():
