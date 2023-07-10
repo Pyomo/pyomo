@@ -5,9 +5,7 @@ from pyomo.contrib.appsi.solvers.wntr import Wntr, wntr_available
 import math
 
 
-_default_wntr_options = dict(
-    TOL=1e-8,
-)
+_default_wntr_options = dict(TOL=1e-8)
 
 
 @unittest.skipUnless(wntr_available, 'wntr is not available')
@@ -32,7 +30,7 @@ class TestWntrPersistent(unittest.TestCase):
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=m.y == (m.x - 1)**2)
+        m.c1 = pe.Constraint(expr=m.y == (m.x - 1) ** 2)
         m.c2 = pe.Constraint(expr=m.y == pe.exp(m.x))
         opt = Wntr()
         opt.config.symbolic_solver_labels = True
@@ -55,7 +53,7 @@ class TestWntrPersistent(unittest.TestCase):
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=m.y == (m.x - 1)**2)
+        m.c1 = pe.Constraint(expr=m.y == (m.x - 1) ** 2)
         m.x.fix(0.5)
         opt = Wntr()
         opt.wntr_options.update(_default_wntr_options)
@@ -116,7 +114,7 @@ class TestWntrPersistent(unittest.TestCase):
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=m.y == (m.x - 1)**2)
+        m.c1 = pe.Constraint(expr=m.y == (m.x - 1) ** 2)
         m.c2 = pe.Constraint(expr=m.y == pe.exp(m.x))
         opt = Wntr()
         opt.config.load_solution = False
@@ -132,7 +130,7 @@ class TestWntrPersistent(unittest.TestCase):
     def test_operators(self):
         m = pe.ConcreteModel()
         m.x = pe.Var(initialize=1)
-        m.c1 = pe.Constraint(expr=2/m.x == 1)
+        m.c1 = pe.Constraint(expr=2 / m.x == 1)
         opt = Wntr()
         opt.wntr_options.update(_default_wntr_options)
         res = opt.solve(m)
@@ -141,23 +139,23 @@ class TestWntrPersistent(unittest.TestCase):
 
         del m.c1
         m.x.value = 0
-        m.c1 = pe.Constraint(expr=pe.sin(m.x) == math.sin(math.pi/4))
+        m.c1 = pe.Constraint(expr=pe.sin(m.x) == math.sin(math.pi / 4))
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
-        self.assertAlmostEqual(m.x.value, math.pi/4)
+        self.assertAlmostEqual(m.x.value, math.pi / 4)
 
         del m.c1
         m.c1 = pe.Constraint(expr=pe.cos(m.x) == 0)
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
-        self.assertAlmostEqual(m.x.value, math.pi/2)
+        self.assertAlmostEqual(m.x.value, math.pi / 2)
 
         del m.c1
         m.c1 = pe.Constraint(expr=pe.tan(m.x) == 1)
         m.x.value = 0
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
-        self.assertAlmostEqual(m.x.value, math.pi/4)
+        self.assertAlmostEqual(m.x.value, math.pi / 4)
 
         del m.c1
         m.c1 = pe.Constraint(expr=pe.asin(m.x) == math.asin(0.5))

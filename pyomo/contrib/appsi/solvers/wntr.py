@@ -4,7 +4,7 @@ from pyomo.contrib.appsi.base import (
     SolverConfig,
     Results,
     TerminationCondition,
-    PersistentSolutionLoader
+    PersistentSolutionLoader,
 )
 from pyomo.core.expr.numeric_expr import (
     ProductExpression,
@@ -37,6 +37,7 @@ from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
+
 wntr, wntr_available = attempt_import('wntr')
 import logging
 import time
@@ -86,8 +87,7 @@ class Wntr(PersistentBase, PersistentSolver):
         self._needs_updated = True
         self._last_results_object: Optional[WntrResults] = None
         self._pyomo_to_wntr_visitor = PyomoToWntrVisitor(
-            self._pyomo_var_to_solver_var_map,
-            self._pyomo_param_to_solver_param_map
+            self._pyomo_var_to_solver_var_map, self._pyomo_param_to_solver_param_map
         )
 
     def available(self):
@@ -233,22 +233,28 @@ class Wntr(PersistentBase, PersistentSolver):
             _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[id(var)]
             lb, ub, step = _domain_interval
             if (
-                    _lb is not None
-                    or _ub is not None
-                    or lb is not None
-                    or ub is not None
-                    or step != 0
+                _lb is not None
+                or _ub is not None
+                or lb is not None
+                or ub is not None
+                or step != 0
             ):
-                raise ValueError(f"WNTR's newton solver only supports continuous variables without bounds: {var.name}")
+                raise ValueError(
+                    f"WNTR's newton solver only supports continuous variables without bounds: {var.name}"
+                )
             if _value is None:
                 _value = 0
             wntr_var = aml.Var(_value)
             setattr(self._solver_model, varname, wntr_var)
             self._pyomo_var_to_solver_var_map[id(var)] = wntr_var
             if _fixed:
-                self._solver_model._wntr_fixed_var_params[id(var)] = param = aml.Param(_value)
+                self._solver_model._wntr_fixed_var_params[id(var)] = param = aml.Param(
+                    _value
+                )
                 wntr_expr = wntr_var - param
-                self._solver_model._wntr_fixed_var_cons[id(var)] = aml.Constraint(wntr_expr)
+                self._solver_model._wntr_fixed_var_cons[id(var)] = aml.Constraint(
+                    wntr_expr
+                )
             self._needs_updated = True
 
     def _add_params(self, params: List[_ParamData]):
@@ -263,9 +269,13 @@ class Wntr(PersistentBase, PersistentSolver):
         aml = wntr.sim.aml.aml
         for con in cons:
             if not con.equality:
-                raise ValueError(f"WNTR's newtwon solver only supports equality constraints: {con.name}")
+                raise ValueError(
+                    f"WNTR's newtwon solver only supports equality constraints: {con.name}"
+                )
             conname = self._symbol_map.getSymbol(con, self._labeler)
-            wntr_expr = self._pyomo_to_wntr_visitor.dfs_postorder_stack(con.body - con.upper)
+            wntr_expr = self._pyomo_to_wntr_visitor.dfs_postorder_stack(
+                con.body - con.upper
+            )
             wntr_con = aml.Constraint(wntr_expr)
             setattr(self._solver_model, conname, wntr_con)
             self._pyomo_con_to_solver_con_map[con] = wntr_con
@@ -307,21 +317,27 @@ class Wntr(PersistentBase, PersistentSolver):
             _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[v_id]
             lb, ub, step = _domain_interval
             if (
-                    _lb is not None
-                    or _ub is not None
-                    or lb is not None
-                    or ub is not None
-                    or step != 0
+                _lb is not None
+                or _ub is not None
+                or lb is not None
+                or ub is not None
+                or step != 0
             ):
-                raise ValueError(f"WNTR's newton solver only supports continuous variables without bounds: {var.name}")
+                raise ValueError(
+                    f"WNTR's newton solver only supports continuous variables without bounds: {var.name}"
+                )
             if _value is None:
                 _value = 0
             solver_var.value = _value
             if _fixed:
                 if v_id not in self._solver_model._wntr_fixed_var_params:
-                    self._solver_model._wntr_fixed_var_params[v_id] = param = aml.Param(_value)
+                    self._solver_model._wntr_fixed_var_params[v_id] = param = aml.Param(
+                        _value
+                    )
                     wntr_expr = solver_var - param
-                    self._solver_model._wntr_fixed_var_cons[v_id] = aml.Constraint(wntr_expr)
+                    self._solver_model._wntr_fixed_var_cons[v_id] = aml.Constraint(
+                        wntr_expr
+                    )
                     self._needs_updated = True
                 else:
                     self._solver_model._wntr_fixed_var_params[v_id].value = _value
@@ -337,7 +353,9 @@ class Wntr(PersistentBase, PersistentSolver):
             solver_p.value = p.value
 
     def _set_objective(self, obj):
-        raise NotImplementedError(f"WNTR's newton solver can only solve square problems")
+        raise NotImplementedError(
+            f"WNTR's newton solver can only solve square problems"
+        )
 
     def load_vars(self, vars_to_load=None):
         if vars_to_load is None:
@@ -359,11 +377,15 @@ class Wntr(PersistentBase, PersistentSolver):
 
     def _add_sos_constraints(self, cons):
         if len(cons) > 0:
-            raise NotImplementedError(f"WNTR's newton solver does not support SOS constraints")
+            raise NotImplementedError(
+                f"WNTR's newton solver does not support SOS constraints"
+            )
 
     def _remove_sos_constraints(self, cons):
         if len(cons) > 0:
-            raise NotImplementedError(f"WNTR's newton solver does not support SOS constraints")
+            raise NotImplementedError(
+                f"WNTR's newton solver does not support SOS constraints"
+            )
 
 
 def _handle_product_expression(node, values):
@@ -382,7 +404,7 @@ def _handle_division_expression(node, values):
 
 def _handle_pow_expression(node, values):
     arg1, arg2 = values
-    return arg1 ** arg2
+    return arg1**arg2
 
 
 def _handle_negation_expression(node, values):
@@ -422,7 +444,7 @@ def _handle_atan_expression(node, values):
 
 
 def _handle_sqrt_expression(node, values):
-    return (values[0])**0.5
+    return (values[0]) ** 0.5
 
 
 def _handle_abs_expression(node, values):
@@ -446,7 +468,9 @@ def _handle_unary_function_expression(node, values):
     if node.getname() in _unary_handler_map:
         return _unary_handler_map[node.getname()](node, values)
     else:
-        raise NotImplementedError(f'Unrecognized unary function expression: {node.getname()}')
+        raise NotImplementedError(
+            f'Unrecognized unary function expression: {node.getname()}'
+        )
 
 
 _handler_map = dict()
