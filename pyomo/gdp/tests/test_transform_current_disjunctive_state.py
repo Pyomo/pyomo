@@ -294,3 +294,37 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
             "the Disjunct indicator_vars are 'False.'",
         ):
             TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(m)
+
+    def test_partial_transformation_indexed_disjuncts(self):
+        m = ConcreteModel()
+        m.d = Disjunct([1, 2, 3, 4])
+        m.disj1 = Disjunction(expr=[m.d[1], m.d[2]])
+        m.disj2 = Disjunction(expr=[m.d[3], m.d[4]])
+
+        m.d[1].indicator_var = True
+
+        reverse = TransformationFactory(
+            'gdp.transform_current_disjunctive_state').apply_to(m)
+
+        self.assertTrue(m.d[1].active)
+        self.assertTrue(m.d[1].ctype, Block)
+        self.assertFalse(m.d[2].active)
+        self.assertTrue(m.d[3].active)
+        self.assertIs(m.d[3].ctype, Disjunct)
+        self.assertTrue(m.d[4].active)
+        self.assertIs(m.d[4].ctype, Disjunct)
+        self.assertFalse(m.disj1.active)
+        self.assertTrue(m.disj2.active)
+
+        TransformationFactory(
+            'gdp.transform_current_disjunctive_state').apply_to(m)
+        self.assertTrue(m.d[1].active)
+        self.assertTrue(m.d[2].active)
+        self.assertTrue(m.d[3].active)
+        self.assertTrue(m.d[4].active)
+        self.assertIs(m.d[1].ctype, Disjunct)
+        self.assertIs(m.d[2].ctype, Disjunct)
+        self.assertIs(m.d[3].ctype, Disjunct)
+        self.assertIs(m.d[4].ctype, Disjunct)
+        self.assertTrue(m.disj1.active)
+        self.assertTrue(m.disj2.active)
