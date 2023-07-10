@@ -67,7 +67,7 @@ from pyomo.environ import (
 )
 from pyomo.kernel import variable, expression, objective
 
-from pyomo.core.expr.expr_common import ExpressionType
+from pyomo.core.expr.expr_common import ExpressionType, clone_counter
 from pyomo.core.expr.numvalue import (
     NumericConstant,
     as_numeric,
@@ -94,7 +94,6 @@ from pyomo.core.expr.numeric_expr import (
     NPV_DivisionExpression,
     NPV_SumExpression,
     decompose_term,
-    clone_counter,
     nonlinear_expression,
     _MutableLinearExpression,
     _MutableSumExpression,

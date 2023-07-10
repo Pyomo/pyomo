@@ -51,33 +51,25 @@ assert _mode == Mode.pyomo6_trees
 #
 from pyomo.core.expr import numvalue as _numvalue
 from pyomo.core.expr import boolean_value as _logicalvalue
-
 from pyomo.core.expr import numeric_expr as _numeric_expr
-from .base import ExpressionBase
-from pyomo.core.expr.numeric_expr import (
-    _add,
-    _sub,
-    _mul,
-    _div,
-    _pow,
-    _neg,
-    _abs,
-    _inplace,
-    _unary,
-    NumericExpression,
-    NumericValue,
-    native_types,
-    nonpyomo_leaf_types,
-    native_numeric_types,
-    as_numeric,
-    value,
+
+from pyomo.core.expr.expr_common import clone_counter
+from pyomo.core.expr.base import ExpressionBase
+from pyomo.core.expr.visitor import (
     evaluate_expression,
     expression_to_string,
     polynomial_degree,
     clone_expression,
     sizeof_expression,
     _expression_is_fixed,
-    clone_counter,
+)
+from pyomo.core.expr.numeric_expr import (
+    NumericExpression,
+    NumericValue,
+    native_types,
+    nonpyomo_leaf_types,
+    native_numeric_types,
+    value,
     nonlinear_expression,
     linear_expression,
     NegationExpression,
@@ -110,6 +102,7 @@ from pyomo.core.expr.numeric_expr import (
     NPV_expression_types,
     _fcn_dispatcher,
 )
+from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.expr import logical_expr as _logical_expr
 from pyomo.core.expr.logical_expr import (
     native_logical_types,
@@ -201,7 +194,6 @@ from pyomo.core.expr.visitor import (
     _EvaluateConstantExpressionVisitor,
     _ComponentVisitor,
     identify_components,
-    _VariableVisitor,
     identify_variables,
     _MutableParamVisitor,
     identify_mutable_parameters,

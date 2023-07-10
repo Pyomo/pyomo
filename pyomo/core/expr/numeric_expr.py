@@ -18,43 +18,82 @@ import operator
 logger = logging.getLogger('pyomo.core')
 
 from math import isclose
-from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.formatting import tostr
 
-from .expr_common import (
-    OperatorAssociativity,
-    ExpressionType,
-    clone_counter,
-    _add,
-    _sub,
-    _mul,
-    _div,
-    _pow,
-    _neg,
-    _abs,
-    _inplace,
-    _unary,
+from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.deprecation import (
+    deprecated,
+    deprecation_warning,
+    relocated_module_attribute,
 )
-from .base import ExpressionBase, NPV_Mixin
-from .numvalue import (
-    NumericValue,
+from pyomo.common.errors import PyomoException
+from pyomo.common.formatting import tostr
+from pyomo.common.numeric_types import (
     native_types,
     nonpyomo_leaf_types,
     native_numeric_types,
-    as_numeric,
-    value,
-    is_potentially_variable,
     check_if_numeric_type,
     value,
 )
 
-from .visitor import (
-    evaluate_expression,
-    expression_to_string,
-    polynomial_degree,
-    clone_expression,
-    sizeof_expression,
-    _expression_is_fixed,
+from pyomo.core.pyomoobject import PyomoObject
+from pyomo.core.expr.expr_common import (
+    OperatorAssociativity,
+    ExpressionType,
+    _lt,
+    _le,
+    _eq,
+)
+
+# Note: pyggyback on expr.base's use of attempt_import(visitor)
+from pyomo.core.expr.base import ExpressionBase, NPV_Mixin, visitor
+
+relocated_module_attribute(
+    'is_potentially_variable',
+    'pyomo.core.expr.numvalue.is_potentially_variable',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'as_numeric',
+    'pyomo.core.expr.numvalue.as_numeric',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'clone_counter',
+    'pyomo.core.expr.expr_common.clone_counter',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'evaluate_expression',
+    'pyomo.core.expr.visitor.evaluate_expression',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'expression_to_string',
+    'pyomo.core.expr.visitor.expression_to_string',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'polynomial_degree',
+    'pyomo.core.expr.visitor.polynomial_degree',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'clone_expression',
+    'pyomo.core.expr.visitor.clone_expression',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'sizeof_expression',
+    'pyomo.core.expr.visitor.sizeof_expression',
+    version='6.6.2.dev0',
+    f_globals=globals(),
 )
 
 _zero_one_optimizations = {1}
@@ -751,7 +790,7 @@ class NumericExpression(ExpressionBase, NumericValue):
             A non-negative integer that is the polynomial
             degree if the expression is polynomial, or :const:`None` otherwise.
         """
-        return polynomial_degree(self)
+        return visitor.polynomial_degree(self)
 
     def _compute_polynomial_degree(self, values):
         """
