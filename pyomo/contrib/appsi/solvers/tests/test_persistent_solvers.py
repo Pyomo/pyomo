@@ -70,6 +70,27 @@ fixed variables
 @unittest.skipUnless(numpy_available, 'numpy is not available')
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
+    def test_remove_variable_and_objective(self, name: str, opt_class: Type[PersistentSolver]):
+        # this test is for issue #2888
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(2, None))
+        m.obj = pe.Objective(expr=m.x)
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(m.x.value, 2)
+
+        del m.x
+        del m.obj
+        m.x = pe.Var(bounds=(2, None))
+        m.obj = pe.Objective(expr=m.x)
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(m.x.value, 2)
+
+    @parameterized.expand(input=all_solvers)
     def test_stale_vars(self, name: str, opt_class: Type[PersistentSolver]):
         opt: PersistentSolver = opt_class()
         if not opt.available():

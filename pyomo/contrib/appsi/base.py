@@ -900,7 +900,7 @@ Notes:
 
 
 class PersistentBase(abc.ABC):
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         self._model = None
         self._active_constraints = dict()  # maps constraint to (lower, body, upper)
         self._vars = dict()  # maps var id to (var, lb, ub, fixed, domain, value)

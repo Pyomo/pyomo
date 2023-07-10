@@ -16,7 +16,7 @@ from ..cmodel import cmodel, cmodel_available
 
 
 class LPWriter(PersistentBase):
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         super(LPWriter, self).__init__(only_child_vars=only_child_vars)
         self._config = WriterConfig()
         self._writer = None
