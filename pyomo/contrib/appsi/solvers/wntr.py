@@ -41,6 +41,7 @@ wntr, wntr_available = attempt_import('wntr')
 import wntr
 import logging
 import time
+import sys
 from pyomo.core.expr.visitor import ExpressionValueVisitor
 
 
@@ -120,15 +121,25 @@ class Wntr(PersistentBase, PersistentSolver):
         return self._symbol_map
 
     def _solve(self, timer: HierarchicalTimer):
+        options = dict()
+        if self.config.time_limit is not None:
+            options['TIME_LIMIT'] = self.config.time_limit
+        options.update(self.wntr_options)
+        opt = wntr.sim.solvers.NewtonSolver(options)
+
+        if self.config.stream_solver:
+            ostream = sys.stdout
+        else:
+            ostream = None
+
         t0 = time.time()
-        opt = wntr.sim.solvers.NewtonSolver(self.wntr_options)
         if self._needs_updated:
             timer.start('set_structure')
             self._solver_model.set_structure()
             timer.stop('set_structure')
             self._needs_updated = False
         timer.start('newton solve')
-        status, msg, num_iter = opt.solve(self._solver_model)
+        status, msg, num_iter = opt.solve(self._solver_model, ostream)
         timer.stop('newton solve')
         tf = time.time()
 
@@ -168,6 +179,13 @@ class Wntr(PersistentBase, PersistentSolver):
         else:
             timer.start('update')
             self.update(timer=timer)
+            timer.start('initial values')
+            for v_id, solver_v in self._pyomo_var_to_solver_var_map.items():
+                pyomo_v = self._vars[v_id][0]
+                val = pyomo_v.value
+                if val is not None:
+                    solver_v.value = val
+            timer.stop('initial values')
             timer.stop('update')
         res = self._solve(timer)
         self._last_results_object = res
@@ -204,6 +222,8 @@ class Wntr(PersistentBase, PersistentSolver):
             self._labeler = NumericLabeler('x')
 
         self._solver_model = wntr.sim.aml.aml.Model()
+        self._solver_model._wntr_fixed_var_params = wntr.sim.aml.aml.ParamDict()
+        self._solver_model._wntr_fixed_var_cons = wntr.sim.aml.aml.ConstraintDict()
 
         self.add_block(model)
 
@@ -228,7 +248,7 @@ class Wntr(PersistentBase, PersistentSolver):
             self._pyomo_var_to_solver_var_map[id(var)] = wntr_var
             if _fixed:
                 self._solver_model._wntr_fixed_var_params[id(var)] = param = aml.Param(_value)
-                wntr_expr = self._pyomo_to_wntr_visitor.dfs_postorder_stack(var - param)
+                wntr_expr = wntr_var - param
                 self._solver_model._wntr_fixed_var_cons[id(var)] = aml.Constraint(wntr_expr)
             self._needs_updated = True
 
@@ -281,6 +301,7 @@ class Wntr(PersistentBase, PersistentSolver):
             del self._pyomo_param_to_solver_param_map[p_id]
 
     def _update_variables(self, variables: List[_GeneralVarData]):
+        aml = wntr.sim.aml.aml
         for var in variables:
             v_id = id(var)
             solver_var = self._pyomo_var_to_solver_var_map[v_id]
@@ -300,7 +321,7 @@ class Wntr(PersistentBase, PersistentSolver):
             if _fixed:
                 if v_id not in self._solver_model._wntr_fixed_var_params:
                     self._solver_model._wntr_fixed_var_params[v_id] = param = aml.Param(_value)
-                    wntr_expr = self._pyomo_to_wntr_visitor.dfs_postorder_stack(var - param)
+                    wntr_expr = solver_var - param
                     self._solver_model._wntr_fixed_var_cons[v_id] = aml.Constraint(wntr_expr)
                     self._needs_updated = True
                 else:
@@ -335,6 +356,7 @@ class Wntr(PersistentBase, PersistentSolver):
             v_id = id(v)
             solver_v = self._pyomo_var_to_solver_var_map[v_id]
             res[v] = solver_v.value
+        return res
 
     def _add_sos_constraints(self, cons):
         if len(cons) > 0:
