@@ -54,20 +54,10 @@ from .numvalue import (
 
 from .boolean_value import BooleanValue
 
-from .numeric_expr import linear_expression, nonlinear_expression, mutable_expression
-from .logical_expr import (
-    land,
-    lnot,
-    lor,
-    xor,
-    equivalent,
-    exactly,
-    atleast,
-    atmost,
-    implies,
-)
-from .relational_expr import inequality
-from .current import (
+from .numeric_expr import (
+    linear_expression,
+    nonlinear_expression,
+    mutable_expression,
     log,
     log10,
     sin,
@@ -88,6 +78,18 @@ from .current import (
     floor,
     Expr_if,
 )
+from .logical_expr import (
+    land,
+    lnot,
+    lor,
+    xor,
+    equivalent,
+    exactly,
+    atleast,
+    atmost,
+    implies,
+)
+from .relational_expr import inequality
 
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.taylor_series import taylor_series_expansion

@@ -1644,7 +1644,7 @@ def _decompose_linear_terms(expr, multiplier=1):
 # -------------------------------------------------------
 
 
-class ARG_TYPE(enum.Enum):
+class ARG_TYPE(enum.IntEnum):
     MUTABLE = -2
     ASNUMERIC = -1
     INVALID = 0
@@ -3905,6 +3905,7 @@ def _fcn_mutable(a, name, fcn):
 
 def _fcn_invalid(a, name, fcn):
     fcn(a)
+    # returns None
 
 
 def _fcn_native(a, name, fcn):
@@ -3952,6 +3953,133 @@ _fcn_type_handler_mapping = {
     ARG_TYPE.SUM: _fcn_other,
     ARG_TYPE.OTHER: _fcn_other,
 }
+
+
+#
+# NOTE: abs() and pow() are not defined here, because they are
+# Python operators.
+#
+def ceil(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'ceil', math.ceil)
+
+
+def floor(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'floor', math.floor)
+
+
+# e ** x
+def exp(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'exp', math.exp)
+
+
+def log(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'log', math.log)
+
+
+def log10(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'log10', math.log10)
+
+
+# FIXME: this is nominally the same as x ** 0.5, but follows a different
+# path and produces a different NL file!
+def sqrt(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'sqrt', math.sqrt)
+    # return _pow_dispatcher[arg.__class__, float](arg, 0.5)
+
+
+def sin(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'sin', math.sin)
+
+
+def cos(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'cos', math.cos)
+
+
+def tan(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'tan', math.tan)
+
+
+def sinh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'sinh', math.sinh)
+
+
+def cosh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'cosh', math.cosh)
+
+
+def tanh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'tanh', math.tanh)
+
+
+def asin(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'asin', math.asin)
+
+
+def acos(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'acos', math.acos)
+
+
+def atan(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'atan', math.atan)
+
+
+def asinh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'asinh', math.asinh)
+
+
+def acosh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'acosh', math.acosh)
+
+
+def atanh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'atanh', math.atanh)
+
+
+#
+# Function interface to Expr_ifExpression
+#
+
+
+def Expr_if(IF=None, THEN=None, ELSE=None):
+    """
+    Function used to construct a conditional numeric expression.
+    """
+    _pv = False
+    for _argname in ('ELSE', 'THEN', 'IF'):
+        _arg = locals()[_argname]
+        _type = _categorize_arg_type(_arg)
+        # Note that relational expressions get mapped to INVALID
+        while _type < ARG_TYPE.INVALID:
+            if _type is ARG_TYPE.MUTABLE:
+                _arg = _recast_mutable(_arg)
+            elif _type is ARG_TYPE.ASNUMERIC:
+                _arg = _arg.as_numeric()
+            else:
+                raise DeveloperError(
+                    '_categorize_arg_type() returned unexpected ARG_TYPE'
+                )
+            locals()[_argname] = _arg
+            _type = _categorize_arg_type(_arg)
+        if _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID:
+            _pv = True
+    # Notes:
+    # - side effect: IF is the last iteration, so _type == _categorize_arg_type(IF)
+    # - we do NO error checking as to the actual arg types.  That is
+    #   left to the writer (and as of writing [Jul 2023], the NL writer
+    #   is the only writer that recognized Expr_if)
+    if _type is ARG_TYPE.NATIVE:
+        return THEN if IF else ELSE
+    elif _type is ARG_TYPE.PARAM and IF.is_constant():
+        return THEN if IF.value else ELSE
+    elif _pv:
+        return Expr_ifExpression((IF, THEN, ELSE))
+    else:
+        return NPV_Expr_ifExpression((IF, THEN, ELSE))
+
+
+#
+# Misc (legacy) functions
+#
 
 
 def _balanced_parens(arg):

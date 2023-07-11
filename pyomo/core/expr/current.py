@@ -95,7 +95,25 @@ from pyomo.core.expr.numeric_expr import (
     decompose_term,
     LinearDecompositionError,
     NPV_expression_types,
-    _fcn_dispatcher,
+    Expr_if,
+    ceil,
+    floor,
+    exp,
+    log,
+    log10,
+    sqrt,
+    sin,
+    cos,
+    tan,
+    sinh,
+    cosh,
+    tanh,
+    asin,
+    acos,
+    atan,
+    asinh,
+    acosh,
+    atanh,
 )
 from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.expr import logical_expr as _logical_expr
@@ -175,94 +193,3 @@ from pyomo.core.expr.visitor import (
     identify_variables,
     identify_mutable_parameters,
 )
-
-
-def Expr_if(IF=None, THEN=None, ELSE=None):
-    """
-    Function used to construct a logical conditional expression.
-    """
-    if _numvalue.is_constant(IF):
-        return THEN if value(IF) else ELSE
-    if not any(map(_numvalue.is_potentially_variable, (IF, THEN, ELSE))):
-        return NPV_Expr_ifExpression((IF, THEN, ELSE))
-    return Expr_ifExpression((IF, THEN, ELSE))
-
-
-#
-# NOTE: abs() and pow() are not defined here, because they are
-# Python operators.
-#
-def ceil(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'ceil', math.ceil)
-
-
-def floor(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'floor', math.floor)
-
-
-# e ** x
-def exp(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'exp', math.exp)
-
-
-def log(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'log', math.log)
-
-
-def log10(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'log10', math.log10)
-
-
-# FIXME: this is nominally the same as x ** 0.5, but follows a different
-# path and produces a different NL file!
-def sqrt(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'sqrt', math.sqrt)
-    # return _pow_dispatcher[arg.__class__, float](arg, 0.5)
-
-
-def sin(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'sin', math.sin)
-
-
-def cos(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'cos', math.cos)
-
-
-def tan(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'tan', math.tan)
-
-
-def sinh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'sinh', math.sinh)
-
-
-def cosh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'cosh', math.cosh)
-
-
-def tanh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'tanh', math.tanh)
-
-
-def asin(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'asin', math.asin)
-
-
-def acos(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'acos', math.acos)
-
-
-def atan(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'atan', math.atan)
-
-
-def asinh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'asinh', math.asinh)
-
-
-def acosh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'acosh', math.acosh)
-
-
-def atanh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'atanh', math.atanh)
