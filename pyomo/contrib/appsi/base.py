@@ -1334,9 +1334,6 @@ class PersistentBase(abc.ABC):
         self.remove_constraints(old_cons)
         self.remove_sos_constraints(old_sos)
         timer.stop('cons')
-        timer.start('vars')
-        self.remove_variables(old_vars)
-        timer.stop('vars')
         timer.start('params')
         self.remove_params(old_params)
 
@@ -1462,6 +1459,12 @@ class PersistentBase(abc.ABC):
         if need_to_set_objective:
             self.set_objective(pyomo_obj)
         timer.stop('objective')
+
+        # this has to be done after the objective in case the
+        # old objective uses old variables
+        timer.start('vars')
+        self.remove_variables(old_vars)
+        timer.stop('vars')
 
 
 legacy_termination_condition_map = {
