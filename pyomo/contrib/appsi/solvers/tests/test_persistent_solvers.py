@@ -81,7 +81,7 @@ def _load_tests(solver_list, only_child_vars_list):
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_remove_variable_and_objective(
-        self, name: str, opt_class: Type[PersistentSolver], only_child_vars,
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
     ):
         # this test is for issue #2888
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
@@ -103,7 +103,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_stale_vars(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_stale_vars(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -146,7 +148,9 @@ class TestSolvers(unittest.TestCase):
         self.assertTrue(m.z.stale)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_range_constraint(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_range_constraint(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -167,7 +171,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_reduced_costs(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_reduced_costs(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -184,7 +190,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.y], 4)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_reduced_costs2(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_reduced_costs2(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -204,7 +212,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.x], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_param_changes(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_param_changes(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -236,7 +246,9 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_immutable_param(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_immutable_param(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         """
         This test is important because component_data_objects returns immutable params as floats.
         We want to make sure we process these correctly.
@@ -272,7 +284,9 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_equality(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_equality(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -304,7 +318,9 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_linear_expression(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_linear_expression(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -338,7 +354,9 @@ class TestSolvers(unittest.TestCase):
             self.assertTrue(res.best_objective_bound <= m.y.value)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_no_objective(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_no_objective(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -370,7 +388,9 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c2], 0)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_add_remove_cons(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_add_remove_cons(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -420,7 +440,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_results_infeasible(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_results_infeasible(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -538,7 +560,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_fixed_vars(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_fixed_vars(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         for treat_fixed_vars_as_params in [True, False]:
             opt.update_config.treat_fixed_vars_as_params = treat_fixed_vars_as_params
@@ -576,7 +600,9 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_fixed_vars_2(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_fixed_vars_2(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = True
         if not opt.available():
@@ -613,7 +639,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_fixed_vars_3(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_fixed_vars_3(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = True
         if not opt.available():
@@ -628,7 +656,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
 
     @parameterized.expand(input=_load_tests(nlp_solvers, only_child_vars_options))
-    def test_fixed_vars_4(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_fixed_vars_4(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         opt.update_config.treat_fixed_vars_as_params = True
         if not opt.available():
@@ -737,7 +767,9 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_add_and_remove_vars(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_add_and_remove_vars(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -812,7 +844,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, -0.42630274815985264)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_with_numpy(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_with_numpy(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -840,7 +874,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_bounds_with_params(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_bounds_with_params(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -872,7 +908,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 3)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_solution_loader(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_solution_loader(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -923,7 +961,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_time_limit(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_time_limit(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -983,7 +1023,9 @@ class TestSolvers(unittest.TestCase):
             )
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_objective_changes(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_objective_changes(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -1042,7 +1084,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.best_feasible_objective, 4)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_domain(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_domain(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -1066,7 +1110,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.best_feasible_objective, 0)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
-    def test_domain_with_integers(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_domain_with_integers(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -1090,7 +1136,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.best_feasible_objective, 1)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
-    def test_fixed_binaries(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_fixed_binaries(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
@@ -1116,7 +1164,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.best_feasible_objective, 1)
 
     @parameterized.expand(input=_load_tests(mip_solvers, only_child_vars_options))
-    def test_with_gdp(self, name: str, opt_class: Type[PersistentSolver], only_child_vars):
+    def test_with_gdp(
+        self, name: str, opt_class: Type[PersistentSolver], only_child_vars
+    ):
         opt: PersistentSolver = opt_class(only_child_vars=only_child_vars)
         if not opt.available():
             raise unittest.SkipTest
