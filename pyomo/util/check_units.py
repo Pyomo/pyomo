@@ -39,6 +39,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.components import iter_component
+from pyomo.common.collections import ComponentSet
 
 
 def check_units_equivalent(*args):
@@ -240,11 +241,7 @@ def assert_units_consistent(obj):
     if objtype in native_types:
         return
     elif obj.is_expression_type() or objtype is IndexTemplate:
-        try:
-            _assert_units_consistent_expression(obj)
-        except UnitsError:
-            print('Units problem with expression {}'.format(obj))
-            raise
+        _assert_units_consistent_expression(obj)
         return
 
     # if object is not in our component handler, raise an exception
@@ -261,14 +258,36 @@ def assert_units_consistent(obj):
     if obj.is_indexed():
         # check all the component data objects
         for cdata in obj.values():
-            try:
-                handler(cdata)
-            except UnitsError:
-                print('Error in units when checking {}'.format(cdata))
-                raise
+            handler(cdata)
     else:
+        handler(obj)
+
+
+def identify_inconsistent_units(block):
+    """
+    This function generates a ComponentSet of all Constraints, Expression and Objectives
+    in a Block or model which have inconsistent units.
+
+    Parameters
+    ----------
+    block : Pyomo Block or Model to test
+
+    Returns
+    ------
+    ComponentSet : contains all Constraints, Expressions or Objectives which were
+        identified as having unit consistency issues
+    """
+    # It would be nice (and more efficient) if there were a method that would check
+    # unit consistency and return a bool for success or failure.
+    # However, the underlying methods (at least as deep as I looked) all raise exceptions
+    # so we need to iterate over the block here and do a try/except for each component
+
+    inconsistent_units = ComponentSet()
+    for o in block.component_data_objects(
+        [Constraint, Expression, Objective], descend_into=True
+    ):
         try:
-            handler(obj)
+            assert_units_consistent(o)
         except UnitsError:
-            print('Error in units when checking {}'.format(obj))
-            raise
+            inconsistent_units.add(o)
+    return inconsistent_units

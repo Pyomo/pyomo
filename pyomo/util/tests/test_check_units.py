@@ -38,6 +38,7 @@ from pyomo.util.check_units import (
     assert_units_consistent,
     assert_units_equivalent,
     check_units_equivalent,
+    identify_inconsistent_units,
 )
 
 
@@ -45,7 +46,7 @@ def python_callback_function(arg1, arg2):
     return 42.0
 
 
-@unittest.skipIf(not pint_available, 'Testing units requires pint')
+@unittest.skipIf(not pint_available, "Testing units requires pint")
 class TestUnitsChecking(unittest.TestCase):
     def _create_model_and_vars(self):
         u = units
@@ -222,10 +223,10 @@ class TestUnitsChecking(unittest.TestCase):
         m.dvar = DerivativeVar(sVar=m.svar, units=u.m / u.s)
 
         def prt1_rule(m):
-            return {'avar': m.dx}
+            return {"avar": m.dx}
 
         def prt2_rule(m):
-            return {'avar': m.dy}
+            return {"avar": m.dy}
 
         m.prt1 = Port(rule=prt1_rule)
         m.prt2 = Port(rule=prt2_rule)
@@ -264,6 +265,56 @@ class TestUnitsChecking(unittest.TestCase):
         m.var_1.fix()
         m.var_2 = Var(initialize=400, units=units.kg / units.s**3 / units.K)
         assert_units_equivalent(m.var_1, m.var_2)
+
+    def test_identify_inconsistent_units(self):
+        u = units
+        m = ConcreteModel()
+        m.S = Set(initialize=[1, 2, 3])
+        m.x = Var(units=u.m)
+        m.t = Var(units=u.s)
+
+        # Scalar constraints
+        m.c1 = Constraint(expr=m.x == 10 * u.m)  # Units consistent
+        m.c2 = Constraint(expr=m.x == m.t)  # Units inconsistent
+
+        # Indexed Constraint
+        @m.Constraint(m.S)
+        def c3(blk, i):
+            if i == 1:
+                return m.t == 10 * u.m  # Inconsistent units
+            return m.t == 10 * u.s  # Consistent units
+
+        # Scalar Expressions
+        m.e1 = Expression(expr=m.x + 10 * u.m)  # Units consistent
+        m.e2 = Expression(expr=m.x + m.t)  # Units inconsistent
+
+        # Indexed Expression
+        @m.Expression(m.S)
+        def e3(blk, i):
+            if i == 1:
+                return m.t + 10 * u.m  # Inconsistent units
+            return m.t + 10 * u.s  # Consistent units
+
+        # Scalar Objectives
+        m.o1 = Objective(expr=m.x + 10 * u.m)  # Units consistent
+        m.o2 = Objective(expr=m.x + m.t)  # Units inconsistent
+
+        # Indexed Objective
+        @m.Objective(m.S)
+        def o3(blk, i):
+            if i == 1:
+                return m.t + 10 * u.m  # Inconsistent units
+            return m.t + 10 * u.s  # Consistent units
+
+        failures = identify_inconsistent_units(m)
+
+        assert len(failures) == 6
+        assert m.c2 in failures
+        assert m.c3[1] in failures
+        assert m.e2 in failures
+        assert m.e3[1] in failures
+        assert m.o2 in failures
+        assert m.o3[1] in failures
 
 
 if __name__ == "__main__":
