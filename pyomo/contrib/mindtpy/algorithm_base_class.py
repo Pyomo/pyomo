@@ -592,16 +592,7 @@ class _MindtPyAlgorithm(object):
         if self.primal_bound_improved:
             self.update_gap()
 
-    def process_objective(
-        self,
-        config,
-        move_objective=False,
-        use_mcpp=False,
-        update_var_con_list=True,
-        partition_nonlinear_terms=True,
-        obj_handleable_polynomial_degree={0, 1},
-        constr_handleable_polynomial_degree={0, 1},
-    ):
+    def process_objective(self, update_var_con_list=True):
         """Process model objective function.
 
         Check that the model has only 1 valid objective.
@@ -610,22 +601,11 @@ class _MindtPyAlgorithm(object):
 
         Parameters
         ----------
-        config : ConfigBlock
-            Solver configuration options
-        move_objective : bool, optional
-            Whether to move even linear objective functions to the constraints, by default False.
-        use_mcpp : bool, optional
-            Whether to use mcpp to tighten the bound of slack variables., by default False.
         update_var_con_list : bool, optional
             Whether to update the variable/constraint/objective lists, by default True.
             Currently, update_var_con_list will be set to False only when add_regularization is not None in MindtPy.
-        partition_nonlinear_terms : bool, optional
-            Whether to partition sum of nonlinear terms in the objective function, by default True.
-        obj_handleable_polynomial_degree : dict, optional
-            The polynomial degree of the objective function that will be regarded as linear, by default {0, 1}.
-        constr_handleable_polynomial_degree : dict, optional
-            The polynomial degree of the constraints that will be regarded as linear, by default {0, 1}.
         """
+        config = self.config
         m = self.working_model
         util_block = getattr(m, self.util_block_name)
         # Handle missing or multiple objectives
@@ -650,10 +630,10 @@ class _MindtPyAlgorithm(object):
 
         # Move the objective to the constraints if it is nonlinear or move_objective is True.
         if (
-            main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree
-            or move_objective
+            main_obj.expr.polynomial_degree() not in self.mip_objective_polynomial_degree
+            or config.move_objective
         ):
-            if move_objective:
+            if config.move_objective:
                 config.logger.info("Moving objective to constraint set.")
             else:
                 config.logger.info(
@@ -663,12 +643,12 @@ class _MindtPyAlgorithm(object):
             util_block.objective_constr = ConstraintList()
             if (
                 main_obj.expr.polynomial_degree()
-                not in obj_handleable_polynomial_degree
-                and partition_nonlinear_terms
+                not in self.mip_objective_polynomial_degree
+                and config.partition_obj_nonlinear_terms
                 and main_obj.expr.__class__ is EXPR.SumExpression
             ):
                 repn = generate_standard_repn(
-                    main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree
+                    main_obj.expr, quadratic=2 in self.mip_objective_polynomial_degree
                 )
                 # the following code will also work if linear_subexpr is a constant.
                 linear_subexpr = (
@@ -689,7 +669,7 @@ class _MindtPyAlgorithm(object):
                     linear_subexpr,
                     util_block.objective_value,
                     util_block.objective_constr,
-                    use_mcpp,
+                    config.use_mcpp,
                     main_obj.sense,
                 )
                 nonlinear_subexpr = repn.nonlinear_expr
@@ -699,7 +679,7 @@ class _MindtPyAlgorithm(object):
                             subsubexpr,
                             util_block.objective_value,
                             util_block.objective_constr,
-                            use_mcpp,
+                            config.use_mcpp,
                             main_obj.sense,
                         )
                 else:
@@ -707,7 +687,7 @@ class _MindtPyAlgorithm(object):
                         nonlinear_subexpr,
                         util_block.objective_value,
                         util_block.objective_constr,
-                        use_mcpp,
+                        config.use_mcpp,
                         main_obj.sense,
                     )
             else:
@@ -715,7 +695,7 @@ class _MindtPyAlgorithm(object):
                     main_obj.expr,
                     util_block.objective_value,
                     util_block.objective_constr,
-                    use_mcpp,
+                    config.use_mcpp,
                     main_obj.sense,
                 )
 
@@ -726,8 +706,8 @@ class _MindtPyAlgorithm(object):
 
             if (
                 main_obj.expr.polynomial_degree()
-                not in obj_handleable_polynomial_degree
-                or (move_objective and update_var_con_list)
+                not in self.mip_objective_polynomial_degree
+                or (config.move_objective and update_var_con_list)
             ):
                 util_block.variable_list.extend(util_block.objective_value[:])
                 util_block.continuous_variable_list.extend(
@@ -738,7 +718,7 @@ class _MindtPyAlgorithm(object):
                 for constr in util_block.objective_constr[:]:
                     if (
                         constr.body.polynomial_degree()
-                        in constr_handleable_polynomial_degree
+                        in self.mip_constraint_polynomial_degree
                     ):
                         util_block.linear_constraint_list.append(constr)
                     else:
@@ -2399,7 +2379,7 @@ class _MindtPyAlgorithm(object):
                 )
 
     ################################################################################################################################
-    # feasibility_pump.py
+    # Feasibility Pump
 
     def solve_fp_subproblem(self, config):
         """Solves the feasibility pump NLP subproblem.
@@ -2898,16 +2878,7 @@ class _MindtPyAlgorithm(object):
         # In the process_objective function, once the objective function has been reformulated as epigraph constraint, the variable/constraint/objective lists will not be updated only if the MINLP has a linear objective function and regularization is activated at the same time.
         # This is because the epigraph constraint is very "flat" for branching rules. The original objective function will be used for the main problem and epigraph reformulation will be used for the projection problem.
         # TODO: The logic here is too complicated, can we simplify it?
-        config = self.config
-        self.process_objective(
-            self.config,
-            move_objective=config.move_objective,
-            use_mcpp=config.use_mcpp,
-            update_var_con_list=True,
-            partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
-            obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
-            constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree,
-        )
+        self.process_objective(update_var_con_list=True)
 
     def handle_main_mip_termination(self, main_mip, main_mip_results):
         should_terminate = False

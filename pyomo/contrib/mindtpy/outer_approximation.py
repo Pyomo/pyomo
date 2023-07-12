@@ -138,15 +138,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         # TODO: The logic here is too complicated, can we simplify it?
         MindtPy = self.working_model.MindtPy_utils
         config = self.config
-        self.process_objective(
-            self.config,
-            move_objective=config.move_objective,
-            use_mcpp=config.use_mcpp,
-            update_var_con_list=config.add_regularization is None,
-            partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
-            obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
-            constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree,
-        )
+        self.process_objective(update_var_con_list=config.add_regularization is None)
         # The epigraph constraint is very "flat" for branching rules.
         # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
         if (
