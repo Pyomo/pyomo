@@ -14,8 +14,8 @@ from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 from pyomo.contrib.gdpopt.util import is_feasible
 from pyomo.util.infeasible import log_infeasible_constraints
-from pyomo.contrib.mindtpy.tests.feasibility_pump1 import Feasibility_Pump1
-from pyomo.contrib.mindtpy.tests.feasibility_pump2 import Feasibility_Pump2
+from pyomo.contrib.mindtpy.tests.feasibility_pump1 import FeasPump1
+from pyomo.contrib.mindtpy.tests.feasibility_pump2 import FeasPump2
 
 required_solvers = ('ipopt', 'cplex')
 # TODO: 'appsi_highs' will fail here.
@@ -27,8 +27,8 @@ else:
 model_list = [
     EightProcessFlowsheet(convex=True),
     ConstraintQualificationExample(),
-    Feasibility_Pump1(),
-    Feasibility_Pump2(),
+    FeasPump1(),
+    FeasPump2(),
     SimpleMINLP(),
     SimpleMINLP2(),
     SimpleMINLP3(),
