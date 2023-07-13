@@ -10,7 +10,7 @@ from pyomo.opt import TerminationCondition
 
 required_solvers = ('ipopt', 'cplex')
 # required_solvers = ('gams', 'gams')
-if all(SolverFactory(s).available() for s in required_solvers):
+if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False

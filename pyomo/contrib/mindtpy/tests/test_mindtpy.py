@@ -57,7 +57,7 @@ QCP_model._generate_model()
 extreme_model_list = [LP_model.model, QCP_model.model]
 
 required_solvers = ('ipopt', 'appsi_highs')
-if all(SolverFactory(s).available() for s in required_solvers):
+if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False

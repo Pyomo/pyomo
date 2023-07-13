@@ -26,7 +26,10 @@ available_mip_solvers = [
     s for s in required_mip_solvers if SolverFactory(s).available(False)
 ]
 
-if SolverFactory(required_nlp_solvers).available(False) and available_mip_solvers:
+if (
+    SolverFactory(required_nlp_solvers).available(exception_flag=False)
+    and available_mip_solvers
+):
     subsolvers_available = True
 else:
     subsolvers_available = False

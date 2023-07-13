@@ -19,7 +19,7 @@ from pyomo.contrib.mindtpy.tests.feasibility_pump2 import FeasPump2
 
 required_solvers = ('ipopt', 'cplex')
 # TODO: 'appsi_highs' will fail here.
-if all(SolverFactory(s).available() for s in required_solvers):
+if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False

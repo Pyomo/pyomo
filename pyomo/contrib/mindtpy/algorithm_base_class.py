@@ -630,7 +630,8 @@ class _MindtPyAlgorithm(object):
 
         # Move the objective to the constraints if it is nonlinear or move_objective is True.
         if (
-            main_obj.expr.polynomial_degree() not in self.mip_objective_polynomial_degree
+            main_obj.expr.polynomial_degree()
+            not in self.mip_objective_polynomial_degree
             or config.move_objective
         ):
             if config.move_objective:
