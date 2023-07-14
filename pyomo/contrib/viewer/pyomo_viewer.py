@@ -22,14 +22,18 @@
 
 import os
 
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import attempt_import, UnavailableClass
 from pyomo.scripting.pyomo_parser import add_subparser
 import pyomo.contrib.viewer.qt as myqt
 
 qtconsole_app, qtconsole_available = attempt_import('qtconsole.qtconsoleapp')
 
 
-class QtApp(qtconsole_app.JupyterQtConsoleApp if qtconsole_available else object):
+class QtApp(
+    qtconsole_app.JupyterQtConsoleApp
+    if qtconsole_available
+    else UnavailableClass(qtconsole_app)
+):
     _kernel_cmd_show_ui = """try:
     ui.show()
 except NameError:

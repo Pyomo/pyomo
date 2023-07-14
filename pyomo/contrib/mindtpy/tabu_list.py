@@ -10,13 +10,13 @@
 #  ___________________________________________________________________________
 #
 
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import attempt_import, UnavailableClass
 
 cplex, cplex_available = attempt_import('cplex')
 
 
 class IncumbentCallback_cplex(
-    cplex.callbacks.IncumbentCallback if cplex_available else object
+    cplex.callbacks.IncumbentCallback if cplex_available else UnavailableClass(cplex)
 ):
     """Inherent class in Cplex to call Incumbent callback."""
 
