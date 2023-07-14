@@ -184,16 +184,25 @@ class DeferredImportModule(object):
 
 
 def UnavailableClass(unavailable_module):
-    class Base(object):
-        def __new__(cls, *args, **kwargs):
+    class UnavailableMeta(type):
+        def __getattr__(cls, name):
             raise DeferredImportError(
                 unavailable_module._moduleunavailable_message(
-                    f"The class '{cls.__name__}' is not available because a "
-                    "required optional dependency was not found"
+                    f"The class attribute '{cls.__name__}.{name}' is not available "
+                    "because a needed optional dependency was not found"
                 )
             )
 
-    return Base
+    class UnavailableBase(metaclass=UnavailableMeta):
+        def __new__(cls, *args, **kwargs):
+            raise DeferredImportError(
+                unavailable_module._moduleunavailable_message(
+                    f"The class '{cls.__name__}' cannot be created because a "
+                    "needed optional dependency was not found"
+                )
+            )
+
+    return UnavailableBase
 
 
 class _DeferredImportIndicatorBase(object):

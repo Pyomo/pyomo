@@ -435,11 +435,20 @@ class TestDependencies(unittest.TestCase):
 
         with self.assertRaisesRegex(
             DeferredImportError,
-            "The class 'A_Class' is not available because a required optional "
+            "The class 'A_Class' cannot be created because a needed optional "
             r"dependency was not found \(import raised ModuleNotFoundError: No "
             r"module named '__there_is_no_module_named_this__'\)",
         ):
             A_Class()
+
+        with self.assertRaisesRegex(
+            DeferredImportError,
+            "The class attribute 'A_Class.method' is not available because a "
+            r"needed optional dependency was not found \(import raised "
+            "ModuleNotFoundError: No module named "
+            r"'__there_is_no_module_named_this__'\)",
+        ):
+            A_Class.method()
 
 
 if __name__ == '__main__':
