@@ -25,7 +25,7 @@ from pyomo.common.deprecation import (
     deprecation_warning,
     relocated_module_attribute,
 )
-from pyomo.common.errors import PyomoException
+from pyomo.common.errors import PyomoException, DeveloperError
 from pyomo.common.formatting import tostr
 from pyomo.common.numeric_types import (
     native_types,
@@ -4040,13 +4040,26 @@ def atanh(arg):
 #
 
 
-def Expr_if(IF=None, THEN=None, ELSE=None):
+def Expr_if(IF_=None, THEN_=None, ELSE_=None, **kwargs):
     """
     Function used to construct a conditional numeric expression.
+
+    This function accepts either of the following signatures:
+
+       - Expr_if(IF={expr}, THEN={expr}, ELSE={expr})
+       - Expr_if(IF_={expr}, THEN_={expr}, ELSE_={expr})
+
+    (the former is historical, and the latter is required to support Cythonization)
     """
+    L = locals()
     _pv = False
-    for _argname in ('ELSE', 'THEN', 'IF'):
-        _arg = locals()[_argname]
+    for _argname in ('ELSE_', 'THEN_', 'IF_'):
+        _arg = L[_argname]
+        _alt_arg = kwargs.pop(_argname[:-1], None)
+        if _alt_arg is not None:
+            if _arg is not None:
+                raise ValueError(f'Cannot specify both {_argname} and {_argname[:-1]}')
+            _arg = L[_argname] = _alt_arg
         _type = _categorize_arg_type(_arg)
         # Note that relational expressions get mapped to INVALID
         while _type < ARG_TYPE.INVALID:
@@ -4058,23 +4071,26 @@ def Expr_if(IF=None, THEN=None, ELSE=None):
                 raise DeveloperError(
                     '_categorize_arg_type() returned unexpected ARG_TYPE'
                 )
-            locals()[_argname] = _arg
+            L[_argname] = _arg
             _type = _categorize_arg_type(_arg)
         if _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID:
             _pv = True
+    if kwargs:
+        raise ValueError('Unrecognized arguments: ' + ', '.join(kwargs))
     # Notes:
     # - side effect: IF is the last iteration, so _type == _categorize_arg_type(IF)
     # - we do NO error checking as to the actual arg types.  That is
     #   left to the writer (and as of writing [Jul 2023], the NL writer
     #   is the only writer that recognized Expr_if)
+    IF_ = L['IF_']
     if _type is ARG_TYPE.NATIVE:
-        return THEN if IF else ELSE
-    elif _type is ARG_TYPE.PARAM and IF.is_constant():
-        return THEN if IF.value else ELSE
+        return L['THEN_'] if IF_ else L['ELSE_']
+    elif _type is ARG_TYPE.PARAM and IF_.is_constant():
+        return L['THEN_'] if IF_.value else L['ELSE_']
     elif _pv:
-        return Expr_ifExpression((IF, THEN, ELSE))
+        return Expr_ifExpression((IF_, L['THEN_'], L['ELSE_']))
     else:
-        return NPV_Expr_ifExpression((IF, THEN, ELSE))
+        return NPV_Expr_ifExpression((IF_, L['THEN_'], L['ELSE_']))
 
 
 #

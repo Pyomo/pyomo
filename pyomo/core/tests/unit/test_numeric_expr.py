@@ -2452,7 +2452,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         m = ConcreteModel()
         m.a = Var()
         m.b = Var()
-        expr = Expr_if(IF=m.a + m.b < 20, THEN=m.a, ELSE=m.b)
+        expr = Expr_if(IF_=m.a + m.b < 20, THEN_=m.a, ELSE_=m.b)
         self.assertEqual(
             "Expr_if( ( a + b  <  20 ), then=( a ), else=( b ) )", str(expr)
         )
@@ -2460,6 +2460,8 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual(
             "Expr_if( ( a + b  <  20 ), then=( 1 ), else=( b ) )", str(expr)
         )
+        with self.assertRaisesRegex(ValueError, "Cannot specify both THEN_ and THEN"):
+            Expr_if(IF_=m.a + m.b < 20, THEN_=1, ELSE_=m.b, THEN=2)
 
     def test_getitem(self):
         m = ConcreteModel()
