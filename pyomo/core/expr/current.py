@@ -15,54 +15,21 @@ import math
 #
 # Common intrinsic functions
 #
-from pyomo.core.expr import expr_common as common
-
-
-#
-# Provide a global value that indicates which expression system is being used
-#
-class Mode(enum.IntEnum):
-    # coopr: Original Coopr/Pyomo expression system
-    coopr_trees = 1
-    # coopr3: leverage reference counts to reduce the amount of required
-    # expression cloning to ensure independent expression trees.
-    coopr3_trees = 3
-    # pyomo4: rework the expression system to remove reliance on
-    # reference counting.  This enables pypy support (which doesn't have
-    # reference counting).  This version never became the default.
-    pyomo4_trees = 4
-    # pyomo5: refinement of pyomo4.  Expressions are now immutable by
-    # contract, which tolerates "entangled" expression trees.  Added
-    # specialized classes for NPV expressions and LinearExpressions.
-    pyomo5_trees = 5
-    # pyomo6: refinement of pyomo5 expression generation to leverage
-    # multiple dispatch.  Standardized expression storage and argument
-    # handling (significant rework of the LinearExpression structure).
-    pyomo6_trees = 6
-
-
-_mode = Mode.pyomo6_trees
-# We no longer support concurrent expression systems.  _mode is left
-# primarily so we can support expression system-specific baselines
-assert _mode == Mode.pyomo6_trees
-
-#
-# Pull symbols from the appropriate expression system
-#
-from pyomo.core.expr import numvalue as _numvalue
-from pyomo.core.expr import boolean_value as _logicalvalue
-from pyomo.core.expr import numeric_expr as _numeric_expr
-
+import pyomo.core.expr.expr_common as common
 from pyomo.core.expr.expr_common import clone_counter
-from pyomo.core.expr.base import ExpressionBase
-from pyomo.core.expr.visitor import (
+
+from pyomo.core.expr import (
+    Mode,
+    _mode,
+    #from pyomo.core.expr.base
+    ExpressionBase,
+    # pyomo.core.expr.visitor
     evaluate_expression,
     expression_to_string,
     polynomial_degree,
     clone_expression,
     sizeof_expression,
-)
-from pyomo.core.expr.numeric_expr import (
+    # pyomo.core.expr.numeric_expr
     NumericExpression,
     NumericValue,
     native_types,
@@ -114,10 +81,9 @@ from pyomo.core.expr.numeric_expr import (
     asinh,
     acosh,
     atanh,
-)
-from pyomo.core.expr.numvalue import as_numeric
-from pyomo.core.expr import logical_expr as _logical_expr
-from pyomo.core.expr.logical_expr import (
+    #pyomo.core.expr.numvalue
+    as_numeric,
+    #pyomo.core.expr.logical_expr
     native_logical_types,
     BooleanValue,
     BooleanConstant,
@@ -144,15 +110,13 @@ from pyomo.core.expr.logical_expr import (
     AtMostExpression,
     AtLeastExpression,
     special_boolean_atom_types,
-)
-from pyomo.core.expr.relational_expr import (
+    # pyomo.core.expr.relational_expr
     RelationalExpression,
     RangedExpression,
     InequalityExpression,
     EqualityExpression,
     inequality,
-)
-from pyomo.core.expr.template_expr import (
+    # pyomo.core.expr.template_expr
     TemplateExpressionError,
     GetItemExpression,
     Numeric_GetItemExpression,
@@ -178,9 +142,7 @@ from pyomo.core.expr.template_expr import (
     substitute_template_with_value,
     templatize_rule,
     templatize_constraint,
-)
-from pyomo.core.expr import visitor as _visitor
-from pyomo.core.expr.visitor import (
+    # pyomo.core.expr.visitor
     SymbolMap,
     StreamBasedExpressionVisitor,
     SimpleExpressionVisitor,
