@@ -21,6 +21,7 @@ from pyomo.common.dependencies import (
     DeferredImportModule,
     DeferredImportIndicator,
     DeferredImportError,
+    UnavailableClass,
     _DeferredAnd,
     _DeferredOr,
     check_min_version,
@@ -421,6 +422,24 @@ class TestDependencies(unittest.TestCase):
         self.assertIs(type(_mod.submod), ModuleUnavailable)
         self.assertTrue(hasattr(_mod.submod, 'subsubmod'))
         self.assertIs(type(_mod.submod.subsubmod), ModuleUnavailable)
+
+    def test_UnavailableClass(self):
+        module_obj, module_available = attempt_import(
+            '__there_is_no_module_named_this__',
+            'Testing import of a non-existent module',
+            defer_check=False,
+        )
+
+        class A_Class(UnavailableClass(module_obj)):
+            pass
+
+        with self.assertRaisesRegex(
+            DeferredImportError,
+            "The class 'A_Class' is not available because a required optional "
+            r"dependency was not found \(import raised ModuleNotFoundError: No "
+            r"module named '__there_is_no_module_named_this__'\)",
+        ):
+            A_Class()
 
 
 if __name__ == '__main__':

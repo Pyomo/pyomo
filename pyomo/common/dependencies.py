@@ -183,6 +183,19 @@ class DeferredImportModule(object):
         return [DeferredImportModule, object]
 
 
+def UnavailableClass(unavailable_module):
+    class Base(object):
+        def __new__(cls, *args, **kwargs):
+            raise DeferredImportError(
+                unavailable_module._moduleunavailable_message(
+                    f"The class '{cls.__name__}' is not available because a "
+                    "required optional dependency was not found"
+                )
+            )
+
+    return Base
+
+
 class _DeferredImportIndicatorBase(object):
     def __and__(self, other):
         return _DeferredAnd(self, other)
