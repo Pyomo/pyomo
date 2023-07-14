@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.modeling import NOTSET
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.kernel.base import ICategorizedObject, _abstract_readwrite_property
 from pyomo.core.kernel.container_utils import define_simple_containers
 from pyomo.core.expr.numvalue import (
@@ -35,7 +35,7 @@ class IIdentityExpression(NumericValue):
 
     PRECEDENCE = 0
 
-    ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
+    ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
 
     @property
     def expr(self):

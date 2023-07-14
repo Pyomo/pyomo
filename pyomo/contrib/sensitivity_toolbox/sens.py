@@ -22,7 +22,7 @@ from pyomo.environ import (
 )
 
 from pyomo.common.sorting import sorted_robust
-from pyomo.core.expr.current import ExpressionReplacementVisitor
+from pyomo.core.expr import ExpressionReplacementVisitor
 
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated

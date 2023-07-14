@@ -21,7 +21,7 @@ import itertools
 from pyomo.common.numeric_types import native_types, native_numeric_types
 from pyomo.core.base import Constraint, Objective, ComponentMap
 
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.core.base.objective import _GeneralObjectiveData, ScalarObjective
 from pyomo.core.base import _ExpressionData, Expression

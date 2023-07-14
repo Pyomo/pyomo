@@ -20,7 +20,6 @@ from pyomo.core.expr.expr_common import clone_counter
 
 from pyomo.core.expr import (
     Mode,
-    _mode,
     #from pyomo.core.expr.base
     ExpressionBase,
     # pyomo.core.expr.visitor
@@ -155,3 +154,5 @@ from pyomo.core.expr import (
     identify_variables,
     identify_mutable_parameters,
 )
+
+_mode = Mode.CURRENT

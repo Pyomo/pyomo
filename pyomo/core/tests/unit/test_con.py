@@ -38,7 +38,7 @@ from pyomo.environ import (
     simple_constraint_rule,
     inequality,
 )
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     SumExpression,
     EqualityExpression,
     InequalityExpression,

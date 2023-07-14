@@ -112,7 +112,7 @@ from pyomo.core.expr.relational_expr import RelationalExpression, EqualityExpres
 from pyomo.core.expr.relational_expr import RelationalExpression, EqualityExpression
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import expression_to_string, clone_expression
-from pyomo.core.expr.current import Expr_if
+from pyomo.core.expr import Expr_if
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import expr_common

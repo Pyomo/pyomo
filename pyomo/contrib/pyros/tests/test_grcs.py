@@ -9,7 +9,7 @@ from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.environ import *
-from pyomo.core.expr.current import identify_variables, identify_mutable_parameters
+from pyomo.core.expr import identify_variables, identify_mutable_parameters
 from pyomo.contrib.pyros.util import (
     selective_clone,
     add_decision_rule_variables,
@@ -27,7 +27,7 @@ from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
 import time
 from pyomo.contrib.pyros.util import time_code
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_to_master,

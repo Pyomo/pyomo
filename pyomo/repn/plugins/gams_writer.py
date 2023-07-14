@@ -16,7 +16,7 @@
 from io import StringIO
 
 from pyomo.common.gc_manager import PauseGC
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import (
     value,
     as_numeric,

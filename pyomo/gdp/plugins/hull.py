@@ -16,7 +16,7 @@ from pyomo.common import deprecated
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base import TransformationFactory, Reference
 from pyomo.core import (
     Block,

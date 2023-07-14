@@ -20,9 +20,9 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 import pyomo.common.unittest as unittest
 
-from pyomo.core.expr.current import Expr_if
+from pyomo.core.expr import Expr_if
 from pyomo.core.expr.visitor import replace_expressions
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.repn import generate_standard_repn
 from pyomo.environ import (
     AbstractModel,
