@@ -1,12 +1,12 @@
 import numpy as np
-from mpi4py import MPI
+from pyomo.common.dependencies import mpi4py
 from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 from pyomo.contrib.pynumero.sparse.mpi_block_matrix import MPIBlockMatrix
 from scipy.sparse import random
 
 
 def main():
-    comm = MPI.COMM_WORLD
+    comm = mpi4py.MPI.COMM_WORLD
     rank = comm.Get_rank()
 
     owners = [0, 1, 2, -1]
