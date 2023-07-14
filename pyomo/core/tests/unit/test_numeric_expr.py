@@ -2462,6 +2462,8 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "Cannot specify both THEN_ and THEN"):
             Expr_if(IF_=m.a + m.b < 20, THEN_=1, ELSE_=m.b, THEN=2)
+        with self.assertRaisesRegex(ValueError, "Unrecognized arguments: _THEN_"):
+            Expr_if(IF_=m.a + m.b < 20, _THEN_=1, ELSE_=m.b)
 
     def test_getitem(self):
         m = ConcreteModel()

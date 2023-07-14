@@ -4040,6 +4040,25 @@ def atanh(arg):
 #
 
 
+def _process_expr_if_arg(arg, kwargs, name):
+    alt = kwargs.pop(name, None)
+    if alt is not None:
+        if arg is not None:
+            raise ValueError(f'Cannot specify both {name}_ and {name}')
+        arg = alt
+    _type = _categorize_arg_type(arg)
+    # Note that relational expressions get mapped to INVALID
+    while _type < ARG_TYPE.INVALID:
+        if _type is ARG_TYPE.MUTABLE:
+            arg = _recast_mutable(arg)
+        elif _type is ARG_TYPE.ASNUMERIC:
+            arg = arg.as_numeric()
+        else:
+            raise DeveloperError('_categorize_arg_type() returned unexpected ARG_TYPE')
+        _type = _categorize_arg_type(arg)
+    return arg, _type
+
+
 def Expr_if(IF_=None, THEN_=None, ELSE_=None, **kwargs):
     """
     Function used to construct a conditional numeric expression.
@@ -4051,30 +4070,13 @@ def Expr_if(IF_=None, THEN_=None, ELSE_=None, **kwargs):
 
     (the former is historical, and the latter is required to support Cythonization)
     """
-    L = locals()
     _pv = False
-    for _argname in ('ELSE_', 'THEN_', 'IF_'):
-        _arg = L[_argname]
-        _alt_arg = kwargs.pop(_argname[:-1], None)
-        if _alt_arg is not None:
-            if _arg is not None:
-                raise ValueError(f'Cannot specify both {_argname} and {_argname[:-1]}')
-            _arg = L[_argname] = _alt_arg
-        _type = _categorize_arg_type(_arg)
-        # Note that relational expressions get mapped to INVALID
-        while _type < ARG_TYPE.INVALID:
-            if _type is ARG_TYPE.MUTABLE:
-                _arg = _recast_mutable(_arg)
-            elif _type is ARG_TYPE.ASNUMERIC:
-                _arg = _arg.as_numeric()
-            else:
-                raise DeveloperError(
-                    '_categorize_arg_type() returned unexpected ARG_TYPE'
-                )
-            L[_argname] = _arg
-            _type = _categorize_arg_type(_arg)
-        if _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID:
-            _pv = True
+    ELSE_, _type = _process_expr_if_arg(ELSE_, kwargs, 'ELSE')
+    _pv |= _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID
+    THEN_, _type = _process_expr_if_arg(THEN_, kwargs, 'THEN')
+    _pv |= _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID
+    IF_, _type = _process_expr_if_arg(IF_, kwargs, 'IF')
+    _pv |= _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID
     if kwargs:
         raise ValueError('Unrecognized arguments: ' + ', '.join(kwargs))
     # Notes:
@@ -4082,15 +4084,14 @@ def Expr_if(IF_=None, THEN_=None, ELSE_=None, **kwargs):
     # - we do NO error checking as to the actual arg types.  That is
     #   left to the writer (and as of writing [Jul 2023], the NL writer
     #   is the only writer that recognized Expr_if)
-    IF_ = L['IF_']
     if _type is ARG_TYPE.NATIVE:
-        return L['THEN_'] if IF_ else L['ELSE_']
+        return THEN_ if IF_ else ELSE_
     elif _type is ARG_TYPE.PARAM and IF_.is_constant():
-        return L['THEN_'] if IF_.value else L['ELSE_']
+        return THEN_ if IF_.value else ELSE_
     elif _pv:
-        return Expr_ifExpression((IF_, L['THEN_'], L['ELSE_']))
+        return Expr_ifExpression((IF_, THEN_, ELSE_))
     else:
-        return NPV_Expr_ifExpression((IF_, L['THEN_'], L['ELSE_']))
+        return NPV_Expr_ifExpression((IF_, THEN_, ELSE_))
 
 
 #
