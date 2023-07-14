@@ -18,7 +18,7 @@ import sys
 import logging
 import itertools
 
-from pyomo.common.numeric_types import native_numeric_types
+from pyomo.common.numeric_types import native_types, native_numeric_types
 from pyomo.core.base import Constraint, Objective, ComponentMap
 
 from pyomo.core.expr import current as EXPR
@@ -970,7 +970,7 @@ def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic
 
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
     _if, _then, _else = exp.args
-    if _if.__class__ in native_numeric_types:  # TODO: coverage?
+    if _if.__class__ in native_types:
         if_val = _if
     elif not _if.is_potentially_variable():
         if compute_values:
