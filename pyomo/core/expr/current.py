@@ -16,11 +16,10 @@ import math
 # Common intrinsic functions
 #
 import pyomo.core.expr.expr_common as common
-from pyomo.core.expr.expr_common import clone_counter
+from pyomo.core.expr.expr_common import clone_counter, _mode
 
 from pyomo.core.expr import (
     Mode,
-    _mode,
     # from pyomo.core.expr.base
     ExpressionBase,
     # pyomo.core.expr.visitor
