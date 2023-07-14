@@ -28,6 +28,7 @@ _equiv = 3
 _xor = 4
 _impl = 5
 
+
 #
 # Provide a global value that indicates which expression system is being used
 #
@@ -51,6 +52,7 @@ class Mode(enum.IntEnum):
     pyomo6_trees = 6
     #
     CURRENT = pyomo6_trees
+
 
 _mode = Mode.CURRENT
 # We no longer support concurrent expression systems.  _mode is left

@@ -21,7 +21,7 @@ from pyomo.core.expr.expr_common import clone_counter
 from pyomo.core.expr import (
     Mode,
     _mode,
-    #from pyomo.core.expr.base
+    # from pyomo.core.expr.base
     ExpressionBase,
     # pyomo.core.expr.visitor
     evaluate_expression,
@@ -81,9 +81,9 @@ from pyomo.core.expr import (
     asinh,
     acosh,
     atanh,
-    #pyomo.core.expr.numvalue
+    # pyomo.core.expr.numvalue
     as_numeric,
-    #pyomo.core.expr.logical_expr
+    # pyomo.core.expr.logical_expr
     native_logical_types,
     BooleanValue,
     BooleanConstant,

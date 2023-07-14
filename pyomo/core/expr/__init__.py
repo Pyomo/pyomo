@@ -48,10 +48,7 @@ from pyomo.common.numeric_types import (
 
 from .base import ExpressionBase
 from .boolean_value import BooleanValue
-from .expr_common import (
-    ExpressionType,
-    Mode,
-)
+from .expr_common import ExpressionType, Mode
 from .logical_expr import (
     native_logical_types,
     special_boolean_atom_types,
