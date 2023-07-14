@@ -122,9 +122,7 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(kg.is_named_expression_type(), False)
         self.assertEqual(kg.is_expression_type(), False)
         self.assertEqual(kg.is_component_type(), False)
-        self.assertEqual(
-            kg.is_expression_type(EXPR.ExpressionType.RELATIONAL), False
-        )
+        self.assertEqual(kg.is_expression_type(EXPR.ExpressionType.RELATIONAL), False)
         self.assertEqual(kg.is_indexed(), False)
         self.assertEqual(kg._compute_polynomial_degree(None), 0)
 

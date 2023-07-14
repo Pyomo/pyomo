@@ -13,10 +13,11 @@ import enum
 import math
 
 from pyomo.common.deprecation import deprecation_warning
+
 deprecation_warning(
     "pyomo.common.expr.current is deprecated.  "
     "Please import expression symbols from pyomo.core.expr",
-    version='6.6.2.dev0'
+    version='6.6.2.dev0',
 )
 
 #
@@ -27,7 +28,7 @@ from pyomo.core.expr.expr_common import clone_counter
 
 from pyomo.core.expr import (
     Mode,
-    #from pyomo.core.expr.base
+    # from pyomo.core.expr.base
     ExpressionBase,
     # pyomo.core.expr.visitor
     evaluate_expression,
@@ -87,9 +88,9 @@ from pyomo.core.expr import (
     asinh,
     acosh,
     atanh,
-    #pyomo.core.expr.numvalue
+    # pyomo.core.expr.numvalue
     as_numeric,
-    #pyomo.core.expr.logical_expr
+    # pyomo.core.expr.logical_expr
     native_logical_types,
     BooleanValue,
     BooleanConstant,
