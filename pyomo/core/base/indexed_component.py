@@ -178,7 +178,7 @@ def rule_result_substituter(result_map):
             # the rule isn't a rule at all, but instead the decorator
             # was used as a function to wrap an inline definition (not
             # something I think we should support, but exists in some
-            # [old] examples.
+            # [old] examples).
             #
             return rule
         else:
