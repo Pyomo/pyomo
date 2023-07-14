@@ -251,7 +251,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
 
     Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|.
 

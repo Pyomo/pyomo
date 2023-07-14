@@ -28,6 +28,8 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_set
+from pyomo.core.pyomoobject import PyomoObject
+from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
@@ -171,6 +173,15 @@ def rule_result_substituter(result_map):
             # The argument is a trivial type and will be mapped
             #
             value = rule
+        elif isinstance(rule, PyomoObject):
+            #
+            # The argument is a Pyomo component.  This can happen when
+            # the rule isn't a rule at all, but instead the decorator
+            # was used as a function to wrap an inline definition (not
+            # something I think we should support, but exists in some
+            # [old] examples).
+            #
+            return rule
         else:
             #
             # Otherwise, the argument is a functor, so call it to

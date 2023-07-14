@@ -9,12 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import os
+import sys
+import time
+
+from pyomo.common.dependencies import mpi4py
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pyo
-import time
-from mpi4py import MPI
-import sys
-import os
 
 
 """
@@ -145,7 +146,7 @@ def create_subproblem(root, farmer, scenario):
 
 
 def main():
-    rank = MPI.COMM_WORLD.Get_rank()
+    rank = mpi4py.MPI.COMM_WORLD.Get_rank()
     if rank != 0:
         sys.stdout = open(os.devnull, 'w')
 
