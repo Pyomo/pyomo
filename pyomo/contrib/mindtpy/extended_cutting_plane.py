@@ -38,7 +38,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
 
     CONFIG = _get_MindtPy_ECP_config()
 
-    def MindtPy_iteration_loop(self, config):
+    def MindtPy_iteration_loop(self):
         """Main loop for MindtPy Algorithms.
 
         This is the outermost function for the Extended Cutting Plane algorithm in this package; this function controls the progression of
@@ -54,41 +54,41 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         ValueError
             The strategy value is not correct or not included.
         """
-        while self.mip_iter < config.iteration_limit:
+        while self.mip_iter < self.config.iteration_limit:
             # solve MILP main problem
-            main_mip, main_mip_results = self.solve_main(config)
+            main_mip, main_mip_results = self.solve_main()
             if main_mip_results is not None:
-                if not config.single_tree:
+                if not self.config.single_tree:
                     if main_mip_results.solver.termination_condition is tc.optimal:
-                        self.handle_main_optimal(main_mip, config)
+                        self.handle_main_optimal(main_mip)
                     elif main_mip_results.solver.termination_condition is tc.infeasible:
-                        self.handle_main_infeasible(main_mip, config)
+                        self.handle_main_infeasible(main_mip)
                         self.last_iter_cuts = True
                         break
                     else:
                         self.handle_main_other_conditions(
-                            main_mip, main_mip_results, config
+                            main_mip, main_mip_results
                         )
                     # Call the MILP post-solve callback
                     with time_code(self.timing, 'Call after main solve'):
-                        config.call_after_main_solve(main_mip)
+                        self.config.call_after_main_solve(main_mip)
             else:
-                config.logger.info('Algorithm should terminate here.')
+                self.config.logger.info('Algorithm should terminate here.')
                 break
 
             if self.algorithm_should_terminate():
                 self.last_iter_cuts = False
                 break
 
-            add_ecp_cuts(self.mip, self.jacobians, config, self.timing)
+            add_ecp_cuts(self.mip, self.jacobians, self.config, self.timing)
 
         # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
         # we correct it after the iteration.
         if (
-            config.add_no_good_cuts or config.use_tabu_list
+            self.config.add_no_good_cuts or self.config.use_tabu_list
         ) and not self.should_terminate:
-            self.fix_dual_bound(config, self.last_iter_cuts)
-        config.logger.info(
+            self.fix_dual_bound(self.last_iter_cuts)
+        self.config.logger.info(
             ' ==============================================================================================='
         )
 
@@ -107,7 +107,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
             doc='Extended Cutting Planes'
         )
 
-    def init_rNLP(self, config):
+    def init_rNLP(self):
         """Initialize the problem by solving the relaxed NLP and then store the optimal variable
         values obtained from solving the rNLP.
 
@@ -121,7 +121,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         ValueError
             MindtPy unable to handle the termination condition of the relaxed NLP.
         """
-        super().init_rNLP(config, add_oa_cuts=False)
+        super().init_rNLP(add_oa_cuts=False)
 
     def algorithm_should_terminate(self):
         """Checks if the algorithm should terminate at the given point.

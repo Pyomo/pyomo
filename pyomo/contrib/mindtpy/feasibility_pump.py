@@ -68,5 +68,5 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
             linearize_violated,
         )
 
-    def MindtPy_iteration_loop(self, config):
+    def MindtPy_iteration_loop(self):
         pass

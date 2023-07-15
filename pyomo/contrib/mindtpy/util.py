@@ -42,17 +42,11 @@ pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
 
 
-class MindtPySolveData(object):
-    """Data container to hold solve-instance data."""
-
-    pass
-
-
 def calc_jacobians(model, config):
     """Generates a map of jacobians for the variables in the model.
 
     This function generates a map of jacobians corresponding to the variables in the
-    model and adds this ComponentMap to solve_data.
+    model.
 
     Parameters
     ----------
@@ -879,104 +873,6 @@ class GurobiPersistent4MindtPy(GurobiPersistent):
         return f
 
 
-def update_gap(solve_data):
-    """Update the relative gap and the absolute gap.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    """
-    if solve_data.objective_sense == minimize:
-        solve_data.abs_gap = solve_data.primal_bound - solve_data.dual_bound
-    else:
-        solve_data.abs_gap = solve_data.dual_bound - solve_data.primal_bound
-    solve_data.rel_gap = solve_data.abs_gap / (abs(solve_data.primal_bound) + 1e-10)
-
-
-def update_dual_bound(solve_data, bound_value):
-    """Update the dual bound.
-
-    Call after solving relaxed problem, including relaxed NLP and MIP main problem.
-    Use the optimal primal bound of the relaxed problem to update the dual bound.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    bound_value : float
-        The input value used to update the dual bound.
-    """
-    if math.isnan(bound_value):
-        return
-    if solve_data.objective_sense == minimize:
-        solve_data.dual_bound = max(bound_value, solve_data.dual_bound)
-        solve_data.dual_bound_improved = (
-            solve_data.dual_bound > solve_data.dual_bound_progress[-1]
-        )
-    else:
-        solve_data.dual_bound = min(bound_value, solve_data.dual_bound)
-        solve_data.dual_bound_improved = (
-            solve_data.dual_bound < solve_data.dual_bound_progress[-1]
-        )
-    solve_data.dual_bound_progress.append(solve_data.dual_bound)
-    solve_data.dual_bound_progress_time.append(get_main_elapsed_time(solve_data.timing))
-    if solve_data.dual_bound_improved:
-        update_gap(solve_data)
-
-
-def update_suboptimal_dual_bound(solve_data, results):
-    """If the relaxed problem is not solved to optimality, the dual bound is updated
-    according to the dual bound of relaxed problem.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    results : SolverResults
-        Results from solving the relaxed problem.
-        The dual bound of the relaxed problem can only be obtained from the result object.
-    """
-    if solve_data.objective_sense == minimize:
-        bound_value = results.problem.lower_bound
-    else:
-        bound_value = results.problem.upper_bound
-    update_dual_bound(solve_data, bound_value)
-
-
-def update_primal_bound(solve_data, bound_value):
-    """Update the primal bound.
-
-    Call after solve fixed NLP subproblem.
-    Use the optimal primal bound of the relaxed problem to update the dual bound.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    bound_value : float
-        The input value used to update the primal bound.
-    """
-    if math.isnan(bound_value):
-        return
-    if solve_data.objective_sense == minimize:
-        solve_data.primal_bound = min(bound_value, solve_data.primal_bound)
-        solve_data.primal_bound_improved = (
-            solve_data.primal_bound < solve_data.primal_bound_progress[-1]
-        )
-    else:
-        solve_data.primal_bound = max(bound_value, solve_data.primal_bound)
-        solve_data.primal_bound_improved = (
-            solve_data.primal_bound > solve_data.primal_bound_progress[-1]
-        )
-    solve_data.primal_bound_progress.append(solve_data.primal_bound)
-    solve_data.primal_bound_progress_time.append(
-        get_main_elapsed_time(solve_data.timing)
-    )
-    if solve_data.primal_bound_improved:
-        update_gap(solve_data)
-
-
 def set_up_logger(config):
     """Set up the formatter and handler for logger.
 
@@ -994,103 +890,6 @@ def set_up_logger(config):
     ch.setFormatter(formatter)
     # add the handlers to logger
     config.logger.addHandler(ch)
-
-
-def get_dual_integral(solve_data, config):
-    """Calculate the dual integral.
-    Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-
-    Returns
-    -------
-    float
-        The dual integral.
-    """
-    dual_integral = 0
-    dual_bound_progress = solve_data.dual_bound_progress.copy()
-    # Initial dual bound is set to inf or -inf. To calculate dual integral, we set
-    # initial_dual_bound to 10% greater or smaller than the first_found_dual_bound.
-    # TODO: check if the calculation of initial_dual_bound needs to be modified.
-    for dual_bound in dual_bound_progress:
-        if dual_bound != dual_bound_progress[0]:
-            break
-    for i in range(len(dual_bound_progress)):
-        if dual_bound_progress[i] == solve_data.dual_bound_progress[0]:
-            dual_bound_progress[i] = dual_bound * (
-                1
-                - config.initial_bound_coef
-                * solve_data.objective_sense
-                * math.copysign(1, dual_bound)
-            )
-        else:
-            break
-    for i in range(len(dual_bound_progress)):
-        if i == 0:
-            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (
-                solve_data.dual_bound_progress_time[i]
-            )
-        else:
-            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (
-                solve_data.dual_bound_progress_time[i]
-                - solve_data.dual_bound_progress_time[i - 1]
-            )
-    config.logger.info(' {:<25}:   {:>7.4f} '.format('Dual integral', dual_integral))
-    return dual_integral
-
-
-def get_primal_integral(solve_data, config):
-    """Calculate the primal integral.
-    Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-
-    Returns
-    -------
-    float
-        The primal integral.
-    """
-    primal_integral = 0
-    primal_bound_progress = solve_data.primal_bound_progress.copy()
-    # Initial primal bound is set to inf or -inf. To calculate primal integral, we set
-    # initial_primal_bound to 10% greater or smaller than the first_found_primal_bound.
-    # TODO: check if the calculation of initial_primal_bound needs to be modified.
-    for primal_bound in primal_bound_progress:
-        if primal_bound != primal_bound_progress[0]:
-            break
-    for i in range(len(primal_bound_progress)):
-        if primal_bound_progress[i] == solve_data.primal_bound_progress[0]:
-            primal_bound_progress[i] = primal_bound * (
-                1
-                + config.initial_bound_coef
-                * solve_data.objective_sense
-                * math.copysign(1, primal_bound)
-            )
-        else:
-            break
-    for i in range(len(primal_bound_progress)):
-        if i == 0:
-            primal_integral += abs(
-                primal_bound_progress[i] - solve_data.primal_bound
-            ) * (solve_data.primal_bound_progress_time[i])
-        else:
-            primal_integral += abs(
-                primal_bound_progress[i] - solve_data.primal_bound
-            ) * (
-                solve_data.primal_bound_progress_time[i]
-                - solve_data.primal_bound_progress_time[i - 1]
-            )
-
-    config.logger.info(
-        ' {:<25}:   {:>7.4f} '.format('Primal integral', primal_integral)
-    )
-    return primal_integral
 
 
 def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense):
@@ -1188,7 +987,7 @@ def setup_results_object(results, model, config):
     )
 
 
-def fp_converged(working_model, mip_model, config, discrete_only=True):
+def fp_converged(working_model, mip_model, proj_zero_tolerance, discrete_only=True):
     """Calculates the euclidean norm between the discrete variables in the MIP and NLP models.
 
     Parameters
@@ -1197,8 +996,8 @@ def fp_converged(working_model, mip_model, config, discrete_only=True):
         The working model(original model).
     mip_model : Pyomo model
         The mip model.
-    config : ConfigBlock
-        The specific configurations for MindtPy.
+    zero_tolerance : Float
+        The projection zero tolerance of Feasibility Pump.
     discrete_only : bool, optional
         Whether to only optimize on distance between the discrete variables, by default True.
 
@@ -1215,7 +1014,7 @@ def fp_converged(working_model, mip_model, config, discrete_only=True):
         )
         if (not discrete_only) or milp_var.is_integer()
     )
-    return distance <= config.fp_projzerotol
+    return distance <= proj_zero_tolerance
 
 
 def add_orthogonality_cuts(working_model, mip_model, config):

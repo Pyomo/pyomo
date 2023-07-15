@@ -68,7 +68,6 @@ from pyomo.contrib.mindtpy.util import (
     generate_norm_inf_objective_function,
     generate_lag_objective_function,
     GurobiPersistent4MindtPy,
-    MindtPySolveData,
     setup_results_object,
     get_integer_solution,
     add_feas_slacks,
@@ -187,11 +186,6 @@ class _MindtPyAlgorithm(object):
 
     def set_up_logger(self):
         """Set up the formatter and handler for logger.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
         self.config.logger.handlers.clear()
         self.config.logger.propagate = False
@@ -246,11 +240,6 @@ class _MindtPyAlgorithm(object):
 
     def model_is_valid(self):
         """Determines whether the model is solvable by MindtPy.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -725,17 +714,15 @@ class _MindtPyAlgorithm(object):
                     else:
                         util_block.nonlinear_constraint_list.append(constr)
 
-    def set_up_solve_data(self, model, config):
+    def set_up_solve_data(self, model):
         """Set up the solve data.
 
         Parameters
         ----------
         model : Pyomo model
             The original model to be solved in MindtPy.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
-
         """
+        config = self.config
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
         if obj.expr.polynomial_degree() == 0:
@@ -781,39 +768,33 @@ class _MindtPyAlgorithm(object):
     # -----------------------------------------------------------------------------------------
     # initialization
 
-    def MindtPy_initialization(self, config):
+    def MindtPy_initialization(self):
         """Initializes the decomposition algorithm.
 
         This function initializes the decomposition algorithm, which includes generating the
         initial cuts required to build the main MIP.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
         # Do the initialization
+        config = self.config
         if config.init_strategy == 'rNLP':
-            self.init_rNLP(config)
+            self.init_rNLP()
         elif config.init_strategy == 'max_binary':
-            self.init_max_binaries(config)
+            self.init_max_binaries()
         elif config.init_strategy == 'initial_binary':
             self.curr_int_sol = get_integer_solution(self.working_model)
             self.integer_list.append(self.curr_int_sol)
-            fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-            self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
+            fixed_nlp, fixed_nlp_result = self.solve_subproblem()
+            self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
         elif config.init_strategy == 'FP':
-            self.init_rNLP(config)
-            self.fp_loop(config)
+            self.init_rNLP()
+            self.fp_loop()
 
-    def init_rNLP(self, config, add_oa_cuts=True):
+    def init_rNLP(self, add_oa_cuts=True):
         """Initialize the problem by solving the relaxed NLP and then store the optimal variable
         values obtained from solving the rNLP.
 
         Parameters
         ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         add_oa_cuts : Bool
             Whether add OA cuts after solving the relaxed NLP problem.
 
@@ -822,6 +803,7 @@ class _MindtPyAlgorithm(object):
         ValueError
             MindtPy unable to handle the termination condition of the relaxed NLP.
         """
+        config = self.config
         m = self.working_model.clone()
         config.logger.debug('Relaxed NLP: Solve relaxed integrality')
         MindtPy = m.MindtPy_utils
@@ -915,16 +897,11 @@ class _MindtPyAlgorithm(object):
                 % (subprob_terminate_cond, results.solver.message)
             )
 
-    def init_max_binaries(self, config):
+    def init_max_binaries(self):
         """Modifies model by maximizing the number of activated binary variables.
 
         Note - The user would usually want to call solve_subproblem after an invocation
         of this function.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------
@@ -933,6 +910,7 @@ class _MindtPyAlgorithm(object):
         ValueError
             MindtPy unable to handle the termination condition of the MILP main problem.
         """
+        config = self.config
         m = self.working_model.clone()
         if hasattr(m, 'dual') and isinstance(m.dual, Suffix):
             m.del_component('dual')
@@ -1006,16 +984,11 @@ class _MindtPyAlgorithm(object):
     ##################################################################################################################################################################################################################
     # nlp_solve.py
 
-    def solve_subproblem(self, config):
+    def solve_subproblem(self):
         """Solves the Fixed-NLP (with fixed integers).
 
         This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their initial var values,
         precomputes dual values, deactivates trivial constraints, and then solves NLP model.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -1024,6 +997,7 @@ class _MindtPyAlgorithm(object):
         results : SolverResults
             Results from solving the Fixed-NLP.
         """
+        config = self.config
         MindtPy = self.fixed_nlp.MindtPy_utils
         self.nlp_iter += 1
 
@@ -1092,7 +1066,7 @@ class _MindtPyAlgorithm(object):
         )
         return self.fixed_nlp, results
 
-    def handle_nlp_subproblem_tc(self, fixed_nlp, result, config, cb_opt=None):
+    def handle_nlp_subproblem_tc(self, fixed_nlp, result, cb_opt=None):
         """This function handles different terminaton conditions of the fixed-NLP subproblem.
 
         Parameters
@@ -1101,8 +1075,6 @@ class _MindtPyAlgorithm(object):
             Integer-variable-fixed NLP model.
         result : SolverResults
             Results from solving the NLP subproblem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         cb_opt : SolverFactory, optional
             The gurobi_persistent solver, by default None.
         """
@@ -1111,25 +1083,25 @@ class _MindtPyAlgorithm(object):
             tc.locallyOptimal,
             tc.feasible,
         }:
-            self.handle_subproblem_optimal(fixed_nlp, config, cb_opt)
+            self.handle_subproblem_optimal(fixed_nlp, cb_opt)
         elif result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
-            self.handle_subproblem_infeasible(fixed_nlp, config, cb_opt)
+            self.handle_subproblem_infeasible(fixed_nlp, cb_opt)
         elif result.solver.termination_condition is tc.maxTimeLimit:
-            config.logger.info(
+            self.config.logger.info(
                 'NLP subproblem failed to converge within the time limit.'
             )
             self.results.solver.termination_condition = tc.maxTimeLimit
             self.should_terminate = True
         elif result.solver.termination_condition is tc.maxEvaluations:
-            config.logger.info('NLP subproblem failed due to maxEvaluations.')
+            self.config.logger.info('NLP subproblem failed due to maxEvaluations.')
             self.results.solver.termination_condition = tc.maxEvaluations
             self.should_terminate = True
         else:
             self.handle_subproblem_other_termination(
-                fixed_nlp, result.solver.termination_condition, config
+                fixed_nlp, result.solver.termination_condition
             )
 
-    def handle_subproblem_optimal(self, fixed_nlp, config, cb_opt=None, fp=False):
+    def handle_subproblem_optimal(self, fixed_nlp, cb_opt=None, fp=False):
         """This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
         the bounds, adds OA and no-good cuts, and then stores the new solution if it is the new best solution. This
         function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
@@ -1138,8 +1110,6 @@ class _MindtPyAlgorithm(object):
         ----------
         fixed_nlp : Pyomo model
             Integer-variable-fixed NLP model.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         cb_opt : SolverFactory, optional
             The gurobi_persistent solver, by default None.
         fp : bool, optional
@@ -1147,6 +1117,7 @@ class _MindtPyAlgorithm(object):
         """
         # TODO: check what is this copy_value function used for?
         # Warmstart?
+        config = self.config
         copy_var_list_values(
             fixed_nlp.MindtPy_utils.variable_list,
             self.working_model.MindtPy_utils.variable_list,
@@ -1205,7 +1176,7 @@ class _MindtPyAlgorithm(object):
             )
         )
 
-    def handle_subproblem_infeasible(self, fixed_nlp, config, cb_opt=None):
+    def handle_subproblem_infeasible(self, fixed_nlp, cb_opt=None):
         """Solves feasibility problem and adds cut according to the specified strategy.
 
         This function handles the result of the latest iteration of solving the NLP subproblem given an infeasible
@@ -1215,13 +1186,12 @@ class _MindtPyAlgorithm(object):
         ----------
         fixed_nlp : Pyomo model
             Integer-variable-fixed NLP model.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         cb_opt : SolverFactory, optional
             The gurobi_persistent solver, by default None.
         """
         # TODO try something else? Reinitialize with different initial
         # value?
+        config = self.config
         config.logger.info('NLP subproblem was locally infeasible.')
         self.nlp_infeasible_counter += 1
         if config.calculate_dual_at_solution:
@@ -1245,9 +1215,7 @@ class _MindtPyAlgorithm(object):
         #             fixed_nlp.ipopt_zU_out[var] = -1
 
         config.logger.info('Solving feasibility problem')
-        feas_subproblem, feas_subproblem_results = self.solve_feasibility_subproblem(
-            config
-        )
+        feas_subproblem, feas_subproblem_results = self.solve_feasibility_subproblem()
         # TODO: do we really need this?
         if self.should_terminate:
             return
@@ -1268,9 +1236,7 @@ class _MindtPyAlgorithm(object):
             # excludes current discrete option
             add_no_good_cuts(self.mip, var_values, config, self.timing)
 
-    def handle_subproblem_other_termination(
-        self, fixed_nlp, termination_condition, config
-    ):
+    def handle_subproblem_other_termination(self, fixed_nlp, termination_condition):
         """Handles the result of the latest iteration of solving the fixed NLP subproblem given
         a solution that is neither optimal nor infeasible.
 
@@ -1280,8 +1246,6 @@ class _MindtPyAlgorithm(object):
             Integer-variable-fixed NLP model.
         termination_condition : Pyomo TerminationCondition
             The termination condition of the fixed NLP subproblem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------
@@ -1290,13 +1254,13 @@ class _MindtPyAlgorithm(object):
         """
         if termination_condition is tc.maxIterations:
             # TODO try something else? Reinitialize with different initial value?
-            config.logger.info(
+            self.config.logger.info(
                 'NLP subproblem failed to converge within iteration limit.'
             )
             var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
-            if config.add_no_good_cuts:
+            if self.config.add_no_good_cuts:
                 # excludes current discrete option
-                add_no_good_cuts(self.mip, var_values, config, self.timing)
+                add_no_good_cuts(self.mip, var_values, self.config, self.timing)
 
         else:
             raise ValueError(
@@ -1304,13 +1268,8 @@ class _MindtPyAlgorithm(object):
                 'condition of {}'.format(termination_condition)
             )
 
-    def solve_feasibility_subproblem(self, config):
+    def solve_feasibility_subproblem(self):
         """Solves a feasibility NLP if the fixed_nlp problem is infeasible.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -1319,6 +1278,7 @@ class _MindtPyAlgorithm(object):
         feas_soln : SolverResults
             Results from solving the feasibility NLP.
         """
+        config = self.config
         feas_subproblem = self.fixed_nlp
         MindtPy = feas_subproblem.MindtPy_utils
         MindtPy.feas_opt.activate()
@@ -1376,7 +1336,7 @@ class _MindtPyAlgorithm(object):
                     if len(feas_soln.solution) > 0:
                         feas_soln.solutions.load_from(feas_soln)
         self.handle_feasibility_subproblem_tc(
-            feas_soln.solver.termination_condition, MindtPy, config
+            feas_soln.solver.termination_condition, MindtPy
         )
         MindtPy.feas_opt.deactivate()
         for constr in MindtPy.nonlinear_constraint_list:
@@ -1385,7 +1345,7 @@ class _MindtPyAlgorithm(object):
         MindtPy.feas_obj.deactivate()
         return feas_subproblem, feas_soln
 
-    def handle_feasibility_subproblem_tc(self, subprob_terminate_cond, MindtPy, config):
+    def handle_feasibility_subproblem_tc(self, subprob_terminate_cond, MindtPy):
         """Handles the result of the latest iteration of solving the feasibility NLP subproblem.
 
         Parameters
@@ -1394,9 +1354,8 @@ class _MindtPyAlgorithm(object):
             The termination condition of the feasibility NLP subproblem.
         MindtPy : Pyomo Block
             The MindtPy_utils block.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
+        config = self.config
         if subprob_terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             # TODO: check what is this copy_value used for?
             copy_var_list_values(
@@ -1434,7 +1393,7 @@ class _MindtPyAlgorithm(object):
     ######################################################################################################################################################
     # iterate.py
 
-    def algorithm_should_terminate(self, config, check_cycling):
+    def algorithm_should_terminate(self, check_cycling):
         """Checks if the algorithm should terminate at the given point.
 
         This function determines whether the algorithm should terminate based on the solver options and progress.
@@ -1443,8 +1402,6 @@ class _MindtPyAlgorithm(object):
 
         Parameters
         ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         check_cycling : bool
             Whether to check for a special case that causes the discrete variables to loop through the same values.
 
@@ -1469,13 +1426,11 @@ class _MindtPyAlgorithm(object):
             or (check_cycling and self.iteration_cycling())
         )
 
-    def fix_dual_bound(self, config, last_iter_cuts):
+    def fix_dual_bound(self, last_iter_cuts):
         """Fix the dual bound when no-good cuts or tabu list is activated.
 
         Parameters
         ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         last_iter_cuts : bool
             Whether the cuts in the last iteration have been added.
         """
@@ -1483,6 +1438,7 @@ class _MindtPyAlgorithm(object):
         # Therefore, we need to correct it at the end.
         # In singletree implementation, the dual bound at one iteration before the optimal solution, is valid for the optimal solution.
         # So we will set the dual bound to it.
+        config = self.config
         if config.single_tree:
             config.logger.info(
                 'Fix the bound to the value of one iteration before optimal solution is found.'
@@ -1500,8 +1456,8 @@ class _MindtPyAlgorithm(object):
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
             if not last_iter_cuts:
-                fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-                self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
+                fixed_nlp, fixed_nlp_result = self.solve_subproblem()
+                self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
 
             MindtPy = self.mip.MindtPy_utils
             # deactivate the integer cuts generated after the best solution was found.
@@ -1590,13 +1546,8 @@ class _MindtPyAlgorithm(object):
     ##########################################################################################################################################
     # mip_solve.py
 
-    def solve_main(self, config):
+    def solve_main(self):
         """This function solves the MIP main problem.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -1605,11 +1556,12 @@ class _MindtPyAlgorithm(object):
         main_mip_results : SolverResults
             Results from solving the main MIP.
         """
+        config = self.config
         self.mip_iter += 1
 
         # setup main problem
-        self.setup_main(config)
-        mip_args = self.set_up_mip_solver(config)
+        self.setup_main()
+        mip_args = self.set_up_mip_solver()
 
         try:
             main_mip_results = self.mip_opt.solve(
@@ -1649,13 +1601,8 @@ class _MindtPyAlgorithm(object):
             )
         return self.mip, main_mip_results
 
-    def solve_fp_main(self, config):
+    def solve_fp_main(self):
         """This function solves the MIP main problem.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -1665,8 +1612,9 @@ class _MindtPyAlgorithm(object):
             Results from solving the main MIP.
         """
         # setup main problem
-        self.setup_fp_main(config)
-        mip_args = self.set_up_mip_solver(config)
+        config = self.config
+        self.setup_fp_main()
+        mip_args = self.set_up_mip_solver()
 
         main_mip_results = self.mip_opt.solve(
             self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
@@ -1686,13 +1634,8 @@ class _MindtPyAlgorithm(object):
 
         return self.mip, main_mip_results
 
-    def solve_regularization_main(self, config):
+    def solve_regularization_main(self):
         """This function solves the MIP main problem.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -1701,9 +1644,9 @@ class _MindtPyAlgorithm(object):
         main_mip_results : SolverResults
             Results from solving the main MIP.
         """
-
+        config = self.config
         # setup main problem
-        self.setup_regularization_main(config)
+        self.setup_regularization_main()
 
         if isinstance(self.regularization_mip_opt, PersistentSolver):
             self.regularization_mip_opt.set_instance(self.mip)
@@ -1752,15 +1695,8 @@ class _MindtPyAlgorithm(object):
 
         return self.mip, main_mip_results
 
-    def set_up_mip_solver(self, config, regularization_problem=False):
+    def set_up_mip_solver(self):
         """Set up the MIP solver.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
-        regularization_problem : bool
-            Whether it is solving a regularization problem.
 
         Returns
         -------
@@ -1768,6 +1704,7 @@ class _MindtPyAlgorithm(object):
             The customized MIP solver.
         """
         # determine if persistent solver is called.
+        config = self.config
         if isinstance(self.mip_opt, PersistentSolver):
             self.mip_opt.set_instance(self.mip, symbolic_solver_labels=True)
         if config.single_tree:
@@ -1786,7 +1723,7 @@ class _MindtPyAlgorithm(object):
 
     # The following functions deal with handling the solution we get from the above MIP solver function
 
-    def handle_main_optimal(self, main_mip, config, update_bound=True):
+    def handle_main_optimal(self, main_mip, update_bound=True):
         """This function copies the results from 'solve_main' to the working model and updates
         the upper/lower bound. This function is called after an optimal solution is found for
         the main problem.
@@ -1795,8 +1732,6 @@ class _MindtPyAlgorithm(object):
         ----------
         main_mip : Pyomo model
             The MIP main problem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         update_bound : bool, optional
             Whether to update the bound, by default True.
             Bound will not be updated when handling regularization problem.
@@ -1806,7 +1741,7 @@ class _MindtPyAlgorithm(object):
         # check if the value of binary variable is valid
         for var in MindtPy.discrete_variable_list:
             if var.value is None:
-                config.logger.warning(
+                self.config.logger.warning(
                     f"Integer variable {var.name} not initialized.  "
                     "Setting it to its lower bound"
                 )
@@ -1816,13 +1751,13 @@ class _MindtPyAlgorithm(object):
         copy_var_list_values(
             main_mip.MindtPy_utils.variable_list,
             self.fixed_nlp.MindtPy_utils.variable_list,
-            config,
+            self.config,
             skip_fixed=False,
         )
 
         if update_bound:
             self.update_dual_bound(value(MindtPy.mip_obj.expr))
-            config.logger.info(
+            self.config.logger.info(
                 self.log_formatter.format(
                     self.mip_iter,
                     'MILP',
@@ -1834,7 +1769,7 @@ class _MindtPyAlgorithm(object):
                 )
             )
 
-    def handle_main_other_conditions(self, main_mip, main_mip_results, config):
+    def handle_main_other_conditions(self, main_mip, main_mip_results):
         """This function handles the result of the latest iteration of solving the MIP problem (given any of a few
         edge conditions, such as if the solution is neither infeasible nor optimal).
 
@@ -1844,8 +1779,6 @@ class _MindtPyAlgorithm(object):
             The MIP main problem.
         main_mip_results : SolverResults
             Results from solving the MIP problem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------
@@ -1853,15 +1786,15 @@ class _MindtPyAlgorithm(object):
             MindtPy unable to handle MILP main termination condition.
         """
         if main_mip_results.solver.termination_condition is tc.infeasible:
-            self.handle_main_infeasible(main_mip, config)
+            self.handle_main_infeasible()
         elif main_mip_results.solver.termination_condition is tc.unbounded:
-            temp_results = self.handle_main_unbounded(main_mip, config)
+            temp_results = self.handle_main_unbounded(main_mip)
         elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
-            temp_results = self.handle_main_unbounded(main_mip, config)
+            temp_results = self.handle_main_unbounded(main_mip)
             if temp_results.solver.termination_condition is tc.infeasible:
-                self.handle_main_infeasible(main_mip, config)
+                self.handle_main_infeasible()
         elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
-            self.handle_main_max_timelimit(main_mip, main_mip_results, config)
+            self.handle_main_max_timelimit(main_mip, main_mip_results)
             self.results.solver.termination_condition = tc.maxTimeLimit
         elif main_mip_results.solver.termination_condition is tc.feasible or (
             main_mip_results.solver.termination_condition is tc.other
@@ -1870,18 +1803,18 @@ class _MindtPyAlgorithm(object):
             # load the solution and suppress the warning message by setting
             # solver status to ok.
             MindtPy = main_mip.MindtPy_utils
-            config.logger.info(
+            self.config.logger.info(
                 'MILP solver reported feasible solution, '
                 'but not guaranteed to be optimal.'
             )
             copy_var_list_values(
                 main_mip.MindtPy_utils.variable_list,
                 self.fixed_nlp.MindtPy_utils.variable_list,
-                config,
+                self.config,
                 skip_fixed=False,
             )
             self.update_suboptimal_dual_bound(main_mip_results)
-            config.logger.info(
+            self.config.logger.info(
                 self.log_formatter.format(
                     self.mip_iter,
                     'MILP',
@@ -1902,7 +1835,7 @@ class _MindtPyAlgorithm(object):
                 )
             )
 
-    def handle_main_infeasible(self, main_mip, config):
+    def handle_main_infeasible(self):
         """This function handles the result of the latest iteration of solving
         the MIP problem given an infeasible solution.
 
@@ -1910,21 +1843,19 @@ class _MindtPyAlgorithm(object):
         ----------
         main_mip : Pyomo model
             The MIP main problem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
-        config.logger.info(
+        self.config.logger.info(
             'MILP main problem is infeasible. '
             'Problem may have no more feasible '
             'binary configurations.'
         )
         if self.mip_iter == 1:
-            config.logger.warning(
+            self.config.logger.warning(
                 'MindtPy initialization may have generated poor quality cuts.'
             )
         # TODO no-good cuts for single tree case
         # set optimistic bound to infinity
-        config.logger.info('MindtPy exiting due to MILP main problem infeasibility.')
+        self.config.logger.info('MindtPy exiting due to MILP main problem infeasibility.')
         if self.results.solver.termination_condition is None:
             if (
                 self.primal_bound == float('inf') and self.objective_sense == minimize
@@ -1936,7 +1867,7 @@ class _MindtPyAlgorithm(object):
             else:
                 self.results.solver.termination_condition = tc.feasible
 
-    def handle_main_max_timelimit(self, main_mip, main_mip_results, config):
+    def handle_main_max_timelimit(self, main_mip, main_mip_results):
         """This function handles the result of the latest iteration of solving the MIP problem
         given that solving the MIP takes too long.
 
@@ -1946,12 +1877,10 @@ class _MindtPyAlgorithm(object):
             The MIP main problem.
         main_mip_results : [type]
             Results from solving the MIP main subproblem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
         # TODO if we have found a valid feasible solution, we take that, if not, we can at least use the dual bound
         MindtPy = main_mip.MindtPy_utils
-        config.logger.info(
+        self.config.logger.info(
             'Unable to optimize MILP main problem '
             'within time limit. '
             'Using current solver feasible solution.'
@@ -1959,11 +1888,11 @@ class _MindtPyAlgorithm(object):
         copy_var_list_values(
             main_mip.MindtPy_utils.variable_list,
             self.fixed_nlp.MindtPy_utils.variable_list,
-            config,
+            self.config,
             skip_fixed=False,
         )
         self.update_suboptimal_dual_bound(main_mip_results)
-        config.logger.info(
+        self.config.logger.info(
             self.log_formatter.format(
                 self.mip_iter,
                 'MILP',
@@ -1975,7 +1904,7 @@ class _MindtPyAlgorithm(object):
             )
         )
 
-    def handle_main_unbounded(self, main_mip, config):
+    def handle_main_unbounded(self, main_mip):
         """This function handles the result of the latest iteration of solving the MIP
         problem given an unbounded solution due to the relaxation.
 
@@ -1983,8 +1912,6 @@ class _MindtPyAlgorithm(object):
         ----------
         main_mip : Pyomo model
             The MIP main problem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -1994,6 +1921,7 @@ class _MindtPyAlgorithm(object):
         # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
         # This occurs when the objective is nonlinear. The nonlinear objective is moved
         # to the constraints, and deactivated for the linear main problem.
+        config = self.config
         MindtPy = main_mip.MindtPy_utils
         config.logger.warning(
             'main MILP was unbounded. '
@@ -2019,7 +1947,7 @@ class _MindtPyAlgorithm(object):
                 self.mip.solutions.load_from(main_mip_results)
         return main_mip_results
 
-    def handle_regularization_main_tc(self, main_mip, main_mip_results, config):
+    def handle_regularization_main_tc(self, main_mip, main_mip_results):
         """Handles the result of the regularization main problem.
 
         Parameters
@@ -2028,8 +1956,6 @@ class _MindtPyAlgorithm(object):
             The MIP main problem.
         main_mip_results : SolverResults
             Results from solving the regularization main subproblem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------
@@ -2037,39 +1963,39 @@ class _MindtPyAlgorithm(object):
             MindtPy unable to handle the regularization problem termination condition.
         """
         if main_mip_results is None:
-            config.logger.info(
+            self.config.logger.info(
                 'Failed to solve the regularization problem.'
                 'The solution of the OA main problem will be adopted.'
             )
         elif main_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
-            self.handle_main_optimal(main_mip, config, update_bound=False)
+            self.handle_main_optimal(main_mip, update_bound=False)
         elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
-            config.logger.info(
+            self.config.logger.info(
                 'Regularization problem failed to converge within the time limit.'
             )
             self.results.solver.termination_condition = tc.maxTimeLimit
             # break
         elif main_mip_results.solver.termination_condition is tc.infeasible:
-            config.logger.info('Regularization problem infeasible.')
+            self.config.logger.info('Regularization problem infeasible.')
         elif main_mip_results.solver.termination_condition is tc.unbounded:
-            config.logger.info(
+            self.config.logger.info(
                 'Regularization problem unbounded.'
                 'Sometimes solving MIQP in cplex, unbounded means infeasible.'
             )
         elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
-            config.logger.info(
+            self.config.logger.info(
                 'Regularization problem is infeasible or unbounded.'
                 'It might happen when using Cplex to solve MIQP.'
             )
         elif main_mip_results.solver.termination_condition is tc.unknown:
-            config.logger.info(
+            self.config.logger.info(
                 'Termination condition of the regularization problem is unknown.'
             )
             if main_mip_results.problem.lower_bound != float('-inf'):
-                config.logger.info('Solution limit has been reached.')
-                self.handle_main_optimal(main_mip, config, update_bound=False)
+                self.config.logger.info('Solution limit has been reached.')
+                self.handle_main_optimal(main_mip, update_bound=False)
             else:
-                config.logger.info(
+                self.config.logger.info(
                     'No solution obtained from the regularization subproblem.'
                     'Please set mip_solver_tee to True for more information.'
                     'The solution of the OA main problem will be adopted.'
@@ -2084,14 +2010,10 @@ class _MindtPyAlgorithm(object):
                 )
             )
 
-    def setup_main(self, config):
+    def setup_main(self):
         """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
+        config = self.config
         MindtPy = self.mip.MindtPy_utils
 
         for c in MindtPy.constraint_list:
@@ -2139,13 +2061,8 @@ class _MindtPyAlgorithm(object):
                         doc='Objective function expression should improve on the best found dual bound',
                     )
 
-    def setup_fp_main(self, config):
+    def setup_fp_main(self):
         """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
         MindtPy = self.mip.MindtPy_utils
 
@@ -2156,27 +2073,23 @@ class _MindtPyAlgorithm(object):
         MindtPy.cuts.activate()
         MindtPy.del_component('mip_obj')
         MindtPy.del_component('fp_mip_obj')
-        if config.fp_main_norm == 'L1':
+        if self.config.fp_main_norm == 'L1':
             MindtPy.fp_mip_obj = generate_norm1_objective_function(
-                self.mip, self.working_model, discrete_only=config.fp_discrete_only
+                self.mip, self.working_model, discrete_only=self.config.fp_discrete_only
             )
-        elif config.fp_main_norm == 'L2':
+        elif self.config.fp_main_norm == 'L2':
             MindtPy.fp_mip_obj = generate_norm2sq_objective_function(
-                self.mip, self.working_model, discrete_only=config.fp_discrete_only
+                self.mip, self.working_model, discrete_only=self.config.fp_discrete_only
             )
-        elif config.fp_main_norm == 'L_infinity':
+        elif self.config.fp_main_norm == 'L_infinity':
             MindtPy.fp_mip_obj = generate_norm_inf_objective_function(
-                self.mip, self.working_model, discrete_only=config.fp_discrete_only
+                self.mip, self.working_model, discrete_only=self.config.fp_discrete_only
             )
 
-    def setup_regularization_main(self, config):
+    def setup_regularization_main(self):
         """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
+        config = self.config
         MindtPy = self.mip.MindtPy_utils
 
         for c in MindtPy.constraint_list:
@@ -2382,16 +2295,11 @@ class _MindtPyAlgorithm(object):
     ################################################################################################################################
     # Feasibility Pump
 
-    def solve_fp_subproblem(self, config):
+    def solve_fp_subproblem(self):
         """Solves the feasibility pump NLP subproblem.
 
         This function sets up the 'fp_nlp' by relax integer variables.
         precomputes dual values, deactivates trivial constraints, and then solves NLP model.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -2402,6 +2310,7 @@ class _MindtPyAlgorithm(object):
         """
         fp_nlp = self.working_model.clone()
         MindtPy = fp_nlp.MindtPy_utils
+        config = self.config
 
         # Set up NLP
         fp_nlp.MindtPy_utils.objective_list[-1].deactivate()
@@ -2452,7 +2361,7 @@ class _MindtPyAlgorithm(object):
                     fp_nlp.solutions.load_from(results)
         return fp_nlp, results
 
-    def handle_fp_subproblem_optimal(self, fp_nlp, config):
+    def handle_fp_subproblem_optimal(self, fp_nlp):
         """Copies the solution to the working model, updates bound, adds OA cuts / no-good cuts /
         increasing objective cut, calculates the duals and stores incumbent solution if it has been improved.
 
@@ -2460,34 +2369,35 @@ class _MindtPyAlgorithm(object):
         ----------
         fp_nlp : Pyomo model
             The feasibility pump NLP subproblem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
         """
         copy_var_list_values(
             fp_nlp.MindtPy_utils.variable_list,
             self.working_model.MindtPy_utils.variable_list,
-            config,
+            self.config
         )
-        add_orthogonality_cuts(self.working_model, self.mip, config)
+        add_orthogonality_cuts(self.working_model, self.mip, self.config)
 
         # if OA-like or fp converged, update Upper bound,
         # add no_good cuts and increasing objective cuts (fp)
         if fp_converged(
-            self.working_model, self.mip, config, discrete_only=config.fp_discrete_only
+            self.working_model,
+            self.mip,
+            proj_zero_tolerance=self.config.fp_projzerotol,
+            discrete_only=self.config.fp_discrete_only
         ):
             copy_var_list_values(
                 self.mip.MindtPy_utils.variable_list,
                 self.fixed_nlp.MindtPy_utils.variable_list,
-                config,
+                self.config,
                 skip_fixed=False,
             )
-            fixed_nlp, fixed_nlp_results = self.solve_subproblem(config)
+            fixed_nlp, fixed_nlp_results = self.solve_subproblem()
             if fixed_nlp_results.solver.termination_condition in {
                 tc.optimal,
                 tc.locallyOptimal,
                 tc.feasible,
             }:
-                self.handle_subproblem_optimal(fixed_nlp, config)
+                self.handle_subproblem_optimal(fixed_nlp)
                 if self.primal_bound_improved:
                     self.mip.MindtPy_utils.cuts.del_component('improving_objective_cut')
                     if self.objective_sense == minimize:
@@ -2495,7 +2405,7 @@ class _MindtPyAlgorithm(object):
                             Constraint(
                                 expr=sum(self.mip.MindtPy_utils.objective_value[:])
                                 <= self.primal_bound
-                                - config.fp_cutoffdecr * max(1, abs(self.primal_bound))
+                                - self.config.fp_cutoffdecr * max(1, abs(self.primal_bound))
                             )
                         )
                     else:
@@ -2503,24 +2413,22 @@ class _MindtPyAlgorithm(object):
                             Constraint(
                                 expr=sum(self.mip.MindtPy_utils.objective_value[:])
                                 >= self.primal_bound
-                                + config.fp_cutoffdecr * max(1, abs(self.primal_bound))
+                                + self.config.fp_cutoffdecr * max(1, abs(self.primal_bound))
                             )
                         )
             else:
-                config.logger.error(
+                self.config.logger.error(
                     'Feasibility pump Fixed-NLP is infeasible, something might be wrong. '
                     'There might be a problem with the precisions - the feasibility pump seems to have converged'
                 )
 
-    def handle_fp_main_tc(self, fp_main_results, config):
+    def handle_fp_main_tc(self, fp_main_results):
         """Handle the termination condition of the feasibility pump main problem.
 
         Parameters
         ----------
         fp_main_results : SolverResults
             The results from solving the FP main problem.
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Returns
         -------
@@ -2528,7 +2436,7 @@ class _MindtPyAlgorithm(object):
             True if FP loop should terminate, False otherwise.
         """
         if fp_main_results.solver.termination_condition is tc.optimal:
-            config.logger.info(
+            self.config.logger.info(
                 self.log_formatter.format(
                     self.fp_iter,
                     'FP-MIP',
@@ -2541,58 +2449,54 @@ class _MindtPyAlgorithm(object):
             )
             return False
         elif fp_main_results.solver.termination_condition is tc.maxTimeLimit:
-            config.logger.warning('FP-MIP reaches max TimeLimit')
+            self.config.logger.warning('FP-MIP reaches max TimeLimit')
             self.results.solver.termination_condition = tc.maxTimeLimit
             return True
         elif fp_main_results.solver.termination_condition is tc.infeasible:
-            config.logger.warning('FP-MIP infeasible')
+            self.config.logger.warning('FP-MIP infeasible')
             no_good_cuts = self.mip.MindtPy_utils.cuts.no_good_cuts
             if no_good_cuts.__len__() > 0:
                 no_good_cuts[no_good_cuts.__len__()].deactivate()
             return True
         elif fp_main_results.solver.termination_condition is tc.unbounded:
-            config.logger.warning('FP-MIP unbounded')
+            self.config.logger.warning('FP-MIP unbounded')
             return True
         elif (
             fp_main_results.solver.termination_condition is tc.other
             and fp_main_results.solution.status is SolutionStatus.feasible
         ):
-            config.logger.warning(
+            self.config.logger.warning(
                 'MILP solver reported feasible solution of FP-MIP, '
                 'but not guaranteed to be optimal.'
             )
             return False
         else:
-            config.logger.warning('Unexpected result of FP-MIP')
+            self.config.logger.warning('Unexpected result of FP-MIP')
             return True
 
-    def fp_loop(self, config):
+    def fp_loop(self):
         """Feasibility pump loop.
 
         This is the outermost function for the Feasibility Pump algorithm in this package; this function
         controls the progression of solving the model.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------
         ValueError
             MindtPy unable to handle the termination condition of the FP-NLP subproblem.
         """
+        config = self.config
         while self.fp_iter < config.fp_iteration_limit:
             # solve MILP main problem
             with time_code(self.timing, 'fp main'):
-                fp_main, fp_main_results = self.solve_fp_main(config)
-            fp_should_terminate = self.handle_fp_main_tc(fp_main_results, config)
+                fp_main, fp_main_results = self.solve_fp_main()
+            fp_should_terminate = self.handle_fp_main_tc(fp_main_results)
             if fp_should_terminate:
                 break
 
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
-            fp_nlp, fp_nlp_result = self.solve_fp_subproblem(config)
+            fp_nlp, fp_nlp_result = self.solve_fp_subproblem()
 
             if fp_nlp_result.solver.termination_condition in {
                 tc.optimal,
@@ -2610,7 +2514,7 @@ class _MindtPyAlgorithm(object):
                         get_main_elapsed_time(self.timing),
                     )
                 )
-                self.handle_fp_subproblem_optimal(fp_nlp, config)
+                self.handle_fp_subproblem_optimal(fp_nlp)
             elif fp_nlp_result.solver.termination_condition in {
                 tc.infeasible,
                 tc.noSolution,
@@ -2805,7 +2709,7 @@ class _MindtPyAlgorithm(object):
         with lower_logger_level_to(config.logger, new_logging_level):
             self.check_config()
 
-        self.set_up_solve_data(model, config)
+        self.set_up_solve_data(model)
 
         if config.integer_to_binary:
             TransformationFactory('contrib.integer_to_binary').apply_to(
@@ -2841,11 +2745,11 @@ class _MindtPyAlgorithm(object):
 
             # Initialization
             with time_code(self.timing, 'initialization'):
-                self.MindtPy_initialization(config)
+                self.MindtPy_initialization()
 
             # Algorithm main loop
             with time_code(self.timing, 'main loop'):
-                self.MindtPy_iteration_loop(config)
+                self.MindtPy_iteration_loop()
 
             # Load solution
             if self.best_solution_found is not None:
@@ -2886,9 +2790,9 @@ class _MindtPyAlgorithm(object):
         if main_mip_results is not None:
             if not self.config.single_tree:
                 if main_mip_results.solver.termination_condition is tc.optimal:
-                    self.handle_main_optimal(main_mip, self.config)
+                    self.handle_main_optimal(main_mip)
                 elif main_mip_results.solver.termination_condition is tc.infeasible:
-                    self.handle_main_infeasible(main_mip, self.config)
+                    self.handle_main_infeasible()
                     self.last_iter_cuts = True
                     should_terminate = True
                 else:
@@ -2902,26 +2806,22 @@ class _MindtPyAlgorithm(object):
         return should_terminate
 
     # iterate.py
-    def MindtPy_iteration_loop(self, config):
+    def MindtPy_iteration_loop(self):
         """Main loop for MindtPy Algorithms.
 
         This is the outermost function for the Outer Approximation algorithm in this package; this function controls the progression of
         solving the model.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------
         ValueError
             The strategy value is not correct or not included.
         """
+        config = self.config
         while self.mip_iter < config.iteration_limit:
             # solve MILP main problem
             with time_code(self.timing, 'main'):
-                main_mip, main_mip_results = self.solve_main(config)
+                main_mip, main_mip_results = self.solve_main()
             if self.handle_main_mip_termination(main_mip, main_mip_results):
                 break
             # Call the MILP post-solve callback
@@ -2943,12 +2843,12 @@ class _MindtPyAlgorithm(object):
                         skip_fixed=False,
                     )
                     if self.curr_int_sol not in set(self.integer_list):
-                        fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
+                        fixed_nlp, fixed_nlp_result = self.solve_subproblem()
                         self.handle_nlp_subproblem_tc(
-                            fixed_nlp, fixed_nlp_result, config
+                            fixed_nlp, fixed_nlp_result
                         )
 
-            if self.algorithm_should_terminate(config, check_cycling=True):
+            if self.algorithm_should_terminate(check_cycling=True):
                 self.last_iter_cuts = False
                 break
 
@@ -2956,14 +2856,14 @@ class _MindtPyAlgorithm(object):
                 # Solve NLP subproblem
                 # The constraint linearization happens in the handlers
                 if not config.solution_pool:
-                    fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-                    self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
+                    fixed_nlp, fixed_nlp_result = self.solve_subproblem()
+                    self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
 
                     # Call the NLP post-solve callback
                     with time_code(self.timing, 'Call after subproblem solve'):
                         config.call_after_subproblem_solve(fixed_nlp)
 
-                    if self.algorithm_should_terminate(config, check_cycling=False):
+                    if self.algorithm_should_terminate(check_cycling=False):
                         self.last_iter_cuts = True
                         break
                 else:
@@ -2988,16 +2888,16 @@ class _MindtPyAlgorithm(object):
                                 continue
                             else:
                                 self.integer_list.append(self.curr_int_sol)
-                        fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
+                        fixed_nlp, fixed_nlp_result = self.solve_subproblem()
                         self.handle_nlp_subproblem_tc(
-                            fixed_nlp, fixed_nlp_result, config
+                            fixed_nlp, fixed_nlp_result
                         )
 
                         # Call the NLP post-solve callback
                         with time_code(self.timing, 'Call after subproblem solve'):
                             config.call_after_subproblem_solve(fixed_nlp)
 
-                        if self.algorithm_should_terminate(config, check_cycling=False):
+                        if self.algorithm_should_terminate(check_cycling=False):
                             self.last_iter_cuts = True
                             break  # TODO: break two loops.
 
@@ -3008,27 +2908,26 @@ class _MindtPyAlgorithm(object):
             and not self.should_terminate
             and config.add_regularization is None
         ):
-            self.fix_dual_bound(config, self.last_iter_cuts)
+            self.fix_dual_bound(self.last_iter_cuts)
         config.logger.info(
             ' ==============================================================================================='
         )
 
     def get_solution_name_obj(self, main_mip_results):
-        config = self.config
-        if config.mip_solver == 'cplex_persistent':
+        if self.config.mip_solver == 'cplex_persistent':
             solution_pool_names = (
                 main_mip_results._solver_model.solution.pool.get_names()
             )
-        elif config.mip_solver == 'gurobi_persistent':
+        elif self.config.mip_solver == 'gurobi_persistent':
             solution_pool_names = list(range(main_mip_results._solver_model.SolCount))
         # list to store the name and objective value of the solutions in the solution pool
         solution_name_obj = []
         for name in solution_pool_names:
-            if config.mip_solver == 'cplex_persistent':
+            if self.config.mip_solver == 'cplex_persistent':
                 obj = main_mip_results._solver_model.solution.pool.get_objective_value(
                     name
                 )
-            elif config.mip_solver == 'gurobi_persistent':
+            elif self.config.mip_solver == 'gurobi_persistent':
                 main_mip_results._solver_model.setParam(
                     gurobipy.GRB.Param.SolutionNumber, name
                 )
@@ -3037,11 +2936,10 @@ class _MindtPyAlgorithm(object):
         solution_name_obj.sort(
             key=itemgetter(1), reverse=self.objective_sense == maximize
         )
-        solution_name_obj = solution_name_obj[: config.num_solution_iteration]
+        solution_name_obj = solution_name_obj[: self.config.num_solution_iteration]
         return solution_name_obj
 
     def add_regularization(self):
-        config = self.config
         if self.best_solution_found is not None:
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if self.dual_bound != self.dual_bound_progress[0]:
@@ -3049,30 +2947,29 @@ class _MindtPyAlgorithm(object):
                     (
                         regularization_main_mip,
                         regularization_main_mip_results,
-                    ) = self.solve_regularization_main(config)
+                    ) = self.solve_regularization_main()
                 self.handle_regularization_main_tc(
-                    regularization_main_mip, regularization_main_mip_results, config
+                    regularization_main_mip, regularization_main_mip_results
                 )
 
     def bounds_converged(self):
         # Check bound convergence
-        config = self.config
-        if self.abs_gap <= config.absolute_bound_tolerance:
-            config.logger.info(
+        if self.abs_gap <= self.config.absolute_bound_tolerance:
+            self.config.logger.info(
                 'MindtPy exiting on bound convergence. '
                 'Absolute gap: {} <= absolute tolerance: {} \n'.format(
-                    self.abs_gap, config.absolute_bound_tolerance
+                    self.abs_gap, self.config.absolute_bound_tolerance
                 )
             )
             self.results.solver.termination_condition = tc.optimal
             return True
         # Check relative bound convergence
         if self.best_solution_found is not None:
-            if self.rel_gap <= config.relative_bound_tolerance:
-                config.logger.info(
+            if self.rel_gap <= self.config.relative_bound_tolerance:
+                self.config.logger.info(
                     'MindtPy exiting on bound convergence. '
                     'Relative gap : {} <= relative tolerance: {} \n'.format(
-                        self.rel_gap, config.relative_bound_tolerance
+                        self.rel_gap, self.config.relative_bound_tolerance
                     )
                 )
                 self.results.solver.termination_condition = tc.optimal
@@ -3081,18 +2978,17 @@ class _MindtPyAlgorithm(object):
 
     def reached_iteration_limit(self):
         # Check iteration limit
-        config = self.config
-        if self.mip_iter >= config.iteration_limit:
-            config.logger.info(
+        if self.mip_iter >= self.config.iteration_limit:
+            self.config.logger.info(
                 'MindtPy unable to converge bounds '
                 'after {} main iterations.'.format(self.mip_iter)
             )
-            config.logger.info(
+            self.config.logger.info(
                 'Final bound values: Primal Bound: {}  Dual Bound: {}'.format(
                     self.primal_bound, self.dual_bound
                 )
             )
-            if config.single_tree:
+            if self.config.single_tree:
                 self.results.solver.termination_condition = tc.feasible
             else:
                 self.results.solver.termination_condition = tc.maxIterations
@@ -3101,16 +2997,15 @@ class _MindtPyAlgorithm(object):
             return False
 
     def reached_time_limit(self):
-        config = self.config
-        if get_main_elapsed_time(self.timing) >= config.time_limit:
-            config.logger.info(
+        if get_main_elapsed_time(self.timing) >= self.config.time_limit:
+            self.config.logger.info(
                 'MindtPy unable to converge bounds '
                 'before time limit of {} seconds. '
                 'Elapsed: {} seconds'.format(
-                    config.time_limit, get_main_elapsed_time(self.timing)
+                    self.config.time_limit, get_main_elapsed_time(self.timing)
                 )
             )
-            config.logger.info(
+            self.config.logger.info(
                 'Final bound values: Primal Bound: {}  Dual Bound: {}'.format(
                     self.primal_bound, self.dual_bound
                 )

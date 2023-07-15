@@ -42,8 +42,14 @@ def add_oa_cuts(
         The relaxed linear model.
     dual_values : list
         The value of the duals for each constraint.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    jacobians : ComponentMap
+        Map nonlinear_constraint --> Map(variable --> jacobian of constraint wrt. variable).
+    objective_sense : Int
+        Objective sense of model.
+    mip_constraint_polynomial_degree : Set
+        The polynomial degrees of constraints that are regarded as linear.
+    mip_iter : Int
+        MIP iteration counter.
     config : ConfigBlock
         The specific configurations for MindtPy.
     cb_opt : SolverFactory, optional
@@ -189,10 +195,12 @@ def add_ecp_cuts(
     ----------
     target_model : Pyomo model
         The relaxed linear model.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    jacobians : ComponentMap
+        Map nonlinear_constraint --> Map(variable --> jacobian of constraint wrt. variable)
     config : ConfigBlock
         The specific configurations for MindtPy.
+    timing : Timing
+        Timing.
     linearize_active : bool, optional
         Whether to linearize the active nonlinear constraints, by default True.
     linearize_violated : bool, optional
@@ -278,14 +286,16 @@ def add_no_good_cuts(target_model, var_values, config, timing, mip_iter=0, cb_op
 
     Parameters
     ----------
+    target_model : Block
+        The model to add no-good cuts.
     var_values : list
         Variable values of the current solution, used to generate the cut.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
     config : ConfigBlock
         The specific configurations for MindtPy.
-    mip_iter: Int, optional
-        Mip iteration counter.
+    timing : Timing
+        Timing.
+    mip_iter : Int, optional
+        MIP iteration counter.
     cb_opt : SolverFactory, optional
         Gurobi_persistent solver, by default None.
 
@@ -346,10 +356,10 @@ def add_affine_cuts(target_model, config, timing):
 
     Parameters
     ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
     config : ConfigBlock
         The specific configurations for MindtPy.
+    timing : Timing
+        Timing.
     """
     with time_code(timing, 'Affine cut generation'):
         m = target_model

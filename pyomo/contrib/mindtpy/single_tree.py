@@ -622,7 +622,7 @@ class LazyOACallback_cplex(
         (
             feas_subproblem,
             feas_subproblem_results,
-        ) = mindtpy_object.solve_feasibility_subproblem(config)
+        ) = mindtpy_object.solve_feasibility_subproblem()
         # In OA algorithm, OA cuts are generated based on the solution of the subproblem
         # We need to first copy the value of variables from the subproblem and then add cuts
         copy_var_list_values(
@@ -789,7 +789,7 @@ class LazyOACallback_cplex(
 
         # solve subproblem
         # The constraint linearization happens in the handlers
-        fixed_nlp, fixed_nlp_result = mindtpy_object.solve_subproblem(config)
+        fixed_nlp, fixed_nlp_result = mindtpy_object.solve_subproblem()
         # add oa cuts
         if fixed_nlp_result.solver.termination_condition in {
             tc.optimal,
@@ -936,10 +936,10 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_object, config):
 
         # solve subproblem
         # The constraint linearization happens in the handlers
-        fixed_nlp, fixed_nlp_result = mindtpy_object.solve_subproblem(config)
+        fixed_nlp, fixed_nlp_result = mindtpy_object.solve_subproblem()
 
         mindtpy_object.handle_nlp_subproblem_tc(
-            fixed_nlp, fixed_nlp_result, config, cb_opt
+            fixed_nlp, fixed_nlp_result, cb_opt
         )
 
 
