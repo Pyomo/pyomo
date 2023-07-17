@@ -208,7 +208,7 @@ class CoptPersistent(PersistentSolver, CoptDirect):
         Parameters
         ----------
         param: str
-            The COPT parameter to get information for. See COPT documenation for possible options.
+            The COPT parameter to get information for. See COPT documentation for possible options.
 
         Returns
         -------

@@ -1,6 +1,6 @@
 """
 This module contains functions for computing an irreducible infeasible set
-for a Pyomo MILP or LP using a specified commerical solver, one of CPLEX,
+for a Pyomo MILP or LP using a specified commercial solver, one of CPLEX,
 Gurobi, Xpress or COPT.
 """
 

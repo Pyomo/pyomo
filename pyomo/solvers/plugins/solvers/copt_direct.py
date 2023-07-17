@@ -458,7 +458,7 @@ class CoptDirect(DirectSolver):
                 TerminationCondition.maxEvaluations
             )
             soln.status = SolutionStatus.stoppedByLimit
-        elif status == 7:  # Imprecise
+        elif status == coptpy.COPT.IMPRECISE:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_message = "Unable to satisfy optimality tolerances and returns a sub-optimal solution."
             self.results.solver.termination_condition = TerminationCondition.other

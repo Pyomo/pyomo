@@ -825,7 +825,7 @@ class Copt(PersistentBase, PersistentSolver):
             results.termination_condition = TerminationCondition.error
         elif status == coptpy.COPT.NODELIMIT:
             results.termination_condition = TerminationCondition.maxIterations
-        elif status == 7:  # Imprecise
+        elif status == coptpy.COPT.IMPRECISE:
             results.termination_condition = TerminationCondition.optimal
         elif status == coptpy.COPT.TIMEOUT:
             results.termination_condition = TerminationCondition.maxTimeLimit
@@ -856,7 +856,7 @@ class Copt(PersistentBase, PersistentSolver):
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '
                         'results.termination_condition and '
-                        'resutls.found_feasible_solution() before loading a solution.'
+                        'results.found_feasible_solution() before loading a solution.'
                     )
                 self.load_vars()
             else:
@@ -864,7 +864,7 @@ class Copt(PersistentBase, PersistentSolver):
                     'A feasible solution was not found, so no solution can be loaded.'
                     'Please set opt.config.load_solution=False and check '
                     'results.termination_condition and '
-                    'resutls.best_feasible_objective before loading a solution.'
+                    'results.best_feasible_objective before loading a solution.'
                 )
         timer.stop('load solution')
 
@@ -1163,7 +1163,7 @@ class Copt(PersistentBase, PersistentSolver):
         Parameters
         ----------
         param: str
-            The COPT parameter to get info for. See COPT documenation for possible options.
+            The COPT parameter to get info for. See COPT documentation for possible options.
 
         Returns
         -------
