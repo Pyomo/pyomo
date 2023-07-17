@@ -11,6 +11,7 @@
 
 from pyomo.common.fileutils import find_library
 from pyomo.common.dependencies import numpy as np
+from pyomo.contrib.pynumero.exceptions import PyNumeroEvaluationError
 import ctypes
 import logging
 import os
@@ -364,7 +365,8 @@ class AmplInterface(object):
         res = self.ASLib.EXTERNAL_AmplInterface_eval_f(
             self._obj, x, self._nx, ctypes.byref(sol)
         )
-        assert res, "Error in AMPL evaluation"
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
         return sol.value
 
     def eval_deriv_f(self, x, df):
@@ -373,7 +375,8 @@ class AmplInterface(object):
             x.dtype == np.double
         ), "Error: array type. Function eval_deriv_f expects an array of type double"
         res = self.ASLib.EXTERNAL_AmplInterface_eval_deriv_f(self._obj, x, df, len(x))
-        assert res, "Error in AMPL evaluation"
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
 
     def struct_jac_g(self, irow, jcol):
         irow_p = irow.astype(np.intc, casting='safe', copy=False)
@@ -409,7 +412,8 @@ class AmplInterface(object):
         res = self.ASLib.EXTERNAL_AmplInterface_eval_jac_g(
             self._obj, xeval, self._nx, jac_eval, self._nnz_jac_g
         )
-        assert res, "Error in AMPL evaluation"
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
 
     def eval_g(self, x, g):
         assert x.size == self._nx, "Error: Dimension mismatch."
@@ -423,7 +427,8 @@ class AmplInterface(object):
         res = self.ASLib.EXTERNAL_AmplInterface_eval_g(
             self._obj, x, self._nx, g, self._ny
         )
-        assert res, "Error in AMPL evaluation"
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
 
     def eval_hes_lag(self, x, lam, hes_lag, obj_factor=1.0):
         assert x.size == self._nx, "Error: Dimension mismatch."
@@ -453,7 +458,8 @@ class AmplInterface(object):
             res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(
                 self._obj, x, self._nx, lam, self._ny, hes_lag, self._nnz_hess
             )
-        assert res, "Error in AMPL evaluation"
+        if not res:
+            raise PyNumeroEvaluationError("Error in AMPL evaluation")
 
     def finalize_solution(self, ampl_solve_status_num, msg, x, lam):
         b_msg = msg.encode('utf-8')
