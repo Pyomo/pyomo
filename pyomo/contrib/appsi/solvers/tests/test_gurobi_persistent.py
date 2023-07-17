@@ -179,6 +179,45 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
 
 
 class TestGurobiPersistent(unittest.TestCase):
+    def test_nonconvex_qcp_objective_bound_1(self):
+        # the goal of this test is to ensure we can get an objective bound
+        # for nonconvex but continuous problems even if a feasible solution
+        # is not found
+        #
+        # This is a fragile test because it could fail if Gurobi's algorithms improve
+        # (e.g., a heuristic solution is found before an objective bound of -8 is reached
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(-5, 5))
+        m.y = pe.Var(bounds=(-5, 5))
+        m.obj = pe.Objective(expr=-m.x**2 - m.y)
+        m.c1 = pe.Constraint(expr=m.y <= -2 * m.x + 1)
+        m.c2 = pe.Constraint(expr=m.y <= m.x - 2)
+        opt = Gurobi()
+        opt.gurobi_options['nonconvex'] = 2
+        opt.gurobi_options['BestBdStop'] = -8
+        opt.config.load_solution = False
+        res = opt.solve(m)
+        self.assertEqual(res.best_feasible_objective, None)
+        self.assertAlmostEqual(res.best_objective_bound, -8)
+
+    def test_nonconvex_qcp_objective_bound_2(self):
+        # the goal of this test is to ensure we can best_objective_bound properly
+        # for nonconvex but continuous problems when the solver terminates with a nonzero gap
+        #
+        # This is a fragile test because it could fail if Gurobi's algorithms change
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(-5, 5))
+        m.y = pe.Var(bounds=(-5, 5))
+        m.obj = pe.Objective(expr=-m.x**2 - m.y)
+        m.c1 = pe.Constraint(expr=m.y <= -2 * m.x + 1)
+        m.c2 = pe.Constraint(expr=m.y <= m.x - 2)
+        opt = Gurobi()
+        opt.gurobi_options['nonconvex'] = 2
+        opt.gurobi_options['MIPGap'] = 0.5
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, -4)
+        self.assertAlmostEqual(res.best_objective_bound, -6)
+
     def test_range_constraints(self):
         m = pe.ConcreteModel()
         m.x = pe.Var()

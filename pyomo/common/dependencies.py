@@ -14,9 +14,13 @@ import inspect
 import importlib
 import logging
 import sys
+import warnings
 
 from .deprecation import deprecated, deprecation_warning, in_testing_environment
 from . import numeric_types
+
+
+SUPPRESS_DEPENDENCY_WARNINGS = False
 
 
 class DeferredImportError(ImportError):
@@ -177,6 +181,28 @@ class DeferredImportModule(object):
     # detecting numpy types
     def mro(self):
         return [DeferredImportModule, object]
+
+
+def UnavailableClass(unavailable_module):
+    class UnavailableMeta(type):
+        def __getattr__(cls, name):
+            raise DeferredImportError(
+                unavailable_module._moduleunavailable_message(
+                    f"The class attribute '{cls.__name__}.{name}' is not available "
+                    "because a needed optional dependency was not found"
+                )
+            )
+
+    class UnavailableBase(metaclass=UnavailableMeta):
+        def __new__(cls, *args, **kwargs):
+            raise DeferredImportError(
+                unavailable_module._moduleunavailable_message(
+                    f"The class '{cls.__name__}' cannot be created because a "
+                    "needed optional dependency was not found"
+                )
+            )
+
+    return UnavailableBase
 
 
 class _DeferredImportIndicatorBase(object):
@@ -563,10 +589,17 @@ def _perform_import(
     import_error = None
     version_error = None
     try:
-        if importer is None:
-            module = importlib.import_module(name)
-        else:
-            module = importer()
+        with warnings.catch_warnings():
+            # Temporarily suppress all warnings: we assume we are
+            # importing a third-party package here and we don't want to
+            # see them?
+            if SUPPRESS_DEPENDENCY_WARNINGS and not name.startswith('pyomo.'):
+                warnings.resetwarnings()
+                warnings.simplefilter("ignore")
+            if importer is None:
+                module = importlib.import_module(name)
+            else:
+                module = importer()
         if minimum_version is None or check_min_version(module, minimum_version):
             if callback is not None:
                 callback(module, True)
@@ -721,6 +754,7 @@ def _finalize_numpy(np, available):
 
 
 dill, dill_available = attempt_import('dill')
+mpi4py, mpi4py_available = attempt_import('mpi4py')
 networkx, networkx_available = attempt_import('networkx')
 numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
 pandas, pandas_available = attempt_import('pandas')
