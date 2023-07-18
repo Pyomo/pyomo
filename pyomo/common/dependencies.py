@@ -235,6 +235,7 @@ def UnavailableClass(unavailable_module):
        named 'bogus_unavailable_class')
 
     """
+
     class UnavailableMeta(type):
         def __getattr__(cls, name):
             raise DeferredImportError(
