@@ -25,11 +25,11 @@ SUPPRESS_DEPENDENCY_WARNINGS = False
 
 
 class ModuleUnavailable(object):
-    """Mock object that raises a DeferredImportError upon attribute access
+    """Mock object that raises :py:class:`.DeferredImportError` upon attribute access
 
     This object is returned by :py:func:`attempt_import()` in lieu of
     the module in the case that the module import fails.  Any attempts
-    to access attributes on this object will raise a DeferredImportError
+    to access attributes on this object will raise a :py:class:`.DeferredImportError`
     exception.
 
     Parameters
@@ -131,7 +131,7 @@ class DeferredImportModule(object):
     ``defer_check=True``.  Any attempts to access attributes on this
     object will trigger the actual module import and return either the
     appropriate module attribute or else if the module import fails,
-    raise a DeferredImportError exception.
+    raise a :py:class:`.DeferredImportError` exception.
 
     """
 
@@ -275,11 +275,11 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
 
     This object serves as a placeholder for the Boolean indicator if a
     deferred module import was successful.  Casting this instance to
-    bool will cause the import to be attempted.  The actual import logic
-    is here and not in the DeferredImportModule to reduce the number of
-    attributes on the DeferredImportModule.
+    `bool` will cause the import to be attempted.  The actual import logic
+    is here and not in the :py:class:`DeferredImportModule` to reduce the number of
+    attributes on the :py:class:`DeferredImportModule`.
 
-    ``DeferredImportIndicator`` supports limited logical expressions
+    :py:class:`DeferredImportIndicator` supports limited logical expressions
     using the ``&`` (and) and ``|`` (or) binary operators.  Creating
     these expressions does not trigger the import of the corresponding
     :py:class:`DeferredImportModule` instances, although casting the
@@ -524,8 +524,8 @@ def attempt_import(
     defer_check: bool, optional
         If True (the default), then the attempted import is deferred
         until the first use of either the module or the availability
-        flag.  The method will return instances of DeferredImportModule
-        and DeferredImportIndicator.
+        flag.  The method will return instances of :py:class:`DeferredImportModule`
+        and :py:class:`DeferredImportIndicator`.
 
     deferred_submodules: Iterable[str], optional
         If provided, an iterable of submodule names within this module
@@ -673,7 +673,7 @@ def _perform_import(
 
 
 def declare_deferred_modules_as_importable(globals_dict):
-    """Make all DeferredImportModules in ``globals_dict`` importable
+    """Make all :py:class:`DeferredImportModules` in ``globals_dict`` importable
 
     This function will go throughout the specified ``globals_dict``
     dictionary and add any instances of :py:class:`DeferredImportModule`
