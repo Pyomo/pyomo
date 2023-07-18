@@ -14,6 +14,36 @@ import textwrap
 
 
 def format_exception(msg, prolog=None, epilog=None, exception=None, width=76):
+    """Generate a formatted exception message
+
+    This returns a formated exception message, line wrapped for display
+    on the console and with optional prolog and epilog messages.
+
+    Parameters
+    ----------
+    msg: str
+        The raw exception message
+
+    prolog: str, optional
+        A message to output before the exception message, ``msg``.  If
+        this message is long enough to line wrap, the ``msg`` will be
+        indented a level below the ``prolog`` message.
+
+    epilog: str, optional
+        A message to output after the exception message, ``msg``.  If
+        provided, the ``msg`` will be indented a level below the
+        ``prolog`` / ``epilog`` messages.
+
+    exception: Exception, optional
+        The raw exception being raised (used to improve initial line wrapping).
+
+    width: int, optional
+        The line length to wrap the exception message to.
+
+    Returns
+    -------
+    str
+    """
     fields = []
 
     if epilog:
