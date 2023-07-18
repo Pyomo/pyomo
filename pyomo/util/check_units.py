@@ -265,7 +265,7 @@ def assert_units_consistent(obj):
 
 def identify_inconsistent_units(block):
     """
-    This function generates a ComponentSet of all Constraints, Expression and Objectives
+    This function generates a ComponentSet of all Constraints, Expressions, and Objectives
     in a Block or model which have inconsistent units.
 
     Parameters
