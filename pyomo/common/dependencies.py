@@ -17,14 +17,11 @@ import sys
 import warnings
 
 from .deprecation import deprecated, deprecation_warning, in_testing_environment
+from .errors import DeferredImportError
 from . import numeric_types
 
 
 SUPPRESS_DEPENDENCY_WARNINGS = False
-
-
-class DeferredImportError(ImportError):
-    pass
 
 
 class ModuleUnavailable(object):
