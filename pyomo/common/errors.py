@@ -155,9 +155,11 @@ class DeveloperError(PyomoException, NotImplementedError):
         )
 
 
-class InvalidValueError(PyomoException, ValueError):
+class InfeasibleConstraintException(PyomoException):
     """
-    Exception class used for for value errors in compiled model representations
+    Exception class used by Pyomo transformations to indicate
+    that an infeasible constraint has been identified (e.g. in
+    the course of range reduction).
     """
 
     pass
@@ -171,26 +173,9 @@ class IntervalException(PyomoException, ValueError):
     pass
 
 
-class InfeasibleConstraintException(PyomoException):
+class InvalidValueError(PyomoException, ValueError):
     """
-    Exception class used by Pyomo transformations to indicate
-    that an infeasible constraint has been identified (e.g. in
-    the course of range reduction).
-    """
-
-    pass
-
-
-class NondifferentiableError(PyomoException, ValueError):
-    """A Pyomo-specific ValueError raised for non-differentiable expressions"""
-
-    pass
-
-
-class TempfileContextError(PyomoException, IndexError):
-    """A Pyomo-specific IndexError raised when attempting to use the
-    TempfileManager when it does not have a currently active context.
-
+    Exception class used for for value errors in compiled model representations
     """
 
     pass
@@ -216,3 +201,18 @@ class MouseTrap(PyomoException, NotImplementedError):
             "pull requests are always welcome!",
             exception=self,
         )
+
+
+class NondifferentiableError(PyomoException, ValueError):
+    """A Pyomo-specific ValueError raised for non-differentiable expressions"""
+
+    pass
+
+
+class TempfileContextError(PyomoException, IndexError):
+    """A Pyomo-specific IndexError raised when attempting to use the
+    TempfileManager when it does not have a currently active context.
+
+    """
+
+    pass
