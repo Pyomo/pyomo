@@ -184,6 +184,60 @@ class DeferredImportModule(object):
 
 
 def UnavailableClass(unavailable_module):
+    """Function to generate an "unavailable" base class
+
+    This function returns a custom class that wraps the
+    :py:class:`ModuleUnavailable` instance returned by
+    :py:func:`attempt_import` when the target module is not available.
+    Any attempt to instantiate this class (or a class derived from it)
+    or access a class attribute will raise the
+    :py:class:`.DeferredImportError` from the wrapped
+    :py:class:`ModuleUnavailable` object.
+
+    Parameters
+    ----------
+    unavailable_module: ModuleUnavailable
+        The :py:class:`ModuleUnavailable` instance (from
+        :py:func:`attempt_import`) to use to generate the
+        :py:class:`.DeferredImportError`.
+
+    Example
+    -------
+
+    Declaring a class that inherits from an optional dependency:
+
+    .. doctest::
+
+       >>> from pyomo.common.dependencies import attempt_import, UnavailableClass
+       >>> bogus, bogus_available = attempt_import('bogus_unavailable_class')
+       >>> class MyPlugin(bogus.plugin if bogus_available else UnavailableClass(bogus)):
+       ...     pass
+
+    Attempting to instantiate the derived class generates an exception
+    when the module is unavailable:
+
+    .. doctest::
+
+       >>> MyPlugin()
+       Traceback (most recent call last):
+          ...
+       pyomo.common.dependencies.DeferredImportError: The class 'MyPlugin' cannot be
+       created because a needed optional dependency was not found (import raised
+       ModuleNotFoundError: No module named 'bogus_unavailable_class')
+
+    As does attempting to access class attributes on the derived class:
+
+    .. doctest::
+
+       >>> MyPlugin.create_instance()
+       Traceback (most recent call last):
+          ...
+       pyomo.common.dependencies.DeferredImportError: The class attribute
+       'MyPlugin.create_instance' is not available because a needed optional
+       dependency was not found (import raised ModuleNotFoundError: No module
+       named 'bogus_unavailable_class')
+
+    """
     class UnavailableMeta(type):
         def __getattr__(cls, name):
             raise DeferredImportError(
