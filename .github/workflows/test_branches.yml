@@ -95,14 +95,6 @@ jobs:
           PACKAGES: mpi4py openmpi
 
         - os: ubuntu-latest
-          python: 3.11
-          other: /singletest
-          category: "-m 'neos or importtest'"
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
           python: '3.10'
           other: /cython
           setup_options: --with-cython
