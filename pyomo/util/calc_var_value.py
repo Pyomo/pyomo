@@ -89,7 +89,7 @@ def calculate_variable_from_constraint(
     upper = constraint.ub
 
     if lower != upper:
-        raise ValueError("Constraint must be an equality constraint")
+        raise ValueError(f"Constraint '{constraint}' must be an equality constraint")
 
     if variable.value is None:
         # Note that we use "skip_validation=True" here as well, as the
@@ -201,7 +201,10 @@ def calculate_variable_from_constraint(
                 raise
 
         if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
-            raise ValueError("Variable derivative == 0, cannot solve for variable")
+            raise ValueError(
+                f"Variable '{variable}' derivative == 0 in constraint "
+                f"'{constraint}', cannot solve for variable"
+            )
 
     if expr_deriv is None:
         fp0 = differentiate(expr, wrt=variable, mode=diff_mode)
@@ -210,8 +213,9 @@ def calculate_variable_from_constraint(
 
     if abs(value(fp0)) < 1e-12:
         raise RuntimeError(
-            'Initial value for variable results in a derivative value that is '
-            'very close to zero.\n\tPlease provide a different initial guess.'
+            f"Initial value for variable '{variable}' results in a derivative "
+            f"value for constraint '{constraint}' that is very close to zero.\n"
+            "\tPlease provide a different initial guess."
         )
 
     iter_left = iterlim
@@ -220,7 +224,8 @@ def calculate_variable_from_constraint(
         iter_left -= 1
         if not iter_left:
             raise RuntimeError(
-                "Iteration limit (%s) reached; remaining residual = %s"
+                f"Iteration limit (%s) reached solving for variable '{variable}' "
+                f"using constraint '{constraint}'; remaining residual = %s"
                 % (iterlim, value(expr))
             )
 
@@ -235,8 +240,8 @@ def calculate_variable_from_constraint(
             # the line search is turned off)
             logger.error(
                 "Newton's method encountered an error evaluating the "
-                "expression.\n\tPlease provide a different initial guess "
-                "or enable the linesearch if you have not."
+                f"expression for constraint '{constraint}'.\n\tPlease provide a "
+                "different initial guess or enable the linesearch if you have not."
             )
             raise
 
@@ -247,7 +252,8 @@ def calculate_variable_from_constraint(
 
         if abs(fpk) < 1e-12:
             raise RuntimeError(
-                "Newton's method encountered a derivative that was too "
+                "Newton's method encountered a derivative of constraint "
+                f"'{constraint}' with respect to variable '{variable}' that was too "
                 "close to zero.\n\tPlease provide a different initial guess "
                 "or enable the linesearch if you have not."
             )
@@ -283,8 +289,9 @@ def calculate_variable_from_constraint(
                 if residual is None or type(residual) is complex:
                     residual = "{function evaluation error}"
                 raise RuntimeError(
-                    "Linesearch iteration limit reached; remaining "
-                    "residual = %s." % (residual,)
+                    f"Linesearch iteration limit reached solving for "
+                    f"variable '{variable}' using constraint '{constraint}'; "
+                    f"remaining residual = {residual}."
                 )
     #
     # Re-set the variable value to trigger any warnings WRT the final
