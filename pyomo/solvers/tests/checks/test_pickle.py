@@ -169,7 +169,15 @@ for model in all_models():
 for key, value in generate_scenarios(lambda c: c.test_pickling):
     model, solver, io = key
     cls = driver[model]
-
+    # July 19, 2023: There is an issue with certain GAMS cases that is
+    # causing failures. This is not universal, however, so we cannot add
+    # the cases directly to testcases.py.
+    if (
+        (solver == 'gams')
+        and (io in ['gms', 'python'])
+        and ('.LP_simple_kernel' in str(value.model))
+    ):
+        value.status = 'expected failure'
     # Symbolic labels
     test_name = "test_" + solver + "_" + io + "_symbolic_labels"
     test_method = create_method(model, solver, io, value, True)

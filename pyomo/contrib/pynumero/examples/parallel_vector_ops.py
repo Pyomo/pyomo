@@ -1,10 +1,10 @@
 import numpy as np
-from mpi4py import MPI
+from pyomo.common.dependencies import mpi4py
 from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 
 
 def main():
-    comm = MPI.COMM_WORLD
+    comm = mpi4py.MPI.COMM_WORLD
     rank = comm.Get_rank()
 
     owners = [2, 0, 1, -1]
