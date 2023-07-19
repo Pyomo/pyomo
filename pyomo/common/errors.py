@@ -176,7 +176,7 @@ class IntervalException(PyomoException, ValueError):
 
 class InvalidValueError(PyomoException, ValueError):
     """
-    Exception class used for for value errors in compiled model representations
+    Exception class used for value errors in compiled model representations
     """
 
     pass
