@@ -124,6 +124,16 @@ class InvalidValueError(PyomoException, ValueError):
     pass
 
 
+class IterationLimitError(PyomoException, RuntimeError):
+    """A subclass of :py:class:`RuntimeError`, raised by an iterative method
+    when the iteration limit is reached.
+
+    TODO: currently solvers currently do not raise this exception, but
+    probably should (at least when non-normal termination conditions are
+    mapped to exceptions)
+
+    """
+
 class IntervalException(PyomoException, ValueError):
     """
     Exception class used for errors in interval arithmetic.

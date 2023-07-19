@@ -14,6 +14,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
+from pyomo.common.errors import IterationLimitError
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
     ConcreteModel,
@@ -152,7 +153,7 @@ class Test_calc_var(unittest.TestCase):
         for mode in all_diff_modes:
             m.x.set_value(1.25)  # set the initial value
             with self.assertRaisesRegex(
-                RuntimeError, r'Iteration limit \(10\) reached'
+                IterationLimitError, r'Iteration limit \(10\) reached'
             ):
                 calculate_variable_from_constraint(
                     m.x, m.d, iterlim=10, linesearch=False, diff_mode=mode
@@ -162,7 +163,7 @@ class Test_calc_var(unittest.TestCase):
         for mode in all_diff_modes:
             m.x.set_value(1.25)  # set the initial value
             with self.assertRaisesRegex(
-                RuntimeError, "Linesearch iteration limit reached"
+                    IterationLimitError, "Linesearch iteration limit reached"
             ):
                 calculate_variable_from_constraint(
                     m.x, m.d, iterlim=10, linesearch=True, diff_mode=mode
@@ -172,7 +173,7 @@ class Test_calc_var(unittest.TestCase):
         for mode in all_diff_modes:
             m.x = 0
             with self.assertRaisesRegex(
-                RuntimeError,
+                ValueError,
                 "Initial value for variable 'x' results in a "
                 "derivative value for constraint 'c' that is very close to zero.",
             ):
@@ -185,7 +186,7 @@ class Test_calc_var(unittest.TestCase):
                 # numeric differentiation should not be used to check if a
                 # derivative is always zero
                 with self.assertRaisesRegex(
-                    RuntimeError,
+                    ValueError,
                     "Initial value for variable 'y' results in a "
                     "derivative value for constraint 'c' that is very close to zero.",
                 ):
@@ -314,7 +315,7 @@ class Test_calc_var(unittest.TestCase):
         m.c = Constraint(expr=m.x**0.5 == -1e-8)
         m.x = 1e-8  # 197.932807183
         with self.assertRaisesRegex(
-            RuntimeError,
+            IterationLimitError,
             "Linesearch iteration limit reached solving for variable 'x' using "
             "constraint 'c'; remaining residual = {function evaluation error}",
         ):

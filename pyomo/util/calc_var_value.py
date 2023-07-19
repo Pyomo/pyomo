@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.errors import IterationLimitError
 from pyomo.core.expr.numvalue import native_numeric_types, value, is_fixed
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.base.constraint import Constraint, _ConstraintData
@@ -212,7 +213,7 @@ def calculate_variable_from_constraint(
         fp0 = value(expr_deriv)
 
     if abs(value(fp0)) < 1e-12:
-        raise RuntimeError(
+        raise ValueError(
             f"Initial value for variable '{variable}' results in a derivative "
             f"value for constraint '{constraint}' that is very close to zero.\n"
             "\tPlease provide a different initial guess."
@@ -223,7 +224,7 @@ def calculate_variable_from_constraint(
     while abs(fk) > eps and iter_left:
         iter_left -= 1
         if not iter_left:
-            raise RuntimeError(
+            raise IterationLimitError(
                 f"Iteration limit (%s) reached solving for variable '{variable}' "
                 f"using constraint '{constraint}'; remaining residual = %s"
                 % (iterlim, value(expr))
@@ -251,6 +252,8 @@ def calculate_variable_from_constraint(
             fpk = value(expr_deriv)
 
         if abs(fpk) < 1e-12:
+            # TODO: should this raise a ValueError or a new
+            # DerivativeError (subclassing ArithmeticError)?
             raise RuntimeError(
                 "Newton's method encountered a derivative of constraint "
                 f"'{constraint}' with respect to variable '{variable}' that was too "
@@ -288,7 +291,7 @@ def calculate_variable_from_constraint(
                 residual = value(expr, exception=False)
                 if residual is None or type(residual) is complex:
                     residual = "{function evaluation error}"
-                raise RuntimeError(
+                raise IterationLimitError(
                     f"Linesearch iteration limit reached solving for "
                     f"variable '{variable}' using constraint '{constraint}'; "
                     f"remaining residual = {residual}."
