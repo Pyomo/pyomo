@@ -14,6 +14,36 @@ import textwrap
 
 
 def format_exception(msg, prolog=None, epilog=None, exception=None, width=76):
+    """Generate a formatted exception message
+
+    This returns a formatted exception message, line wrapped for display
+    on the console and with optional prolog and epilog messages.
+
+    Parameters
+    ----------
+    msg: str
+        The raw exception message
+
+    prolog: str, optional
+        A message to output before the exception message, ``msg``.  If
+        this message is long enough to line wrap, the ``msg`` will be
+        indented a level below the ``prolog`` message.
+
+    epilog: str, optional
+        A message to output after the exception message, ``msg``.  If
+        provided, the ``msg`` will be indented a level below the
+        ``prolog`` / ``epilog`` messages.
+
+    exception: Exception, optional
+        The raw exception being raised (used to improve initial line wrapping).
+
+    width: int, optional
+        The line length to wrap the exception message to.
+
+    Returns
+    -------
+    str
+    """
     fields = []
 
     if epilog:
@@ -92,9 +122,19 @@ class ApplicationError(Exception):
 
 class PyomoException(Exception):
     """
-    Exception class for other pyomo exceptions to inherit from,
-    allowing pyomo exceptions to be caught in a general way
+    Exception class for other Pyomo exceptions to inherit from,
+    allowing Pyomo exceptions to be caught in a general way
     (e.g., in other applications that use Pyomo).
+    """
+
+    pass
+
+
+class DeferredImportError(ImportError):
+    """This exception is raised when something attempts to access a module
+    that was imported by :py:func:`.attempt_import`, but the module
+    import failed.
+
     """
 
     pass
@@ -116,9 +156,11 @@ class DeveloperError(PyomoException, NotImplementedError):
         )
 
 
-class InvalidValueError(PyomoException, ValueError):
+class InfeasibleConstraintException(PyomoException):
     """
-    Exception class used for for value errors in compiled model representations
+    Exception class used by Pyomo transformations to indicate
+    that an infeasible constraint has been identified (e.g. in
+    the course of range reduction).
     """
 
     pass
@@ -132,26 +174,9 @@ class IntervalException(PyomoException, ValueError):
     pass
 
 
-class InfeasibleConstraintException(PyomoException):
+class InvalidValueError(PyomoException, ValueError):
     """
-    Exception class used by Pyomo transformations to indicate
-    that an infeasible constraint has been identified (e.g. in
-    the course of range reduction).
-    """
-
-    pass
-
-
-class NondifferentiableError(PyomoException, ValueError):
-    """A Pyomo-specific ValueError raised for non-differentiable expressions"""
-
-    pass
-
-
-class TempfileContextError(PyomoException, IndexError):
-    """A Pyomo-specific IndexError raised when attempting to use the
-    TempfileManager when it does not have a currently active context.
-
+    Exception class used for value errors in compiled model representations
     """
 
     pass
@@ -177,3 +202,18 @@ class MouseTrap(PyomoException, NotImplementedError):
             "pull requests are always welcome!",
             exception=self,
         )
+
+
+class NondifferentiableError(PyomoException, ValueError):
+    """A Pyomo-specific ValueError raised for non-differentiable expressions"""
+
+    pass
+
+
+class TempfileContextError(PyomoException, IndexError):
+    """A Pyomo-specific IndexError raised when attempting to use the
+    TempfileManager when it does not have a currently active context.
+
+    """
+
+    pass
