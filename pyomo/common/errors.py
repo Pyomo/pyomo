@@ -134,6 +134,7 @@ class IterationLimitError(PyomoException, RuntimeError):
 
     """
 
+
 class IntervalException(PyomoException, ValueError):
     """
     Exception class used for errors in interval arithmetic.

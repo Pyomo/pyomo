@@ -163,7 +163,7 @@ class Test_calc_var(unittest.TestCase):
         for mode in all_diff_modes:
             m.x.set_value(1.25)  # set the initial value
             with self.assertRaisesRegex(
-                    IterationLimitError, "Linesearch iteration limit reached"
+                IterationLimitError, "Linesearch iteration limit reached"
             ):
                 calculate_variable_from_constraint(
                     m.x, m.d, iterlim=10, linesearch=True, diff_mode=mode
