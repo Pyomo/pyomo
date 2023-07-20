@@ -308,6 +308,27 @@ def split_long_line(line):
     return new_lines
 
 
+class GAMSSymbolMap(SymbolMap):
+    def __init__(self, var_labeler, var_list):
+        super().__init__(self.var_label)
+        self.var_labeler = var_labeler
+        self.var_list = var_list
+
+    def var_label(self, obj):
+        # if obj.is_fixed():
+        #    return str(value(obj))
+        return self.getSymbol(obj, self.var_recorder)
+
+    def var_recorder(self, obj):
+        ans = self.var_labeler(obj)
+        try:
+            if obj.is_variable_type():
+                self.var_list.append(ans)
+        except:
+            pass
+        return ans
+
+
 @WriterFactory.register('gams', 'Generate the corresponding GAMS file')
 class ProblemWriter_gams(AbstractProblemWriter):
     def __init__(self):
@@ -492,21 +513,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         var_list = []
 
-        def var_recorder(obj):
-            ans = var_labeler(obj)
-            try:
-                if obj.is_variable_type():
-                    var_list.append(ans)
-            except:
-                pass
-            return ans
-
-        def var_label(obj):
-            # if obj.is_fixed():
-            #    return str(value(obj))
-            return symbolMap.getSymbol(obj, var_recorder)
-
-        symbolMap = SymbolMap(var_label)
+        symbolMap = GAMSSymbolMap(var_labeler, var_list)
 
         # when sorting, there are a non-trivial number of
         # temporary objects created. these all yield
@@ -527,7 +534,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file=output_file,
                     solver_capability=solver_capability,
                     var_list=var_list,
-                    var_label=var_label,
+                    var_label=symbolMap.var_label,
                     symbolMap=symbolMap,
                     con_labeler=con_labeler,
                     sort=sort,
