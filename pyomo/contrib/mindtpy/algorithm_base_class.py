@@ -2593,15 +2593,18 @@ class _MindtPyAlgorithm(object):
             self.mip_opt = GurobiPersistent4MindtPy()
         else:
             self.mip_opt = SolverFactory(config.mip_solver)
-        self.regularization_mip_opt = SolverFactory(config.mip_regularization_solver)
         self.nlp_opt = SolverFactory(config.nlp_solver)
         self.feasibility_nlp_opt = SolverFactory(config.nlp_solver)
+        if config.mip_regularization_solver is not None:
+            self.regularization_mip_opt = SolverFactory(config.mip_regularization_solver)
 
         self.check_subsolver_validity()
+        if config.mip_solver == 'gams':
+            self.mip_opt.options['add_options'] = []
+        if config.nlp_solver == 'gams':
+            self.nlp_opt.options['add_options'] = []
+            self.feasibility_nlp_opt.options['add_options'] = []
         set_solver_mipgap(self.mip_opt, config.mip_solver, config)
-        set_solver_mipgap(
-            self.regularization_mip_opt, config.mip_regularization_solver, config
-        )
 
         set_solver_constraint_violation_tolerance(
             self.nlp_opt, config.nlp_solver, config
@@ -2621,25 +2624,34 @@ class _MindtPyAlgorithm(object):
         # set threads
         if config.threads > 0:
             self.mip_opt.options['threads'] = config.threads
-        if config.regularization_mip_threads > 0:
-            self.regularization_mip_opt['threads'] = config.threads
-
         # regularization solver
-        if config.mip_regularization_solver == 'cplex':
-            if config.solution_limit is not None:
-                self.regularization_mip_opt.options[
-                    'mip limits solutions'
-                ] = config.solution_limit
-            self.regularization_mip_opt.options['mip strategy presolvenode'] = 3
-            # TODO: need to discuss if this option should be added.
-            if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
-                self.regularization_mip_opt.options['optimalitytarget'] = 3
-        elif config.mip_regularization_solver == 'gurobi':
-            if config.solution_limit is not None:
-                self.regularization_mip_opt.options[
-                    'SolutionLimit'
-                ] = config.solution_limit
-            self.regularization_mip_opt.options['Presolve'] = 2
+        if config.mip_regularization_solver is not None:
+            set_solver_mipgap(
+                self.regularization_mip_opt,
+                config.mip_regularization_solver,
+                config
+            )
+            if config.mip_regularization_solver == 'gams':
+                self.regularization_mip_opt.options['add_options'] = []
+            if config.regularization_mip_threads > 0:
+                self.regularization_mip_opt.options['threads'] = config.regularization_mip_threads
+            else:
+                self.regularization_mip_opt.options['threads'] = config.threads
+
+            if config.mip_regularization_solver in {'cplex', 'appsi_cplex', 'cplex_persistent'}:
+                if config.solution_limit is not None:
+                    self.regularization_mip_opt.options[
+                        'mip limits solutions'
+                    ] = config.solution_limit
+                self.regularization_mip_opt.options['mip strategy presolvenode'] = 3
+                if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
+                    self.regularization_mip_opt.options['optimalitytarget'] = 3
+            elif config.mip_regularization_solver == 'gurobi':
+                if config.solution_limit is not None:
+                    self.regularization_mip_opt.options[
+                        'SolutionLimit'
+                    ] = config.solution_limit
+                self.regularization_mip_opt.options['Presolve'] = 2
 
     def set_appsi_solver_update_config(self):
         """Set update config for APPSI solvers."""

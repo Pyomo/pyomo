@@ -488,145 +488,6 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     )
 
 
-def set_solver_options(opt, timing, config, solver_type, regularization=False):
-    """Set options for MIP/NLP solvers.
-
-    Parameters
-    ----------
-    opt : SolverFactory
-        The MIP/NLP solver.
-    timing : Timing
-        Timing.
-    config : ConfigBlock
-        The specific configurations for MindtPy.
-    solver_type : str
-        The type of the solver, i.e. mip or nlp.
-    regularization : bool, optional
-        Whether the solver is used to solve the regularization problem, by default False.
-    """
-    # TODO: integrate nlp_args here
-    # nlp_args = dict(config.nlp_solver_args)
-    elapsed = get_main_elapsed_time(timing)
-    remaining = int(max(config.time_limit - elapsed, 1))
-    if solver_type == 'mip':
-        if regularization:
-            solver_name = config.mip_regularization_solver
-            if config.regularization_mip_threads > 0:
-                opt.options['threads'] = config.regularization_mip_threads
-        else:
-            solver_name = config.mip_solver
-            if config.threads > 0:
-                opt.options['threads'] = config.threads
-    elif solver_type == 'nlp':
-        solver_name = config.nlp_solver
-    # TODO: opt.name doesn't work for GAMS
-    if solver_name in {'cplex', 'gurobi', 'gurobi_persistent', 'appsi_gurobi'}:
-        opt.options['timelimit'] = remaining
-        opt.options['mipgap'] = config.mip_solver_mipgap
-        if solver_name == 'gurobi_persistent' and config.single_tree:
-            # PreCrush: Controls presolve reductions that affect user cuts
-            # You should consider setting this parameter to 1 if you are using callbacks to add your own cuts.
-            opt.options['PreCrush'] = 1
-            opt.options['LazyConstraints'] = 1
-        if regularization == True:
-            if solver_name == 'cplex':
-                if config.solution_limit is not None:
-                    opt.options['mip_limits_solutions'] = config.solution_limit
-                opt.options['mip_strategy_presolvenode'] = 3
-                # TODO: need to discuss if this option should be added.
-                if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
-                    opt.options['optimalitytarget'] = 3
-            elif solver_name == 'gurobi':
-                if config.solution_limit is not None:
-                    opt.options['SolutionLimit'] = config.solution_limit
-                opt.options['Presolve'] = 2
-    elif solver_name == 'cplex_persistent':
-        opt.options['timelimit'] = remaining
-        opt.options['mipgap'] = config.mip_solver_mipgap
-        if regularization is True:
-            if config.solution_limit is not None:
-                opt._solver_model.parameters.mip.limits.solutions.set(
-                    config.solution_limit
-                )
-            opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
-            if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
-                opt._solver_model.parameters.optimalitytarget.set(3)
-    elif solver_name == 'appsi_cplex':
-        opt.options['timelimit'] = remaining
-        opt.options['mip_tolerances_mipgap'] = config.mip_solver_mipgap
-        if regularization is True:
-            if config.solution_limit is not None:
-                opt.options['mip_limits_solutions'] = config.solution_limit
-            opt.options['mip_strategy_presolvenode'] = 3
-            if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
-                opt.options['optimalitytarget'] = 3
-    elif solver_name == 'appsi_highs':
-        opt.config.time_limit = remaining
-        opt.config.mip_gap = config.mip_solver_mipgap
-    elif solver_name == 'glpk':
-        opt.options['tmlim'] = remaining
-        opt.options['mipgap'] = config.mip_solver_mipgap
-    elif solver_name == 'baron':
-        opt.options['MaxTime'] = remaining
-        opt.options['AbsConFeasTol'] = config.zero_tolerance
-    elif solver_name in {'ipopt', 'appsi_ipopt'}:
-        opt.options['max_cpu_time'] = remaining
-        opt.options['constr_viol_tol'] = config.zero_tolerance
-    elif solver_name == 'cyipopt':
-        opt.config.options['max_cpu_time'] = float(remaining)
-        opt.config.options['constr_viol_tol'] = config.zero_tolerance
-    elif solver_name == 'gams':
-        if solver_type == 'mip':
-            opt.options['add_options'] = [
-                'option optcr=%s;' % config.mip_solver_mipgap,
-                'option reslim=%s;' % remaining,
-            ]
-        elif solver_type == 'nlp':
-            opt.options['add_options'] = ['option reslim=%s;' % remaining]
-            if config.nlp_solver_args.__contains__('solver'):
-                if config.nlp_solver_args['solver'] in {
-                    'ipopt',
-                    'ipopth',
-                    'msnlp',
-                    'conopt',
-                    'baron',
-                }:
-                    if config.nlp_solver_args['solver'] == 'ipopt':
-                        opt.options['add_options'].append('$onecho > ipopt.opt')
-                        opt.options['add_options'].append(
-                            'constr_viol_tol ' + str(config.zero_tolerance)
-                        )
-                    elif config.nlp_solver_args['solver'] == 'ipopth':
-                        opt.options['add_options'].append('$onecho > ipopth.opt')
-                        opt.options['add_options'].append(
-                            'constr_viol_tol ' + str(config.zero_tolerance)
-                        )
-                        # TODO: Ipopt warmstart option
-                        # opt.options['add_options'].append('warm_start_init_point       yes\n'
-                        #                                   'warm_start_bound_push       1e-9\n'
-                        #                                   'warm_start_bound_frac       1e-9\n'
-                        #                                   'warm_start_slack_bound_frac 1e-9\n'
-                        #                                   'warm_start_slack_bound_push 1e-9\n'
-                        #                                   'warm_start_mult_bound_push  1e-9\n')
-                    elif config.nlp_solver_args['solver'] == 'conopt':
-                        opt.options['add_options'].append('$onecho > conopt.opt')
-                        opt.options['add_options'].append(
-                            'RTNWMA ' + str(config.zero_tolerance)
-                        )
-                    elif config.nlp_solver_args['solver'] == 'msnlp':
-                        opt.options['add_options'].append('$onecho > msnlp.opt')
-                        opt.options['add_options'].append(
-                            'feasibility_tolerance ' + str(config.zero_tolerance)
-                        )
-                    elif config.nlp_solver_args['solver'] == 'baron':
-                        opt.options['add_options'].append('$onecho > baron.opt')
-                        opt.options['add_options'].append(
-                            'AbsConFeasTol ' + str(config.zero_tolerance)
-                        )
-                    opt.options['add_options'].append('$offecho')
-                    opt.options['add_options'].append('GAMS_MODEL.optfile=1')
-
-
 def set_solver_timelimit(opt, solver_name, timing, config):
     """Set timelimit for subsolvers.
 
@@ -663,7 +524,7 @@ def set_solver_timelimit(opt, solver_name, timing, config):
     elif solver_name in {'ipopt', 'appsi_ipopt'}:
         opt.options['max_cpu_time'] = remaining
     elif solver_name == 'gams':
-        opt.options['add_options'].append('option reslim=%s;' % remaining)
+        opt.options['add_options'].append('option Reslim=%s;' % remaining)
 
 
 def set_solver_mipgap(opt, solver_name, config):
@@ -721,40 +582,32 @@ def set_solver_constraint_violation_tolerance(opt, solver_name, config):
             'conopt',
             'baron',
         }:
-            if config.nlp_solver_args['solver'] == 'ipopt':
-                opt.options['add_options'].append('$onecho > ipopt.opt')
+            opt.options['add_options'].append('GAMS_MODEL.optfile=1')
+            opt.options['add_options'].append('$onecho > ' + config.nlp_solver_args['solver'] + '.opt')
+            if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth'}:
                 opt.options['add_options'].append(
                     'constr_viol_tol ' + str(config.zero_tolerance)
                 )
-            elif config.nlp_solver_args['solver'] == 'ipopth':
-                opt.options['add_options'].append('$onecho > ipopth.opt')
-                opt.options['add_options'].append(
-                    'constr_viol_tol ' + str(config.zero_tolerance)
-                )
-                # TODO: Ipopt warmstart option
-                # opt.options['add_options'].append('warm_start_init_point       yes\n'
-                #                                   'warm_start_bound_push       1e-9\n'
-                #                                   'warm_start_bound_frac       1e-9\n'
-                #                                   'warm_start_slack_bound_frac 1e-9\n'
-                #                                   'warm_start_slack_bound_push 1e-9\n'
-                #                                   'warm_start_mult_bound_push  1e-9\n')
+                # Ipopt warmstart options
+                opt.options['add_options'].append('warm_start_init_point       yes\n'
+                                                  'warm_start_bound_push       1e-9\n'
+                                                  'warm_start_bound_frac       1e-9\n'
+                                                  'warm_start_slack_bound_frac 1e-9\n'
+                                                  'warm_start_slack_bound_push 1e-9\n'
+                                                  'warm_start_mult_bound_push  1e-9\n')
             elif config.nlp_solver_args['solver'] == 'conopt':
-                opt.options['add_options'].append('$onecho > conopt.opt')
                 opt.options['add_options'].append(
                     'RTNWMA ' + str(config.zero_tolerance)
                 )
             elif config.nlp_solver_args['solver'] == 'msnlp':
-                opt.options['add_options'].append('$onecho > msnlp.opt')
                 opt.options['add_options'].append(
                     'feasibility_tolerance ' + str(config.zero_tolerance)
                 )
             elif config.nlp_solver_args['solver'] == 'baron':
-                opt.options['add_options'].append('$onecho > baron.opt')
                 opt.options['add_options'].append(
                     'AbsConFeasTol ' + str(config.zero_tolerance)
                 )
             opt.options['add_options'].append('$offecho')
-            opt.options['add_options'].append('GAMS_MODEL.optfile=1')
 
 
 def get_integer_solution(model, string_zero=False):
