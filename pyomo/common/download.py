@@ -15,6 +15,7 @@ import logging
 import os
 import platform
 import re
+import shutil
 import sys
 import subprocess
 
@@ -99,14 +100,15 @@ class FileDownloader(object):
 
     @classmethod
     def _get_distver_from_lsb_release(cls):
+        lsb_release = shutil.which('lsb_release')
         dist = subprocess.run(
-            ['lsb_release', '-si'],
+            [lsb_release, '-si'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
         )
         ver = subprocess.run(
-            ['lsb_release', '-sr'],
+            [lsb_release, '-sr'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
@@ -152,14 +154,7 @@ class FileDownloader(object):
                 dist, ver = cls._get_distver_from_distro()
             elif os.path.exists('/etc/redhat-release'):
                 dist, ver = cls._get_distver_from_redhat_release()
-            elif (
-                subprocess.run(
-                    ['lsb_release'],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                ).returncode
-                == 0
-            ):
+            elif shutil.which('lsb_release'):
                 dist, ver = cls._get_distver_from_lsb_release()
             elif os.path.exists('/etc/os-release'):
                 # Note that (at least on centos), os_release is an

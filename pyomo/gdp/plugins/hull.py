@@ -446,7 +446,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # mark this as local because we won't re-disaggregate if this is
                 # a nested disjunction
                 if local_var_set is not None:
-                    local_var_set.append(disaggregatedVar)
+                    local_var_set.append(disaggregated_var)
                 var_free = 1 - sum(
                     disj.indicator_var.get_associated_binary()
                     for disj in disjunctsVarAppearsIn[var]
