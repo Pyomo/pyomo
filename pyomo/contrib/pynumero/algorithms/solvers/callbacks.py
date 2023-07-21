@@ -12,7 +12,7 @@
 import logging
 
 
-logger = logging.getLogger("CALLBACK")
+logger = logging.getLogger("pyomo")
 
 
 class CyIpoptIntermediateCallbackBase(object):
