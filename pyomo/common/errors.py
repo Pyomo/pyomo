@@ -224,7 +224,7 @@ class TemplateExpressionError(ValueError):
 
     This exception is triggered by the Pyomo expression system when
     attempting to get a member of an IndexedComponent using either a
-    TemplateIndex, or an expression vcontaining an TemplateIndex.
+    TemplateIndex, or an expression containing a TemplateIndex.
 
     Users should never see this exception.
 
