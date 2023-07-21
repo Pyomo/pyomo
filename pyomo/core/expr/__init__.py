@@ -45,6 +45,7 @@ from pyomo.common.numeric_types import (
     native_types,
     nonpyomo_leaf_types,
 )
+from pyomo.common.errors import TemplateExpressionError
 
 from .base import ExpressionBase
 from .boolean_value import BooleanValue
@@ -157,7 +158,6 @@ from .relational_expr import (
 )
 from .symbol_map import SymbolMap
 from .template_expr import (
-    TemplateExpressionError,  # TODO: move to common.errors
     GetItemExpression,
     Numeric_GetItemExpression,
     Boolean_GetItemExpression,
