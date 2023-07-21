@@ -10,8 +10,11 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
+from pyomo.common.tee import redirect_fd, TeeStream
 import pyomo.environ as pyo
+import sys
 import os
+import logging
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
@@ -39,6 +42,7 @@ from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
 )
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
+from pyomo.contrib.pynumero.algorithms.solvers.callbacks import InfeasibilityCallback
 
 
 def create_model1():
@@ -257,3 +261,32 @@ class TestCyIpoptSolver(unittest.TestCase):
         x, info = solver.solve(tee=False)
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)
+
+
+    def test_infeasibility_callback(self):
+        model = create_model1()
+        intermediate_cb = InfeasibilityCallback(
+            infeasibility_threshold=1e1, scaled=True
+        )
+        solver = pyo.SolverFactory("cyipopt", intermediate_callback=intermediate_cb)
+        fname = "_cyipopt_inf_cb.log"
+        solver.config.options["output_file"] = fname
+        logging.getLogger("pyomo").setLevel(logging.INFO)
+
+        from pyomo.common.tee import capture_output
+        #with capture_output(capture_fd=True) as output:
+        #    solver.solve(model, tee=True)
+        #    output_str = output.read()
+        #with TeeStream(sys.stdout) as _teeStream:
+        #    try:
+        #        fd = sys.stdout.fileno()
+        #    except (io.UnsupportedOperation, AttributeError):
+        #        # If sys,stdout doesn't have a valid fileno,
+        #        # then create one using the TeeStream
+        #        fd = _teeStream.STDOUT.fileno()
+        #    with redirect_fd(fd=1, output=fd, synchronize=False):
+        #        solver.solve(model, tee=True)
+
+
+if __name__ == "__main__":
+    TestCyIpoptSolver().test_infeasibility_callback()
