@@ -117,13 +117,17 @@ class _ComponentBase(PyomoObject):
             _scope = memo['__block_scope__']
             _new = None
             tmp = self.parent_block()
+            # "Floating" components should be in scope by default (we
+            # will handle 'global' components like GlobalSets in the
+            # components)
+            _in_scope = tmp is None
             # Note: normally we would need to check that tmp does not
             # end up being None.  However, since clone() inserts
             # id(None) into the __block_scope__ dictionary, we are safe
             while id(tmp) not in _scope:
                 _new = (_new, id(tmp))
                 tmp = tmp.parent_block()
-            _in_scope = _scope[id(tmp)]
+            _in_scope |= _scope[id(tmp)]
 
             # Remember whether all newly-encountered blocks are in or
             # out of scope (prevent duplicate work)

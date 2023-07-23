@@ -21,7 +21,11 @@ from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
-from pyomo.common.numeric_types import native_types, native_numeric_types
+from pyomo.common.numeric_types import (
+    native_types,
+    native_numeric_types,
+    check_if_numeric_type,
+)
 
 from pyomo.core.expr import current as EXPR
 import pyomo.core.expr.numeric_expr as numeric_expr
@@ -29,13 +33,13 @@ from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.numvalue import NumericValue, as_numeric
+from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')
 
 
-class _ExpressionData(NumericValue):
+class _ExpressionData(numeric_expr.NumericValue):
     """
     An object that defines a named expression.
 

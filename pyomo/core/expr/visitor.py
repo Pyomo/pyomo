@@ -19,17 +19,16 @@ from collections import deque
 
 logger = logging.getLogger('pyomo.core')
 
-from .symbol_map import SymbolMap
-from . import expr_common as common
-from .expr_errors import TemplateExpressionError
 from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.errors import DeveloperError
-from pyomo.core.expr.numvalue import (
+from pyomo.common.errors import DeveloperError, TemplateExpressionError
+from pyomo.common.numeric_types import (
     nonpyomo_leaf_types,
     native_types,
     native_numeric_types,
     value,
 )
+import pyomo.core.expr.expr_common as common
+from pyomo.core.expr.symbol_map import SymbolMap
 
 try:
     # sys._getframe is slightly faster than inspect's currentframe, but

@@ -109,6 +109,26 @@ SkipTests['cplex', 'nl', 'QCP_simple'] = (
 #
 
 #
+# GAMS
+#
+
+ExpectedFailures['gams', 'gms', 'MILP_unbounded'] = (
+    lambda v: v <= _trunk_version,
+    "GAMS requires finite bounds for integer variables. 1.0E100 is as extreme"
+    "as GAMS will define, and should be enough to appear unbounded. If the"
+    "solver cannot handle this bound, explicitly set a smaller bound on"
+    "the pyomo model, or try a different GAMS solver.",
+)
+
+ExpectedFailures['gams', 'python', 'MILP_unbounded'] = (
+    lambda v: v <= _trunk_version,
+    "GAMS requires finite bounds for integer variables. 1.0E100 is as extreme"
+    "as GAMS will define, and should be enough to appear unbounded. If the"
+    "solver cannot handle this bound, explicitly set a smaller bound on"
+    "the pyomo model, or try a different GAMS solver.",
+)
+
+#
 # GLPK
 #
 
@@ -260,83 +280,6 @@ for prob in ('LP_unbounded', 'LP_unbounded_kernel'):
         lambda v: v[:3] == (22, 1, 19),
         'BARON 22.1.19 reports model as optimal',
     )
-
-#
-# The following were necessary before we started adding the 'WantDual'
-# option when a user explicitly defines a 'dual' or 'rc' suffix to
-# "force" Baron to run a local solve (if necessary) and always return
-# dual nformation.
-#
-
-# # Known to fail through 18.11.15, but was resolved by 19.12.7
-# ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = (
-#     lambda v: v <= (18,11,15),
-#     ['dual'],
-#     "Baron fails to report a MILP model as unbounded")
-
-# # Known to work through 18.11.15, and fail in 19.12.7
-# MissingSuffixFailures['baron', 'bar', 'LP_piecewise'] = (
-#     lambda v: v <= (15,0,0,0) or v > (18,11,15),
-#     ['dual'],
-#     "Baron will not return dual solution when a solution is "
-#     "found during preprocessing.")
-
-# # Marking this test suffixes as fragile: Baron 20.4.14 will
-# # intermittently return suffixes.
-# MissingSuffixFailures['baron', 'bar', 'QP_simple'] = (
-#     lambda v: v <= (15,2,0,0) or v > (18,11,15),
-#     {'dual': (False, {}), 'rc': (False, {})},
-#     "Baron will intermittently return dual solution when "
-#     "a solution is found during preprocessing.")
-
-# # Known to fail through 17.4.1, but was resolved by 18.5.9
-# MissingSuffixFailures['baron', 'bar', 'QCP_simple'] = (
-#     lambda v: v <= (17,4,1) or v > (18,11,15),
-#     ['dual','rc'],
-#     "Baron will not return dual solution when a solution is "
-#     "found during preprocessing.")
-
-# # Known to work through 18.11.15, and fail in 19.12.7
-# MissingSuffixFailures['baron', 'bar', 'LP_block'] = (
-#     lambda v: v > (18,11,15),
-#     ['dual'],
-#     "Baron will not return dual solution when a solution is "
-#     "found during preprocessing.")
-
-# # Known to work through 18.11.15, and fail in 19.12.7
-# MissingSuffixFailures['baron', 'bar', 'LP_inactive_index'] = (
-#     lambda v: v > (18,11,15),
-#     ['dual'],
-#     "Baron will not return dual solution when a solution is "
-#     "found during preprocessing.")
-
-# # Known to work through 18.11.15, and fail in 19.12.7
-# MissingSuffixFailures['baron', 'bar', 'LP_simple'] = (
-#     lambda v: v > (18,11,15),
-#     ['dual'],
-#     "Baron will not return dual solution when a solution is "
-#     "found during preprocessing.")
-
-# # Known to work through 18.11.15, and fail in 19.12.7
-# MissingSuffixFailures['baron', 'bar', 'LP_trivial_constraints'] = (
-#     lambda v: v > (18,11,15),
-#     ['dual'],
-#     "Baron will not return dual solution when a solution is "
-#     "found during preprocessing.")
-
-# # Known to work through 19.12.7, and fail in 20.4.14
-# MissingSuffixFailures['baron', 'bar', 'LP_duals_minimize'] = (
-#     lambda v: v > (19,12,7),
-#     ['dual','rc'],
-#     "Baron will not return dual solution when a solution is "
-#     "found during preprocessing.")
-
-# # Known to work through 19.12.7, and fail in 20.4.14
-# MissingSuffixFailures['baron', 'bar', 'LP_duals_maximize'] = (
-#     lambda v: v > (19,12,7),
-#     ['dual','rc'],
-#     "Baron will not return dual solution when a solution is "
-#     "found during preprocessing.")
 
 
 #
