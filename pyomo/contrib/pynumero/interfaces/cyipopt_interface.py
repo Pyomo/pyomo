@@ -447,7 +447,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
                 )
             else:
                 # This is the callback signature expected pre-Pyomo vTBD and
-                # is supported for backwards compatability.
+                # is supported for backwards compatibility.
                 return self._intermediate_callback(
                     self._nlp,
                     alg_mod,
