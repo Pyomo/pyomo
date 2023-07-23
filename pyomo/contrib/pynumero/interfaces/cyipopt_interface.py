@@ -300,7 +300,8 @@ class CyIpoptNLP(CyIpoptProblemInterface):
                 inspect.Parameter.POSITIONAL_ONLY,
             }
             positional = [
-                param for param in signature.parameters.values()
+                param
+                for param in signature.parameters.values()
                 if param.kind in positional_kinds
             ]
             has_var_args = any(

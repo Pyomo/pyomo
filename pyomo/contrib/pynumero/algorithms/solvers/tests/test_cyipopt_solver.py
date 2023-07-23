@@ -262,7 +262,6 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)
 
-
     def test_infeasibility_callback(self):
         model = create_model1()
         intermediate_cb = InfeasibilityCallback(
@@ -274,10 +273,11 @@ class TestCyIpoptSolver(unittest.TestCase):
         logging.getLogger("pyomo").setLevel(logging.INFO)
 
         from pyomo.common.tee import capture_output
-        #with capture_output(capture_fd=True) as output:
+
+        # with capture_output(capture_fd=True) as output:
         #    solver.solve(model, tee=True)
         #    output_str = output.read()
-        #with TeeStream(sys.stdout) as _teeStream:
+        # with TeeStream(sys.stdout) as _teeStream:
         #    try:
         #        fd = sys.stdout.fileno()
         #    except (io.UnsupportedOperation, AttributeError):
