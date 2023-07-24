@@ -162,5 +162,3 @@ from pyomo.core.expr import (
     identify_variables,
     identify_mutable_parameters,
 )
-
-_mode = Mode.CURRENT
