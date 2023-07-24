@@ -185,8 +185,7 @@ class _MindtPyAlgorithm(object):
         )
 
     def set_up_logger(self):
-        """Set up the formatter and handler for logger.
-        """
+        """Set up the formatter and handler for logger."""
         self.config.logger.handlers.clear()
         self.config.logger.propagate = False
         ch = logging.StreamHandler()
@@ -1855,7 +1854,9 @@ class _MindtPyAlgorithm(object):
             )
         # TODO no-good cuts for single tree case
         # set optimistic bound to infinity
-        self.config.logger.info('MindtPy exiting due to MILP main problem infeasibility.')
+        self.config.logger.info(
+            'MindtPy exiting due to MILP main problem infeasibility.'
+        )
         if self.results.solver.termination_condition is None:
             if (
                 self.primal_bound == float('inf') and self.objective_sense == minimize
@@ -2011,8 +2012,7 @@ class _MindtPyAlgorithm(object):
             )
 
     def setup_main(self):
-        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
-        """
+        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods."""
         config = self.config
         MindtPy = self.mip.MindtPy_utils
 
@@ -2062,8 +2062,7 @@ class _MindtPyAlgorithm(object):
                     )
 
     def setup_fp_main(self):
-        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
-        """
+        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods."""
         MindtPy = self.mip.MindtPy_utils
 
         for c in MindtPy.constraint_list:
@@ -2087,8 +2086,7 @@ class _MindtPyAlgorithm(object):
             )
 
     def setup_regularization_main(self):
-        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
-        """
+        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods."""
         config = self.config
         MindtPy = self.mip.MindtPy_utils
 
@@ -2373,7 +2371,7 @@ class _MindtPyAlgorithm(object):
         copy_var_list_values(
             fp_nlp.MindtPy_utils.variable_list,
             self.working_model.MindtPy_utils.variable_list,
-            self.config
+            self.config,
         )
         add_orthogonality_cuts(self.working_model, self.mip, self.config)
 
@@ -2383,7 +2381,7 @@ class _MindtPyAlgorithm(object):
             self.working_model,
             self.mip,
             proj_zero_tolerance=self.config.fp_projzerotol,
-            discrete_only=self.config.fp_discrete_only
+            discrete_only=self.config.fp_discrete_only,
         ):
             copy_var_list_values(
                 self.mip.MindtPy_utils.variable_list,
@@ -2405,7 +2403,8 @@ class _MindtPyAlgorithm(object):
                             Constraint(
                                 expr=sum(self.mip.MindtPy_utils.objective_value[:])
                                 <= self.primal_bound
-                                - self.config.fp_cutoffdecr * max(1, abs(self.primal_bound))
+                                - self.config.fp_cutoffdecr
+                                * max(1, abs(self.primal_bound))
                             )
                         )
                     else:
@@ -2413,7 +2412,8 @@ class _MindtPyAlgorithm(object):
                             Constraint(
                                 expr=sum(self.mip.MindtPy_utils.objective_value[:])
                                 >= self.primal_bound
-                                + self.config.fp_cutoffdecr * max(1, abs(self.primal_bound))
+                                + self.config.fp_cutoffdecr
+                                * max(1, abs(self.primal_bound))
                             )
                         )
             else:
@@ -2844,9 +2844,7 @@ class _MindtPyAlgorithm(object):
                     )
                     if self.curr_int_sol not in set(self.integer_list):
                         fixed_nlp, fixed_nlp_result = self.solve_subproblem()
-                        self.handle_nlp_subproblem_tc(
-                            fixed_nlp, fixed_nlp_result
-                        )
+                        self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
 
             if self.algorithm_should_terminate(check_cycling=True):
                 self.last_iter_cuts = False
@@ -2889,9 +2887,7 @@ class _MindtPyAlgorithm(object):
                             else:
                                 self.integer_list.append(self.curr_int_sol)
                         fixed_nlp, fixed_nlp_result = self.solve_subproblem()
-                        self.handle_nlp_subproblem_tc(
-                            fixed_nlp, fixed_nlp_result
-                        )
+                        self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
 
                         # Call the NLP post-solve callback
                         with time_code(self.timing, 'Call after subproblem solve'):

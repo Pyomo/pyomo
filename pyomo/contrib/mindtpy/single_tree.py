@@ -938,9 +938,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_object, config):
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = mindtpy_object.solve_subproblem()
 
-        mindtpy_object.handle_nlp_subproblem_tc(
-            fixed_nlp, fixed_nlp_result, cb_opt
-        )
+        mindtpy_object.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, cb_opt)
 
 
 def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, mindtpy_object, config):

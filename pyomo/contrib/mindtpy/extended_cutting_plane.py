@@ -66,9 +66,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                         self.last_iter_cuts = True
                         break
                     else:
-                        self.handle_main_other_conditions(
-                            main_mip, main_mip_results
-                        )
+                        self.handle_main_other_conditions(main_mip, main_mip_results)
                     # Call the MILP post-solve callback
                     with time_code(self.timing, 'Call after main solve'):
                         self.config.call_after_main_solve(main_mip)
