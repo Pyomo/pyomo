@@ -436,7 +436,7 @@ class XpressDirect(DirectSolver):
             # was convex
             if (xprob_attrs.originalmipents > 0) or (xprob_attrs.originalsets > 0):
                 return self._get_mip_results(results, soln)
-            elif not xprob_attrs.xslp_nlpstatus:
+            elif xprob_attrs.lpstatus and not xprob_attrs.xslp_nlpstatus:
                 # If there is no NLP solver status, process the result
                 # using the LP results processor.
                 return self._get_lp_results(results, soln)
@@ -448,9 +448,7 @@ class XpressDirect(DirectSolver):
         optimal = False  # *globally* optimal?
         if status == xp.nlp_unstarted:
             results.solver.status = SolverStatus.unknown
-            results.solver.termination_message = (
-                "Non-convex model solve was not start"
-            )
+            results.solver.termination_message = "Non-convex model solve was not start"
             results.solver.termination_condition = TerminationCondition.unknown
             soln.status = SolutionStatus.unknown
         elif status == xp.nlp_locally_optimal:
@@ -498,9 +496,7 @@ class XpressDirect(DirectSolver):
             soln.status = SolutionStatus.infeasible
         elif status == xp.nlp_unbounded:  # locally unbounded!
             results.solver.status = SolverStatus.ok
-            results.solver.termination_message = (
-                "Non-convex model is locally unbounded"
-            )
+            results.solver.termination_message = "Non-convex model is locally unbounded"
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
         elif status == xp.nlp_unfinished:
@@ -513,8 +509,8 @@ class XpressDirect(DirectSolver):
             have_soln = True
         else:
             results.solver.status = SolverStatus.error
-            results.solver.termination_message = (
-                "Error for non-convex model: " + str(status)
+            results.solver.termination_message = "Error for non-convex model: " + str(
+                status
             )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
