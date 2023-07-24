@@ -270,8 +270,8 @@ class TestCyIpoptSolver(unittest.TestCase):
         solver = pyo.SolverFactory("cyipopt", intermediate_callback=intermediate_cb)
         fname = "_cyipopt_inf_cb.log"
         solver.config.options["output_file"] = fname
-        #logging.getLogger("pyomo").setLevel(logging.INFO)
-        #from pyomo.common.tee import capture_output
+        # logging.getLogger("pyomo").setLevel(logging.INFO)
+        # from pyomo.common.tee import capture_output
 
         # with capture_output(capture_fd=True) as output:
         #    solver.solve(model, tee=True)
