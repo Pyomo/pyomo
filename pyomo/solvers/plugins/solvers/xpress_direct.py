@@ -448,7 +448,9 @@ class XpressDirect(DirectSolver):
         optimal = False  # *globally* optimal?
         if status == xp.nlp_unstarted:
             results.solver.status = SolverStatus.unknown
-            results.solver.termination_message = "Non-convex model solve was not start"
+            results.solver.termination_message = (
+                "Non-convex model solve was not started"
+            )
             results.solver.termination_condition = TerminationCondition.unknown
             soln.status = SolutionStatus.unknown
         elif status == xp.nlp_locally_optimal:
@@ -490,7 +492,7 @@ class XpressDirect(DirectSolver):
         elif status == xp.nlp_infeasible:
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
-                "Non-conex model was proven to be infeasible"
+                "Non-convex model was proven to be infeasible"
             )
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
