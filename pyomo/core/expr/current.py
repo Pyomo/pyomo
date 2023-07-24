@@ -15,7 +15,7 @@ import math
 from pyomo.common.deprecation import deprecation_warning
 
 deprecation_warning(
-    "pyomo.common.expr.current is deprecated.  "
+    "pyomo.core.expr.current is deprecated.  "
     "Please import expression symbols from pyomo.core.expr",
     version='6.6.2.dev0',
 )
