@@ -155,6 +155,32 @@ def create_model9():
     return model
 
 
+def make_hs071_model():
+    # This is a model that is mathematically equivalent to the Hock-Schittkowski
+    # test problem 071, but that will trigger an evaluation error if x[0] goes
+    # above 1.1.
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([0, 1, 2, 3], bounds=(1.0, 5.0))
+    m.x[0] = 1.0
+    m.x[1] = 5.0
+    m.x[2] = 5.0
+    m.x[3] = 1.0
+    m.obj = pyo.Objective(expr=m.x[0] * m.x[3] * (m.x[0] + m.x[1] + m.x[2]) + m.x[2])
+    # This expression evaluates to zero, but is not well defined when x[0] > 1.1
+    trivial_expr_with_eval_error = (
+        #    0.0
+        (pyo.sqrt(1.1 - m.x[0])) ** 2 + m.x[0] - 1.1
+    )
+    m.ineq1 = pyo.Constraint(expr=m.x[0] * m.x[1] * m.x[2] * m.x[3] >= 25.0)
+    m.eq1 = pyo.Constraint(
+        expr=(
+            m.x[0] ** 2 + m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2
+            == 40.0 + trivial_expr_with_eval_error
+        )
+    )
+    return m
+
+
 @unittest.skipIf(cyipopt_available, "cyipopt is available")
 class TestCyIpoptNotAvailable(unittest.TestCase):
     def test_not_available_exception(self):
@@ -257,3 +283,12 @@ class TestCyIpoptSolver(unittest.TestCase):
         x, info = solver.solve(tee=False)
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)
+
+    def test_hs071_evalerror(self):
+        m = make_hs071_model()
+        solver = pyo.SolverFactory("cyipopt")
+        res = solver.solve(m, tee=True)
+
+        x = list(m.x[:].value)
+        expected_x = np.array([1.0, 4.74299964, 3.82114998, 1.37940829])
+        np.testing.assert_allclose(x, expected_x)
