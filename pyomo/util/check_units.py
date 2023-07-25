@@ -14,6 +14,8 @@
 This module has some helpful methods to support checking units on Pyomo
 module objects.
 """
+import logging
+
 from pyomo.core.base.units_container import units, UnitsError
 from pyomo.core.base import (
     Objective,
@@ -40,6 +42,8 @@ from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.components import iter_component
 from pyomo.common.collections import ComponentSet
+
+logger = logging.getLogger(__name__)
 
 
 def check_units_equivalent(*args):
@@ -241,7 +245,11 @@ def assert_units_consistent(obj):
     if objtype in native_types:
         return
     elif obj.is_expression_type() or objtype is IndexTemplate:
-        _assert_units_consistent_expression(obj)
+        try:
+            _assert_units_consistent_expression(obj)
+        except UnitsError:
+            logger.error('Units problem with expression {}'.format(obj))
+            raise
         return
 
     # if object is not in our component handler, raise an exception
@@ -258,7 +266,11 @@ def assert_units_consistent(obj):
     if obj.is_indexed():
         # check all the component data objects
         for cdata in obj.values():
-            handler(cdata)
+            try:
+                handler(cdata)
+            except UnitsError:
+                logger.error('Error in units when checking {}'.format(cdata))
+                raise
     else:
         handler(obj)
 
@@ -283,11 +295,11 @@ def identify_inconsistent_units(block):
     # so we need to iterate over the block here and do a try/except for each component
 
     inconsistent_units = ComponentSet()
-    for o in block.component_data_objects(
+    for obj in block.component_data_objects(
         [Constraint, Expression, Objective], descend_into=True
     ):
         try:
-            assert_units_consistent(o)
+            assert_units_consistent(obj)
         except UnitsError:
-            inconsistent_units.add(o)
+            inconsistent_units.add(obj)
     return inconsistent_units
