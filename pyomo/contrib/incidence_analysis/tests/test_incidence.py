@@ -19,6 +19,25 @@ from pyomo.contrib.incidence_analysis.incidence import (
 )
 
 
+class TestAssumedBehavior(unittest.TestCase):
+    """Tests for non-obvious behavior we rely on
+
+    If this behavior changes, these tests will fail and hopefully we won't
+    waste time debugging the "real" tests. This behavior includes:
+    - The error message when we try to evaluate an expression with
+      uninitialized variables
+
+    """
+
+    def test_uninitialized_value_error_message(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2])
+        m.x[1].set_value(5)
+        msg = "No value for uninitialized NumericValue"
+        with self.assertRaisesRegex(ValueError, msg):
+            pyo.value(1 + m.x[1] * m.x[2])
+
+
 class _TestIncidence(object):
     """Base class with tests for get_incident_variables that should be
     independent of the method used
@@ -109,6 +128,33 @@ class TestIncidenceStandardRepn(unittest.TestCase, _TestIncidence):
         m.x[3].fix(2.5)
         expr = 2 * m.x[1] + 2 * m.x[2] * m.x[3] + 3 * m.x[2]
         variables = self._get_incident_variables(expr, linear_only=True)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
+
+    def test_fixed_zero_linear_coefficient(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.p = pyo.Param([1, 2], mutable=True, initialize=1.0)
+        m.p[1].set_value(0)
+        expr = 2 * m.x[1] + m.p[1] * m.p[2] * m.x[2] + m.p[2] * m.x[3] ** 2
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[3]]))
+
+        m.x[3].fix(0.0)
+        expr = 2 * m.x[1] + 3 * m.x[3] * m.p[2] * m.x[2] + m.x[1] ** 2
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
+
+        m.x[3].fix(1.0)
+        variables = self._get_incident_variables(expr)
+        self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
+
+    def test_fixed_none_linear_coefficient(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.p = pyo.Param([1, 2], mutable=True, initialize=1.0)
+        m.x[3].fix(None)
+        expr = 2 * m.x[1] + 3 * m.x[3] * m.p[2] * m.x[2] + m.x[1] ** 2
+        variables = self._get_incident_variables(expr)
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
 
 

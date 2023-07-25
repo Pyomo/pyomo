@@ -67,7 +67,7 @@ from pyomo.environ import (
 )
 from pyomo.kernel import variable, expression, objective
 
-from pyomo.core.expr.expr_common import ExpressionType
+from pyomo.core.expr.expr_common import ExpressionType, clone_counter
 from pyomo.core.expr.numvalue import (
     NumericConstant,
     as_numeric,
@@ -94,7 +94,6 @@ from pyomo.core.expr.numeric_expr import (
     NPV_DivisionExpression,
     NPV_SumExpression,
     decompose_term,
-    clone_counter,
     nonlinear_expression,
     _MutableLinearExpression,
     _MutableSumExpression,
@@ -2453,7 +2452,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         m = ConcreteModel()
         m.a = Var()
         m.b = Var()
-        expr = Expr_if(IF=m.a + m.b < 20, THEN=m.a, ELSE=m.b)
+        expr = Expr_if(IF_=m.a + m.b < 20, THEN_=m.a, ELSE_=m.b)
         self.assertEqual(
             "Expr_if( ( a + b  <  20 ), then=( a ), else=( b ) )", str(expr)
         )
@@ -2461,6 +2460,10 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual(
             "Expr_if( ( a + b  <  20 ), then=( 1 ), else=( b ) )", str(expr)
         )
+        with self.assertRaisesRegex(ValueError, "Cannot specify both THEN_ and THEN"):
+            Expr_if(IF_=m.a + m.b < 20, THEN_=1, ELSE_=m.b, THEN=2)
+        with self.assertRaisesRegex(ValueError, "Unrecognized arguments: _THEN_"):
+            Expr_if(IF_=m.a + m.b < 20, _THEN_=1, ELSE_=m.b)
 
     def test_getitem(self):
         m = ConcreteModel()

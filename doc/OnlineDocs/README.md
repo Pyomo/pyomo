@@ -18,3 +18,10 @@ Preview Changes Locally
    ```
 
 1. View `_build/html/index.html` in your browser
+
+Test Changes Locally
+--------------------
+
+   ```bash
+   $ make -C doc/OnlineDocs doctest -d      # from the pyomo root folder
+   ```

@@ -14,17 +14,16 @@ import operator
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.errors import PyomoException, DeveloperError
+from pyomo.common.numeric_types import (
+    native_numeric_types,
+    check_if_numeric_type,
+    value,
+)
 
 from .base import ExpressionBase
 from .boolean_value import BooleanValue
 from .expr_common import _lt, _le, _eq, ExpressionType
-from .numvalue import (
-    native_numeric_types,
-    is_potentially_variable,
-    is_constant,
-    value,
-    check_if_numeric_type,
-)
+from .numvalue import is_potentially_variable, is_constant
 from .visitor import polynomial_degree
 
 # -------------------------------------------------------
