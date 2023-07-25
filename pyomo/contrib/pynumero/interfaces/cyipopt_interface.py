@@ -23,6 +23,7 @@ objects for the matrices (e.g., AmplNLP and PyomoNLP)
 import abc
 
 from pyomo.common.dependencies import attempt_import, numpy as np, numpy_available
+from pyomo.contrib.pynumero.exceptions import PyNumeroEvaluationError
 
 
 def _cyipopt_importer():
@@ -328,24 +329,46 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         return obj_scaling, x_scaling, g_scaling
 
     def objective(self, x):
-        self._set_primals_if_necessary(x)
-        return self._nlp.evaluate_objective()
+        try:
+            self._set_primals_if_necessary(x)
+            return self._nlp.evaluate_objective()
+        except PyNumeroEvaluationError:
+            # TODO: halt_on_evaluation_error option. If set, we re-raise the
+            # original exception.
+            raise cyipopt.CyIpoptEvaluationError(
+                "Error in objective function evaluation"
+            )
 
     def gradient(self, x):
-        self._set_primals_if_necessary(x)
-        return self._nlp.evaluate_grad_objective()
+        try:
+            self._set_primals_if_necessary(x)
+            return self._nlp.evaluate_grad_objective()
+        except PyNumeroEvaluationError:
+            raise cyipopt.CyIpoptEvaluationError(
+                "Error in objective gradient evaluation"
+            )
 
     def constraints(self, x):
-        self._set_primals_if_necessary(x)
-        return self._nlp.evaluate_constraints()
+        try:
+            self._set_primals_if_necessary(x)
+            return self._nlp.evaluate_constraints()
+        except PyNumeroEvaluationError:
+            raise cyipopt.CyIpoptEvaluationError(
+                "Error in constraint evaluation"
+            )
 
     def jacobianstructure(self):
         return self._jac_g.row, self._jac_g.col
 
     def jacobian(self, x):
-        self._set_primals_if_necessary(x)
-        self._nlp.evaluate_jacobian(out=self._jac_g)
-        return self._jac_g.data
+        try:
+            self._set_primals_if_necessary(x)
+            self._nlp.evaluate_jacobian(out=self._jac_g)
+            return self._jac_g.data
+        except PyNumeroEvaluationError:
+            raise cyipopt.CyIpoptEvaluationError(
+                "Error in constraint Jacobian evaluation"
+            )
 
     def hessianstructure(self):
         if not self._hessian_available:
@@ -359,12 +382,17 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         if not self._hessian_available:
             raise ValueError("Hessian requested, but not supported by the NLP")
 
-        self._set_primals_if_necessary(x)
-        self._set_duals_if_necessary(y)
-        self._set_obj_factor_if_necessary(obj_factor)
-        self._nlp.evaluate_hessian_lag(out=self._hess_lag)
-        data = np.compress(self._hess_lower_mask, self._hess_lag.data)
-        return data
+        try:
+            self._set_primals_if_necessary(x)
+            self._set_duals_if_necessary(y)
+            self._set_obj_factor_if_necessary(obj_factor)
+            self._nlp.evaluate_hessian_lag(out=self._hess_lag)
+            data = np.compress(self._hess_lower_mask, self._hess_lag.data)
+            return data
+        except PyNumeroEvaluationError:
+            raise cyipopt.CyIpoptEvaluationError(
+                "Error in Lagrangian Hessian evaluation"
+            )
 
     def intermediate(
         self,
