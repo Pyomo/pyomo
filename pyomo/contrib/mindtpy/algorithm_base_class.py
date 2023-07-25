@@ -1291,18 +1291,7 @@ class _MindtPyAlgorithm(object):
             constr.deactivate()
 
         MindtPy.feas_opt.activate()
-        if config.feasibility_norm == 'L1':
-            MindtPy.feas_obj = Objective(
-                expr=sum(s for s in MindtPy.feas_opt.slack_var[...]), sense=minimize
-            )
-        elif config.feasibility_norm == 'L2':
-            MindtPy.feas_obj = Objective(
-                expr=sum(s * s for s in MindtPy.feas_opt.slack_var[...]), sense=minimize
-            )
-        else:
-            MindtPy.feas_obj = Objective(
-                expr=MindtPy.feas_opt.slack_var, sense=minimize
-            )
+        MindtPy.feas_obj.activate()
         nlp_args = dict(config.nlp_solver_args)
         set_solver_timelimit(
             self.feasibility_nlp_opt, config.nlp_solver, self.timing, config
@@ -2674,7 +2663,6 @@ class _MindtPyAlgorithm(object):
             self.nlp_opt.update_config.check_for_new_or_removed_vars = False
             self.nlp_opt.update_config.check_for_new_or_removed_params = False
             self.nlp_opt.update_config.check_for_new_objective = False
-            # TODO: we will deactivate trivial constraints, do we need to update constraints?
             self.nlp_opt.update_config.update_constraints = True
             self.nlp_opt.update_config.update_vars = True
             self.nlp_opt.update_config.update_params = False
@@ -2682,21 +2670,20 @@ class _MindtPyAlgorithm(object):
             self.nlp_opt.update_config.update_objective = False
             self.nlp_opt.update_config.treat_fixed_vars_as_params = False
 
-            # TODO check the config of feasibility_nlp_solver
             self.feasibility_nlp_opt.update_config.check_for_new_or_removed_constraints = (
-                True
+                False
             )
-            self.feasibility_nlp_opt.update_config.check_for_new_or_removed_vars = True
+            self.feasibility_nlp_opt.update_config.check_for_new_or_removed_vars = False
             self.feasibility_nlp_opt.update_config.check_for_new_or_removed_params = (
-                True
+                False
             )
-            self.feasibility_nlp_opt.update_config.check_for_new_objective = True
-            self.feasibility_nlp_opt.update_config.update_constraints = True
+            self.feasibility_nlp_opt.update_config.check_for_new_objective = False
+            self.feasibility_nlp_opt.update_config.update_constraints = False
             self.feasibility_nlp_opt.update_config.update_vars = True
-            self.feasibility_nlp_opt.update_config.update_params = True
-            self.feasibility_nlp_opt.update_config.update_named_expressions = True
-            self.feasibility_nlp_opt.update_config.update_objective = True
-            self.feasibility_nlp_opt.update_config.treat_fixed_vars_as_params = True
+            self.feasibility_nlp_opt.update_config.update_params = False
+            self.feasibility_nlp_opt.update_config.update_named_expressions = False
+            self.feasibility_nlp_opt.update_config.update_objective = False
+            self.feasibility_nlp_opt.update_config.treat_fixed_vars_as_params = False
 
     def solve(self, model, **kwds):
         """Solve the model.

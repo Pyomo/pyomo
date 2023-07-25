@@ -102,6 +102,20 @@ def add_feas_slacks(m, config):
                 MindtPy.feas_opt.feas_constraints.add(
                     constr.body - constr.lower >= -MindtPy.feas_opt.slack_var
                 )
+    # Setup objective function for the feasibility subproblem.
+    if config.feasibility_norm == 'L1':
+        MindtPy.feas_obj = Objective(
+            expr=sum(s for s in MindtPy.feas_opt.slack_var[...]), sense=minimize
+        )
+    elif config.feasibility_norm == 'L2':
+        MindtPy.feas_obj = Objective(
+            expr=sum(s * s for s in MindtPy.feas_opt.slack_var[...]), sense=minimize
+        )
+    else:
+        MindtPy.feas_obj = Objective(
+            expr=MindtPy.feas_opt.slack_var, sense=minimize
+        )
+    MindtPy.feas_obj.deactivate()
 
 
 def add_var_bound(model, config):
