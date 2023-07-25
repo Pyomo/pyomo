@@ -70,7 +70,7 @@ from pyomo.contrib.mindtpy.util import (
     GurobiPersistent4MindtPy,
     setup_results_object,
     get_integer_solution,
-    add_feas_slacks,
+    initialize_feas_subproblem,
     epigraph_reformulation,
     add_var_bound,
     copy_var_list_values_from_solution_pool,
@@ -1157,7 +1157,9 @@ class _MindtPyAlgorithm(object):
 
         var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
         if config.add_no_good_cuts:
-            add_no_good_cuts(self.mip, var_values, config, self.timing, self.mip_iter, cb_opt)
+            add_no_good_cuts(
+                self.mip, var_values, config, self.timing, self.mip_iter, cb_opt
+            )
 
         config.call_after_subproblem_feasible(fixed_nlp)
 
@@ -1232,9 +1234,13 @@ class _MindtPyAlgorithm(object):
         var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
         if config.add_no_good_cuts:
             # excludes current discrete option
-            add_no_good_cuts(self.mip, var_values, config, self.timing, self.mip_iter, cb_opt)
+            add_no_good_cuts(
+                self.mip, var_values, config, self.timing, self.mip_iter, cb_opt
+            )
 
-    def handle_subproblem_other_termination(self, fixed_nlp, termination_condition, cb_opt=None):
+    def handle_subproblem_other_termination(
+        self, fixed_nlp, termination_condition, cb_opt=None
+    ):
         """Handles the result of the latest iteration of solving the fixed NLP subproblem given
         a solution that is neither optimal nor infeasible.
 
@@ -1258,7 +1264,14 @@ class _MindtPyAlgorithm(object):
             var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
             if self.config.add_no_good_cuts:
                 # excludes current discrete option
-                add_no_good_cuts(self.mip, var_values, self.config, self.timing, self.mip_iter, cb_opt)
+                add_no_good_cuts(
+                    self.mip,
+                    var_values,
+                    self.config,
+                    self.timing,
+                    self.mip_iter,
+                    cb_opt,
+                )
 
         else:
             raise ValueError(
@@ -2572,7 +2585,7 @@ class _MindtPyAlgorithm(object):
 
         self.fixed_nlp = self.working_model.clone()
         TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
-        add_feas_slacks(self.fixed_nlp, config)
+        initialize_feas_subproblem(self.fixed_nlp, config)
 
     def initialize_subsolvers(self):
         """Initialize and set options for MIP and NLP subsolvers."""
@@ -2584,7 +2597,9 @@ class _MindtPyAlgorithm(object):
         self.nlp_opt = SolverFactory(config.nlp_solver)
         self.feasibility_nlp_opt = SolverFactory(config.nlp_solver)
         if config.mip_regularization_solver is not None:
-            self.regularization_mip_opt = SolverFactory(config.mip_regularization_solver)
+            self.regularization_mip_opt = SolverFactory(
+                config.mip_regularization_solver
+            )
 
         self.check_subsolver_validity()
         if config.mip_solver == 'gams':
@@ -2615,18 +2630,22 @@ class _MindtPyAlgorithm(object):
         # regularization solver
         if config.mip_regularization_solver is not None:
             set_solver_mipgap(
-                self.regularization_mip_opt,
-                config.mip_regularization_solver,
-                config
+                self.regularization_mip_opt, config.mip_regularization_solver, config
             )
             if config.mip_regularization_solver == 'gams':
                 self.regularization_mip_opt.options['add_options'] = []
             if config.regularization_mip_threads > 0:
-                self.regularization_mip_opt.options['threads'] = config.regularization_mip_threads
+                self.regularization_mip_opt.options[
+                    'threads'
+                ] = config.regularization_mip_threads
             else:
                 self.regularization_mip_opt.options['threads'] = config.threads
 
-            if config.mip_regularization_solver in {'cplex', 'appsi_cplex', 'cplex_persistent'}:
+            if config.mip_regularization_solver in {
+                'cplex',
+                'appsi_cplex',
+                'cplex_persistent',
+            }:
                 if config.solution_limit is not None:
                     self.regularization_mip_opt.options[
                         'mip_limits_solutions'

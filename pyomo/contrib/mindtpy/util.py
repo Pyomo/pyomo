@@ -71,8 +71,9 @@ def calc_jacobians(model, config):
     return jacobians
 
 
-def add_feas_slacks(m, config):
+def initialize_feas_subproblem(m, config):
     """Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem).
+       Define the objective function of the feasibility subproblem.
 
     Parameters
     ----------
@@ -112,9 +113,7 @@ def add_feas_slacks(m, config):
             expr=sum(s * s for s in MindtPy.feas_opt.slack_var[...]), sense=minimize
         )
     else:
-        MindtPy.feas_obj = Objective(
-            expr=MindtPy.feas_opt.slack_var, sense=minimize
-        )
+        MindtPy.feas_obj = Objective(expr=MindtPy.feas_opt.slack_var, sense=minimize)
     MindtPy.feas_obj.deactivate()
 
 
@@ -597,18 +596,22 @@ def set_solver_constraint_violation_tolerance(opt, solver_name, config):
             'baron',
         }:
             opt.options['add_options'].append('GAMS_MODEL.optfile=1')
-            opt.options['add_options'].append('$onecho > ' + config.nlp_solver_args['solver'] + '.opt')
+            opt.options['add_options'].append(
+                '$onecho > ' + config.nlp_solver_args['solver'] + '.opt'
+            )
             if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth'}:
                 opt.options['add_options'].append(
                     'constr_viol_tol ' + str(config.zero_tolerance)
                 )
                 # Ipopt warmstart options
-                opt.options['add_options'].append('warm_start_init_point       yes\n'
-                                                  'warm_start_bound_push       1e-9\n'
-                                                  'warm_start_bound_frac       1e-9\n'
-                                                  'warm_start_slack_bound_frac 1e-9\n'
-                                                  'warm_start_slack_bound_push 1e-9\n'
-                                                  'warm_start_mult_bound_push  1e-9\n')
+                opt.options['add_options'].append(
+                    'warm_start_init_point       yes\n'
+                    'warm_start_bound_push       1e-9\n'
+                    'warm_start_bound_frac       1e-9\n'
+                    'warm_start_slack_bound_frac 1e-9\n'
+                    'warm_start_slack_bound_push 1e-9\n'
+                    'warm_start_mult_bound_push  1e-9\n'
+                )
             elif config.nlp_solver_args['solver'] == 'conopt':
                 opt.options['add_options'].append(
                     'RTNWMA ' + str(config.zero_tolerance)
@@ -643,7 +646,7 @@ def get_integer_solution(model, string_zero=False):
     for var in model.MindtPy_utils.discrete_variable_list:
         if string_zero:
             if var.value == 0:
-                # In CPLEX, negative zero is different from zero, 
+                # In CPLEX, negative zero is different from zero,
                 # so we use string to denote this(Only in singletree)
                 temp.append(str(var.value))
             else:
