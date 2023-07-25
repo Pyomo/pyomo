@@ -229,8 +229,7 @@ class ICategorizedObject(AutoSlots.Mixin):
         object.__setattr__(self, "_parent", None)
         try:
             new_block = copy.deepcopy(
-                self,
-                {'__categorized_object_scope__': {id(self): True, id(None): False}},
+                self, {'__block_scope__': {id(self): True, id(None): False}}
             )
         finally:
             object.__setattr__(self, "_parent", save_parent)
@@ -244,23 +243,21 @@ class ICategorizedObject(AutoSlots.Mixin):
     #
 
     def __deepcopy__(self, memo):
-        if (
-            '__categorized_object_scope__' in memo
-            and id(self) not in memo['__categorized_object_scope__']
-        ):
-            _known = memo['__categorized_object_scope__']
-            _new = []
+        if '__block_scope__' in memo:
+            _known = memo['__block_scope__']
+            _new = None
             tmp = self.parent
-            tmpId = id(tmp)
-            while tmpId not in _known:
-                _new.append(tmpId)
+            _in_scope = tmp is None
+            while id(tmp) not in _known:
+                _new = (_new, id(tmp))
                 tmp = tmp.parent
-                tmpId = id(tmp)
+            _in_scope |= _known[id(tmp)]
 
-            for _id in _new:
-                _known[_id] = _known[tmpId]
+            while _new is not None:
+                _new, _id = _new
+                _known[_id] = _in_scope
 
-            if not _known[tmpId]:
+            if not _in_scope and id(self) not in _known:
                 # component is out-of-scope. shallow copy only
                 memo[id(self)] = self
                 return self

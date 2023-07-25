@@ -11,13 +11,25 @@
 #
 # Unit Tests for pyomo.base.misc
 #
+
+import glob
+import importlib
 import os
+import subprocess
+import sys
+
+from itertools import filterfalse
 from os.path import join
 
+import pyomo.common.dependencies as dependencies
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
 
 import pyomo.common.unittest as unittest
 
+parameterized, param_available = dependencies.attempt_import('parameterized')
+parameterized = parameterized.parameterized
+
+_FAST_TEST = False
 
 # List of directories under `pyomo` that intentionally do NOT have
 # __init__.py files (because they either contain no Python files - or
@@ -40,6 +52,35 @@ _NON_MODULE_DIRS = {
     join('solvers', 'tests', 'piecewise_linear', 'kernel_problems'),
     join('solvers', 'tests', 'piecewise_linear', 'problems'),
 }
+
+_DO_NOT_IMPORT_MODULES = {
+    'pyomo.common.tests.dep_mod_except',
+    'pyomo.contrib.interior_point.examples.ex1',
+}
+
+try:
+    _cwd = os.getcwd()
+    os.chdir(os.path.join(PYOMO_ROOT_DIR, 'pyomo'))
+    modules = sorted(
+        os.path.join('pyomo', os.path.splitext(fname)[0]).replace(os.path.sep, '.')
+        for fname in glob.glob(os.path.join('**', '*.py'), recursive=True)
+        if not fname.endswith('__init__.py')
+    )
+    modules = list(filterfalse(_DO_NOT_IMPORT_MODULES.__contains__, modules))
+finally:
+    os.chdir(_cwd)
+
+
+import_test = """
+import pyomo.common.dependencies
+pyomo.common.dependencies.SUPPRESS_DEPENDENCY_WARNINGS = True
+import unittest
+try:
+    import %s
+except unittest.case.SkipTest as e:
+    # suppress the exception, but print the message
+    print(e)
+"""
 
 
 class TestPackageLayout(unittest.TestCase):
@@ -78,3 +119,45 @@ class TestPackageLayout(unittest.TestCase):
                 "or unexpectedly contain a __init__.py file:\n\t"
                 + "\n\t".join(sorted(_NMD))
             )
+
+    @parameterized.expand(modules)
+    @unittest.pytest.mark.importtest
+    def test_module_import(self, module):
+        # We will go through the entire package and ensure that all the
+        # python modules are a least importable.  This is important to
+        # be tested on the newest Python version (in part to catch
+        # deprecation warnings before they become fatal parse errors).
+        module_file = (
+            os.path.join(PYOMO_ROOT_DIR, module.replace('.', os.path.sep)) + '.py'
+        )
+        # we need to delete the .pyc file, because some things (like
+        # invalid docstrings) only toss the warning when the module is
+        # initially byte-compiled.
+        pyc = importlib.util.cache_from_source(module_file)
+        if os.path.isfile(pyc):
+            os.remove(pyc)
+        test_code = import_test % module
+        if _FAST_TEST:
+            # This is much faster, as it only reloads each module once
+            # (no subprocess, and no reloading and dependent modules).
+            # However, it will generate false positives when reimporting
+            # a single module creates side effects (this happens in some
+            # of the testing harness for auto-registered test cases)
+            from pyomo.common.fileutils import import_file
+            import warnings
+
+            try:
+                _dep_warn = dependencies.SUPPRESS_DEPENDENCY_WARNINGS
+                dependencies.SUPPRESS_DEPENDENCY_WARNINGS = True
+
+                with warnings.catch_warnings():
+                    warnings.resetwarnings()
+                    warnings.filterwarnings('error')
+                    import_file(module_file, clear_cache=True)
+            except unittest.SkipTest as e:
+                # suppress the exception, but print the message
+                print(e)
+            finally:
+                dependencies.SUPPRESS_DEPENDENCY_WARNINGS = _dep_warn
+        else:
+            subprocess.run([sys.executable, '-Werror', '-c', test_code], check=True)
