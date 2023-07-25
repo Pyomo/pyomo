@@ -1098,7 +1098,7 @@ class _MindtPyAlgorithm(object):
             self.should_terminate = True
         else:
             self.handle_subproblem_other_termination(
-                fixed_nlp, result.solver.termination_condition
+                fixed_nlp, result.solver.termination_condition, cb_opt
             )
 
     def handle_subproblem_optimal(self, fixed_nlp, cb_opt=None, fp=False):
@@ -1158,8 +1158,7 @@ class _MindtPyAlgorithm(object):
 
         var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
         if config.add_no_good_cuts:
-            # TODO: fix
-            add_no_good_cuts(self.mip, var_values, config, self.timing)
+            add_no_good_cuts(self.mip, var_values, config, self.timing, self.mip_iter, cb_opt)
 
         config.call_after_subproblem_feasible(fixed_nlp)
 
@@ -1234,9 +1233,9 @@ class _MindtPyAlgorithm(object):
         var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
         if config.add_no_good_cuts:
             # excludes current discrete option
-            add_no_good_cuts(self.mip, var_values, config, self.timing)
+            add_no_good_cuts(self.mip, var_values, config, self.timing, self.mip_iter, cb_opt)
 
-    def handle_subproblem_other_termination(self, fixed_nlp, termination_condition):
+    def handle_subproblem_other_termination(self, fixed_nlp, termination_condition, cb_opt=None):
         """Handles the result of the latest iteration of solving the fixed NLP subproblem given
         a solution that is neither optimal nor infeasible.
 
@@ -1260,7 +1259,7 @@ class _MindtPyAlgorithm(object):
             var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
             if self.config.add_no_good_cuts:
                 # excludes current discrete option
-                add_no_good_cuts(self.mip, var_values, self.config, self.timing)
+                add_no_good_cuts(self.mip, var_values, self.config, self.timing, self.mip_iter, cb_opt)
 
         else:
             raise ValueError(
@@ -1581,7 +1580,7 @@ class _MindtPyAlgorithm(object):
                         'Error: Cannot load a SolverResults object with bad status: error. '
                         'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
                         "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
-                        'No integer solution is found, so the cplex solver will report an error status. '
+                        'No integer solution is found, so the CPLEX solver will report an error status. '
                     )
             return None, None
         if config.solution_pool:
@@ -1980,12 +1979,12 @@ class _MindtPyAlgorithm(object):
         elif main_mip_results.solver.termination_condition is tc.unbounded:
             self.config.logger.info(
                 'Regularization problem unbounded.'
-                'Sometimes solving MIQP in cplex, unbounded means infeasible.'
+                'Sometimes solving MIQP in CPLEX, unbounded means infeasible.'
             )
         elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
             self.config.logger.info(
                 'Regularization problem is infeasible or unbounded.'
-                'It might happen when using Cplex to solve MIQP.'
+                'It might happen when using CPLEX to solve MIQP.'
             )
         elif main_mip_results.solver.termination_condition is tc.unknown:
             self.config.logger.info(
@@ -2280,8 +2279,8 @@ class _MindtPyAlgorithm(object):
                 config.mip_solver = 'cplex'
             if config.mip_regularization_solver == 'appsi_cplex':
                 config.logger.info(
-                    "APPSI-Cplex cannot get duals for mixed-integer problems"
-                    "mip_solver will be changed to Cplex."
+                    "APPSI-CPLEX cannot get duals for mixed-integer problems"
+                    "mip_solver will be changed to CPLEX."
                 )
                 config.mip_regularization_solver = 'cplex'
             if config.mip_solver in {
@@ -2641,9 +2640,9 @@ class _MindtPyAlgorithm(object):
             if config.mip_regularization_solver in {'cplex', 'appsi_cplex', 'cplex_persistent'}:
                 if config.solution_limit is not None:
                     self.regularization_mip_opt.options[
-                        'mip limits solutions'
+                        'mip_limits_solutions'
                     ] = config.solution_limit
-                self.regularization_mip_opt.options['mip strategy presolvenode'] = 3
+                self.regularization_mip_opt.options['mip_strategy_presolvenode'] = 3
                 if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                     self.regularization_mip_opt.options['optimalitytarget'] = 3
             elif config.mip_regularization_solver == 'gurobi':

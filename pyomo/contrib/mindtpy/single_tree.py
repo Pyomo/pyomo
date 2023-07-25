@@ -32,7 +32,7 @@ cplex, cplex_available = attempt_import('cplex')
 class LazyOACallback_cplex(
     cplex.callbacks.LazyConstraintCallback if cplex_available else object
 ):
-    """Inherent class in Cplex to call Lazy callback."""
+    """Inherent class in CPLEX to call Lazy callback."""
 
     def copy_lazy_var_list_values(
         self,
@@ -119,7 +119,7 @@ class LazyOACallback_cplex(
         linearize_active=True,
         linearize_violated=True,
     ):
-        """Linearizes nonlinear constraints; add the OA cuts through Cplex inherent function self.add()
+        """Linearizes nonlinear constraints; add the OA cuts through CPLEX inherent function self.add()
         For nonconvex problems, turn on 'config.add_slack'. Slack variables will always be used for
         nonlinear equality constraints.
 
@@ -163,7 +163,8 @@ class LazyOACallback_cplex(
                     )
                     rhs = constr.lower
 
-                    # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
+                    # Since the CPLEX requires the lazy cuts in CPLEX type,
+                    # we need to transform the pyomo expression into CPLEX expression.
                     pyomo_expr = copysign(1, sign_adjust * dual_values[index]) * (
                         sum(
                             value(jacs[constr][var]) * (var - value(var))
@@ -274,7 +275,7 @@ class LazyOACallback_cplex(
     def add_lazy_affine_cuts(self, mindtpy_object, config, opt):
         """Adds affine cuts using MCPP.
 
-        Add affine cuts through Cplex inherent function self.add().
+        Add affine cuts through CPLEX inherent function self.add().
 
         Parameters
         ----------
@@ -686,7 +687,7 @@ class LazyOACallback_cplex(
             )
 
     def __call__(self):
-        """This is an inherent function in LazyConstraintCallback in cplex.
+        """This is an inherent function in LazyConstraintCallback in CPLEX.
 
         This function is called whenever an integer solution is found during the branch and bound process.
         """

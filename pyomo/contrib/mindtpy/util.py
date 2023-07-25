@@ -629,7 +629,8 @@ def get_integer_solution(model, string_zero=False):
     for var in model.MindtPy_utils.discrete_variable_list:
         if string_zero:
             if var.value == 0:
-                # In cplex, negative zero is different from zero, so we use string to denote this(Only in singletree)
+                # In CPLEX, negative zero is different from zero, 
+                # so we use string to denote this(Only in singletree)
                 temp.append(str(var.value))
             else:
                 temp.append(int(round(var.value)))
@@ -705,18 +706,18 @@ def copy_var_list_values_from_solution_pool(
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
-    """A new persistent interface to Gurobi.
+    """A new persistent interface to GUROBI.
 
     Args:
-        GurobiPersistent (PersistentSolver): A class that provides a persistent interface to Gurobi.
+        GurobiPersistent (PersistentSolver): A class that provides a persistent interface to GUROBI.
     """
 
     def _intermediate_callback(self):
         def f(gurobi_model, where):
-            """Callback function for Gurobi.
+            """Callback function for GUROBI.
 
             Args:
-                gurobi_model (gurobi model): the gurobi model derived from pyomo model.
+                gurobi_model (GUROBI model): the GUROBI model derived from pyomo model.
                 where (int): an enum member of gurobipy.GRB.Callback.
             """
             self._callback_func(
