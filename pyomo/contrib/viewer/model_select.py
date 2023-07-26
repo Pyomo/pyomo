@@ -49,8 +49,8 @@ except:
 
 
 class ModelSelect(_ModelSelect, _ModelSelectUI):
-    def __init__(self, ui_data, parent=None):
-        super().__init__(parent=parent)
+    def __init__(self, ui_data):
+        super().__init__()
         self.setupUi(self)
         self.ui_data = ui_data
         self.closeButton.clicked.connect(self.close)

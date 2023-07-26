@@ -97,11 +97,11 @@ except NameError:
     def init_qt_elements(self):
         super().init_qt_elements()
         self.kernel_pyomo_init(self.widget.kernel_client)
-        self.run_script_act = myqt.QtWidgets.QAction("&Run Script...", self.window)
-        self.show_ui_act = myqt.QtWidgets.QAction(
+        self.run_script_act = myqt.QAction("&Run Script...", self.window)
+        self.show_ui_act = myqt.QAction(
             "&Show Pyomo Model Viewer", self.window
         )
-        self.hide_ui_act = myqt.QtWidgets.QAction(
+        self.hide_ui_act = myqt.QAction(
             "&Hide Pyomo Model Viewer", self.window
         )
         self.window.file_menu.addSeparator()
