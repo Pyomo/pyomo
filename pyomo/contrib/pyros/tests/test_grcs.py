@@ -8,7 +8,6 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
-from pyomo.environ import *
 from pyomo.core.expr import identify_variables, identify_mutable_parameters
 from pyomo.contrib.pyros.util import (
     selective_clone,
@@ -27,7 +26,6 @@ from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
 import time
 from pyomo.contrib.pyros.util import time_code
-import pyomo.core.expr as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_to_master,
@@ -47,7 +45,20 @@ from pyomo.opt import (
     TerminationCondition,
     Solution,
 )
-from pyomo.environ import Objective, value, Var
+from pyomo.environ import (
+    Constraint,
+    Expression,
+    Objective,
+    Param,
+    SolverFactory,
+    Var,
+    cos,
+    exp,
+    log,
+    sin,
+    sqrt,
+    value,
+)
 
 
 if not (numpy_available and scipy_available):
@@ -555,9 +566,9 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         # get variables, mutable params in the explicit constraints
         cons = mod_2.uncertain_var_bound_cons
         for idx in cons:
-            for p in EXPR.identify_mutable_parameters(cons[idx].expr):
+            for p in identify_mutable_parameters(cons[idx].expr):
                 params_in_cons.add(p)
-            for v in EXPR.identify_variables(cons[idx].expr):
+            for v in identify_variables(cons[idx].expr):
                 vars_in_cons.add(v)
         # reduce only to uncertain mutable params found
         params_in_cons = params_in_cons & uncertain_params
