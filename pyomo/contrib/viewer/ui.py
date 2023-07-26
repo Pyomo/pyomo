@@ -266,7 +266,8 @@ class MainWindow(_MainWindow, _MainWindowUI):
         model_select = ModelSelect(parent=self, ui_data=self.ui_data)
         model_select.update_models()
         model_select.show()
-        return model_select
+        print(model_select)
+        #return model_select
 
     def exit_action(self):
         """
