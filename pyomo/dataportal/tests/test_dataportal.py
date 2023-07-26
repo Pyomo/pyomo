@@ -675,7 +675,7 @@ class PyomoDataPortal(unittest.TestCase):
 
         md = DataPortal()
         md.load(filename=currdir + "data17.dat")
-        
+
         self.assertEqual(md['A'], 1)
         self.assertEqual(md['B'], {'a': 1})
         self.assertEqual(md['C'], {'a': 1, 'b': 2, 'c': 3})
