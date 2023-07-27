@@ -3,8 +3,7 @@
 # =================
 import pyomo.environ as pyo
 from pyomo.environ import units
-from pyomo.contrib.edi.formulation import Formulation, RuntimeConstraint
-from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel, BBVariable
+from pyomo.contrib.edi import Formulation, RuntimeConstraint, BlackBoxFunctionModel, BBVariable
 
 # ===================
 # Declare Formulation
@@ -57,7 +56,7 @@ class UnitCircle(BlackBoxFunctionModel):
 
     def BlackBox(self, x, y): # The actual function that does things
         x = pyo.value(units.convert(x,self.inputs[0].units)) # Converts to correct units then casts to float
-        y = pyo.value(units.convert(y,self.inputs[0].units)) # Converts to correct units then casts to float
+        y = pyo.value(units.convert(y,self.inputs[1].units)) # Converts to correct units then casts to float
 
         z = x**2 + y**2 # Compute z
         dzdx = 2*x      # Compute dz/dx
