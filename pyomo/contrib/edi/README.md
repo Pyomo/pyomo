@@ -17,7 +17,7 @@ The core object in EDI is the `Formulation`  object, which inherits from the `py
 
 Below is a simple example to get started, but additional resources can be found in the [examples](https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/edi/examples) folder or in the EDI [documentation](https://pyomo.readthedocs.io/en/stable/contributed_packages/edi/index.html)
 
-```
+```python
 # =================
 # Import Statements
 # =================
