@@ -18,7 +18,7 @@ from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr import GetItemExpression
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index

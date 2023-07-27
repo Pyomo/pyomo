@@ -54,7 +54,7 @@ from pyomo.core.base.external import ExternalFunction
 from pyomo.network import Port
 from pyomo.common.collections import ComponentSet
 from pyomo.repn import generate_standard_repn
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.opt import SolverFactory
 from pyomo.util.vars_from_expressions import get_vars_from_components
 

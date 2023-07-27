@@ -22,7 +22,7 @@ from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.core.expr.current import Expr_if, inequality, LinearExpression
+from pyomo.core.expr import Expr_if, inequality, LinearExpression
 from pyomo.core.base.expression import ScalarExpression
 from pyomo.environ import (
     ConcreteModel,
