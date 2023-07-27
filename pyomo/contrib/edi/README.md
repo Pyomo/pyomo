@@ -23,8 +23,9 @@ Below is a simple example to get started, but additional resources can be found 
 # =================
 import numpy as np
 import pyomo.environ as pyo
-from pyomo.environ import units
-from pyomo.edi import Formulation, RuntimeConstraint, BlackBoxFunctionModel, bbVariable
+from pyomo.environ import PositiveReals, units
+from pyomo.contrib.edi.formulation import Formulation, RuntimeConstraint
+from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel, BBVariable
 
 # ===================
 # Declare Formulation
@@ -32,7 +33,7 @@ from pyomo.edi import Formulation, RuntimeConstraint, BlackBoxFunctionModel, bbV
 f = Formulation()
 
 # =================
-# Declare Variables
+# Declare Variables\
 # =================
 x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
 y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
@@ -63,11 +64,11 @@ class UnitCircle(BlackBoxFunctionModel):
         self.description = 'This model evaluates the function: y = exp(x)'
         
         # Declare the black box model inputs
-        self.inputs.append(bbVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-        self.inputs.append(bbVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
+        self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
+        self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
 
         # Declare the black box model outputs
-        self.outputs.append(bbVariable('z', None, 'ft**2',  'Resultant of the unit circle evaluation'))
+        self.outputs.append(BBVariable('z', None, 'ft**2',  'Resultant of the unit circle evaluation'))
 
         # Declare the maximum available derivative
         self.availableDerivative = 2
