@@ -140,6 +140,19 @@ class Formulation(ConcreteModel):
             if domain not in domainList:
                 raise RuntimeError("Invalid domain")
 
+        if bounds is not None:
+            if not isinstance(bounds,(list,tuple)):
+                raise ValueError('The keyword bounds must be a 2 length list or tuple of floats')
+            if len(bounds)!=2:
+                raise ValueError('The keyword bounds must be a 2 length list or tuple of floats')
+            if not isinstance(bounds[0], (float, int)):
+                raise ValueError('The keyword bounds must be a 2 length list or tuple of floats')
+            if not isinstance(bounds[1], (float, int)):
+                raise ValueError('The keyword bounds must be a 2 length list or tuple of floats')
+            if bounds[0] > bounds[1]:
+                raise ValueError("Lower bound is higher than upper bound")
+
+
         if size is not None:
             if isinstance(size,(list, tuple)):
                 for i in range(0,len(size)):
@@ -152,24 +165,24 @@ class Formulation(ConcreteModel):
                     else:
                         st *= Set(initialize=list(range(0,size[i])))
                 st.construct()
-                self.add_component(name, Var(st, name=name, initialize=guess, domain=domain, doc=description, units=decodeUnits(units)))
+                self.add_component(name, Var(st, name=name, initialize=guess, domain=domain, bounds=bounds, doc=description, units=decodeUnits(units)))
             else:
                 if isinstance(size, int):
                     if size == 1 or size == 0:
-                        self.add_component(name, Var(name=name, initialize=guess, domain=domain, doc=description, units=decodeUnits(units)))
+                        self.add_component(name, Var(name=name, initialize=guess, domain=domain, bounds=bounds, doc=description, units=decodeUnits(units)))
                     else:
                         st = Set(initialize=list(range(0,size)))
                         st.construct()
-                        self.add_component(name, Var(st, name=name, initialize=guess, domain=domain, doc=description, units=decodeUnits(units)))
+                        self.add_component(name, Var(st, name=name, initialize=guess, domain=domain, bounds=bounds, doc=description, units=decodeUnits(units)))
                 else:
                     raise ValueError('Invalid size.  Must be an integer or list/tuple of integers')
         else:
-            self.add_component(name, Var(name=name, initialize=guess, domain=domain, doc=description, units=decodeUnits(units)))
+            self.add_component(name, Var(name=name, initialize=guess, domain=domain, bounds=bounds, doc=description, units=decodeUnits(units)))
         self.__dict__[name].construct()
         self._variable_keys.append(name)
         return self.__dict__[name]
     
-    def Constant(self, name, value, units, description, size=None, within=None):
+    def Constant(self, name, value, units, description='', size=None, within=None):
         if within is None:
             within = Reals
         else:
@@ -306,10 +319,8 @@ class Formulation(ConcreteModel):
 
     def get_runtimeConstraints(self):
         return [self.__dict__[nm] for nm in self.__dict__.keys() if nm in self._runtimeConstraint_keys]
-    
-    def solve(self):
 
-        # objectives = 
+    def check_units(self):
         for i in range(1,self._objective_counter+1):
             assert_units_consistent(self.__dict__['objective_'+str(i)])
             
@@ -317,6 +328,5 @@ class Formulation(ConcreteModel):
             if not isinstance(self.__dict__['constraint_'+str(i)],pyomo.contrib.pynumero.interfaces.external_grey_box.ExternalGreyBoxBlock):
                 assert_units_consistent(self.__dict__['constraint_'+str(i)])
         
-        
-        self.pprint()
+
         
