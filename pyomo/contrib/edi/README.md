@@ -23,7 +23,7 @@ Below is a simple example to get started, but additional resources can be found 
 # =================
 import numpy as np
 import pyomo.environ as pyo
-from pyomo.environ import PositiveReals, units
+from pyomo.environ import units
 from pyomo.contrib.edi.formulation import Formulation, RuntimeConstraint
 from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel, BBVariable
 
