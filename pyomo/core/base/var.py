@@ -22,7 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr import GetItemExpression
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue,

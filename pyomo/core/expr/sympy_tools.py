@@ -15,8 +15,8 @@ from pyomo.common import DeveloperError
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import NondifferentiableError
-from pyomo.core.expr import current as EXPR, logical_expr as LEXPR, native_types
-from pyomo.core.expr.numvalue import value
+import pyomo.core.expr as EXPR
+from pyomo.core.expr.numvalue import value, native_types
 
 #
 # Sympy takes a significant time to load; defer importing it unless
@@ -57,11 +57,11 @@ def _configure_sympy(sympy, available):
             sympy.Abs: lambda x: abs(*x),
             sympy.Derivative: _nondifferentiable,
             sympy.Tuple: lambda x: x,
-            sympy.Or: lambda x: LEXPR.lor(*x),
-            sympy.And: lambda x: LEXPR.land(*x),
-            sympy.Implies: lambda x: LEXPR.implies(*x),
-            sympy.Equivalent: lambda x: LEXPR.equivalents(*x),
-            sympy.Not: lambda x: LEXPR.lnot(*x),
+            sympy.Or: lambda x: EXPR.lor(*x),
+            sympy.And: lambda x: EXPR.land(*x),
+            sympy.Implies: lambda x: EXPR.implies(*x),
+            sympy.Equivalent: lambda x: EXPR.equivalents(*x),
+            sympy.Not: lambda x: EXPR.lnot(*x),
             sympy.LessThan: lambda x: operator.le(*x),
             sympy.StrictLessThan: lambda x: operator.lt(*x),
             sympy.GreaterThan: lambda x: operator.ge(*x),
@@ -77,12 +77,12 @@ def _configure_sympy(sympy, available):
             EXPR.ProductExpression: sympy.Mul,
             EXPR.MonomialTermExpression: sympy.Mul,
             EXPR.ExternalFunctionExpression: _external_fcn,
-            LEXPR.AndExpression: sympy.And,
-            LEXPR.OrExpression: sympy.Or,
-            LEXPR.ImplicationExpression: sympy.Implies,
-            LEXPR.EquivalenceExpression: sympy.Equivalent,
-            LEXPR.XorExpression: sympy.Xor,
-            LEXPR.NotExpression: sympy.Not,
+            EXPR.AndExpression: sympy.And,
+            EXPR.OrExpression: sympy.Or,
+            EXPR.ImplicationExpression: sympy.Implies,
+            EXPR.EquivalenceExpression: sympy.Equivalent,
+            EXPR.XorExpression: sympy.Xor,
+            EXPR.NotExpression: sympy.Not,
         }
     )
 

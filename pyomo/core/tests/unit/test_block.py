@@ -57,7 +57,7 @@ from pyomo.core.base.block import (
     _BlockData,
     declare_custom_block,
 )
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.opt import check_available_solvers
 
 from pyomo.gdp import Disjunct

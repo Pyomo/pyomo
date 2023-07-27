@@ -28,7 +28,7 @@ from pyomo.environ import (
     Constraint,
     Reals,
 )
-from pyomo.core.expr.current import MonomialTermExpression
+from pyomo.core.expr import MonomialTermExpression
 from pyomo.core.expr.numeric_expr import NumericNDArray
 from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.expr.compare import compare_expressions

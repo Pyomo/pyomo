@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 from pyomo.core import (
     nonpyomo_leaf_types,

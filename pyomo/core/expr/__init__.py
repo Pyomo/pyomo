@@ -49,7 +49,7 @@ from pyomo.common.errors import TemplateExpressionError
 
 from .base import ExpressionBase
 from .boolean_value import BooleanValue
-from .expr_common import ExpressionType, Mode
+from .expr_common import ExpressionType, Mode, OperatorAssociativity
 from .logical_expr import (
     native_logical_types,
     special_boolean_atom_types,
@@ -90,6 +90,8 @@ from .numeric_expr import (
     Expr_ifExpression,
     ExternalFunctionExpression,
     LinearExpression,
+    MaxExpression,
+    MinExpression,
     MonomialTermExpression,
     NegationExpression,
     PowExpression,
@@ -102,6 +104,8 @@ from .numeric_expr import (
     NPV_DivisionExpression,
     NPV_Expr_ifExpression,
     NPV_ExternalFunctionExpression,
+    NPV_MaxExpression,
+    NPV_MinExpression,
     NPV_NegationExpression,
     NPV_PowExpression,
     NPV_ProductExpression,
@@ -149,6 +153,7 @@ from .relational_expr import (
     RangedExpression,
     InequalityExpression,
     EqualityExpression,
+    NotEqualExpression,
     inequality,
 )
 from .symbol_map import SymbolMap

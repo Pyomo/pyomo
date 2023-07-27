@@ -15,7 +15,7 @@ logger = logging.getLogger('pyomo.core')
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.log import is_debug_set
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base import (
     Transformation,
     TransformationFactory,

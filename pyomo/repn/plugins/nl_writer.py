@@ -26,7 +26,7 @@ from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     NegationExpression,
     ProductExpression,
     DivisionExpression,

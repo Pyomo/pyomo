@@ -12,7 +12,7 @@
 from io import StringIO
 
 import pyomo.common.unittest as unittest
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
