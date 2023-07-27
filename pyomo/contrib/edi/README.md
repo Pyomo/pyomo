@@ -68,7 +68,7 @@ class UnitCircle(BlackBoxFunctionModel):
         self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
 
         # Declare the black box model outputs
-        self.outputs.append(BBVariable('z', None, 'ft**2',  'Resultant of the unit circle evaluation'))
+        self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
 
         # Declare the maximum available derivative
         self.availableDerivative = 2
