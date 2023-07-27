@@ -33,7 +33,7 @@ from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel, BBVar
 f = Formulation()
 
 # =================
-# Declare Variables\
+# Declare Variables
 # =================
 x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
 y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
