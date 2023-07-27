@@ -61,7 +61,7 @@ class UnitCircle(BlackBoxFunctionModel):
         super(UnitCircle, self).__init__()
 
         # A brief description of the model
-        self.description = 'This model evaluates the function: y = exp(x)'
+        self.description = 'This model evaluates the function: z = x**2 + y**2'
         
         # Declare the black box model inputs
         self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
