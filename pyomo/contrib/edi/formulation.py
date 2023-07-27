@@ -145,8 +145,8 @@ class Formulation(ConcreteModel):
                 for i in range(0,len(size)):
                     if not isinstance(size[i],int):
                         raise ValueError('Invalid size.  Must be an integer or list/tuple of integers')
-                    if size[i] == 1:
-                        raise ValueError('A value of 1 is not valid for defining size.  Use fewer dimensions.')
+                    if size[i] == 1 or size[i] == 0 :
+                        raise ValueError('A value of 0 or 1 is not valid for defining size.  Use fewer dimensions.')
                     if i == 0:
                         st = Set(initialize=list(range(0,size[i])))
                     else:

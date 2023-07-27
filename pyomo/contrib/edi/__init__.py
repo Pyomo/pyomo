@@ -15,12 +15,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# # Recommended just to build all of the appropriate things
-# import pyomo.environ
+# Recommended just to build all of the appropriate things
+import pyomo.environ
 
-# # Import the relevant classes from Formulation
-# from formulation import Formulation, RuntimeConstraint
+# Import the relevant classes from Formulation
+from formulation import Formulation, RuntimeConstraint
 
-# # Import the black box modeling tools
-# from blackBoxFunctionModel import BlackBoxFunctionModel
-# from blackBoxFunctionModel import BlackBoxFunctionModel_Variable as bbVariable
+# Import the black box modeling tools
+from blackBoxFunctionModel import BlackBoxFunctionModel
+from blackBoxFunctionModel import BlackBoxFunctionModel_Variable as BBVariable

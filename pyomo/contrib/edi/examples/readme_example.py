@@ -1,27 +1,10 @@
-# Engineering Design Interface
-
-The Pyomo Engineering Design Interface (EDI) is a lightweight wrapper on the Pyomo language that is targeted at composing engineering design optimization problems.  The language and interface have been designed to mimic many of the features found in [GPkit](https://github.com/convexengineering/gpkit) and [CVXPY](https://github.com/cvxpy/cvxpy) while also providing a simple, clean interface for black-box analysis codes that are common in engineering design applications.
-
-## Installation
-
-EDI is a part of the standard installation process for Pyomo:
-```
-pip install pyomo
-```
-
-## Usage
-
-The core object in EDI is the `Formulation`  object, which inherits from the `pyomo.environ.ConcreteModel`.  Essentally, a `Formulation` is a Pyomo `Model` with some extra stuff, but can be treated exactly as if it were a Pyomo `Model`.  However, an EDI `Formulation` has some additional features that can help simplify model construction.
-
-Below is a simple example to get started, but additional resources can be found in the [examples](https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/edi/examples) folder or in the EDI [documentation](https://pyomo.readthedocs.io/en/stable/contributed_packages/edi/index.html)
-
-```python
 # =================
 # Import Statements
 # =================
 import pyomo.environ as pyo
 from pyomo.environ import units
-from pyomo.contrib.edi import Formulation, RuntimeConstraint, BlackBoxFunctionModel, BBVariable
+from pyomo.contrib.edi.formulation import Formulation, RuntimeConstraint
+from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel, BBVariable
 
 # ===================
 # Declare Formulation
@@ -95,20 +78,3 @@ f.ConstraintList(
         z <= 1*units.m**2
     ]
 )
-```
-
-## Acknowledgement
-
-Pyomo: Python Optimization Modeling Objects  
-Copyright (c) 2008-2023  
-National Technology and Engineering Solutions of Sandia, LLC  
-Under the terms of Contract DE-NA0003525 with National Technology and
-Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-rights in this software.
-
-Development of this module was conducted as part of the Institute for
-the Design of Advanced Energy Systems (IDAES) with support through the
-Simulation-Based Engineering, Crosscutting Research Program within the
-U.S. Department of Energy’s Office of Fossil Energy and Carbon Management.
-
-This software is distributed under the 3-clause BSD License.
