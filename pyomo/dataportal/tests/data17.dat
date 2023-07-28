@@ -1,0 +1,10 @@
+param A := 1;
+
+param B := a 1;
+
+param C := 
+a 1
+b 2
+c 3;
+
+table D := 1; 
