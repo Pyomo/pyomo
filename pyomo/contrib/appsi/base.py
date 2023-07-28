@@ -42,13 +42,41 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
 
 
+# # TerminationCondition
+
+# We currently have: Termination condition, solver status, and solution status.
+# LL: Michael was trying to go for simplicity. All three conditions can be confusing.
+# It is likely okay to have termination condition and solver status.
+
+# ## Open Questions (User Perspective)
+# - Did I (the user) get a reasonable answer back from the solver?
+# - If the answer is not reasonable, can I figure out why?
+
+# ## Our Goal
+# Solvers normally tell you what they did and hope the users understand that.
+# *We* want to try to return that information but also _help_ the user.
+
+# ## Proposals
+# PROPOSAL 1: PyomoCondition and SolverCondition
+# - SolverCondition: what the solver said
+# - PyomoCondition: what we interpret that the solver said
+
+# PROPOSAL 2: TerminationCondition contains...
+# - Some finite list of conditions
+# - Two flags: why did it exit (TerminationCondition)? how do we interpret the result (SolutionStatus)? 
+#   - Replace `optimal` with `normal` or `ok` for the termination flag; `optimal` can be used differently for the solver flag
+#   - You can use something else like `local`, `global`, `feasible` for solution status
+
 class TerminationCondition(enum.Enum):
     """
     An enumeration for checking the termination condition of solvers
     """
 
-    unknown = 0
+    unknown = 42
     """unknown serves as both a default value, and it is used when no other enum member makes sense"""
+
+    ok = 0
+    """The solver exited with the optimal solution"""
 
     maxTimeLimit = 1
     """The solver exited due to a time limit"""
@@ -62,46 +90,78 @@ class TerminationCondition(enum.Enum):
     minStepLength = 4
     """The solver exited due to a minimum step length"""
 
-    optimal = 5
-    """The solver exited with the optimal solution"""
-
-    unbounded = 8
+    unbounded = 5
     """The solver exited because the problem is unbounded"""
 
-    infeasible = 9
+    infeasible = 6
     """The solver exited because the problem is infeasible"""
 
-    infeasibleOrUnbounded = 10
+    infeasibleOrUnbounded = 7
     """The solver exited because the problem is either infeasible or unbounded"""
 
-    error = 11
+    error = 8
     """The solver exited due to an error"""
 
-    interrupted = 12
+    interrupted = 9
     """The solver exited because it was interrupted"""
 
-    licensingProblems = 13
+    licensingProblems = 10
     """The solver exited due to licensing problems"""
 
 
-class SolverConfig(ConfigDict):
+class SolutionStatus(enum.Enum):
+    # We may want to not use enum.Enum; we may want to use the flavor that allows sets
+    noSolution = 0
+    locallyOptimal = 1
+    globallyOptimal = 2
+    feasible = 3
+
+
+# # SolverConfig
+
+# The idea here (currently / in theory) is that a call to solve will have a keyword argument `solver_config`:
+# ```
+#   solve(model, solver_config=...)
+#       config = self.config(solver_config)
+# ```
+
+# We have several flavors of options:
+# - Solver options
+# - Standardized options
+# - Wrapper options
+# - Interface options
+# - potentially... more?
+
+# ## The Options
+
+# There are three basic structures: flat, doubly-nested, separate dicts.
+# We need to pick between these three structures (and stick with it).
+
+# **Flat: Clear interface; ambiguous about what goes where; better solve interface.** <- WINNER
+# Doubly: More obscure interface; less ambiguity; better programmatic interface.
+# SepDicts: Clear delineation; **kwargs becomes confusing (what maps to what?) (NOT HAPPENING)
+
+
+class InterfaceConfig(ConfigDict):
     """
     Attributes
     ----------
-    time_limit: float
+    time_limit: float - sent to solver
         Time limit for the solver
-    stream_solver: bool
+    stream_solver: bool - wrapper
         If True, then the solver log goes to stdout
-    load_solution: bool
+    load_solution: bool - wrapper
         If False, then the values of the primal variables will not be
         loaded into the model
-    symbolic_solver_labels: bool
+    symbolic_solver_labels: bool - sent to solver
         If True, the names given to the solver will reflect the names
         of the pyomo components. Cannot be changed after set_instance
         is called.
-    report_timing: bool
+    report_timing: bool - wrapper
         If True, then some timing information will be printed at the
         end of the solve.
+    solver_options: ConfigDict or dict
+        The "raw" solver options to be passed to the solver.
     """
 
     def __init__(
@@ -112,7 +172,7 @@ class SolverConfig(ConfigDict):
         implicit_domain=None,
         visibility=0,
     ):
-        super(SolverConfig, self).__init__(
+        super(InterfaceConfig, self).__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -120,20 +180,19 @@ class SolverConfig(ConfigDict):
             visibility=visibility,
         )
 
-        self.declare('time_limit', ConfigValue(domain=NonNegativeFloat))
         self.declare('stream_solver', ConfigValue(domain=bool))
         self.declare('load_solution', ConfigValue(domain=bool))
         self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
         self.declare('report_timing', ConfigValue(domain=bool))
 
-        self.time_limit: Optional[float] = None
+        self.time_limit: Optional[float] = self.declare('time_limit', ConfigValue(domain=NonNegativeFloat))
         self.stream_solver: bool = False
         self.load_solution: bool = True
         self.symbolic_solver_labels: bool = False
         self.report_timing: bool = False
 
 
-class MIPSolverConfig(SolverConfig):
+class MIPSolverConfig(InterfaceConfig):
     """
     Attributes
     ----------
@@ -166,6 +225,21 @@ class MIPSolverConfig(SolverConfig):
         self.mip_gap: Optional[float] = None
         self.relax_integrality: bool = False
 
+
+# # SolutionLoaderBase
+
+# This is an attempt to answer the issue of persistent/non-persistent solution
+# loading. This is an attribute of the results object (not the solver).
+
+# You wouldn't ask the solver to load a solution into a model. You would
+# ask the result to load the solution - into the model you solved.
+# The results object points to relevant elements; elements do NOT point to
+# the results object.
+
+# Per Michael: This may be a bit clunky; but it works.
+# Per Siirola: We may want to rethink `load_vars` and `get_primals`. In particular,
+# this is for efficiency - don't create a dictionary you don't need to. And what is
+# the client use-case for `get_primals`?
 
 class SolutionLoaderBase(abc.ABC):
     def load_vars(
@@ -584,6 +658,46 @@ class UpdateConfig(ConfigDict):
         self.treat_fixed_vars_as_params: bool = True
 
 
+# # Solver
+
+# ## Open Question: What does 'solve' look like?
+
+# We may want to use the 80/20 rule here - we support 80% of the cases; anything
+# fancier than that is going to require "writing code." The 80% would be offerings
+# that are supported as part of the `pyomo` script.
+
+# ## Configs
+
+# We will likely have two configs for `solve`: standardized config (processes `**kwargs`)
+# and implicit ConfigDict with some specialized options.
+
+# These have to be separated because there is a set that need to be passed
+# directly to the solver. The other is Pyomo options / our standardized options
+# (a few of which might be passed directly to solver, e.g., time_limit).
+
+# ## Contained Methods
+
+# We do not like `symbol_map`; it's keyed towards file-based interfaces. That
+# is the `lp` writer; the `nl` writer doesn't need that (and in fact, it's
+# obnoxious). The new `nl` writer returns back more meaningful things to the `nl`
+# interface.
+
+# If the writer needs a symbol map, it will return it. But it is _not_ a
+# solver thing. So it does not need to continue to exist in the solver interface.
+
+# All other options are reasonable.
+
+# ## Other (maybe should be contained) Methods
+
+# There are other methods in other solvers such as `warmstart`, `sos`; do we
+# want to continue to support and/or offer those features? 
+
+# The solver interface is not responsible for telling the client what
+# it can do, e.g., `supports_sos2`. This is actually a contract between
+# the solver and its writer.
+
+# End game: we are not supporting a `has_Xcapability` interface (CHECK BOOK).
+
 class Solver(abc.ABC):
     class Availability(enum.IntEnum):
         NotFound = 0
@@ -610,7 +724,7 @@ class Solver(abc.ABC):
             return self.name
 
     @abc.abstractmethod
-    def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
+    def solve(self, model: _BlockData, tee = False, timer: HierarchicalTimer = None, **kwargs) -> Results:
         """
         Solve a Pyomo model.
 
@@ -618,8 +732,12 @@ class Solver(abc.ABC):
         ----------
         model: _BlockData
             The Pyomo model to be solved
+        tee: bool
+            Show solver output in the terminal
         timer: HierarchicalTimer
             An option timer for reporting timing
+        **kwargs
+            Additional keyword arguments (including solver_options - passthrough options; delivered directly to the solver (with no validation))
 
         Returns
         -------
@@ -672,15 +790,10 @@ class Solver(abc.ABC):
 
         Returns
         -------
-        SolverConfig
+        InterfaceConfig
             An object for configuring pyomo solve options such as the time limit.
             These options are mostly independent of the solver.
         """
-        pass
-
-    @property
-    @abc.abstractmethod
-    def symbol_map(self):
         pass
 
     def is_persistent(self):
