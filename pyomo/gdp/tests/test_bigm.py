@@ -35,7 +35,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
 import logging
 
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 

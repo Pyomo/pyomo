@@ -19,7 +19,7 @@ import textwrap
 
 from copy import deepcopy
 
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.numeric_expr import NumericNDArray
 from pyomo.core.expr.numvalue import native_types
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice

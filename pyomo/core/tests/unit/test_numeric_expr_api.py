@@ -19,7 +19,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     value,
     sin,
     Expr_if,

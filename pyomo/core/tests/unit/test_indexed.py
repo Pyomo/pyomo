@@ -24,7 +24,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Var, Param, Set, value, Integers
 from pyomo.core.base.set import FiniteSetOf, OrderedSetOf
 from pyomo.core.base.indexed_component import normalize_index
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr import GetItemExpression
 from pyomo.core import SortComponents
 
 

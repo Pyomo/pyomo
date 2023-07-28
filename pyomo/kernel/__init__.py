@@ -27,7 +27,6 @@ from pyomo.core.expr import (
     numeric_expr,
     boolean_value,
     logical_expr,
-    current,
     calculus,
     symbol_map,
     expr_errors,
@@ -55,7 +54,7 @@ from pyomo.core.expr.numvalue import (
 
 from pyomo.core.expr.boolean_value import BooleanValue
 
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     linear_expression,
     nonlinear_expression,
     land,

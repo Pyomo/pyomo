@@ -16,7 +16,7 @@ from pyomo.core import (
     LogicalConstraint,
     exactly,
 )
-from pyomo.core.expr.current import sqrt
+from pyomo.core.expr import sqrt
 from pyomo.gdp import Disjunct, Disjunction
 
 import pyomo.network as ntwk

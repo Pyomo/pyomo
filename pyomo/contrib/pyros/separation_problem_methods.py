@@ -14,7 +14,7 @@ from pyomo.contrib.pyros.solve_data import (
     SeparationResults,
 )
 from pyomo.opt import TerminationCondition as tc
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     replace_expressions,
     identify_mutable_parameters,
     identify_variables,
