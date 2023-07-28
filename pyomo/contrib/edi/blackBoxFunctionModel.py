@@ -153,9 +153,7 @@ class BlackBoxFunctionModel_Variable(object):
         else:
             raise ValueError('Invalid description.  Must be a string.')
 
-BBVariable = BlackBoxFunctionModel_Variable
-
-errorString = 'This function is calling to the base Model class and has not been defined.'
+errorString = 'This function is calling to the base class and has not been defined.'
 
 class BlackBoxFunctionModel(ExternalGreyBoxModel):
 # ---------------------------------------------------------------------------------------------------------------------

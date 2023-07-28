@@ -295,7 +295,6 @@ class Formulation(ConcreteModel):
 
     def ConstraintList(self, conList):
         for i in range(0,len(conList)):
-            # self._constraint_counter += 1
             con = conList[i]
             if isinstance(con, RuntimeConstraint):
                 self.RuntimeConstraint(con)

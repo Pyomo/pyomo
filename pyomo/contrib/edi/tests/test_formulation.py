@@ -166,23 +166,133 @@ class TestEDIFormulation(unittest.TestCase):
 
     def test_edi_formulation_getobjectives(self):
         "Tests the get_objectives function in edi.formulation"
-        pass    
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation
+        f = Formulation()
+        x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
+        y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
+        f.Objective(x+y)
+        objList = f.get_objectives()
+        self.assertTrue(len(objList)==1)
+        # not really sure how to check this, so I wont
 
     def test_edi_formulation_getconstraints(self):
-        "Tests the get_constraints function in edi.formulation"
-        pass    
+        "Tests the get_constraints, get_explicitConstraints, and get_runtimeConstraints functions in edi.formulation"
+        # =================
+        # Import Statements
+        # =================
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, RuntimeConstraint, BlackBoxFunctionModel, BBVariable
 
-    def test_edi_formulation_getexplicitconstraints(self):
-        "Tests the get_explicitConstraints function in edi.formulation"
-        pass    
+        # ===================
+        # Declare Formulation
+        # ===================
+        f = Formulation()
 
-    def test_edi_formulation_getruntimeconstraints(self):
-        "Tests the get_runtimeConstraints function in edi.formulation"
-        pass    
+        # =================
+        # Declare Variables
+        # =================
+        x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
+        y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
+        z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'The unit circle output')
+
+        # =================
+        # Declare Constants
+        # =================
+        c = f.Constant(name = 'c', value = 1.0, units = '', description = 'A constant c', size = 2)
+
+        # =====================
+        # Declare the Objective
+        # =====================
+        f.Objective(
+            c[0]*x + c[1]*y
+        )
+
+        # ===================
+        # Declare a Black Box
+        # ===================
+        class UnitCircle(BlackBoxFunctionModel):
+            def __init__(self): # The initalization function
+                
+                # Initalize the black box model
+                super(UnitCircle, self).__init__()
+
+                # A brief description of the model
+                self.description = 'This model evaluates the function: z = x**2 + y**2'
+                
+                # Declare the black box model inputs
+                self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
+                self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
+
+                # Declare the black box model outputs
+                self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+
+                # Declare the maximum available derivative
+                self.availableDerivative = 2
+
+                # Post-initalization setup
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, x, y): # The actual function that does things
+                x = pyo.value(units.convert(x,self.inputs[0].units)) # Converts to correct units then casts to float
+                y = pyo.value(units.convert(y,self.inputs[1].units)) # Converts to correct units then casts to float
+
+                z = x**2 + y**2 # Compute z
+                dzdx = 2*x      # Compute dz/dx
+                dzdy = 2*y      # Compute dz/dy
+
+                z *= units.ft**2
+                dzdx *= units.ft # units.ft**2 / units.ft
+                dzdy *= units.ft # units.ft**2 / units.ft
+                
+                return z, [dzdx, dzdy] # return z, grad(z), hess(z)...
+
+        # =======================
+        # Declare the Constraints
+        # =======================
+        f.ConstraintList(
+            [
+                RuntimeConstraint(z, '==', [x,y], UnitCircle() ) ,
+                z <= 1*units.m**2
+            ]
+        )
+
+        cl  = f.get_constraints()
+        ecl = f.get_explicitConstraints()
+        rcl = f.get_runtimeConstraints()
+
+        self.assertTrue(len(cl)==2)
+        self.assertTrue(len(ecl)==1)
+        self.assertTrue(len(rcl)==1)
 
     def test_edi_formulation_checkunits(self):
         "Tests the check_units function in edi.formulation"
-        pass    
+        import pyomo
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation
+        f = Formulation()
+        x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
+        y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
+
+        f.Objective(x+y)
+        f.Constraint(x+y <= 1.0*units.m)
+        f.check_units()
+
+        f.Constraint(2.0*x+y <= 1.0)
+        self.assertRaises(pyomo.core.base.units_container.UnitsError, f.check_units, *())
+
+
+        f2 = Formulation()
+        u = f2.Variable(name = 'u', guess = 1.0, units = 'm'  , description = 'The u variable')
+        v = f2.Variable(name = 'v', guess = 1.0, units = 'kg'  , description = 'The v variable')
+        f2.Objective(u+v)
+        self.assertRaises(pyomo.core.base.units_container.UnitsError, f2.check_units, *())
+
+
+        
 
 
 if __name__ == '__main__':
