@@ -19,7 +19,7 @@
 import pyomo.environ
 
 # Import the relevant classes from Formulation
-from pyomo.contrib.edi.formulation import Formulation, RuntimeConstraint
+from pyomo.contrib.edi.formulation import Formulation
 
 # Import the black box modeling tools
 from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel

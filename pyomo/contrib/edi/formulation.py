@@ -75,45 +75,6 @@ def decodeUnits(u_val):
             return pyomo_units.__getattr__(u_val)
     else:
         return u_val
-
-class RuntimeConstraint(object):
-    def __init__(self, outputs, operators, inputs, black_box):
-
-        inputs_raw = inputs
-        outputs_raw = outputs 
-        operators_raw = operators
-
-        if isinstance(inputs_raw, (pyomo.core.base.var.IndexedVar,pyomo.core.base.var.ScalarVar)):
-            inputs_raw = [inputs_raw]
-        elif isinstance(inputs_raw, (list, tuple)):
-            inputs_raw = list(inputs_raw)
-        else:
-            raise ValueError("Invalid type for input variables")
-
-        if isinstance(outputs_raw, (pyomo.core.base.var.IndexedVar,pyomo.core.base.var.ScalarVar)):
-            outputs_raw = [outputs_raw]
-        elif isinstance(outputs_raw, (list, tuple)):
-            outputs_raw = list(outputs_raw)
-        else:
-            raise ValueError("Invalid type for output variables")
-
-        if isinstance(operators_raw, (list, tuple)):
-            operators_raw = list(outputs_raw)
-        elif isinstance(operators_raw,str):
-            if operators_raw in ["==",">=","<="]:
-                operators_raw = [operators_raw]
-            else:
-                raise ValueError("Invalid operator")
-        else:
-            raise ValueError("Invalid type for operators")
-
-
-        self.outputs = outputs_raw
-        self.operators = operators_raw
-        self.inputs = inputs_raw
-        self.black_box = black_box
-
-        self.black_box.setOptimizationVariables(inputs_raw, outputs_raw)
     
 class Formulation(ConcreteModel):
     def __init__(self):
@@ -236,8 +197,8 @@ class Formulation(ConcreteModel):
         self._allConstraint_keys.append(conName)
         self.__dict__[conName].construct()
 
-    
-    def RuntimeConstraint(self, rcCon):
+
+    def RuntimeConstraint(self, outputs, operators, inputs, black_box):
         self._constraint_counter += 1
         conName = 'constraint_'+str(self._constraint_counter)
         self._runtimeConstraint_keys.append(conName)
@@ -248,9 +209,39 @@ class Formulation(ConcreteModel):
 
         # TODO:  Need to include operators after Michael fixes things
 
-        inputs_raw    = rcCon.inputs
-        outputs_raw   = rcCon.outputs
-        operators_raw = rcCon.operators
+        inputs_raw    = inputs
+        outputs_raw   = outputs
+        operators_raw = operators
+
+        if isinstance(inputs_raw, (pyomo.core.base.var.IndexedVar,pyomo.core.base.var.ScalarVar)):
+            inputs_raw = [inputs_raw]
+        elif isinstance(inputs_raw, (list, tuple)):
+            inputs_raw = list(inputs_raw)
+        else:
+            raise ValueError("Invalid type for input variables")
+
+        if isinstance(outputs_raw, (pyomo.core.base.var.IndexedVar,pyomo.core.base.var.ScalarVar)):
+            outputs_raw = [outputs_raw]
+        elif isinstance(outputs_raw, (list, tuple)):
+            outputs_raw = list(outputs_raw)
+        else:
+            raise ValueError("Invalid type for output variables")
+        for lst in [outputs_raw, inputs_raw]:
+            for vr in lst:
+                if not isinstance(vr, (pyomo.core.base.var.IndexedVar,pyomo.core.base.var.ScalarVar)):
+                    raise ValueError("Invalid type when checking inputs and outputs")                    
+
+        if isinstance(operators_raw, (list, tuple)):
+            operators_raw = list(operators_raw)
+        elif isinstance(operators_raw,str):
+            operators_raw = [operators_raw]
+        else:
+            raise ValueError("Invalid type for operators")
+        for opr in operators_raw:
+            if opr not in ["==",">=","<="]:
+                raise ValueError("Invalid operator")
+
+        black_box.setOptimizationVariables(inputs_raw, outputs_raw)
 
         outputs_raw_length = len(outputs_raw)
         operators_raw_length = len(operators_raw)
@@ -259,37 +250,36 @@ class Formulation(ConcreteModel):
         for ovar in outputs_raw:
             if isinstance(ovar, pyomo.core.base.var.ScalarVar):
                 outputs_unwrapped.append(ovar)
-            elif isinstance(ovar, pyomo.core.base.var.IndexedVar):
+            else: # isinstance(ovar, pyomo.core.base.var.IndexedVar), validated above
                 validIndicies = list(ovar.index_set().data())
                 for vi in validIndicies:
                     outputs_unwrapped.append(ovar[vi])
-            else:
-               raise ValueError("Invalid type for output variable") 
 
         inputs_unwrapped = []
         for ivar in inputs_raw:
             if isinstance(ivar, pyomo.core.base.var.ScalarVar):
                 inputs_unwrapped.append(ivar)
-            elif isinstance(ivar, pyomo.core.base.var.IndexedVar):
+            else: # isinstance(ivar, pyomo.core.base.var.IndexedVar), validated above
                 validIndicies = list(ivar.index_set().data())
                 for vi in validIndicies:
-                    inputs_unwrapped.append(ivar[vi])
-            else:
-                raise ValueError("Invalid type for input variable") 
+                    inputs_unwrapped.append(ivar[vi]) 
 
-        rcCon.black_box._NunwrappedOutputs = len(outputs_unwrapped)
-        rcCon.black_box._NunwrappedInputs  = len(inputs_unwrapped)
+        black_box._NunwrappedOutputs = len(outputs_unwrapped)
+        black_box._NunwrappedInputs  = len(inputs_unwrapped)
+        black_box.post_init_setup()
 
         # TODO:  Need to unwrap operators 
 
 
-        self.__dict__[conName].set_external_model(rcCon.black_box, inputs=inputs_unwrapped, outputs=outputs_unwrapped)#,operators=operators_unwrapped)
+        self.__dict__[conName].set_external_model(black_box, inputs=inputs_unwrapped, outputs=outputs_unwrapped)#,operators=operators_unwrapped)
 
     def ConstraintList(self, conList):
         for i in range(0,len(conList)):
             con = conList[i]
-            if isinstance(con, RuntimeConstraint):
-                self.RuntimeConstraint(con)
+            if isinstance(con, (tuple,list)):
+                self.RuntimeConstraint(*con)
+            elif isinstance(con, dict):
+                self.RuntimeConstraint(**con)
             else:
                 self.Constraint(con)
 

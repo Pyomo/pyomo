@@ -21,7 +21,7 @@ Below is a simple example to get started, but additional resources can be found 
 # =================
 import pyomo.environ as pyo
 from pyomo.environ import units
-from pyomo.contrib.edi import Formulation, RuntimeConstraint, BlackBoxFunctionModel, BBVariable
+from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
 
 # ===================
 # Declare Formulation
@@ -70,7 +70,7 @@ class UnitCircle(BlackBoxFunctionModel):
         self.availableDerivative = 1
 
         # Post-initalization setup
-        self.post_init_setup(len(self.inputs))
+        self.post_init_setup()
 
     def BlackBox(self, x, y): # The actual function that does things
         x = pyo.value(units.convert(x,self.inputs[0].units)) # Converts to correct units then casts to float
@@ -91,7 +91,7 @@ class UnitCircle(BlackBoxFunctionModel):
 # =======================
 f.ConstraintList(
     [
-        RuntimeConstraint(z, '==', [x,y], UnitCircle() ) ,
+        [ z, '==', [x,y], UnitCircle() ] ,
         z <= 1*units.m**2
     ]
 )

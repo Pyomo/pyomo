@@ -230,8 +230,8 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         jac = self._cache['pyomo_jacobian']
         return jac
 
-    def post_init_setup(self, N_inputs, defaultVal = 0.0):
-        self._input_values = np.ones(N_inputs) * defaultVal
+    def post_init_setup(self, defaultVal = 1.0):
+        self._input_values = np.ones(self._NunwrappedInputs) * defaultVal
 
 
     def fillCache(self):
@@ -256,12 +256,12 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 if isinstance(optimizationInput, pyomo.core.base.var.IndexedVar):
                     value = np.zeros(shape) 
                     for vix in list(optimizationInput.index_set().data()):
-                        value[vix] = raw_inputs[ptr]
+                        raw_val                = float(raw_inputs[ptr]) * optimizationUnits
+                        raw_val_correctedUnits = pyomo_units.convert(raw_val, localUnits)
+                        value[vix] = pyo.value(raw_val_correctedUnits)
                         ptr += 1
-                    value *= optimizationUnits
-                    self.sizeCheck(localShape, value)
-                    value_correctedUnits = pyomo_units.convert(value, localUnits)
-                    bb_inputs.append(value_correctedUnits)
+                    self.sizeCheck(localShape, value*localUnits)
+                    bb_inputs.append(value*localUnits)
 
                 elif isinstance(optimizationInput, pyomo.core.base.var.ScalarVar):
                     value = raw_inputs[ptr] * optimizationUnits
@@ -293,7 +293,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 modelOutputUnits        = opt.units
                 ouptutOptimizationUnits = optimizationOutput.get_units()
                 vl = valueList[i]
-                if isinstance(vl, pyomo.core.expr.numvalue.NumericNDArray):
+                if isinstance(vl, pyomo.core.expr.numeric_expr.NumericNDArray):
                     validIndexList = optimizationOutput.index_set().data()
                     for j in range(0,len(validIndexList)):
                         vi = validIndexList[j]
@@ -310,7 +310,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
             self._cache['pyomo_outputs'] = outputVector
 
-            outputJacobian = np.zeros([self._NunwrappedOutputs, self._NunwrappedInputs])
+            outputJacobian = np.ones([self._NunwrappedOutputs, self._NunwrappedInputs]) * -1
             ptr_row = 0
             ptr_col = 0 
 
@@ -320,6 +320,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 oounits = oopt.get_units()
                 lounits = lopt.units
                 # oshape  = [len(idx) for idx in oopt.index_set().subsets()]
+                ptr_col = 0
                 for j in range(0,len(self.inputs)):
                     oipt = self.inputVariables_optimization[j]
                     lipt = self.inputs[j]
@@ -336,7 +337,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                         ptr_col += 1
                         ptr_row_step = 1
 
-                    elif isinstance(jacobianValue_raw,pyomo.core.expr.numvalue.NumericNDArray):
+                    elif isinstance(jacobianValue_raw,pyomo.core.expr.numeric_expr.NumericNDArray):
                         jshape = jacobianValue_raw.shape
 
                         if isinstance(oopt, pyomo.core.base.var.ScalarVar):
@@ -377,14 +378,20 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                             # both are dimensioned vectors
                             #oshape, ishape, jshape
                             ptr_row_cache = ptr_row
+                            ptr_col_cache = ptr_col
                             validIndicies_o = list(oopt.index_set().data())
                             validIndicies_i = list(oipt.index_set().data())
 
                             for vio in validIndicies_o:
+                                if isinstance(vio, (float,int)):
+                                    vio = (vio,)
                                 for vii in validIndicies_i:
+                                    if isinstance(vii, (float,int)):
+                                        vii = (vii,)
                                     corrected_value = pyo.value(pyomo_units.convert(jacobianValue_raw[vio + vii], oounits/oiunits)) # now unitless in correct units
                                     outputJacobian[ptr_row,ptr_col] = corrected_value
                                     ptr_col += 1
+                                ptr_col = ptr_col_cache
                                 ptr_row += 1
                             ptr_row = ptr_row_cache
                             ptr_row_step = len(validIndicies_o)
@@ -537,7 +544,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                                   pyomo.core.base.units_container._PyomoUnit)):
                 if size != 0 and size != 1 :
                     raise ValueError('Size of %s did not match the expected size %s (ie: Scalar)'%(name, str(size)))
-            elif isinstance(szVal, pyomo.core.expr.numvalue.NumericNDArray):
+            elif isinstance(szVal, pyomo.core.expr.numeric_expr.NumericNDArray):
                 shp = szVal.shape
                 if isinstance(size,(int,float)):
                     size = [size]
@@ -584,17 +591,25 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
             ipval = inputDict[name]
 
             if unts is not None:
-                try:
-                    ipval_correctUnits = pyomo_units.convert(ipval, unts)#ipval.to(unts)
-                except:
-                    raise ValueError('Could not convert %s of %s to %s'%(name, str(ipval),str(unts)))
+                if isinstance(ipval,  pyomo.core.expr.numeric_expr.NumericNDArray):
+                    for ii in range(0,len(ipval)):
+                        try:
+                            ipval[ii] = pyomo_units.convert(ipval[ii], unts)#ipval.to(unts)
+                        except:
+                            raise ValueError('Could not convert %s of %s to %s'%(name, str(ipval),str(unts)))
+                    ipval_correctUnits = ipval
+                else:
+                    try:
+                        ipval_correctUnits = pyomo_units.convert(ipval, unts)#ipval.to(unts)
+                    except:
+                        raise ValueError('Could not convert %s of %s to %s'%(name, str(ipval),str(unts)))
             else:
                 ipval_correctUnits = ipval
 
             if not isinstance(ipval_correctUnits, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
-                                                   pyomo.core.expr.numvalue.NumericNDArray,
+                                                   pyomo.core.expr.numeric_expr.NumericNDArray,
                                                    pyomo.core.base.units_container._PyomoUnit)):
-                ipval_correctUnits *= pyomo_units.dimensionless
+                ipval_correctUnits = ipval_correctUnits * pyomo_units.dimensionless
 
             self.sizeCheck(size, ipval_correctUnits)
 
@@ -645,9 +660,9 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 ipval_correctUnits = ipval
 
             if not isinstance(ipval_correctUnits, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
-                                                   pyomo.core.expr.numvalue.NumericNDArray,
+                                                   pyomo.core.expr.numeric_expr.NumericNDArray,
                                                    pyomo.core.base.units_container._PyomoUnit)):
-                ipval_correctUnits *= pyomo_units.dimensionless
+                ipval_correctUnits = ipval_correctUnits * pyomo_units.dimensionless
 
             self.sizeCheck(size, ipval_correctUnits)
 

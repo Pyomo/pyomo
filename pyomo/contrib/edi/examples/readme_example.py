@@ -3,7 +3,7 @@
 # =================
 import pyomo.environ as pyo
 from pyomo.environ import units
-from pyomo.contrib.edi import Formulation, RuntimeConstraint
+from pyomo.contrib.edi import Formulation
 from pyomo.contrib.edi import BlackBoxFunctionModel, BBVariable
 
 # ===================
@@ -60,10 +60,7 @@ class UnitCircle(BlackBoxFunctionModel):
 
         # Declare the maximum available derivative
         self.availableDerivative = 1
-
-        # Post-initalization setup
-        self.post_init_setup(len(self.inputs))
-
+        
     def BlackBox(self, x, y): # The actual function that does things
         # Converts to correct units then casts to float
         x = pyo.value(units.convert(x,self.inputs[0].units)) 
@@ -84,7 +81,7 @@ class UnitCircle(BlackBoxFunctionModel):
 # =======================
 f.ConstraintList(
     [
-        RuntimeConstraint(z, '==', [x,y], UnitCircle() ) ,
+        [ z, '==', [x,y], UnitCircle() ] ,
         z <= 1*units.m**2
     ]
 )
