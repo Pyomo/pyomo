@@ -16,6 +16,7 @@ Contributed packages distributed with Pyomo:
    :maxdepth: 1
    
    community.rst
+   edi/index.rst
    doe/doe.rst
    gdpopt.rst
    iis.rst

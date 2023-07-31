@@ -3,7 +3,8 @@
 # =================
 import pyomo.environ as pyo
 from pyomo.environ import units
-from pyomo.contrib.edi import Formulation, RuntimeConstraint, BlackBoxFunctionModel, BBVariable
+from pyomo.contrib.edi import Formulation, RuntimeConstraint
+from pyomo.contrib.edi import BlackBoxFunctionModel, BBVariable
 
 # ===================
 # Declare Formulation
@@ -15,7 +16,7 @@ f = Formulation()
 # =================
 x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
 y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'The unit circle output')
+z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Model output')
 
 # =================
 # Declare Constants
@@ -42,21 +43,31 @@ class UnitCircle(BlackBoxFunctionModel):
         self.description = 'This model evaluates the function: z = x**2 + y**2'
         
         # Declare the black box model inputs
-        self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-        self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
+        self.inputs.append(BBVariable(name = 'x', 
+                                      size = 0, 
+                                      units = 'ft' , 
+                                      description = 'The x variable') )
+        self.inputs.append(BBVariable(name = 'y', 
+                                      size = 0, 
+                                      units = 'ft' , 
+                                      description = 'The y variable') )
 
         # Declare the black box model outputs
-        self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+        self.outputs.append(BBVariable(name = 'z', 
+                                       size = 0, 
+                                       units = 'ft**2',  
+                                       description = 'Resultant of the unit circle') )
 
         # Declare the maximum available derivative
-        self.availableDerivative = 2
+        self.availableDerivative = 1
 
         # Post-initalization setup
         self.post_init_setup(len(self.inputs))
 
     def BlackBox(self, x, y): # The actual function that does things
-        x = pyo.value(units.convert(x,self.inputs[0].units)) # Converts to correct units then casts to float
-        y = pyo.value(units.convert(y,self.inputs[1].units)) # Converts to correct units then casts to float
+        # Converts to correct units then casts to float
+        x = pyo.value(units.convert(x,self.inputs[0].units)) 
+        y = pyo.value(units.convert(y,self.inputs[1].units))
 
         z = x**2 + y**2 # Compute z
         dzdx = 2*x      # Compute dz/dx
