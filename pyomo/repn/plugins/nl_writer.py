@@ -11,7 +11,7 @@
 
 import logging
 import os
-from collections import deque
+from collections import deque, defaultdict
 from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.backports import nullcontext
@@ -72,6 +72,7 @@ from pyomo.repn.util import (
     ExprType,
     FileDeterminism,
     FileDeterminism_to_SortComponents,
+    InvalidNumber,
     apply_node_operation,
     categorize_valid_components,
     complex_number_error,
@@ -2255,22 +2256,9 @@ def _before_param(visitor, child):
 
 
 def _before_npv(visitor, child):
-    # TBD: It might be more efficient to cache the value of NPV
-    # expressions to avoid duplicate evaluations.  However, current
-    # examples do not benefit from this cache.
-    #
-    # _id = id(child)
-    # if _id in visitor.value_cache:
-    #     child = visitor.value_cache[_id]
-    # else:
-    #     child = visitor.value_cache[_id] = child()
-    # return False, (_CONSTANT, child)
     try:
         return False, (_CONSTANT, visitor._eval_expr(child))
-    except:
-        # If there was an exception evaluating the subexpression, then
-        # we need to descend into it (in case there is something like 0 *
-        # nan that we need to map to 0)
+    except (ValueError, ArithmeticError):
         return True, None
 
 
@@ -2281,42 +2269,29 @@ def _before_monomial(visitor, child):
     #
     arg1, arg2 = child._args_
     if arg1.__class__ not in native_types:
-        # TBD: It might be more efficient to cache the value of NPV
-        # expressions to avoid duplicate evaluations.  However, current
-        # examples do not benefit from this cache.
-        #
-        # _id = id(arg1)
-        # if _id in visitor.value_cache:
-        #     arg1 = visitor.value_cache[_id]
-        # else:
-        #     arg1 = visitor.value_cache[_id] = arg1()
         try:
             arg1 = visitor._eval_expr(arg1)
-        except:
-            # If there was an exception evaluating the subexpression,
-            # then we need to descend into it (in case there is something
-            # like 0 * nan that we need to map to 0)
+        except (ValueError, ArithmeticError):
             return True, None
 
-    if arg2.fixed:
-        arg2 = arg2.value
-        _prod = arg1 * arg2
-        if not (arg1 and arg2) and _prod:
-            deprecation_warning(
-                f"Encountered {arg1}*{arg2} in expression tree.  "
-                "Mapping the NaN result to 0 for compatibility "
-                "with the nl_v1 writer.  In the future, this NaN "
-                "will be preserved/emitted to comply with IEEE-754.",
-                version='6.4.3',
-            )
-            _prod = 0
-        return False, (_CONSTANT, _prod)
-
-    # Trap multiplication by 0.
+    # Trap multiplication by 0 and nan.
     if not arg1:
-        return False, (_CONSTANT, 0)
+        if arg2.fixed:
+            arg2 = visitor._eval_fixed(arg2)
+            if arg2 != arg2:
+                deprecation_warning(
+                    f"Encountered {arg1}*{arg2} in expression tree.  "
+                    "Mapping the NaN result to 0 for compatibility "
+                    "with the nl_v1 writer.  In the future, this NaN "
+                    "will be preserved/emitted to comply with IEEE-754.",
+                    version='6.4.3',
+                )
+        return False, (_CONSTANT, arg1)
+
     _id = id(arg2)
     if _id not in visitor.var_map:
+        if arg2.fixed:
+            return False, (_CONSTANT, arg1 * visitor._eval_fixed(arg2))
         visitor.var_map[_id] = arg2
     return False, (_MONOMIAL, _id, arg1)
 
@@ -2330,23 +2305,46 @@ def _before_linear(visitor, child):
     linear = {}
     for arg in child.args:
         if arg.__class__ is MonomialTermExpression:
-            c, v = arg.args
-            if c.__class__ not in native_types:
-                c = visitor._eval_expr(c)
-            if v.fixed:
-                const += c * v.value
-            elif c:
-                _id = id(v)
-                if _id not in var_map:
-                    var_map[_id] = v
-                if _id in linear:
-                    linear[_id] += c
-                else:
-                    linear[_id] = c
+            arg1, arg2 = arg._args_
+            if arg1.__class__ not in native_types:
+                try:
+                    arg1 = visitor._eval_expr(arg1)
+                except (ValueError, ArithmeticError):
+                    return True, None
+
+            # Trap multiplication by 0 and nan.
+            if not arg1:
+                if arg2.fixed:
+                    arg2 = visitor._eval_fixed(arg2)
+                    if arg2 != arg2:
+                        deprecation_warning(
+                            f"Encountered {arg1}*{str(arg2.value)} in expression "
+                            "tree.  Mapping the NaN result to 0 for compatibility "
+                            "with the nl_v1 writer.  In the future, this NaN "
+                            "will be preserved/emitted to comply with IEEE-754.",
+                            version='6.6.0',
+                        )
+                continue
+
+            _id = id(arg2)
+            if _id not in var_map:
+                if arg2.fixed:
+                    const += arg1 * visitor._eval_fixed(arg2)
+                    continue
+                var_map[_id] = arg2
+                linear[_id] = arg1
+            elif _id in linear:
+                linear[_id] += arg1
+            else:
+                linear[_id] = arg1
         elif arg.__class__ in native_types:
             const += arg
         else:
-            const += visitor._eval_expr(arg)
+            try:
+                const += visitor._eval_expr(arg)
+            except (ValueError, ArithmeticError):
+                return True, None
+
     if linear:
         return False, (_GENERAL, AMPLRepn(const, linear, None))
     else:
@@ -2371,10 +2369,55 @@ def _before_general_expression(visitor, child):
     return True, None
 
 
+def _register_new_before_child_handler(visitor, child):
+    handlers = _before_child_handlers
+    child_type = child.__class__
+    if child_type in native_numeric_types:
+        if isinstance(child_type, complex):
+            _complex_types.add(child_type)
+            dispatcher[child_type] = _before_complex
+        else:
+            dispatcher[child_type] = _before_native
+    elif issubclass(child_type, str):
+        handlers[child_type] = _before_string
+    elif child_type in native_types:
+        handlers[child_type] = _before_native
+    elif not child.is_expression_type():
+        if child.is_potentially_variable():
+            handlers[child_type] = _before_var
+        else:
+            handlers[child_type] = _before_param
+    elif not child.is_potentially_variable():
+        handlers[child_type] = _before_npv
+        # If we descend into the named expression (because of an
+        # evaluation error), then on the way back out, we will use
+        # the potentially variable handler to process the result.
+        pv_base_type = child.potentially_variable_base_class()
+        if pv_base_type not in handlers:
+            try:
+                child.__class__ = pv_base_type
+                _register_new_before_child_handler(visitor, child)
+            finally:
+                child.__class__ = child_type
+        if pv_base_type in _operator_handles:
+            _operator_handles[child_type] = _operator_handles[pv_base_type]
+    elif id(child) in visitor.subexpression_cache or issubclass(
+        child_type, _GeneralExpressionData
+    ):
+        handlers[child_type] = _before_named_expression
+        _operator_handles[child_type] = handle_named_expression_node
+    else:
+        handlers[child_type] = _before_general_expression
+    return handlers[child_type](visitor, child)
+
+
+_before_child_handlers = defaultdict(lambda: _register_new_before_child_handler)
+
 _complex_types = set((complex,))
 # Register an initial set of known expression types with the "before
 # child" expression handler lookup table.
-_before_child_handlers = {_type: _before_native for _type in native_numeric_types}
+for _type in native_numeric_types:
+    _before_child_handlers[_type] = _before_native
 _before_child_handlers[complex] = _before_complex
 for _type in native_types:
     if issubclass(_type, str):
@@ -2424,6 +2467,14 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.encountered_string_arguments = False
         self._eval_expr_visitor = _EvaluationVisitor(True)
 
+    def _eval_fixed(self, obj):
+        ans = obj()
+        if ans is None or ans != ans:
+            ans = InvalidNumber(nan)
+        elif ans.__class__ in _complex_types:
+            ans = complex_number_error(ans, self, obj)
+        return ans
+
     def _eval_expr(self, expr):
         ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
         if ans.__class__ not in native_types:
@@ -2441,10 +2492,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        try:
-            return _before_child_handlers[child.__class__](self, child)
-        except KeyError:
-            self._register_new_before_child_processor(child)
         return _before_child_handlers[child.__class__](self, child)
 
     def enterNode(self, node):
@@ -2527,43 +2574,3 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         self.active_expression_source = None
         return ans
-
-    def _register_new_before_child_processor(self, child):
-        handlers = _before_child_handlers
-        child_type = child.__class__
-        if child_type in native_numeric_types:
-            if isinstance(child_type, complex):
-                _complex_types.add(child_type)
-                dispatcher[child_type] = _before_complex
-            else:
-                dispatcher[child_type] = _before_native
-        elif issubclass(child_type, str):
-            handlers[child_type] = _before_string
-        elif child_type in native_types:
-            handlers[child_type] = _before_native
-        elif not child.is_expression_type():
-            if child.is_potentially_variable():
-                handlers[child_type] = _before_var
-            else:
-                handlers[child_type] = _before_param
-        elif not child.is_potentially_variable():
-            handlers[child_type] = _before_npv
-            # If we descend into the named expression (because of an
-            # evaluation error), then on the way back out, we will use
-            # the potentially variable handler to process the result.
-            pv_base_type = child.potentially_variable_base_class()
-            if pv_base_type not in handlers:
-                try:
-                    child.__class__ = pv_base_type
-                    _register_new_before_child_processor(self, child)
-                finally:
-                    child.__class__ = child_type
-            if pv_base_type in _operator_handles:
-                _operator_handles[child_type] = _operator_handles[pv_base_type]
-        elif id(child) in self.subexpression_cache or issubclass(
-            child_type, _GeneralExpressionData
-        ):
-            handlers[child_type] = _before_named_expression
-            _operator_handles[child_type] = handle_named_expression_node
-        else:
-            handlers[child_type] = _before_general_expression
