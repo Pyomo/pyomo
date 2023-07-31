@@ -77,6 +77,8 @@ from pyomo.repn.util import (
     complex_number_error,
     initialize_var_map_from_column_order,
     ordered_active_constraints,
+    nan,
+    sum_like_expression_types,
 )
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
@@ -2448,7 +2450,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        if node.__class__ is SumExpression:
+        if node.__class__ in sum_like_expression_types:
             data = AMPLRepn(0, {}, None)
             data.nonlinear = []
             return node.args, data
