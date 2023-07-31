@@ -11,7 +11,7 @@
 
 import logging
 import os
-from collections import deque
+from collections import deque, defaultdict
 from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.backports import nullcontext
@@ -72,6 +72,7 @@ from pyomo.repn.util import (
     ExprType,
     FileDeterminism,
     FileDeterminism_to_SortComponents,
+    InvalidNumber,
     apply_node_operation,
     categorize_valid_components,
     complex_number_error,
@@ -2255,22 +2256,9 @@ def _before_param(visitor, child):
 
 
 def _before_npv(visitor, child):
-    # TBD: It might be more efficient to cache the value of NPV
-    # expressions to avoid duplicate evaluations.  However, current
-    # examples do not benefit from this cache.
-    #
-    # _id = id(child)
-    # if _id in visitor.value_cache:
-    #     child = visitor.value_cache[_id]
-    # else:
-    #     child = visitor.value_cache[_id] = child()
-    # return False, (_CONSTANT, child)
     try:
         return False, (_CONSTANT, visitor._eval_expr(child))
-    except:
-        # If there was an exception evaluating the subexpression, then
-        # we need to descend into it (in case there is something like 0 *
-        # nan that we need to map to 0)
+    except (ValueError, ArithmeticError):
         return True, None
 
 
@@ -2281,42 +2269,29 @@ def _before_monomial(visitor, child):
     #
     arg1, arg2 = child._args_
     if arg1.__class__ not in native_types:
-        # TBD: It might be more efficient to cache the value of NPV
-        # expressions to avoid duplicate evaluations.  However, current
-        # examples do not benefit from this cache.
-        #
-        # _id = id(arg1)
-        # if _id in visitor.value_cache:
-        #     arg1 = visitor.value_cache[_id]
-        # else:
-        #     arg1 = visitor.value_cache[_id] = arg1()
         try:
             arg1 = visitor._eval_expr(arg1)
-        except:
-            # If there was an exception evaluating the subexpression,
-            # then we need to descend into it (in case there is something
-            # like 0 * nan that we need to map to 0)
+        except (ValueError, ArithmeticError):
             return True, None
 
-    if arg2.fixed:
-        arg2 = arg2.value
-        _prod = arg1 * arg2
-        if not (arg1 and arg2) and _prod:
-            deprecation_warning(
-                f"Encountered {arg1}*{arg2} in expression tree.  "
-                "Mapping the NaN result to 0 for compatibility "
-                "with the nl_v1 writer.  In the future, this NaN "
-                "will be preserved/emitted to comply with IEEE-754.",
-                version='6.4.3',
-            )
-            _prod = 0
-        return False, (_CONSTANT, _prod)
-
-    # Trap multiplication by 0.
+    # Trap multiplication by 0 and nan.
     if not arg1:
-        return False, (_CONSTANT, 0)
+        if arg2.fixed:
+            arg2 = visitor._eval_fixed(arg2)
+            if arg2 != arg2:
+                deprecation_warning(
+                    f"Encountered {arg1}*{arg2} in expression tree.  "
+                    "Mapping the NaN result to 0 for compatibility "
+                    "with the nl_v1 writer.  In the future, this NaN "
+                    "will be preserved/emitted to comply with IEEE-754.",
+                    version='6.4.3',
+                )
+        return False, (_CONSTANT, arg1)
+
     _id = id(arg2)
     if _id not in visitor.var_map:
+        if arg2.fixed:
+            return False, (_CONSTANT, arg1 * visitor._eval_fixed(arg2))
         visitor.var_map[_id] = arg2
     return False, (_MONOMIAL, _id, arg1)
 
@@ -2330,23 +2305,46 @@ def _before_linear(visitor, child):
     linear = {}
     for arg in child.args:
         if arg.__class__ is MonomialTermExpression:
-            c, v = arg.args
-            if c.__class__ not in native_types:
-                c = visitor._eval_expr(c)
-            if v.fixed:
-                const += c * v.value
-            elif c:
-                _id = id(v)
-                if _id not in var_map:
-                    var_map[_id] = v
-                if _id in linear:
-                    linear[_id] += c
-                else:
-                    linear[_id] = c
+            arg1, arg2 = arg._args_
+            if arg1.__class__ not in native_types:
+                try:
+                    arg1 = visitor._eval_expr(arg1)
+                except (ValueError, ArithmeticError):
+                    return True, None
+
+            # Trap multiplication by 0 and nan.
+            if not arg1:
+                if arg2.fixed:
+                    arg2 = visitor._eval_fixed(arg2)
+                    if arg2 != arg2:
+                        deprecation_warning(
+                            f"Encountered {arg1}*{str(arg2.value)} in expression "
+                            "tree.  Mapping the NaN result to 0 for compatibility "
+                            "with the nl_v1 writer.  In the future, this NaN "
+                            "will be preserved/emitted to comply with IEEE-754.",
+                            version='6.6.0',
+                        )
+                continue
+
+            _id = id(arg2)
+            if _id not in var_map:
+                if arg2.fixed:
+                    const += arg1 * visitor._eval_fixed(arg2)
+                    continue
+                var_map[_id] = arg2
+                linear[_id] = arg1
+            elif _id in linear:
+                linear[_id] += arg1
+            else:
+                linear[_id] = arg1
         elif arg.__class__ in native_types:
             const += arg
         else:
-            const += visitor._eval_expr(arg)
+            try:
+                const += visitor._eval_expr(arg)
+            except (ValueError, ArithmeticError):
+                return True, None
+
     if linear:
         return False, (_GENERAL, AMPLRepn(const, linear, None))
     else:
@@ -2423,6 +2421,14 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.use_named_exprs = use_named_exprs
         self.encountered_string_arguments = False
         self._eval_expr_visitor = _EvaluationVisitor(True)
+
+    def _eval_fixed(self, obj):
+        ans = obj()
+        if ans is None or ans != ans:
+            ans = InvalidNumber(nan)
+        elif ans.__class__ in _complex_types:
+            ans = complex_number_error(ans, self, obj)
+        return ans
 
     def _eval_expr(self, expr):
         ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
