@@ -18,7 +18,16 @@ from pyomo.core.expr import Expr_if, inequality, LinearExpression, NPV_SumExpres
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 from pyomo.repn.util import InvalidNumber
 
-from pyomo.environ import Any, ConcreteModel, Param, Var, Expression, ExternalFunction, cos, log
+from pyomo.environ import (
+    Any,
+    ConcreteModel,
+    Param,
+    Var,
+    Expression,
+    ExternalFunction,
+    cos,
+    log,
+)
 
 nan = float('nan')
 
