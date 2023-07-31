@@ -18,7 +18,7 @@ from pyomo.core.expr import Expr_if, inequality, LinearExpression, NPV_SumExpres
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 from pyomo.repn.util import InvalidNumber
 
-from pyomo.environ import ConcreteModel, Param, Var, Expression, ExternalFunction, cos
+from pyomo.environ import Any, ConcreteModel, Param, Var, Expression, ExternalFunction, cos, log
 
 nan = float('nan')
 
@@ -1311,6 +1311,80 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
         self.assertIs(repn.nonlinear, e)
+
+    def test_errors_propagate_nan(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=0, domain=Any)
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.y.fix(1)
+
+        expr = m.y + m.x + m.z + ((3 * m.x) / m.p) / m.y
+        cfg = VisitorConfig()
+        with LoggingIntercept() as LOG:
+            repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Exception encountered evaluating expression 'div(3, 0)'\n"
+            "\tmessage: division by zero\n"
+            "\texpression: 3/p\n",
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(repn.linear[id(m.z)], 1)
+        self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
+        self.assertEqual(repn.nonlinear, None)
+
+        m.y.fix(None)
+        expr = log(m.y) + 3
+        repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        expr = 3 * m.y
+        repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.p.value = None
+        expr = 5 * (m.p * m.x + 2 * m.z)
+        repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(repn.linear[id(m.z)], 10)
+        self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
+        self.assertEqual(repn.nonlinear, None)
+
+        expr = m.y * m.x
+        repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
+        self.assertEqual(repn.nonlinear, None)
+
+        m.z = Var([1, 2, 3, 4], initialize=lambda m, i: i - 1)
+        m.z[1].fix(None)
+        expr = m.z[1] - ((m.z[2] * m.z[3]) * m.z[4])
+        repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.linear, {})
+        self.assertIsNotNone(repn.nonlinear)
+
+        m.z[3].fix(float('nan'))
+        repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.linear, {})
+        self.assertIsNotNone(repn.nonlinear)
 
     def test_type_registrations(self):
         m = ConcreteModel()
