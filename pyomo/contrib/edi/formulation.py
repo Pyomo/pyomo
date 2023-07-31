@@ -229,14 +229,6 @@ class Formulation(ConcreteModel):
     #     pass
     
     def Constraint(self, expr):
-        # Should use 
-            # N = [1,2,3]
-            # a = {1:1, 2:3.1, 3:4.5}
-            # b = {1:1, 2:2.9, 3:3.1}
-            # model.y = pyo.Var(N, within=pyo.NonNegativeReals, initialize=0.0)
-            # def CoverConstr_rule(model, i): return a[i] * model.y[i] >= b[i]
-            # model.CoverConstr = pyo.Constraint(N, rule=CoverConstr_rule)
-        # to handle things like "x(a set Variable) <= 20"
         self._constraint_counter += 1
         conName = 'constraint_'+str(self._constraint_counter)
         self.add_component(conName, Constraint(expr=expr))
