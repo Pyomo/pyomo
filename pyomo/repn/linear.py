@@ -42,20 +42,18 @@ from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
 import pyomo.core.kernel as kernel
 from pyomo.repn.util import (
     ExprType,
+    InvalidNumber,
     apply_node_operation,
     complex_number_error,
-    InvalidNumber,
+    nan,
+    sum_like_expression_types,
 )
 
 logger = logging.getLogger(__name__)
 
-nan = float("nan")
-
 _CONSTANT = ExprType.CONSTANT
 _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
-
-_SumLikeExpression = {SumExpression, LinearExpression, NPV_SumExpression}
 
 
 def _merge_dict(dest_dict, mult, src_dict):
@@ -879,7 +877,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        if node.__class__ in _SumLikeExpression:
+        if node.__class__ in sum_like_expression_types:
             return node.args, self.Result()
         else:
             return node.args, []

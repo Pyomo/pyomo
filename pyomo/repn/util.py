@@ -29,12 +29,18 @@ from pyomo.core.base import (
 )
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.expr.numvalue import native_numeric_types, is_fixed, value
+import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
 
 logger = logging.getLogger('pyomo.core')
 
 valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
 valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
+sum_like_expression_types = {
+    EXPR.SumExpression,
+    EXPR.LinearExpression,
+    EXPR.NPV_SumExpression,
+}
 
 HALT_ON_EVALUATION_ERROR = False
 nan = float('nan')
