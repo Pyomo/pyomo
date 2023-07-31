@@ -821,7 +821,10 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
 
     def _eval_fixed(self, obj):
         ans = obj()
-        if ans is None or ans != ans:
+        if ans.__class__ not in native_numeric_types:
+            if ans.__class__ is not InvalidNumber:
+                ans = InvalidNumber(nan if ans is None else ans)
+        elif ans != ans:
             ans = InvalidNumber(nan)
         elif ans.__class__ in _complex_types:
             ans = complex_number_error(ans, self, obj)
@@ -831,9 +834,12 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
         if ans.__class__ not in native_types:
             ans = value(ans)
-        if ans != ans:
-            return InvalidNumber(ans)
-        if ans.__class__ in _complex_types:
+        if ans.__class__ not in native_numeric_types:
+            if ans.__class__ is not InvalidNumber:
+                ans = InvalidNumber(nan if ans is None else ans)
+        elif ans != ans:
+            ans = InvalidNumber(nan)
+        elif ans.__class__ in _complex_types:
             return complex_number_error(ans, self, expr)
         return ans
 
