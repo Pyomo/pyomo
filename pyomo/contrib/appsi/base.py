@@ -14,7 +14,7 @@ from pyomo.core.base.constraint import _GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
-from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.block import _BlockData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap
 from .utils.get_objective import get_objective
@@ -36,7 +36,6 @@ from pyomo.opt.results.solver import (
 )
 from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
-import weakref
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
@@ -460,7 +459,7 @@ class Results(object):
         >>> opt = appsi.solvers.Ipopt()
         >>> opt.config.load_solution = False
         >>> results = opt.solve(m) #doctest:+SKIP
-        >>> if results.termination_condition == appsi.base.TerminationCondition.optimal: #doctest:+SKIP
+        >>> if results.termination_condition == appsi.base.TerminationCondition.ok: #doctest:+SKIP
         ...     print('optimal solution found: ', results.best_feasible_objective) #doctest:+SKIP
         ...     results.solution_loader.load_vars() #doctest:+SKIP
         ...     print('the optimal value of x is ', m.x.value) #doctest:+SKIP
@@ -1583,7 +1582,7 @@ legacy_termination_condition_map = {
     TerminationCondition.maxIterations: LegacyTerminationCondition.maxIterations,
     TerminationCondition.objectiveLimit: LegacyTerminationCondition.minFunctionValue,
     TerminationCondition.minStepLength: LegacyTerminationCondition.minStepLength,
-    TerminationCondition.optimal: LegacyTerminationCondition.optimal,
+    TerminationCondition.ok: LegacyTerminationCondition.optimal,
     TerminationCondition.unbounded: LegacyTerminationCondition.unbounded,
     TerminationCondition.infeasible: LegacyTerminationCondition.infeasible,
     TerminationCondition.infeasibleOrUnbounded: LegacyTerminationCondition.infeasibleOrUnbounded,
@@ -1599,7 +1598,7 @@ legacy_solver_status_map = {
     TerminationCondition.maxIterations: LegacySolverStatus.aborted,
     TerminationCondition.objectiveLimit: LegacySolverStatus.aborted,
     TerminationCondition.minStepLength: LegacySolverStatus.error,
-    TerminationCondition.optimal: LegacySolverStatus.ok,
+    TerminationCondition.ok: LegacySolverStatus.ok,
     TerminationCondition.unbounded: LegacySolverStatus.error,
     TerminationCondition.infeasible: LegacySolverStatus.error,
     TerminationCondition.infeasibleOrUnbounded: LegacySolverStatus.error,
@@ -1615,7 +1614,7 @@ legacy_solution_status_map = {
     TerminationCondition.maxIterations: LegacySolutionStatus.stoppedByLimit,
     TerminationCondition.objectiveLimit: LegacySolutionStatus.stoppedByLimit,
     TerminationCondition.minStepLength: LegacySolutionStatus.error,
-    TerminationCondition.optimal: LegacySolutionStatus.optimal,
+    TerminationCondition.ok: LegacySolutionStatus.optimal,
     TerminationCondition.unbounded: LegacySolutionStatus.unbounded,
     TerminationCondition.infeasible: LegacySolutionStatus.infeasible,
     TerminationCondition.infeasibleOrUnbounded: LegacySolutionStatus.unsure,
