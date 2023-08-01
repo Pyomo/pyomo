@@ -962,7 +962,7 @@ class _MindtPyAlgorithm(object):
             )
         elif solve_terminate_cond is tc.infeasible:
             raise ValueError(
-                'MILP main problem is infeasible. '
+                'MIP main problem is infeasible. '
                 'Problem may have no more feasible '
                 'binary configurations.'
             )
@@ -1845,7 +1845,7 @@ class _MindtPyAlgorithm(object):
             The MIP main problem.
         """
         self.config.logger.info(
-            'MILP main problem is infeasible. '
+            'MIP main problem is infeasible. '
             'Problem may have no more feasible '
             'binary configurations.'
         )
