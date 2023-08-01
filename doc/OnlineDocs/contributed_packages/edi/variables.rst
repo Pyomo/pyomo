@@ -41,7 +41,9 @@ Variables are constructed by 1) creating an instance of a new variable in a EDI 
 Relation to Pyomo Var
 ---------------------
 
-The fields: name, guess, domain, and bounds are directly passed to the pyomo ``Var`` constructor, with some minor checking.  The description field is passed to the doc field in the pyomo ``Var``.  Units are passed directly with an additional check.
+The fields: name, domain, and bounds are directly passed to the pyomo ``Var`` constructor, with some minor checking.  The guess field is passed to initalize.  The description field is passed to the doc field in the pyomo ``Var``.  Units are passed directly with an additional check.
+
+Non-scalar variables are constructed using pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector variable of length 5 would create a pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar pyomo ``Params``.
 
 
 Examples

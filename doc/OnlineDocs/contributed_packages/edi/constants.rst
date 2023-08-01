@@ -37,7 +37,9 @@ Constants are constructed by 1) creating an instance of a new parameter in a EDI
 Relation to Pyomo Param
 -----------------------
 
-The fields: name, guess, domain, and bounds are directly passed to the pyomo ``Var`` constructor, with some minor checking.  The description field is passed to the doc field in the pyomo ``Var``.  Units are passed directly with an additional check.
+The fields: name and within, and bounds are directly passed to the pyomo ``Param`` constructor, with some minor checking.  The value field is passed to the ``Param`` initalize field.  The description field is passed to the doc field in the pyomo ``Param``.  Units are passed directly with an additional check.  All Constants set the pyomo ``Param`` mutable field to True.
+
+Non-scalar constants are constructed using pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector constant of length 5 would create a pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar pyomo ``Params``.
 
 
 Examples
@@ -162,11 +164,11 @@ More complicated units definition
 Tips
 ----
 
-* Declare variables in alphabetical order.  Trust me.  It's a pain at first, but it saves a huge amount of time down the road, especially for large models.
-* Designate a section in your file for variable declarations, as is done in the :doc:`introductory example <./quickstart>`
-* Align all of your variable declarations in a pretty, grid like fashion.  Again, a pain at first, but a big time saver
-* Use the keyword names during variable declarations.  Takes extra space, but is a massive boost to readability and intrepretability
-* Declare one variable on one single line with no breaks, no matter what style guides tell you.  Again, this is a significant boost to readability
+* Declare constants in alphabetical order.  Trust me.  It's a pain at first, but it saves a huge amount of time down the road, especially for large models.
+* Designate a section in your file for constant declarations, as is done in the :doc:`introductory example <./quickstart>`
+* Align all of your constant declarations in a pretty, grid like fashion.  Depending on preference, these may or may not line up with variable declarations (I usually do not bother with this)
+* Use the keyword names during constant declarations.  Takes extra space, but is a massive boost to readability and intrepretability
+* Declare one constant on one single line with no breaks, no matter what style guides tell you.  Again, this is a significant boost to readability
 * Do not skimp out on the description field, it is extremely helpful
 
 
