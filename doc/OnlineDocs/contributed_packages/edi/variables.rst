@@ -110,7 +110,10 @@ An alternative units definition
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation
    f = Formulation()
-   x = f.Variable(name = 'x', guess = 1.0, units = units.m , description = 'The x variable')
+   x = f.Variable( name = 'x', 
+                   guess = 1.0, 
+                   units = units.m , 
+                   description = 'The x variable' )
 
 
 A vector variable

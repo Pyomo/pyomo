@@ -21,7 +21,11 @@ z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Model outp
 # =================
 # Declare Constants
 # =================
-c = f.Constant(name = 'c', value = 1.0, units = '', description = 'A constant c', size = 2)
+c = f.Constant( name = 'c', 
+                value = 1.0, 
+                units = '', 
+                description = 'A constant c', 
+                size = 2 )
 
 # =====================
 # Declare the Objective

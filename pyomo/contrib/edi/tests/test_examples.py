@@ -24,18 +24,18 @@ import importlib
 
 
 testIndex = 0
-class TestEDIExamples(unittest.TestCase):
+class EDIExamples(unittest.TestCase):
     pass
 
-def createTest(filename):
-    def testFunction(self):
+def create_new(filename):
+    def t_function(self):
         importName = filename[0:-3]
         # filename = ".."+filename
         try:
             importlib.import_module("pyomo.contrib.edi.examples."+importName)
         except:
             self.fail("This example is failing: %s"%(filename))
-    return testFunction
+    return t_function
 
 
 
@@ -46,8 +46,8 @@ pythonFileList = [
 for filename in pythonFileList:
     testName = 'test_DocumentationExample_%d'%(testIndex)
     testIndex += 1
-    testFunction = createTest(filename)
-    setattr(TestEDIExamples, testName, testFunction)
+    t_Function = create_new(filename)
+    setattr(EDIExamples, testName, t_Function)
 
 
 if __name__ == '__main__':

@@ -172,8 +172,8 @@ Runtime Constraints are declared one of two ways, just as regular constraints.  
     from pyomo.environ import units
     from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
     f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
+    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
+    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
     z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Output var')
     f.Objective( x + y )
     class UnitCircle(BlackBoxFunctionModel):
@@ -257,8 +257,8 @@ However, more commonly we expect users to construct Runtime Constraints as a par
     from pyomo.environ import units
     from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
     f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
+    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
+    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
     z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Output var')
     f.Objective( x + y )
     class UnitCircle(BlackBoxFunctionModel):
