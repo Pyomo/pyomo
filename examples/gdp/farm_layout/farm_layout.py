@@ -24,8 +24,20 @@ from pyomo.environ import (
 # Format: areas, length lower bounds, width lower bounds, length overall upper bound, width overall upper bound
 # Examples are from Sawaya (2006), except the labelled alternate ones.
 farm_layout_model_examples = {
-    "FLay02": {'areas': {1: 40, 2: 50}, 'length_lbs': {1: 1, 2: 1}, 'width_lbs': {1: 1, 2: 1}, 'length_upper_overall': 30, 'width_upper_overall': 30},
-    "FLay03": {'areas': {1: 40, 2: 50, 3: 60}, 'length_lbs': {1: 1, 2: 1, 3: 1}, 'width_lbs': {1: 1, 2: 1, 3: 1}, 'length_upper_overall': 30, 'width_upper_overall': 30},
+    "FLay02": {
+        'areas': {1: 40, 2: 50},
+        'length_lbs': {1: 1, 2: 1},
+        'width_lbs': {1: 1, 2: 1},
+        'length_upper_overall': 30,
+        'width_upper_overall': 30,
+    },
+    "FLay03": {
+        'areas': {1: 40, 2: 50, 3: 60},
+        'length_lbs': {1: 1, 2: 1, 3: 1},
+        'width_lbs': {1: 1, 2: 1, 3: 1},
+        'length_upper_overall': 30,
+        'width_upper_overall': 30,
+    },
     "FLay04": {
         'areas': {1: 40, 2: 50, 3: 60, 4: 35},
         'length_lbs': {1: 3, 2: 3, 3: 3, 4: 3},
