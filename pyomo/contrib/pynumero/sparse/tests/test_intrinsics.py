@@ -19,7 +19,7 @@ from pyomo.contrib.pynumero.dependencies import (
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest(
-        "Pynumero needs scipy and numpy to run Sparse intrinsict tests"
+        "Pynumero needs scipy and numpy to run Sparse intrinsic tests"
     )
 
 from pyomo.contrib.pynumero.sparse import BlockVector
