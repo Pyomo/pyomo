@@ -30,8 +30,8 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
     # Implement to use PiecewiseLinearToGDP. This function returns the Var
     # that replaces the transformed piecewise linear expr
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
-        self.DEBUG = True
-        identify_vars = True
+        self.DEBUG = False
+        identify_vars = False
         # Get a new Block() in transformation_block.transformed_functions, which
         # is a Block(Any)
         transBlock = transformation_block.transformed_functions[
@@ -66,6 +66,9 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         if self.DEBUG:
             print(f"lb is {self.substitute_var_lb}, ub is {self.substitute_var_ub}")
         
+        # NOTE - This functionality does not work. Even when we can choose the indicator
+        # variables, it seems that infeasibilities will always be generated. We may need
+        # to just directly transform to mip :(
         if identify_vars:
             if self.DEBUG:
                 print("Now identifying variables")
