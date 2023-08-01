@@ -18,31 +18,32 @@ from pyomo.environ import (
 
 # Circles2D3 is the original example described in the papers. Ruiz and Grossman
 # (2012) discuss two more example instances, Circles2D36 and Circles3D36, but I
-# couldn't find them.
+# couldn't find data for them, so I made a couple.
 # format: dimension, circle_centers, circle_rvals, circle_penalties, reference_point, upper_bound
 circles_model_examples = {
-    "Circles2D3": [
-        2,
-        # {1: [0, 0], 2: [4, 1], 3: [2, 4]},
-        {(1, 1): 0, (1, 2): 0, (2, 1): 4, (2, 2): 1, (3, 1): 2, (3, 2): 4},
-        {1: 1, 2: 1, 3: 1},
-        {1: 2, 2: 1, 3: 3},
-        {1: 3, 2: 2},
-        8,
-    ],
+    "Circles2D3": {
+        'dimension': 2,
+        # written as {(circle number, coordinate index): value}, for example below
+        # means {circle 1: (0, 0), circle 2: (4, 1), circle 3: (2, 4)},
+        'circle_centers': {(1, 1): 0, (1, 2): 0, (2, 1): 4, (2, 2): 1, (3, 1): 2, (3, 2): 4},
+        'circle_rvals': {1: 1, 2: 1, 3: 1},
+        'circle_penalties': {1: 2, 2: 1, 3: 3},
+        'reference_point': {1: 3, 2: 2},
+        'upper_bound': 8,
+    },
     # Here the solver has a local minimum to avoid by not choosing the closest point
-    "Circles2D3_modified": [
-        2,
-        {(1, 1): 0, (1, 2): 0, (2, 1): 4, (2, 2): 1, (3, 1): 2, (3, 2): 4},
-        {1: 1, 2: 1, 3: 1},
-        {1: 2, 2: 3, 3: 1},
-        {1: 3, 2: 2},
-        8,
-    ],
+    "Circles2D3_modified": {
+        'dimension': 2,
+        'circle_centers': {(1, 1): 0, (1, 2): 0, (2, 1): 4, (2, 2): 1, (3, 1): 2, (3, 2): 4},
+        'circle_rvals': {1: 1, 2: 1, 3: 1},
+        'circle_penalties': {1: 2, 2: 3, 3: 1},
+        'reference_point': {1: 3, 2: 2},
+        'upper_bound': 8,
+    },
     # Here's a 3D model.
-    "Circles3D4": [
-        3,
-        {
+    "Circles3D4": {
+        'dimension': 3,
+        'circle_centers': {
             (1, 1): 0,
             (1, 2): 0,
             (1, 3): 0,
@@ -56,11 +57,11 @@ circles_model_examples = {
             (4, 2): 6,
             (4, 3): 1,
         },
-        {1: 1, 2: 1, 3: 1, 4: 1},
-        {1: 1, 2: 3, 3: 2, 4: 1},
-        {1: 2, 2: 2, 3: 1},
-        10,
-    ],
+        'circle_rvals': {1: 1, 2: 1, 3: 1, 4: 1},
+        'circle_penalties': {1: 1, 2: 3, 3: 2, 4: 1},
+        'reference_point': {1: 2, 2: 2, 3: 1},
+        'upper_bound': 10,
+    },
 }
 
 
@@ -69,14 +70,13 @@ def build_model(data):
 
     # Ensure good data was passed
     assert len(data) == 6, "Error processing data"
-    (
-        dimension,
-        circle_centers,
-        circle_rvals,
-        circle_penalties,
-        reference_point,
-        upper_bound,
-    ) = data
+
+    dimension = data['dimension']
+    circle_centers = data['circle_centers']
+    circle_rvals = data['circle_rvals']
+    circle_penalties = data['circle_penalties']
+    reference_point = data['reference_point']
+    upper_bound = data['upper_bound']
 
     assert len(circle_rvals) == len(circle_penalties), "Error processing data"
     assert len(circle_centers) == len(circle_rvals) * dimension, "Error processing data"
