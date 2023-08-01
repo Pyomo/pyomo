@@ -2063,7 +2063,7 @@ class _MindtPyAlgorithm(object):
                     )
 
     def setup_fp_main(self):
-        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods."""
+        """Set up main problem for Feasibility Pump method."""
         MindtPy = self.mip.MindtPy_utils
 
         for c in MindtPy.constraint_list:
@@ -2087,7 +2087,7 @@ class _MindtPyAlgorithm(object):
             )
 
     def setup_regularization_main(self):
-        """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods."""
+        """Set up main regularization problem for ROA method."""
         config = self.config
         MindtPy = self.mip.MindtPy_utils
 
@@ -2841,7 +2841,7 @@ class _MindtPyAlgorithm(object):
                 main_mip, main_mip_results = self.solve_main()
             if self.handle_main_mip_termination(main_mip, main_mip_results):
                 break
-            # Call the MILP post-solve callback
+            # Call the MIP post-solve callback
             with time_code(self.timing, 'Call after main solve'):
                 config.call_after_main_solve(main_mip)
 

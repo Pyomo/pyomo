@@ -67,7 +67,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                         break
                     else:
                         self.handle_main_other_conditions(main_mip, main_mip_results)
-                    # Call the MILP post-solve callback
+                    # Call the MIP post-solve callback
                     with time_code(self.timing, 'Call after main solve'):
                         self.config.call_after_main_solve(main_mip)
             else:
