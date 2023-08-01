@@ -2479,7 +2479,7 @@ class _MindtPyAlgorithm(object):
         """Feasibility pump loop.
 
         This is the outermost function for the Feasibility Pump algorithm in this package; this function
-        controls the progression of solving the model.
+        controls the progress of solving the model.
 
         Raises
         ------
@@ -2826,7 +2826,7 @@ class _MindtPyAlgorithm(object):
     def MindtPy_iteration_loop(self):
         """Main loop for MindtPy Algorithms.
 
-        This is the outermost function for the Outer Approximation algorithm in this package; this function controls the progression of
+        This is the outermost function for the Outer Approximation algorithm in this package; this function controls the progress of
         solving the model.
 
         Raises
