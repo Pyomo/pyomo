@@ -25,7 +25,14 @@ circles_model_examples = {
         'dimension': 2,
         # written as {(circle number, coordinate index): value}, for example below
         # means {circle 1: (0, 0), circle 2: (4, 1), circle 3: (2, 4)},
-        'circle_centers': {(1, 1): 0, (1, 2): 0, (2, 1): 4, (2, 2): 1, (3, 1): 2, (3, 2): 4},
+        'circle_centers': {
+            (1, 1): 0,
+            (1, 2): 0,
+            (2, 1): 4,
+            (2, 2): 1,
+            (3, 1): 2,
+            (3, 2): 4,
+        },
         'circle_rvals': {1: 1, 2: 1, 3: 1},
         'circle_penalties': {1: 2, 2: 1, 3: 3},
         'reference_point': {1: 3, 2: 2},
@@ -34,7 +41,14 @@ circles_model_examples = {
     # Here the solver has a local minimum to avoid by not choosing the closest point
     "Circles2D3_modified": {
         'dimension': 2,
-        'circle_centers': {(1, 1): 0, (1, 2): 0, (2, 1): 4, (2, 2): 1, (3, 1): 2, (3, 2): 4},
+        'circle_centers': {
+            (1, 1): 0,
+            (1, 2): 0,
+            (2, 1): 4,
+            (2, 2): 1,
+            (3, 1): 2,
+            (3, 2): 4,
+        },
         'circle_rvals': {1: 1, 2: 1, 3: 1},
         'circle_penalties': {1: 2, 2: 3, 3: 1},
         'reference_point': {1: 3, 2: 2},
