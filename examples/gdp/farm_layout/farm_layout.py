@@ -22,46 +22,46 @@ from pyomo.environ import (
 )
 
 # Format: areas, length lower bounds, width lower bounds, length overall upper bound, width overall upper bound
-# Examples are from Sawaya (2006)
+# Examples are from Sawaya (2006), except the labelled alternate ones.
 farm_layout_model_examples = {
-    "FLay02": [{1: 40, 2: 50}, {1: 1, 2: 1}, {1: 1, 2: 1}, 30, 30],
-    "FLay03": [{1: 40, 2: 50, 3: 60}, {1: 1, 2: 1, 3: 1}, {1: 1, 2: 1, 3: 1}, 30, 30],
-    "FLay04": [
-        {1: 40, 2: 50, 3: 60, 4: 35},
-        {1: 3, 2: 3, 3: 3, 4: 3},
-        {1: 3, 2: 3, 3: 3, 4: 3},
-        100,
-        100,
-    ],
-    "FLay05": [
-        {1: 40, 2: 50, 3: 60, 4: 35, 5: 75},
-        {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
-        {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
-        30,
-        30,
-    ],
-    "FLay06": [
-        {1: 40, 2: 50, 3: 60, 4: 35, 5: 75, 6: 20},
-        {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
-        {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
-        30,
-        30,
-    ],
+    "FLay02": {'areas': {1: 40, 2: 50}, 'length_lbs': {1: 1, 2: 1}, 'width_lbs': {1: 1, 2: 1}, 'length_upper_overall': 30, 'width_upper_overall': 30},
+    "FLay03": {'areas': {1: 40, 2: 50, 3: 60}, 'length_lbs': {1: 1, 2: 1, 3: 1}, 'width_lbs': {1: 1, 2: 1, 3: 1}, 'length_upper_overall': 30, 'width_upper_overall': 30},
+    "FLay04": {
+        'areas': {1: 40, 2: 50, 3: 60, 4: 35},
+        'length_lbs': {1: 3, 2: 3, 3: 3, 4: 3},
+        'width_lbs': {1: 3, 2: 3, 3: 3, 4: 3},
+        'length_upper_overall': 100,
+        'width_upper_overall': 100,
+    },
+    "FLay05": {
+        'areas': {1: 40, 2: 50, 3: 60, 4: 35, 5: 75},
+        'length_lbs': {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
+        'width_lbs': {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
+        'length_upper_overall': 30,
+        'width_upper_overall': 30,
+    },
+    "FLay06": {
+        'areas': {1: 40, 2: 50, 3: 60, 4: 35, 5: 75, 6: 20},
+        'length_lbs': {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
+        'width_lbs': {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
+        'length_upper_overall': 30,
+        'width_upper_overall': 30,
+    },
     # An example where the dimension constraints are strict enough that it cannot fit a square
-    "FLay03_alt_1": [
-        {1: 40, 2: 50, 3: 60},
-        {1: 5, 2: 5, 3: 5},
-        {1: 5, 2: 5, 3: 7},
-        30,
-        30,
-    ],
-    "FLay03_alt_2": [
-        {1: 40, 2: 50, 3: 60},
-        {1: 1, 2: 1, 3: 1},
-        {1: 1, 2: 1, 3: 1},
-        8,
-        30,
-    ],
+    "FLay03_alt_1": {
+        'areas': {1: 40, 2: 50, 3: 60},
+        'length_lbs': {1: 5, 2: 5, 3: 5},
+        'width_lbs': {1: 5, 2: 5, 3: 7},
+        'length_upper_overall': 30,
+        'width_upper_overall': 30,
+    },
+    "FLay03_alt_2": {
+        'areas': {1: 40, 2: 50, 3: 60},
+        'length_lbs': {1: 1, 2: 1, 3: 1},
+        'width_lbs': {1: 1, 2: 1, 3: 1},
+        'length_upper_overall': 8,
+        'width_upper_overall': 30,
+    },
 }
 
 
@@ -71,8 +71,14 @@ def build_model(params=farm_layout_model_examples["FLay03"]):
     # Ensure good data was passed
     assert (
         len(params) == 5
-    ), "Params should be in the format: areas, length_lbs, width_lbs, length_upper_overall, width_upper, overall"
-    areas, length_lbs, width_lbs, length_upper_overall, width_upper_overall = params
+    ), "Params should be in the format: areas, length_lbs, width_lbs, length_upper_overall, width_upper_overall"
+
+    areas = params['areas']
+    length_lbs = params['length_lbs']
+    width_lbs = params['width_lbs']
+    length_upper_overall = params['length_upper_overall']
+    width_upper_overall = params['width_upper_overall']
+
     for a in areas:
         assert a > 0, "Area must be positive"
 
