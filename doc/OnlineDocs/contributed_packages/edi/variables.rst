@@ -29,7 +29,7 @@ Variables are constructed by 1) creating an instance of a new variable in a EDI 
    :type  description: str
    :param size: The size (or shape) of the variable.  Entries of 0, 1, and None all correspond to scalar variables.  Other integers correspond to vector variables.  Matrix and tensor variable are declared using lists of ints, ex: [10,10].  Matrix and tensor variables with a dimension of 1 (ie, [10,10,1]) will be rejected as the extra dimension holds no meaningful value.  
    :type  size: int or list
-   :param bounds: The bounds on the variable.  A list or tuple of two elements [lower_bound, upper_bound] where the two bounds are assumed to be either ints or floats.  WARNING:  User is currently responsible for ensuring the units are correct (see `this issue <https://github.com/codykarcher/pyomo/issues/8>`_)
+   :param bounds: The bounds on the variable.  A list or tuple of two elements [lower_bound, upper_bound] where the two bounds are assumed to be either ints or floats.  WARNING:  User is currently responsible for ensuring the units are correct (see `this issue <https://github.com/codykarcher/pyomo/issues/8>`__)
    :type  bounds: list or tuple
    :param domain: The domain of the variable (ex: Reals, Integers, etc).  Default of None constructs a variable in Reals.
    :type  domain: pyomo set
@@ -54,7 +54,6 @@ A standard declaration statement
 ++++++++++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.contrib.edi import Formulation
    f = Formulation()
@@ -65,7 +64,6 @@ Shortest possible declaration
 +++++++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.contrib.edi import Formulation
    f = Formulation()
@@ -76,7 +74,6 @@ A variable with bounds
 ++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.contrib.edi import Formulation
    f = Formulation()
@@ -91,7 +88,6 @@ An integer variable
 +++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.contrib.edi import Formulation
    from pyomo.environ import Integers
@@ -107,7 +103,6 @@ An alternative units definition
 +++++++++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation
@@ -122,7 +117,6 @@ A vector variable
 +++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation
@@ -138,7 +132,6 @@ A matrix/tensor variable
 ++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation
@@ -154,7 +147,6 @@ More complicated units definition
 +++++++++++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation

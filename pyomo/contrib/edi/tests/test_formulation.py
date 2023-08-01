@@ -20,6 +20,10 @@ import pyomo.environ as pyo
 # from pyomo.opt import check_optimal_termination
 from pyomo.common.dependencies import attempt_import
 
+from pyomo.core.base.units_container import (
+    pint_available,
+)
+
 # np, numpy_available = attempt_import(
 #     'numpy', 'edi requires numpy'
 # )
@@ -33,6 +37,7 @@ from pyomo.common.dependencies import attempt_import
 #         'edi.formulation tests require numpy'
 #     )
 
+@unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestEDIFormulation(unittest.TestCase):
     def test_edi_formulation_init(self):
         "Tests that a formulation initializes to the correct type and has proper data"

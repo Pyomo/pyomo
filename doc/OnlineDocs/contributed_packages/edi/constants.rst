@@ -19,7 +19,7 @@ Constants are constructed by 1) creating an instance of a new parameter in a EDI
 
    :param name: The name of the constant for the purposes of tracking in the formulation.  Commonly, this will be the same as the constant name in local namespace.
    :type  name: str
-   :param value: The value of the constant.  For scalar constants, this should be a valid float or int for the specified domain.  For vector constants, this will most often also be a single float or int, but a dictionary of index-value pairs is also accepted as in accordance with base pyomo.  Numpy arrays will be supported in a future release (see `this issue <https://github.com/codykarcher/pyomo/issues/1>`_)
+   :param value: The value of the constant.  For scalar constants, this should be a valid float or int for the specified domain.  For vector constants, this will most often also be a single float or int, but a dictionary of index-value pairs is also accepted as in accordance with base pyomo.  Numpy arrays will be supported in a future release (see `this issue <https://github.com/codykarcher/pyomo/issues/1>`__)
    :type  value: float or int or dict
    :param units: The units of the constant.  Every entry in a vector constant must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless
    :type  units: str or pyomo.core.base.units_container._PyomoUnit
@@ -31,7 +31,7 @@ Constants are constructed by 1) creating an instance of a new parameter in a EDI
    :type  within: pyomo set
 
    :return: The constant that was declared in the formulation
-   :rtype: pyomo.core.base.var.ScalarVar or pyomo.core.base.var.IndexedVar
+   :rtype: pyomo.core.base.param.ScalarParam or pyomo.core.base.param.IndexedParam
 
 
 Relation to Pyomo Param
@@ -39,7 +39,7 @@ Relation to Pyomo Param
 
 The fields: name and within, and bounds are directly passed to the pyomo ``Param`` constructor, with some minor checking.  The value field is passed to the ``Param`` initalize field.  The description field is passed to the doc field in the pyomo ``Param``.  Units are passed directly with an additional check.  All Constants set the pyomo ``Param`` mutable field to True.
 
-Non-scalar constants are constructed using pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector constant of length 5 would create a pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar pyomo ``Params``.
+Non-scalar constants are constructed using pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector constant of length 5 would create a pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar pyomo ``Param``.
 
 
 Examples
@@ -50,99 +50,63 @@ A standard declaration statement
 ++++++++++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.contrib.edi import Formulation
    f = Formulation()
-   x = f.Variable(name = 'x', guess = 1.0, units = 'm' , description = 'The x variable')
+   x = f.Constant(name = 'c', value = 1.0, units = 'm' , description = 'A constant c')
 
 
 Shortest possible declaration
 +++++++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.contrib.edi import Formulation
    f = Formulation()
-   x = f.Variable('x', 1.0, 'm' )
-
-
-A variable with bounds
-++++++++++++++++++++++
-
-.. code-block:: python
-   :linenos:
-
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
-                   units = 'm' , 
-                   description = 'The x variable', 
-                   bounds = [-10,10] )
-
-
-An integer variable
-+++++++++++++++++++
-
-.. code-block:: python
-   :linenos:
-
-   from pyomo.contrib.edi import Formulation
-   from pyomo.environ import Integers
-   f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
-                   units = 'm' , 
-                   description = 'The x variable', 
-                   domain = Integers )
+   x = f.Constant('c', 1.0, 'm' )
 
 
 An alternative units definition
 +++++++++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation
    f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
+   x = f.Constant( name = 'c', 
+                   value = 1.0, 
                    units = units.m , 
-                   description = 'The x variable' )
+                   description = 'A constant c' )
 
 
-A vector variable
+A vector constant
 +++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation
    f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
+   x = f.Constant( name = 'c', 
+                   value = 1.0, 
                    units = 'm' , 
-                   description = 'The x variable', 
+                   description = 'A constant c', 
                    size = 5 )
 
 
-A matrix/tensor variable
+A matrix/tensor constant
 ++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation
    f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
+   x = f.Constant( name = 'c', 
+                   value = 1.0, 
                    units = 'm' , 
-                   description = 'The x variable', 
+                   description = 'A constant c', 
                    size = [10,2] )
 
 
@@ -150,15 +114,14 @@ More complicated units definition
 +++++++++++++++++++++++++++++++++
 
 .. code-block:: python
-   :linenos:
 
    from pyomo.environ import units
    from pyomo.contrib.edi import Formulation
    f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
+   x = f.Constant( name = 'c', 
+                   value = 1.0, 
                    units = 'kg*m/s**2' , 
-                   description = 'The x variable' )
+                   description = 'A constant c' )
 
 
 Tips

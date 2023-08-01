@@ -15,7 +15,6 @@ Construction
 A *Formulation* is constructed as follows:
 
 .. code-block:: python
-  :linenos:
 
   from pyomo.contrib.edi import Formulation
   f = Formulation()
@@ -31,7 +30,6 @@ See the :doc:`Variables <./variables>` Documentation
 Variables are declared using the ``f.Variable()`` function.  This function creates an instance of ``pyomo.environ.Var`` and adds it to the ``edi.contrib.Formulation``.  The function returns an instance of a ``pyomo.environ.Var`` that can be used in later construction.
 
 .. code-block:: python
-  :linenos:
 
   from pyomo.contrib.edi import Formulation
   f = Formulation()
@@ -47,7 +45,6 @@ See the :doc:`Constants <./constants>` Documentation
 Constants (referred to in base pyomo as parameters or ``Params``) are declared using the ``f.Constant()`` function.  This function creates an instance of a ``pyomo.environ.Param`` and adds it to the ``edi.contrib.Formulation``.  This function also returns an instance of ``pyomo.environ.Param`` that can be used in later construction.
 
 .. code-block:: python
-  :linenos:
 
   from pyomo.contrib.edi import Formulation
   f = Formulation()
@@ -62,7 +59,6 @@ See the :doc:`Objectives <./objectives>` Documentation
 Objectives are declared using the ``f.Objective()`` function.  This function creates an instance of a ``pyomo.environ.Objective`` and adds it to the ``edi.contrib.Formulation``.  Multiple objectives can be declared, but interpretation of multiple objectives will depend on the solver.  The returned values of the ``f.Variable()`` and ``f.Constant()`` declarations can be used to construct the objective.  Black-box (ie, Runtime) objectives are not supported at this time, but are planned in a future update.
 
 .. code-block:: python
-  :linenos:
 
   from pyomo.contrib.edi import Formulation
   f = Formulation()
@@ -75,7 +71,6 @@ Objectives are declared using the ``f.Objective()`` function.  This function cre
 By default, objectives are minimized, but can be switched to a maximize using the ``sense`` keyword from pyomo:
 
 .. code-block:: python
-  :linenos:
 
   from pyomo.contrib.edi import Formulation
   from pyomo.environ import maximize, minimize
@@ -98,7 +93,6 @@ See the :doc:`Constraints <./constraints>` Documentation
 Constraints can be declared in two ways.  First is using the standard ``f.Constraint()`` constructor.  This function creates an instance of ``pyomo.environ.Constraint`` and adds it to the ``edi.contrib.Formulation``.  The operators ``<=``, ``>=``, and ``==`` are used as constraint constructors.
 
 .. code-block:: python
-  :linenos:
 
   from pyomo.contrib.edi import Formulation
   f = Formulation()
@@ -113,7 +107,6 @@ Constraints can be declared in two ways.  First is using the standard ``f.Constr
 Constraints can also be declared using the ``f.ConstraintList()`` function.  This function takes in a list of constraints and allows for multiple constraints to be declared in one go:
 
 .. code-block:: python
-  :linenos:
 
   from pyomo.contrib.edi import Formulation
   f = Formulation()
@@ -132,7 +125,6 @@ Constraints can also be declared using the ``f.ConstraintList()`` function.  Thi
 The constraint list can also be declared a priori and passed in to the ``f.ConstraintList()`` function, which may be beneficial for complex models:
 
 .. code-block:: python
-  :linenos:
 
   from pyomo.contrib.edi import Formulation
   f = Formulation()
@@ -166,7 +158,6 @@ The use of Runtime constraints requires a black box model that is discussed in d
 Runtime Constraints are declared one of two ways, just as regular constraints.  The ``f.RuntimeConstraint()`` constructor is available: 
 
 .. code-block:: python
-  :linenos:
 
     import pyomo.environ as pyo
     from pyomo.environ import units
@@ -213,12 +204,13 @@ Runtime Constraints are declared one of two ways, just as regular constraints.  
 The ``f.RuntimeConstraint()`` constructor takes in the following inputs:
 
 .. py:function:: f.RuntimeConstraint(outputs, operators, inputs, black_box)
+    :noindex:
 
     Declares a runtime constraint in a pyomo.edi.formulation
 
     :param outputs: The outputs of the black box function
     :type outputs: pyomo.environ.Var or list or tuple
-    :param operators: The operators that are used to construct constraints.  Currently, only equality constraints are supported and will be the default no matter what is passed in here (see `this issue <https://github.com/codykarcher/pyomo/issues/4>`_)
+    :param operators: The operators that are used to construct constraints.  Currently, only equality constraints are supported and will be the default no matter what is passed in here (see `this issue <https://github.com/codykarcher/pyomo/issues/4>`__)
     :type operators: str or list or tuple
     :param inputs: The inputs to the black box function
     :type inputs: pyomo.environ.Var or list or tuple
@@ -251,7 +243,6 @@ The following are alternative construction methods that may be of use:
 However, more commonly we expect users to construct Runtime Constraints as a part of a ``f.ConstraintList()`` declaration.  Simply include a list, tuple, or dict as a part of the ConstraintList as follows:
 
 .. code-block:: python
-  :linenos:
 
     import pyomo.environ as pyo
     from pyomo.environ import units

@@ -19,13 +19,19 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
 
+from pyomo.core.base.units_container import (
+    pint_available,
+)
+
 import importlib
 
 
 
 testIndex = 0
 class EDIExamples(unittest.TestCase):
-    pass
+    def test_edi_example_placeholder(self):
+        "A placeholder"
+        pass
 
 def create_new(filename):
     def t_function(self):
@@ -47,7 +53,8 @@ for filename in pythonFileList:
     testName = 'test_DocumentationExample_%d'%(testIndex)
     testIndex += 1
     t_Function = create_new(filename)
-    setattr(EDIExamples, testName, t_Function)
+    if pint_available:
+        setattr(EDIExamples, testName, t_Function)
 
 
 if __name__ == '__main__':
