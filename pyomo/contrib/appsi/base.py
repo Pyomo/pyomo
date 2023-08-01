@@ -110,10 +110,22 @@ class TerminationCondition(enum.Enum):
 
 
 class SolutionStatus(enum.Enum):
-    # We may want to not use enum.Enum; we may want to use the flavor that allows sets
+    """
+    An enumeration for interpreting the result of a termination
+
+    TODO: We may want to not use enum.Enum; we may want to use the flavor that allows sets
+    """
+
+    """No solution found"""
     noSolution = 0
+
+    """Locally optimal solution identified"""
     locallyOptimal = 1
+
+    """Globally optimal solution identified"""
     globallyOptimal = 2
+
+    """Feasible solution identified"""
     feasible = 3
 
 
@@ -160,8 +172,6 @@ class InterfaceConfig(ConfigDict):
     report_timing: bool - wrapper
         If True, then some timing information will be printed at the
         end of the solve.
-    solver_options: ConfigDict or dict
-        The "raw" solver options to be passed to the solver.
     """
 
     def __init__(
