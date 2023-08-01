@@ -874,7 +874,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         if status == grb.LOADED:  # problem is loaded, but no solution
             results.termination_condition = TerminationCondition.unknown
         elif status == grb.OPTIMAL:  # optimal
-            results.termination_condition = TerminationCondition.optimal
+            results.termination_condition = TerminationCondition.ok
         elif status == grb.INFEASIBLE:
             results.termination_condition = TerminationCondition.infeasible
         elif status == grb.INF_OR_UNBD:
@@ -925,7 +925,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         timer.start('load solution')
         if config.load_solution:
             if gprob.SolCount > 0:
-                if results.termination_condition != TerminationCondition.optimal:
+                if results.termination_condition != TerminationCondition.ok:
                     logger.warning(
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '

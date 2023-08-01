@@ -62,9 +62,10 @@ from pyomo.core.expr.numvalue import NumericConstant
 
 # PROPOSAL 2: TerminationCondition contains...
 # - Some finite list of conditions
-# - Two flags: why did it exit (TerminationCondition)? how do we interpret the result (SolutionStatus)? 
+# - Two flags: why did it exit (TerminationCondition)? how do we interpret the result (SolutionStatus)?
 #   - Replace `optimal` with `normal` or `ok` for the termination flag; `optimal` can be used differently for the solver flag
 #   - You can use something else like `local`, `global`, `feasible` for solution status
+
 
 class TerminationCondition(enum.Enum):
     """
@@ -184,7 +185,9 @@ class InterfaceConfig(ConfigDict):
         self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
         self.declare('report_timing', ConfigValue(domain=bool))
 
-        self.time_limit: Optional[float] = self.declare('time_limit', ConfigValue(domain=NonNegativeFloat))
+        self.time_limit: Optional[float] = self.declare(
+            'time_limit', ConfigValue(domain=NonNegativeFloat)
+        )
         self.stream_solver: bool = False
         self.load_solution: bool = True
         self.symbolic_solver_labels: bool = False
@@ -239,6 +242,7 @@ class MIPInterfaceConfig(InterfaceConfig):
 # Per Siirola: We may want to rethink `load_vars` and `get_primals`. In particular,
 # this is for efficiency - don't create a dictionary you don't need to. And what is
 # the client use-case for `get_primals`?
+
 
 class SolutionLoaderBase(abc.ABC):
     def load_vars(
@@ -689,13 +693,14 @@ class UpdateConfig(ConfigDict):
 # ## Other (maybe should be contained) Methods
 
 # There are other methods in other solvers such as `warmstart`, `sos`; do we
-# want to continue to support and/or offer those features? 
+# want to continue to support and/or offer those features?
 
 # The solver interface is not responsible for telling the client what
 # it can do, e.g., `supports_sos2`. This is actually a contract between
 # the solver and its writer.
 
 # End game: we are not supporting a `has_Xcapability` interface (CHECK BOOK).
+
 
 class Solver(abc.ABC):
     class Availability(enum.IntEnum):
@@ -723,7 +728,9 @@ class Solver(abc.ABC):
             return self.name
 
     @abc.abstractmethod
-    def solve(self, model: _BlockData, tee = False, timer: HierarchicalTimer = None, **kwargs) -> Results:
+    def solve(
+        self, model: _BlockData, tee=False, timer: HierarchicalTimer = None, **kwargs
+    ) -> Results:
         """
         Solve a Pyomo model.
 

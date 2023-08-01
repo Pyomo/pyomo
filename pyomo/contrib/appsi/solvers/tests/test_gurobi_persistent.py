@@ -160,7 +160,7 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         res = opt.solve(self.m)
         self.assertAlmostEqual(x + y, res.best_feasible_objective)
         self.assertAlmostEqual(x + y, res.best_objective_bound)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertTrue(res.best_feasible_objective is not None)
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)

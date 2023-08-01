@@ -303,7 +303,7 @@ class Ipopt(PersistentSolver):
 
         termination_line = all_lines[1]
         if 'Optimal Solution Found' in termination_line:
-            results.termination_condition = TerminationCondition.optimal
+            results.termination_condition = TerminationCondition.ok
         elif 'Problem may be infeasible' in termination_line:
             results.termination_condition = TerminationCondition.infeasible
         elif 'problem might be unbounded' in termination_line:
@@ -384,7 +384,7 @@ class Ipopt(PersistentSolver):
                 self._reduced_costs[var] = 0
 
         if (
-            results.termination_condition == TerminationCondition.optimal
+            results.termination_condition == TerminationCondition.ok
             and self.config.load_solution
         ):
             for v, val in self._primal_sol.items():
@@ -395,7 +395,7 @@ class Ipopt(PersistentSolver):
                 results.best_feasible_objective = value(
                     self._writer.get_active_objective().expr
                 )
-        elif results.termination_condition == TerminationCondition.optimal:
+        elif results.termination_condition == TerminationCondition.ok:
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
             else:
@@ -526,7 +526,7 @@ class Ipopt(PersistentSolver):
         if (
             self._last_results_object is None
             or self._last_results_object.termination_condition
-            != TerminationCondition.optimal
+            != TerminationCondition.ok
         ):
             raise RuntimeError(
                 'Solver does not currently have valid duals. Please '
@@ -544,7 +544,7 @@ class Ipopt(PersistentSolver):
         if (
             self._last_results_object is None
             or self._last_results_object.termination_condition
-            != TerminationCondition.optimal
+            != TerminationCondition.ok
         ):
             raise RuntimeError(
                 'Solver does not currently have valid reduced costs. Please '

@@ -122,13 +122,13 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x)
         m.c = pe.Constraint(expr=(-1, m.x, 1))
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, -1)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c], 1)
         m.obj.sense = pe.maximize
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, 1)
         duals = opt.get_duals()
         self.assertAlmostEqual(duals[m.c], 1)
@@ -143,7 +143,7 @@ class TestSolvers(unittest.TestCase):
         m.y = pe.Var(bounds=(-2, 2))
         m.obj = pe.Objective(expr=3 * m.x + 4 * m.y)
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, -1)
         self.assertAlmostEqual(m.y.value, -2)
         rc = opt.get_reduced_costs()
@@ -159,13 +159,13 @@ class TestSolvers(unittest.TestCase):
         m.x = pe.Var(bounds=(-1, 1))
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, -1)
         rc = opt.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], 1)
         m.obj.sense = pe.maximize
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, 1)
         rc = opt.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], 1)
@@ -193,7 +193,7 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertEqual(res.termination_condition, TerminationCondition.ok)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
@@ -229,7 +229,7 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertEqual(res.termination_condition, TerminationCondition.ok)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
@@ -261,7 +261,7 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertEqual(res.termination_condition, TerminationCondition.ok)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
@@ -299,7 +299,7 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertEqual(res.termination_condition, TerminationCondition.ok)
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
             self.assertTrue(res.best_objective_bound <= m.y.value)
@@ -327,7 +327,7 @@ class TestSolvers(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
-            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertEqual(res.termination_condition, TerminationCondition.ok)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertEqual(res.best_feasible_objective, None)
@@ -354,7 +354,7 @@ class TestSolvers(unittest.TestCase):
         m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
         m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
         self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
@@ -365,7 +365,7 @@ class TestSolvers(unittest.TestCase):
 
         m.c3 = pe.Constraint(expr=m.y >= a3 * m.x + b3)
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, (b3 - b1) / (a1 - a3))
         self.assertAlmostEqual(m.y.value, a1 * (b3 - b1) / (a1 - a3) + b1)
         self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
@@ -377,7 +377,7 @@ class TestSolvers(unittest.TestCase):
 
         del m.c3
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
         self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
@@ -401,7 +401,7 @@ class TestSolvers(unittest.TestCase):
             res = opt.solve(m)
         opt.config.load_solution = False
         res = opt.solve(m)
-        self.assertNotEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertNotEqual(res.termination_condition, TerminationCondition.ok)
         if opt_class is Ipopt:
             acceptable_termination_conditions = {
                 TerminationCondition.infeasible,
@@ -685,7 +685,7 @@ class TestSolvers(unittest.TestCase):
             m.c2.value = float(c2)
             m.obj.sense = sense
             res: Results = opt.solve(m)
-            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertEqual(res.termination_condition, TerminationCondition.ok)
             if sense is pe.minimize:
                 self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2), 6)
                 self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1, 6)
@@ -720,7 +720,7 @@ class TestSolvers(unittest.TestCase):
         opt.update_config.check_for_new_or_removed_vars = False
         opt.config.load_solution = False
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         opt.load_vars()
         self.assertAlmostEqual(m.y.value, -1)
         m.x = pe.Var()
@@ -733,7 +733,7 @@ class TestSolvers(unittest.TestCase):
         opt.add_variables([m.x])
         opt.add_constraints([m.c1, m.c2])
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         opt.load_vars()
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
@@ -741,7 +741,7 @@ class TestSolvers(unittest.TestCase):
         opt.remove_variables([m.x])
         m.x.value = None
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         opt.load_vars()
         self.assertEqual(m.x.value, None)
         self.assertAlmostEqual(m.y.value, -1)
@@ -800,7 +800,7 @@ class TestSolvers(unittest.TestCase):
             )
         )
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
 
@@ -1126,14 +1126,14 @@ class TestSolvers(unittest.TestCase):
         m.b.c2 = pe.Constraint(expr=m.y >= -m.x)
 
         res = opt.solve(m.b)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(res.best_feasible_objective, 1)
         self.assertAlmostEqual(m.x.value, -1)
         self.assertAlmostEqual(m.y.value, 1)
 
         m.x.setlb(0)
         res = opt.solve(m.b)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(res.best_feasible_objective, 2)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
@@ -1156,7 +1156,7 @@ class TestSolvers(unittest.TestCase):
         m.c4 = pe.Constraint(expr=m.y >= -m.z + 1)
 
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(res.best_feasible_objective, 1)
         sol = res.solution_loader.get_primals()
         self.assertIn(m.x, sol)
@@ -1166,7 +1166,7 @@ class TestSolvers(unittest.TestCase):
         del m.c3
         del m.c4
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(res.best_feasible_objective, 0)
         sol = res.solution_loader.get_primals()
         self.assertIn(m.x, sol)
@@ -1188,12 +1188,12 @@ class TestSolvers(unittest.TestCase):
         m.c = pe.Constraint(expr=m.y >= m.p * m.x)
 
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(res.best_feasible_objective, 0)
 
         m.p.value = 1
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(res.best_feasible_objective, 3)
 
 
