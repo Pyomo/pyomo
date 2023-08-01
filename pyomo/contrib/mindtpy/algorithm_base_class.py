@@ -1982,7 +1982,7 @@ class _MindtPyAlgorithm(object):
         elif main_mip_results.solver.termination_condition is tc.unbounded:
             self.config.logger.info(
                 'Regularization problem unbounded.'
-                'Sometimes solving MIQP in CPLEX, unbounded means infeasible.'
+                'Sometimes solving MIQCP in CPLEX, unbounded means infeasible.'
             )
         elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
             self.config.logger.info(
