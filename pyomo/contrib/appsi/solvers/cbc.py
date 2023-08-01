@@ -4,7 +4,7 @@ from pyomo.contrib.appsi.base import (
     PersistentSolver,
     Results,
     TerminationCondition,
-    SolverConfig,
+    InterfaceConfig,
     PersistentSolutionLoader,
 )
 from pyomo.contrib.appsi.writers import LPWriter
@@ -33,7 +33,7 @@ from pyomo.core.staleflag import StaleFlagManager
 logger = logging.getLogger(__name__)
 
 
-class CbcConfig(SolverConfig):
+class CbcConfig(InterfaceConfig):
     def __init__(
         self,
         description=None,

@@ -23,7 +23,7 @@ from pyomo.contrib.appsi.base import (
     PersistentSolver,
     Results,
     TerminationCondition,
-    MIPSolverConfig,
+    MIPInterfaceConfig,
     PersistentBase,
     PersistentSolutionLoader,
 )
@@ -53,7 +53,7 @@ class DegreeError(PyomoException):
     pass
 
 
-class GurobiConfig(MIPSolverConfig):
+class GurobiConfig(MIPInterfaceConfig):
     def __init__(
         self,
         description=None,

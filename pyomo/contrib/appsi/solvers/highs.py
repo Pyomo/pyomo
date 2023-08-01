@@ -20,7 +20,7 @@ from pyomo.contrib.appsi.base import (
     PersistentSolver,
     Results,
     TerminationCondition,
-    MIPSolverConfig,
+    MIPInterfaceConfig,
     PersistentBase,
     PersistentSolutionLoader,
 )
@@ -38,7 +38,7 @@ class DegreeError(PyomoException):
     pass
 
 
-class HighsConfig(MIPSolverConfig):
+class HighsConfig(MIPInterfaceConfig):
     def __init__(
         self,
         description=None,

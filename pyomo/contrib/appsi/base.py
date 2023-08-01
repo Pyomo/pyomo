@@ -116,7 +116,7 @@ class SolutionStatus(enum.Enum):
     feasible = 3
 
 
-# # SolverConfig
+# # InterfaceConfig
 
 # The idea here (currently / in theory) is that a call to solve will have a keyword argument `solver_config`:
 # ```
@@ -191,7 +191,7 @@ class InterfaceConfig(ConfigDict):
         self.report_timing: bool = False
 
 
-class MIPSolverConfig(InterfaceConfig):
+class MIPInterfaceConfig(InterfaceConfig):
     """
     Attributes
     ----------
@@ -210,7 +210,7 @@ class MIPSolverConfig(InterfaceConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super(MIPSolverConfig, self).__init__(
+        super(MIPInterfaceConfig, self).__init__(
             description=description,
             doc=doc,
             implicit=implicit,
