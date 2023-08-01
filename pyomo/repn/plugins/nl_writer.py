@@ -2375,9 +2375,9 @@ def _register_new_before_child_handler(visitor, child):
     if child_type in native_numeric_types:
         if isinstance(child_type, complex):
             _complex_types.add(child_type)
-            dispatcher[child_type] = _before_complex
+            handlers[child_type] = _before_complex
         else:
-            dispatcher[child_type] = _before_native
+            handlers[child_type] = _before_native
     elif issubclass(child_type, str):
         handlers[child_type] = _before_string
     elif child_type in native_types:
@@ -2414,28 +2414,10 @@ def _register_new_before_child_handler(visitor, child):
 _before_child_handlers = defaultdict(lambda: _register_new_before_child_handler)
 
 _complex_types = set((complex,))
-# Register an initial set of known expression types with the "before
-# child" expression handler lookup table.
-for _type in native_numeric_types:
-    _before_child_handlers[_type] = _before_native
 _before_child_handlers[complex] = _before_complex
 for _type in native_types:
     if issubclass(_type, str):
         _before_child_handlers[_type] = _before_string
-# general operators
-for _type in _operator_handles:
-    _before_child_handlers[_type] = _before_general_expression
-# named subexpressions
-for _type in (
-    _GeneralExpressionData,
-    ScalarExpression,
-    kernel.expression.expression,
-    kernel.expression.noclone,
-    _GeneralObjectiveData,
-    ScalarObjective,
-    kernel.objective.objective,
-):
-    _before_child_handlers[_type] = _before_named_expression
 # Special linear / summation expressions
 _before_child_handlers[MonomialTermExpression] = _before_monomial
 _before_child_handlers[LinearExpression] = _before_linear

@@ -768,18 +768,8 @@ _before_child_dispatcher = collections.defaultdict(
 # complex number types
 _complex_types = set((complex,))
 
-# Register an initial set of known expression types with the "before
-# child" expression handler lookup table.
-for _type in native_numeric_types:
-    _before_child_dispatcher[_type] = _before_native
 # We do not support writing complex numbers out
 _before_child_dispatcher[complex] = _before_complex
-# general operators
-for _type in _exit_node_handlers:
-    _before_child_dispatcher[_type] = _before_general_expression
-# override for named subexpressions
-for _type in _named_subexpression_types:
-    _before_child_dispatcher[_type] = _before_named_expression
 # Special handling for expr_if and external functions: will be handled
 # as terminal nodes from the point of view of the visitor
 _before_child_dispatcher[Expr_ifExpression] = _before_expr_if
