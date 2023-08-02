@@ -24,45 +24,8 @@ import scipy.sparse as sps
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
 
 
-class TypeCheckedList(list):
-    def __init__(self, checkItem, itemList = None):
-        super(TypeCheckedList, self).__init__()
-        self.checkItem = checkItem
-        
-        if itemList is not None:
-            if isinstance(itemList, list) or isinstance(itemList, tuple):
-                for itm in itemList:
-                    self.append(itm)
-            else:
-                raise ValueError('Input to itemList is not iterable')
-        
-    def __setitem__(self, key, val):
-        if isinstance(val, self.checkItem):
-            super(TypeCheckedList, self).__setitem__(key, val)
-        else:
-            raise ValueError('Input must be an instance of the defined type')
-        
-    def __setslice__(self, i, j, sequence):
-        performSet = True
-        for val in sequence:
-            if not isinstance(val, self.checkItem):
-                performSet = False
-                break
-        
-        if performSet:
-            super(TypeCheckedList, self).__setslice__(i,j,sequence)
-        else:
-            raise ValueError('All values in the input must be an instance of the defined type')
-        
-    def append(self, val):
-        if isinstance(val, self.checkItem):
-            super(TypeCheckedList, self).append(val)
-        else:
-            raise ValueError('Input must be an instance of the defined type')
-
-
 class BlackBoxFunctionModel_Variable(object):
-    def __init__(self, name, size, units, description = ''):
+    def __init__(self, name, units, description = '', size = 0):
         # Order matters
         self.name = name
         self.units = units
@@ -153,6 +116,114 @@ class BlackBoxFunctionModel_Variable(object):
         else:
             raise ValueError('Invalid description.  Must be a string.')
 
+
+
+
+
+class TypeCheckedList(list):
+    def __init__(self, checkItem, itemList = None):
+        super(TypeCheckedList, self).__init__()
+        self.checkItem = checkItem
+        
+        if itemList is not None:
+            if isinstance(itemList, list) or isinstance(itemList, tuple):
+                for itm in itemList:
+                    self.append(itm)
+            else:
+                raise ValueError('Input to itemList is not iterable')
+        
+    def __setitem__(self, key, val):
+        if isinstance(val, self.checkItem):
+            super(TypeCheckedList, self).__setitem__(key, val)
+        else:
+            raise ValueError('Input must be an instance of the defined type')
+        
+    def __setslice__(self, i, j, sequence):
+        performSet = True
+        for val in sequence:
+            if not isinstance(val, self.checkItem):
+                performSet = False
+                break
+        
+        if performSet:
+            super(TypeCheckedList, self).__setslice__(i,j,sequence)
+        else:
+            raise ValueError('All values in the input must be an instance of the defined type')
+        
+    def append(self, val):
+        if isinstance(val, self.checkItem):
+            super(TypeCheckedList, self).append(val)
+        else:
+            raise ValueError('Input must be an instance of the defined type')
+
+
+class BBList(TypeCheckedList):
+    def __init__(self):
+        super(BBList, self).__init__(BlackBoxFunctionModel_Variable,[])
+        self._lookupDict = {}
+        self._counter = 0
+
+    def __getitem__(self, val):
+        if isinstance(val, int):
+            return super(BBList, self).__getitem__(val)
+        elif isinstance(val, str):
+            return super(BBList, self).__getitem__(self._lookupDict[val])
+        else:
+            raise ValueError('Input must be an integer or a valid variable name')
+
+
+
+    def append(*args, **kwargs):
+        args = list(args)
+        self = args.pop(0)
+        
+        if len(args) + len(kwargs.values()) == 1:
+            if len(args) == 1:
+                inputData = args[0]
+            if len(kwargs.values()) == 1:
+                inputData = list(kwargs.values())[0]
+                
+            if isinstance(inputData, self.checkItem):
+                if inputData.name in self._lookupDict.keys():
+                    raise ValueError("Key '%s' already exists in the input list"%(inputData.name))
+                self._lookupDict[inputData.name] = self._counter
+                self._counter += 1
+                super(BBList, self).append(inputData)
+            else:
+                if isinstance(inputData, str):
+                    raise ValueError("Key '%s' not passed in to the black box variable constructor"%('units'))
+                else:
+                    raise ValueError('Invalid (single) input type')
+        
+        elif len(args) + len(kwargs.values()) <= 4:
+            argKeys = ['name','units','description','size']
+            ipd = dict(zip(argKeys[0:len(args)],args))
+            for ky, vl in kwargs.items():
+                if ky in ipd:
+                    raise ValueError("Key '%s' declared after non-keyword arguments and is out of order"%(ky))
+                else:
+                    ipd[ky]=vl
+            
+            for ak in argKeys:
+                if ak not in ipd.keys():
+                    if ak == 'description':
+                        ipd['description']=''
+                    elif ak == 'size':
+                        ipd['size'] = 0
+                    else:
+                        raise ValueError("Key '%s' not passed in to the black box variable constructor"%(ak))
+                        
+
+            if ipd['name'] in self._lookupDict.keys():
+                raise ValueError("Key '%s' already exists in the input list"%(ipd['name']))
+            self._lookupDict[ipd['name']] = self._counter
+            self._counter += 1
+            super(BBList, self).append(BlackBoxFunctionModel_Variable(**ipd))
+            
+        else:
+            raise ValueError('Too many inputs to a black box variable')
+
+
 errorString = 'This function is calling to the base class and has not been defined.'
 
 class BlackBoxFunctionModel(ExternalGreyBoxModel):
@@ -162,8 +233,8 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         super(BlackBoxFunctionModel, self).__init__()
 
         # List of the inputs and outputs
-        self.inputs = TypeCheckedList(BlackBoxFunctionModel_Variable, [])
-        self.outputs = TypeCheckedList(BlackBoxFunctionModel_Variable, [])
+        self.inputs = BBList()
+        self.outputs = BBList()
 
         self.inputVariables_optimization  = None
         self.outputVariables_optimization = None

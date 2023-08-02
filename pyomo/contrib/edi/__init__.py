@@ -23,4 +23,6 @@ from pyomo.contrib.edi.formulation import Formulation
 
 # Import the black box modeling tools
 from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel
+from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable as BlackBoxVariable
 from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable as BBVariable
+from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable as BBV

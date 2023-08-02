@@ -161,7 +161,7 @@ Runtime Constraints are declared one of two ways, just as regular constraints.  
 
     import pyomo.environ as pyo
     from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
     f = Formulation()
     x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
     y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
@@ -169,26 +169,23 @@ Runtime Constraints are declared one of two ways, just as regular constraints.  
     f.Objective( x + y )
     class UnitCircle(BlackBoxFunctionModel):
         def __init__(self): 
-            super(UnitCircle, self).__init__()
+            super().__init__()
             self.description = 'This model evaluates the function: z = x**2 + y**2'
-            self.inputs.append(BBVariable(  name = 'x', 
-                                            size = 0, 
-                                            units = 'ft' , 
-                                            description = 'The x variable' ) )
-            self.inputs.append(BBVariable(  name = 'y', 
-                                            size = 0, 
-                                            units = 'ft' , 
-                                            description = 'The y variable' ) )
-            self.outputs.append(BBVariable( name = 'z', 
-                                            size = 0, 
-                                            units = 'ft**2',  
-                                            description = 'Output variable' ) )
+            self.inputs.append(  name = 'x', 
+                                 units = 'ft' , 
+                                 description = 'The x variable'  )
+            self.inputs.append(  name = 'y', 
+                                 units = 'ft' , 
+                                 description = 'The y variable'  )
+            self.outputs.append( name = 'z', 
+                                 units = 'ft**2',  
+                                 description = 'Output variable'  )
             self.availableDerivative = 1
             self.post_init_setup(len(self.inputs))
         def BlackBox(self, x, y): # The actual function that does things
             # Converts to correct units then casts to float
-            x = pyo.value(units.convert(x,self.inputs[0].units))
-            y = pyo.value(units.convert(y,self.inputs[1].units))
+            x = pyo.value(units.convert(x,self.inputs['x'].units))
+            y = pyo.value(units.convert(y,self.inputs['y'].units))
             z = x**2 + y**2 # Compute z
             dzdx = 2*x      # Compute dz/dx
             dzdy = 2*y      # Compute dz/dy
@@ -246,7 +243,7 @@ However, more commonly we expect users to construct Runtime Constraints as a par
 
     import pyomo.environ as pyo
     from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
     f = Formulation()
     x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
     y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
@@ -254,20 +251,17 @@ However, more commonly we expect users to construct Runtime Constraints as a par
     f.Objective( x + y )
     class UnitCircle(BlackBoxFunctionModel):
         def __init__(self): 
-            super(UnitCircle, self).__init__()
+            super().__init__()
             self.description = 'This model evaluates the function: z = x**2 + y**2'
-            self.inputs.append(BBVariable(  name = 'x', 
-                                            size = 0, 
-                                            units = 'ft' , 
-                                            description = 'The x variable' ) )
-            self.inputs.append(BBVariable(  name = 'y', 
-                                            size = 0, 
-                                            units = 'ft' , 
-                                            description = 'The y variable' ) )
-            self.outputs.append(BBVariable( name = 'z', 
-                                            size = 0, 
-                                            units = 'ft**2',  
-                                            description = 'Output variable' ) )
+            self.inputs.append(  name = 'x', 
+                                 units = 'ft' , 
+                                 description = 'The x variable'  )
+            self.inputs.append(  name = 'y', 
+                                 units = 'ft' , 
+                                 description = 'The y variable'  )
+            self.outputs.append( name = 'z', 
+                                 units = 'ft**2',  
+                                 description = 'Output variable'  )
             self.availableDerivative = 1
             self.post_init_setup(len(self.inputs))
         def BlackBox(self, x, y): # The actual function that does things

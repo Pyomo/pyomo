@@ -21,7 +21,7 @@ Below is a simple example to get started, but additional resources can be found 
 # =================
 import pyomo.environ as pyo
 from pyomo.environ import units
-from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
 
 # ===================
 # Declare Formulation
@@ -54,17 +54,17 @@ class UnitCircle(BlackBoxFunctionModel):
     def __init__(self): # The initalization function
         
         # Initalize the black box model
-        super(UnitCircle, self).__init__()
+        super().__init__()
 
         # A brief description of the model
         self.description = 'This model evaluates the function: z = x**2 + y**2'
         
         # Declare the black box model inputs
-        self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-        self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
+        self.inputs.append(name = 'x', units = 'ft' , description = 'The x variable')
+        self.inputs.append(name = 'y', units = 'ft' , description = 'The y variable')
 
         # Declare the black box model outputs
-        self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+        self.outputs.append(name = 'z', units = 'ft**2',  description = 'Resultant of the unit circle evaluation')
 
         # Declare the maximum available derivative
         self.availableDerivative = 1
@@ -73,8 +73,8 @@ class UnitCircle(BlackBoxFunctionModel):
         self.post_init_setup()
 
     def BlackBox(self, x, y): # The actual function that does things
-        x = pyo.value(units.convert(x,self.inputs[0].units)) # Converts to correct units then casts to float
-        y = pyo.value(units.convert(y,self.inputs[1].units)) # Converts to correct units then casts to float
+        x = pyo.value(units.convert(x,self.inputs['x'].units)) # Converts to correct units then casts to float
+        y = pyo.value(units.convert(y,self.inputs['y'].units)) # Converts to correct units then casts to float
 
         z = x**2 + y**2 # Compute z
         dzdx = 2*x      # Compute dz/dx

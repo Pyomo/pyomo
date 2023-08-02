@@ -13,11 +13,19 @@ EDI installs as a part of the standard pyomo install:
 
     pip install pyomo
 
+
+EDI also requires the pint package that is viewed as optional by pyomo:
+
+::
+
+    pip install pint
+
+
 User's Guide
 ------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 4
 
    quickstart.rst
    formulation.rst
