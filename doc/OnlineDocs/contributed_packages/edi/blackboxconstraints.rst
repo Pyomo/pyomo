@@ -68,10 +68,10 @@ A simple example is shown below:
                 dydx = 2*x
                 
                 # Add the units to the output
-                y = y * self.inputs['y'].units
+                y = y * self.outputs['y'].units
                 
                 # Add the units to the derivative for output
-                dydx = dydx * self.inputs['y'].units / self.inputs['x'].units
+                dydx = dydx * self.outputs['y'].units / self.inputs['x'].units
                 
                 # Return
                 return y, [dydx] # return z, grad(z), hess(z)...
@@ -185,10 +185,10 @@ When preparing the outputs, note that all outputs must have units:
 .. code-block:: python
 
     # Add the units to the output
-    y = y * self.inputs['y'].units
+    y = y * self.outputs['y'].units
     
     # Add the units to the derivative for output
-    dydx = dydx * self.inputs['y'].units / self.inputs['x'].units
+    dydx = dydx * self.outputs['y'].units / self.inputs['x'].units
 
 
 The ``BlackBox`` method then outputs a tuple of length ``self.availableDerivative+1``.  Entry [0] is the values specified during the ``__init__()``, entry [1] is first derivative information, and similar for higher order if available.
@@ -401,31 +401,68 @@ Any of the alternative declarations above are valid to pass into the ``f.Constra
 Examples
 --------
 
-A standard declaration statement
-++++++++++++++++++++++++++++++++
+More examples are in the :doc:`advanced <./advancedruntimeconstraints>` documentation, and will be added over time.  Feel free to reach out to the developers if you have questions regarding model development.
+
+A standard construction
++++++++++++++++++++++++
 
 .. code-block:: python
 
-    from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective( c*x + y )
-    f.ConstraintList(
-        [
-            x**2 + y**2 <= 1.0*units.m**2 ,
-            x <= 0.75*units.m,
-            x >= y ,
-        ]
-    )
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
+        f = Formulation()
+        x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
+        y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
+        z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'The z variable')
+
+        f.Objective( x + y )
+
+        class UnitCircle(BlackBoxFunctionModel):
+            def __init__(self): 
+                super().__init__()
+                self.description = 'This model evaluates the function: z = x**2 + y**2'
+                self.inputs.append(  name = 'x', 
+                                     units = 'ft' , 
+                                     description = 'The x variable' )
+                self.inputs.append(  name = 'y', 
+                                     units = 'ft' , 
+                                     description = 'The y variable' )
+                self.outputs.append( name = 'z',
+                                     units = 'ft**2',  
+                                     description = 'Resultant of the unit circle evaluation' )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, x, y): # The actual function that does things
+                x = pyo.value(units.convert(x,self.inputs['x'].units))
+                y = pyo.value(units.convert(y,self.inputs['y'].units))
+                z = x**2 + y**2
+                dzdx = 2*x
+                dzdy = 2*y
+                z = z * self.outputs['z'].units
+                dzdx = dzdx * self.outputs['z'].units / self.inputs['x'].units
+                dzdy = dzdy * self.outputs['z'].units / self.inputs['y'].units
+                return z, [dzdx, dzdy] # return z, grad(z), hess(z)...
+
+        f.ConstraintList(
+            [
+                (z, '==', [x,y], UnitCircle() ) ,
+                z <= 1*units.m**2
+            ]
+        )
 
 
 Tips
 ----
 
-* 
+* Align input and ouptut declarations just as is recommended for optimization variable and constant declarations
+* Delcare an input/output all on one line, no matter what the style guides say
+* This interface is really designed for subject matter experts who are not python users to have a simple, easy path to include their tools into a python based optimization architecture.  Try to let them build their own models as a means of fostering trust in the optimization tools
+* Embrace units.  They will save you so many times, it is well worth the minor additional overhead
+* Pyomo units work sligtly diffenrently than pint (for those with pint experience), but those differences should be hidden from the model creator for the most part
+* It is common to use this framework to call to a piece of software external to python
+* See the :doc:`advanced <./advancedruntimeconstraints>` documentation for extra tips and tricks
 
 
 Known Issues
@@ -433,3 +470,4 @@ Known Issues
 
 * Currently only equality constraints are supported, pending an update to pyomo (see `this issue <https://github.com/codykarcher/pyomo/issues/2>`__)
 * Runtime constraints must output to a variable, numbers and constants are not permitted (see `this issue <https://github.com/codykarcher/pyomo/issues/4>`__)
+* This functionality is not well tested when returning derivatives higher than first order.  Though it should work, exercise caution and reach out to the dev team if questions arise.

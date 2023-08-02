@@ -9,6 +9,11 @@ EDI is a part of the standard installation process for Pyomo:
 pip install pyomo
 ```
 
+EDI also requires the pint dependency that is optional in base Pyomo:
+```
+pip install pint
+```
+
 ## Usage
 
 The core object in EDI is the `Formulation`  object, which inherits from the `pyomo.environ.ConcreteModel`.  Essentally, a `Formulation` is a Pyomo `Model` with some extra stuff, but can be treated exactly as if it were a Pyomo `Model`.  However, an EDI `Formulation` has some additional features that can help simplify model construction.
