@@ -215,7 +215,6 @@ if there is one single scalar output, the unpacking may be simplified to the fol
 ::
 
     output[0] = <output>
-    output[0][<index_of_output>] = <output>
 
     output[1] = <list_of_jacobians>
     output[1][<index_of_input>] = <d(output)/d(input_of_specified_index)>

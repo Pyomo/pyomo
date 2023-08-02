@@ -695,9 +695,9 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
     def checkOutputs(self, *args, **kwargs):
         nameList = [self.outputs[i].name for i in range(0,len(self.outputs))]
         if len(args) + len(kwargs.values()) > len(nameList):
-            raise ValueError('Too many inputs')
+            raise ValueError('Too many outputs')
         if len(args) + len(kwargs.values()) < len(nameList):
-            raise ValueError('Not enough inputs')
+            raise ValueError('Not enough outputs')
         inputDict = {}
         for i in range(0,len(args)):
             rg = args[i]
@@ -707,7 +707,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
             if ky in nameList:
                 inputDict[ky] = vl
             else:
-                raise ValueError('Unexpected input keyword argument %s in the inputs'%(ky))
+                raise ValueError('Unexpected output keyword argument %s in the outputs'%(ky))
 
         opts = []
 
