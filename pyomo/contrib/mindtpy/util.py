@@ -867,7 +867,7 @@ def fp_converged(working_model, mip_model, proj_zero_tolerance, discrete_only=Tr
         The working model(original model).
     mip_model : Pyomo model
         The mip model.
-    zero_tolerance : Float
+    proj_zero_tolerance : Float
         The projection zero tolerance of Feasibility Pump.
     discrete_only : bool, optional
         Whether to only optimize on distance between the discrete variables, by default True.

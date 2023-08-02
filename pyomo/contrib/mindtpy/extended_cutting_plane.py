@@ -55,7 +55,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
             The strategy value is not correct or not included.
         """
         while self.mip_iter < self.config.iteration_limit:
-            # solve MILP main problem
+            # solve MIP main problem
             main_mip, main_mip_results = self.solve_main()
             if main_mip_results is not None:
                 if not self.config.single_tree:

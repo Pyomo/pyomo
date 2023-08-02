@@ -163,7 +163,7 @@ class LazyOACallback_cplex(
                     )
                     rhs = constr.lower
 
-                    # Since the CPLEX requires the lazy cuts in CPLEX type,
+                    # Since CPLEX requires the lazy cuts in CPLEX type,
                     # we need to transform the pyomo expression into CPLEX expression.
                     pyomo_expr = copysign(1, sign_adjust * dual_values[index]) * (
                         sum(
