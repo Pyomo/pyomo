@@ -2799,7 +2799,6 @@ class _MindtPyAlgorithm(object):
         # In ROA and RLP/NLP, since the distance calculation does not include these epigraph slack variables, they should not be added to the variable list. (update_var_con_list = False)
         # In the process_objective function, once the objective function has been reformulated as epigraph constraint, the variable/constraint/objective lists will not be updated only if the MINLP has a linear objective function and regularization is activated at the same time.
         # This is because the epigraph constraint is very "flat" for branching rules. The original objective function will be used for the main problem and epigraph reformulation will be used for the projection problem.
-        # TODO: The logic here is too complicated, can we simplify it?
         self.process_objective(update_var_con_list=True)
 
     def handle_main_mip_termination(self, main_mip, main_mip_results):
