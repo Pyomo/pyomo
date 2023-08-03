@@ -147,7 +147,7 @@ class TestEDIFormulation(unittest.TestCase):
         "Tests the runtime constraint constructor in edi.formulation"
         import pyomo.environ as pyo
         from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
         f = Formulation()
         x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
         y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
@@ -158,9 +158,9 @@ class TestEDIFormulation(unittest.TestCase):
             def __init__(self): 
                 super(UnitCircle, self).__init__()
                 self.description = 'This model evaluates the function: z = x**2 + y**2'
-                self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-                self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
-                self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+                self.inputs.append(name = 'x', units = 'ft' , description = 'The x variable')
+                self.inputs.append(name = 'y', units = 'ft' , description = 'The y variable')
+                self.outputs.append(name = 'z', units = 'ft**2',  description = 'Resultant of the unit circle evaluation')
                 self.availableDerivative = 1
                 self.post_init_setup(len(self.inputs))
             def BlackBox(self, x, y): # The actual function that does things
@@ -181,7 +181,7 @@ class TestEDIFormulation(unittest.TestCase):
         "Tests the runtime constraint constructor in edi.formulation"
         import pyomo.environ as pyo
         from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
         f = Formulation()
         x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
         y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
@@ -192,9 +192,9 @@ class TestEDIFormulation(unittest.TestCase):
             def __init__(self): 
                 super(UnitCircle, self).__init__()
                 self.description = 'This model evaluates the function: z = x**2 + y**2'
-                self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-                self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
-                self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+                self.inputs.append(name = 'x', units = 'ft' , description = 'The x variable')
+                self.inputs.append(name = 'y', units = 'ft' , description = 'The y variable')
+                self.outputs.append(name = 'z', units = 'ft**2',  description = 'Resultant of the unit circle evaluation')
                 self.availableDerivative = 1
                 self.post_init_setup(len(self.inputs))
             def BlackBox(self, x, y): # The actual function that does things
@@ -216,7 +216,7 @@ class TestEDIFormulation(unittest.TestCase):
         "Tests the runtime constraint constructor in edi.formulation"
         import pyomo.environ as pyo
         from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
         f = Formulation()
         x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
         y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
@@ -227,9 +227,9 @@ class TestEDIFormulation(unittest.TestCase):
             def __init__(self): 
                 super(UnitCircle, self).__init__()
                 self.description = 'This model evaluates the function: z = x**2 + y**2'
-                self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-                self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
-                self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+                self.inputs.append(name = 'x', units = 'ft' , description = 'The x variable')
+                self.inputs.append(name = 'y', units = 'ft' , description = 'The y variable')
+                self.outputs.append(name = 'z', units = 'ft**2',  description = 'Resultant of the unit circle evaluation')
                 self.availableDerivative = 1
                 self.post_init_setup(len(self.inputs))
             def BlackBox(self, x, y): # The actual function that does things
@@ -251,7 +251,7 @@ class TestEDIFormulation(unittest.TestCase):
         "Tests the constraint list constructor in edi.formulation"
         import pyomo.environ as pyo
         from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
         f = Formulation()
         x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
         y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
@@ -263,9 +263,9 @@ class TestEDIFormulation(unittest.TestCase):
             def __init__(self): 
                 super(UnitCircle, self).__init__()
                 self.description = 'This model evaluates the function: z = x**2 + y**2'
-                self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-                self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
-                self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+                self.inputs.append(name = 'x', units = 'ft' , description = 'The x variable')
+                self.inputs.append(name = 'y', units = 'ft' , description = 'The y variable')
+                self.outputs.append(name = 'z', units = 'ft**2',  description = 'Resultant of the unit circle evaluation')
                 self.availableDerivative = 1
                 self.post_init_setup(len(self.inputs))
 
@@ -296,7 +296,7 @@ class TestEDIFormulation(unittest.TestCase):
         "Tests the constraint list constructor in edi.formulation"
         import pyomo.environ as pyo
         from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
         f = Formulation()
         x = f.Variable(name = 'x', guess = 1.0, units = 'm'     , description = 'The x variable')
         y = f.Variable(name = 'y', guess = 1.0, units = 'm**2'  , description = 'The y variable')
@@ -306,8 +306,8 @@ class TestEDIFormulation(unittest.TestCase):
             def __init__(self): 
                 super(Parabola, self).__init__()
                 self.description = 'This model evaluates the function: y = x**2'
-                self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-                self.outputs.append(BBVariable(name = 'y', size = 0, units = 'ft**2' , description = 'The y variable'))
+                self.inputs.append(name = 'x', units = 'ft' , description = 'The x variable')
+                self.outputs.append(name = 'y', units = 'ft**2' , description = 'The y variable')
                 self.availableDerivative = 1
                 self.post_init_setup(len(self.inputs))
 
@@ -334,7 +334,7 @@ class TestEDIFormulation(unittest.TestCase):
         "Tests the constraint list constructor in edi.formulation"
         import pyomo.environ as pyo
         from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
         f = Formulation()
         x = f.Variable(name = 'x', guess = 1.0, units = 'm'     , description = 'The x variable', size=3)
         y = f.Variable(name = 'y', guess = 1.0, units = 'm**2'  , description = 'The y variable', size=3)
@@ -343,8 +343,8 @@ class TestEDIFormulation(unittest.TestCase):
             def __init__(self): 
                 super(Parabola, self).__init__()
                 self.description = 'This model evaluates the function: y = x**2'
-                self.inputs.append(BBVariable(name = 'x', size = 3, units = 'ft' , description = 'The x variable'))
-                self.outputs.append(BBVariable(name = 'y', size = 3, units = 'ft**2' , description = 'The y variable'))
+                self.inputs.append(name = 'x', size = 3, units = 'ft' , description = 'The x variable')
+                self.outputs.append(name = 'y', size = 3, units = 'ft**2' , description = 'The y variable')
                 self.availableDerivative = 1
                 self.post_init_setup(len(self.inputs))
 
@@ -373,7 +373,7 @@ class TestEDIFormulation(unittest.TestCase):
         "Tests the runtime constraint constructor in edi.formulation"
         import pyomo.environ as pyo
         from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
         f = Formulation()
         x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
         y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
@@ -384,9 +384,9 @@ class TestEDIFormulation(unittest.TestCase):
             def __init__(self): 
                 super(UnitCircle, self).__init__()
                 self.description = 'This model evaluates the function: z = x**2 + y**2'
-                self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-                self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
-                self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+                self.inputs.append(name = 'x', units = 'ft' , description = 'The x variable')
+                self.inputs.append(name = 'y', units = 'ft' , description = 'The y variable')
+                self.outputs.append(name = 'z', units = 'ft**2',  description = 'Resultant of the unit circle evaluation')
                 self.availableDerivative = 1
                 self.post_init_setup(len(self.inputs))
             def BlackBox(self, x, y): # The actual function that does things
@@ -456,7 +456,7 @@ class TestEDIFormulation(unittest.TestCase):
         # =================
         import pyomo.environ as pyo
         from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, BBVariable
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
 
         # ===================
         # Declare Formulation
@@ -495,11 +495,11 @@ class TestEDIFormulation(unittest.TestCase):
                 self.description = 'This model evaluates the function: z = x**2 + y**2'
                 
                 # Declare the black box model inputs
-                self.inputs.append(BBVariable(name = 'x', size = 0, units = 'ft' , description = 'The x variable'))
-                self.inputs.append(BBVariable(name = 'y', size = 0, units = 'ft' , description = 'The y variable'))
+                self.inputs.append(name = 'x', units = 'ft' , description = 'The x variable')
+                self.inputs.append(name = 'y', units = 'ft' , description = 'The y variable')
 
                 # Declare the black box model outputs
-                self.outputs.append(BBVariable(name = 'z', size = 0, units = 'ft**2',  description = 'Resultant of the unit circle evaluation'))
+                self.outputs.append(name = 'z', units = 'ft**2',  description = 'Resultant of the unit circle evaluation')
 
                 # Declare the maximum available derivative
                 self.availableDerivative = 1

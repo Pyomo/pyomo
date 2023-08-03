@@ -331,7 +331,7 @@ However, more commonly we expect users to construct Runtime Constraints as a par
             self.inputs.append( name = 'y', 
                                 units = 'ft' , 
                                 description = 'The y variable' )
-            self.outputs.append name = 'z', 
+            self.outputs.append(name = 'z', 
                                 units = 'ft**2',  
                                 description = 'Output variable' )
             self.availableDerivative = 1
@@ -351,7 +351,7 @@ However, more commonly we expect users to construct Runtime Constraints as a par
 
     f.ConstraintList(
         [
-            z <= 1*units.m**2 ) ,
+            z <= 1*units.m**2  ,
             [ z, '==', [x,y], UnitCircle() ] ,             
         ]
     )

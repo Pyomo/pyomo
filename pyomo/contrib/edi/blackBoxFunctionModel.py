@@ -117,9 +117,6 @@ class BlackBoxFunctionModel_Variable(object):
             raise ValueError('Invalid description.  Must be a string.')
 
 
-
-
-
 class TypeCheckedList(list):
     def __init__(self, checkItem, itemList = None):
         super(TypeCheckedList, self).__init__()
@@ -135,20 +132,14 @@ class TypeCheckedList(list):
     def __setitem__(self, key, val):
         if isinstance(val, self.checkItem):
             super(TypeCheckedList, self).__setitem__(key, val)
+        elif isinstance(val, (tuple,list)):
+            cks = [isinstance(vl,self.checkItem) for vl in val]
+            if sum(cks) == len(cks):
+                super(TypeCheckedList, self).__setitem__(key, val)
+            else:
+                raise ValueError('Input must be an instance of the defined type')    
         else:
             raise ValueError('Input must be an instance of the defined type')
-        
-    def __setslice__(self, i, j, sequence):
-        performSet = True
-        for val in sequence:
-            if not isinstance(val, self.checkItem):
-                performSet = False
-                break
-        
-        if performSet:
-            super(TypeCheckedList, self).__setslice__(i,j,sequence)
-        else:
-            raise ValueError('All values in the input must be an instance of the defined type')
         
     def append(self, val):
         if isinstance(val, self.checkItem):
@@ -266,7 +257,6 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 for vi in validIndicies:
                     inputs_unwrapped.append(ivar[vi])
             else:
-                print(type(ivar))
                 raise ValueError("Invalid type for input variable") 
 
         return [ip.__str__() for ip in  inputs_unwrapped]
@@ -295,7 +285,6 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         opts = self._cache['pyomo_outputs']
         return opts
         
-
     def evaluate_jacobian_outputs(self):
         self.fillCache()
         jac = self._cache['pyomo_jacobian']
@@ -316,13 +305,17 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
             for i in range(0,len(self.inputVariables_optimization)):
                 optimizationInput = self.inputVariables_optimization[i]
-                ipt               = self.inputs[i]
+                if isinstance(optimizationInput, (pyomo.core.base.var.IndexedVar, pyomo.core.base.var.ScalarVar)):
+                    # optimizationInput = self.inputVariables_optimization[i]
+                    ipt               = self.inputs[i]
 
-                shape             = [len(idx) for idx in optimizationInput.index_set().subsets()]
-                localShape        = ipt.size
+                    shape             = [len(idx) for idx in optimizationInput.index_set().subsets()]
+                    localShape        = ipt.size
 
-                optimizationUnits = self.inputVariables_optimization[i].get_units()
-                localUnits        = ipt.units
+                    optimizationUnits = self.inputVariables_optimization[i].get_units()
+                    localUnits        = ipt.units
+                else:
+                    raise ValueError("Invalid input variable type")
 
                 if isinstance(optimizationInput, pyomo.core.base.var.IndexedVar):
                     value = np.zeros(shape) 
@@ -334,15 +327,13 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                     self.sizeCheck(localShape, value*localUnits)
                     bb_inputs.append(value*localUnits)
 
-                elif isinstance(optimizationInput, pyomo.core.base.var.ScalarVar):
+                else: # isinstance(optimizationInput, pyomo.core.base.var.ScalarVar):, just checked this
                     value = raw_inputs[ptr] * optimizationUnits
                     ptr += 1
                     self.sizeCheck(localShape, value)
                     value_correctedUnits = pyomo_units.convert(value, localUnits)
                     bb_inputs.append(value_correctedUnits)
 
-                else:
-                    raise ValueError("Invalid input variable type")
 
             bbo = self.BlackBox(*bb_inputs)
 

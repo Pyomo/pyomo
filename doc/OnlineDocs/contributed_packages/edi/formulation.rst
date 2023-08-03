@@ -279,7 +279,7 @@ However, more commonly we expect users to construct Runtime Constraints as a par
 
     f.ConstraintList(
         [
-            z <= 1*units.m**2 ) ,
+            z <= 1*units.m**2  ,
             [ z, '==', [x,y], UnitCircle() ] ,             
         ]
     )
