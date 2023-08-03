@@ -65,6 +65,8 @@ class TestEDIBlackBox(unittest.TestCase):
         self.assertRaises(ValueError,x.__init__,*('x', '','',[2,1]))        
 
         x.__init__('x', units.dimensionless, '', None)
+        x.__init__('x', None, '', None)
+
         self.assertRaises(ValueError,x.__init__,*('x', '','', 1 ))
         self.assertRaises(ValueError,x.__init__,*('x', '','', {} ))    
         self.assertRaises(ValueError,x.__init__,*('x', '', 1.0 ))        
@@ -244,6 +246,60 @@ class TestEDIBlackBox(unittest.TestCase):
 
         self.assertRaises(ValueError,f.__dict__['constraint_2'].get_external_model().fillCache,*())
 
+    def test_edi_blackbox_etc_4(self):
+        "Tests a black box assertion issue"
+        import numpy as np
+        from pyomo.environ import units
+        import pyomo.environ as pyo
+        from pyomo.contrib.edi import Formulation
+        from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable, TypeCheckedList, BBList, BlackBoxFunctionModel
+
+        f = Formulation()
+        x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
+        y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
+        z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Output var')
+        f.Objective( x + y )
+        class UnitCircle(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the function: z = x**2 + y**2'
+                self.inputs.append( name = 'x',
+                                    units = 'ft' ,
+                                    description = 'The x variable' )
+                self.inputs.append( name = 'y',
+                                    units = 'ft' ,
+                                    description = 'The y variable' )
+                self.outputs.append(name = 'z',
+                                    units = 'ft**2',
+                                    description = 'Output variable' )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+            def BlackBox(self, x, y): # The actual function that does things
+                # Converts to correct units then casts to float
+                x = pyo.value(units.convert(x,self.inputs[0].units))
+                y = pyo.value(units.convert(y,self.inputs[1].units))
+                z = x**2 + y**2 # Compute z
+                dzdx = 2*x      # Compute dz/dx
+                dzdy = 2*y      # Compute dz/dy
+                z *= units.ft**2
+                dzdx *= units.ft # units.ft**2 / units.ft
+                dzdy *= units.ft # units.ft**2 / units.ft
+                return z, [dzdx, dzdy] # return z, grad(z), hess(z)...
+
+
+        f.ConstraintList(
+            [
+                z <= 1*units.m**2 ,
+                [ z, '==', [x,y], UnitCircle() ] ,
+            ]
+        )
+
+        f.__dict__['constraint_2'].get_external_model().set_input_values(np.array([2.0, 2.0]))
+        f.__dict__['constraint_2'].get_external_model().outputVariables_optimization = [1]
+        # f.__dict__['constraint_2'].get_external_model().fillCache()
+        self.assertRaises(ValueError,f.__dict__['constraint_2'].get_external_model().fillCache,*())
+
+
     def test_edi_blackbox_example_1(self):
         "Tests a black box example construction"
         from pyomo.environ import units
@@ -303,8 +359,6 @@ class TestEDIBlackBox(unittest.TestCase):
         e_print = f.__dict__['constraint_2'].get_external_model().__repr__()
 
 
-
-
     def test_edi_blackbox_example_2(self):
         "Tests a black box example construction"
         import pyomo.environ as pyo
@@ -323,9 +377,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.availableDerivative = 1
                 self.post_init_setup(len(self.inputs))
 
-            def BlackBox(*args, **kwargs):# The actual function that does things
-                args = list(args)
-                self = args.pop(0)
+            def BlackBox(self, *args, **kwargs):# The actual function that does things
                 runCases, returnMode, remainingKwargs = self.parseInputs(*args, **kwargs)
                
                 x = self.sanitizeInputs(runCases[0]['x'])
@@ -361,10 +413,192 @@ class TestEDIBlackBox(unittest.TestCase):
         sm      = f.__dict__['constraint_1'].get_external_model().summary
         e_print = f.__dict__['constraint_1'].get_external_model().__repr__()
 
+    def test_edi_blackbox_example_3(self):
+        "Tests a black box example construction"
+        import numpy as np
+        from pyomo.environ import units
+        import pyomo.environ as pyo
+        from pyomo.contrib.edi import Formulation
+        from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable, TypeCheckedList, BBList, BlackBoxFunctionModel
+
+        f = Formulation()
+        x = f.Variable(name = 'x', guess = 1.0, units = ''  , description = 'x variable', size = 3)
+        y = f.Variable(name = 'y', guess = 1.0, units = ''  , description = 'y variable')
+        f.Objective( y )
+        class Norm_2(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the two norm'
+                self.inputs.append( name = 'x',
+                                    units = '' ,
+                                    description = 'The x variable' ,
+                                    size = 3)
+                self.outputs.append(name = 'y',
+                                    units = '' ,
+                                    description = 'The y variable' )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+            def BlackBox(self, *args, **kwargs):# The actual function that does things
+                runCases, returnMode, remainingKwargs = self.parseInputs(*args, **kwargs)
+
+                x = self.sanitizeInputs(runCases[0]['x'])
+                x = np.array([pyo.value(xval) for xval in x], dtype=np.float64)
+
+                y = x[0]**2 + x[1]**2 + x[2]**2    # Compute y
+                dydx0 = 2*x[0]                     # Compute dy/dx0
+                dydx1 = 2*x[1]                     # Compute dy/dx1
+                dydx2 = 2*x[2]                     # Compute dy/dx2
+
+                y = y * units.dimensionless
+                dydx = np.array([dydx0,dydx1,dydx2]) * units.dimensionless
+                # dydx0 = dydx0 * units.dimensionless
+                # dydx1 = dydx1 * units.dimensionless
+                # dydx2 = dydx2 * units.dimensionless
+
+                return y, [dydx] # return z, grad(z), hess(z)...
+            
+        f.ConstraintList([ {'outputs':y, 'operators':'==', 'inputs':x, 'black_box':Norm_2() },])
+
+        f.__dict__['constraint_1'].get_external_model().set_input_values(np.ones(3)*2)
+        opt = f.__dict__['constraint_1'].get_external_model().evaluate_outputs()
+        jac = f.__dict__['constraint_1'].get_external_model().evaluate_jacobian_outputs().todense()
+
+        self.assertAlmostEqual(opt[0],12)
+        self.assertAlmostEqual(jac[0,0],4)
+        self.assertAlmostEqual(jac[0,1],4)
+        self.assertAlmostEqual(jac[0,2],4)
+
+        sm      = f.__dict__['constraint_1'].get_external_model().summary
+        e_print = f.__dict__['constraint_1'].get_external_model().__repr__()
 
 
-    def test_edi_blackbox_todo2(self):
-        "TODO2"
+    def test_edi_blackbox_example_4(self):
+        "Tests a black box example construction"
+        import numpy as np
+        from pyomo.environ import units
+        import pyomo.environ as pyo
+        from pyomo.contrib.edi import Formulation
+        from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable, TypeCheckedList, BBList, BlackBoxFunctionModel
+
+        f = Formulation()
+        x = f.Variable(name = 'x', guess = 1.0, units = ''  , description = 'x variable')
+        y = f.Variable(name = 'y', guess = 1.0, units = ''  , description = 'y variable', size=3)
+        f.Objective( y[0]**2 + y[1]**2 + y[2]**2 )
+        class VectorCast(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the two norm'
+                self.inputs.append( name = 'x',
+                                    units = '' ,
+                                    description = 'The x variable' )
+                self.outputs.append(name = 'y',
+                                    units = '' ,
+                                    description = 'The y variable' ,
+                                    size = 3)
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, *args, **kwargs):# The actual function that does things
+                runCases, returnMode, remainingKwargs = self.parseInputs(*args, **kwargs)
+
+                x = pyo.value(self.sanitizeInputs(runCases[0]['x']))
+
+                y = np.array([x,x,x]) * units.dimensionless
+                dydx = np.array([1.0,1.0,1.0])  * units.dimensionless
+
+                return y, [dydx] # return z, grad(z), hess(z)...
+
+        f.ConstraintList([ {'outputs':y, 'operators':'==', 'inputs':x, 'black_box':VectorCast() },])
+
+        f.__dict__['constraint_1'].get_external_model().set_input_values(np.ones(3)*2)
+        opt = f.__dict__['constraint_1'].get_external_model().evaluate_outputs()
+        jac = f.__dict__['constraint_1'].get_external_model().evaluate_jacobian_outputs().todense()
+
+        self.assertAlmostEqual(opt[0],2.0)
+        self.assertAlmostEqual(opt[1],2.0)
+        self.assertAlmostEqual(opt[2],2.0)
+        self.assertAlmostEqual(jac[0,0],1.0)
+        self.assertAlmostEqual(jac[1,0],1.0)
+        self.assertAlmostEqual(jac[2,0],1.0)
+
+        sm      = f.__dict__['constraint_1'].get_external_model().summary
+        e_print = f.__dict__['constraint_1'].get_external_model().__repr__()
+
+    def test_edi_blackbox_badexample_1(self):
+        "Tests a black box example construction"
+        import numpy as np
+        from pyomo.environ import units
+        import pyomo.environ as pyo
+        from pyomo.contrib.edi import Formulation
+        from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable, TypeCheckedList, BBList, BlackBoxFunctionModel
+
+        f = Formulation()
+        x = f.Variable(name = 'x', guess = 1.0, units = ''  , description = 'x variable', size = 3)
+        y = f.Variable(name = 'y', guess = 1.0, units = ''  , description = 'y variable')
+        f.Objective( y )
+        class Norm_2(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the two norm'
+                self.inputs.append( name = 'x',
+                                    units = '' ,
+                                    description = 'The x variable' ,
+                                    size = 3)
+                self.outputs.append(name = 'y',
+                                    units = '' ,
+                                    description = 'The y variable' )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+            def BlackBox(self, *args, **kwargs):# The actual function that does things
+                runCases, returnMode, remainingKwargs = self.parseInputs(*args, **kwargs)
+
+                x = self.sanitizeInputs(runCases[0]['x'])
+                x = np.array([pyo.value(xval) for xval in x], dtype=np.float64)
+
+                y = x[0]**2 + x[1]**2 + x[2]**2    # Compute y
+                dydx0 = 2*x[0]                     # Compute dy/dx0
+                dydx1 = 2*x[1]                     # Compute dy/dx1
+                dydx2 = 2*x[2]                     # Compute dy/dx2
+
+                y = y * units.dimensionless
+                # dydx = np.array([dydx0,dydx1,dydx2]) * units.dimensionless
+                dydx0 = dydx0 * units.dimensionless
+                dydx1 = dydx1 * units.dimensionless
+                dydx2 = dydx2 * units.dimensionless
+
+                return y, [[dydx0, dydx1, dydx2]] # return z, grad(z), hess(z)...
+            
+        f.ConstraintList([ {'outputs':y, 'operators':'==', 'inputs':x, 'black_box':Norm_2() },])
+
+        f.__dict__['constraint_1'].get_external_model().set_input_values(np.ones(3)*2)
+        self.assertRaises(ValueError,f.__dict__['constraint_1'].get_external_model().evaluate_outputs,*())
+
+
+    def test_edi_blackbox_smallfunctions(self):
+        "Tests the more general value and convert functions"
+        import numpy as np
+        from pyomo.environ import units
+        import pyomo.environ as pyo
+        from pyomo.contrib.edi import Formulation
+        from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable, TypeCheckedList, BBList, BlackBoxFunctionModel
+
+        bb = BlackBoxFunctionModel()
+        t1 = bb.convert(2*units.m, units.ft)
+        t2 = bb.convert(np.ones([2,2])*units.m, units.ft)
+        self.assertRaises(ValueError,bb.convert,*('err',units.ft))
+
+        t3 = bb.pyomo_value(2*units.m)
+        t3 = bb.pyomo_value(np.ones([2,2])*units.m)
+        self.assertRaises(ValueError,bb.pyomo_value,*(np.ones([2,2]),))        
+
+        bb.sizeCheck([2,2],np.ones([2,2])*units.m)
+        self.assertRaises(ValueError,bb.sizeCheck,*(2,3*units.m,))   
+        self.assertRaises(ValueError,bb.sizeCheck,*([10,10,10],np.ones([2,2])*units.m,))   
+        self.assertRaises(ValueError,bb.sizeCheck,*([10,10],np.ones([2,2])*units.m,))  
+        self.assertRaises(ValueError,bb.sizeCheck,*([10,10],[],))   
+
+    def test_edi_blackbox_bare_example_1(self):
+        "Tests a black box example construction without an optimization problem"
         import numpy as np
         import pyomo.environ as pyo
         from pyomo.environ import units
@@ -387,9 +621,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 self.availableDerivative = 1
 
             #standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
-            def BlackBox(*args, **kwargs):
-                args = list(args)       # convert tuple to list
-                self = args.pop(0)      # pop off the self argument
+            def BlackBox(self, *args, **kwargs):
                 runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
                 x = np.array([ pyo.value(runCases[i]['x']) for i in range(0,len(runCases)) ])
 
@@ -400,7 +632,7 @@ class TestEDIBlackBox(unittest.TestCase):
                 dydx[gradientSwitch] = -6
                 ddy_ddx[gradientSwitch] = 0
 
-                y = [ self.checkOutputs(yval) for yval in y ]
+                y = [ yval * units.dimensionless for yval in y]
                 dydx = [dydx[i] * units.dimensionless for i in range(0,len(dydx))]
 
                 if returnMode < 0:
@@ -438,9 +670,160 @@ class TestEDIBlackBox(unittest.TestCase):
         bbo = s.BlackBox([ [x] for x in np.linspace(-2,2,11)], True, optn=False)
         bbo = s.BlackBox([ [x] for x in np.linspace(-2,2,11)], optn1=True, optn2=False)
 
+        sm = s.summary
 
-    # def test_edi_formulation_variable(self):
-    #     "Tests the variable constructor in edi.formulation"
+        self.assertRaises(ValueError,s.BlackBox,*( [ [[1,2],2,3] , [1,2,3]]  ))        
+        self.assertRaises(ValueError,s.BlackBox,*( [ [np.ones(2),2,3] , [1,2,3]]  ))     
+
+        self.assertRaises(ValueError,s.sanitizeInputs,*(  ))        
+        self.assertRaises(ValueError,s.sanitizeInputs,*( 1 , 2, 3 ))       
+        self.assertRaises(ValueError,s.sanitizeInputs,**{'z':2.0*units.dimensionless})
+        self.assertRaises(ValueError,s.sanitizeInputs,*(2.0*units.ft,))       
+        self.assertRaises(NotImplementedError,s.checkOutputs,*())       
+
+
+    def test_edi_blackbox_bare_example_2(self):
+        "Tests a black box example construction without an optimization problem"
+        import numpy as np
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
+        from pyomo.common.formatting import tostr
+
+        class PassThrough(BlackBoxFunctionModel):
+            def __init__(self):
+                # Set up all the attributes by calling Model.__init__
+                super().__init__()
+
+                #Setup Inputs
+                self.inputs.append( 'x', '', 'Independent Variable', size = [2,2])
+
+                #Setup Outputs
+                self.outputs.append( 'y', '', 'Dependent Variable', size = [2,2])
+
+                #Simple model description
+                self.description = 'This model is a pass through)'
+
+                self.availableDerivative = 1
+
+            #standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
+            def BlackBox(self, *args, **kwargs):
+                runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+                x = [ self.pyomo_value(runCases[i]['x']) for i in range(0,len(runCases)) ]
+
+                y    = []
+                dydx = []
+                
+                for xval in x:
+                    y.append(xval*units.dimensionless)
+                    dydx_temp = np.zeros([2,2,2,2])
+                    dydx_temp[0,0,0,0] = 1.0
+                    dydx_temp[0,1,0,1] = 1.0
+                    dydx_temp[1,0,1,0] = 1.0
+                    dydx_temp[1,1,1,1] = 1.0
+                    
+                    dydx.append(dydx_temp*units.dimensionless)
+                    
+                if returnMode < 0:
+                    returnMode = -1*(returnMode + 1)
+                    if returnMode == 0:
+                        return y[0]
+                    if returnMode == 1:
+                        return y[0], dydx
+                else:
+                    if returnMode == 0:
+                        opt = []
+                        for i in range(0,len(y)):
+                            opt.append([ y[i] ])
+                        return opt
+                    if returnMode == 1:
+                        opt = []
+                        for i in range(0,len(y)):
+                            opt.append([ [y[i]], [ [[dydx[i]]] ] ])
+                        return opt
+
+        bb = PassThrough()
+        ivals = [[np.eye(2)*units.dimensionless], [np.ones([2,2])*units.dimensionless], [np.zeros([2,2])*units.dimensionless] ]
+
+        xv = np.eye(2)*units.dimensionless
+
+        # How the black box may be called using EDI
+        bbo = bb.BlackBox(**{'x':xv})
+        bbo = bb.BlackBox({'x':xv})
+        bbo = bb.BlackBox(**{'x':xv, 'optn':True})
+
+        # # Additional options available with parseInputs
+        bbo = bb.BlackBox(*[xv], **{'optn1': True, 'optn2': False})
+        bbo = bb.BlackBox(*[xv,True], **{'optn': False})
+        bbo = bb.BlackBox({'x':[x[0] for x in ivals]})
+        bbo = bb.BlackBox([{'x':x[0]} for x in ivals])
+        bbo = bb.BlackBox([ [x[0]] for x in ivals])
+        bbo = bb.BlackBox([ [x[0]] for x in ivals], True, optn=False)
+        bbo = bb.BlackBox([ [x[0]] for x in ivals], optn1=True, optn2=False)
+
+        sm = bb.summary
+
+        self.assertRaises(ValueError,bb.sanitizeInputs,*(np.ones([2,2])*units.ft,))       
+
+
+    def test_edi_blackbox_bare_example_3(self):
+        "Tests a black box example construction"
+        import numpy as np
+        from pyomo.environ import units
+        import pyomo.environ as pyo
+        from pyomo.contrib.edi import Formulation
+        from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel_Variable, TypeCheckedList, BBList, BlackBoxFunctionModel
+
+        class Norm_2(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the two norm'
+                self.inputs.append( name = 'x',
+                                    units = '' ,
+                                    description = 'The x variable' ,
+                                    size = 3)
+                self.inputs.append( name = 'y',
+                                    units = '' ,
+                                    description = 'The y variable' ,
+                                    size = 2)
+                self.outputs.append(name = 'z',
+                                    units = '' ,
+                                    description = 'The z variable')
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+            def BlackBox(self, *args, **kwargs):# The actual function that does things
+                runCases, returnMode, remainingKwargs = self.parseInputs(*args, **kwargs)
+
+                x = [ rc['x'] for rc in runCases][0]
+                x = np.array([self.pyomo_value(xval) for xval in x], dtype=np.float64)
+
+                y = [ rc['y'] for rc in runCases][0]
+                y = np.array([self.pyomo_value(yval) for yval in y], dtype=np.float64)
+
+                z = x[0]**2 + x[1]**2 + x[2]**2  + y[0]**2 + y[1]**2
+                dzdx0 = 2*x[0]                     # Compute dy/dx0
+                dzdx1 = 2*x[1]                     # Compute dy/dx1
+                dzdx2 = 2*x[2]                     # Compute dy/dx2
+                dzdy0 = 2*y[0]
+                dzdy1 = 2*y[1]
+
+                z = z * units.dimensionless
+                dz = np.array([dzdx0,dzdx1,dzdx2,dzdy0,dzdy1]) * units.dimensionless
+                # dydx0 = dydx0 * units.dimensionless
+                # dydx1 = dydx1 * units.dimensionless
+                # dydx2 = dydx2 * units.dimensionless
+
+                return z, [dz] # return z, grad(z), hess(z)...
+
+        bb = Norm_2()
+        bbo = bb.BlackBox({'x':np.array([0,0,0])*units.dimensionless, 'y':np.array([0,0])*units.dimensionless})
+        bbo = bb.BlackBox(np.array([0,0,0])*units.dimensionless, y=np.array([0,0])*units.dimensionless)
+
+        self.assertRaises(ValueError,bb.BlackBox,*( {'er':np.array([0,0,0])*units.dimensionless, 'y':np.array([0,0])*units.dimensionless},  ))  
+        self.assertRaises(ValueError,bb.BlackBox,*( 'err',  ))        
+        self.assertRaises(ValueError,bb.BlackBox,*( np.array([0,0,0])*units.dimensionless, np.array([0,0])*units.dimensionless ), **{'x':'err too many'})  
+        self.assertRaises(ValueError,bb.BlackBox,*( np.array([0,0,0])*units.dimensionless, ), **{'notY':np.array([0,0])*units.dimensionless})  
+
 
 
 

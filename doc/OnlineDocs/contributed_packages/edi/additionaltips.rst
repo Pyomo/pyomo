@@ -29,5 +29,9 @@ then open the file ``<path_to_pyomo/doc/OnlineDocs/_build/html/index.html>``
    cd <path_to_pyomo>/pyomo/pyomo/contrib/edi
    pytest --cov-report term-missing --cov=pyomo.contrib.edi -v ./tests/
 
+or generating html output:
 
+::
 
+   cd <path_to_pyomo>/pyomo/pyomo/contrib/edi
+   pytest --cov-report html --cov=pyomo.contrib.edi -v ./tests/

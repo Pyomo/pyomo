@@ -250,7 +250,7 @@ Runtime Constraints are declared one of two ways, just as regular constraints.  
             self.inputs.append( name = 'y', 
                                 units = 'ft' , 
                                 description = 'The y variable' ) 
-            self.outputs.append name = 'z', 
+            self.outputs.append(name = 'z', 
                                 units = 'ft**2',  
                                 description = 'Output variable' ) 
             self.availableDerivative = 1
@@ -455,6 +455,7 @@ A standard construction
 Tips
 ----
 
+* Use the pyomo ``tostr()`` function (``from pyomo.common.formatting import tostr``) to print the results of black-boxes for more meaningful printouts
 * Align input and ouptut declarations just as is recommended for optimization variable and constant declarations
 * Delcare an input/output all on one line, no matter what the style guides say
 * This interface is really designed for subject matter experts who are not python users to have a simple, easy path to include their tools into a python based optimization architecture.  Try to let them build their own models as a means of fostering trust in the optimization tools

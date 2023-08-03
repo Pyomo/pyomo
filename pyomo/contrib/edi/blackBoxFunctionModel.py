@@ -60,6 +60,8 @@ class BlackBoxFunctionModel_Variable(object):
         if isinstance(val, str):
             if val in ['-', '', ' ']:
                 val = 'dimensionless'
+        if val is None:
+            val = 'dimensionless'
         
         if isinstance(val, str):
             self._units = pyomo_units.__getattr__(val)
@@ -91,7 +93,7 @@ class BlackBoxFunctionModel_Variable(object):
             self._size = val
         else:
             if val is None:
-                self._size = None
+                self._size = 0 # set to scalar
             elif isinstance(val, str):
                 # is a 1D vector of unknown length, should be 'inf', but any string accepted
                 self._size = -1
@@ -305,17 +307,16 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
             for i in range(0,len(self.inputVariables_optimization)):
                 optimizationInput = self.inputVariables_optimization[i]
-                if isinstance(optimizationInput, (pyomo.core.base.var.IndexedVar, pyomo.core.base.var.ScalarVar)):
-                    # optimizationInput = self.inputVariables_optimization[i]
-                    ipt               = self.inputs[i]
-
-                    shape             = [len(idx) for idx in optimizationInput.index_set().subsets()]
-                    localShape        = ipt.size
-
-                    optimizationUnits = self.inputVariables_optimization[i].get_units()
-                    localUnits        = ipt.units
-                else:
+                if not isinstance(optimizationInput, (pyomo.core.base.var.IndexedVar, pyomo.core.base.var.ScalarVar)):
                     raise ValueError("Invalid input variable type")
+
+                ipt               = self.inputs[i]
+
+                shape             = [len(idx) for idx in optimizationInput.index_set().subsets()]
+                localShape        = ipt.size
+
+                optimizationUnits = self.inputVariables_optimization[i].get_units()
+                localUnits        = ipt.units                    
 
                 if isinstance(optimizationInput, pyomo.core.base.var.IndexedVar):
                     value = np.zeros(shape) 
@@ -350,6 +351,8 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 jacobianList = bbo[1]
             for i in range(0,len(valueList)):
                 optimizationOutput = self.outputVariables_optimization[i]
+                if not isinstance(optimizationOutput, (pyomo.core.base.var.IndexedVar, pyomo.core.base.var.ScalarVar)):
+                    raise ValueError("Invalid output variable type")
                 opt                = self.outputs[i]
 
                 modelOutputUnits        = opt.units
@@ -378,6 +381,9 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
             for i in range(0,len(jacobianList)):
                 oopt = self.outputVariables_optimization[i]
+                # Checked about 20 lines above
+                # if not isinstance(oopt, (pyomo.core.base.var.ScalarVar,pyomo.core.base.var.IndexedVar)):
+                #     raise ValueError("Invalid type for output variable") 
                 lopt = self.outputs[i]
                 oounits = oopt.get_units()
                 lounits = lopt.units
@@ -385,6 +391,9 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 ptr_col = 0
                 for j in range(0,len(self.inputs)):
                     oipt = self.inputVariables_optimization[j]
+                    # This is checked about 80 lines up
+                    # if not isinstance(oipt, (pyomo.core.base.var.ScalarVar,pyomo.core.base.var.IndexedVar)):
+                    #     raise ValueError("Invalid type for output variable") 
                     lipt = self.inputs[j]
                     oiunits = oipt.get_units()
                     liunits = lipt.units
@@ -404,17 +413,13 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
                         if isinstance(oopt, pyomo.core.base.var.ScalarVar):
                             oshape = 0
-                        elif isinstance(oopt, pyomo.core.base.var.IndexedVar):
+                        else: # isinstance(oopt, pyomo.core.base.var.IndexedVar), checked above
                             oshape  = [len(idx) for idx in oopt.index_set().subsets()]
-                        else:
-                            raise ValueError("Invalid type for output variable") 
 
                         if isinstance(oipt, pyomo.core.base.var.ScalarVar):
                             ishape = 0
-                        elif isinstance(oipt, pyomo.core.base.var.IndexedVar):
+                        else: # isinstance(oipt, pyomo.core.base.var.IndexedVar), checked above
                             ishape  = [len(idx) for idx in oipt.index_set().subsets()]
-                        else:
-                            raise ValueError("Invalid type for input variable") 
 
                         if oshape == 0:
                             validIndicies = list(oipt.index_set().data())
@@ -471,11 +476,46 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
     def BlackBox(*args, **kwargs):
         raise AttributeError(errorString)
 
+
+    def convert(self, val, unts):
+        try:
+            val = val * pyomo_units.dimensionless
+        except:
+            pass ## will handle later
+
+        if isinstance(val, (pyomo.core.base.units_container._PyomoUnit,pyomo.core.expr.numeric_expr.NPV_ProductExpression)):
+            return pyomo_units.convert(val, unts)
+        elif isinstance(val, pyomo.core.expr.numeric_expr.NumericNDArray):
+            shp = val.shape
+            ix = np.ndindex(*shp)
+            opt = np.zeros(shp)
+            for i in range(0,np.prod(shp)):
+                ixt = next(ix)
+                opt[ixt] = pyo.value(pyomo_units.convert(val[ixt],unts))
+            return opt*unts
+        else:
+            raise ValueError('Invalid type passed to unit conversion function')
+
+
+    def pyomo_value(self, val):
+        try:
+            return pyo.value(val)
+        except:
+            if isinstance(val, pyomo.core.expr.numeric_expr.NumericNDArray):
+                shp = val.shape
+                ix = np.ndindex(*shp)
+                opt = np.zeros(shp)
+                for i in range(0,np.prod(shp)):
+                    ixt = next(ix)
+                    opt[ixt] = pyo.value(val[ixt])
+                return opt
+            else:
+                raise ValueError('Invalid type passed to pyomo_value function')
+
 # ---------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------------
-    def parseInputs(*args, **kwargs):
+    def parseInputs(self, *args, **kwargs):
         args = list(args)       # convert tuple to list
-        self = args.pop(0)      # pop off the self argument
 
         inputNames = [self.inputs[i].name for i in range(0,len(self.inputs))]
 
@@ -569,33 +609,47 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                         ix = inputNames.index(ky)
                         valList[ix] = kwargs[ky]
 
-                    if any([valList[i]==None for i in range(0,len(valList))]):
-                        raise ValueError('Kewords did not properly fill in the remaining arguments. Check the inputs.')
+                    # Not possible to reach due to other checks
+                    # if any([valList[i]==None for i in range(0,len(valList))]):
+                    #     raise ValueError('Kewords did not properly fill in the remaining arguments. Check the inputs.')
 
-                    sips = self.sanitizeInputs(*valList)
+                    sips = self.sanitizeInputs(*valList)              
+
                     if len(inputNames) == 1:
                         sips = [sips]
 
                     remainingKwargs = copy.deepcopy(kwargs)
                     for nm in inputNames:
-                        del remainingKwargs[nm]
+                        try:
+                            del remainingKwargs[nm]
+                        except:
+                            # was in args
+                            pass
 
                     return [dict(zip(inputNames,sips))], -self.availableDerivative-1, remainingKwargs # Mix of args and kwargs define inputs
             else:
                 # all of the inputs are in the args
                 try:
                     sips = self.sanitizeInputs(*args[0:len(inputNames)])
+
                     if len(inputNames) == 1:
                         sips = [sips]
 
                     remainingKwargs = copy.deepcopy(kwargs)
                     remainingKwargs['remainingArgs'] = args[len(inputNames):]
                     return [dict(zip(inputNames,sips))], -self.availableDerivative-1, remainingKwargs # all inputs are in args
-                except:
-                    runCases, returnMode, extra_singleInput = self.parseInputs(args[0])
-                    remainingKwargs = copy.deepcopy(kwargs)
-                    remainingKwargs['remainingArgs'] = args[len(inputNames):]
-                    return runCases, returnMode, remainingKwargs
+                # except:
+                except Exception as e:
+                    # not possible due to other checks
+                    # if str(e) == 'Too many inputs':
+                    #     raise ValueError(e)
+                    if str(e) == 'Not enough inputs':
+                        raise ValueError(e)
+                    else:#otherwise, proceed 
+                        runCases, returnMode, extra_singleInput = self.parseInputs(args[0])
+                        remainingKwargs = copy.deepcopy(kwargs)
+                        remainingKwargs['remainingArgs'] = args[len(inputNames):]
+                        return runCases, returnMode, remainingKwargs
 
 # ---------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------------
@@ -605,7 +659,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
             if isinstance(szVal, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
                                   pyomo.core.base.units_container._PyomoUnit)):
                 if size != 0 and size != 1 :
-                    raise ValueError('Size of %s did not match the expected size %s (ie: Scalar)'%(name, str(size)))
+                    raise ValueError('Size did not match the expected size %s (ie: Scalar)'%(str(size)))
             elif isinstance(szVal, pyomo.core.expr.numeric_expr.NumericNDArray):
                 shp = szVal.shape
                 if isinstance(size,(int,float)):
@@ -618,12 +672,13 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                         if size[j] != shp[j]:
                             raise ValueError('Shapes/Sizes of %s does not match the expected %s'%(str(shp),str(size)))
             else:
-                raise ValueError('Invalid type detected when checking size (Should never display)')
+                raise ValueError('Invalid type detected when checking size')
 
 # ---------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------------
     def sanitizeInputs(self, *args, **kwargs):
         nameList = [self.inputs[i].name for i in range(0,len(self.inputs))]
+
         if len(args) + len(kwargs.values()) > len(nameList):
             raise ValueError('Too many inputs')
         if len(args) + len(kwargs.values()) < len(nameList):
@@ -647,31 +702,30 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
             unts = self.inputs[i].units
             size = self.inputs[i].size
             
-            if name != nameCheck:
-                raise RuntimeError('Something went wrong and values are not consistent.  Check your defined inputs.')
+            # should be impossible
+            # if name != nameCheck:
+            #     raise RuntimeError('Something went wrong and values are not consistent.  Check your defined inputs.')
 
             ipval = inputDict[name]
 
-            if unts is not None:
-                if isinstance(ipval,  pyomo.core.expr.numeric_expr.NumericNDArray):
-                    for ii in range(0,len(ipval)):
-                        try:
-                            ipval[ii] = pyomo_units.convert(ipval[ii], unts)#ipval.to(unts)
-                        except:
-                            raise ValueError('Could not convert %s of %s to %s'%(name, str(ipval),str(unts)))
-                    ipval_correctUnits = ipval
-                else:
+            if isinstance(ipval,  pyomo.core.expr.numeric_expr.NumericNDArray):
+                for ii in range(0,len(ipval)):
                     try:
-                        ipval_correctUnits = pyomo_units.convert(ipval, unts)#ipval.to(unts)
+                        ipval[ii] = self.convert(ipval[ii], unts)#ipval.to(unts)
                     except:
                         raise ValueError('Could not convert %s of %s to %s'%(name, str(ipval),str(unts)))
-            else:
                 ipval_correctUnits = ipval
+            else:
+                try:
+                    ipval_correctUnits = self.convert(ipval, unts)#ipval.to(unts)
+                except:
+                    raise ValueError('Could not convert %s of %s to %s'%(name, str(ipval),str(unts)))
 
-            if not isinstance(ipval_correctUnits, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
-                                                   pyomo.core.expr.numeric_expr.NumericNDArray,
-                                                   pyomo.core.base.units_container._PyomoUnit)):
-                ipval_correctUnits = ipval_correctUnits * pyomo_units.dimensionless
+            # superceeded by the custom convert function
+            # if not isinstance(ipval_correctUnits, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
+            #                                        pyomo.core.expr.numeric_expr.NumericNDArray,
+            #                                        pyomo.core.base.units_container._PyomoUnit)):
+            #     ipval_correctUnits = ipval_correctUnits * pyomo_units.dimensionless
 
             self.sizeCheck(size, ipval_correctUnits)
 
@@ -684,55 +738,56 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 # ---------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------------
     def checkOutputs(self, *args, **kwargs):
-        nameList = [self.outputs[i].name for i in range(0,len(self.outputs))]
-        if len(args) + len(kwargs.values()) > len(nameList):
-            raise ValueError('Too many outputs')
-        if len(args) + len(kwargs.values()) < len(nameList):
-            raise ValueError('Not enough outputs')
-        inputDict = {}
-        for i in range(0,len(args)):
-            rg = args[i]
-            inputDict[nameList[i]] = rg
+        raise NotImplementedError('Contact developers to use this function')
+        # nameList = [self.outputs[i].name for i in range(0,len(self.outputs))]
+        # if len(args) + len(kwargs.values()) > len(nameList):
+        #     raise ValueError('Too many outputs')
+        # if len(args) + len(kwargs.values()) < len(nameList):
+        #     raise ValueError('Not enough outputs')
+        # inputDict = {}
+        # for i in range(0,len(args)):
+        #     rg = args[i]
+        #     inputDict[nameList[i]] = rg
 
-        for ky, vl in kwargs.items():
-            if ky in nameList:
-                inputDict[ky] = vl
-            else:
-                raise ValueError('Unexpected output keyword argument %s in the outputs'%(ky))
+        # for ky, vl in kwargs.items():
+        #     if ky in nameList:
+        #         inputDict[ky] = vl
+        #     else:
+        #         raise ValueError('Unexpected output keyword argument %s in the outputs'%(ky))
 
-        opts = []
+        # opts = []
 
-        for i in range(0,len(nameList)):
-            name = nameList[i]
-            nameCheck = self.outputs[i].name
-            unts = self.outputs[i].units
-            size = self.outputs[i].size
+        # for i in range(0,len(nameList)):
+        #     name = nameList[i]
+        #     nameCheck = self.outputs[i].name
+        #     unts = self.outputs[i].units
+        #     size = self.outputs[i].size
             
-            if name != nameCheck:
-                raise RuntimeError('Something went wrong and values are not consistent.  Check your defined inputs.')
+        #     if name != nameCheck:
+        #         raise RuntimeError('Something went wrong and values are not consistent.  Check your defined inputs.')
 
-            ipval = inputDict[name]
+        #     ipval = inputDict[name]
 
-            if unts is not None:
-                try:
-                    ipval_correctUnits = pyomo_units.convert(ipval, unts)
-                except:
-                    raise ValueError('Could not convert %s of %s to %s'%(name, str(ipval),str(unts)))
-            else:
-                ipval_correctUnits = ipval
+        #     if unts is not None:
+        #         try:
+        #             ipval_correctUnits = self.convert(ipval, unts)
+        #         except:
+        #             raise ValueError('Could not convert %s of %s to %s'%(name, str(ipval),str(unts)))
+        #     else:
+        #         ipval_correctUnits = ipval
 
-            if not isinstance(ipval_correctUnits, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
-                                                   pyomo.core.expr.numeric_expr.NumericNDArray,
-                                                   pyomo.core.base.units_container._PyomoUnit)):
-                ipval_correctUnits = ipval_correctUnits * pyomo_units.dimensionless
+        #     if not isinstance(ipval_correctUnits, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
+        #                                            pyomo.core.expr.numeric_expr.NumericNDArray,
+        #                                            pyomo.core.base.units_container._PyomoUnit)):
+        #         ipval_correctUnits = ipval_correctUnits * pyomo_units.dimensionless
 
-            self.sizeCheck(size, ipval_correctUnits)
+        #     self.sizeCheck(size, ipval_correctUnits)
 
-            opts.append(ipval_correctUnits)
-        if len(opts) == 1:
-            opts = opts[0]
+        #     opts.append(ipval_correctUnits)
+        # if len(opts) == 1:
+        #     opts = opts[0]
 
-        return opts
+        # return opts
 
 # ---------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------------
@@ -750,24 +805,18 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
             nml = len(ipt.name)
             if nml > longestName:
                 longestName = nml
-            if ipt.units is None:
-                unts = 'None'
-            else:
-                unts = ipt.units.__str__()#_repr_html_()
-                # unts = unts.replace('<sup>','^')
-                # unts = unts.replace('</sup>','')
-                # unts = unts.replace('\[', '[')
-                # unts = unts.replace('\]', ']')
+            unts = ipt.units.__str__()#_repr_html_()
+            # unts = unts.replace('<sup>','^')
+            # unts = unts.replace('</sup>','')
+            # unts = unts.replace('\[', '[')
+            # unts = unts.replace('\]', ']')
             unl = len(unts)
             if unl > longestUnits:
                 longestUnits = unl
-            if ipt.size is None:
-                lsz = 4
+            if type(ipt.size) == list:
+                lsz = len(ipt.size.__repr__())
             else:
-                if type(ipt.size) == list:
-                    lsz = len(ipt.size.__repr__())
-                else:
-                    lsz = len(str(ipt.size))
+                lsz = len(str(ipt.size))
             if lsz > longestSize:
                 longestSize = lsz
         namespace = max([4, longestName]) + whitespace
@@ -792,19 +841,13 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         pstr += '\n'
         for ipt in self.inputs:
             pstr += ipt.name.ljust(namespace)
-            if ipt.units is None:
-                unts = 'None'
-            else:
-                unts = ipt.units.__str__()#_repr_html_()
-                # unts = unts.replace('<sup>','^')
-                # unts = unts.replace('</sup>','')
-                # unts = unts.replace('\[', '[')
-                # unts = unts.replace('\]', ']')
+            unts = ipt.units.__str__()#_repr_html_()
+            # unts = unts.replace('<sup>','^')
+            # unts = unts.replace('</sup>','')
+            # unts = unts.replace('\[', '[')
+            # unts = unts.replace('\]', ']')
             pstr += unts.ljust(unitspace)
-            if ipt.size is None:
-                lnstr = 'None'
-            else:
-                lnstr = '%s'%(ipt.size.__repr__())
+            lnstr = '%s'%(ipt.size.__repr__())
             pstr += lnstr.ljust(sizespace)
             pstr += ipt.description
             pstr += '\n'
@@ -817,24 +860,18 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
             nml = len(opt.name)
             if nml > longestName:
                 longestName = nml
-            if opt.units is None:
-                unts = 'None'
-            else:
-                unts = opt.units.__str__()#_repr_html_()
-                # unts = unts.replace('<sup>','^')
-                # unts = unts.replace('</sup>','')
-                # unts = unts.replace('\[', '[')
-                # unts = unts.replace('\]', ']')
+            unts = opt.units.__str__()#_repr_html_()
+            # unts = unts.replace('<sup>','^')
+            # unts = unts.replace('</sup>','')
+            # unts = unts.replace('\[', '[')
+            # unts = unts.replace('\]', ']')
             unl = len(unts)
             if unl > longestUnits:
                 longestUnits = unl
-            if opt.size is None:
-                lsz = 4
+            if type(opt.size) == list:
+                lsz = len(opt.size.__repr__())
             else:
-                if type(opt.size) == list:
-                    lsz = len(opt.size.__repr__())
-                else:
-                    lsz = len(str(opt.size))
+                lsz = len(str(opt.size))
             if lsz > longestSize:
                 longestSize = lsz
         namespace = max([4, longestName]) + whitespace
@@ -859,19 +896,13 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         pstr += '\n'
         for opt in self.outputs:
             pstr += opt.name.ljust(namespace)
-            if opt.units is None:
-                unts = 'None'
-            else:
-                unts = opt.units.__str__()#_repr_html_()
-                # unts = unts.replace('<sup>','^')
-                # unts = unts.replace('</sup>','')
-                # unts = unts.replace('\[', '[')
-                # unts = unts.replace('\]', ']')
+            unts = opt.units.__str__()#_repr_html_()
+            # unts = unts.replace('<sup>','^')
+            # unts = unts.replace('</sup>','')
+            # unts = unts.replace('\[', '[')
+            # unts = unts.replace('\]', ']')
             pstr += unts.ljust(unitspace)
-            if opt.size is None:
-                lnstr = 'None'
-            else:
-                lnstr = '%s'%(opt.size.__repr__())
+            lnstr = '%s'%(opt.size.__repr__())
             pstr += lnstr.ljust(sizespace)
             pstr += opt.description
             pstr += '\n'

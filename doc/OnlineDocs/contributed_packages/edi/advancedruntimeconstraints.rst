@@ -9,10 +9,12 @@ Coding a black-box model often represents a significant effort, and it is theref
 
 The ``parseInputs()`` method enables this batch-like capability in a variety of forms:
 
-.. py:function:: BlackBoxFunctionModel.parseInputs(*args, **kwargs)
+.. py:function:: BlackBoxFunctionModel.parseInputs(self, *args, **kwargs)
 
     Parses the inputs to a black-box model into a list of run-cases
 
+   :param args: The self attribute in all python methods
+   :type  self: black-box model
    :param args: index passed arguments
    :type  args: list or tuple
    :param kwargs: keyword passed arguments
@@ -30,13 +32,11 @@ The function definition is not particularly helpful, so let's dive in a bit.  Fo
 
 .. code-block:: python
 
-    def BlackBox(*args, **kwargs):
-        args = list(args)       # convert tuple to list
-        self = args.pop(0)      # pop off the self argument
+    def BlackBox(self, *args, **kwargs):
         runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
 
 
-Essentially, ``parseInputs()`` is a pre-processor that directly takes the inputs of the black-box model after popping off the default ``self`` argument that is passed to all python class methods.  The ``parseInputs()`` method will check all of the inputs, ensure that size and units are correct, split into run cases as appropriate, and return a run-cases list that is ready to operate on.
+Essentially, ``parseInputs()`` is a pre-processor that directly takes the inputs of the black-box.  The ``parseInputs()`` method will check all of the inputs, ensure that size and units are correct, split into run cases as appropriate, and return a run-cases list that is ready to operate on.
 
 The ``runCases`` return (which can be named as any valid python name) is a list of dicts, where the keys to the dict are the names of the inputs declared in the ``__init__()`` method.  Ex: ``runCases[0]['x']`` will give the ``'x'`` input (in units specified in the ``__init__()`` method) in the first run-case.
 
@@ -84,15 +84,14 @@ There are many ways this functionality can be used, we provide an example here t
             self.outputs.append( 'y', '', 'Dependent Variable')
         
             #Simple model description
-            self.description = 'This model evaluates the function: max([-6*x-6, x**4-3*x**2])'
+            self.description = ( 'This model evaluates the '+
+                               'function: max([-6*x-6, x**4-3*x**2])' )
             
             self.availableDerivative = 1
         
-        #standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
-        def BlackBox(*args, **kwargs):
-            args = list(args)       # convert tuple to list
-            self = args.pop(0)      # pop off the self argument
+        def BlackBox(self, *args, **kwargs):
             runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+
             x = np.array([ pyo.value(runCases[i]['x']) for i in range(0,len(runCases)) ])
             
             y = np.maximum(-6*x-6, x**4-3*x**2)
@@ -145,7 +144,7 @@ There are many ways this functionality can be used, we provide an example here t
 Check outputs
 -------------
 
-There is a ``checkOutputs()`` method that can be used but is not currently fully operational.  Contact the developers if you desire this functionality, but the following the practices described in this documentation should render the need for this moot.
+There is a ``checkOutputs()`` method that is not supported in the current version.  Contact the developers if you desire this functionality, but the following the practices described in this documentation should render the need for this moot.
 
 
 Cases of non-scalar inputs or outputs

@@ -46,7 +46,8 @@ def create_new(filename):
 
 
 pythonFileList = [
-    "readme_example.py"
+    "readme_example.py",
+    "aircraft_gp.py"
 ]
 
 for filename in pythonFileList:
