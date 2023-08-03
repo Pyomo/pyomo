@@ -53,7 +53,7 @@ A simple example is shown below:
                 )
                 
                 # Set the highest available derivative
-                # Should be 1 for most cases but defauts to 0
+                # Should be 1 for most cases but defaults to 0
                 self.availableDerivative = 1
 
             def BlackBox(self, x): # The actual function that does things
@@ -99,7 +99,7 @@ Next, you must tell the model what its inputs are by appending them to the ``sel
 
    :param name: The name of the variable, any valid python string.  **Does not** have to match the name in the optimization formulation
    :type  name: str
-   :param units: The units of the variable.  Every entry in a vector variable must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless. The units **must** be convertable to the units used in the optimization formulation (ex, meters and feet), but **are not required** to be the same.  Because of this, for example, a black-box can be written in imperial units, while an optimization formulation operates in metric.
+   :param units: The units of the variable.  Every entry in a vector variable must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless. The units **must** be convertible to the units used in the optimization formulation (ex, meters and feet), but **are not required** to be the same.  Because of this, for example, a black-box can be written in imperial units, while an optimization formulation operates in metric.
    :type  units: str or pyomo.core.base.units_container._PyomoUnit
    :param description: A description of the variable
    :type  description: str
@@ -126,7 +126,7 @@ Next, outputs must be added to the model.  This is done identically to inputs, h
 
    :param name: The name of the variable, any valid python string.  **Does not** have to match the name in the optimization formulation
    :type  name: str
-   :param units: The units of the variable.  Every entry in a vector variable must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless. The units **must** be convertable to the units used in the optimization formulation (ex, meters and feet), but **are not required** to be the same.  Because of this, for example, a black-box can be written in imperial units, while an optimization formulation operates in metric.
+   :param units: The units of the variable.  Every entry in a vector variable must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless. The units **must** be convertible to the units used in the optimization formulation (ex, meters and feet), but **are not required** to be the same.  Because of this, for example, a black-box can be written in imperial units, while an optimization formulation operates in metric.
    :type  units: str or pyomo.core.base.units_container._PyomoUnit
    :param description: A description of the variable
    :type  description: str
@@ -149,7 +149,7 @@ Finally, the highest available derivative must be set.  For models being used in
 .. code-block:: python
 
     # Set the highest available derivative
-    # Should be 1 for most cases but defauts to 0
+    # Should be 1 for most cases but defaults to 0
     self.availableDerivative = 1
 
 
@@ -456,11 +456,11 @@ Tips
 ----
 
 * Use the pyomo ``tostr()`` function (``from pyomo.common.formatting import tostr``) to print the results of black-boxes for more meaningful printouts
-* Align input and ouptut declarations just as is recommended for optimization variable and constant declarations
-* Delcare an input/output all on one line, no matter what the style guides say
+* Align input and output declarations just as is recommended for optimization variable and constant declarations
+* Declare an input/output all on one line, no matter what the style guides say
 * This interface is really designed for subject matter experts who are not python users to have a simple, easy path to include their tools into a python based optimization architecture.  Try to let them build their own models as a means of fostering trust in the optimization tools
 * Embrace units.  They will save you so many times, it is well worth the minor additional overhead
-* Pyomo units work sligtly diffenrently than pint (for those with pint experience), but those differences should be hidden from the model creator for the most part
+* Pyomo units work slightly diffenrently than pint (for those with pint experience), but those differences should be hidden from the model creator for the most part
 * It is common to use this framework to call to a piece of software external to python
 * See the :doc:`advanced <./advancedruntimeconstraints>` documentation for extra tips and tricks
 
