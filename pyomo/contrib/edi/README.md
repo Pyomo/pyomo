@@ -16,7 +16,7 @@ pip install pint
 
 ## Usage
 
-The core object in EDI is the `Formulation`  object, which inherits from the `pyomo.environ.ConcreteModel`.  Essentally, a `Formulation` is a Pyomo `Model` with some extra stuff, but can be treated exactly as if it were a Pyomo `Model`.  However, an EDI `Formulation` has some additional features that can help simplify model construction.
+The core object in EDI is the `Formulation`  object, which inherits from the `pyomo.environ.ConcreteModel`.  Essentially, a `Formulation` is a Pyomo `Model` with some extra stuff, but can be treated exactly as if it were a Pyomo `Model`.  However, an EDI `Formulation` has some additional features that can help simplify model construction.
 
 Below is a simple example to get started, but additional resources can be found in the [examples](https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/edi/examples) folder or in the EDI [documentation](https://pyomo.readthedocs.io/en/stable/contributed_packages/edi/index.html)
 
@@ -56,9 +56,9 @@ f.Objective(
 # Declare a Black Box
 # ===================
 class UnitCircle(BlackBoxFunctionModel):
-    def __init__(self): # The initalization function
+    def __init__(self): # The initialization function
         
-        # Initalize the black box model
+        # Initialize the black box model
         super().__init__()
 
         # A brief description of the model
@@ -74,7 +74,7 @@ class UnitCircle(BlackBoxFunctionModel):
         # Declare the maximum available derivative
         self.availableDerivative = 1
 
-        # Post-initalization setup
+        # Post-initialization setup
         self.post_init_setup()
 
     def BlackBox(self, x, y): # The actual function that does things
