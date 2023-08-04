@@ -1880,7 +1880,7 @@ class _MindtPyAlgorithm(object):
         main_mip_results : [type]
             Results from solving the MIP main subproblem.
         """
-        # TODO if we have found a valid feasible solution, we take that, if not, we can at least use the dual bound
+        # If we have found a valid feasible solution, we take that. If not, we can at least use the dual bound.
         MindtPy = main_mip.MindtPy_utils
         self.config.logger.info(
             'Unable to optimize MILP main problem '
