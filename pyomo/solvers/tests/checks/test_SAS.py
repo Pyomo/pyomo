@@ -32,6 +32,14 @@ class SASTestAbc:
     solver_io = "_sas94"
     base_options = {}
 
+    @classmethod
+    def setUpClass(cls):
+        cls.opt_sas = SolverFactory("sas", solver_io=cls.solver_io)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opt_sas
+
     def setObj(self):
         X = self.instance.X
         self.instance.Obj = Objective(
@@ -58,10 +66,7 @@ class SASTestAbc:
         instance.rc = Suffix(direction=Suffix.IMPORT)
         instance.dual = Suffix(direction=Suffix.IMPORT)
 
-        self.opt_sas = SolverFactory("sas", solver_io=self.solver_io)
-
     def tearDown(self):
-        del self.opt_sas
         del self.instance
 
     def run_solver(self, **kwargs):

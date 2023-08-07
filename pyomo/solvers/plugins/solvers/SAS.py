@@ -285,6 +285,14 @@ class SAS94(SASAbc):
             self._python_api_exists = True
             self._sas.logger.setLevel(logger.level)
 
+        # Create the session only as its needed
+        self._sas_session = None
+
+    def __del__(self):
+        # Close the session, if we created one
+        if self._sas_session:
+            self._sas_session.endsas()
+
     def _create_statement_str(self, statement):
         """Helper function to create the strings for the statements of the proc OPTLP/OPTMILP code."""
         stmt = self.options.pop(statement, None)
@@ -364,134 +372,133 @@ class SAS94(SASAbc):
         # Set some SAS options to make the log more clean
         sas_options = "option notes nonumber nodate nosource pagesize=max;"
 
-        # Start a SAS session, submit the code and return the results
-        with self._sas.SASsession() as sas:
-            # Find the version of 9.4 we are using
-            self._sasver = sas.sasver
+        # Get the current SAS session, submit the code and return the results
+        sas = self._sas_session
+        if sas == None:
+            sas = self._sas_session = self._sas.SASsession()
 
-            # Upload files, only if not accessible locally
-            upload_mps = False
-            if not sas.file_info(self._problem_files[0], quiet=True):
-                sas.upload(
-                    self._problem_files[0], self._problem_files[0], overwrite=True
-                )
-                upload_mps = True
+        # Find the version of 9.4 we are using
+        self._sasver = sas.sasver
 
-            upload_pin = False
-            if self.warmstart_flag and not sas.file_info(
-                self._warm_start_file_name, quiet=True
-            ):
-                sas.upload(
-                    self._warm_start_file_name,
-                    self._warm_start_file_name,
-                    overwrite=True,
-                )
-                upload_pin = True
+        # Upload files, only if not accessible locally
+        upload_mps = False
+        if not sas.file_info(self._problem_files[0], quiet=True):
+            sas.upload(self._problem_files[0], self._problem_files[0], overwrite=True)
+            upload_mps = True
 
-            # Using a function call to make it easier to moch the version check
-            version = self.sas_version().split("M", 1)[1][0]
-            if int(version) < 5:
-                raise NotImplementedError(
-                    "Support for SAS 9.4 M4 and earlier is no implemented."
-                )
-            elif int(version) == 5:
-                # In 9.4M5 we have to create an MPS data set from an MPS file first
-                # Earlier versions will not work because the MPS format in incompatible
-                mps_dataset_name = "mps" + unique
-                res = sas.submit(
-                    """
-                                {sas_options}
-                                {warmstart}
-                                %MPS2SASD(MPSFILE="{mpsfile}", OUTDATA={mps_dataset_name}, MAXLEN=256, FORMAT=FREE);
-                                proc {proc} data={mps_dataset_name} {options} primalout={primalout_dataset_name} dualout={dualout_dataset_name};
-                                {decomp}
-                                {decompmaster}
-                                {decompmasterip}
-                                {decompsubprob}
-                                {rootnode}
-                                run;
-                                """.format(
-                        sas_options=sas_options,
-                        warmstart=warmstart_str,
-                        proc=proc,
-                        mpsfile=self._problem_files[0],
-                        mps_dataset_name=mps_dataset_name,
-                        options=opt_str,
-                        primalout_dataset_name=primalout_dataset_name,
-                        dualout_dataset_name=dualout_dataset_name,
-                        decomp=decomp_str,
-                        decompmaster=decompmaster_str,
-                        decompmasterip=decompmasterip_str,
-                        decompsubprob=decompsubprob_str,
-                        rootnode=rootnode_str,
-                    ),
-                    results="TEXT",
-                )
-                sas.sasdata(mps_dataset_name).delete(quiet=True)
-            else:
-                # Since 9.4M6+ optlp/optmilp can read mps files directly
-                res = sas.submit(
-                    """
-                                {sas_options}
-                                {warmstart}
-                                proc {proc} mpsfile=\"{mpsfile}\" {options} primalout={primalout_dataset_name} dualout={dualout_dataset_name};
-                                {decomp}
-                                {decompmaster}
-                                {decompmasterip}
-                                {decompsubprob}
-                                {rootnode}
-                                run;
-                                """.format(
-                        sas_options=sas_options,
-                        warmstart=warmstart_str,
-                        proc=proc,
-                        mpsfile=self._problem_files[0],
-                        options=opt_str,
-                        primalout_dataset_name=primalout_dataset_name,
-                        dualout_dataset_name=dualout_dataset_name,
-                        decomp=decomp_str,
-                        decompmaster=decompmaster_str,
-                        decompmasterip=decompmasterip_str,
-                        decompsubprob=decompsubprob_str,
-                        rootnode=rootnode_str,
-                    ),
-                    results="TEXT",
-                )
+        upload_pin = False
+        if self.warmstart_flag and not sas.file_info(
+            self._warm_start_file_name, quiet=True
+        ):
+            sas.upload(
+                self._warm_start_file_name, self._warm_start_file_name, overwrite=True
+            )
+            upload_pin = True
 
-            # Delete uploaded file
-            if upload_mps:
-                sas.file_delete(self._problem_files[0], quiet=True)
-            if self.warmstart_flag and upload_pin:
-                sas.file_delete(self._warm_start_file_name, quiet=True)
+        # Using a function call to make it easier to moch the version check
+        version = self.sas_version().split("M", 1)[1][0]
+        if int(version) < 5:
+            raise NotImplementedError(
+                "Support for SAS 9.4 M4 and earlier is no implemented."
+            )
+        elif int(version) == 5:
+            # In 9.4M5 we have to create an MPS data set from an MPS file first
+            # Earlier versions will not work because the MPS format in incompatible
+            mps_dataset_name = "mps" + unique
+            res = sas.submit(
+                """
+                            {sas_options}
+                            {warmstart}
+                            %MPS2SASD(MPSFILE="{mpsfile}", OUTDATA={mps_dataset_name}, MAXLEN=256, FORMAT=FREE);
+                            proc {proc} data={mps_dataset_name} {options} primalout={primalout_dataset_name} dualout={dualout_dataset_name};
+                            {decomp}
+                            {decompmaster}
+                            {decompmasterip}
+                            {decompsubprob}
+                            {rootnode}
+                            run;
+                            """.format(
+                    sas_options=sas_options,
+                    warmstart=warmstart_str,
+                    proc=proc,
+                    mpsfile=self._problem_files[0],
+                    mps_dataset_name=mps_dataset_name,
+                    options=opt_str,
+                    primalout_dataset_name=primalout_dataset_name,
+                    dualout_dataset_name=dualout_dataset_name,
+                    decomp=decomp_str,
+                    decompmaster=decompmaster_str,
+                    decompmasterip=decompmasterip_str,
+                    decompsubprob=decompsubprob_str,
+                    rootnode=rootnode_str,
+                ),
+                results="TEXT",
+            )
+            sas.sasdata(mps_dataset_name).delete(quiet=True)
+        else:
+            # Since 9.4M6+ optlp/optmilp can read mps files directly
+            res = sas.submit(
+                """
+                            {sas_options}
+                            {warmstart}
+                            proc {proc} mpsfile=\"{mpsfile}\" {options} primalout={primalout_dataset_name} dualout={dualout_dataset_name};
+                            {decomp}
+                            {decompmaster}
+                            {decompmasterip}
+                            {decompsubprob}
+                            {rootnode}
+                            run;
+                            """.format(
+                    sas_options=sas_options,
+                    warmstart=warmstart_str,
+                    proc=proc,
+                    mpsfile=self._problem_files[0],
+                    options=opt_str,
+                    primalout_dataset_name=primalout_dataset_name,
+                    dualout_dataset_name=dualout_dataset_name,
+                    decomp=decomp_str,
+                    decompmaster=decompmaster_str,
+                    decompmasterip=decompmasterip_str,
+                    decompsubprob=decompsubprob_str,
+                    rootnode=rootnode_str,
+                ),
+                results="TEXT",
+            )
 
-            # Store log and ODS output
-            self._log = res["LOG"]
-            self._lst = res["LST"]
-            if "ERROR 22-322: Syntax error" in self._log:
-                raise ValueError(
-                    "An option passed to the SAS solver caused a syntax error: {log}".format(
-                        log=self._log
-                    )
-                )
-            else:
-                # Print log if requested by the user, only if we did not already print it
-                if self._tee:
-                    print(self._log)
-            self._macro = dict(
-                (key.strip(), value.strip())
-                for key, value in (
-                    pair.split("=") for pair in sas.symget("_OR" + proc + "_").split()
+        # Delete uploaded file
+        if upload_mps:
+            sas.file_delete(self._problem_files[0], quiet=True)
+        if self.warmstart_flag and upload_pin:
+            sas.file_delete(self._warm_start_file_name, quiet=True)
+
+        # Store log and ODS output
+        self._log = res["LOG"]
+        self._lst = res["LST"]
+        if "ERROR 22-322: Syntax error" in self._log:
+            raise ValueError(
+                "An option passed to the SAS solver caused a syntax error: {log}".format(
+                    log=self._log
                 )
             )
-            if self._macro.get("STATUS", "ERROR") == "OK":
-                primal_out = sas.sd2df(primalout_dataset_name)
-                dual_out = sas.sd2df(dualout_dataset_name)
+        else:
+            # Print log if requested by the user, only if we did not already print it
+            if self._tee:
+                print(self._log)
+        self._macro = dict(
+            (key.strip(), value.strip())
+            for key, value in (
+                pair.split("=") for pair in sas.symget("_OR" + proc + "_").split()
+            )
+        )
+        if self._macro.get("STATUS", "ERROR") == "OK":
+            primal_out = sas.sd2df(primalout_dataset_name)
+            dual_out = sas.sd2df(dualout_dataset_name)
 
-            # Delete data sets, they will go away automatically, but does not hurt to delete them
-            if primalin_dataset_name:
-                sas.sasdata(primalin_dataset_name).delete(quiet=True)
-            sas.sasdata(primalout_dataset_name).delete(quiet=True)
-            sas.sasdata(dualout_dataset_name).delete(quiet=True)
+        # Delete data sets, they will go away automatically, but does not hurt to delete them
+        if primalin_dataset_name:
+            sas.sasdata(primalin_dataset_name).delete(quiet=True)
+        sas.sasdata(primalout_dataset_name).delete(quiet=True)
+        sas.sasdata(dualout_dataset_name).delete(quiet=True)
 
         # Prepare the solver results
         results = self.results = self._create_results_from_status(
@@ -597,6 +604,14 @@ class SASCAS(SASAbc):
         else:
             self._python_api_exists = True
 
+        # Create the session only as its needed
+        self._sas_session = None
+
+    def __del__(self):
+        # Close the session, if we created one
+        if self._sas_session:
+            self._sas_session.close()
+
     def _apply_solver(self):
         """ "Prepare the options and run the solver. Then store the data to be returned."""
         logger.debug("Running SAS Viya")
@@ -626,7 +641,9 @@ class SASCAS(SASAbc):
 
         # Connect to CAS server
         with redirect_stdout(SASLogWriter(self._tee)) as self._log_writer:
-            s = self._sas.CAS(**cas_opts)
+            s = self._sas_session
+            if s == None:
+                s = self._sas_session = self._sas.CAS(**cas_opts)
             try:
                 # Load the optimization action set
                 s.loadactionset("optimization")
@@ -787,7 +804,6 @@ class SASCAS(SASAbc):
                     s.dropTable(name=primalout_table_name, quiet=True)
                 if dualout_table_name:
                     s.dropTable(name=dualout_table_name, quiet=True)
-                s.close()
 
         self._log = self._log_writer.log()
         self._rc = 0
