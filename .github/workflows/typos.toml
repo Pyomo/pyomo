@@ -38,4 +38,6 @@ caf = "caf"
 WRONLY = "WRONLY"
 # Ignore the name Hax
 Hax = "Hax"
+# Ignore dout (short for dual output in SAS solvers)
+dout = "dout"
 # AS NEEDED: Add More Words Below

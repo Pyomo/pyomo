@@ -1,5 +1,6 @@
 import os
 import pyomo.common.unittest as unittest
+from unittest import mock
 from pyomo.environ import (
     ConcreteModel,
     Var,
@@ -15,20 +16,20 @@ from pyomo.environ import (
 )
 from pyomo.opt.results import SolverStatus, TerminationCondition, ProblemSense
 from pyomo.opt import SolverFactory, check_available_solvers
-
+import warnings
 
 CAS_OPTIONS = {
-    "hostname": os.environ.get('CAS_SERVER', None),
-    "port": os.environ.get('CAS_PORT', None),
-    "authinfo": os.environ.get('CAS_AUTHINFO', None),
+    "hostname": os.environ.get("CASHOST", None),
+    "port": os.environ.get("CASPORT", None),
+    "authinfo": os.environ.get("CASAUTHINFO", None),
 }
 
 
-sas_available = check_available_solvers('sas')
+sas_available = check_available_solvers("sas")
 
 
 class SASTestAbc:
-    solver_io = '_sas94'
+    solver_io = "_sas94"
     base_options = {}
 
     def setObj(self):
@@ -41,6 +42,8 @@ class SASTestAbc:
         self.instance.X = Var([1, 2, 3], within=NonNegativeReals)
 
     def setUp(self):
+        # Disable resource warnings
+        warnings.filterwarnings("ignore", category=ResourceWarning)
         instance = self.instance = ConcreteModel()
         self.setX()
         X = instance.X
@@ -55,7 +58,7 @@ class SASTestAbc:
         instance.rc = Suffix(direction=Suffix.IMPORT)
         instance.dual = Suffix(direction=Suffix.IMPORT)
 
-        self.opt_sas = SolverFactory('sas', solver_io=self.solver_io)
+        self.opt_sas = SolverFactory("sas", solver_io=self.solver_io)
 
     def tearDown(self):
         del self.opt_sas
@@ -74,7 +77,7 @@ class SASTestAbc:
         self.results = opt_sas.solve(instance, **kwargs)
 
 
-class SASTestLP(SASTestAbc, unittest.TestCase):
+class SASTestLP(SASTestAbc):
     def checkSolution(self):
         instance = self.instance
         results = self.results
@@ -111,41 +114,39 @@ class SASTestLP(SASTestAbc, unittest.TestCase):
         self.assertAlmostEqual(instance.dual[instance.R3], sense * 0.0)
 
         # Check basis status
-        self.assertEqual(instance.status[instance.X[1]], 'L')
-        self.assertEqual(instance.status[instance.X[2]], 'B')
-        self.assertEqual(instance.status[instance.X[3]], 'L')
-        self.assertEqual(instance.status[instance.R1], 'U')
-        self.assertEqual(instance.status[instance.R2], 'B')
-        self.assertEqual(instance.status[instance.R3], 'B')
+        self.assertEqual(instance.status[instance.X[1]], "L")
+        self.assertEqual(instance.status[instance.X[2]], "B")
+        self.assertEqual(instance.status[instance.X[3]], "L")
+        self.assertEqual(instance.status[instance.R1], "U")
+        self.assertEqual(instance.status[instance.R2], "B")
+        self.assertEqual(instance.status[instance.R3], "B")
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_default(self):
         self.run_solver()
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
+    def test_solver_tee(self):
+        self.run_solver(tee=True)
+        self.checkSolution()
+
     def test_solver_primal(self):
         self.run_solver(options={"algorithm": "ps"})
         self.assertIn("NOTE: The Primal Simplex algorithm is used.", self.opt_sas._log)
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_ipm(self):
         self.run_solver(options={"algorithm": "ip"})
         self.assertIn("NOTE: The Interior Point algorithm is used.", self.opt_sas._log)
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_intoption(self):
         self.run_solver(options={"maxiter": 20})
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_invalidoption(self):
         with self.assertRaisesRegex(ValueError, "syntax error"):
             self.run_solver(options={"foo": "bar"})
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_max(self):
         X = self.instance.X
         self.instance.Obj.set_value(expr=-2 * X[1] + 3 * X[2] + 4 * X[3])
@@ -154,7 +155,6 @@ class SASTestLP(SASTestAbc, unittest.TestCase):
         self.checkSolution()
         self.assertEqual(self.results.problem.sense, ProblemSense.maximize)
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_infeasible(self):
         instance = self.instance
         X = instance.X
@@ -167,21 +167,23 @@ class SASTestLP(SASTestAbc, unittest.TestCase):
         )
         self.assertEqual(results.solver.message, "The problem is infeasible.")
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_infeasible_or_unbounded(self):
         self.instance.X.domain = Reals
         self.run_solver()
         results = self.results
         self.assertEqual(results.solver.status, SolverStatus.warning)
-        self.assertEqual(
+        self.assertIn(
             results.solver.termination_condition,
-            TerminationCondition.infeasibleOrUnbounded,
+            [
+                TerminationCondition.infeasibleOrUnbounded,
+                TerminationCondition.unbounded,
+            ],
         )
-        self.assertEqual(
-            results.solver.message, "The problem is infeasible or unbounded."
+        self.assertIn(
+            results.solver.message,
+            ["The problem is infeasible or unbounded.", "The problem is unbounded."],
         )
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_unbounded(self):
         self.instance.X.domain = Reals
         self.run_solver(options={"presolver": "none", "algorithm": "primal"})
@@ -229,7 +231,6 @@ class SASTestLP(SASTestAbc, unittest.TestCase):
 
         # Don't check basis status for decomp
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_decomp(self):
         self.run_solver(
             options={
@@ -243,7 +244,6 @@ class SASTestLP(SASTestAbc, unittest.TestCase):
         )
         self.checkSolutionDecomp()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_iis(self):
         self.run_solver(options={"iis": "true"})
         results = self.results
@@ -257,7 +257,6 @@ class SASTestLP(SASTestAbc, unittest.TestCase):
             "The problem is feasible. This status is displayed when the IIS=TRUE option is specified and the problem is feasible.",
         )
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_maxiter(self):
         self.run_solver(options={"maxiter": 1})
         results = self.results
@@ -270,13 +269,59 @@ class SASTestLP(SASTestAbc, unittest.TestCase):
             "The maximum allowable number of iterations was reached.",
         )
 
+    def test_solver_with_milp(self):
+        self.run_solver(options={"with": "milp"})
+        self.assertIn(
+            "WARNING: The problem has no integer variables.", self.opt_sas._log
+        )
 
-class SASTestLPCAS(SASTestLP):
-    solver_io = '_sascas'
+
+@unittest.skipIf(not sas_available, "The SAS solver is not available")
+class SASTestLP94(SASTestLP, unittest.TestCase):
+    @mock.patch(
+        "pyomo.solvers.plugins.solvers.SAS.SAS94.sas_version",
+        return_value="2sd45s39M4234232",
+    )
+    def test_solver_versionM4(self, sas):
+        with self.assertRaises(NotImplementedError):
+            self.run_solver()
+
+    @mock.patch(
+        "pyomo.solvers.plugins.solvers.SAS.SAS94.sas_version",
+        return_value="234897293M5324u98",
+    )
+    def test_solver_versionM5(self, sas):
+        self.run_solver()
+        self.checkSolution()
+
+    @mock.patch("saspy.SASsession.submit", return_value={"LOG": "", "LST": ""})
+    @mock.patch("saspy.SASsession.symget", return_value="STATUS=OUT_OF_MEMORY")
+    def test_solver_out_of_memory(self, submit_mock, symget_mocks):
+        self.run_solver(load_solutions=False)
+        results = self.results
+        self.assertEqual(results.solver.status, SolverStatus.aborted)
+
+    @mock.patch("saspy.SASsession.submit", return_value={"LOG": "", "LST": ""})
+    @mock.patch("saspy.SASsession.symget", return_value="STATUS=ERROR")
+    def test_solver_error(self, submit_mock, symget_mock):
+        self.run_solver(load_solutions=False)
+        results = self.results
+        self.assertEqual(results.solver.status, SolverStatus.error)
+
+
+@unittest.skipIf(not sas_available, "The SAS solver is not available")
+class SASTestLPCAS(SASTestLP, unittest.TestCase):
+    solver_io = "_sascas"
     base_options = CAS_OPTIONS
 
+    @mock.patch("pyomo.solvers.plugins.solvers.SAS.stat")
+    def test_solver_large_file(self, os_stat):
+        os_stat.return_value.st_size = 3 * 1024**3
+        self.run_solver()
+        self.checkSolution()
 
-class SASTestMILP(SASTestAbc, unittest.TestCase):
+
+class SASTestMILP(SASTestAbc):
     def setX(self):
         self.instance.X = Var([1, 2, 3], within=NonNegativeIntegers)
 
@@ -301,12 +346,14 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
         self.assertAlmostEqual(instance.X[2].value, 1.0)
         self.assertAlmostEqual(instance.X[3].value, 1.0)
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_default(self):
-        self.run_solver(options={})
+        self.run_solver()
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
+    def test_solver_tee(self):
+        self.run_solver(tee=True)
+        self.checkSolution()
+
     def test_solver_presolve(self):
         self.run_solver(options={"presolver": "none"})
         self.assertIn(
@@ -314,17 +361,14 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
         )
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_intoption(self):
         self.run_solver(options={"maxnodes": 20})
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_invalidoption(self):
         with self.assertRaisesRegex(ValueError, "syntax error"):
             self.run_solver(options={"foo": "bar"})
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_max(self):
         X = self.instance.X
         self.instance.Obj.set_value(expr=-2 * X[1] + 3 * X[2] + 4 * X[3])
@@ -332,7 +376,6 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
         self.run_solver()
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_infeasible(self):
         instance = self.instance
         X = instance.X
@@ -345,22 +388,23 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
         )
         self.assertEqual(results.solver.message, "The problem is infeasible.")
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
-    @unittest.skip("Returns wrong status for some versions.")
     def test_solver_infeasible_or_unbounded(self):
         self.instance.X.domain = Integers
         self.run_solver()
         results = self.results
         self.assertEqual(results.solver.status, SolverStatus.warning)
-        self.assertEqual(
+        self.assertIn(
             results.solver.termination_condition,
-            TerminationCondition.infeasibleOrUnbounded,
+            [
+                TerminationCondition.infeasibleOrUnbounded,
+                TerminationCondition.unbounded,
+            ],
         )
-        self.assertEqual(
-            results.solver.message, "The problem is infeasible or unbounded."
+        self.assertIn(
+            results.solver.message,
+            ["The problem is infeasible or unbounded.", "The problem is unbounded."],
         )
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_unbounded(self):
         self.instance.X.domain = Integers
         self.run_solver(
@@ -373,7 +417,6 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
         )
         self.assertEqual(results.solver.message, "The problem is unbounded.")
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_decomp(self):
         self.run_solver(
             options={
@@ -388,12 +431,10 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
         )
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_rootnode(self):
         self.run_solver(options={"rootnode": {"presolver": "automatic"}})
         self.checkSolution()
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_maxnodes(self):
         self.run_solver(options={"maxnodes": 0})
         results = self.results
@@ -406,7 +447,6 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
             "The solver reached the maximum number of nodes specified by the MAXNODES= option and found a solution.",
         )
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_maxsols(self):
         self.run_solver(options={"maxsols": 1})
         results = self.results
@@ -419,7 +459,6 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
             "The solver reached the maximum number of solutions specified by the MAXSOLS= option.",
         )
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_target(self):
         self.run_solver(options={"target": -6.0})
         results = self.results
@@ -432,7 +471,6 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
             "The solution is not worse than the target specified by the TARGET= option.",
         )
 
-    @unittest.skipIf(not sas_available, "The SAS solver is not available")
     def test_solver_primalin(self):
         X = self.instance.X
         X[1] = None
@@ -445,11 +483,42 @@ class SASTestMILP(SASTestAbc, unittest.TestCase):
             self.opt_sas._log,
         )
 
+    def test_solver_primalin_nosol(self):
+        X = self.instance.X
+        X[1] = None
+        X[2] = None
+        X[3] = None
+        self.run_solver(warmstart=True)
+        self.checkSolution()
 
-class SASTestMILPCAS(SASTestMILP):
-    solver_io = '_sascas'
+    @mock.patch("pyomo.solvers.plugins.solvers.SAS.stat")
+    def test_solver_large_file(self, os_stat):
+        os_stat.return_value.st_size = 3 * 1024**3
+        self.run_solver()
+        self.checkSolution()
+
+    def test_solver_with_lp(self):
+        self.run_solver(options={"with": "lp"})
+        self.assertIn(
+            "contains integer variables; the linear relaxation will be solved.",
+            self.opt_sas._log,
+        )
+
+    def test_solver_warmstart_capable(self):
+        self.run_solver()
+        self.assertTrue(self.opt_sas.warm_start_capable())
+
+
+@unittest.skipIf(not sas_available, "The SAS solver is not available")
+class SASTestMILP94(SASTestMILP, unittest.TestCase):
+    pass
+
+
+@unittest.skipIf(not sas_available, "The SAS solver is not available")
+class SASTestMILPCAS(SASTestMILP, unittest.TestCase):
+    solver_io = "_sascas"
     base_options = CAS_OPTIONS
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

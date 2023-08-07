@@ -3,6 +3,9 @@
 .spyder*
 .ropeproject
 .vscode
+.env
+venv
+sascfg_personal.py
 # Python generates numerous files when byte compiling / installing packages
 *.pyx
 *.pyc

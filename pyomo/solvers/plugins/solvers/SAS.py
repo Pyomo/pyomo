@@ -1,8 +1,9 @@
-__all__ = ['SAS']
+__all__ = ["SAS"]
 
 import logging
 import sys
-import os
+from os import stat
+import uuid
 
 from io import StringIO
 from abc import ABC, abstractmethod
@@ -24,7 +25,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.kernel.block import IBlock
 
 
-logger = logging.getLogger('pyomo.solvers')
+logger = logging.getLogger("pyomo.solvers")
 
 
 STATUS_TO_SOLVERSTATUS = {
@@ -112,20 +113,20 @@ CAS_OPTION_NAMES = [
 ]
 
 
-@SolverFactory.register('sas', doc='The SAS LP/MIP solver')
+@SolverFactory.register("sas", doc="The SAS LP/MIP solver")
 class SAS(OptSolver):
     """The SAS optimization solver"""
 
     def __new__(cls, *args, **kwds):
-        mode = kwds.pop('solver_io', None)
+        mode = kwds.pop("solver_io", None)
         if mode != None:
             return SolverFactory(mode)
         else:
             # Choose solver factory automatically
-            # bassed on what can be loaded.
-            s = SolverFactory('_sas94', **kwds)
+            # based on what can be loaded.
+            s = SolverFactory("_sas94", **kwds)
             if not s.available():
-                s = SolverFactory('_sascas', **kwds)
+                s = SolverFactory("_sascas", **kwds)
             return s
 
 
@@ -134,7 +135,7 @@ class SASAbc(ABC, OptSolver):
 
     def __init__(self, **kwds):
         """Initialize the SAS solver interfaces."""
-        kwds['type'] = 'sas'
+        kwds["type"] = "sas"
         super(SASAbc, self).__init__(**kwds)
 
         #
@@ -157,7 +158,7 @@ class SASAbc(ABC, OptSolver):
         TempfileManager.push()
 
         # Get the warmstart flag
-        self.warmstart_flag = kwds.pop('warmstart', False)
+        self.warmstart_flag = kwds.pop("warmstart", False)
 
         # Call parent presolve function
         super(SASAbc, self)._presolve(*args, **kwds)
@@ -173,7 +174,7 @@ class SASAbc(ABC, OptSolver):
                         Var, active=True, descend_into=False
                     ):
                         self._vars.append(vardata)
-                # Store the symbal map, we need this for example when writing the warmstart file
+                # Store the symbol map, we need this for example when writing the warmstart file
                 if isinstance(self._instance, IBlock):
                     self._smap = getattr(self._instance, "._symbol_maps")[self._smap_id]
                 else:
@@ -186,8 +187,8 @@ class SASAbc(ABC, OptSolver):
             )
             smap = self._smap
             numWritten = 0
-            with open(filename, 'w') as file:
-                file.write('_VAR_,_VALUE_\n')
+            with open(filename, "w") as file:
+                file.write("_VAR_,_VALUE_\n")
                 for var in self._vars:
                     if (var.value is not None) and (id(var) in smap.byObject):
                         name = smap.byObject[id(var)]
@@ -239,8 +240,7 @@ class SASAbc(ABC, OptSolver):
 
     @abstractmethod
     def _apply_solver(self):
-        """The routine that performs the solve"""
-        raise NotImplemented("This is an abstract function and thus not implemented!")
+        pass
 
     def _postsolve(self):
         """Clean up at the end, especially the temp files."""
@@ -260,7 +260,7 @@ class SASAbc(ABC, OptSolver):
         return True
 
 
-@SolverFactory.register('_sas94', doc='SAS 9.4 interface')
+@SolverFactory.register("_sas94", doc="SAS 9.4 interface")
 class SAS94(SASAbc):
     """
     Solver interface for SAS 9.4 using saspy. See the saspy documentation about
@@ -298,6 +298,9 @@ class SAS94(SASAbc):
         else:
             return ""
 
+    def sas_version(self):
+        return self._sasver
+
     def _apply_solver(self):
         """ "Prepare the options and run the solver. Then store the data to be returned."""
         logger.debug("Running SAS")
@@ -326,39 +329,81 @@ class SAS94(SASAbc):
         decompsubprob_str = self._create_statement_str("decompsubprob")
         rootnode_str = self._create_statement_str("rootnode")
 
+        # Get a unique identifier, always use the same with different prefixes
+        unique = uuid.uuid4().hex[:16]
+
+        # Create unique filename for output datasets
+        primalout_dataset_name = "pout" + unique
+        dualout_dataset_name = "dout" + unique
+        primalin_dataset_name = None
+
         # Handle warmstart
         warmstart_str = ""
         if self.warmstart_flag:
             # Set the warmstart basis option
+            primalin_dataset_name = "pin" + unique
             if proc != "OPTLP":
                 warmstart_str = """
                                 proc import datafile='{primalin}'
-                                    out=primalin
+                                    out={primalin_dataset_name}
                                     dbms=csv
                                     replace;
                                     getnames=yes;
                                     run;
                                 """.format(
-                    primalin=self._warm_start_file_name
+                    primalin=self._warm_start_file_name,
+                    primalin_dataset_name=primalin_dataset_name,
                 )
-                self.options["primalin"] = "primalin"
+                self.options["primalin"] = primalin_dataset_name
 
         # Convert options to string
         opt_str = " ".join(
             option + "=" + str(value) for option, value in self.options.items()
         )
 
-        # Start a SAS session, submit the code and return the results``
+        # Set some SAS options to make the log more clean
+        sas_options = "option notes nonumber nodate nosource pagesize=max;"
+
+        # Start a SAS session, submit the code and return the results
         with self._sas.SASsession() as sas:
             # Find the version of 9.4 we are using
-            if sas.sasver.startswith("9.04.01M5"):
+            self._sasver = sas.sasver
+
+            # Upload files, only if not accessible locally
+            upload_mps = False
+            if not sas.file_info(self._problem_files[0], quiet=True):
+                sas.upload(
+                    self._problem_files[0], self._problem_files[0], overwrite=True
+                )
+                upload_mps = True
+
+            upload_pin = False
+            if self.warmstart_flag and not sas.file_info(
+                self._warm_start_file_name, quiet=True
+            ):
+                sas.upload(
+                    self._warm_start_file_name,
+                    self._warm_start_file_name,
+                    overwrite=True,
+                )
+                upload_pin = True
+
+            # Using a function call to make it easier to moch the version check
+            version = self.sas_version().split("M", 1)[1][0]
+            if int(version) < 5:
+                raise NotImplementedError(
+                    "Support for SAS 9.4 M4 and earlier is no implemented."
+                )
+            elif int(version) == 5:
                 # In 9.4M5 we have to create an MPS data set from an MPS file first
                 # Earlier versions will not work because the MPS format in incompatible
+                mps_dataset_name = "mps" + unique
                 res = sas.submit(
                     """
+                                {sas_options}
                                 {warmstart}
-                                %MPS2SASD(MPSFILE="{mpsfile}", OUTDATA=mpsdata, MAXLEN=256, FORMAT=FREE);
-                                proc {proc} data=mpsdata {options} primalout=primalout dualout=dualout;
+                                %MPS2SASD(MPSFILE="{mpsfile}", OUTDATA={mps_dataset_name}, MAXLEN=256, FORMAT=FREE);
+                                proc {proc} data={mps_dataset_name} {options} primalout={primalout_dataset_name} dualout={dualout_dataset_name};
                                 {decomp}
                                 {decompmaster}
                                 {decompmasterip}
@@ -366,10 +411,14 @@ class SAS94(SASAbc):
                                 {rootnode}
                                 run;
                                 """.format(
+                        sas_options=sas_options,
                         warmstart=warmstart_str,
                         proc=proc,
                         mpsfile=self._problem_files[0],
+                        mps_dataset_name=mps_dataset_name,
                         options=opt_str,
+                        primalout_dataset_name=primalout_dataset_name,
+                        dualout_dataset_name=dualout_dataset_name,
                         decomp=decomp_str,
                         decompmaster=decompmaster_str,
                         decompmasterip=decompmasterip_str,
@@ -378,12 +427,14 @@ class SAS94(SASAbc):
                     ),
                     results="TEXT",
                 )
+                sas.sasdata(mps_dataset_name).delete(quiet=True)
             else:
                 # Since 9.4M6+ optlp/optmilp can read mps files directly
                 res = sas.submit(
                     """
+                                {sas_options}
                                 {warmstart}
-                                proc {proc} mpsfile=\"{mpsfile}\" {options} primalout=primalout dualout=dualout;
+                                proc {proc} mpsfile=\"{mpsfile}\" {options} primalout={primalout_dataset_name} dualout={dualout_dataset_name};
                                 {decomp}
                                 {decompmaster}
                                 {decompmasterip}
@@ -391,10 +442,13 @@ class SAS94(SASAbc):
                                 {rootnode}
                                 run;
                                 """.format(
+                        sas_options=sas_options,
                         warmstart=warmstart_str,
                         proc=proc,
                         mpsfile=self._problem_files[0],
                         options=opt_str,
+                        primalout_dataset_name=primalout_dataset_name,
+                        dualout_dataset_name=dualout_dataset_name,
                         decomp=decomp_str,
                         decompmaster=decompmaster_str,
                         decompmasterip=decompmasterip_str,
@@ -404,26 +458,40 @@ class SAS94(SASAbc):
                     results="TEXT",
                 )
 
+            # Delete uploaded file
+            if upload_mps:
+                sas.file_delete(self._problem_files[0], quiet=True)
+            if self.warmstart_flag and upload_pin:
+                sas.file_delete(self._warm_start_file_name, quiet=True)
+
             # Store log and ODS output
             self._log = res["LOG"]
             self._lst = res["LST"]
-            # Print log if requested by the user
-            if self._tee:
-                print(self._log)
             if "ERROR 22-322: Syntax error" in self._log:
                 raise ValueError(
                     "An option passed to the SAS solver caused a syntax error: {log}".format(
                         log=self._log
                     )
                 )
+            else:
+                # Print log if requested by the user, only if we did not already print it
+                if self._tee:
+                    print(self._log)
             self._macro = dict(
                 (key.strip(), value.strip())
                 for key, value in (
                     pair.split("=") for pair in sas.symget("_OR" + proc + "_").split()
                 )
             )
-            primal_out = sas.sd2df("primalout")
-            dual_out = sas.sd2df("dualout")
+            if self._macro.get("STATUS", "ERROR") == "OK":
+                primal_out = sas.sd2df(primalout_dataset_name)
+                dual_out = sas.sd2df(dualout_dataset_name)
+
+            # Delete data sets, they will go away automatically, but does not hurt to delete them
+            if primalin_dataset_name:
+                sas.sasdata(primalin_dataset_name).delete(quiet=True)
+            sas.sasdata(primalout_dataset_name).delete(quiet=True)
+            sas.sasdata(dualout_dataset_name).delete(quiet=True)
 
         # Prepare the solver results
         results = self.results = self._create_results_from_status(
@@ -445,35 +513,35 @@ class SAS94(SASAbc):
             sol.termination_condition = TerminationCondition.optimal
 
             # Store objective value in solution
-            sol.objective['__default_objective__'] = {'Value': self._macro["OBJECTIVE"]}
+            sol.objective["__default_objective__"] = {"Value": self._macro["OBJECTIVE"]}
 
             if proc == "OPTLP":
                 # Convert primal out data set to variable dictionary
                 # Use panda functions for efficiency
-                primal_out = primal_out[['_VAR_', '_VALUE_', '_STATUS_', '_R_COST_']]
-                primal_out = primal_out.set_index('_VAR_', drop=True)
+                primal_out = primal_out[["_VAR_", "_VALUE_", "_STATUS_", "_R_COST_"]]
+                primal_out = primal_out.set_index("_VAR_", drop=True)
                 primal_out = primal_out.rename(
-                    {'_VALUE_': 'Value', '_STATUS_': 'Status', '_R_COST_': 'rc'},
-                    axis='columns',
+                    {"_VALUE_": "Value", "_STATUS_": "Status", "_R_COST_": "rc"},
+                    axis="columns",
                 )
-                sol.variable = primal_out.to_dict('index')
+                sol.variable = primal_out.to_dict("index")
 
                 # Convert dual out data set to constraint dictionary
                 # Use pandas functions for efficiency
-                dual_out = dual_out[['_ROW_', '_VALUE_', '_STATUS_', '_ACTIVITY_']]
-                dual_out = dual_out.set_index('_ROW_', drop=True)
+                dual_out = dual_out[["_ROW_", "_VALUE_", "_STATUS_", "_ACTIVITY_"]]
+                dual_out = dual_out.set_index("_ROW_", drop=True)
                 dual_out = dual_out.rename(
-                    {'_VALUE_': 'dual', '_STATUS_': 'Status', '_ACTIVITY_': 'slack'},
-                    axis='columns',
+                    {"_VALUE_": "dual", "_STATUS_": "Status", "_ACTIVITY_": "slack"},
+                    axis="columns",
                 )
-                sol.constraint = dual_out.to_dict('index')
+                sol.constraint = dual_out.to_dict("index")
             else:
                 # Convert primal out data set to variable dictionary
                 # Use pandas functions for efficiency
-                primal_out = primal_out[['_VAR_', '_VALUE_']]
-                primal_out = primal_out.set_index('_VAR_', drop=True)
-                primal_out = primal_out.rename({'_VALUE_': 'Value'}, axis='columns')
-                sol.variable = primal_out.to_dict('index')
+                primal_out = primal_out[["_VAR_", "_VALUE_"]]
+                primal_out = primal_out.set_index("_VAR_", drop=True)
+                primal_out = primal_out.rename({"_VALUE_": "Value"}, axis="columns")
+                sol.variable = primal_out.to_dict("index")
 
         self._rc = 0
         return Bunch(rc=self._rc, log=self._log)
@@ -504,7 +572,7 @@ class SASLogWriter:
         return self._log.getvalue()
 
 
-@SolverFactory.register('_sascas', doc='SAS Viya CAS Server interface')
+@SolverFactory.register("_sascas", doc="SAS Viya CAS Server interface")
 class SASCAS(SASAbc):
     """
     Solver interface connection to a SAS Viya CAS server using swat.
@@ -553,70 +621,89 @@ class SASCAS(SASAbc):
             # Check if there are integer variables, this might be slow
             action = "solveMilp" if self._has_integer_variables() else "solveLp"
 
+        # Get a unique identifier, always use the same with different prefixes
+        unique = uuid.uuid4().hex[:16]
+
         # Connect to CAS server
         with redirect_stdout(SASLogWriter(self._tee)) as self._log_writer:
             s = self._sas.CAS(**cas_opts)
             try:
                 # Load the optimization action set
-                s.loadactionset('optimization')
+                s.loadactionset("optimization")
+
+                # Declare a unique table name for the mps table
+                mpsdata_table_name = "mps" + unique
 
                 # Upload mps file to CAS
-                if os.stat(self._problem_files[0]).st_size >= 2 * 1024**3:
-                    # For large files, use convertMPS, first create file for upload
+                if stat(self._problem_files[0]).st_size >= 2 * 1024**3:
+                    # For files larger than 2 GB (this is a limitation of the loadMps action used in the else part).
+                    # Use convertMPS, first create file for upload.
                     mpsWithIdFileName = TempfileManager.create_tempfile(
                         ".mps.csv", text=True
                     )
-                    with open(mpsWithIdFileName, 'w') as mpsWithId:
-                        mpsWithId.write('_ID_\tText\n')
-                        with open(self._problem_files[0], 'r') as f:
+                    with open(mpsWithIdFileName, "w") as mpsWithId:
+                        mpsWithId.write("_ID_\tText\n")
+                        with open(self._problem_files[0], "r") as f:
                             id = 0
                             for line in f:
                                 id += 1
-                                mpsWithId.write(str(id) + '\t' + line.rstrip() + '\n')
+                                mpsWithId.write(str(id) + "\t" + line.rstrip() + "\n")
 
                     # Upload .mps.csv file
+                    mpscsv_table_name = "csv" + unique
                     s.upload_file(
                         mpsWithIdFileName,
-                        casout={"name": "mpscsv", "replace": True},
+                        casout={"name": mpscsv_table_name, "replace": True},
                         importoptions={"filetype": "CSV", "delimiter": "\t"},
                     )
 
                     # Convert .mps.csv file to .mps
                     s.optimization.convertMps(
-                        data="mpscsv",
-                        casOut={"name": "mpsdata", "replace": True},
+                        data=mpscsv_table_name,
+                        casOut={"name": mpsdata_table_name, "replace": True},
                         format="FREE",
                     )
+
+                    # Delete the table we don't need anymore
+                    if mpscsv_table_name:
+                        s.dropTable(name=mpscsv_table_name, quiet=True)
                 else:
-                    # For small files, use loadMPS
-                    with open(self._problem_files[0], 'r') as mps_file:
+                    # For small files (less than 2 GB), use loadMps
+                    with open(self._problem_files[0], "r") as mps_file:
                         s.optimization.loadMps(
                             mpsFileString=mps_file.read(),
-                            casout={"name": "mpsdata", "replace": True},
+                            casout={"name": mpsdata_table_name, "replace": True},
                             format="FREE",
                         )
 
+                primalin_table_name = None
                 if self.warmstart_flag:
+                    primalin_table_name = "pin" + unique
                     # Upload warmstart file to CAS
                     s.upload_file(
                         self._warm_start_file_name,
-                        casout={"name": "primalin", "replace": True},
+                        casout={"name": primalin_table_name, "replace": True},
                         importoptions={"filetype": "CSV"},
                     )
-                    self.options["primalin"] = "primalin"
+                    self.options["primalin"] = primalin_table_name
+
+                # Define output table names
+                primalout_table_name = "pout" + unique
+                dualout_table_name = None
 
                 # Solve the problem in CAS
                 if action == "solveMilp":
                     r = s.optimization.solveMilp(
-                        data={"name": "mpsdata"},
-                        primalOut={"name": "primalout", "replace": True},
+                        data={"name": mpsdata_table_name},
+                        primalOut={"name": primalout_table_name, "replace": True},
                         **self.options
                     )
                 else:
+                    dualout_table_name = "dout" + unique
                     r = s.optimization.solveLp(
-                        data={"name": "mpsdata"},
-                        primalOut={"name": "primalout", "replace": True},
-                        dualOut={"name": "dualout", "replace": True},
+                        data={"name": mpsdata_table_name},
+                        primalOut={"name": primalout_table_name, "replace": True},
+                        dualOut={"name": dualout_table_name, "replace": True},
                         **self.options
                     )
 
@@ -644,44 +731,44 @@ class SASCAS(SASAbc):
                         sol.termination_condition = TerminationCondition.optimal
 
                         # Store objective value in solution
-                        sol.objective['__default_objective__'] = {
-                            'Value': r["objective"]
+                        sol.objective["__default_objective__"] = {
+                            "Value": r["objective"]
                         }
 
                         if action == "solveMilp":
-                            primal_out = s.CASTable(name="primalout")
+                            primal_out = s.CASTable(name=primalout_table_name)
                             # Use pandas functions for efficiency
-                            primal_out = primal_out[['_VAR_', '_VALUE_']]
+                            primal_out = primal_out[["_VAR_", "_VALUE_"]]
                             sol.variable = {}
                             for row in primal_out.itertuples(index=False):
-                                sol.variable[row[0]] = {'Value': row[1]}
+                                sol.variable[row[0]] = {"Value": row[1]}
                         else:
                             # Convert primal out data set to variable dictionary
                             # Use panda functions for efficiency
-                            primal_out = s.CASTable(name="primalout")
+                            primal_out = s.CASTable(name=primalout_table_name)
                             primal_out = primal_out[
-                                ['_VAR_', '_VALUE_', '_STATUS_', '_R_COST_']
+                                ["_VAR_", "_VALUE_", "_STATUS_", "_R_COST_"]
                             ]
                             sol.variable = {}
                             for row in primal_out.itertuples(index=False):
                                 sol.variable[row[0]] = {
-                                    'Value': row[1],
-                                    'Status': row[2],
-                                    'rc': row[3],
+                                    "Value": row[1],
+                                    "Status": row[2],
+                                    "rc": row[3],
                                 }
 
                             # Convert dual out data set to constraint dictionary
                             # Use pandas functions for efficiency
-                            dual_out = s.CASTable(name="dualout")
+                            dual_out = s.CASTable(name=dualout_table_name)
                             dual_out = dual_out[
-                                ['_ROW_', '_VALUE_', '_STATUS_', '_ACTIVITY_']
+                                ["_ROW_", "_VALUE_", "_STATUS_", "_ACTIVITY_"]
                             ]
                             sol.constraint = {}
                             for row in dual_out.itertuples(index=False):
                                 sol.constraint[row[0]] = {
-                                    'dual': row[1],
-                                    'Status': row[2],
-                                    'slack': row[3],
+                                    "dual": row[1],
+                                    "Status": row[2],
+                                    "slack": row[3],
                                 }
                 else:
                     results = self.results = SolverResults()
@@ -692,10 +779,16 @@ class SASCAS(SASAbc):
                     )
 
             finally:
+                if mpsdata_table_name:
+                    s.dropTable(name=mpsdata_table_name, quiet=True)
+                if primalin_table_name:
+                    s.dropTable(name=primalin_table_name, quiet=True)
+                if primalout_table_name:
+                    s.dropTable(name=primalout_table_name, quiet=True)
+                if dualout_table_name:
+                    s.dropTable(name=dualout_table_name, quiet=True)
                 s.close()
 
         self._log = self._log_writer.log()
-        if self._tee:
-            print(self._log)
         self._rc = 0
         return Bunch(rc=self._rc, log=self._log)
