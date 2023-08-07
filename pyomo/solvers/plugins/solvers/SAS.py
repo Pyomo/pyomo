@@ -152,7 +152,7 @@ class SASAbc(ABC, OptSolver):
         super(SASAbc, self).set_problem_format(ProblemFormat.mps)
 
     def _presolve(self, *args, **kwds):
-        """ "Set things up for the actual solve."""
+        """Set things up for the actual solve."""
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
         TempfileManager.push()
