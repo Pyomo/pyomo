@@ -49,79 +49,61 @@ Examples
 A standard declaration statement
 ++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Constant(name = 'c', value = 1.0, units = 'm' , description = 'A constant c')
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constants_Snippet_01
+    :end-before: # END: Constants_Snippet_01
 
 
 Shortest possible declaration
 +++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Constant('c', 1.0, 'm' )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constants_Snippet_02
+    :end-before: # END: Constants_Snippet_02
 
 
 An alternative units definition
 +++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.environ import units
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Constant( name = 'c', 
-                   value = 1.0, 
-                   units = units.m , 
-                   description = 'A constant c' )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constants_Snippet_03
+    :end-before: # END: Constants_Snippet_03
 
 
 A vector constant
 +++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.environ import units
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Constant( name = 'c', 
-                   value = 1.0, 
-                   units = 'm' , 
-                   description = 'A constant c', 
-                   size = 5 )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constants_Snippet_04
+    :end-before: # END: Constants_Snippet_04
 
 
 A matrix/tensor constant
 ++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.environ import units
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Constant( name = 'c', 
-                   value = 1.0, 
-                   units = 'm' , 
-                   description = 'A constant c', 
-                   size = [10,2] )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constants_Snippet_05
+    :end-before: # END: Constants_Snippet_05
 
 
 More complicated units definition
 +++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.environ import units
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Constant( name = 'c', 
-                   value = 1.0, 
-                   units = 'kg*m/s**2' , 
-                   description = 'A constant c' )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constants_Snippet_06
+    :end-before: # END: Constants_Snippet_06
 
 
 Tips
@@ -133,6 +115,3 @@ Tips
 * Use the keyword names during constant declarations.  Takes extra space, but is a massive boost to readability and intrepretability
 * Declare one constant on one single line with no breaks, no matter what style guides tell you.  Again, this is a significant boost to readability
 * Do not skimp out on the description field, it is extremely helpful
-
-
-

@@ -39,120 +39,69 @@ Examples
 A standard declaration statement
 ++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.contrib.edi import Formulation
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective( c*x + y )  # Default is minimize
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Objectives_Snippet_01
+    :end-before: # END: Objectives_Snippet_01
 
 With a non-linear objective
 +++++++++++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.contrib.edi import Formulation
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective( c*x**4 + y**4 ) # Default is minimize
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Objectives_Snippet_02
+    :end-before: # END: Objectives_Snippet_02
 
 Explicitly minimize
 +++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.contrib.edi import Formulation
-    from pyomo.environ import minimize, maximize
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective( c*x**4 + y**4 , sense = minimize)
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Objectives_Snippet_03
+    :end-before: # END: Objectives_Snippet_03
 
 Explicitly minimize using integer
 +++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.contrib.edi import Formulation
-    from pyomo.environ import minimize, maximize
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective( c*x**4 + y**4 , sense = 1 ) # 1 corresponds to minimize
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Objectives_Snippet_04
+    :end-before: # END: Objectives_Snippet_04
 
 
 Maximizing
 ++++++++++
 
-.. code-block:: python
-
-    from pyomo.contrib.edi import Formulation
-    from pyomo.environ import minimize, maximize
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective( -c*x**4 - y**4 , sense = maximize)
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Objectives_Snippet_05
+    :end-before: # END: Objectives_Snippet_05
 
 Maximizing using integer
 ++++++++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.contrib.edi import Formulation
-    from pyomo.environ import minimize, maximize
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective( -c*x**4 - y**4 , sense = -1 ) # -1 corresponds to maximize
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Objectives_Snippet_06
+    :end-before: # END: Objectives_Snippet_06
 
 Using indexed variables and constants
 +++++++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.contrib.edi import Formulation
-    f = Formulation()
-    x = f.Variable( name = 'x', 
-                    guess = 1.0, 
-                    units = 'm' , 
-                    description = 'The x variable',
-                    bounds = [0,100] ,
-                    size = 3    )
-    y = f.Variable( name = 'y', 
-                    guess = 1.0, 
-                    units = 'm' , 
-                    description = 'The y variable',
-                    size = [2,2])
-    c = f.Constant( name = 'c', 
-                    value = 1.0, 
-                    units = ''  , 
-                    description = 'A constant c'  ,
-                    size = 3    )
-    f.Objective( c[0]*x[0] + c[1]*x[1] + c[2]*x[2] 
-                 + y[0,0]**4
-                 + y[0,1]**4
-                 + y[1,0]**4
-                 + y[1,1]**4 ) # Default is minimize
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Objectives_Snippet_07
+    :end-before: # END: Objectives_Snippet_07
 
 
 Tips
 ----
 
 * Objectives are a pretty natural place to break your file.  Put at least one blank line above and below the objective constructor and use good sectioning to create a whitespace easily identifiable when scrolling quickly 
-
-
-

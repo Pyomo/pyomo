@@ -20,5 +20,3 @@ The example shown here minimizes a linear objective function subject to the inte
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/examples/readme_example.py
     :language: python 
-
-

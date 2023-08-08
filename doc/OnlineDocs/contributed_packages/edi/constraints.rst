@@ -51,80 +51,30 @@ Examples
 A standard declaration statement
 ++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective( c*x + y )
-    f.ConstraintList(
-        [
-            x**2 + y**2 <= 1.0*units.m**2 ,
-            x <= 0.75*units.m,
-            x >= y ,
-        ]
-    )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constraints_Snippet_01
+    :end-before: # END: Constraints_Snippet_01
 
 
 With the core constructor
 +++++++++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-    c = f.Constant(name = 'c', value = 1.0, units = ''   , description = 'A constant c' )
-    f.Objective(  c*x + y )
-    f.Constraint( x**2 + y**2 <= 1.0*units.m**2 )
-    f.Constraint( x <= 0.75*units.m )
-    f.Constraint( x >= y )
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constraints_Snippet_02
+    :end-before: # END: Constraints_Snippet_02
 
 Using indexed variables and constants
 +++++++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-    from pyomo.contrib.edi import Formulation
-    f = Formulation()
-    x = f.Variable( name = 'x', 
-                    guess = 1.0, 
-                    units = 'm' , 
-                    description = 'The x variable',
-                    bounds = [0,100] ,
-                    size = 3    )
-    y = f.Variable( name = 'y', 
-                    guess = 1.0, 
-                    units = 'm' , 
-                    description = 'The y variable',
-                    size = [2,2])
-    c = f.Constant( name = 'c', 
-                    value = 1.0, 
-                    units = ''  , 
-                    description = 'A constant c'  ,
-                    size = 3    )
-    f.Objective( c[0]*x[0] + c[1]*x[1] + c[2]*x[2] 
-                 + y[0,0]**4
-                 + y[0,1]**4
-                 + y[1,0]**4
-                 + y[1,1]**4 ) # Default is minimize
-    f.ConstraintList(
-        [
-            x[0]**2 + x[1]**2 + x[2]**2 <= 1.0*units.m,
-            y[0,0] >= 1.0*units.m,
-            y[0,1] >= 1.0*units.m,
-            y[1,0] >= 1.0*units.m,
-            y[1,1] >= 1.0*units.m,
-            x[0] >= y[0,0] ,
-        ]
-    )
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Constraints_Snippet_03
+    :end-before: # END: Constraints_Snippet_03
 
 Tips
 ----

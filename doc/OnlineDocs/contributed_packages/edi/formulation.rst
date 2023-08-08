@@ -14,10 +14,12 @@ Construction
 ------------
 A *Formulation* is constructed as follows:
 
-.. code-block:: python
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_01
+    :end-before: # END: Formulation_Snippet_01
 
-  from pyomo.contrib.edi import Formulation
-  f = Formulation()
 
 Standard practice is to construct a formulation to namespace variable ``f``, but any valid python name can be used.  Standard pyomo practice would be to construct this to ``model`` or ``m``.
 
@@ -29,12 +31,11 @@ See the :doc:`Variables <./variables>` Documentation
 
 Variables are declared using the ``f.Variable()`` function.  This function creates an instance of ``pyomo.environ.Var`` and adds it to the ``edi.contrib.Formulation``.  The function returns an instance of a ``pyomo.environ.Var`` that can be used in later construction.
 
-.. code-block:: python
-
-  from pyomo.contrib.edi import Formulation
-  f = Formulation()
-  x = f.Variable(name = 'x', guess = 1.0, units = '')
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_02
+    :end-before: # END: Formulation_Snippet_02
 
 
 Declaring Constants
@@ -44,11 +45,12 @@ See the :doc:`Constants <./constants>` Documentation
 
 Constants (referred to in base pyomo as parameters or ``Params``) are declared using the ``f.Constant()`` function.  This function creates an instance of a ``pyomo.environ.Param`` and adds it to the ``edi.contrib.Formulation``.  This function also returns an instance of ``pyomo.environ.Param`` that can be used in later construction.
 
-.. code-block:: python
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_03
+    :end-before: # END: Formulation_Snippet_03
 
-  from pyomo.contrib.edi import Formulation
-  f = Formulation()
-  c = f.Constant(name = 'c', value = 1.0, units = '')
 
 
 Declaring Objectives
@@ -58,31 +60,23 @@ See the :doc:`Objectives <./objectives>` Documentation
 
 Objectives are declared using the ``f.Objective()`` function.  This function creates an instance of a ``pyomo.environ.Objective`` and adds it to the ``edi.contrib.Formulation``.  Multiple objectives can be declared, but interpretation of multiple objectives will depend on the solver.  The returned values of the ``f.Variable()`` and ``f.Constant()`` declarations can be used to construct the objective.  Black-box (ie, Runtime) objectives are not supported at this time, but are planned in a future update.
 
-.. code-block:: python
-
-  from pyomo.contrib.edi import Formulation
-  f = Formulation()
-  x = f.Variable(name = 'x', guess = 1.0, units = '')
-  y = f.Variable(name = 'y', guess = 1.0, units = '')
-  c = f.Constant(name = 'c', value = 1.0, units = '')
-  f.Objective( c*x + y )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_04
+    :end-before: # END: Formulation_Snippet_04
 
 
 By default, objectives are minimized, but can be switched to a maximize using the ``sense`` keyword from pyomo:
 
-.. code-block:: python
-
-  from pyomo.contrib.edi import Formulation
-  from pyomo.environ import maximize, minimize
-  f = Formulation()
-  x = f.Variable(name = 'x', guess = 1.0, units = '')
-  y = f.Variable(name = 'y', guess = 1.0, units = '')
-  c = f.Constant(name = 'c', value = 1.0, units = '')
-  f.Objective( c*x + y , sense = maximize)
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_05
+    :end-before: # END: Formulation_Snippet_05
 
 
 Note:  Future version will allow a string to be passed into ``sense`` (see `this issue <https://github.com/codykarcher/pyomo/issues/7>`_)
-
 
 
 Declaring Constraints
@@ -92,54 +86,27 @@ See the :doc:`Constraints <./constraints>` Documentation
 
 Constraints can be declared in two ways.  First is using the standard ``f.Constraint()`` constructor.  This function creates an instance of ``pyomo.environ.Constraint`` and adds it to the ``edi.contrib.Formulation``.  The operators ``<=``, ``>=``, and ``==`` are used as constraint constructors.
 
-.. code-block:: python
-
-  from pyomo.contrib.edi import Formulation
-  f = Formulation()
-  x = f.Variable(name = 'x', guess = 1.0, units = '')
-  y = f.Variable(name = 'y', guess = 1.0, units = '')
-  c = f.Constant(name = 'c', value = 1.0, units = '')
-  f.Objective( c*x + y )
-  f.Constraint( x**2 + y**2 <= 1.0 )
-  f.Constraint( x >= 0)
-  f.Constraint( y <= 0)
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_06
+    :end-before: # END: Formulation_Snippet_06
 
 Constraints can also be declared using the ``f.ConstraintList()`` function.  This function takes in a list of constraints and allows for multiple constraints to be declared in one go:
 
-.. code-block:: python
-
-  from pyomo.contrib.edi import Formulation
-  f = Formulation()
-  x = f.Variable(name = 'x', guess = 1.0, units = '')
-  y = f.Variable(name = 'y', guess = 1.0, units = '')
-  c = f.Constant(name = 'c', value = 1.0, units = '')
-  f.Objective( c*x + y )
-  f.ConstraintList( 
-      [
-          x**2 + y**2 <= 1.0 ,
-          x >= 0,
-          y <= 0,
-      ]
-  )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_07
+    :end-before: # END: Formulation_Snippet_07
 
 The constraint list can also be declared a priori and passed in to the ``f.ConstraintList()`` function, which may be beneficial for complex models:
 
-.. code-block:: python
-
-  from pyomo.contrib.edi import Formulation
-  f = Formulation()
-  x = f.Variable(name = 'x', guess = 1.0, units = '')
-  y = f.Variable(name = 'y', guess = 1.0, units = '')
-  c = f.Constant(name = 'c', value = 1.0, units = '')
-  f.Objective( c*x + y )
-
-  constraintList = [
-      x**2 + y**2 <= 1.0 ,
-      x >= 0,
-      y <= 0,
-  ]
-
-  f.ConstraintList( constraintList )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_08
+    :end-before: # END: Formulation_Snippet_08
 
 We recommend that most users should be using the ``f.ConstraintList()`` function, with the ``f.Constraint()`` function being reserved for under-the-hood usage.
 
@@ -157,45 +124,11 @@ The use of Runtime constraints requires a black box model that is discussed in d
 
 Runtime Constraints are declared one of two ways, just as regular constraints.  The ``f.RuntimeConstraint()`` constructor is available: 
 
-.. code-block:: python
-
-    import pyomo.environ as pyo
-    from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
-    z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Output var')
-    f.Objective( x + y )
-    class UnitCircle(BlackBoxFunctionModel):
-        def __init__(self): 
-            super().__init__()
-            self.description = 'This model evaluates the function: z = x**2 + y**2'
-            self.inputs.append(  name = 'x', 
-                                 units = 'ft' , 
-                                 description = 'The x variable'  )
-            self.inputs.append(  name = 'y', 
-                                 units = 'ft' , 
-                                 description = 'The y variable'  )
-            self.outputs.append( name = 'z', 
-                                 units = 'ft**2',  
-                                 description = 'Output variable'  )
-            self.availableDerivative = 1
-            self.post_init_setup(len(self.inputs))
-        def BlackBox(self, x, y): # The actual function that does things
-            # Converts to correct units then casts to float
-            x = pyo.value(units.convert(x,self.inputs['x'].units))
-            y = pyo.value(units.convert(y,self.inputs['y'].units))
-            z = x**2 + y**2 # Compute z
-            dzdx = 2*x      # Compute dz/dx
-            dzdy = 2*y      # Compute dz/dy
-            z *= units.ft**2
-            dzdx *= units.ft # units.ft**2 / units.ft
-            dzdy *= units.ft # units.ft**2 / units.ft
-            return z, [dzdx, dzdy] # return z, grad(z), hess(z)...
-    f.Constraint( z <= 1*units.m**2 )
-
-    f.RuntimeConstraint( z, '==', [x,y], UnitCircle() )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_09
+    :end-before: # END: Formulation_Snippet_09
 
 
 The ``f.RuntimeConstraint()`` constructor takes in the following inputs:
@@ -217,113 +150,63 @@ The ``f.RuntimeConstraint()`` constructor takes in the following inputs:
 
 The following are alternative construction methods that may be of use:
 
-.. code-block:: python
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_10
+    :end-before: # END: Formulation_Snippet_10
 
-    f.RuntimeConstraint( *( z, '==', [x,y], UnitCircle() ) )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_11
+    :end-before: # END: Formulation_Snippet_11
 
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_12
+    :end-before: # END: Formulation_Snippet_12
 
-.. code-block:: python
-
-    f.RuntimeConstraint( *[ z, '==', [x,y], UnitCircle() ] )
-
-.. code-block:: python
-
-    f.RuntimeConstraint( **{ 'outputs'   : z, 
-                             'operators' : '==', 
-                             'inputs'    : [x,y], 
-                             'black_box' : UnitCircle() } )
-
-.. code-block:: python
-
-    f.RuntimeConstraint( *( [z], ['=='], [x,y], UnitCircle() ) )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_13
+    :end-before: # END: Formulation_Snippet_13
 
 However, more commonly we expect users to construct Runtime Constraints as a part of a ``f.ConstraintList()`` declaration.  Simply include a list, tuple, or dict as a part of the ConstraintList as follows:
 
-.. code-block:: python
-
-    import pyomo.environ as pyo
-    from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
-    z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Output var')
-    f.Objective( x + y )
-    class UnitCircle(BlackBoxFunctionModel):
-        def __init__(self): 
-            super().__init__()
-            self.description = 'This model evaluates the function: z = x**2 + y**2'
-            self.inputs.append(  name = 'x', 
-                                 units = 'ft' , 
-                                 description = 'The x variable'  )
-            self.inputs.append(  name = 'y', 
-                                 units = 'ft' , 
-                                 description = 'The y variable'  )
-            self.outputs.append( name = 'z', 
-                                 units = 'ft**2',  
-                                 description = 'Output variable'  )
-            self.availableDerivative = 1
-            self.post_init_setup(len(self.inputs))
-        def BlackBox(self, x, y): # The actual function that does things
-            # Converts to correct units then casts to float
-            x = pyo.value(units.convert(x,self.inputs[0].units))
-            y = pyo.value(units.convert(y,self.inputs[1].units))
-            z = x**2 + y**2 # Compute z
-            dzdx = 2*x      # Compute dz/dx
-            dzdy = 2*y      # Compute dz/dy
-            z *= units.ft**2
-            dzdx *= units.ft # units.ft**2 / units.ft
-            dzdy *= units.ft # units.ft**2 / units.ft
-            return z, [dzdx, dzdy] # return z, grad(z), hess(z)...
-
-
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2  ,
-            [ z, '==', [x,y], UnitCircle() ] ,             
-        ]
-    )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_14
+    :end-before: # END: Formulation_Snippet_14
 
 Any of the alternative declarations above are valid to pass into the ``f.ConstraintList()`` constructor, for example:
 
-.. code-block:: python
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_15
+    :end-before: # END: Formulation_Snippet_15
 
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2 ) ,
-            ( z, '==', [x,y], UnitCircle() ) ,             
-        ]
-    )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_16
+    :end-before: # END: Formulation_Snippet_16
 
-.. code-block:: python
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_17
+    :end-before: # END: Formulation_Snippet_17
 
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2 ) ,
-            [ z, '==', [x,y], UnitCircle() ] ,             
-        ]
-    )
-
-.. code-block:: python
-
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2 ) ,
-            { 'outputs'   : z, 
-              'operators' : '==', 
-              'inputs'    : [x,y], 
-              'black_box' : UnitCircle() } ,             
-        ]
-    )
-
-.. code-block:: python
-
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2 ) ,
-            ( [z], ['=='], [x,y], UnitCircle() ) ,             
-        ]
-    )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_18
+    :end-before: # END: Formulation_Snippet_18
 
 Support Functions
 -----------------
@@ -348,15 +231,3 @@ Returns a list of *runtime* (ie. black-box) constraints that have been defined i
 
 ``f.check_units()``  |br|
 Checks the units of each objective and constraint for consistency.  Will only check objectives and constraints defined via EDI.
-
-
-
-
-
-
-
-
-
-
-
-

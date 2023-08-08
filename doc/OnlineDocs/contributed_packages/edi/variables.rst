@@ -53,108 +53,80 @@ Examples
 A standard declaration statement
 ++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Variable(name = 'x', guess = 1.0, units = 'm' , description = 'The x variable')
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Variables_Snippet_01
+    :end-before: # END: Variables_Snippet_01
 
 
 Shortest possible declaration
 +++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Variable('x', 1.0, 'm' )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Variables_Snippet_02
+    :end-before: # END: Variables_Snippet_02
 
 
 A variable with bounds
 ++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
-                   units = 'm' , 
-                   description = 'The x variable', 
-                   bounds = [-10,10] )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Variables_Snippet_03
+    :end-before: # END: Variables_Snippet_03
 
 
 An integer variable
 +++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.contrib.edi import Formulation
-   from pyomo.environ import Integers
-   f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
-                   units = 'm' , 
-                   description = 'The x variable', 
-                   domain = Integers )
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Variables_Snippet_04
+    :end-before: # END: Variables_Snippet_04
 
 An alternative units definition
 +++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.environ import units
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
-                   units = units.m , 
-                   description = 'The x variable' )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Variables_Snippet_05
+    :end-before: # END: Variables_Snippet_05
 
 
 A vector variable
 +++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.environ import units
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
-                   units = 'm' , 
-                   description = 'The x variable', 
-                   size = 5 )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Variables_Snippet_06
+    :end-before: # END: Variables_Snippet_06
 
 
 A matrix/tensor variable
 ++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.environ import units
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
-                   units = 'm' , 
-                   description = 'The x variable', 
-                   size = [10,2] )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Variables_Snippet_07
+    :end-before: # END: Variables_Snippet_07
 
 
 More complicated units definition
 +++++++++++++++++++++++++++++++++
 
-.. code-block:: python
-
-   from pyomo.environ import units
-   from pyomo.contrib.edi import Formulation
-   f = Formulation()
-   x = f.Variable( name = 'x', 
-                   guess = 1.0, 
-                   units = 'kg*m/s**2' , 
-                   description = 'The x variable' )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Variables_Snippet_08
+    :end-before: # END: Variables_Snippet_08
 
 
 Tips
@@ -166,8 +138,3 @@ Tips
 * Use the keyword names during variable declarations.  Takes extra space, but is a massive boost to readability and intrepretability
 * Declare one variable on one single line with no breaks, no matter what style guides tell you.  Again, this is a significant boost to readability
 * Do not skimp out on the description field, it is extremely helpful
-
-
-
-
-

@@ -14,10 +14,12 @@ EDI installs as a part of the standard pyomo install:
     pip install pyomo
 
 
-EDI also requires the pint package that is viewed as optional by pyomo:
+EDI also requires packages that are optional in base pyomo:
 
 ::
 
+    pip install numpy
+    pip install scipy
     pip install pint
 
 

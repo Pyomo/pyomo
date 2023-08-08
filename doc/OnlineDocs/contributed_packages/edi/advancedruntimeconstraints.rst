@@ -30,10 +30,11 @@ The ``parseInputs()`` method enables this batch-like capability in a variety of 
 
 The function definition is not particularly helpful, so let's dive in a bit.  For the typical user, we recommend that the top of all ``BlackBox()`` methods appear as follows:
 
-.. code-block:: python
-
-    def BlackBox(self, *args, **kwargs):
-        runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 12
+    :start-after: # BEGIN: AdvancedRTC_Snippet_02
+    :end-before: # END: AdvancedRTC_Snippet_02
 
 
 Essentially, ``parseInputs()`` is a pre-processor that directly takes the inputs of the black-box.  The ``parseInputs()`` method will check all of the inputs, ensure that size and units are correct, split into run cases as appropriate, and return a run-cases list that is ready to operate on.
@@ -64,81 +65,11 @@ An Example
 
 There are many ways this functionality can be used, we provide an example here to get new users started
 
-
-.. code-block:: python
-
-    import numpy as np
-    import pyomo.environ as pyo
-    from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
-
-    class SignomialTest(BlackBoxFunctionModel):
-        def __init__(self):
-            # Set up all the attributes by calling Model.__init__
-            super().__init__()
-            
-            #Setup Inputs
-            self.inputs.append( 'x', '', 'Independent Variable')
-            
-            #Setup Outputs
-            self.outputs.append( 'y', '', 'Dependent Variable')
-        
-            #Simple model description
-            self.description = ( 'This model evaluates the '+
-                               'function: max([-6*x-6, x**4-3*x**2])' )
-            
-            self.availableDerivative = 1
-        
-        def BlackBox(self, *args, **kwargs):
-            runCases, returnMode, extras = self.parseInputs(*args, **kwargs)
-
-            x = np.array([ pyo.value(runCases[i]['x']) for i in range(0,len(runCases)) ])
-            
-            y = np.maximum(-6*x-6, x**4-3*x**2)
-            dydx = 4*x**3 - 6*x
-            ddy_ddx = 12*x**2 - 6
-            gradientSwitch = -6*x-6 > x**4-3*x**2
-            dydx[gradientSwitch] = -6
-            ddy_ddx[gradientSwitch] = 0
-        
-            y = [ self.checkOutputs(yval) for yval in y ]
-            dydx = [dydx[i] * units.dimensionless for i in range(0,len(dydx))]
-            
-            if returnMode < 0:
-                returnMode = -1*(returnMode + 1)
-                if returnMode == 0:
-                    return y[0]
-                if returnMode == 1:
-                    return y[0], dydx
-            else:
-                if returnMode == 0:
-                    opt = []
-                    for i in range(0,len(y)):
-                        opt.append([ y[i] ])
-                    return opt
-                if returnMode == 1:
-                    opt = []
-                    for i in range(0,len(y)):
-                        opt.append([ [y[i]], [ [[dydx[i]]] ] ])
-                    return opt
-
-    s = SignomialTest()
-    ivals = [[x] for x in np.linspace(-2,2,11)]
-
-    # How the black box may be called using EDI
-    bbo = s.BlackBox(**{'x':0.5})
-    bbo = s.BlackBox({'x':0.5})
-    bbo = s.BlackBox(**{'x':0.5, 'optn':True})
-
-    # Additional options available with parseInputs
-    bbo = s.BlackBox(*[0.5], **{'optn1': True, 'optn2': False})
-    bbo = s.BlackBox(*[0.5,True], **{'optn': False})
-    bbo = s.BlackBox({'x':[x for x in np.linspace(-2,2,11)]})
-    bbo = s.BlackBox([{'x':x} for x in np.linspace(-2,2,11)])
-    bbo = s.BlackBox([ [x] for x in np.linspace(-2,2,11)])
-    bbo = s.BlackBox([ [x] for x in np.linspace(-2,2,11)], True, optn=False)
-    bbo = s.BlackBox([ [x] for x in np.linspace(-2,2,11)], optn1=True, optn2=False)
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: AdvancedRTC_Snippet_01
+    :end-before: # END: AdvancedRTC_Snippet_01
 
 
 Check outputs
@@ -168,7 +99,7 @@ However, for outputs, the result will be an array with dimensions equal to the s
 
     jacobian_list_entry[(output_dim_1_ix, output_dim_2_ix, ..., input_dim_1_ix, input_dim_2_ix, ...)] = <scalar_d(output_of_specified_index)/d(input_of_specified_index)>
 
-For example, with an output that is ``NxN`` and an input that is also ``NxN``
+For example, with an output that is 2x2 and an input that is also 2x2
 
 ::
 
@@ -182,12 +113,3 @@ Tips
 ----
 
 * A model summary can be printed by calling ``print(model_instance.summary)``
-
-
-
-
-
-
-
-
-

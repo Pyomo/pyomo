@@ -27,55 +27,11 @@ First, we need to create an object which is visible to pyomo/EDI that calls the 
 
 A simple example is shown below:
 
-.. code-block:: python
-
-        import pyomo.environ as pyo
-        from pyomo.environ import units
-        from pyomo.contrib.edi import BlackBoxFunctionModel
-
-        class Parabola(BlackBoxFunctionModel):
-            def __init__(self): 
-
-                # Call parent init
-                super().__init__()
-
-                # A brief description of the model
-                self.description = 'This model evaluates the function: y = x**2'
-
-                # Append the model inputs
-                self.inputs.append(
-                    name='x', units='ft' , description='The x variable'
-                )
-
-                # Append the model outputs
-                self.outputs.append(
-                    name='y', units='ft**2' , description='The y variable'
-                )
-                
-                # Set the highest available derivative
-                # Should be 1 for most cases but defaults to 0
-                self.availableDerivative = 1
-
-            def BlackBox(self, x): # The actual function that does things
-
-                # Convert to correct units and cast to a float
-                x = pyo.value(units.convert(x,self.inputs['x'].units))
-
-                # Compute y
-                y = x**2
-
-                # Compute dy/dx
-                dydx = 2*x
-                
-                # Add the units to the output
-                y = y * self.outputs['y'].units
-                
-                # Add the units to the derivative for output
-                dydx = dydx * self.outputs['y'].units / self.inputs['x'].units
-                
-                # Return
-                return y, [dydx] # return z, grad(z), hess(z)...
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_01
+    :end-before: # END: RuntimeConstraints_Snippet_01
 
 The inheriting classes can have any valid python name (in this case ``Parabola``) and have two methods ``__init__()`` and ``BlackBox()``.  
 
@@ -85,9 +41,11 @@ The init method
 
 The ``__init__()`` function sets up the model, and has 5 distinct steps.  First, the parent class ``__init__()`` must be called:
 
-.. code-block:: python
-                
-    super().__init__()
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 16
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_02
+    :end-before: # END: RuntimeConstraints_Snippet_02
 
 In general, this line can be used verbatim.
 
@@ -109,11 +67,11 @@ Next, you must tell the model what its inputs are by appending them to the ``sel
 
 Models with multiple inputs simply call the ``self.input.append()`` command multiple times:
 
-.. code-block:: python
-
-    # Append the model inputs
-    self.inputs.append( name='x', units='ft' , description='The x variable' )
-    self.inputs.append( name='y', units='ft' , description='The y variable' )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 16
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_03
+    :end-before: # END: RuntimeConstraints_Snippet_03
 
 Input names must be unique, and an error is raised if a repeated name is attempted to be set.  
 
@@ -136,21 +94,20 @@ Next, outputs must be added to the model.  This is done identically to inputs, h
 
 and similarly:
 
-.. code-block:: python
-
-    # Append the model inputs
-    self.outputs.append( name='u', units='ft' , description='The u variable' )
-    self.outputs.append( name='v', units='ft' , description='The v variable' )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 16
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_04
+    :end-before: # END: RuntimeConstraints_Snippet_04
 
 
 Finally, the highest available derivative must be set.  For models being used in optimization, this will most often be ``1``, ie first derivative, gradient, or Jacobian information.
 
-
-.. code-block:: python
-
-    # Set the highest available derivative
-    # Should be 1 for most cases but defaults to 0
-    self.availableDerivative = 1
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 16
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_05
+    :end-before: # END: RuntimeConstraints_Snippet_05
 
 
 The BlackBox method
@@ -162,19 +119,20 @@ The ``BlackBox`` method assumes to take in the inputs as arguments in the order 
 
 Since the units cannot be assumed on input, the first step in any black box is to convert to the model units:
 
-.. code-block:: python
-
-    from pyomo.environ import units
-    x = units.convert(x,self.inputs['x'].units)
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 16
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_06
+    :end-before: # END: RuntimeConstraints_Snippet_06
 
 
 And frequently, it is a good idea to cast these to a float value using ``pyomo.environ.value``:
 
-.. code-block:: python
-        
-        import pyomo.environ as pyo
-        from pyomo.environ import units
-        x = pyo.value(units.convert(x,self.inputs['x'].units))
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 16
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_07
+    :end-before: # END: RuntimeConstraints_Snippet_07
 
 The assumed units can now be added if desired, but this may cause a slowdown in performance.
 
@@ -182,21 +140,20 @@ Operations can now be performed to compute the output and derivatives as desired
 
 When preparing the outputs, note that all outputs must have units:
 
-.. code-block:: python
-
-    # Add the units to the output
-    y = y * self.outputs['y'].units
-    
-    # Add the units to the derivative for output
-    dydx = dydx * self.outputs['y'].units / self.inputs['x'].units
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 16
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_08
+    :end-before: # END: RuntimeConstraints_Snippet_08
 
 
 The ``BlackBox`` method then outputs a tuple of length ``self.availableDerivative+1``.  Entry [0] is the values specified during the ``__init__()``, entry [1] is first derivative information, and similar for higher order if available.
 
-.. code-block:: python
-    
-    # Return
-    return y, [dydx] # return z, grad(z), hess(z)...
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 16
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_09
+    :end-before: # END: RuntimeConstraints_Snippet_09
 
 
 The full unpacking is as follows:
@@ -226,49 +183,15 @@ See the :doc:`advanced <./advancedruntimeconstraints>` documentation for cases w
 Including a Black-Box in an EDI Formulation
 +++++++++++++++++++++++++++++++++++++++++++
 
-This second construction step is covered in the :doc:`Formulation <./formulation>` documentation, but is repeated here for completion.
+This second construction step is covered in the :doc:`Formulation <./formulation>` documentation, but is repeated here for completion.  Future versions may differentiate this section.
 
 Runtime Constraints are declared one of two ways, just as regular constraints.  The ``f.RuntimeConstraint()`` constructor is available: 
 
-.. code-block:: python
-
-    import pyomo.environ as pyo
-    from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
-    z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Output var')
-    f.Objective( x + y )
-    class UnitCircle(BlackBoxFunctionModel):
-        def __init__(self): 
-            super().__init__()
-            self.description = 'This model evaluates the function: z = x**2 + y**2'
-            self.inputs.append( name = 'x', 
-                                units = 'ft' , 
-                                description = 'The x variable' ) 
-            self.inputs.append( name = 'y', 
-                                units = 'ft' , 
-                                description = 'The y variable' ) 
-            self.outputs.append(name = 'z', 
-                                units = 'ft**2',  
-                                description = 'Output variable' ) 
-            self.availableDerivative = 1
-            self.post_init_setup(len(self.inputs))
-        def BlackBox(self, x, y): # The actual function that does things
-            # Converts to correct units then casts to float
-            x = pyo.value(units.convert(x,self.inputs['x'].units))
-            y = pyo.value(units.convert(y,self.inputs['y'].units))
-            z = x**2 + y**2 # Compute z
-            dzdx = 2*x      # Compute dz/dx
-            dzdy = 2*y      # Compute dz/dy
-            z *= units.ft**2
-            dzdx *= units.ft # units.ft**2 / units.ft
-            dzdy *= units.ft # units.ft**2 / units.ft
-            return z, [dzdx, dzdy] # return z, grad(z), hess(z)...
-    f.Constraint( z <= 1*units.m**2 )
-
-    f.RuntimeConstraint( z, '==', [x,y], UnitCircle() )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_09
+    :end-before: # END: Formulation_Snippet_09
 
 
 The ``f.RuntimeConstraint()`` constructor takes in the following inputs:
@@ -289,113 +212,65 @@ The ``f.RuntimeConstraint()`` constructor takes in the following inputs:
 
 The following are alternative construction methods that may be of use:
 
-.. code-block:: python
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_10
+    :end-before: # END: Formulation_Snippet_10
 
-    f.RuntimeConstraint( *( z, '==', [x,y], UnitCircle() ) )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_11
+    :end-before: # END: Formulation_Snippet_11
 
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_12
+    :end-before: # END: Formulation_Snippet_12
 
-.. code-block:: python
-
-    f.RuntimeConstraint( *[ z, '==', [x,y], UnitCircle() ] )
-
-.. code-block:: python
-
-    f.RuntimeConstraint( **{ 'outputs'   : z, 
-                             'operators' : '==', 
-                             'inputs'    : [x,y], 
-                             'black_box' : UnitCircle() } )
-
-.. code-block:: python
-
-    f.RuntimeConstraint( *( [z], ['=='], [x,y], UnitCircle() ) )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_13
+    :end-before: # END: Formulation_Snippet_13
 
 However, more commonly we expect users to construct Runtime Constraints as a part of a ``f.ConstraintList()`` declaration.  Simply include a list, tuple, or dict as a part of the ConstraintList as follows:
 
-.. code-block:: python
-
-    import pyomo.environ as pyo
-    from pyomo.environ import units
-    from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
-    f = Formulation()
-    x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'x variable')
-    y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'y variable')
-    z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'Output var')
-    f.Objective( x + y )
-    class UnitCircle(BlackBoxFunctionModel):
-        def __init__(self): 
-            super().__init__()
-            self.description = 'This model evaluates the function: z = x**2 + y**2'
-            self.inputs.append( name = 'x', 
-                                units = 'ft' , 
-                                description = 'The x variable' )
-            self.inputs.append( name = 'y', 
-                                units = 'ft' , 
-                                description = 'The y variable' )
-            self.outputs.append(name = 'z', 
-                                units = 'ft**2',  
-                                description = 'Output variable' )
-            self.availableDerivative = 1
-            self.post_init_setup(len(self.inputs))
-        def BlackBox(self, x, y): # The actual function that does things
-            # Converts to correct units then casts to float
-            x = pyo.value(units.convert(x,self.inputs[0].units))
-            y = pyo.value(units.convert(y,self.inputs[1].units))
-            z = x**2 + y**2 # Compute z
-            dzdx = 2*x      # Compute dz/dx
-            dzdy = 2*y      # Compute dz/dy
-            z *= units.ft**2
-            dzdx *= units.ft # units.ft**2 / units.ft
-            dzdy *= units.ft # units.ft**2 / units.ft
-            return z, [dzdx, dzdy] # return z, grad(z), hess(z)...
-
-
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2  ,
-            [ z, '==', [x,y], UnitCircle() ] ,             
-        ]
-    )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_14
+    :end-before: # END: Formulation_Snippet_14
 
 Any of the alternative declarations above are valid to pass into the ``f.ConstraintList()`` constructor, for example:
 
-.. code-block:: python
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_15
+    :end-before: # END: Formulation_Snippet_15
 
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2 ) ,
-            ( z, '==', [x,y], UnitCircle() ) ,             
-        ]
-    )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_16
+    :end-before: # END: Formulation_Snippet_16
 
-.. code-block:: python
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_17
+    :end-before: # END: Formulation_Snippet_17
 
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2 ) ,
-            [ z, '==', [x,y], UnitCircle() ] ,             
-        ]
-    )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: Formulation_Snippet_18
+    :end-before: # END: Formulation_Snippet_18
 
-.. code-block:: python
 
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2 ) ,
-            { 'outputs'   : z, 
-              'operators' : '==', 
-              'inputs'    : [x,y], 
-              'black_box' : UnitCircle() } ,             
-        ]
-    )
-
-.. code-block:: python
-
-    f.ConstraintList(
-        [
-            z <= 1*units.m**2 ) ,
-            ( [z], ['=='], [x,y], UnitCircle() ) ,             
-        ]
-    )
 
 Examples
 --------
@@ -405,51 +280,11 @@ More examples are in the :doc:`advanced <./advancedruntimeconstraints>` document
 A standard construction
 +++++++++++++++++++++++
 
-.. code-block:: python
-
-        import pyomo.environ as pyo
-        from pyomo.environ import units
-        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
-        f = Formulation()
-        x = f.Variable(name = 'x', guess = 1.0, units = 'm'  , description = 'The x variable')
-        y = f.Variable(name = 'y', guess = 1.0, units = 'm'  , description = 'The y variable')
-        z = f.Variable(name = 'z', guess = 1.0, units = 'm^2', description = 'The z variable')
-
-        f.Objective( x + y )
-
-        class UnitCircle(BlackBoxFunctionModel):
-            def __init__(self): 
-                super().__init__()
-                self.description = 'This model evaluates the function: z = x**2 + y**2'
-                self.inputs.append(  name = 'x', 
-                                     units = 'ft' , 
-                                     description = 'The x variable' )
-                self.inputs.append(  name = 'y', 
-                                     units = 'ft' , 
-                                     description = 'The y variable' )
-                self.outputs.append( name = 'z',
-                                     units = 'ft**2',  
-                                     description = 'Resultant of the unit circle evaluation' )
-                self.availableDerivative = 1
-                self.post_init_setup(len(self.inputs))
-
-            def BlackBox(self, x, y): # The actual function that does things
-                x = pyo.value(units.convert(x,self.inputs['x'].units))
-                y = pyo.value(units.convert(y,self.inputs['y'].units))
-                z = x**2 + y**2
-                dzdx = 2*x
-                dzdy = 2*y
-                z = z * self.outputs['z'].units
-                dzdx = dzdx * self.outputs['z'].units / self.inputs['x'].units
-                dzdy = dzdy * self.outputs['z'].units / self.inputs['y'].units
-                return z, [dzdx, dzdy] # return z, grad(z), hess(z)...
-
-        f.ConstraintList(
-            [
-                (z, '==', [x,y], UnitCircle() ) ,
-                z <= 1*units.m**2
-            ]
-        )
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_10
+    :end-before: # END: RuntimeConstraints_Snippet_10
 
 
 Tips
