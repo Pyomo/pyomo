@@ -19,24 +19,21 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
 
-from pyomo.core.base.units_container import pint_available
+from pyomo.core.base.units_container import (
+    pint_available,
+)
 
-np, numpy_available = attempt_import('numpy', 'edi requires numpy')
-# scipy, scipy_available = attempt_import(
-#     'scipy', 'inverse_reduced_hessian requires scipy'
-# )
+from pyomo.common.dependencies import numpy, numpy_available
+from pyomo.common.dependencies import scipy, scipy_available
+egb, egb_available = attempt_import("pyomo.contrib.pynumero.interfaces.external_grey_box")
 
-# if not (numpy_available and scipy_available):
-if not numpy_available:
-    raise unittest.SkipTest('edi.formulation tests require numpy')
+if numpy_available:
+    import numpy as np
 
-
-<<<<<<< HEAD
+@unittest.skipIf(not egb_available,   'Testing pyomo.contrib.edi requires pynumero external grey boxes')
 @unittest.skipIf(not numpy_available, 'Testing pyomo.contrib.edi requires numpy')
 @unittest.skipIf(not scipy_available, 'Testing pyomo.contrib.edi requires scipy')
-=======
->>>>>>> parent of f76f4974b (addressing concerns in PR)
-@unittest.skipIf(not pint_available, 'Testing units requires pint')
+@unittest.skipIf(not pint_available,  'Testing units requires pint')
 class TestEDIBlackBox(unittest.TestCase):
     def test_edi_blackbox_variable(self):
         "Tests the black box variable class"

@@ -16,46 +16,35 @@
 #  ___________________________________________________________________________
 
 import copy
-import numpy as np
 import pyomo
 import pyomo.environ as pyo
 from pyomo.environ import units as pyomo_units
-import scipy.sparse as sps
-from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-    ExternalGreyBoxModel,
-    ExternalGreyBoxBlock,
-)
+from pyomo.common.dependencies import attempt_import
 
-<<<<<<< HEAD
-try:
+
+egb, egb_available = attempt_import("pyomo.contrib.pynumero.interfaces.external_grey_box")
+
+from pyomo.common.dependencies import numpy, numpy_available
+from pyomo.common.dependencies import scipy, scipy_available
+
+
+if numpy_available:
     import numpy as np
-except:
-    raise ImportError(
-        "pyomo.contrib.edi requires numpy to enable black box capability, fix with 'pip install numpy' "
-    )
+else:
+    raise ImportError("pyomo.contrib.edi requires numpy to enable black box capability, fix with 'pip install numpy' ")
 
-try:
+if scipy_available
     import scipy.sparse as sps
-except:
-    raise ImportError(
-        "pyomo.contrib.edi requires scipy to enable black box capability, fix with 'pip install scipy' "
-    )
+else:
+    raise ImportError("pyomo.contrib.edi requires scipy to enable black box capability, fix with 'pip install scipy' ")
 
-try:
-    from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-        ExternalGreyBoxModel,
-        ExternalGreyBoxBlock,
-    )
-except:
-    raise ImportError(
-        "pyomo.contrib.edi requires pyomo.contrib.pynumero to be installed to enable black box capability, this should have installed with base pyomo"
-    )
-
-=======
->>>>>>> parent of f76f4974b (addressing concerns in PR)
+if egb_available:
+    from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
+else:
+    raise ImportError("pyomo.contrib.edi requires pyomo.contrib.pynumero to be installed to enable black box capability, this should have installed with base pyomo")
 
 class BlackBoxFunctionModel_Variable(object):
-    def __init__(self, name, units, description='', size=0):
+    def __init__(self, name, units, description = '', size = 0):
         # Order matters
         self.name = name
         self.units = units
