@@ -17,12 +17,31 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
+
+# from pyomo.opt import check_optimal_termination
 from pyomo.common.dependencies import attempt_import
 
 from pyomo.core.base.units_container import pint_available
+<<<<<<< HEAD
+
+=======
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
+
+# np, numpy_available = attempt_import(
+#     'numpy', 'edi requires numpy'
+# )
+# scipy, scipy_available = attempt_import(
+#     'scipy', 'inverse_reduced_hessian requires scipy'
+# )
+
+# if not (numpy_available and scipy_available):
+# if not numpy_available:
+#     raise unittest.SkipTest(
+#         'edi.formulation tests require numpy'
+#     )
 
 
-@unittest.skipIf(not pint_available, 'Testing pyomo.contrib.edi requires pint')
+@unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestEDIFormulation(unittest.TestCase):
     def test_edi_formulation_init(self):
         "Tests that a formulation initializes to the correct type and has proper data"

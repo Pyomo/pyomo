@@ -21,15 +21,21 @@ from pyomo.common.dependencies import attempt_import
 
 from pyomo.core.base.units_container import pint_available
 
-from pyomo.common.dependencies import numpy, numpy_available
-from pyomo.common.dependencies import scipy, scipy_available
+np, numpy_available = attempt_import('numpy', 'edi requires numpy')
+# scipy, scipy_available = attempt_import(
+#     'scipy', 'inverse_reduced_hessian requires scipy'
+# )
 
-if numpy_available:
-    import numpy as np
+# if not (numpy_available and scipy_available):
+if not numpy_available:
+    raise unittest.SkipTest('edi.formulation tests require numpy')
 
 
+<<<<<<< HEAD
 @unittest.skipIf(not numpy_available, 'Testing pyomo.contrib.edi requires numpy')
 @unittest.skipIf(not scipy_available, 'Testing pyomo.contrib.edi requires scipy')
+=======
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
 @unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestEDIBlackBox(unittest.TestCase):
     def test_edi_blackbox_variable(self):
@@ -951,6 +957,7 @@ class TestEDIBlackBox(unittest.TestCase):
             *(np.array([0, 0, 0]) * units.dimensionless,),
             **{'notY': np.array([0, 0]) * units.dimensionless}
         )
+<<<<<<< HEAD
 
     def test_edi_blackbox_bare_example_4(self):
         "Tests a black box example construction without an optimization problem"
@@ -1028,6 +1035,8 @@ class TestEDIBlackBox(unittest.TestCase):
         bb = PassThrough()
         bbo = bb.BlackBox(1.0, 1.0)
         bbo = bb.BlackBox({'x': np.linspace(0, 10, 11), 'y': np.linspace(0, 10, 11)})
+=======
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
 
 
 if __name__ == '__main__':

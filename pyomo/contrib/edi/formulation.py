@@ -139,6 +139,7 @@ class Formulation(ConcreteModel):
                             'A value of 0 or 1 is not valid for defining size.  Use fewer dimensions.'
                         )
                     if i == 0:
+<<<<<<< HEAD
                         st = pyo.Set(initialize=list(range(0, size[i])))
                     else:
                         st *= pyo.Set(initialize=list(range(0, size[i])))
@@ -146,6 +147,15 @@ class Formulation(ConcreteModel):
                 self.add_component(
                     name,
                     pyo.Var(
+=======
+                        st = Set(initialize=list(range(0, size[i])))
+                    else:
+                        st *= Set(initialize=list(range(0, size[i])))
+                st.construct()
+                self.add_component(
+                    name,
+                    Var(
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
                         st,
                         name=name,
                         initialize=guess,
@@ -160,7 +170,11 @@ class Formulation(ConcreteModel):
                     if size == 1 or size == 0:
                         self.add_component(
                             name,
+<<<<<<< HEAD
                             pyo.Var(
+=======
+                            Var(
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
                                 name=name,
                                 initialize=guess,
                                 domain=domain,
@@ -170,11 +184,19 @@ class Formulation(ConcreteModel):
                             ),
                         )
                     else:
+<<<<<<< HEAD
                         st = pyo.Set(initialize=list(range(0, size)))
                         st.construct()
                         self.add_component(
                             name,
                             pyo.Var(
+=======
+                        st = Set(initialize=list(range(0, size)))
+                        st.construct()
+                        self.add_component(
+                            name,
+                            Var(
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
                                 st,
                                 name=name,
                                 initialize=guess,
@@ -191,7 +213,11 @@ class Formulation(ConcreteModel):
         else:
             self.add_component(
                 name,
+<<<<<<< HEAD
                 pyo.Var(
+=======
+                Var(
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
                     name=name,
                     initialize=guess,
                     domain=domain,
@@ -223,6 +249,7 @@ class Formulation(ConcreteModel):
                             'A value of 1 is not valid for defining size.  Use fewer dimensions.'
                         )
                     if i == 0:
+<<<<<<< HEAD
                         st = pyo.Set(initialize=list(range(0, size[i])))
                     else:
                         st *= pyo.Set(initialize=list(range(0, size[i])))
@@ -230,6 +257,15 @@ class Formulation(ConcreteModel):
                 self.add_component(
                     name,
                     pyo.Param(
+=======
+                        st = Set(initialize=list(range(0, size[i])))
+                    else:
+                        st *= Set(initialize=list(range(0, size[i])))
+                st.construct()
+                self.add_component(
+                    name,
+                    Param(
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
                         st,
                         name=name,
                         initialize=value,
@@ -244,7 +280,11 @@ class Formulation(ConcreteModel):
                     if size == 1 or size == 0:
                         self.add_component(
                             name,
+<<<<<<< HEAD
                             pyo.Param(
+=======
+                            Param(
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
                                 name=name,
                                 initialize=value,
                                 within=within,
@@ -254,11 +294,19 @@ class Formulation(ConcreteModel):
                             ),
                         )
                     else:
+<<<<<<< HEAD
                         st = pyo.Set(initialize=list(range(0, size)))
                         st.construct()
                         self.add_component(
                             name,
                             pyo.Param(
+=======
+                        st = Set(initialize=list(range(0, size)))
+                        st.construct()
+                        self.add_component(
+                            name,
+                            Param(
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
                                 st,
                                 name=name,
                                 initialize=value,
@@ -275,7 +323,11 @@ class Formulation(ConcreteModel):
         else:
             self.add_component(
                 name,
+<<<<<<< HEAD
                 pyo.Param(
+=======
+                Param(
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
                     name=name,
                     initialize=value,
                     within=within,
@@ -293,7 +345,11 @@ class Formulation(ConcreteModel):
         self._objective_counter += 1
         self.add_component(
             'objective_' + str(self._objective_counter),
+<<<<<<< HEAD
             pyo.Objective(expr=expr, sense=sense),
+=======
+            Objective(expr=expr, sense=sense),
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
         )
         self._objective_keys.append('objective_' + str(self._objective_counter))
         self.__dict__['objective_' + str(self._objective_counter)].construct()
@@ -304,7 +360,11 @@ class Formulation(ConcreteModel):
     def Constraint(self, expr):
         self._constraint_counter += 1
         conName = 'constraint_' + str(self._constraint_counter)
+<<<<<<< HEAD
         self.add_component(conName, pyo.Constraint(expr=expr))
+=======
+        self.add_component(conName, Constraint(expr=expr))
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
         self._constraint_keys.append(conName)
         self._allConstraint_keys.append(conName)
         self.__dict__[conName].construct()

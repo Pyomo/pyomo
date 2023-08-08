@@ -72,9 +72,12 @@ class UnitCircle(BlackBoxFunctionModel):
 # Declare the Constraints
 # =======================
 f.ConstraintList([[z, '==', [x, y], UnitCircle()], z <= 1 * units.m**2])
+<<<<<<< HEAD
 
 # =============================================
 # Run the black box (improves coverage metrics)
 # =============================================
 uc = UnitCircle()
 bbo = uc.BlackBox(0.5 * units.m, 0.5 * units.m)
+=======
+>>>>>>> parent of f76f4974b (addressing concerns in PR)

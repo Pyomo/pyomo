@@ -16,10 +16,17 @@
 #  ___________________________________________________________________________
 
 import copy
+import numpy as np
 import pyomo
 import pyomo.environ as pyo
 from pyomo.environ import units as pyomo_units
+import scipy.sparse as sps
+from pyomo.contrib.pynumero.interfaces.external_grey_box import (
+    ExternalGreyBoxModel,
+    ExternalGreyBoxBlock,
+)
 
+<<<<<<< HEAD
 try:
     import numpy as np
 except:
@@ -44,6 +51,8 @@ except:
         "pyomo.contrib.edi requires pyomo.contrib.pynumero to be installed to enable black box capability, this should have installed with base pyomo"
     )
 
+=======
+>>>>>>> parent of f76f4974b (addressing concerns in PR)
 
 class BlackBoxFunctionModel_Variable(object):
     def __init__(self, name, units, description='', size=0):
