@@ -14,6 +14,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
+from pyomo.common.errors import IterationLimitError
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
     ConcreteModel,
@@ -96,7 +97,7 @@ class Test_calc_var(unittest.TestCase):
 
         m.lt = Constraint(expr=m.x <= m.y)
         with self.assertRaisesRegex(
-            ValueError, "Constraint must be an equality constraint"
+            ValueError, "Constraint 'lt' must be an equality constraint"
         ):
             calculate_variable_from_constraint(m.x, m.lt)
 
@@ -152,7 +153,7 @@ class Test_calc_var(unittest.TestCase):
         for mode in all_diff_modes:
             m.x.set_value(1.25)  # set the initial value
             with self.assertRaisesRegex(
-                RuntimeError, r'Iteration limit \(10\) reached'
+                IterationLimitError, r'Iteration limit \(10\) reached'
             ):
                 calculate_variable_from_constraint(
                     m.x, m.d, iterlim=10, linesearch=False, diff_mode=mode
@@ -162,7 +163,7 @@ class Test_calc_var(unittest.TestCase):
         for mode in all_diff_modes:
             m.x.set_value(1.25)  # set the initial value
             with self.assertRaisesRegex(
-                RuntimeError, "Linesearch iteration limit reached"
+                IterationLimitError, "Linesearch iteration limit reached"
             ):
                 calculate_variable_from_constraint(
                     m.x, m.d, iterlim=10, linesearch=True, diff_mode=mode
@@ -172,9 +173,9 @@ class Test_calc_var(unittest.TestCase):
         for mode in all_diff_modes:
             m.x = 0
             with self.assertRaisesRegex(
-                RuntimeError,
-                "Initial value for variable results in a "
-                "derivative value that is very close to zero.",
+                ValueError,
+                "Initial value for variable 'x' results in a "
+                "derivative value for constraint 'c' that is very close to zero.",
             ):
                 calculate_variable_from_constraint(m.x, m.c, diff_mode=mode)
 
@@ -185,13 +186,15 @@ class Test_calc_var(unittest.TestCase):
                 # numeric differentiation should not be used to check if a
                 # derivative is always zero
                 with self.assertRaisesRegex(
-                    RuntimeError,
-                    "Initial value for variable results in a "
-                    "derivative value that is very close to zero.",
+                    ValueError,
+                    "Initial value for variable 'y' results in a "
+                    "derivative value for constraint 'c' that is very close to zero.",
                 ):
                     calculate_variable_from_constraint(m.y, m.c, diff_mode=mode)
             else:
-                with self.assertRaisesRegex(ValueError, "Variable derivative == 0"):
+                with self.assertRaisesRegex(
+                    ValueError, "Variable 'y' derivative == 0 in constraint 'c'"
+                ):
                     calculate_variable_from_constraint(m.y, m.c, diff_mode=mode)
 
         # should succeed with or without a linesearch
@@ -224,8 +227,8 @@ class Test_calc_var(unittest.TestCase):
             m.x.set_value(3.0)
             with self.assertRaisesRegex(
                 RuntimeError,
-                "Newton's method encountered a derivative "
-                "that was too close to zero",
+                "Newton's method encountered a derivative of constraint 'f' "
+                "with respect to variable 'x' that was too close to zero",
             ):
                 calculate_variable_from_constraint(
                     m.x, m.f, linesearch=False, diff_mode=mode
@@ -299,7 +302,8 @@ class Test_calc_var(unittest.TestCase):
                 # calculate_variable_from_constraint
                 calculate_variable_from_constraint(m.x, m.c, linesearch=False)
         self.assertIn(
-            "Newton's method encountered an error evaluating the expression.",
+            "Newton's method encountered an error evaluating the expression for "
+            "constraint 'c'.",
             output.getvalue(),
         )
 
@@ -311,9 +315,9 @@ class Test_calc_var(unittest.TestCase):
         m.c = Constraint(expr=m.x**0.5 == -1e-8)
         m.x = 1e-8  # 197.932807183
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Linesearch iteration limit reached; "
-            "remaining residual = {function evaluation error}",
+            IterationLimitError,
+            "Linesearch iteration limit reached solving for variable 'x' using "
+            "constraint 'c'; remaining residual = {function evaluation error}",
         ):
             calculate_variable_from_constraint(m.x, m.c, linesearch=True, alpha_min=0.5)
 

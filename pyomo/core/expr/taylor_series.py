@@ -1,5 +1,4 @@
-from pyomo.core.expr.current import identify_variables, value
-from pyomo.core.expr.calculus.derivatives import differentiate
+from pyomo.core.expr import identify_variables, value, differentiate
 import logging
 import math
 

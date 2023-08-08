@@ -19,7 +19,7 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.common.collections import OrderedSet
 from pyomo.common.fileutils import this_file_dir
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base import SymbolMap
 
 from pyomo.environ import (

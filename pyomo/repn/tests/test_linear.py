@@ -14,12 +14,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr.numeric_expr import LinearExpression, MonomialTermExpression
-from pyomo.core.expr.current import (
-    Expr_if,
-    inequality,
-    LinearExpression,
-    NPV_SumExpression,
-)
+from pyomo.core.expr import Expr_if, inequality, LinearExpression, NPV_SumExpression
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 from pyomo.repn.util import InvalidNumber
 

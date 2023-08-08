@@ -24,48 +24,53 @@ from . import (
     boolean_value,
     logical_expr,
     relational_expr,
-    current,
 )
 
-# FIXME: remove circular dependencies between numvalue and numeric_expr
 #
-# We unfortunately have circular dependencies between the numvalue
-# module (which defines the base class for all numeric expression
-# components, and implements the operator overloading methods) and the
-# numeric_expr module (the dispatchers and the expression node
-# definitions)
-numvalue._add_dispatcher = numeric_expr._add_dispatcher
-numvalue._neg_dispatcher = numeric_expr._neg_dispatcher
-numvalue._mul_dispatcher = numeric_expr._mul_dispatcher
-numvalue._div_dispatcher = numeric_expr._div_dispatcher
-numvalue._abs_dispatcher = numeric_expr._abs_dispatcher
-numvalue._pow_dispatcher = numeric_expr._pow_dispatcher
+# FIXME: remove circular dependencies between relational_expr and numeric_expr
+#
 
-# Initialize numvalue functions
-numvalue._generate_relational_expression = (
+# Initialize relational expression functions
+numeric_expr._generate_relational_expression = (
     relational_expr._generate_relational_expression
 )
 
 # Initialize logicalvalue functions
 boolean_value._generate_logical_proposition = logical_expr._generate_logical_proposition
 
-from .numvalue import (
+
+from pyomo.common.numeric_types import (
     value,
-    is_constant,
-    is_fixed,
-    is_variable_type,
-    is_potentially_variable,
-    NumericValue,
-    ZeroConstant,
     native_numeric_types,
     native_types,
-    polynomial_degree,
+    nonpyomo_leaf_types,
 )
+from pyomo.common.errors import TemplateExpressionError
 
+from .base import ExpressionBase
 from .boolean_value import BooleanValue
-
-from .numeric_expr import linear_expression, nonlinear_expression, mutable_expression
+from .expr_common import ExpressionType, Mode, OperatorAssociativity
 from .logical_expr import (
+    native_logical_types,
+    special_boolean_atom_types,
+    #
+    BooleanValue,
+    BooleanConstant,
+    BooleanExpressionBase,
+    #
+    UnaryBooleanExpression,
+    NotExpression,
+    BinaryBooleanExpression,
+    EquivalenceExpression,
+    XorExpression,
+    ImplicationExpression,
+    NaryBooleanExpression,
+    AndExpression,
+    OrExpression,
+    ExactlyExpression,
+    AtMostExpression,
+    AtLeastExpression,
+    #
     land,
     lnot,
     lor,
@@ -76,8 +81,38 @@ from .logical_expr import (
     atmost,
     implies,
 )
-from .relational_expr import inequality
-from .current import (
+from .numeric_expr import (
+    NumericValue,
+    NumericExpression,
+    # operators:
+    AbsExpression,
+    DivisionExpression,
+    Expr_ifExpression,
+    ExternalFunctionExpression,
+    LinearExpression,
+    MaxExpression,
+    MinExpression,
+    MonomialTermExpression,
+    NegationExpression,
+    PowExpression,
+    ProductExpression,
+    SumExpressionBase,  # TODO: deprecate / remove
+    SumExpression,
+    UnaryFunctionExpression,
+    # TBD: remove export of NPV classes here?
+    NPV_AbsExpression,
+    NPV_DivisionExpression,
+    NPV_Expr_ifExpression,
+    NPV_ExternalFunctionExpression,
+    NPV_MaxExpression,
+    NPV_MinExpression,
+    NPV_NegationExpression,
+    NPV_PowExpression,
+    NPV_ProductExpression,
+    NPV_SumExpression,
+    NPV_UnaryFunctionExpression,
+    # functions to generate expressions
+    Expr_if,
     log,
     log10,
     sin,
@@ -96,8 +131,77 @@ from .current import (
     atanh,
     ceil,
     floor,
-    Expr_if,
+    # Lgacy utilities
+    NPV_expression_types,  # TODO: remove
+    LinearDecompositionError,  # TODO: move to common.errors
+    decompose_term,
+    linear_expression,
+    nonlinear_expression,
+    mutable_expression,
+)
+from .numvalue import (
+    as_numeric,
+    is_constant,
+    is_fixed,
+    is_variable_type,
+    is_potentially_variable,
+    ZeroConstant,
+    polynomial_degree,
+)
+from .relational_expr import (
+    RelationalExpression,
+    RangedExpression,
+    InequalityExpression,
+    EqualityExpression,
+    NotEqualExpression,
+    inequality,
+)
+from .symbol_map import SymbolMap
+from .template_expr import (
+    GetItemExpression,
+    Numeric_GetItemExpression,
+    Boolean_GetItemExpression,
+    Structural_GetItemExpression,
+    GetAttrExpression,
+    Numeric_GetAttrExpression,
+    Boolean_GetAttrExpression,
+    Structural_GetAttrExpression,
+    CallExpression,
+    TemplateSumExpression,
+    #
+    NPV_Numeric_GetItemExpression,
+    NPV_Boolean_GetItemExpression,
+    NPV_Structural_GetItemExpression,
+    NPV_Numeric_GetAttrExpression,
+    NPV_Boolean_GetAttrExpression,
+    NPV_Structural_GetAttrExpression,
+    #
+    IndexTemplate,
+    resolve_template,
+    ReplaceTemplateExpression,
+    substitute_template_expression,
+    substitute_getitem_with_param,
+    substitute_template_with_value,
+    templatize_rule,
+    templatize_constraint,
+)
+from .visitor import (
+    StreamBasedExpressionVisitor,
+    SimpleExpressionVisitor,
+    ExpressionValueVisitor,
+    ExpressionReplacementVisitor,
+    FixedExpressionError,
+    NonConstantExpressionError,
+    identify_components,
+    identify_variables,
+    identify_mutable_parameters,
+    clone_expression,
+    evaluate_expression,
+    expression_to_string,
+    polynomial_degree,
+    replace_expressions,
+    sizeof_expression,
 )
 
-from pyomo.core.expr.calculus.derivatives import differentiate
-from pyomo.core.expr.taylor_series import taylor_series_expansion
+from .calculus.derivatives import differentiate
+from .taylor_series import taylor_series_expansion

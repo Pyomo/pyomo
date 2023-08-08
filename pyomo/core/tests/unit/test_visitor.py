@@ -74,8 +74,8 @@ from pyomo.core.expr.visitor import (
 )
 from pyomo.core.base.param import _ParamData, ScalarParam
 from pyomo.core.expr.template_expr import IndexTemplate
-from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.common.collections import ComponentSet
+from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.log import LoggingIntercept
 from io import StringIO
 from pyomo.core.expr.compare import assertExpressionsEqual

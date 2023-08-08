@@ -16,7 +16,7 @@
 from io import StringIO
 
 from pyomo.common.gc_manager import PauseGC
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import (
     value,
     as_numeric,
@@ -24,6 +24,7 @@ from pyomo.core.expr.numvalue import (
     native_numeric_types,
     nonpyomo_leaf_types,
 )
+from pyomo.core.expr.visitor import _ToStringVisitor
 from pyomo.core.base import (
     SymbolMap,
     ShortNameLabeler,
@@ -99,7 +100,7 @@ def _handle_AbsExpression(visitor, node, values):
 # A visitor pattern that creates a string for an expression
 # that is compatible with the GAMS syntax.
 #
-class ToGamsVisitor(EXPR._ToStringVisitor):
+class ToGamsVisitor(_ToStringVisitor):
     _expression_handlers = {
         EXPR.PowExpression: _handle_PowExpression,
         EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,
@@ -308,6 +309,27 @@ def split_long_line(line):
     return new_lines
 
 
+class GAMSSymbolMap(SymbolMap):
+    def __init__(self, var_labeler, var_list):
+        super().__init__(self.var_label)
+        self.var_labeler = var_labeler
+        self.var_list = var_list
+
+    def var_label(self, obj):
+        # if obj.is_fixed():
+        #    return str(value(obj))
+        return self.getSymbol(obj, self.var_recorder)
+
+    def var_recorder(self, obj):
+        ans = self.var_labeler(obj)
+        try:
+            if obj.is_variable_type():
+                self.var_list.append(ans)
+        except:
+            pass
+        return ans
+
+
 @WriterFactory.register('gams', 'Generate the corresponding GAMS file')
 class ProblemWriter_gams(AbstractProblemWriter):
     def __init__(self):
@@ -492,21 +514,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         var_list = []
 
-        def var_recorder(obj):
-            ans = var_labeler(obj)
-            try:
-                if obj.is_variable_type():
-                    var_list.append(ans)
-            except:
-                pass
-            return ans
-
-        def var_label(obj):
-            # if obj.is_fixed():
-            #    return str(value(obj))
-            return symbolMap.getSymbol(obj, var_recorder)
-
-        symbolMap = SymbolMap(var_label)
+        symbolMap = GAMSSymbolMap(var_labeler, var_list)
 
         # when sorting, there are a non-trivial number of
         # temporary objects created. these all yield
@@ -527,7 +535,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file=output_file,
                     solver_capability=solver_capability,
                     var_list=var_list,
-                    var_label=var_label,
+                    var_label=symbolMap.var_label,
                     symbolMap=symbolMap,
                     con_labeler=con_labeler,
                     sort=sort,

@@ -32,7 +32,7 @@ from pyomo.core import (
     Objective,
 )
 from pyomo.core.base import TransformationFactory
-from pyomo.core.expr.current import log
+from pyomo.core.expr import log
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
