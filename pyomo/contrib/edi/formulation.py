@@ -22,6 +22,7 @@ from pyomo.environ import ConcreteModel
 from pyomo.environ import Var, Param, Objective, Constraint, Set
 from pyomo.environ import maximize, minimize
 from pyomo.environ import units as pyomo_units
+from pyomo.common.dependencies import attempt_import
 
 egb, egb_available = attempt_import(
     "pyomo.contrib.pynumero.interfaces.external_grey_box"
@@ -35,7 +36,7 @@ else:
     raise ImportError(
         "pyomo.contrib.edi requires pyomo.contrib.pynumero to be installed to enable black box capability, this should have installed with base pyomo"
     )
-    
+
 from pyomo.environ import (
     Reals,
     PositiveReals,
