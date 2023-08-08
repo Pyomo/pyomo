@@ -36,6 +36,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -57,6 +58,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -78,6 +80,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -99,6 +102,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -120,6 +124,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -141,6 +146,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -162,6 +168,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -183,6 +190,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -205,6 +213,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -228,6 +237,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',

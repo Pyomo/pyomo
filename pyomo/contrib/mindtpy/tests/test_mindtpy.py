@@ -83,6 +83,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -104,6 +105,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in extreme_model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -116,6 +118,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -138,6 +141,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -160,6 +164,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -182,6 +187,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -203,6 +209,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -224,6 +231,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -248,7 +256,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_quadratic_strategy(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = ProposalModel()
+            model = ProposalModel().clone()
             if SolverFactory('cplex').available():
                 mip_solver = 'cplex'
             elif SolverFactory('gurobi').available():
@@ -279,6 +287,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -302,6 +311,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -325,6 +335,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in nonconvex_model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -345,6 +356,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -366,6 +378,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm (partition_obj_nonlinear_terms)."""
         with SolverFactory('mindtpy') as opt:
             for model in obj_nonlinear_sum_model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -387,6 +400,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -427,6 +441,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in nonconvex_model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
@@ -446,7 +461,7 @@ class TestMindtPy(unittest.TestCase):
 
     def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:
-            model = ConstraintQualificationExample()
+            model = ConstraintQualificationExample().clone()
             opt.solve(
                 model,
                 strategy='OA',
@@ -458,7 +473,7 @@ class TestMindtPy(unittest.TestCase):
 
     def test_time_limit(self):
         with SolverFactory('mindtpy') as opt:
-            model = ConstraintQualificationExample()
+            model = ConstraintQualificationExample().clone()
             opt.solve(
                 model,
                 strategy='OA',
@@ -470,7 +485,7 @@ class TestMindtPy(unittest.TestCase):
     def test_maximize_obj(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = ProposalModel()
+            model = ProposalModel().clone()
             model.objective.sense = maximize
             opt.solve(
                 model,
@@ -483,7 +498,7 @@ class TestMindtPy(unittest.TestCase):
     def test_infeasible_model(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = SimpleMINLP()
+            model = SimpleMINLP().clone()
             model.X[1].fix(0)
             model.Y[1].fix(0)
             results = opt.solve(

@@ -58,6 +58,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='FP',
@@ -72,6 +73,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the FP-OA algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='OA',
