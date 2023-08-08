@@ -19,7 +19,7 @@ from pyomo.core import (
 )
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.gdp import Disjunct
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.common.modeling import unique_component_name
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')

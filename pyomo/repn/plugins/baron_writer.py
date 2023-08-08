@@ -29,7 +29,7 @@ from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
 )
 from pyomo.core.expr.visitor import _ToStringVisitor
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base import (
     SortComponents,
     SymbolMap,

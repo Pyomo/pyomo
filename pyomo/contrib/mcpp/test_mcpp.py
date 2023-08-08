@@ -35,7 +35,7 @@ from pyomo.core import (
     ComponentMap,
     log,
 )
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 
 
 @unittest.skipIf(not mcpp_available(), "MC++ is not available")

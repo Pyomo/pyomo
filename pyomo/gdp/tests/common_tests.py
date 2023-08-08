@@ -32,7 +32,7 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.base import constraint, ComponentUID
 from pyomo.core.base.block import _BlockData
 from pyomo.repn import generate_standard_repn
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 import pyomo.gdp.tests.models as models
 from io import StringIO
 import random

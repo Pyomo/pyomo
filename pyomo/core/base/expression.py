@@ -27,7 +27,7 @@ from pyomo.common.numeric_types import (
     check_if_numeric_type,
 )
 
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -49,9 +49,9 @@ class _ExpressionData(numeric_expr.NumericValue):
 
     __slots__ = ()
 
-    EXPRESSION_SYSTEM = EXPR.common.ExpressionType.NUMERIC
+    EXPRESSION_SYSTEM = EXPR.ExpressionType.NUMERIC
     PRECEDENCE = 0
-    ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
+    ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
 
     #
     # Interface

@@ -16,7 +16,7 @@ from pyomo.core.expr import expr_common
 
 
 import pyomo.common.unittest as unittest
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 
 from pyomo.environ import (
     ConcreteModel,

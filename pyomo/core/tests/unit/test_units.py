@@ -53,7 +53,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.util.check_units import assert_units_consistent, check_units_equivalent
 from pyomo.core.expr import inequality
 from pyomo.core.expr.numvalue import NumericConstant
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base.units_container import (
     pint_available,
     pint_module,
@@ -122,9 +122,7 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(kg.is_named_expression_type(), False)
         self.assertEqual(kg.is_expression_type(), False)
         self.assertEqual(kg.is_component_type(), False)
-        self.assertEqual(
-            kg.is_expression_type(EXPR.common.ExpressionType.RELATIONAL), False
-        )
+        self.assertEqual(kg.is_expression_type(EXPR.ExpressionType.RELATIONAL), False)
         self.assertEqual(kg.is_indexed(), False)
         self.assertEqual(kg._compute_polynomial_degree(None), 0)
 

@@ -1,7 +1,7 @@
 """Tests detection of zero terms."""
 import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, Constraint, TransformationFactory, Var
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.repn import generate_standard_repn
 
 

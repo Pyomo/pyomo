@@ -26,7 +26,7 @@ from pyomo.core.base.expression import Expression
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import UnindexedComponent_set
 from pyomo.core.base.initializer import Initializer
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 
 # This is the default absolute tolerance in np.isclose... Not sure if it's
 # enough, but we need to make sure that 'barely negative' values are assumed to
