@@ -737,7 +737,7 @@ class LazyOACallback_cplex(
                         "The solution from MIP start is valid for the problem. "
                         "Usually introduce a math domain error. "
                         "We will abort it."
-                        )
+                    )
                     self.abort()
 
         # regularization is activated after the first feasible solution is found.

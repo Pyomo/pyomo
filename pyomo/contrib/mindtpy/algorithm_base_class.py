@@ -783,8 +783,10 @@ class _MindtPyAlgorithm(object):
             try:
                 self.curr_int_sol = get_integer_solution(self.working_model)
             except TypeError:
-                raise ValueError('The initial integer combination is not provided or not complete. '
-                                 'Please provide the complete integer combination or use other initialization strategy.')
+                raise ValueError(
+                    'The initial integer combination is not provided or not complete. '
+                    'Please provide the complete integer combination or use other initialization strategy.'
+                )
             self.integer_list.append(self.curr_int_sol)
             fixed_nlp, fixed_nlp_result = self.solve_subproblem()
             self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result)
