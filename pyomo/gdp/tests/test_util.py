@@ -12,7 +12,7 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.core import ConcreteModel, Var, Expression, Block, RangeSet, Any
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base.expression import _ExpressionData
 from pyomo.gdp.util import (
     clone_without_expression_components,

@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr import numvalue, numeric_expr, boolean_value, logical_expr, current
+from pyomo.core.expr import numvalue, numeric_expr, boolean_value, logical_expr
 from pyomo.core.expr.numvalue import (
     value,
     is_constant,
@@ -23,7 +23,7 @@ from pyomo.core.expr.numvalue import (
     polynomial_degree,
 )
 from pyomo.core.expr.boolean_value import BooleanValue
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     log,
     log10,
     sin,

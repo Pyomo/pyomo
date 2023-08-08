@@ -21,9 +21,10 @@ import array
 from weakref import ref as weakref_ref
 
 from pyomo.common.log import is_debug_set
+from pyomo.common.numeric_types import value
+from pyomo.core.expr.numvalue import is_fixed, ZeroConstant
 from pyomo.core.base.set_types import Any
 from pyomo.core.base import SortComponents, Var
-from pyomo.core.base.numvalue import is_fixed, value, ZeroConstant
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.constraint import (
     Constraint,

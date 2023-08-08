@@ -24,7 +24,7 @@ from pyomo.core import (
     Expression,
 )
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.repn import generate_standard_repn
 import logging, time
 

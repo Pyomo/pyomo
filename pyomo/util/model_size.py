@@ -14,7 +14,7 @@ import logging
 
 from pyomo.common.collections import ComponentSet, Bunch
 from pyomo.core import Block, Constraint, Var
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.gdp import Disjunct, Disjunction
 
 

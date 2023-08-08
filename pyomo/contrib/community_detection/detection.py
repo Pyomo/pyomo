@@ -20,8 +20,7 @@ from pyomo.core import (
     ConstraintList,
 )
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.core.expr.current import identify_variables
-from pyomo.core.expr.visitor import replace_expressions
+from pyomo.core.expr.visitor import replace_expressions, identify_variables
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 from pyomo.common.dependencies import networkx as nx
 from pyomo.common.dependencies.matplotlib import pyplot as plt
