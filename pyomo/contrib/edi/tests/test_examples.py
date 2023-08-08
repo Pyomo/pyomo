@@ -19,42 +19,40 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
 import importlib
+
 testIndex = 0
 
-from pyomo.core.base.units_container import (
-    pint_available,
-)
+from pyomo.core.base.units_container import pint_available
 
 from pyomo.common.dependencies import numpy, numpy_available
 from pyomo.common.dependencies import scipy, scipy_available
 
+
 @unittest.skipIf(not numpy_available, 'Testing pyomo.contrib.edi requires numpy')
 @unittest.skipIf(not scipy_available, 'Testing pyomo.contrib.edi requires scipy')
-@unittest.skipIf(not pint_available,  'Testing units requires pint')
+@unittest.skipIf(not pint_available, 'Testing units requires pint')
 class EDIExamples(unittest.TestCase):
     def test_edi_example_placeholder(self):
         "A placeholder"
         pass
+
 
 def create_new(filename):
     def t_function(self):
         importName = filename[0:-3]
         # filename = ".."+filename
         try:
-            importlib.import_module("pyomo.contrib.edi.examples."+importName)
+            importlib.import_module("pyomo.contrib.edi.examples." + importName)
         except:
-            self.fail("This example is failing: %s"%(filename))
+            self.fail("This example is failing: %s" % (filename))
+
     return t_function
 
 
-
-pythonFileList = [
-    "readme_example.py",
-    "aircraft_gp.py"
-]
+pythonFileList = ["readme_example.py", "aircraft_gp.py"]
 
 for filename in pythonFileList:
-    testName = 'test_DocumentationExample_%d'%(testIndex)
+    testName = 'test_DocumentationExample_%d' % (testIndex)
     testIndex += 1
     t_Function = create_new(filename)
     if pint_available:
@@ -63,5 +61,3 @@ for filename in pythonFileList:
 
 if __name__ == '__main__':
     unittest.main()
-
-
