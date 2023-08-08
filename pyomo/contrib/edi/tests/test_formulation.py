@@ -21,8 +21,23 @@ from pyomo.common.dependencies import attempt_import
 
 from pyomo.core.base.units_container import pint_available
 
+from pyomo.common.dependencies import numpy, numpy_available
+from pyomo.common.dependencies import scipy, scipy_available
 
-@unittest.skipIf(not pint_available, 'Testing pyomo.contrib.edi requires pint')
+egb, egb_available = attempt_import(
+    "pyomo.contrib.pynumero.interfaces.external_grey_box"
+)
+
+if numpy_available:
+    import numpy as np
+
+
+@unittest.skipIf(
+    not egb_available, 'Testing pyomo.contrib.edi requires pynumero external grey boxes'
+)
+@unittest.skipIf(not numpy_available, 'Testing pyomo.contrib.edi requires numpy')
+@unittest.skipIf(not scipy_available, 'Testing pyomo.contrib.edi requires scipy')
+@unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestEDIFormulation(unittest.TestCase):
     def test_edi_formulation_init(self):
         "Tests that a formulation initializes to the correct type and has proper data"
