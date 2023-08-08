@@ -1460,8 +1460,8 @@ class PersistentBase(abc.ABC):
             self.set_objective(pyomo_obj)
         timer.stop('objective')
 
-        # this has to be done after the objective in case the
-        # old objective uses old variables
+        # this has to be done after the objective and constraints in case the
+        # old objective/constraints use old variables
         timer.start('vars')
         self.remove_variables(old_vars)
         timer.stop('vars')
