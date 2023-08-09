@@ -2656,6 +2656,8 @@ class _MindtPyAlgorithm(object):
                     self.regularization_mip_opt.options[
                         'mip_limits_solutions'
                     ] = config.solution_limit
+                # We don't need to solve the regularization problem to optimality. 
+                # We will choose to perform aggressive node probing during presolve.
                 self.regularization_mip_opt.options['mip_strategy_presolvenode'] = 3
                 if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                     self.regularization_mip_opt.options['optimalitytarget'] = 3
@@ -2664,6 +2666,7 @@ class _MindtPyAlgorithm(object):
                     self.regularization_mip_opt.options[
                         'SolutionLimit'
                     ] = config.solution_limit
+                # Same reason as mip_strategy_presolvenode.
                 self.regularization_mip_opt.options['Presolve'] = 2
 
     def set_appsi_solver_update_config(self):
