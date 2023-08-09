@@ -19,16 +19,25 @@
 import pyomo.environ
 
 # Import the relevant classes from Formulation
-from pyomo.contrib.edi.formulation import Formulation
+try:
+    from pyomo.contrib.edi.formulation import Formulation
+except:
+    pass
+    # in this case, the dependencies are not installed, nothing will work
+
 
 # Import the black box modeling tools
-from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel
-from pyomo.contrib.edi.blackBoxFunctionModel import (
-    BlackBoxFunctionModel_Variable as BlackBoxVariable,
-)
-from pyomo.contrib.edi.blackBoxFunctionModel import (
-    BlackBoxFunctionModel_Variable as BBVariable,
-)
-from pyomo.contrib.edi.blackBoxFunctionModel import (
-    BlackBoxFunctionModel_Variable as BBV,
-)
+try:
+    from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel
+    from pyomo.contrib.edi.blackBoxFunctionModel import (
+        BlackBoxFunctionModel_Variable as BlackBoxVariable,
+    )
+    from pyomo.contrib.edi.blackBoxFunctionModel import (
+        BlackBoxFunctionModel_Variable as BBVariable,
+    )
+    from pyomo.contrib.edi.blackBoxFunctionModel import (
+        BlackBoxFunctionModel_Variable as BBV,
+    )
+except:
+    pass
+    # in this case, the dependencies are not installed, nothing will work
