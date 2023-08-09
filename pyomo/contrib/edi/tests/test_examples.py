@@ -31,6 +31,22 @@ egb, egb_available = attempt_import(
     "pyomo.contrib.pynumero.interfaces.external_grey_box"
 )
 
+formulation_available = False
+try:
+    from pyomo.contrib.edi import Formulation
+    formulation_available = True 
+except:
+    pass
+    # formulation_available = False
+
+blackbox_available = False
+try:
+    from pyomo.contrib.edi import BlackBoxFunctionModel
+    blackbox_available = True 
+except:
+    pass
+    # blackbox_available = False
+
 if numpy_available:
     import numpy as np
 
@@ -38,6 +54,8 @@ if numpy_available:
 @unittest.skipIf(
     not egb_available, 'Testing pyomo.contrib.edi requires pynumero external grey boxes'
 )
+@unittest.skipIf(not formulation_available, 'Formulation import failed')
+@unittest.skipIf(not blackbox_available, 'Blackbox import failed')
 @unittest.skipIf(not numpy_available, 'Testing pyomo.contrib.edi requires numpy')
 @unittest.skipIf(not scipy_available, 'Testing pyomo.contrib.edi requires scipy')
 @unittest.skipIf(not pint_available, 'Testing units requires pint')
