@@ -191,6 +191,7 @@ class TestMPIBlockVector(unittest.TestCase):
         self.assertEqual(v.min(), -np.inf)
         self.assertEqual(v.max(), -np.inf)
 
+        v = MPIBlockVector(3, [0, 1, 2], comm)
         v.set_block(rank, np.array([]))
         with self.assertRaisesRegex(ValueError, 'cannot get the min of a size 0 array'):
             v.min()
