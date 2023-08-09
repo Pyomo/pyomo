@@ -34,7 +34,8 @@ egb, egb_available = attempt_import(
 formulation_available = False
 try:
     from pyomo.contrib.edi import Formulation
-    formulation_available = True 
+
+    formulation_available = True
 except:
     pass
     # formulation_available = False
@@ -42,7 +43,8 @@ except:
 blackbox_available = False
 try:
     from pyomo.contrib.edi import BlackBoxFunctionModel
-    blackbox_available = True 
+
+    blackbox_available = True
 except:
     pass
     # blackbox_available = False
