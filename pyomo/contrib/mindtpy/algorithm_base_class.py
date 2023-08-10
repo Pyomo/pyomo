@@ -1974,7 +1974,7 @@ class _MindtPyAlgorithm(object):
             MindtPy.aug_penalty_expr = Expression(
                 expr=sign_adjust
                 * config.OA_penalty_factor
-                * sum(v for v in MindtPy.cuts.slack_vars[...])
+                * sum(v for v in MindtPy.cuts.slack_vars.values())
             )
         main_objective = MindtPy.objective_list[-1]
         MindtPy.mip_obj = Objective(

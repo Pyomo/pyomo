@@ -104,11 +104,11 @@ def initialize_feas_subproblem(m, config):
     # Setup objective function for the feasibility subproblem.
     if config.feasibility_norm == 'L1':
         MindtPy.feas_obj = Objective(
-            expr=sum(s for s in MindtPy.feas_opt.slack_var[...]), sense=minimize
+            expr=sum(s for s in MindtPy.feas_opt.slack_var.values()), sense=minimize
         )
     elif config.feasibility_norm == 'L2':
         MindtPy.feas_obj = Objective(
-            expr=sum(s * s for s in MindtPy.feas_opt.slack_var[...]), sense=minimize
+            expr=sum(s * s for s in MindtPy.feas_opt.slack_var.values()), sense=minimize
         )
     else:
         MindtPy.feas_obj = Objective(expr=MindtPy.feas_opt.slack_var, sense=minimize)
