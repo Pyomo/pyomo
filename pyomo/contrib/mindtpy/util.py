@@ -54,7 +54,7 @@ def calc_jacobians(model, config):
         The specific configurations for MindtPy.
     """
     # Map nonlinear_constraint --> Map(
-    #     variable --> jacobian of constraint wrt. variable)
+    #     variable --> jacobian of constraint w.r.t. variable)
     jacobians = ComponentMap()
     if config.differentiate_mode == 'reverse_symbolic':
         mode = EXPR.differentiate.Modes.reverse_symbolic

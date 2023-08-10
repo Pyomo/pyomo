@@ -43,7 +43,7 @@ def add_oa_cuts(
     dual_values : list
         The value of the duals for each constraint.
     jacobians : ComponentMap
-        Map nonlinear_constraint --> Map(variable --> jacobian of constraint wrt. variable).
+        Map nonlinear_constraint --> Map(variable --> jacobian of constraint w.r.t. variable).
     objective_sense : Int
         Objective sense of model.
     mip_constraint_polynomial_degree : Set
@@ -189,14 +189,14 @@ def add_ecp_cuts(
     linearize_active=True,
     linearize_violated=True,
 ):
-    """Linearizes nonlinear constraints. Adds the cuts for the ECP method.
+    """Linearize nonlinear constraints. Adds the cuts for the ECP method.
 
     Parameters
     ----------
     target_model : Pyomo model
         The relaxed linear model.
     jacobians : ComponentMap
-        Map nonlinear_constraint --> Map(variable --> jacobian of constraint wrt. variable)
+        Map nonlinear_constraint --> Map(variable --> jacobian of constraint w.r.t. variable)
     config : ConfigBlock
         The specific configurations for MindtPy.
     timing : Timing
