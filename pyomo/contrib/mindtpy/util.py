@@ -645,7 +645,7 @@ def get_integer_solution(model, string_zero=False):
         if string_zero:
             if var.value == 0:
                 # In CPLEX, negative zero is different from zero,
-                # so we use string to denote this(Only in singletree)
+                # so we use string to denote this (Only in singletree).
                 temp.append(str(var.value))
             else:
                 temp.append(int(round(var.value)))
