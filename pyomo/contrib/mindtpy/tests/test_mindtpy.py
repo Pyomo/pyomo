@@ -461,7 +461,7 @@ class TestMindtPy(unittest.TestCase):
 
     def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:
-            model = ConstraintQualificationExample().clone()
+            model = ConstraintQualificationExample()
             opt.solve(
                 model,
                 strategy='OA',
@@ -473,7 +473,7 @@ class TestMindtPy(unittest.TestCase):
 
     def test_time_limit(self):
         with SolverFactory('mindtpy') as opt:
-            model = ConstraintQualificationExample().clone()
+            model = ConstraintQualificationExample()
             opt.solve(
                 model,
                 strategy='OA',
