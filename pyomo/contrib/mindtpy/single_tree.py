@@ -713,7 +713,7 @@ class LazyOACallback_cplex(
         ):
             for constraint, sense, rhs in mindtpy_object.mip_start_lazy_oa_cuts:
                 self.add(constraint, sense, rhs)
-            mindtpy_object.mip_start_lazy_oa_cuts == []
+            mindtpy_object.mip_start_lazy_oa_cuts = []
 
         if mindtpy_object.should_terminate:
             self.abort()
