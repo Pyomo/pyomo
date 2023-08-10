@@ -57,22 +57,13 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         while self.mip_iter < self.config.iteration_limit:
             # solve MIP main problem
             main_mip, main_mip_results = self.solve_main()
-            if main_mip_results is not None:
-                if not self.config.single_tree:
-                    if main_mip_results.solver.termination_condition is tc.optimal:
-                        self.handle_main_optimal(main_mip)
-                    elif main_mip_results.solver.termination_condition is tc.infeasible:
-                        self.handle_main_infeasible(main_mip)
-                        self.last_iter_cuts = True
-                        break
-                    else:
-                        self.handle_main_other_conditions(main_mip, main_mip_results)
-                    # Call the MIP post-solve callback
-                    with time_code(self.timing, 'Call after main solve'):
-                        self.config.call_after_main_solve(main_mip)
-            else:
-                self.config.logger.info('Algorithm should terminate here.')
+
+            if self.handle_main_mip_termination(main_mip, main_mip_results):
                 break
+
+            # Call the MIP post-solve callback
+            with time_code(self.timing, 'Call after main solve'):
+                self.config.call_after_main_solve(main_mip)
 
             if self.algorithm_should_terminate():
                 self.last_iter_cuts = False
