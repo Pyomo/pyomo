@@ -19,19 +19,21 @@ import textwrap
 
 from copy import deepcopy
 
-from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.expr_errors import TemplateExpressionError
-from pyomo.core.expr.numvalue import native_types, NumericNDArray
+import pyomo.core.expr as EXPR
+from pyomo.core.expr.numeric_expr import NumericNDArray
+from pyomo.core.expr.numvalue import native_types
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_set
+from pyomo.core.pyomoobject import PyomoObject
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 
@@ -171,6 +173,15 @@ def rule_result_substituter(result_map):
             # The argument is a trivial type and will be mapped
             #
             value = rule
+        elif isinstance(rule, PyomoObject):
+            #
+            # The argument is a Pyomo component.  This can happen when
+            # the rule isn't a rule at all, but instead the decorator
+            # was used as a function to wrap an inline definition (not
+            # something I think we should support, but exists in some
+            # [old] examples).
+            #
+            return rule
         else:
             #
             # Otherwise, the argument is a functor, so call it to

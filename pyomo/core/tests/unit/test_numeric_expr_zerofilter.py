@@ -17,8 +17,8 @@ import operator
 import pyomo.common.unittest as unittest
 
 from pyomo.core.expr.compare import assertExpressionsEqual
-import pyomo.core.expr.current as EXPR
-from pyomo.core.expr.current import (
+import pyomo.core.expr as EXPR
+from pyomo.core.expr import (
     DivisionExpression,
     NPV_DivisionExpression,
     SumExpression,

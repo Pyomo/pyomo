@@ -40,4 +40,6 @@ WRONLY = "WRONLY"
 Hax = "Hax"
 # Ignore dout (short for dual output in SAS solvers)
 dout = "dout"
+# Big Sur
+Sur = "Sur"
 # AS NEEDED: Add More Words Below

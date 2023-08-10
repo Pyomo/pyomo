@@ -343,7 +343,8 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
                         _dim = _guess_set_dimen(_param.index_set())
                     finaldata = _process_data_list(pname, _dim, cmd)
                 else:
-                    finaldata = _process_data_list(pname, 1, cmd)
+                    _dim = 1 if len(cmd) > 1 else 0
+                    finaldata = _process_data_list(pname, _dim, cmd)
                 for key in finaldata:
                     _data[pname][key] = finaldata[key]
             else:

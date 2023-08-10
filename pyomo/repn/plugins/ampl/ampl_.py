@@ -25,7 +25,7 @@ from math import isclose
 from pyomo.common.fileutils import find_library
 from pyomo.common.gc_manager import PauseGC
 from pyomo.opt import ProblemFormat, AbstractProblemWriter, WriterFactory
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import (
     NumericConstant,
     native_numeric_types,

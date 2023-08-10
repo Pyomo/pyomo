@@ -20,6 +20,7 @@ through the `pyomo.environ` namespace.
    Constraint
    ExternalFunction
    Reference
+   SOSConstraint
 
 
 AML Component Documentation
@@ -73,6 +74,11 @@ AML Component Documentation
    :inherited-members:
 
 .. autoclass:: Var
+   :show-inheritance:
+   :members:
+   :inherited-members:
+
+.. autoclass:: SOSConstraint
    :show-inheritance:
    :members:
    :inherited-members:

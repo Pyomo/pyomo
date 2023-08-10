@@ -23,7 +23,7 @@ from pyomo.dae import ContinuousSet
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentMap
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, kaug, sensitivity_calculation
 import pyomo.contrib.sensitivity_toolbox.examples.parameter as param_ex
 import pyomo.contrib.sensitivity_toolbox.examples.parameter_kaug as param_kaug_ex

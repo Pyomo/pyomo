@@ -39,7 +39,7 @@ from pyomo.core.expr.numvalue import (
     NumericConstant,
     value,
 )
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base.component import Component
 from pyomo.core.base.units_container import units
 

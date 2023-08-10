@@ -52,6 +52,7 @@ class MumpsCentralizedAssembledLinearSolver(DirectLinearSolverInterface):
     def __init__(self, sym=0, par=1, comm=None, cntl_options=None, icntl_options=None):
         self._nnz = None
         self._dim = None
+        self._mumps = None
         self._mumps = mumps.DMumpsContext(sym=sym, par=par, comm=comm)
         self._mumps.set_silent()
         self._icntl_options = dict()
@@ -229,7 +230,8 @@ class MumpsCentralizedAssembledLinearSolver(DirectLinearSolverInterface):
         return new_allocation
 
     def __del__(self):
-        self._mumps.destroy()
+        if getattr(self, '_mumps', None) is not None:
+            self._mumps.destroy()
 
     def set_icntl(self, key, value):
         self._icntl_options[key] = value

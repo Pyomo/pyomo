@@ -144,7 +144,7 @@ class Highs(PersistentBase, PersistentSolver):
 
     _available = None
 
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         super().__init__(only_child_vars=only_child_vars)
         self._config = HighsConfig()
         self._solver_options = dict()

@@ -37,7 +37,7 @@ from pyomo.gdp.plugins.partition_disjuncts import (
     compute_fbbt_bounds,
 )
 from pyomo.core import Block, value
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 import pyomo.gdp.tests.common_tests as ct
 import pyomo.gdp.tests.models as models
 from pyomo.repn import generate_standard_repn
