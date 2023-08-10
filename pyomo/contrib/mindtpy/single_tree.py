@@ -727,18 +727,17 @@ class LazyOACallback_cplex(
                 config,
             )
             if config.strategy == 'OA':
-                # The solution obtained from mip start might be infeasible and even introduce math domain error, like log(-1).
+                # The solution obtained from mip start might be infeasible and even introduce a math domain error, like log(-1).
                 try:
                     self.add_lazy_oa_cuts(
                         mindtpy_object.mip, None, mindtpy_object, config, opt
                     )
                 except ValueError:
                     config.logger.debug(
-                        "The solution from MIP start is valid for the problem. "
-                        "Usually introduce a math domain error. "
-                        "We will abort it."
+                        "Usually this error is caused by the MIP start solution causing a math domain error. "
+                        "We will skip it."
                     )
-                    self.abort()
+                    return
 
         # regularization is activated after the first feasible solution is found.
         if (
