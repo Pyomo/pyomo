@@ -71,7 +71,7 @@ def calc_jacobians(model, config):
 
 def initialize_feas_subproblem(m, config):
     """Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem).
-       Define the objective function of the feasibility subproblem.
+       Defines the objective function of the feasibility subproblem.
 
     Parameters
     ----------
