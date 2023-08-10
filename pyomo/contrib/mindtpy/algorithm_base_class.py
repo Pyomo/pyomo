@@ -1503,7 +1503,8 @@ class _MindtPyAlgorithm(object):
                 self.results.solver.termination_condition = tc.optimal
 
     def set_up_tabulist_callback(self):
-        """Set up the tabulist using IncumbentCallback
+        """Sets up the tabulist using IncumbentCallback.
+        Currently only support CPLEX.
 
         Parameters
         ----------
@@ -1525,7 +1526,8 @@ class _MindtPyAlgorithm(object):
         self.mip_opt._solver_model.set_error_stream(None)
 
     def set_up_lazy_OA_callback(self):
-        """Set up the lazy OA using LazyConstraintCallback
+        """Sets up the lazy OA using LazyConstraintCallback.
+        Currently only support CPLEX and Gurobi.
 
         Parameters
         ----------
