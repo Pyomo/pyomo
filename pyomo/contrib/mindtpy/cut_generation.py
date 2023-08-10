@@ -189,7 +189,7 @@ def add_ecp_cuts(
     linearize_active=True,
     linearize_violated=True,
 ):
-    """Linearize nonlinear constraints. Adds the cuts for the ECP method.
+    """Linearizes nonlinear constraints. Adds the cuts for the ECP method.
 
     Parameters
     ----------
@@ -287,7 +287,7 @@ def add_no_good_cuts(target_model, var_values, config, timing, mip_iter=0, cb_op
     Parameters
     ----------
     target_model : Block
-        The model to add no-good cuts.
+        The model to add no-good cuts to.
     var_values : list
         Variable values of the current solution, used to generate the cut.
     config : ConfigBlock
