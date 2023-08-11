@@ -232,7 +232,7 @@ class Gurobi(PersistentBase, PersistentSolver):
     _available = None
     _num_instances = 0
 
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         super(Gurobi, self).__init__(only_child_vars=only_child_vars)
         self._num_instances += 1
         self._config = GurobiConfig()
