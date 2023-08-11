@@ -91,7 +91,7 @@ class TestSolvers(unittest.TestCase):
         m.x = pe.Var(bounds=(2, None))
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, 2)
 
         del m.x
@@ -99,7 +99,7 @@ class TestSolvers(unittest.TestCase):
         m.x = pe.Var(bounds=(2, None))
         m.obj = pe.Objective(expr=m.x)
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.ok)
         self.assertAlmostEqual(m.x.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
