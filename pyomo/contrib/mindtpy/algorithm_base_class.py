@@ -325,16 +325,12 @@ class _MindtPyAlgorithm(object):
         )
         util_block.linear_constraint_list = list(
             c
-            for c in model.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block)
-            )
+            for c in util_block.constraint_list
             if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree
         )
         util_block.nonlinear_constraint_list = list(
             c
-            for c in model.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block)
-            )
+            for c in util_block.constraint_list
             if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree
         )
         util_block.objective_list = list(
@@ -360,14 +356,10 @@ class _MindtPyAlgorithm(object):
             if v in var_set
         )
         util_block.discrete_variable_list = list(
-            v
-            for v in model.component_data_objects(ctype=Var, descend_into=(Block))
-            if v in var_set and v.is_integer()
+            v for v in util_block.variable_list if v in var_set and v.is_integer()
         )
         util_block.continuous_variable_list = list(
-            v
-            for v in model.component_data_objects(ctype=Var, descend_into=(Block))
-            if v in var_set and v.is_continuous()
+            v for v in util_block.variable_list if v in var_set and v.is_continuous()
         )
 
     def add_cuts_components(self, model):
