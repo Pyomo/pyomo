@@ -182,8 +182,7 @@ class LazyOACallback_cplex(
                         sense='L',
                         rhs=cplex_rhs,
                     )
-                    # 119 means mipstart_solution
-                    if self.get_solution_source() == 119:
+                    if self.get_solution_source() == cplex.callbacks.SolutionSource.mipstart_solution:
                         mindtpy_object.mip_start_lazy_oa_cuts.append(
                             [
                                 cplex.SparsePair(
@@ -220,7 +219,7 @@ class LazyOACallback_cplex(
                             sense='L',
                             rhs=value(constr.upper) + cplex_rhs,
                         )
-                        if self.get_solution_source() == 119:
+                        if self.get_solution_source() == cplex.callbacks.SolutionSource.mipstart_solution:
                             mindtpy_object.mip_start_lazy_oa_cuts.append(
                                 [
                                     cplex.SparsePair(
@@ -260,7 +259,7 @@ class LazyOACallback_cplex(
                             sense='G',
                             rhs=value(constr.lower) + cplex_rhs,
                         )
-                        if self.get_solution_source() == 119:
+                        if self.get_solution_source() == cplex.callbacks.SolutionSource.mipstart_solution:
                             mindtpy_object.mip_start_lazy_oa_cuts.append(
                                 [
                                     cplex.SparsePair(
@@ -697,6 +696,8 @@ class LazyOACallback_cplex(
         main_mip = self.main_mip
         mindtpy_object = self.mindtpy_object
 
+        # Reference: https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.SolutionSource-class.htm
+        # Another solution source is user_solution = 118, but it will not be encountered in LazyConstraintCallback.
         config.logger.debug(
             "Solution source: %s (111 node_solution, 117 heuristic_solution, 119 mipstart_solution)".format(
                 self.get_solution_source()
@@ -708,7 +709,7 @@ class LazyOACallback_cplex(
         # This means that the callback may have to separate the same constraint again for the next MIP start or for a solution that is found later in the solution process.
         # https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.LazyConstraintCallback-class.htm
         if (
-            self.get_solution_source() != 119
+            self.get_solution_source() != cplex.callbacks.SolutionSource.mipstart_solution
             and len(mindtpy_object.mip_start_lazy_oa_cuts) > 0
         ):
             for constraint, sense, rhs in mindtpy_object.mip_start_lazy_oa_cuts:
