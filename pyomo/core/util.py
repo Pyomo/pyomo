@@ -30,7 +30,7 @@ from pyomo.core.expr.numeric_expr import (
     nonlinear_expression,
     NPV_SumExpression,
 )
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.component import _ComponentBase

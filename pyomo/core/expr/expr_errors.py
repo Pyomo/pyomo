@@ -9,8 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import relocated_module_attribute
 
-class TemplateExpressionError(ValueError):
-    def __init__(self, template, *args, **kwds):
-        self.template = template
-        super(TemplateExpressionError, self).__init__(*args, **kwds)
+relocated_module_attribute(
+    'TemplateExpressionError',
+    'pyomo.common.errors.TemplateExpressionError',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)

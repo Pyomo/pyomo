@@ -470,7 +470,10 @@ def import_file(path, clear_cache=False, infer_package=True, module_name=None):
     sys.path.insert(0, module_dir)
     try:
         spec = importlib.util.spec_from_file_location(module_name, path)
-        module = spec.loader.load_module()
+        module = importlib.util.module_from_spec(spec)
+        if module_name not in sys.modules:
+            sys.modules[module_name] = module
+        spec.loader.exec_module(module)
     finally:
         sys.path.pop(0)
     return module

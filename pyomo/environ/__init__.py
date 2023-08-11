@@ -98,7 +98,6 @@ from pyomo.core import (
     numvalue,
     numeric_expr,
     boolean_value,
-    current,
     symbol_map,
     sympy_tools,
     taylor_series,

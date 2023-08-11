@@ -12,7 +12,7 @@
 """Iteration loop for MindtPy."""
 import math
 from io import StringIO
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.repn import generate_standard_repn
 import logging
 from pyomo.contrib.fbbt.fbbt import fbbt

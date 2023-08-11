@@ -691,7 +691,6 @@ class TestExternalPyomoModel(unittest.TestCase):
             hess = external_model.evaluate_hessian_external_variables()
             expected_hess = model.evaluate_external_hessian(x)
             for matrix1, matrix2 in zip(hess, expected_hess):
-                matrix2 = np.matrix(matrix2)
                 np.testing.assert_allclose(matrix1, matrix2, rtol=1e-8)
 
     def test_external_jacobian_SimpleModel2x2_1(self):

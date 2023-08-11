@@ -39,7 +39,7 @@ from pyomo.core import (
     Any,
 )
 from pyomo.core.base import TransformationFactory, Reference
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.bigm_mixin import (
     _BigM_MixIn,
