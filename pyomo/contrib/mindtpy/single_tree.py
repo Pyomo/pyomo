@@ -183,7 +183,10 @@ class LazyOACallback_cplex(
                         sense='L',
                         rhs=cplex_rhs,
                     )
-                    if self.get_solution_source() == cplex.callbacks.SolutionSource.mipstart_solution:
+                    if (
+                        self.get_solution_source()
+                        == cplex.callbacks.SolutionSource.mipstart_solution
+                    ):
                         mindtpy_object.mip_start_lazy_oa_cuts.append(
                             [
                                 cplex.SparsePair(
@@ -220,7 +223,10 @@ class LazyOACallback_cplex(
                             sense='L',
                             rhs=value(constr.upper) + cplex_rhs,
                         )
-                        if self.get_solution_source() == cplex.callbacks.SolutionSource.mipstart_solution:
+                        if (
+                            self.get_solution_source()
+                            == cplex.callbacks.SolutionSource.mipstart_solution
+                        ):
                             mindtpy_object.mip_start_lazy_oa_cuts.append(
                                 [
                                     cplex.SparsePair(
@@ -260,7 +266,10 @@ class LazyOACallback_cplex(
                             sense='G',
                             rhs=value(constr.lower) + cplex_rhs,
                         )
-                        if self.get_solution_source() == cplex.callbacks.SolutionSource.mipstart_solution:
+                        if (
+                            self.get_solution_source()
+                            == cplex.callbacks.SolutionSource.mipstart_solution
+                        ):
                             mindtpy_object.mip_start_lazy_oa_cuts.append(
                                 [
                                     cplex.SparsePair(
@@ -710,7 +719,8 @@ class LazyOACallback_cplex(
         # This means that the callback may have to separate the same constraint again for the next MIP start or for a solution that is found later in the solution process.
         # https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.LazyConstraintCallback-class.htm
         if (
-            self.get_solution_source() != cplex.callbacks.SolutionSource.mipstart_solution
+            self.get_solution_source()
+            != cplex.callbacks.SolutionSource.mipstart_solution
             and len(mindtpy_object.mip_start_lazy_oa_cuts) > 0
         ):
             for constraint, sense, rhs in mindtpy_object.mip_start_lazy_oa_cuts:
@@ -735,8 +745,9 @@ class LazyOACallback_cplex(
                         mindtpy_object.mip, None, mindtpy_object, config, opt
                     )
                 except ValueError as e:
-                    config.logger.error(str(e) +
-                        "\nUsually this error is caused by the MIP start solution causing a math domain error. "
+                    config.logger.error(
+                        str(e)
+                        + "\nUsually this error is caused by the MIP start solution causing a math domain error. "
                         "We will skip it."
                     )
                     return

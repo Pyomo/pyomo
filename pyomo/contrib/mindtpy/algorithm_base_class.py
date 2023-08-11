@@ -1049,8 +1049,8 @@ class _MindtPyAlgorithm(object):
                 tolerance=config.constraint_tolerance,
             )
         except InfeasibleConstraintException as e:
-            config.logger.error(str(e) +
-                '\nInfeasibility detected in deactivate_trivial_constraints.'
+            config.logger.error(
+                str(e) + '\nInfeasibility detected in deactivate_trivial_constraints.'
             )
             results = SolverResults()
             results.solver.termination_condition = tc.infeasible
@@ -1455,8 +1455,9 @@ class _MindtPyAlgorithm(object):
             try:
                 self.dual_bound = self.stored_bound[self.primal_bound]
             except KeyError as e:
-                config.logger.error(str(e) +
-                    '\nNo stored bound found. Bound fix failed.')
+                config.logger.error(
+                    str(e) + '\nNo stored bound found. Bound fix failed.'
+                )
         else:
             config.logger.info(
                 'Solve the main problem without the last no_good cut to fix the bound.'
@@ -2289,8 +2290,8 @@ class _MindtPyAlgorithm(object):
                 tolerance=config.constraint_tolerance,
             )
         except InfeasibleConstraintException as e:
-            config.logger.error(str(e) +
-                '\nInfeasibility detected in deactivate_trivial_constraints.'
+            config.logger.error(
+                str(e) + '\nInfeasibility detected in deactivate_trivial_constraints.'
             )
             results = SolverResults()
             results.solver.termination_condition = tc.infeasible
@@ -2597,7 +2598,7 @@ class _MindtPyAlgorithm(object):
                     self.regularization_mip_opt.options[
                         'mip_limits_solutions'
                     ] = config.solution_limit
-                # We don't need to solve the regularization problem to optimality. 
+                # We don't need to solve the regularization problem to optimality.
                 # We will choose to perform aggressive node probing during presolve.
                 self.regularization_mip_opt.options['mip_strategy_presolvenode'] = 3
                 if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
@@ -2763,7 +2764,10 @@ class _MindtPyAlgorithm(object):
                     should_terminate = True
                 elif main_mip_results.solver.termination_condition is tc.unbounded:
                     temp_results = self.handle_main_unbounded(main_mip)
-                elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
+                elif (
+                    main_mip_results.solver.termination_condition
+                    is tc.infeasibleOrUnbounded
+                ):
                     temp_results = self.handle_main_unbounded(main_mip)
                     if temp_results.solver.termination_condition is tc.infeasible:
                         self.handle_main_infeasible()
