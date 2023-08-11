@@ -75,7 +75,7 @@ class TerminationCondition(enum.Enum):
     unknown = 42
     """unknown serves as both a default value, and it is used when no other enum member makes sense"""
 
-    ok = 0
+    convergenceCriteriaSatisfied = 0
     """The solver exited with the optimal solution"""
 
     maxTimeLimit = 1
