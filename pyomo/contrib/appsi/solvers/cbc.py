@@ -64,7 +64,7 @@ class CbcConfig(InterfaceConfig):
 
 
 class Cbc(PersistentSolver):
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         self._config = CbcConfig()
         self._solver_options = dict()
         self._writer = LPWriter(only_child_vars=only_child_vars)

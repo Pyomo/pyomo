@@ -50,8 +50,8 @@ except:
 
 
 class ResidualTable(_ResidualTable, _ResidualTableUI):
-    def __init__(self, ui_data, parent=None):
-        super().__init__(parent=parent)
+    def __init__(self, ui_data):
+        super().__init__()
         self.setupUi(self)
         self.ui_data = ui_data
         datmodel = ResidualDataModel(parent=self, ui_data=ui_data)
