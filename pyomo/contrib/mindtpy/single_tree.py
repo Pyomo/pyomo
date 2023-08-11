@@ -709,7 +709,7 @@ class LazyOACallback_cplex(
         # https://www.ibm.com/docs/en/icos/12.8.0.0?topic=SSSA5P_12.8.0/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.LazyConstraintCallback-class.htm
         if (
             self.get_solution_source() != 119
-            and mindtpy_object.mip_start_lazy_oa_cuts != []
+            and len(mindtpy_object.mip_start_lazy_oa_cuts) > 0
         ):
             for constraint, sense, rhs in mindtpy_object.mip_start_lazy_oa_cuts:
                 self.add(constraint, sense, rhs)
