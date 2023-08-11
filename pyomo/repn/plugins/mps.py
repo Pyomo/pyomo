@@ -515,10 +515,18 @@ class ProblemWriter_mps(AbstractProblemWriter):
         column_template = "     %s %s %" + self._precision_string + "\n"
         output_file.write("COLUMNS\n")
         cnt = 0
+        set_integer = False
         for vardata in variable_list:
             col_entries = column_data[variable_to_column[vardata]]
             cnt += 1
             if len(col_entries) > 0:
+                if vardata.is_binary() and not set_integer:
+                    set_integer = True
+                    output_file.write("     %s %s %s\n" % ("INT", "'MARKER'", "'INTORG'"))
+                if not vardata.is_binary() and set_integer:
+                    set_integer = False
+                    output_file.write("     %s %s %s\n" % ("INTEND", "'MARKER'", "'INTEND'"))
+
                 var_label = variable_symbol_dictionary[id(vardata)]
                 for i, (row_label, coef) in enumerate(col_entries):
                     output_file.write(
