@@ -1,9 +1,10 @@
 <!-- ##################################################################### -->
 <!-- PLEASE READ BEFORE OPENING THIS PULL REQUEST -->
 
-<!-- All changes must adhere to PEP8 standards, applied using `black`: https://black.readthedocs.io/en/stable/. -->
+<!-- All changes must adhere to PEP8 standards as enforced by Black. -->
 <!-- If your changes do NOT adhere, the test suite will fail. -->
-<!-- Please read our Contributing guide (https://pyomo.readthedocs.io/en/stable/contribution_guide.html) for instructions on how to apply these standards. -->
+<!-- Please read our Contributing guide for instructions on how to apply these standards. -->
+<!-- Contributing Guide: https://pyomo.readthedocs.io/en/stable/contribution_guide.html -->
 <!-- ##################################################################### -->
 
 ## Fixes # .
