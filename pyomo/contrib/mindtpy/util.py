@@ -701,8 +701,8 @@ def copy_var_list_values_from_solution_pool(
             # instead log warnings).  This means that the following will
             # always succeed and the ValueError should never be raised.
             v_to.set_value(var_val, skip_validation=True)
-        except ValueError as err:
-            err_msg = getattr(err, 'message', str(err))
+        except ValueError as e:
+            config.logger.error(e)
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality and v_to.is_integer():

@@ -106,5 +106,5 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
                     no_good_cuts[i].deactivate()
             if self.config.use_tabu_list:
                 self.integer_list = self.integer_list[:valid_no_good_cuts_num]
-        except KeyError:
-            self.config.logger.info('No-good cut deactivate failed.')
+        except KeyError as e:
+            self.config.logger.error(str(e) + '\nDeactivating no-good cuts failed.')

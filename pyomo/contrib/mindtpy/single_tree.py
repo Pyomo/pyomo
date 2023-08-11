@@ -84,8 +84,9 @@ class LazyOACallback_cplex(
                 # will always succeed and the ValueError should never be
                 # raised.
                 v_to.set_value(v_val, skip_validation=True)
-            except ValueError:
+            except ValueError as e:
                 # Snap the value to the bounds
+                config.logger.error(e)
                 if (
                     v_to.has_lb()
                     and v_val < v_to.lb
@@ -733,9 +734,9 @@ class LazyOACallback_cplex(
                     self.add_lazy_oa_cuts(
                         mindtpy_object.mip, None, mindtpy_object, config, opt
                     )
-                except ValueError:
-                    config.logger.debug(
-                        "Usually this error is caused by the MIP start solution causing a math domain error. "
+                except ValueError as e:
+                    config.logger.error(str(e) +
+                        "\nUsually this error is caused by the MIP start solution causing a math domain error. "
                         "We will skip it."
                     )
                     return
