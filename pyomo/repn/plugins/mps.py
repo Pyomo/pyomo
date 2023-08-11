@@ -520,10 +520,10 @@ class ProblemWriter_mps(AbstractProblemWriter):
             col_entries = column_data[variable_to_column[vardata]]
             cnt += 1
             if len(col_entries) > 0:
-                if vardata.is_binary() and not set_integer:
+                if vardata.is_integer() and not set_integer:
                     set_integer = True
                     output_file.write("     %s %s %s\n" % ("INT", "'MARKER'", "'INTORG'"))
-                if not vardata.is_binary() and set_integer:
+                if not vardata.is_integer() and set_integer:
                     set_integer = False
                     output_file.write("     %s %s %s\n" % ("INTEND", "'MARKER'", "'INTEND'"))
 
