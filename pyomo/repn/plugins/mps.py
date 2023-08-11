@@ -522,10 +522,14 @@ class ProblemWriter_mps(AbstractProblemWriter):
             if len(col_entries) > 0:
                 if vardata.is_integer() and not set_integer:
                     set_integer = True
-                    output_file.write("     %s %s %s\n" % ("INT", "'MARKER'", "'INTORG'"))
+                    output_file.write(
+                        "     %s %s %s\n" % ("INT", "'MARKER'", "'INTORG'")
+                    )
                 if not vardata.is_integer() and set_integer:
                     set_integer = False
-                    output_file.write("     %s %s %s\n" % ("INTEND", "'MARKER'", "'INTEND'"))
+                    output_file.write(
+                        "     %s %s %s\n" % ("INTEND", "'MARKER'", "'INTEND'")
+                    )
 
                 var_label = variable_symbol_dictionary[id(vardata)]
                 for i, (row_label, coef) in enumerate(col_entries):
