@@ -1474,7 +1474,9 @@ class _MindtPyAlgorithm(object):
             if isinstance(self.mip_opt, PersistentSolver):
                 self.mip_opt.set_instance(self.mip, symbolic_solver_labels=True)
             mip_args = dict(config.mip_solver_args)
-            update_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
+            update_solver_timelimit(
+                self.mip_opt, config.mip_solver, self.timing, config
+            )
             main_mip_results = self.mip_opt.solve(
                 self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
             )
