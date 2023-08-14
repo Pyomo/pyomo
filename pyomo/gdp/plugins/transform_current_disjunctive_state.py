@@ -210,24 +210,32 @@ class TransformCurrentDisjunctiveState(Transformation):
             transformation_blocks
     ):
         for disj in true_disjunctions:
-            disj.indicator_var.fix(True)
             parent_block = disj.parent_block()
             if not disj.parent_component().is_indexed():
                 reverse_dict[disj] = (disj.indicator_var.fixed,
                                       disj.indicator_var.value, None, None, None)
                 parent_block.reclassify_component_type(disj, Block)
             else:
+                parent = disj.parent_component()
+                disj_idx = disj.index()
                 transBlock = self._get_transformation_block(
                     transformation_blocks, parent_block)
-                idx = len(transBlock)
-                parent = disj.parent_component()
+                blk_idx = len(transBlock)
+                transBlockData = transBlock[blk_idx]
+                #transBlockData.transfer_attributes_from(disj)
                 reverse_dict[disj] = (disj.indicator_var.fixed,
-                                      disj.indicator_var.value, transBlock[idx],
+                                      disj.indicator_var.value, transBlockData,
                                       parent,
-                                      disj.index())
-                del parent._data[disj.index()]
-                transBlock._data[idx] = disj
-                disj._index = idx
+                                      disj_idx)
+                #del parent._data[disj_idx]
+                transBlock._data[blk_idx] = disj
+                #disj._index = blk_idx
+                parent._data[disj_idx] = transBlockData
+                #transBlockData._index = disj_idx
+                from pytest import set_trace
+                set_trace()
+            disj.indicator_var.fix(True)
+            
         for disj in false_disjunctions:
             reverse_dict[disj] = (disj.indicator_var.fixed, disj.indicator_var.value,
                                   None, None, None)
@@ -241,16 +249,22 @@ class TransformCurrentDisjunctiveState(Transformation):
             disjunction.activate()
         for disjunct in disjunction.disjuncts:
             if disjunct in reverse_token['_disjuncts']:
-                #if # it's not indexed
-                disjunct.parent_block().reclassify_component_type(disjunct, Disjunct)
-                disjunct.activate()
                 (fixed, val, trans_block, parent,
                  orig_idx) = reverse_token['_disjuncts'][disjunct]
+                if not disjunct.parent_component().is_indexed():
+                    disjunct.parent_block().reclassify_component_type(disjunct,
+                                                                      Disjunct)
+                    disjunct.activate()
+                else:
+                    assert trans_block is not None
+                    del trans_block.parent_component()._data[trans_block.index()]
+                    parent[orig_idx] = trans_block
+                    trans_block._index = orig_idx
                 disjunct.indicator_var = val
                 disjunct.indicator_var.fixed = fixed
-                if trans_block is not None:
-                    del trans_block.parent_component()._data[trans_block.index()]
-                    parent._data[orig_idx] = disjunct
-                    disjunct._index = orig_idx
+                # if trans_block is not None:
+                #     del trans_block.parent_component()._data[trans_block.index()]
+                #     parent._data[orig_idx] = disjunct
+                #     disjunct._index = orig_idx
                     
                     
