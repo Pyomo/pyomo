@@ -79,7 +79,7 @@ from pyomo.contrib.mindtpy.util import (
     add_orthogonality_cuts,
     set_solver_mipgap,
     set_solver_constraint_violation_tolerance,
-    set_solver_timelimit,
+    update_solver_timelimit,
 )
 
 single_tree, single_tree_available = attempt_import('pyomo.contrib.mindtpy.single_tree')
@@ -267,7 +267,7 @@ class _MindtPyAlgorithm(object):
                     'Your model is a NLP (nonlinear program). '
                     'Using NLP solver %s to solve.' % config.nlp_solver
                 )
-                set_solver_timelimit(
+                update_solver_timelimit(
                     self.nlp_opt, config.nlp_solver, self.timing, config
                 )
                 self.nlp_opt.solve(
@@ -283,7 +283,7 @@ class _MindtPyAlgorithm(object):
                 )
                 if isinstance(self.mip_opt, PersistentSolver):
                     self.mip_opt.set_instance(self.original_model)
-                set_solver_timelimit(
+                update_solver_timelimit(
                     self.mip_opt, config.mip_solver, self.timing, config
                 )
                 results = self.mip_opt.solve(
@@ -807,7 +807,7 @@ class _MindtPyAlgorithm(object):
         MindtPy = m.MindtPy_utils
         TransformationFactory('core.relax_integer_vars').apply_to(m)
         nlp_args = dict(config.nlp_solver_args)
-        set_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
+        update_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
         with SuppressInfeasibleWarning():
             results = self.nlp_opt.solve(
                 m, tee=config.nlp_solver_tee, load_solutions=False, **nlp_args
@@ -934,7 +934,7 @@ class _MindtPyAlgorithm(object):
         if isinstance(self.mip_opt, PersistentSolver):
             self.mip_opt.set_instance(m)
         mip_args = dict(config.mip_solver_args)
-        set_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
+        update_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
         results = self.mip_opt.solve(
             m, tee=config.mip_solver_tee, load_solutions=False, **mip_args
         )
@@ -1049,7 +1049,7 @@ class _MindtPyAlgorithm(object):
             return self.fixed_nlp, results
         # Solve the NLP
         nlp_args = dict(config.nlp_solver_args)
-        set_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
+        update_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
         with SuppressInfeasibleWarning():
             with time_code(self.timing, 'fixed subproblem'):
                 results = self.nlp_opt.solve(
@@ -1306,7 +1306,7 @@ class _MindtPyAlgorithm(object):
         MindtPy.feas_opt.activate()
         MindtPy.feas_obj.activate()
         nlp_args = dict(config.nlp_solver_args)
-        set_solver_timelimit(
+        update_solver_timelimit(
             self.feasibility_nlp_opt, config.nlp_solver, self.timing, config
         )
         with SuppressInfeasibleWarning():
@@ -1474,7 +1474,7 @@ class _MindtPyAlgorithm(object):
             if isinstance(self.mip_opt, PersistentSolver):
                 self.mip_opt.set_instance(self.mip, symbolic_solver_labels=True)
             mip_args = dict(config.mip_solver_args)
-            set_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
+            update_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
             main_mip_results = self.mip_opt.solve(
                 self.mip, tee=config.mip_solver_tee, load_solutions=False, **mip_args
             )
@@ -1656,7 +1656,7 @@ class _MindtPyAlgorithm(object):
 
         if isinstance(self.regularization_mip_opt, PersistentSolver):
             self.regularization_mip_opt.set_instance(self.mip)
-        set_solver_timelimit(
+        update_solver_timelimit(
             self.regularization_mip_opt,
             config.mip_regularization_solver,
             self.timing,
@@ -1877,7 +1877,7 @@ class _MindtPyAlgorithm(object):
         )
         if isinstance(self.mip_opt, PersistentSolver):
             self.mip_opt.set_instance(main_mip)
-        set_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
+        update_solver_timelimit(self.mip_opt, config.mip_solver, self.timing, config)
         with SuppressInfeasibleWarning():
             main_mip_results = self.mip_opt.solve(
                 main_mip,
@@ -2290,7 +2290,7 @@ class _MindtPyAlgorithm(object):
             return fp_nlp, results
         # Solve the NLP
         nlp_args = dict(config.nlp_solver_args)
-        set_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
+        update_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
         with SuppressInfeasibleWarning():
             with time_code(self.timing, 'fp subproblem'):
                 results = self.nlp_opt.solve(

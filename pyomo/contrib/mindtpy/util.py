@@ -499,8 +499,8 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     )
 
 
-def set_solver_timelimit(opt, solver_name, timing, config):
-    """Set timelimit for subsolvers.
+def update_solver_timelimit(opt, solver_name, timing, config):
+    """Updates the time limit for subsolvers.
 
     Parameters
     ----------
