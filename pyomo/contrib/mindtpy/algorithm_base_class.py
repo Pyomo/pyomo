@@ -1579,7 +1579,7 @@ class _MindtPyAlgorithm(object):
             config.logger.error(e)
             if config.single_tree:
                 config.logger.warning('Single tree terminate.')
-                if get_main_elapsed_time(self.timing) >= config.time_limit - 2:
+                if get_main_elapsed_time(self.timing) >= config.time_limit:
                     config.logger.warning('due to the timelimit.')
                     self.results.solver.termination_condition = tc.maxTimeLimit
                 if config.strategy == 'GOA' or config.add_no_good_cuts:
