@@ -1513,7 +1513,7 @@ class _MindtPyAlgorithm(object):
         )
         tabulist.opt = self.mip_opt
         tabulist.config = self.config
-        tabulist.mindtpy_object = self
+        tabulist.mindtpy_solver = self
         self.mip_opt.options['preprocessing_reduce'] = 1
         # If the callback is used to reject incumbents, the user must set the
         # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
@@ -1539,13 +1539,13 @@ class _MindtPyAlgorithm(object):
             lazyoa.main_mip = self.mip
             lazyoa.config = self.config
             lazyoa.opt = self.mip_opt
-            lazyoa.mindtpy_object = self
+            lazyoa.mindtpy_solver = self
             self.mip_opt._solver_model.set_warning_stream(None)
             self.mip_opt._solver_model.set_log_stream(None)
             self.mip_opt._solver_model.set_error_stream(None)
         if self.config.mip_solver == 'gurobi_persistent':
             self.mip_opt.set_callback(single_tree.LazyOACallback_gurobi)
-            self.mip_opt.mindtpy_object = self
+            self.mip_opt.mindtpy_solver = self
             self.mip_opt.config = self.config
 
     ##########################################################################################################################################

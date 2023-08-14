@@ -736,7 +736,7 @@ class GurobiPersistent4MindtPy(GurobiPersistent):
                 where (int): an enum member of gurobipy.GRB.Callback.
             """
             self._callback_func(
-                self._pyomo_model, self, where, self.mindtpy_object, self.config
+                self._pyomo_model, self, where, self.mindtpy_solver, self.config
             )
 
         return f

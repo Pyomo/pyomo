@@ -28,17 +28,17 @@ class IncumbentCallback_cplex(
         IncumbentCallback will be activated after Lazyconstraint callback, when the potential incumbent solution is satisfies the lazyconstraints.
         TODO: need to handle GOA same integer combination check in lazyconstraint callback in single_tree.py
         """
-        mindtpy_object = self.mindtpy_object
+        mindtpy_solver = self.mindtpy_solver
         opt = self.opt
         config = self.config
         if config.single_tree:
             self.reject()
         else:
             temp = []
-            for var in mindtpy_object.mip.MindtPy_utils.discrete_variable_list:
+            for var in mindtpy_solver.mip.MindtPy_utils.discrete_variable_list:
                 value = self.get_values(opt._pyomo_var_to_solver_var_map[var])
                 temp.append(int(round(value)))
-            mindtpy_object.curr_int_sol = tuple(temp)
+            mindtpy_solver.curr_int_sol = tuple(temp)
 
-            if mindtpy_object.curr_int_sol in set(mindtpy_object.integer_list):
+            if mindtpy_solver.curr_int_sol in set(mindtpy_solver.integer_list):
                 self.reject()
