@@ -207,12 +207,13 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
         self.check_fixed_mip(m)
 
         with self.assertRaisesRegex(
-                ValueError,
-                "The 'gdp.transform_current_disjunctive_state' transformation "
-                "cannot be called with both targets and a reverse token "
-                "specified. If reversing the transformation, do not include "
-                "targets: The reverse transformation will restore all the "
-                "components the original transformation call transformed."):
+            ValueError,
+            "The 'gdp.transform_current_disjunctive_state' transformation "
+            "cannot be called with both targets and a reverse token "
+            "specified. If reversing the transformation, do not include "
+            "targets: The reverse transformation will restore all the "
+            "components the original transformation call transformed.",
+        ):
             TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
                 m, reverse=reverse, targets=m.disjunction2
             )
@@ -292,13 +293,14 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
         m.d[1].indicator_var = True
 
         with self.assertRaisesRegex(
-                GDP_Error,
-                "Disjunction 'disj2' does not contain enough Disjuncts with "
-                "values in their indicator_vars to specify which Disjuncts "
-                "are True. Cannot fully transform model."
+            GDP_Error,
+            "Disjunction 'disj2' does not contain enough Disjuncts with "
+            "values in their indicator_vars to specify which Disjuncts "
+            "are True. Cannot fully transform model.",
         ):
             reverse = TransformationFactory(
-                'gdp.transform_current_disjunctive_state').apply_to(m)
+                'gdp.transform_current_disjunctive_state'
+            ).apply_to(m)
 
     def test_not_enough_info_in_single_disjunction_to_fully_transform_xor(self):
         m = ConcreteModel()
@@ -308,13 +310,14 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
         m.d[2].indicator_var = False
 
         with self.assertRaisesRegex(
-                GDP_Error,
-                "Disjunction 'disj1' does not contain enough Disjuncts with "
-                "values in their indicator_vars to specify which Disjuncts "
-                "are True. Cannot fully transform model."
+            GDP_Error,
+            "Disjunction 'disj1' does not contain enough Disjuncts with "
+            "values in their indicator_vars to specify which Disjuncts "
+            "are True. Cannot fully transform model.",
         ):
             reverse = TransformationFactory(
-                'gdp.transform_current_disjunctive_state').apply_to(m)
+                'gdp.transform_current_disjunctive_state'
+            ).apply_to(m)
 
     def test_not_enough_info_in_single_disjunction_to_fully_transform_or(self):
         m = ConcreteModel()
@@ -324,13 +327,14 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
         m.d[2].indicator_var = False
 
         with self.assertRaisesRegex(
-                GDP_Error,
-                "Disjunction 'disj1' does not contain enough Disjuncts with "
-                "values in their indicator_vars to specify which Disjuncts "
-                "are True. Cannot fully transform model."
+            GDP_Error,
+            "Disjunction 'disj1' does not contain enough Disjuncts with "
+            "values in their indicator_vars to specify which Disjuncts "
+            "are True. Cannot fully transform model.",
         ):
             reverse = TransformationFactory(
-                'gdp.transform_current_disjunctive_state').apply_to(m)
+                'gdp.transform_current_disjunctive_state'
+            ).apply_to(m)
 
     def test_complain_about_dangling_disjuncts(self):
         m = ConcreteModel()
@@ -339,11 +343,11 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
         m.d[1].indicator_var = True
 
         with self.assertRaisesRegex(
-                GDP_Error,
-                "Found active Disjuncts on the model that "
-                "were not included in any Disjunctions:\nd\[4\]\nPlease "
-                "deactivate them or include them in a Disjunction."
+            GDP_Error,
+            "Found active Disjuncts on the model that "
+            "were not included in any Disjunctions:\nd\[4\]\nPlease "
+            "deactivate them or include them in a Disjunction.",
         ):
             reverse = TransformationFactory(
-                'gdp.transform_current_disjunctive_state').apply_to(m)
-        
+                'gdp.transform_current_disjunctive_state'
+            ).apply_to(m)
