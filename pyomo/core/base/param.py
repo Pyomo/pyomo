@@ -21,8 +21,9 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
+from pyomo.common.numeric_types import native_types, value as expr_value
 from pyomo.common.timing import ConstructionTimer
-
+from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -32,10 +33,9 @@ from pyomo.core.base.indexed_component import (
 )
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from pyomo.core.base.numvalue import NumericValue, native_types, value as expr_value
 from pyomo.core.base.set import Reals, _AnySet
 from pyomo.core.base.units_container import units
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr import GetItemExpression
 
 logger = logging.getLogger('pyomo.core')
 
@@ -350,7 +350,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     # We do not need to override keys(), as the __len__ override will
     # cause the base class keys() to correctly correctly handle default
     # values
-    # def keys(self, ordered=False):
+    # def keys(self, sort=None):
 
     @property
     def mutable(self):

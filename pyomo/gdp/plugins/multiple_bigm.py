@@ -39,7 +39,7 @@ from pyomo.core import (
     Var,
 )
 from pyomo.core.base import Reference, TransformationFactory
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.util import target_list
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error

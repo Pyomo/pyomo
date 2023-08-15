@@ -12,7 +12,7 @@
 import logging
 
 import pyomo.environ as pyo
-from pyomo.core.expr.current import replace_expressions, identify_mutable_parameters
+from pyomo.core.expr import replace_expressions, identify_mutable_parameters
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.param import IndexedParam
 

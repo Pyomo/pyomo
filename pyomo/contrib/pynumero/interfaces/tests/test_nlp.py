@@ -22,6 +22,7 @@ if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 from pyomo.contrib.pynumero.asl import AmplInterface
+from pyomo.contrib.pynumero.exceptions import PyNumeroEvaluationError
 
 if not AmplInterface.available():
     raise unittest.SkipTest("Pynumero needs the ASL extension to run NLP tests")
@@ -814,6 +815,57 @@ class TestUtils(unittest.TestCase):
         )
         self.assertTrue(ret is full_primals_lb)
         self.assertTrue(np.array_equal(expected_full_primals_lb, full_primals_lb))
+
+
+class TestExceptions(unittest.TestCase):
+    def _make_bad_model(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3])
+        m.x = pyo.Var(m.I, initialize=1)
+
+        m.obj = pyo.Objective(expr=m.x[1] + m.x[2] / m.x[3])
+        m.eq1 = pyo.Constraint(expr=m.x[1] == pyo.sqrt(m.x[2]))
+        return m
+
+    def test_eval_error_in_constraint(self):
+        m = self._make_bad_model()
+        m.x[2] = -1
+        nlp = PyomoNLP(m)
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            residuals = nlp.evaluate_constraints()
+
+    def test_eval_error_in_constraint_jacobian(self):
+        m = self._make_bad_model()
+        m.x[2] = -1
+        nlp = PyomoNLP(m)
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            jacobian = nlp.evaluate_jacobian()
+
+    def test_eval_error_in_objective(self):
+        m = self._make_bad_model()
+        m.x[3] = 0
+        nlp = PyomoNLP(m)
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            objval = nlp.evaluate_objective()
+
+    def test_eval_error_in_objective_gradient(self):
+        m = self._make_bad_model()
+        m.x[3] = 0
+        nlp = PyomoNLP(m)
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            gradient = nlp.evaluate_grad_objective()
+
+    def test_eval_error_in_lagrangian_hessian(self):
+        m = self._make_bad_model()
+        m.x[3] = 0
+        nlp = PyomoNLP(m)
+        msg = "Error in AMPL evaluation"
+        with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
+            hessian = nlp.evaluate_hessian_lag()
 
 
 if __name__ == '__main__':

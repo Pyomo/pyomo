@@ -13,9 +13,9 @@ import sys
 from io import StringIO
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
+from pyomo.repn.tests.lp_diff import lp_diff
 
-_baseline = """
-\\* Source Pyomo model name=unknown *\\
+_baseline = """\\* Source Pyomo model name=unknown *\\
 
 min
 x2:
@@ -85,15 +85,13 @@ def run_writer_test():
         from pyomo.common.tempfiles import TempfileManager
 
         with TempfileManager:
-            fname = TempfileManager.create_tempfile(suffix='pyomo.lp')
-            m.write(fname)
+            fname = TempfileManager.create_tempfile(suffix='pyomo.lp_v1')
+            m.write(fname, format='lp_v1')
             with open(fname, 'r') as FILE:
                 data = FILE.read()
 
-    if not all(
-        d.strip() == b.strip()
-        for d, b in zip(data.strip().splitlines(), _baseline.strip().splitlines())
-    ):
+    base, test = lp_diff(_baseline, data)
+    if base != test:
         print(
             "Result did not match baseline.\nRESULT:\n%s\nBASELINE:\n%s"
             % (data, _baseline)

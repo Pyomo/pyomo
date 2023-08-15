@@ -16,7 +16,7 @@ from pyomo.common import deprecated
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base import TransformationFactory, Reference
 from pyomo.core import (
     Block,
@@ -446,7 +446,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # mark this as local because we won't re-disaggregate if this is
                 # a nested disjunction
                 if local_var_set is not None:
-                    local_var_set.append(disaggregatedVar)
+                    local_var_set.append(disaggregated_var)
                 var_free = 1 - sum(
                     disj.indicator_var.get_associated_binary()
                     for disj in disjunctsVarAppearsIn[var]

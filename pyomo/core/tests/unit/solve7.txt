@@ -1,75 +1,75 @@
 {
     "Problem": [
         {
-            "Lower bound": -4.33333333333333, 
-            "Number of constraints": 2, 
-            "Number of nonzeros": 14, 
-            "Number of objectives": 1, 
-            "Number of variables": 14, 
-            "Sense": "minimize", 
+            "Lower bound": -4.33333333333333,
+            "Number of constraints": 1,
+            "Number of nonzeros": 13,
+            "Number of objectives": 1,
+            "Number of variables": 13,
+            "Sense": "minimize",
             "Upper bound": -4.33333333333333
         }
-    ], 
+    ],
     "Solution": [
         {
-            "number of solutions": 1, 
+            "number of solutions": 1,
             "number of solutions displayed": 1
-        }, 
+        },
         {
-            "Constraint": "No values", 
+            "Constraint": "No values",
             "Objective": {
                 "obj": {
                     "Value": -4.33333333333333
                 }
-            }, 
+            },
             "Gap": 0.0,
             "Variable": {
                 "x[1,'C,D']": {
                     "Value": -1.0
-                }, 
+                },
                 "x[1,A B]": {
                     "Value": -1.0
-                }, 
+                },
                 "x[1,E]": {
                     "Value": -1.0
-                }, 
+                },
                 "x[2,'C,D']": {
                     "Value": -1.0
-                }, 
+                },
                 "x[2,A B]": {
                     "Value": -1.0
-                }, 
+                },
                 "x[2,E]": {
                     "Value": -1.0
-                }, 
+                },
                 "x[3,'C,D']": {
                     "Value": -1.0
-                }, 
+                },
                 "x[3,A B]": {
                     "Value": 0.666666666666667
-                }, 
+                },
                 "x[3,E]": {
                     "Value": -1.0
-                }, 
+                },
                 "x[4,'C,D']": {
                     "Value": 1.0
-                }, 
+                },
                 "x[4,A B]": {
                     "Value": 1.0
-                }, 
+                },
                 "x[4,E]": {
                     "Value": 1.0
-                }, 
+                },
                 "y": {
                     "Value": 1.0
                 }
             }
         }
-    ], 
+    ],
     "Solver": [
         {
-            "Error rc": 0, 
-            "Status": "ok", 
+            "Error rc": 0,
+            "Status": "ok",
             "Termination condition": "optimal"
         }
     ]

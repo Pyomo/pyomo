@@ -27,12 +27,10 @@ from pyomo.core import (
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.core.expr import differentiate
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.opt import ProblemSense
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.util.model_size import build_model_size_report
-from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
@@ -65,12 +63,12 @@ def calc_jacobians(model, config):
     #     variable --> jacobian of constraint wrt. variable)
     jacobians = ComponentMap()
     if config.differentiate_mode == 'reverse_symbolic':
-        mode = differentiate.Modes.reverse_symbolic
+        mode = EXPR.differentiate.Modes.reverse_symbolic
     elif config.differentiate_mode == 'sympy':
-        mode = differentiate.Modes.sympy
+        mode = EXPR.differentiate.Modes.sympy
     for c in model.MindtPy_utils.nonlinear_constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
-        jac_list = differentiate(c.body, wrt_list=vars_in_constr, mode=mode)
+        jac_list = EXPR.differentiate(c.body, wrt_list=vars_in_constr, mode=mode)
         jacobians[c] = ComponentMap(
             (var, jac_wrt_var) for var, jac_wrt_var in zip(vars_in_constr, jac_list)
         )
@@ -141,7 +139,8 @@ def add_var_bound(model, config):
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
+    r"""This function generates objective (FP-NLP subproblem) for minimum
+    euclidean distance to setpoint_model.
 
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}.
 
@@ -152,7 +151,8 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete
+        variables, by default False.
 
     Returns
     -------
@@ -195,7 +195,8 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum
+    Norm1 distance to setpoint_model.
 
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
 
@@ -206,12 +207,14 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete
+        variables, by default False.
 
     Returns
     -------
     Objective
         The norm1 objective function.
+
     """
     # skip objective_value variable and slack_var variables
     var_filter = (
@@ -248,7 +251,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
 
     Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|.
 
@@ -433,9 +436,12 @@ def generate_lag_objective_function(
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
-    """This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    r"""This function generates constraint (PF-OA main problem) for minimum
+    Norm1 distance to setpoint_model.
 
-    Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
+    Norm constraint is used to guarantees the monotonicity of the norm
+    objective value sequence of all iterations.
+
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
     Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP' Eq. (16).
 
@@ -448,7 +454,9 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     config : ConfigBlock
         The specific configurations for MindtPy.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default True.
+        Whether to only optimize on distance between the discrete
+        variables, by default True.
+
     """
     var_filter = (lambda v: v.is_integer()) if discrete_only else (lambda v: True)
     model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
@@ -565,6 +573,9 @@ def set_solver_options(opt, timing, config, solver_type, regularization=False):
     elif solver_name in {'ipopt', 'appsi_ipopt'}:
         opt.options['max_cpu_time'] = remaining
         opt.options['constr_viol_tol'] = config.zero_tolerance
+    elif solver_name == 'cyipopt':
+        opt.config.options['max_cpu_time'] = float(remaining)
+        opt.config.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'gams':
         if solver_type == 'mip':
             opt.options['add_options'] = [

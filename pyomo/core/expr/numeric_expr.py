@@ -18,45 +18,90 @@ import operator
 logger = logging.getLogger('pyomo.core')
 
 from math import isclose
-from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.formatting import tostr
 
-from .expr_common import (
-    OperatorAssociativity,
-    ExpressionType,
-    clone_counter,
-    _add,
-    _sub,
-    _mul,
-    _div,
-    _pow,
-    _neg,
-    _abs,
-    _inplace,
-    _unary,
+from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.deprecation import (
+    deprecated,
+    deprecation_warning,
+    relocated_module_attribute,
 )
-from .base import ExpressionBase, NPV_Mixin
-from .numvalue import (
-    NumericValue,
+from pyomo.common.errors import PyomoException, DeveloperError
+from pyomo.common.formatting import tostr
+from pyomo.common.numeric_types import (
     native_types,
     nonpyomo_leaf_types,
     native_numeric_types,
-    as_numeric,
-    value,
-    is_potentially_variable,
     check_if_numeric_type,
+    value,
 )
 
-from .visitor import (
-    evaluate_expression,
-    expression_to_string,
-    polynomial_degree,
-    clone_expression,
-    sizeof_expression,
-    _expression_is_fixed,
+from pyomo.core.pyomoobject import PyomoObject
+from pyomo.core.expr.expr_common import (
+    OperatorAssociativity,
+    ExpressionType,
+    _lt,
+    _le,
+    _eq,
+)
+
+# Note: pyggyback on expr.base's use of attempt_import(visitor)
+from pyomo.core.expr.base import ExpressionBase, NPV_Mixin, visitor
+
+relocated_module_attribute(
+    'is_potentially_variable',
+    'pyomo.core.expr.numvalue.is_potentially_variable',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'as_numeric',
+    'pyomo.core.expr.numvalue.as_numeric',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'clone_counter',
+    'pyomo.core.expr.expr_common.clone_counter',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'evaluate_expression',
+    'pyomo.core.expr.visitor.evaluate_expression',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'expression_to_string',
+    'pyomo.core.expr.visitor.expression_to_string',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'polynomial_degree',
+    'pyomo.core.expr.visitor.polynomial_degree',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'clone_expression',
+    'pyomo.core.expr.visitor.clone_expression',
+    version='6.6.2.dev0',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'sizeof_expression',
+    'pyomo.core.expr.visitor.sizeof_expression',
+    version='6.6.2.dev0',
+    f_globals=globals(),
 )
 
 _zero_one_optimizations = {1}
+
+
+# Stub in the dispatchers
+def _generate_relational_expression(etype, lhs, rhs):
+    raise RuntimeError("incomplete import of Pyomo expression system")
 
 
 def enable_expression_optimizations(zero=None, one=None):
@@ -164,6 +209,497 @@ class linear_expression(mutable_expression):
     """
 
 
+class NumericValue(PyomoObject):
+    """
+    This is the base class for numeric values used in Pyomo.
+    """
+
+    __slots__ = ()
+
+    # This is required because we define __eq__
+    __hash__ = None
+
+    def getname(self, fully_qualified=False, name_buffer=None):
+        """
+        If this is a component, return the component's name on the owning
+        block; otherwise return the value converted to a string
+        """
+        _base = super(NumericValue, self)
+        if hasattr(_base, 'getname'):
+            return _base.getname(fully_qualified, name_buffer)
+        else:
+            return str(type(self))
+
+    @property
+    def name(self):
+        return self.getname(fully_qualified=True)
+
+    @property
+    def local_name(self):
+        return self.getname(fully_qualified=False)
+
+    def is_numeric_type(self):
+        """Return True if this class is a Pyomo numeric object"""
+        return True
+
+    def is_constant(self):
+        """Return True if this numeric value is a constant value"""
+        return False
+
+    def is_fixed(self):
+        """Return True if this is a non-constant value that has been fixed"""
+        return False
+
+    def is_potentially_variable(self):
+        """Return True if variables can appear in this expression"""
+        return False
+
+    @deprecated(
+        "is_relational() is deprecated in favor of "
+        "is_expression_type(ExpressionType.RELATIONAL)",
+        version='6.4.3',
+    )
+    def is_relational(self):
+        """
+        Return True if this numeric value represents a relational expression.
+        """
+        return False
+
+    def is_indexed(self):
+        """Return True if this numeric value is an indexed object"""
+        return False
+
+    def polynomial_degree(self):
+        """
+        Return the polynomial degree of the expression.
+
+        Returns:
+            :const:`None`
+        """
+        return self._compute_polynomial_degree(None)
+
+    def _compute_polynomial_degree(self, values):
+        """
+        Compute the polynomial degree of this expression given
+        the degree values of its children.
+
+        Args:
+            values (list): A list of values that indicate the degree
+                of the children expression.
+
+        Returns:
+            :const:`None`
+        """
+        return None
+
+    def __bool__(self):
+        """Coerce the value to a bool
+
+        Numeric values can be coerced to bool only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
+
+        Raises:
+            PyomoException
+
+        """
+        # Note that we want to implement __bool__, as scalar numeric
+        # components (e.g., Param, Var) implement __len__ (since they
+        # are implicit containers), and Python falls back on __len__ if
+        # __bool__ is not defined.
+        if self.is_constant():
+            return bool(self())
+        raise PyomoException(
+            """
+Cannot convert non-constant Pyomo numeric value (%s) to bool.
+This error is usually caused by using a Var, unit, or mutable Param in a
+Boolean context such as an "if" statement. For example,
+    >>> m.x = Var()
+    >>> if not m.x:
+    ...     pass
+would cause this exception.""".strip()
+            % (self,)
+        )
+
+    def __float__(self):
+        """Coerce the value to a floating point
+
+        Numeric values can be coerced to float only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
+
+        Raises:
+            TypeError
+
+        """
+        if self.is_constant():
+            return float(self())
+        raise TypeError(
+            """
+Implicit conversion of Pyomo numeric value (%s) to float is disabled.
+This error is often the result of using Pyomo components as arguments to
+one of the Python built-in math module functions when defining
+expressions. Avoid this error by using Pyomo-provided math functions or
+explicitly resolving the numeric value using the Pyomo value() function.
+""".strip()
+            % (self,)
+        )
+
+    def __int__(self):
+        """Coerce the value to an integer
+
+        Numeric values can be coerced to int only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
+
+        Raises:
+            TypeError
+
+        """
+        if self.is_constant():
+            return int(self())
+        raise TypeError(
+            """
+Implicit conversion of Pyomo numeric value (%s) to int is disabled.
+This error is often the result of using Pyomo components as arguments to
+one of the Python built-in math module functions when defining
+expressions. Avoid this error by using Pyomo-provided math functions or
+explicitly resolving the numeric value using the Pyomo value() function.
+""".strip()
+            % (self,)
+        )
+
+    def __lt__(self, other):
+        """
+        Less than operator
+
+        This method is called when Python processes statements of the form::
+
+            self < other
+            other > self
+        """
+        return _generate_relational_expression(_lt, self, other)
+
+    def __gt__(self, other):
+        """
+        Greater than operator
+
+        This method is called when Python processes statements of the form::
+
+            self > other
+            other < self
+        """
+        return _generate_relational_expression(_lt, other, self)
+
+    def __le__(self, other):
+        """
+        Less than or equal operator
+
+        This method is called when Python processes statements of the form::
+
+            self <= other
+            other >= self
+        """
+        return _generate_relational_expression(_le, self, other)
+
+    def __ge__(self, other):
+        """
+        Greater than or equal operator
+
+        This method is called when Python processes statements of the form::
+
+            self >= other
+            other <= self
+        """
+        return _generate_relational_expression(_le, other, self)
+
+    def __eq__(self, other):
+        """
+        Equal to operator
+
+        This method is called when Python processes the statement::
+
+            self == other
+        """
+        return _generate_relational_expression(_eq, self, other)
+
+    def __add__(self, other):
+        """
+        Binary addition
+
+        This method is called when Python processes the statement::
+
+            self + other
+        """
+        return _add_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __sub__(self, other):
+        """
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            self - other
+        """
+        return self.__add__(-other)
+
+    def __mul__(self, other):
+        """
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            self * other
+        """
+        return _mul_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __div__(self, other):
+        """
+        Binary division
+
+        This method is called when Python processes the statement::
+
+            self / other
+        """
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __truediv__(self, other):
+        """
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+
+            self / other
+        """
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __pow__(self, other):
+        """
+        Binary power
+
+        This method is called when Python processes the statement::
+
+            self ** other
+        """
+        return _pow_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __radd__(self, other):
+        """
+        Binary addition
+
+        This method is called when Python processes the statement::
+
+            other + self
+        """
+        return _add_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __rsub__(self, other):
+        """
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            other - self
+        """
+        return other + (-self)
+
+    def __rmul__(self, other):
+        """
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            other * self
+
+        when other is not a :class:`NumericValue <pyomo.core.expr.numvalue.NumericValue>` object.
+        """
+        return _mul_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __rdiv__(self, other):
+        """Binary division
+
+        This method is called when Python processes the statement::
+
+            other / self
+        """
+        return _div_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __rtruediv__(self, other):
+        """
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+
+            other / self
+        """
+        return _div_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __rpow__(self, other):
+        """
+        Binary power
+
+        This method is called when Python processes the statement::
+
+            other ** self
+        """
+        return _pow_dispatcher[other.__class__, self.__class__](other, self)
+
+    def __iadd__(self, other):
+        """
+        Binary addition
+
+        This method is called when Python processes the statement::
+
+            self += other
+        """
+        return _add_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __isub__(self, other):
+        """
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            self -= other
+        """
+        return self.__iadd__(-other)
+
+    def __imul__(self, other):
+        """
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            self *= other
+        """
+        return _mul_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __idiv__(self, other):
+        """
+        Binary division
+
+        This method is called when Python processes the statement::
+
+            self /= other
+        """
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __itruediv__(self, other):
+        """
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+
+            self /= other
+        """
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __ipow__(self, other):
+        """
+        Binary power
+
+        This method is called when Python processes the statement::
+
+            self **= other
+        """
+        return _pow_dispatcher[self.__class__, other.__class__](self, other)
+
+    def __neg__(self):
+        """
+        Negation
+
+        This method is called when Python processes the statement::
+
+            - self
+        """
+        return _neg_dispatcher[self.__class__](self)
+
+    def __pos__(self):
+        """
+        Positive expression
+
+        This method is called when Python processes the statement::
+
+            + self
+        """
+        return self
+
+    def __abs__(self):
+        """Absolute value
+
+        This method is called when Python processes the statement::
+
+            abs(self)
+        """
+        return _abs_dispatcher[self.__class__](self)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return NumericNDArray.__array_ufunc__(None, ufunc, method, *inputs, **kwargs)
+
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
+        """Return a string representation of the expression tree.
+
+        Args:
+            verbose (bool): If :const:`True`, then the string
+                representation consists of nested functions.  Otherwise,
+                the string representation is an infix algebraic equation.
+                Defaults to :const:`False`.
+            labeler: An object that generates string labels for
+                non-constant in the expression tree.  Defaults to
+                :const:`None`.
+            smap: A SymbolMap instance that stores string labels for
+                non-constant nodes in the expression tree.  Defaults to
+                :const:`None`.
+            compute_values (bool): If :const:`True`, then fixed
+                expressions are evaluated and the string representation
+                of the resulting value is returned.
+
+        Returns:
+            A string representation for the expression tree.
+
+        """
+        if compute_values and self.is_fixed():
+            try:
+                return str(self())
+            except:
+                pass
+        if not self.is_constant():
+            if smap is not None:
+                return smap.getSymbol(self, labeler)
+            elif labeler is not None:
+                return labeler(self)
+        return str(self)
+
+
+#
+# Note: the "if numpy_available" in the class definition also ensures
+# that the numpy types are registered if numpy is in fact available
+#
+# TODO: Move this to a separate module to support avoiding the numpy
+# import if numpy is not actually used.
+class NumericNDArray(np.ndarray if numpy_available else object):
+    """An ndarray subclass that stores Pyomo numeric expressions"""
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if method == '__call__':
+            # Convert all incoming types to ndarray (to prevent recursion)
+            args = [np.asarray(i) for i in inputs]
+            # Set the return type to be an 'object'.  This prevents the
+            # logical operators from casting the result to a bool.  This
+            # requires numpy >= 1.6
+            kwargs['dtype'] = object
+
+        # Delegate to the base ufunc, but return an instance of this
+        # class so that additional operators hit this method.
+        ans = getattr(ufunc, method)(*args, **kwargs)
+        if isinstance(ans, np.ndarray):
+            if ans.size == 1:
+                return ans[0]
+            return ans.view(NumericNDArray)
+        else:
+            return ans
+
+
 # -------------------------------------------------------
 #
 # Expression classes
@@ -254,7 +790,7 @@ class NumericExpression(ExpressionBase, NumericValue):
             A non-negative integer that is the polynomial
             degree if the expression is polynomial, or :const:`None` otherwise.
         """
-        return polynomial_degree(self)
+        return visitor.polynomial_degree(self)
 
     def _compute_polynomial_degree(self, values):
         """
@@ -696,7 +1232,7 @@ class SumExpression(NumericExpression):
     @deprecated(
         "SumExpression.add() is deprecated.  Please use regular Python operators "
         "(infix '+' or inplace '+='.)",
-        version='6.5.1.dev0',
+        version='6.6.0',
     )
     def add(self, new_arg):
         self += new_arg
@@ -1108,7 +1644,7 @@ def _decompose_linear_terms(expr, multiplier=1):
 # -------------------------------------------------------
 
 
-class ARG_TYPE(enum.Enum):
+class ARG_TYPE(enum.IntEnum):
     MUTABLE = -2
     ASNUMERIC = -1
     INVALID = 0
@@ -3369,6 +3905,7 @@ def _fcn_mutable(a, name, fcn):
 
 def _fcn_invalid(a, name, fcn):
     fcn(a)
+    # returns None
 
 
 def _fcn_native(a, name, fcn):
@@ -3416,6 +3953,150 @@ _fcn_type_handler_mapping = {
     ARG_TYPE.SUM: _fcn_other,
     ARG_TYPE.OTHER: _fcn_other,
 }
+
+
+#
+# NOTE: abs() and pow() are not defined here, because they are
+# Python operators.
+#
+def ceil(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'ceil', math.ceil)
+
+
+def floor(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'floor', math.floor)
+
+
+# e ** x
+def exp(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'exp', math.exp)
+
+
+def log(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'log', math.log)
+
+
+def log10(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'log10', math.log10)
+
+
+# FIXME: this is nominally the same as x ** 0.5, but follows a different
+# path and produces a different NL file!
+def sqrt(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'sqrt', math.sqrt)
+    # return _pow_dispatcher[arg.__class__, float](arg, 0.5)
+
+
+def sin(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'sin', math.sin)
+
+
+def cos(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'cos', math.cos)
+
+
+def tan(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'tan', math.tan)
+
+
+def sinh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'sinh', math.sinh)
+
+
+def cosh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'cosh', math.cosh)
+
+
+def tanh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'tanh', math.tanh)
+
+
+def asin(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'asin', math.asin)
+
+
+def acos(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'acos', math.acos)
+
+
+def atan(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'atan', math.atan)
+
+
+def asinh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'asinh', math.asinh)
+
+
+def acosh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'acosh', math.acosh)
+
+
+def atanh(arg):
+    return _fcn_dispatcher[arg.__class__](arg, 'atanh', math.atanh)
+
+
+#
+# Function interface to Expr_ifExpression
+#
+
+
+def _process_expr_if_arg(arg, kwargs, name):
+    alt = kwargs.pop(name, None)
+    if alt is not None:
+        if arg is not None:
+            raise ValueError(f'Cannot specify both {name}_ and {name}')
+        arg = alt
+    _type = _categorize_arg_type(arg)
+    # Note that relational expressions get mapped to INVALID
+    while _type < ARG_TYPE.INVALID:
+        if _type is ARG_TYPE.MUTABLE:
+            arg = _recast_mutable(arg)
+        elif _type is ARG_TYPE.ASNUMERIC:
+            arg = arg.as_numeric()
+        else:
+            raise DeveloperError('_categorize_arg_type() returned unexpected ARG_TYPE')
+        _type = _categorize_arg_type(arg)
+    return arg, _type
+
+
+def Expr_if(IF_=None, THEN_=None, ELSE_=None, **kwargs):
+    """
+    Function used to construct a conditional numeric expression.
+
+    This function accepts either of the following signatures:
+
+       - Expr_if(IF={expr}, THEN={expr}, ELSE={expr})
+       - Expr_if(IF_={expr}, THEN_={expr}, ELSE_={expr})
+
+    (the former is historical, and the latter is required to support Cythonization)
+    """
+    _pv = False
+    ELSE_, _type = _process_expr_if_arg(ELSE_, kwargs, 'ELSE')
+    _pv |= _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID
+    THEN_, _type = _process_expr_if_arg(THEN_, kwargs, 'THEN')
+    _pv |= _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID
+    IF_, _type = _process_expr_if_arg(IF_, kwargs, 'IF')
+    _pv |= _type >= ARG_TYPE.VAR or _type == ARG_TYPE.INVALID
+    if kwargs:
+        raise ValueError('Unrecognized arguments: ' + ', '.join(kwargs))
+    # Notes:
+    # - side effect: IF is the last iteration, so _type == _categorize_arg_type(IF)
+    # - we do NO error checking as to the actual arg types.  That is
+    #   left to the writer (and as of writing [Jul 2023], the NL writer
+    #   is the only writer that recognized Expr_if)
+    if _type is ARG_TYPE.NATIVE:
+        return THEN_ if IF_ else ELSE_
+    elif _type is ARG_TYPE.PARAM and IF_.is_constant():
+        return THEN_ if IF_.value else ELSE_
+    elif _pv:
+        return Expr_ifExpression((IF_, THEN_, ELSE_))
+    else:
+        return NPV_Expr_ifExpression((IF_, THEN_, ELSE_))
+
+
+#
+# Misc (legacy) functions
+#
 
 
 def _balanced_parens(arg):

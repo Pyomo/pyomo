@@ -232,7 +232,7 @@ class Gurobi(PersistentBase, PersistentSolver):
     _available = None
     _num_instances = 0
 
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         super(Gurobi, self).__init__(only_child_vars=only_child_vars)
         self._num_instances += 1
         self._config = GurobiConfig()
@@ -257,42 +257,46 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._last_results_object: Optional[GurobiResults] = None
 
     def available(self):
-        if self._available is None:
-            self._check_license()
-        return self._available
+        if not gurobipy_available:  # this triggers the deferred import
+            return self.Availability.NotFound
+        elif self._available == self.Availability.BadVersion:
+            return self.Availability.BadVersion
+        else:
+            return self._check_license()
 
-    @classmethod
-    def _check_license(cls):
+    def _check_license(self):
+        avail = False
         try:
             # Gurobipy writes out license file information when creating
             # the environment
             with capture_output(capture_fd=True):
                 m = gurobipy.Model()
-                m.dispose()
-        except ImportError:
-            # Triggered if this is the first time the deferred import of
-            # gurobipy is resolved. _import_gurobipy will have already
-            # set _available appropriately.
-            return
+            if self._solver_model is None:
+                self._solver_model = m
+            avail = True
         except gurobipy.GurobiError:
-            cls._available = Gurobi.Availability.BadLicense
-            return
+            avail = False
+
+        if avail:
+            if self._available is None:
+                res = Gurobi._check_full_license()
+                self._available = res
+                return res
+            else:
+                return self._available
+        else:
+            return self.Availability.BadLicense
+
+    @classmethod
+    def _check_full_license(cls):
         m = gurobipy.Model()
         m.setParam('OutputFlag', 0)
         try:
-            # As of 3/2021, the limited-size Gurobi license was limited
-            # to 2000 variables.
             m.addVars(range(2001))
-            m.setParam('OutputFlag', 0)
             m.optimize()
-            cls._available = Gurobi.Availability.FullLicense
+            return cls.Availability.FullLicense
         except gurobipy.GurobiError:
-            cls._available = Gurobi.Availability.LimitedLicense
-        finally:
-            m.dispose()
-            del m
-            with capture_output(capture_fd=True):
-                gurobipy.disposeDefaultEnv()
+            return cls.Availability.LimitedLicense
 
     def release_license(self):
         self._reinit()
@@ -901,21 +905,18 @@ class Gurobi(PersistentBase, PersistentSolver):
         results.best_feasible_objective = None
         results.best_objective_bound = None
         if self._objective is not None:
-            if gprob.SolCount > 0:
-                try:
-                    results.best_feasible_objective = gprob.ObjVal
-                except (gurobipy.GurobiError, AttributeError):
-                    results.best_feasible_objective = None
             try:
-                if gprob.NumBinVars + gprob.NumIntVars == 0:
-                    results.best_objective_bound = gprob.ObjVal
-                else:
-                    results.best_objective_bound = gprob.ObjBound
+                results.best_feasible_objective = gprob.ObjVal
+            except (gurobipy.GurobiError, AttributeError):
+                results.best_feasible_objective = None
+            try:
+                results.best_objective_bound = gprob.ObjBound
             except (gurobipy.GurobiError, AttributeError):
                 if self._objective.sense == minimize:
                     results.best_objective_bound = -math.inf
                 else:
                     results.best_objective_bound = math.inf
+
             if results.best_feasible_objective is not None and not math.isfinite(
                 results.best_feasible_objective
             ):

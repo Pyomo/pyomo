@@ -11,22 +11,33 @@ Deprecation
 We offer a set of tools to help with deprecation in
 ``pyomo.common.deprecation``.
 
-By policy, when deprecating or moving an existing capability,
-one of the following functions should be imported. In use,
-the ``version`` option should be set to current development
-version. This can be found by running ``pyomo --version`` on
-your local fork/branch.
+By policy, when deprecating or moving an existing capability, one of the
+following utilities should be leveraged.  Each has a required
+``version`` argument that should be set to current development version (e.g.,
+``"6.6.2.dev0"``).  This version will be updated to the next actual
+release as part of the Pyomo release process.  The current development version
+can be found by running ``pyomo --version`` on your local fork/branch.
 
-.. autoclass:: pyomo.common.deprecation.deprecated
+.. currentmodule:: pyomo.common.deprecation
+
+.. autosummary::
+
+   deprecated
+   deprecation_warning
+   relocated_module
+   relocated_module_attribute
+   RenamedClass
+
+.. autodecorator:: pyomo.common.deprecation.deprecated
    :noindex:
 
-.. autoclass:: pyomo.common.deprecation.deprecation_warning
+.. autofunction:: pyomo.common.deprecation.deprecation_warning
    :noindex:
 
-.. autoclass:: pyomo.common.deprecation.relocated_module
+.. autofunction:: pyomo.common.deprecation.relocated_module
    :noindex:
 
-.. autoclass:: pyomo.common.deprecation.relocated_module_attribute
+.. autofunction:: pyomo.common.deprecation.relocated_module_attribute
    :noindex:
 
 .. autoclass:: pyomo.common.deprecation.RenamedClass

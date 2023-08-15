@@ -37,9 +37,6 @@ from pyomo.core.expr import (
     lnot,
     xor,
     inequality,
-)
-
-from pyomo.core.expr.current import (
     log,
     log10,
     sin,
@@ -73,7 +70,6 @@ from pyomo.core.expr import (
     numeric_expr,
     boolean_value,
     logical_expr,
-    current,
     symbol_map,
     sympy_tools,
     taylor_series,

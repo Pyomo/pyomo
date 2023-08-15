@@ -19,7 +19,7 @@ from pyomo.contrib.mindtpy.mip_solve import (
 )
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.repn import generate_standard_repn
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from math import copysign
 from pyomo.contrib.mindtpy.util import (
     get_integer_solution,
@@ -38,7 +38,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (
 )
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, value
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 
 cplex, cplex_available = attempt_import('cplex')
 
@@ -498,6 +498,12 @@ class LazyOACallback_cplex(
             for c in fixed_nlp.tmp_duals:
                 if fixed_nlp.dual.get(c, None) is None:
                     fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
+                elif (
+                    config.nlp_solver == 'cyipopt'
+                    and solve_data.objective_sense == minimize
+                ):
+                    # TODO: recover the opposite dual when cyipopt issue #2831 is solved.
+                    fixed_nlp.dual[c] = -fixed_nlp.dual[c]
             dual_values = list(
                 fixed_nlp.dual[c] for c in fixed_nlp.MindtPy_utils.constraint_list
             )

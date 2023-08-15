@@ -1,0 +1,21 @@
+\* Source Pyomo model name=unknown *\
+
+min 
+obj:
++1 a
++1 b
++1 c
+
+s.t.
+
+c_u_con_:
++1 a
++1 b
++1 c
+<= 1
+
+bounds
+   -inf <= a <= +inf
+   -inf <= b <= +inf
+   -inf <= c <= +inf
+end

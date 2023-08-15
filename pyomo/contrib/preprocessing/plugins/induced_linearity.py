@@ -44,7 +44,7 @@ from pyomo.core import (
     value,
 )
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.gdp import Disjunct
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.repn import generate_standard_repn
@@ -101,14 +101,14 @@ class InducedLinearity(IsomorphicTransformation):
         """Apply the transformation to the given model."""
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
-        _process_container(model, config)
         _process_subcontainers(model, config)
+        _process_container(model, config)
 
 
 def _process_subcontainers(blk, config):
-    for disj in blk.component_data_objects(Disjunct, active=True, descend_into=True):
-        _process_container(disj, config)
+    for disj in blk.component_data_objects(Disjunct, active=True, descend_into=False):
         _process_subcontainers(disj, config)
+        _process_container(disj, config)
 
 
 def _process_container(blk, config):
@@ -219,6 +219,15 @@ def prune_possible_values(block_scope, possible_values, config):
         disj = tmp_clone_blk._tmp_block_scope[0]
         disj.indicator_var.fix(1)
         TransformationFactory('gdp.bigm').apply_to(model)
+    # FIXME: this whole transformation should be reworked to solve
+    # feasibility checks on independent models (using References) and
+    # NOT have to clone the model / deactivate components in place.
+    #
+    # Deactivate any Disjuncts / Disjunctions (so the writers don't complain)
+    for d in model.component_data_objects(Disjunction):
+        d.deactivate()
+    for d in model.component_data_objects(Disjunct):
+        d._deactivate_without_fixing_indicator()
     tmp_clone_blk.test_feasible = Constraint()
     tmp_clone_blk._obj = Objective(expr=1)
     for eff_discr_var, vals in tmp_clone_blk._possible_values.items():
@@ -378,7 +387,7 @@ def detect_effectively_discrete_vars(block, equality_tolerance):
         if constr.lower is None or constr.upper is None:
             continue  # skip inequality constraints
         if fabs(value(constr.lower) - value(constr.upper)) > equality_tolerance:
-            continue  # not equality constriant. Skip.
+            continue  # not equality constraint. Skip.
         if constr.body.polynomial_degree() not in (1, 0):
             continue  # skip nonlinear expressions
         repn = generate_standard_repn(constr.body)

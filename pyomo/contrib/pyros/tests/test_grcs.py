@@ -8,8 +8,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
-from pyomo.environ import *
-from pyomo.core.expr.current import identify_variables, identify_mutable_parameters
+from pyomo.core.expr import identify_variables, identify_mutable_parameters
 from pyomo.contrib.pyros.util import (
     selective_clone,
     add_decision_rule_variables,
@@ -27,7 +26,6 @@ from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
 import time
 from pyomo.contrib.pyros.util import time_code
-from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_to_master,
@@ -47,7 +45,20 @@ from pyomo.opt import (
     TerminationCondition,
     Solution,
 )
-from pyomo.environ import Objective, value, Var
+from pyomo.environ import (
+    Constraint,
+    Expression,
+    Objective,
+    Param,
+    SolverFactory,
+    Var,
+    cos,
+    exp,
+    log,
+    sin,
+    sqrt,
+    value,
+)
 
 
 if not (numpy_available and scipy_available):
@@ -67,6 +78,15 @@ if baron_available:
 else:
     baron_license_is_valid = False
     baron_version = (0, 0, 0)
+
+_scip = SolverFactory('scip')
+scip_available = _scip.available(exception_flag=False)
+if scip_available:
+    scip_license_is_valid = _scip.license_is_valid()
+    scip_version = _scip.version()
+else:
+    scip_license_is_valid = False
+    scip_version = (0, 0, 0)
 
 
 # @SolverFactory.register("time_delay_solver")
@@ -546,9 +566,9 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         # get variables, mutable params in the explicit constraints
         cons = mod_2.uncertain_var_bound_cons
         for idx in cons:
-            for p in EXPR.identify_mutable_parameters(cons[idx].expr):
+            for p in identify_mutable_parameters(cons[idx].expr):
                 params_in_cons.add(p)
-            for v in EXPR.identify_variables(cons[idx].expr):
+            for v in identify_variables(cons[idx].expr):
                 vars_in_cons.add(v)
         # reduce only to uncertain mutable params found
         params_in_cons = params_in_cons & uncertain_params
@@ -2806,6 +2826,48 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
             ),
         )
 
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_two_stg_model_discrete_set(self):
+        """
+        Test PyROS successfully solves two-stage model with
+        multiple scenarios.
+        """
+        m = ConcreteModel()
+        m.x1 = Var(bounds=(0, 10))
+        m.x2 = Var(bounds=(0, 10))
+        m.u = Param(mutable=True, initialize=1.125)
+        m.con = Constraint(expr=sqrt(m.u) * m.x1 - m.u * m.x2 <= 2)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u) ** 2)
+
+        discrete_set = DiscreteScenarioSet(scenarios=[[0.25], [1.125], [2]])
+
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=discrete_set,
+            local_solver=global_solver,
+            global_solver=global_solver,
+            decision_rule_order=0,
+            solve_master_globally=True,
+            objective_focus=ObjectiveType.worst_case,
+        )
+
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg=(
+                "Failed to solve discrete set multiple scenarios instance to "
+                "robust optimality"
+            ),
+        )
+
 
 class testFactorModelUncertaintySetClass(unittest.TestCase):
     '''
@@ -4313,6 +4375,130 @@ class RegressionTest(unittest.TestCase):
             res.pyros_termination_condition,
             pyrosTerminationCondition.subsolver_error,
             msg=(
+                "Returned termination condition for separation error"
+                f"test is not {pyrosTerminationCondition.subsolver_error}."
+            ),
+        )
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_discrete_separation_subsolver_error(self):
+        """
+        Test PyROS for two-stage problem with discrete type set,
+        subsolver error status.
+        """
+        m = ConcreteModel()
+
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+
+        # upper bound induces subsolver error: separation
+        # max(x2 - log(m.q)) will force subsolver to q = 0
+        m.x2 = Var(initialize=2, bounds=(None, log(m.q)))
+
+        m.obj = Objective(expr=m.x1 + m.x2, sense=maximize)
+
+        discrete_set = DiscreteScenarioSet(scenarios=[(1,), (0,)])
+
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=discrete_set,
+            local_solver=local_solver,
+            global_solver=global_solver,
+            decision_rule_order=1,
+            tee=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.subsolver_error,
+            msg=(
+                "Returned termination condition for separation error"
+                f"test is not {pyrosTerminationCondition.subsolver_error}."
+            ),
+        )
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_pyros_math_domain_error(self):
+        """
+        Test PyROS on a two-stage problem, discrete
+        set type with a math domain error evaluating
+        performance constraint expressions in separation.
+        """
+        m = ConcreteModel()
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+        m.x2 = Var(initialize=2, bounds=(-m.q, log(m.q)))
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        box_set = BoxSet(bounds=[[0, 1]])
+
+        local_solver = SolverFactory("baron")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        with self.assertRaisesRegex(
+            expected_exception=ArithmeticError,
+            expected_regex=(
+                "Evaluation of performance constraint.*math domain error.*"
+            ),
+            msg="ValueError arising from math domain error not raised",
+        ):
+            # should raise math domain error:
+            # (1) lower bounding constraint on x2 solved first
+            #     in separation, q = 0 in worst case
+            # (2) now tries to evaluate log(q), but q = 0
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.q],
+                uncertainty_set=box_set,
+                local_solver=local_solver,
+                global_solver=global_solver,
+                decision_rule_order=1,
+                tee=True,
+            )
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_pyros_no_perf_cons(self):
+        """
+        Ensure PyROS properly accommodates models with no
+        performance constraints (such as effectively deterministic
+        models).
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.q = Param(mutable=True, initialize=1)
+
+        m.obj = Objective(expr=m.x * m.q)
+
+        pyros_solver = SolverFactory("pyros")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet(bounds=[[0, 1]]),
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            solve_master_globally=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg=(
                 f"Returned termination condition for separation error"
                 "test is not {pyrosTerminationCondition.subsolver_error}.",
             ),
@@ -4419,7 +4605,7 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     @unittest.skipUnless(
-        baron_version >= (23, 1, 5), "Test runs >90 minutes with Baron 22.9.30"
+        baron_version == (23, 1, 5), "Test runs >90 minutes with Baron 22.9.30"
     )
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()
@@ -4520,6 +4706,181 @@ class RegressionTest(unittest.TestCase):
             2,
             msg="Incorrect objective function value.",
         )
+
+    def create_mitsos_4_3(self):
+        """
+        Create instance of Problem 4_3 from Mitsos (2011)'s
+        Test Set of semi-infinite programs.
+        """
+        # construct the deterministic model
+        m = ConcreteModel()
+        m.u = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[-1000, 1000])
+        m.x2 = Var(bounds=[-1000, 1000])
+        m.x3 = Var(bounds=[-1000, 1000])
+        m.con = Constraint(expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u**2 <= 0)
+        m.eq_con = Constraint(
+            expr=(
+                m.u**2 * (m.x2 - 1)
+                + m.u * (m.x1**3 + 0.5)
+                - 5 * m.u * m.x1 * m.x2
+                + m.u * (m.x1 + 2)
+                == 0
+            )
+        )
+        m.obj = Objective(expr=m.x1 + m.x2 / 2 + m.x3 / 3)
+
+        return m
+
+    @unittest.skipUnless(
+        baron_license_is_valid and scip_available and scip_license_is_valid,
+        "Global solvers BARON and SCIP not both available and licensed",
+    )
+    def test_coeff_matching_solver_insensitive(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching is insensitive to subsolver settings. Based
+        on Mitsos (2011) semi-infinite programming instance 4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        scip = SolverFactory("scip")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        solver_names = {"baron": baron, "scip": scip}
+        for name, solver in solver_names.items():
+            res = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[],
+                second_stage_variables=[m.x1, m.x2, m.x3],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                local_solver=solver,
+                global_solver=solver,
+                objective_focus=ObjectiveType.worst_case,
+                solve_master_globally=True,
+                bypass_local_separation=True,
+                robust_feasibility_tolerance=1e-4,
+            )
+            self.assertEqual(
+                first=res.iterations,
+                second=2,
+                msg=(
+                    "Iterations for Watson 43 instance solved with "
+                    f"subsolver {name} not as expected"
+                ),
+            )
+            np.testing.assert_allclose(
+                actual=res.final_objective_value,
+                desired=0.9781633,
+                rtol=0,
+                atol=5e-3,
+                err_msg=(
+                    "Final objective for Watson 43 instance solved with "
+                    f"subsolver {name} not as expected"
+                ),
+            )
+
+    @unittest.skipUnless(
+        baron_license_is_valid and baron_version >= (23, 2, 27),
+        "BARON licensing and version requirements not met",
+    )
+    def test_coefficient_matching_partitioning_insensitive(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching is insensitive to DOF partitioning. Model
+        is based on Mitsos (2011) semi-infinite programming instance
+        4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        partitionings = [
+            {"fsv": [m.x1, m.x2, m.x3], "ssv": []},
+            {"fsv": [], "ssv": [m.x1, m.x2, m.x3]},
+        ]
+        for partitioning in partitionings:
+            res = pyros_solver.solve(
+                model=m,
+                first_stage_variables=partitioning["fsv"],
+                second_stage_variables=partitioning["ssv"],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                local_solver=baron,
+                global_solver=baron,
+                objective_focus=ObjectiveType.worst_case,
+                solve_master_globally=True,
+                bypass_local_separation=True,
+                robust_feasibility_tolerance=1e-4,
+            )
+            self.assertEqual(
+                first=res.iterations,
+                second=2,
+                msg=(
+                    "Iterations for Watson 43 instance solved with "
+                    f"first-stage vars {[fsv.name for fsv in partitioning['fsv']]} "
+                    f"second-stage vars {[ssv.name for ssv in partitioning['ssv']]} "
+                    "not as expected"
+                ),
+            )
+            np.testing.assert_allclose(
+                actual=res.final_objective_value,
+                desired=0.9781633,
+                rtol=0,
+                atol=5e-3,
+                err_msg=(
+                    "Final objective for Watson 43 instance solved with "
+                    f"first-stage vars {[fsv.name for fsv in partitioning['fsv']]} "
+                    f"second-stage vars {[ssv.name for ssv in partitioning['ssv']]} "
+                    "not as expected"
+                ),
+            )
+
+    def test_coefficient_matching_raises_error_4_3(self):
+        """
+        Check that result for instance with constraint subject to
+        coefficient matching results in exception certifying robustness
+        cannot be certified where expected. Model
+        is based on Mitsos (2011) semi-infinite programming instance
+        4_3.
+        """
+        m = self.create_mitsos_4_3()
+
+        # instantiate BARON subsolver and PyROS solver
+        baron = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        # solve with PyROS
+        dr_orders = [1, 2]
+        for dr_order in dr_orders:
+            with self.assertRaisesRegex(
+                ValueError,
+                expected_regex=(
+                    "Equality constraint.*cannot be guaranteed to be robustly "
+                    "feasible.*"
+                ),
+            ):
+                res = pyros_solver.solve(
+                    model=m,
+                    first_stage_variables=[],
+                    second_stage_variables=[m.x1, m.x2, m.x3],
+                    uncertain_params=[m.u],
+                    uncertainty_set=BoxSet(bounds=[[0, 1]]),
+                    local_solver=baron,
+                    global_solver=baron,
+                    objective_focus=ObjectiveType.worst_case,
+                    decision_rule_order=dr_order,
+                    solve_master_globally=True,
+                    bypass_local_separation=True,
+                    robust_feasibility_tolerance=1e-4,
+                )
 
     def test_coefficient_matching_robust_infeasible_proof_in_pyros(self):
         # Write the deterministic Pyomo model

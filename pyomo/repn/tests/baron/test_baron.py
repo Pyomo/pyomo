@@ -19,7 +19,7 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.common.collections import OrderedSet
 from pyomo.common.fileutils import this_file_dir
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.base import SymbolMap
 
 from pyomo.environ import (
@@ -259,6 +259,19 @@ class TestToBaronVisitor(unittest.TestCase):
         e = (3 + EXPR.ProductExpression((m.p, m.y))) ** m.x
         test = expression_to_string(e, variables, smap)
         self.assertEqual(test, "3 ^ x")
+
+    def test_issue_2819(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.z = Var()
+        t = 0.55
+        m.x.fix(3.5)
+        e = (m.x - 4) ** 2 + (m.z - 1) ** 2 - t
+
+        variables = OrderedSet()
+        smap = SymbolMap()
+        test = expression_to_string(e, variables, smap)
+        self.assertEqual(test, '(-0.5) ^ 2 + (z - 1) ^ 2 + (-0.55)')
 
 
 # class TestBaron_writer(unittest.TestCase):

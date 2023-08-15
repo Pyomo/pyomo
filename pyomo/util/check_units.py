@@ -14,6 +14,8 @@
 This module has some helpful methods to support checking units on Pyomo
 module objects.
 """
+import logging
+
 from pyomo.core.base.units_container import units, UnitsError
 from pyomo.core.base import (
     Objective,
@@ -39,6 +41,9 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.components import iter_component
+from pyomo.common.collections import ComponentSet
+
+logger = logging.getLogger(__name__)
 
 
 def check_units_equivalent(*args):
@@ -210,7 +215,7 @@ _component_data_handlers = {
     RangeSet: None,
     # TODO: Piecewise: _assert_units_consistent_piecewise,
     # TODO: SOSConstraint: _assert_units_consistent_sos,
-    # TODO: LogicalConstriant: _assert_units_consistent_logical,
+    # TODO: LogicalConstraint: _assert_units_consistent_logical,
     BuildAction: None,
     BuildCheck: None,
     # complementarities that are not in normal form are not working yet
@@ -243,7 +248,7 @@ def assert_units_consistent(obj):
         try:
             _assert_units_consistent_expression(obj)
         except UnitsError:
-            print('Units problem with expression {}'.format(obj))
+            logger.error('Units problem with expression {}'.format(obj))
             raise
         return
 
@@ -264,11 +269,37 @@ def assert_units_consistent(obj):
             try:
                 handler(cdata)
             except UnitsError:
-                print('Error in units when checking {}'.format(cdata))
+                logger.error('Error in units when checking {}'.format(cdata))
                 raise
     else:
+        handler(obj)
+
+
+def identify_inconsistent_units(block):
+    """
+    This function generates a ComponentSet of all Constraints, Expressions, and Objectives
+    in a Block or model which have inconsistent units.
+
+    Parameters
+    ----------
+    block : Pyomo Block or Model to test
+
+    Returns
+    ------
+    ComponentSet : contains all Constraints, Expressions or Objectives which were
+        identified as having unit consistency issues
+    """
+    # It would be nice (and more efficient) if there were a method that would check
+    # unit consistency and return a bool for success or failure.
+    # However, the underlying methods (at least as deep as I looked) all raise exceptions
+    # so we need to iterate over the block here and do a try/except for each component
+
+    inconsistent_units = ComponentSet()
+    for obj in block.component_data_objects(
+        [Constraint, Expression, Objective], descend_into=True
+    ):
         try:
-            handler(obj)
+            assert_units_consistent(obj)
         except UnitsError:
-            print('Error in units when checking {}'.format(obj))
-            raise
+            inconsistent_units.add(obj)
+    return inconsistent_units

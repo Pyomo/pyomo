@@ -19,17 +19,16 @@ from collections import deque
 
 logger = logging.getLogger('pyomo.core')
 
-from .symbol_map import SymbolMap
-from . import expr_common as common
-from .expr_errors import TemplateExpressionError
 from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.errors import DeveloperError
-from pyomo.core.expr.numvalue import (
+from pyomo.common.errors import DeveloperError, TemplateExpressionError
+from pyomo.common.numeric_types import (
     nonpyomo_leaf_types,
     native_types,
     native_numeric_types,
     value,
 )
+import pyomo.core.expr.expr_common as common
+from pyomo.core.expr.symbol_map import SymbolMap
 
 try:
     # sys._getframe is slightly faster than inspect's currentframe, but
@@ -267,18 +266,22 @@ class StreamBasedExpressionVisitor(object):
 
         try:
             result = self._process_node(root, RECURSION_LIMIT)
+            _nonrecursive = None
         except RevertToNonrecursive:
             ptr = (None,) + self.recursion_stack.pop()
             while self.recursion_stack:
                 ptr = (ptr,) + self.recursion_stack.pop()
             self.recursion_stack = None
-            result = self._nonrecursive_walker_loop(ptr)
+            _nonrecursive = self._nonrecursive_walker_loop, ptr
         except RecursionError:
             logger.warning(
                 'Unexpected RecursionError walking an expression tree.',
                 extra={'id': 'W1003'},
             )
-            return self.walk_expression_nonrecursive(expr)
+            _nonrecursive = self.walk_expression_nonrecursive, expr
+
+        if _nonrecursive is not None:
+            return _nonrecursive[0](_nonrecursive[1])
 
         if self.finalizeResult is not None:
             return self.finalizeResult(result)

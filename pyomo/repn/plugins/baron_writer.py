@@ -28,7 +28,8 @@ from pyomo.core.expr.numvalue import (
     native_types,
     nonpyomo_leaf_types,
 )
-from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.visitor import _ToStringVisitor
+import pyomo.core.expr as EXPR
 from pyomo.core.base import (
     SortComponents,
     SymbolMap,
@@ -61,7 +62,7 @@ def _handle_PowExpression(visitor, node, values):
         if type(arg) in native_types:
             pass
         elif arg.is_fixed():
-            values[i] = ftoa(value(arg))
+            values[i] = ftoa(value(arg), True)
         else:
             unfixed_count += 1
 
@@ -106,7 +107,7 @@ _plusMinusOne = {-1, 1}
 # A visitor pattern that creates a string for an expression
 # that is compatible with the BARON syntax.
 #
-class ToBaronVisitor(EXPR._ToStringVisitor):
+class ToBaronVisitor(_ToStringVisitor):
     _expression_handlers = {
         EXPR.PowExpression: _handle_PowExpression,
         EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,

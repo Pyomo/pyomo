@@ -67,7 +67,7 @@ class CplexResults(Results):
 class Cplex(PersistentSolver):
     _available = None
 
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         self._config = CplexConfig()
         self._solver_options = dict()
         self._writer = LPWriter(only_child_vars=only_child_vars)

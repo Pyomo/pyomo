@@ -21,7 +21,7 @@ from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import (
@@ -375,20 +375,23 @@ def get_time_from_solver(results):
     This method attempts to access solver time through the
     attributes of `results.solver` in the following order
     of precedence:
-    1) `'user_time'` if the results object was returned by a GAMS
+
+    1) Attribute with name ``pyros.util.TIC_TOC_SOLVE_TIME_ATTR``.
+       This attribute is an estimate of the elapsed solve time
+       obtained using the Pyomo `TicTocTimer` at the point the
+       solver from which the results object is derived was invoked.
+       Preferred over other time attributes, as other attributes
+       may be in CPUs, and for purposes of evaluating overhead
+       time, we require wall s.
+    2) `'user_time'` if the results object was returned by a GAMS
        solver, `'time'` otherwise.
-    2) a custom-added attribute (with name
-       `pyros.util.TIC_TOC_SOLVE_TIME_ATTR`), which contains
-       an estimate of the elapsed solve time obtained using the Pyomo
-       `TicTocTimer` at the point the solver from which the results
-       object is derived was invoked.
     """
     solver_name = getattr(results.solver, "name", None)
 
     # is this sufficient to confirm GAMS solver used?
     from_gams = solver_name is not None and str(solver_name).startswith("GAMS ")
     time_attr_name = "user_time" if from_gams else "time"
-    for attr_name in [time_attr_name, TIC_TOC_SOLVE_TIME_ATTR]:
+    for attr_name in [TIC_TOC_SOLVE_TIME_ATTR, time_attr_name]:
         solve_time = getattr(results.solver, attr_name, None)
         if solve_time is not None:
             break
@@ -719,6 +722,8 @@ def substitute_ssv_in_dr_constraints(model, constraint):
     fsv = ComponentSet(model.util.first_stage_variables)
     if not hasattr(model, "dr_substituted_constraints"):
         model.dr_substituted_constraints = ConstraintList()
+
+    substitution_map = {}
     for eqn in dr_eqns:
         repn = generate_standard_repn(eqn.body, compute_values=False)
         new_expression = 0
@@ -739,9 +744,7 @@ def substitute_ssv_in_dr_constraints(model, constraint):
             for coeff, var in map_quad_coeff_to_var:
                 new_expression += coeff * var[0] * var[1]  # var here is a 2-tuple
 
-        model.no_ssv_dr_expr = Expression(expr=new_expression)
-        substitution_map = {}
-        substitution_map[id(repn.linear_vars[-1])] = model.no_ssv_dr_expr.expr
+        substitution_map[id(repn.linear_vars[-1])] = new_expression
 
     model.dr_substituted_constraints.add(
         replace_expressions(expr=constraint.lower, substitution_map=substitution_map)
@@ -750,7 +753,6 @@ def substitute_ssv_in_dr_constraints(model, constraint):
 
     # === Delete the original constraint
     model.del_component(constraint.name)
-    model.del_component("no_ssv_dr_expr")
 
     return model.dr_substituted_constraints[
         max(model.dr_substituted_constraints.keys())
@@ -822,6 +824,7 @@ def coefficient_matching(model, constraint, uncertain_params, config):
         constraint = substitute_ssv_in_dr_constraints(
             model=model, constraint=constraint
         )
+
         variables_in_constraint = ComponentSet(identify_variables(constraint.expr))
         params_in_constraint = ComponentSet(
             identify_mutable_parameters(constraint.expr)

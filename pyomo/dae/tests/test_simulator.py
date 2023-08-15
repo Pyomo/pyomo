@@ -13,7 +13,7 @@ from __future__ import print_function
 import json
 import pyomo.common.unittest as unittest
 
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.environ import (
     ConcreteModel,
     Param,

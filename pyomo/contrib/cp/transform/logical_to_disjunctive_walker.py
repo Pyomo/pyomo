@@ -17,8 +17,7 @@ from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import NumericExpression
 from pyomo.core.expr.relational_expr import RelationalExpression
-import pyomo.core.expr.current as EXPR
-import pyomo.core.expr.logical_expr as LE
+import pyomo.core.expr as EXPR
 from pyomo.core.base import (
     Binary,
     Constraint,
@@ -43,6 +42,11 @@ def _dispatch_boolean_var(visitor, node):
             z = visitor.z_vars.add()
             visitor.boolean_to_binary_map[node] = z
             node.associate_binary_var(z)
+    if node.fixed:
+        visitor.boolean_to_binary_map[node].fixed = True
+        visitor.boolean_to_binary_map[node].set_value(
+            int(node.value) if node.value is not None else None, skip_validation=True
+        )
     return False, visitor.boolean_to_binary_map[node]
 
 
@@ -102,6 +106,7 @@ def _dispatch_and(visitor, node, *args):
     z = visitor.z_vars.add()
     for arg in args:
         visitor.constraints.add(arg >= z)
+    visitor.constraints.add(len(args) - sum(args) >= 1 - z)
     return z
 
 
@@ -147,7 +152,7 @@ def _get_integer_value(n, node):
 
 
 def _dispatch_exactly(visitor, node, *args):
-    # z = sum(args[1:] == args[0]
+    # z = sum(args[1:]) == args[0]
     # This is currently implemented as:
     # [sum(args[1:] = n] v [[sum(args[1:]) < n] v [sum(args[1:]) > n]]
     M = len(args) - 1
@@ -192,15 +197,15 @@ def _dispatch_atmost(visitor, node, *args):
 
 
 _operator_dispatcher = {}
-_operator_dispatcher[LE.ImplicationExpression] = _dispatch_implication
-_operator_dispatcher[LE.EquivalenceExpression] = _dispatch_equivalence
-_operator_dispatcher[LE.NotExpression] = _dispatch_not
-_operator_dispatcher[LE.AndExpression] = _dispatch_and
-_operator_dispatcher[LE.OrExpression] = _dispatch_or
-_operator_dispatcher[LE.XorExpression] = _dispatch_xor
-_operator_dispatcher[LE.ExactlyExpression] = _dispatch_exactly
-_operator_dispatcher[LE.AtLeastExpression] = _dispatch_atleast
-_operator_dispatcher[LE.AtMostExpression] = _dispatch_atmost
+_operator_dispatcher[EXPR.ImplicationExpression] = _dispatch_implication
+_operator_dispatcher[EXPR.EquivalenceExpression] = _dispatch_equivalence
+_operator_dispatcher[EXPR.NotExpression] = _dispatch_not
+_operator_dispatcher[EXPR.AndExpression] = _dispatch_and
+_operator_dispatcher[EXPR.OrExpression] = _dispatch_or
+_operator_dispatcher[EXPR.XorExpression] = _dispatch_xor
+_operator_dispatcher[EXPR.ExactlyExpression] = _dispatch_exactly
+_operator_dispatcher[EXPR.AtLeastExpression] = _dispatch_atleast
+_operator_dispatcher[EXPR.AtMostExpression] = _dispatch_atmost
 
 _before_child_dispatcher = {}
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var

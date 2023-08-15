@@ -5,3 +5,5 @@ from .scc_solver import (
     generate_strongly_connected_components,
     solve_strongly_connected_components,
 )
+from .incidence import get_incident_variables
+from .config import IncidenceMethod
