@@ -119,8 +119,14 @@ class _ExpressionData(numeric_expr.NumericValue):
 
     @property
     def expr(self):
-        """Return expression on this expression."""
-        raise NotImplementedError
+        arg, = self._args_
+        if arg is None:
+            return None
+        return as_numeric(arg)
+
+    @expr.setter
+    def expr(self, value):
+        self.set_value(value)
 
     def set_value(self, expr):
         """Set the expression on this expression."""
