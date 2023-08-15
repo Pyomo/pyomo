@@ -232,7 +232,7 @@ class Cbc(PersistentSolver):
         termination_line = all_lines[0].lower()
         obj_val = None
         if termination_line.startswith('optimal'):
-            results.termination_condition = TerminationCondition.ok
+            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
             obj_val = float(termination_line.split()[-1])
         elif 'infeasible' in termination_line:
             results.termination_condition = TerminationCondition.infeasible
@@ -307,7 +307,7 @@ class Cbc(PersistentSolver):
                 self._reduced_costs[v_id] = (v, -rc_val)
 
         if (
-            results.termination_condition == TerminationCondition.ok
+            results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied
             and self.config.load_solution
         ):
             for v_id, (v, val) in self._primal_sol.items():
@@ -316,7 +316,7 @@ class Cbc(PersistentSolver):
                 results.best_feasible_objective = None
             else:
                 results.best_feasible_objective = obj_val
-        elif results.termination_condition == TerminationCondition.ok:
+        elif results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied:
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
             else:
@@ -451,7 +451,7 @@ class Cbc(PersistentSolver):
         if (
             self._last_results_object is None
             or self._last_results_object.termination_condition
-            != TerminationCondition.ok
+            != TerminationCondition.convergenceCriteriaSatisfied
         ):
             raise RuntimeError(
                 'Solver does not currently have valid duals. Please '
@@ -469,7 +469,7 @@ class Cbc(PersistentSolver):
         if (
             self._last_results_object is None
             or self._last_results_object.termination_condition
-            != TerminationCondition.ok
+            != TerminationCondition.convergenceCriteriaSatisfied
         ):
             raise RuntimeError(
                 'Solver does not currently have valid reduced costs. Please '

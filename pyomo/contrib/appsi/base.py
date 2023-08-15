@@ -478,7 +478,7 @@ class Results():
         >>> opt = appsi.solvers.Ipopt()
         >>> opt.config.load_solution = False
         >>> results = opt.solve(m) #doctest:+SKIP
-        >>> if results.termination_condition == appsi.base.TerminationCondition.ok: #doctest:+SKIP
+        >>> if results.termination_condition == appsi.base.TerminationCondition.convergenceCriteriaSatisfied: #doctest:+SKIP
         ...     print('optimal solution found: ', results.best_feasible_objective) #doctest:+SKIP
         ...     results.solution_loader.load_vars() #doctest:+SKIP
         ...     print('the optimal value of x is ', m.x.value) #doctest:+SKIP

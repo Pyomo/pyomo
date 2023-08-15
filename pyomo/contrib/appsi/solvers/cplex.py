@@ -284,7 +284,7 @@ class Cplex(PersistentSolver):
         status = cpxprob.solution.get_status()
 
         if status in [1, 101, 102]:
-            results.termination_condition = TerminationCondition.ok
+            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
         elif status in [2, 40, 118, 133, 134]:
             results.termination_condition = TerminationCondition.unbounded
         elif status in [4, 119, 134]:
@@ -336,7 +336,7 @@ class Cplex(PersistentSolver):
                     'results.best_feasible_objective before loading a solution.'
                 )
             else:
-                if results.termination_condition != TerminationCondition.ok:
+                if results.termination_condition != TerminationCondition.convergenceCriteriaSatisfied:
                     logger.warning(
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '

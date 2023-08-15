@@ -610,7 +610,7 @@ class Highs(PersistentBase, PersistentSolver):
         elif status == highspy.HighsModelStatus.kModelEmpty:
             results.termination_condition = TerminationCondition.unknown
         elif status == highspy.HighsModelStatus.kOptimal:
-            results.termination_condition = TerminationCondition.ok
+            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
         elif status == highspy.HighsModelStatus.kInfeasible:
             results.termination_condition = TerminationCondition.infeasible
         elif status == highspy.HighsModelStatus.kUnboundedOrInfeasible:
@@ -633,7 +633,7 @@ class Highs(PersistentBase, PersistentSolver):
         timer.start('load solution')
         self._sol = highs.getSolution()
         has_feasible_solution = False
-        if results.termination_condition == TerminationCondition.ok:
+        if results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied:
             has_feasible_solution = True
         elif results.termination_condition in {
             TerminationCondition.objectiveLimit,
@@ -645,7 +645,7 @@ class Highs(PersistentBase, PersistentSolver):
 
         if config.load_solution:
             if has_feasible_solution:
-                if results.termination_condition != TerminationCondition.ok:
+                if results.termination_condition != TerminationCondition.convergenceCriteriaSatisfied:
                     logger.warning(
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '
