@@ -59,7 +59,7 @@ class _ExpressionData(numeric_expr.NumericValue):
 
     def __call__(self, exception=True):
         """Compute the value of this expression."""
-        arg, = self._args_
+        (arg,) = self._args_
         if arg.__class__ in native_types:
             # Note: native_types includes NoneType
             return arg
@@ -119,7 +119,7 @@ class _ExpressionData(numeric_expr.NumericValue):
 
     @property
     def expr(self):
-        arg, = self._args_
+        (arg,) = self._args_
         if arg is None:
             return None
         return as_numeric(arg)
@@ -207,7 +207,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
-        e, = self._args_
+        (e,) = self._args_
         return e.__class__ in native_types or e.is_fixed()
 
     # Override the in-place operators here so that we can redirect the
@@ -215,26 +215,26 @@ class _GeneralExpressionDataImpl(_ExpressionData):
     # this Expression object (which would map to "other")
 
     def __iadd__(self, other):
-        e, = self._args_
+        (e,) = self._args_
         return numeric_expr._add_dispatcher[e.__class__, other.__class__](e, other)
 
     # Note: the default implementation of __isub__ leverages __iadd__
     # and doesn't need to be reimplemented here
 
     def __imul__(self, other):
-        e, = self._args_
+        (e,) = self._args_
         return numeric_expr._mul_dispatcher[e.__class__, other.__class__](e, other)
 
     def __idiv__(self, other):
-        e, = self._args_
+        (e,) = self._args_
         return numeric_expr._div_dispatcher[e.__class__, other.__class__](e, other)
 
     def __itruediv__(self, other):
-        e, = self._args_
+        (e,) = self._args_
         return numeric_expr._div_dispatcher[e.__class__, other.__class__](e, other)
 
     def __ipow__(self, other):
-        e, = self._args_
+        (e,) = self._args_
         return numeric_expr._pow_dispatcher[e.__class__, other.__class__](e, other)
 
 

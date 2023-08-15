@@ -271,9 +271,7 @@ class Objective(ActiveIndexedComponent):
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)
-        _init = self._pop_from_kwargs(
-            'Objective', kwargs, ('rule', 'expr'), None
-        )
+        _init = self._pop_from_kwargs('Objective', kwargs, ('rule', 'expr'), None)
 
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
