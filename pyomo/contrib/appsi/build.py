@@ -63,8 +63,7 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
 
 def build_appsi(args=[]):
     print('\n\n**** Building APPSI ****')
-    import setuptools
-    from distutils.dist import Distribution
+    from setuptools.dist import Distribution
     from pybind11.setup_helpers import build_ext
     import pybind11.setup_helpers
     from pyomo.common.envvar import PYOMO_CONFIG_DIR

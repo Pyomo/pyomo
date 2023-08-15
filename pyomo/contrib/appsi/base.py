@@ -409,7 +409,7 @@ class SolutionLoader(SolutionLoaderBase):
                 'for the given problem type.'
             )
         if cons_to_load is None:
-            duals = {self._duals}
+            duals = dict(self._duals)
         else:
             duals = {}
             for c in cons_to_load:
@@ -426,7 +426,7 @@ class SolutionLoader(SolutionLoaderBase):
                 'for the given problem type.'
             )
         if cons_to_load is None:
-            slacks = {self._slacks}
+            slacks = dict(self._slacks)
         else:
             slacks = {}
             for c in cons_to_load:
@@ -1116,7 +1116,7 @@ class PersistentBase(abc.ABC):
             v_id = id(v)
             if v_id not in self._referenced_variables:
                 new_vars[v_id] = v
-        self.add_variables([new_vars.values()])
+        self.add_variables(list(new_vars.values()))
 
     def _check_to_remove_vars(self, variables: List[_GeneralVarData]):
         vars_to_remove = {}
@@ -1125,7 +1125,7 @@ class PersistentBase(abc.ABC):
             ref_cons, ref_sos, ref_obj = self._referenced_variables[v_id]
             if len(ref_cons) == 0 and len(ref_sos) == 0 and ref_obj is None:
                 vars_to_remove[v_id] = v
-        self.remove_variables([vars_to_remove.values()])
+        self.remove_variables(list(vars_to_remove.values()))
 
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         all_fixed_vars = {}
@@ -1224,7 +1224,7 @@ class PersistentBase(abc.ABC):
             if p.mutable:
                 for _p in p.values():
                     param_dict[id(_p)] = _p
-        self.add_params([param_dict.values()])
+        self.add_params(list(param_dict.values()))
         if self._only_child_vars:
             self.add_variables(
                 list(
