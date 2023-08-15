@@ -18,6 +18,7 @@ from pyomo.core import Expression, Param
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import IndexedBlock, SortComponents
 from pyomo.dae import ContinuousSet, DAE_Error
+from pyomo.common.formatting import tostr
 
 from io import StringIO
 
@@ -165,7 +166,7 @@ def expand_components(block):
                         "components %s. Reformulate your model to"
                         " remove circular references or apply a "
                         "discretization transformation before "
-                        "linking blocks together." % (block, str(redo_expansion))
+                        "linking blocks together." % (block, tostr(redo_expansion))
                     )
 
                 N = len(redo_expansion)
