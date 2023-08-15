@@ -427,6 +427,22 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
     # construction
     #
 
+    def __call__(self, exception=True):
+        if self._constructed:
+            if len(self._data) == 0:
+                raise ValueError(
+                    "Evaluating the expression of ScalarObjective "
+                    "'%s' before the Objective has been assigned "
+                    "a sense or expression. There is currently "
+                    "nothing to access." % (self.name)
+                )
+            return super().__call__(exception)
+        raise ValueError(
+            "Evaluating the expression of objective '%s' "
+            "before the Objective has been constructed (there "
+            "is currently no value to return)." % (self.name)
+        )
+
     @property
     def expr(self):
         """Access the expression of this objective."""

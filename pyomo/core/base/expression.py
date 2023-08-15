@@ -413,6 +413,16 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     # construction
     #
 
+    def __call__(self, exception=True):
+        """Return expression on this expression."""
+        if self._constructed:
+            return super().__call__(exception)
+        raise ValueError(
+            "Accessing the expression of expression '%s' "
+            "before the Expression has been constructed (there "
+            "is currently no value to return)." % (self.name)
+        )
+
     @property
     def expr(self):
         """Return expression on this expression."""
