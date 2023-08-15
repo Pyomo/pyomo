@@ -271,20 +271,9 @@ class Objective(ActiveIndexedComponent):
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)
-        _init = tuple(
-            _arg
-            for _arg in (kwargs.pop('rule', None), kwargs.pop('expr', None))
-            if _arg is not None
+        _init = self._pop_from_kwargs(
+            'Objective', kwargs, ('rule', 'expr'), None
         )
-        if len(_init) == 1:
-            _init = _init[0]
-        elif not _init:
-            _init = None
-        else:
-            raise ValueError(
-                "Duplicate initialization: Objective() only "
-                "accepts one of 'rule=' and 'expr='"
-            )
 
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
