@@ -59,10 +59,11 @@ class _ExpressionData(numeric_expr.NumericValue):
 
     def __call__(self, exception=True):
         """Compute the value of this expression."""
-        if self.expr.__class__ in native_types:
+        arg, = self._args_
+        if arg.__class__ in native_types:
             # Note: native_types includes NoneType
-            return self.expr
-        return self.expr(exception=exception)
+            return arg
+        return arg(exception=exception)
 
     def is_named_expression_type(self):
         """A boolean indicating whether this in a named expression."""
@@ -73,17 +74,13 @@ class _ExpressionData(numeric_expr.NumericValue):
         return expression_system is None or expression_system == self.EXPRESSION_SYSTEM
 
     def arg(self, index):
-        if index < 0 or index >= 1:
+        if index != 0:
             raise KeyError("Invalid index for expression argument: %d" % index)
-        return self.expr
-
-    @property
-    def _args_(self):
-        return (self.expr,)
+        return self._args_[0]
 
     @property
     def args(self):
-        return (self.expr,)
+        return self._args_
 
     def nargs(self):
         return 1
@@ -91,7 +88,7 @@ class _ExpressionData(numeric_expr.NumericValue):
     def _to_string(self, values, verbose, smap):
         if verbose:
             return "%s{%s}" % (str(self), values[0])
-        if self.expr is None:
+        if self._args_[0] is None:
             return "%s{None}" % str(self)
         return values[0]
 
@@ -106,8 +103,8 @@ class _ExpressionData(numeric_expr.NumericValue):
 
     def polynomial_degree(self):
         """A tuple of subexpressions involved in this expressions operation."""
-        if self.expr.__class__ in native_types:
-            return 0
+        if self._args_[0] is None:
+            return None
         return self.expr.polynomial_degree()
 
     def _compute_polynomial_degree(self, result):
@@ -158,7 +155,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
     __slots__ = ()
 
     def __init__(self, expr=None):
-        self._expr = as_numeric(expr) if (expr is not None) else None
+        self._args_ = (expr,)
 
     def create_node_with_local_data(self, values):
         """
@@ -170,34 +167,25 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         """
         obj = ScalarExpression()
         obj.construct()
-        obj.expr = values[0]
+        obj._args_ = values
         return obj
 
     #
     # Abstract Interface
     #
 
-    @property
-    def expr(self):
-        """Return expression on this expression."""
-        return self._expr
-
-    @expr.setter
-    def expr(self, expr):
-        self.set_value(expr)
-
     def set_value(self, expr):
         """Set the expression on this expression."""
         if expr is None or expr.__class__ in native_numeric_types:
-            self._expr = expr
+            self._args_ = (expr,)
             return
         try:
             if expr.is_numeric_type():
-                self._expr = expr
+                self._args_ = (expr,)
                 return
         except AttributeError:
             if check_if_numeric_type(expr):
-                self._expr = expr
+                self._args_ = (expr,)
                 return
         raise ValueError(
             f"Cannot assign {expr.__class__.__name__} to "
@@ -213,33 +201,34 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
-        return self._expr.__class__ in native_types or self._expr.is_fixed()
+        e, = self._args_
+        return e.__class__ in native_types or e.is_fixed()
 
     # Override the in-place operators here so that we can redirect the
     # dispatcher based on the current contained expression type and not
     # this Expression object (which would map to "other")
 
     def __iadd__(self, other):
-        e = self._expr
+        e, = self._args_
         return numeric_expr._add_dispatcher[e.__class__, other.__class__](e, other)
 
     # Note: the default implementation of __isub__ leverages __iadd__
     # and doesn't need to be reimplemented here
 
     def __imul__(self, other):
-        e = self._expr
+        e, = self._args_
         return numeric_expr._mul_dispatcher[e.__class__, other.__class__](e, other)
 
     def __idiv__(self, other):
-        e = self._expr
+        e, = self._args_
         return numeric_expr._div_dispatcher[e.__class__, other.__class__](e, other)
 
     def __itruediv__(self, other):
-        e = self._expr
+        e, = self._args_
         return numeric_expr._div_dispatcher[e.__class__, other.__class__](e, other)
 
     def __ipow__(self, other):
-        e = self._expr
+        e, = self._args_
         return numeric_expr._pow_dispatcher[e.__class__, other.__class__](e, other)
 
 
@@ -258,7 +247,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl, ComponentData):
         _component  The expression component.
     """
 
-    __slots__ = ('_expr',)
+    __slots__ = ('_args_',)
 
     def __init__(self, expr=None, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)

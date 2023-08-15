@@ -154,7 +154,7 @@ class _GeneralObjectiveData(
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ("_sense", "_expr")
+    __slots__ = ("_sense", "_args_")
 
     def __init__(self, expr=None, sense=minimize, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
