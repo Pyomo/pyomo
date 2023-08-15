@@ -1,5 +1,5 @@
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 import math
 from pyomo.contrib.fbbt.tests.test_interval import IntervalTestBase
 
@@ -7,7 +7,7 @@ from pyomo.contrib.fbbt.tests.test_interval import IntervalTestBase
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestInterval(IntervalTestBase, unittest.TestCase):
     def setUp(self):
-        super(TestInterval, self).setUp()
+        super().setUp()
         self.add = cmodel.py_interval_add
         self.sub = cmodel.py_interval_sub
         self.mul = cmodel.py_interval_mul

@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.common.gsl import find_GSL
 

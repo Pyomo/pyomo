@@ -38,7 +38,7 @@ class CplexConfig(MIPInterfaceConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super(CplexConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -59,7 +59,7 @@ class CplexConfig(MIPInterfaceConfig):
 
 class CplexResults(Results):
     def __init__(self, solver):
-        super(CplexResults, self).__init__()
+        super().__init__()
         self.wallclock_time = None
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
@@ -69,7 +69,7 @@ class Cplex(PersistentSolver):
 
     def __init__(self, only_child_vars=False):
         self._config = CplexConfig()
-        self._solver_options = dict()
+        self._solver_options = {}
         self._writer = LPWriter(only_child_vars=only_child_vars)
         self._filename = None
         self._last_results_object: Optional[CplexResults] = None
@@ -400,7 +400,7 @@ class Cplex(PersistentSolver):
             con_names = self._cplex_model.linear_constraints.get_names()
             dual_values = self._cplex_model.solution.get_dual_values()
         else:
-            con_names = list()
+            con_names = []
             for con in cons_to_load:
                 orig_name = symbol_map.byObject[id(con)]
                 if con.equality:
@@ -412,7 +412,7 @@ class Cplex(PersistentSolver):
                         con_names.append(orig_name + '_ub')
             dual_values = self._cplex_model.solution.get_dual_values(con_names)
 
-        res = dict()
+        res = {}
         for name, val in zip(con_names, dual_values):
             orig_name = name[:-3]
             if orig_name == 'obj_const_con':

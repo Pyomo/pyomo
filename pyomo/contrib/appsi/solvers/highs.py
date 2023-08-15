@@ -47,7 +47,7 @@ class HighsConfig(MIPInterfaceConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super(HighsConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -71,7 +71,7 @@ class HighsResults(Results):
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
-class _MutableVarBounds(object):
+class _MutableVarBounds():
     def __init__(self, lower_expr, upper_expr, pyomo_var_id, var_map, highs):
         self.pyomo_var_id = pyomo_var_id
         self.lower_expr = lower_expr
@@ -86,7 +86,7 @@ class _MutableVarBounds(object):
         self.highs.changeColBounds(col_ndx, lb, ub)
 
 
-class _MutableLinearCoefficient(object):
+class _MutableLinearCoefficient():
     def __init__(self, pyomo_con, pyomo_var_id, con_map, var_map, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -101,7 +101,7 @@ class _MutableLinearCoefficient(object):
         self.highs.changeCoeff(row_ndx, col_ndx, value(self.expr))
 
 
-class _MutableObjectiveCoefficient(object):
+class _MutableObjectiveCoefficient():
     def __init__(self, pyomo_var_id, var_map, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -113,7 +113,7 @@ class _MutableObjectiveCoefficient(object):
         self.highs.changeColCost(col_ndx, value(self.expr))
 
 
-class _MutableObjectiveOffset(object):
+class _MutableObjectiveOffset():
     def __init__(self, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -122,7 +122,7 @@ class _MutableObjectiveOffset(object):
         self.highs.changeObjectiveOffset(value(self.expr))
 
 
-class _MutableConstraintBounds(object):
+class _MutableConstraintBounds():
     def __init__(self, lower_expr, upper_expr, pyomo_con, con_map, highs):
         self.lower_expr = lower_expr
         self.upper_expr = upper_expr
@@ -147,14 +147,14 @@ class Highs(PersistentBase, PersistentSolver):
     def __init__(self, only_child_vars=False):
         super().__init__(only_child_vars=only_child_vars)
         self._config = HighsConfig()
-        self._solver_options = dict()
+        self._solver_options = {}
         self._solver_model = None
-        self._pyomo_var_to_solver_var_map = dict()
-        self._pyomo_con_to_solver_con_map = dict()
-        self._solver_con_to_pyomo_con_map = dict()
-        self._mutable_helpers = dict()
-        self._mutable_bounds = dict()
-        self._objective_helpers = list()
+        self._pyomo_var_to_solver_var_map = {}
+        self._pyomo_con_to_solver_con_map = {}
+        self._solver_con_to_pyomo_con_map = {}
+        self._mutable_helpers = {}
+        self._mutable_bounds = {}
+        self._objective_helpers = []
         self._last_results_object: Optional[HighsResults] = None
         self._sol = None
 
@@ -301,10 +301,10 @@ class Highs(PersistentBase, PersistentSolver):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
-        lbs = list()
-        ubs = list()
-        indices = list()
-        vtypes = list()
+        lbs = []
+        ubs = []
+        indices = []
+        vtypes = []
 
         current_num_vars = len(self._pyomo_var_to_solver_var_map)
         for v in variables:
@@ -360,11 +360,11 @@ class Highs(PersistentBase, PersistentSolver):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         current_num_cons = len(self._pyomo_con_to_solver_con_map)
-        lbs = list()
-        ubs = list()
-        starts = list()
-        var_indices = list()
-        coef_values = list()
+        lbs = []
+        ubs = []
+        starts = []
+        var_indices = []
+        coef_values = []
 
         for con in cons:
             repn = generate_standard_repn(
@@ -390,7 +390,7 @@ class Highs(PersistentBase, PersistentSolver):
                         highs=self._solver_model,
                     )
                     if con not in self._mutable_helpers:
-                        self._mutable_helpers[con] = list()
+                        self._mutable_helpers[con] = []
                     self._mutable_helpers[con].append(mutable_linear_coefficient)
                     if coef_val == 0:
                         continue
@@ -445,7 +445,7 @@ class Highs(PersistentBase, PersistentSolver):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
-        indices_to_remove = list()
+        indices_to_remove = []
         for con in cons:
             con_ndx = self._pyomo_con_to_solver_con_map.pop(con)
             del self._solver_con_to_pyomo_con_map[con_ndx]
@@ -455,7 +455,7 @@ class Highs(PersistentBase, PersistentSolver):
             len(indices_to_remove), np.array(indices_to_remove)
         )
         con_ndx = 0
-        new_con_map = dict()
+        new_con_map = {}
         for c in self._pyomo_con_to_solver_con_map.keys():
             new_con_map[c] = con_ndx
             con_ndx += 1
@@ -474,7 +474,7 @@ class Highs(PersistentBase, PersistentSolver):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
-        indices_to_remove = list()
+        indices_to_remove = []
         for v in variables:
             v_id = id(v)
             v_ndx = self._pyomo_var_to_solver_var_map.pop(v_id)
@@ -484,7 +484,7 @@ class Highs(PersistentBase, PersistentSolver):
             len(indices_to_remove), np.array(indices_to_remove)
         )
         v_ndx = 0
-        new_var_map = dict()
+        new_var_map = {}
         for v_id in self._pyomo_var_to_solver_var_map.keys():
             new_var_map[v_id] = v_ndx
             v_ndx += 1
@@ -497,10 +497,10 @@ class Highs(PersistentBase, PersistentSolver):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
-        indices = list()
-        lbs = list()
-        ubs = list()
-        vtypes = list()
+        indices = []
+        lbs = []
+        ubs = []
+        vtypes = []
 
         for v in variables:
             v_id = id(v)
@@ -541,7 +541,7 @@ class Highs(PersistentBase, PersistentSolver):
         n = len(self._pyomo_var_to_solver_var_map)
         indices = np.arange(n)
         costs = np.zeros(n, dtype=np.double)
-        self._objective_helpers = list()
+        self._objective_helpers = []
         if obj is None:
             sense = highspy.ObjSense.kMinimize
             self._solver_model.changeObjectiveOffset(0)
@@ -692,7 +692,7 @@ class Highs(PersistentBase, PersistentSolver):
 
         res = ComponentMap()
         if vars_to_load is None:
-            var_ids_to_load = list()
+            var_ids_to_load = []
             for v, ref_info in self._referenced_variables.items():
                 using_cons, using_sos, using_obj = ref_info
                 if using_cons or using_sos or (using_obj is not None):
@@ -737,7 +737,7 @@ class Highs(PersistentBase, PersistentSolver):
                 'check the termination condition.'
             )
 
-        res = dict()
+        res = {}
         if cons_to_load is None:
             cons_to_load = list(self._pyomo_con_to_solver_con_map.keys())
 
@@ -756,7 +756,7 @@ class Highs(PersistentBase, PersistentSolver):
                 'check the termination condition.'
             )
 
-        res = dict()
+        res = {}
         if cons_to_load is None:
             cons_to_load = list(self._pyomo_con_to_solver_con_map.keys())
 

@@ -24,8 +24,8 @@ def main(plot=True, n_points=200):
 
     # write a for loop to vary the value of parameter p from 1 to 10
     p_values = [float(i) for i in np.linspace(1, 10, n_points)]
-    obj_values = list()
-    x_values = list()
+    obj_values = []
+    x_values = []
     timer = HierarchicalTimer()  # create a timer for some basic profiling
     timer.start('p loop')
     for p_val in p_values:

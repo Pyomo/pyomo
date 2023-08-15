@@ -1,6 +1,6 @@
 import pyomo.environ as pe
 from pyomo.common.dependencies import attempt_import
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 
 parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
@@ -68,7 +68,7 @@ fixed variables
 
 
 def _load_tests(solver_list, only_child_vars_list):
-    res = list()
+    res = []
     for solver_name, solver in solver_list:
         for child_var_option in only_child_vars_list:
             test_name = f"{solver_name}_only_child_vars_{child_var_option}"
@@ -979,8 +979,8 @@ class TestSolvers(unittest.TestCase):
         m.x = pe.Var(m.jobs, m.tasks, bounds=(0, 1))
 
         random.seed(0)
-        coefs = list()
-        lin_vars = list()
+        coefs = []
+        lin_vars = []
         for j in m.jobs:
             for t in m.tasks:
                 coefs.append(random.uniform(0, 10))

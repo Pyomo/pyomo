@@ -45,7 +45,7 @@ class IpoptConfig(InterfaceConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super(IpoptConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -129,10 +129,10 @@ ipopt_command_line_options = {
 class Ipopt(PersistentSolver):
     def __init__(self, only_child_vars=False):
         self._config = IpoptConfig()
-        self._solver_options = dict()
+        self._solver_options = {}
         self._writer = NLWriter(only_child_vars=only_child_vars)
         self._filename = None
-        self._dual_sol = dict()
+        self._dual_sol = {}
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
         self._last_results_object: Optional[Results] = None
@@ -347,7 +347,7 @@ class Ipopt(PersistentSolver):
             + n_rc_lower
         ]
 
-        self._dual_sol = dict()
+        self._dual_sol = {}
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
 

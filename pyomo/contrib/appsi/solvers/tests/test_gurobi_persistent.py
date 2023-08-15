@@ -1,5 +1,5 @@
 from pyomo.common.errors import PyomoException
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 import pyomo.environ as pe
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.appsi.base import TerminationCondition

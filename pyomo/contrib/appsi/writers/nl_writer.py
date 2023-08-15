@@ -20,18 +20,18 @@ from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
 class NLWriter(PersistentBase):
     def __init__(self, only_child_vars=False):
-        super(NLWriter, self).__init__(only_child_vars=only_child_vars)
+        super().__init__(only_child_vars=only_child_vars)
         self._config = WriterConfig()
         self._writer = None
         self._symbol_map = SymbolMap()
         self._var_labeler = None
         self._con_labeler = None
         self._param_labeler = None
-        self._pyomo_var_to_solver_var_map = dict()
-        self._pyomo_con_to_solver_con_map = dict()
-        self._solver_var_to_pyomo_var_map = dict()
-        self._solver_con_to_pyomo_con_map = dict()
-        self._pyomo_param_to_solver_param_map = dict()
+        self._pyomo_var_to_solver_var_map = {}
+        self._pyomo_con_to_solver_con_map = {}
+        self._solver_var_to_pyomo_var_map = {}
+        self._solver_con_to_pyomo_con_map = {}
+        self._pyomo_param_to_solver_param_map = {}
         self._expr_types = None
 
     @property
@@ -172,8 +172,8 @@ class NLWriter(PersistentBase):
     def _set_objective(self, obj: _GeneralObjectiveData):
         if obj is None:
             const = cmodel.Constant(0)
-            lin_vars = list()
-            lin_coef = list()
+            lin_vars = []
+            lin_coef = []
             nonlin = cmodel.Constant(0)
             sense = 0
         else:
@@ -240,7 +240,7 @@ class NLWriter(PersistentBase):
         timer.stop('write file')
 
     def update(self, timer: HierarchicalTimer = None):
-        super(NLWriter, self).update(timer=timer)
+        super().update(timer=timer)
         self._set_pyomo_amplfunc_env()
 
     def get_ordered_vars(self):

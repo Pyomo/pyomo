@@ -37,16 +37,16 @@ class TestResults(unittest.TestCase):
         m.c1 = pe.Constraint(expr=m.x == 1)
         m.c2 = pe.Constraint(expr=m.y == 2)
 
-        primals = dict()
+        primals = {}
         primals[id(m.x)] = (m.x, 1)
         primals[id(m.y)] = (m.y, 2)
-        duals = dict()
+        duals = {}
         duals[m.c1] = 3
         duals[m.c2] = 4
-        rc = dict()
+        rc = {}
         rc[id(m.x)] = (m.x, 5)
         rc[id(m.y)] = (m.y, 6)
-        slacks = dict()
+        slacks = {}
         slacks[m.c1] = 7
         slacks[m.c2] = 8
 

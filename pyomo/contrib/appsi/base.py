@@ -72,61 +72,66 @@ class TerminationCondition(enum.Enum):
     An enumeration for checking the termination condition of solvers
     """
 
-    unknown = 42
     """unknown serves as both a default value, and it is used when no other enum member makes sense"""
+    unknown = 42
 
+    """The solver exited because the convergence criteria were satisfied"""
     convergenceCriteriaSatisfied = 0
-    """The solver exited with the optimal solution"""
 
-    maxTimeLimit = 1
     """The solver exited due to a time limit"""
+    maxTimeLimit = 1
 
-    maxIterations = 2
-    """The solver exited due to an iteration limit """
+    """The solver exited due to an iteration limit"""
+    iterationLimit = 2
 
-    objectiveLimit = 3
     """The solver exited due to an objective limit"""
+    objectiveLimit = 3
 
-    minStepLength = 4
     """The solver exited due to a minimum step length"""
+    minStepLength = 4
 
-    unbounded = 5
     """The solver exited because the problem is unbounded"""
+    unbounded = 5
 
-    infeasible = 6
-    """The solver exited because the problem is infeasible"""
+    """The solver exited because the problem is proven infeasible"""
+    provenInfeasible = 6
 
-    infeasibleOrUnbounded = 7
+    """The solver exited because the problem was found to be locally infeasible"""
+    locallyInfeasible = 7
+
     """The solver exited because the problem is either infeasible or unbounded"""
+    infeasibleOrUnbounded = 8
 
-    error = 8
     """The solver exited due to an error"""
+    error = 9
 
-    interrupted = 9
     """The solver exited because it was interrupted"""
+    interrupted = 10
 
-    licensingProblems = 10
     """The solver exited due to licensing problems"""
+    licensingProblems = 11
 
 
-class SolutionStatus(enum.Enum):
+class SolutionStatus(enum.IntEnum):
     """
-    An enumeration for interpreting the result of a termination
-
-    TODO: We may want to not use enum.Enum; we may want to use the flavor that allows sets
+    An enumeration for interpreting the result of a termination. This describes the designated
+    status by the solver to be loaded back into the model.
+    
+    For now, we are choosing to use IntEnum such that return values are numerically
+    assigned in increasing order.
     """
 
-    """No solution found"""
+    """No (single) solution found; possible that a population of solutions was returned"""
     noSolution = 0
 
-    """Locally optimal solution identified"""
-    locallyOptimal = 1
-
-    """Globally optimal solution identified"""
-    globallyOptimal = 2
+    """Solution point does not satisfy some domains and/or constraints"""
+    infeasible = 10
 
     """Feasible solution identified"""
-    feasible = 3
+    feasible = 20
+
+    """Optimal solution identified"""
+    optimal = 30
 
 
 # # InterfaceConfig
@@ -182,7 +187,7 @@ class InterfaceConfig(ConfigDict):
         implicit_domain=None,
         visibility=0,
     ):
-        super(InterfaceConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -223,7 +228,7 @@ class MIPInterfaceConfig(InterfaceConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super(MIPInterfaceConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -404,9 +409,9 @@ class SolutionLoader(SolutionLoaderBase):
                 'for the given problem type.'
             )
         if cons_to_load is None:
-            duals = dict(self._duals)
+            duals = {self._duals}
         else:
-            duals = dict()
+            duals = {}
             for c in cons_to_load:
                 duals[c] = self._duals[c]
         return duals
@@ -421,9 +426,9 @@ class SolutionLoader(SolutionLoaderBase):
                 'for the given problem type.'
             )
         if cons_to_load is None:
-            slacks = dict(self._slacks)
+            slacks = {self._slacks}
         else:
-            slacks = dict()
+            slacks = {}
             for c in cons_to_load:
                 slacks[c] = self._slacks[c]
         return slacks
@@ -446,7 +451,7 @@ class SolutionLoader(SolutionLoaderBase):
         return rc
 
 
-class Results(object):
+class Results():
     """
     Attributes
     ----------
@@ -526,7 +531,7 @@ class UpdateConfig(ConfigDict):
     ):
         if doc is None:
             doc = 'Configuration options to detect changes in model between solves'
-        super(UpdateConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -1031,23 +1036,23 @@ Notes:
 class PersistentBase(abc.ABC):
     def __init__(self, only_child_vars=False):
         self._model = None
-        self._active_constraints = dict()  # maps constraint to (lower, body, upper)
-        self._vars = dict()  # maps var id to (var, lb, ub, fixed, domain, value)
-        self._params = dict()  # maps param id to param
+        self._active_constraints = {}  # maps constraint to (lower, body, upper)
+        self._vars = {}  # maps var id to (var, lb, ub, fixed, domain, value)
+        self._params = {}  # maps param id to param
         self._objective = None
         self._objective_expr = None
         self._objective_sense = None
         self._named_expressions = (
-            dict()
+            {}
         )  # maps constraint to list of tuples (named_expr, named_expr.expr)
         self._external_functions = ComponentMap()
-        self._obj_named_expressions = list()
+        self._obj_named_expressions = []
         self._update_config = UpdateConfig()
         self._referenced_variables = (
-            dict()
+            {}
         )  # var_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
-        self._vars_referenced_by_con = dict()
-        self._vars_referenced_by_obj = list()
+        self._vars_referenced_by_con = {}
+        self._vars_referenced_by_obj = []
         self._expr_types = None
         self.use_extensions = False
         self._only_child_vars = only_child_vars
@@ -1081,7 +1086,7 @@ class PersistentBase(abc.ABC):
                 raise ValueError(
                     'variable {name} has already been added'.format(name=v.name)
                 )
-            self._referenced_variables[id(v)] = [dict(), dict(), None]
+            self._referenced_variables[id(v)] = [{}, {}, None]
             self._vars[id(v)] = (
                 v,
                 v._lb,
@@ -1106,24 +1111,24 @@ class PersistentBase(abc.ABC):
         pass
 
     def _check_for_new_vars(self, variables: List[_GeneralVarData]):
-        new_vars = dict()
+        new_vars = {}
         for v in variables:
             v_id = id(v)
             if v_id not in self._referenced_variables:
                 new_vars[v_id] = v
-        self.add_variables(list(new_vars.values()))
+        self.add_variables([new_vars.values()])
 
     def _check_to_remove_vars(self, variables: List[_GeneralVarData]):
-        vars_to_remove = dict()
+        vars_to_remove = {}
         for v in variables:
             v_id = id(v)
             ref_cons, ref_sos, ref_obj = self._referenced_variables[v_id]
             if len(ref_cons) == 0 and len(ref_sos) == 0 and ref_obj is None:
                 vars_to_remove[v_id] = v
-        self.remove_variables(list(vars_to_remove.values()))
+        self.remove_variables([vars_to_remove.values()])
 
     def add_constraints(self, cons: List[_GeneralConstraintData]):
-        all_fixed_vars = dict()
+        all_fixed_vars = {}
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError(
@@ -1165,7 +1170,7 @@ class PersistentBase(abc.ABC):
             variables = con.get_variables()
             if not self._only_child_vars:
                 self._check_for_new_vars(variables)
-            self._named_expressions[con] = list()
+            self._named_expressions[con] = []
             self._vars_referenced_by_con[con] = variables
             for v in variables:
                 self._referenced_variables[id(v)][1][con] = None
@@ -1206,20 +1211,20 @@ class PersistentBase(abc.ABC):
             for v in fixed_vars:
                 v.fix()
         else:
-            self._vars_referenced_by_obj = list()
+            self._vars_referenced_by_obj = []
             self._objective = None
             self._objective_expr = None
             self._objective_sense = None
-            self._obj_named_expressions = list()
+            self._obj_named_expressions = []
             self._set_objective(obj)
 
     def add_block(self, block):
-        param_dict = dict()
+        param_dict = {}
         for p in block.component_objects(Param, descend_into=True):
             if p.mutable:
                 for _p in p.values():
                     param_dict[id(_p)] = _p
-        self.add_params(list(param_dict.values()))
+        self.add_params([param_dict.values()])
         if self._only_child_vars:
             self.add_variables(
                 list(
@@ -1230,20 +1235,10 @@ class PersistentBase(abc.ABC):
                 )
             )
         self.add_constraints(
-            [
-                con
-                for con in block.component_data_objects(
-                    Constraint, descend_into=True, active=True
-                )
-            ]
+            list(block.component_data_objects(Constraint, descend_into=True, active=True))
         )
         self.add_sos_constraints(
-            [
-                con
-                for con in block.component_data_objects(
-                    SOSConstraint, descend_into=True, active=True
-                )
-            ]
+            list(block.component_data_objects(SOSConstraint, descend_into=True, active=True))
         )
         obj = get_objective(block)
         if obj is not None:
@@ -1326,20 +1321,10 @@ class PersistentBase(abc.ABC):
 
     def remove_block(self, block):
         self.remove_constraints(
-            [
-                con
-                for con in block.component_data_objects(
-                    ctype=Constraint, descend_into=True, active=True
-                )
-            ]
+            list(block.component_data_objects(ctype=Constraint, descend_into=True, active=True))
         )
         self.remove_sos_constraints(
-            [
-                con
-                for con in block.component_data_objects(
-                    ctype=SOSConstraint, descend_into=True, active=True
-                )
-            ]
+            list(block.component_data_objects(ctype=SOSConstraint, descend_into=True, active=True))
         )
         if self._only_child_vars:
             self.remove_variables(
@@ -1387,17 +1372,17 @@ class PersistentBase(abc.ABC):
         if timer is None:
             timer = HierarchicalTimer()
         config = self.update_config
-        new_vars = list()
-        old_vars = list()
-        new_params = list()
-        old_params = list()
-        new_cons = list()
-        old_cons = list()
-        old_sos = list()
-        new_sos = list()
-        current_vars_dict = dict()
-        current_cons_dict = dict()
-        current_sos_dict = dict()
+        new_vars = []
+        old_vars = []
+        new_params = []
+        old_params = []
+        new_cons = []
+        old_cons = []
+        old_sos = []
+        new_sos = []
+        current_vars_dict = {}
+        current_cons_dict = {}
+        current_sos_dict = {}
         timer.start('vars')
         if self._only_child_vars and (
             config.check_for_new_or_removed_vars or config.update_vars
@@ -1417,7 +1402,7 @@ class PersistentBase(abc.ABC):
         timer.stop('vars')
         timer.start('params')
         if config.check_for_new_or_removed_params:
-            current_params_dict = dict()
+            current_params_dict = {}
             for p in self._model.component_objects(Param, descend_into=True):
                 if p.mutable:
                     for _p in p.values():
@@ -1482,11 +1467,11 @@ class PersistentBase(abc.ABC):
         new_cons_set = set(new_cons)
         new_sos_set = set(new_sos)
         new_vars_set = set(id(v) for v in new_vars)
-        cons_to_remove_and_add = dict()
+        cons_to_remove_and_add = {}
         need_to_set_objective = False
         if config.update_constraints:
-            cons_to_update = list()
-            sos_to_update = list()
+            cons_to_update = []
+            sos_to_update = []
             for c in current_cons_dict.keys():
                 if c not in new_cons_set:
                     cons_to_update.append(c)
@@ -1524,7 +1509,7 @@ class PersistentBase(abc.ABC):
         timer.stop('cons')
         timer.start('vars')
         if self._only_child_vars and config.update_vars:
-            vars_to_check = list()
+            vars_to_check = []
             for v_id, v in current_vars_dict.items():
                 if v_id not in new_vars_set:
                     vars_to_check.append(v)
@@ -1532,7 +1517,7 @@ class PersistentBase(abc.ABC):
             end_vars = {v_id: v_tuple[0] for v_id, v_tuple in self._vars.items()}
             vars_to_check = [v for v_id, v in end_vars.items() if v_id in start_vars]
         if config.update_vars:
-            vars_to_update = list()
+            vars_to_update = []
             for v in vars_to_check:
                 _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
                 if lb is not v._lb:
@@ -1557,7 +1542,7 @@ class PersistentBase(abc.ABC):
         timer.stop('cons')
         timer.start('named expressions')
         if config.update_named_expressions:
-            cons_to_update = list()
+            cons_to_update = []
             for c, expr_list in self._named_expressions.items():
                 if c in new_cons_set:
                     continue
@@ -1599,12 +1584,13 @@ class PersistentBase(abc.ABC):
 legacy_termination_condition_map = {
     TerminationCondition.unknown: LegacyTerminationCondition.unknown,
     TerminationCondition.maxTimeLimit: LegacyTerminationCondition.maxTimeLimit,
-    TerminationCondition.maxIterations: LegacyTerminationCondition.maxIterations,
+    TerminationCondition.iterationLimit: LegacyTerminationCondition.maxIterations,
     TerminationCondition.objectiveLimit: LegacyTerminationCondition.minFunctionValue,
     TerminationCondition.minStepLength: LegacyTerminationCondition.minStepLength,
-    TerminationCondition.ok: LegacyTerminationCondition.optimal,
+    TerminationCondition.convergenceCriteriaSatisfied: LegacyTerminationCondition.optimal,
     TerminationCondition.unbounded: LegacyTerminationCondition.unbounded,
-    TerminationCondition.infeasible: LegacyTerminationCondition.infeasible,
+    TerminationCondition.provenInfeasible: LegacyTerminationCondition.infeasible,
+    TerminationCondition.locallyInfeasible: LegacyTerminationCondition.infeasible,
     TerminationCondition.infeasibleOrUnbounded: LegacyTerminationCondition.infeasibleOrUnbounded,
     TerminationCondition.error: LegacyTerminationCondition.error,
     TerminationCondition.interrupted: LegacyTerminationCondition.resourceInterrupt,
@@ -1615,12 +1601,13 @@ legacy_termination_condition_map = {
 legacy_solver_status_map = {
     TerminationCondition.unknown: LegacySolverStatus.unknown,
     TerminationCondition.maxTimeLimit: LegacySolverStatus.aborted,
-    TerminationCondition.maxIterations: LegacySolverStatus.aborted,
+    TerminationCondition.iterationLimit: LegacySolverStatus.aborted,
     TerminationCondition.objectiveLimit: LegacySolverStatus.aborted,
     TerminationCondition.minStepLength: LegacySolverStatus.error,
-    TerminationCondition.ok: LegacySolverStatus.ok,
+    TerminationCondition.convergenceCriteriaSatisfied: LegacySolverStatus.ok,
     TerminationCondition.unbounded: LegacySolverStatus.error,
-    TerminationCondition.infeasible: LegacySolverStatus.error,
+    TerminationCondition.provenInfeasible: LegacySolverStatus.error,
+    TerminationCondition.locallyInfeasible: LegacySolverStatus.error,
     TerminationCondition.infeasibleOrUnbounded: LegacySolverStatus.error,
     TerminationCondition.error: LegacySolverStatus.error,
     TerminationCondition.interrupted: LegacySolverStatus.aborted,
@@ -1631,12 +1618,13 @@ legacy_solver_status_map = {
 legacy_solution_status_map = {
     TerminationCondition.unknown: LegacySolutionStatus.unknown,
     TerminationCondition.maxTimeLimit: LegacySolutionStatus.stoppedByLimit,
-    TerminationCondition.maxIterations: LegacySolutionStatus.stoppedByLimit,
+    TerminationCondition.iterationLimit: LegacySolutionStatus.stoppedByLimit,
     TerminationCondition.objectiveLimit: LegacySolutionStatus.stoppedByLimit,
     TerminationCondition.minStepLength: LegacySolutionStatus.error,
-    TerminationCondition.ok: LegacySolutionStatus.optimal,
+    TerminationCondition.convergenceCriteriaSatisfied: LegacySolutionStatus.optimal,
     TerminationCondition.unbounded: LegacySolutionStatus.unbounded,
-    TerminationCondition.infeasible: LegacySolutionStatus.infeasible,
+    TerminationCondition.provenInfeasible: LegacySolutionStatus.infeasible,
+    TerminationCondition.locallyInfeasible: LegacySolutionStatus.infeasible,
     TerminationCondition.infeasibleOrUnbounded: LegacySolutionStatus.unsure,
     TerminationCondition.error: LegacySolutionStatus.error,
     TerminationCondition.interrupted: LegacySolutionStatus.error,
@@ -1644,7 +1632,7 @@ legacy_solution_status_map = {
 }
 
 
-class LegacySolverInterface(object):
+class LegacySolverInterface():
     def solve(
         self,
         model: _BlockData,
@@ -1683,7 +1671,7 @@ class LegacySolverInterface(object):
         if options is not None:
             self.options = options
 
-        results: Results = super(LegacySolverInterface, self).solve(model)
+        results: Results = super().solve(model)
 
         legacy_results = LegacySolverResults()
         legacy_soln = LegacySolution()
@@ -1760,7 +1748,7 @@ class LegacySolverInterface(object):
         return legacy_results
 
     def available(self, exception_flag=True):
-        ans = super(LegacySolverInterface, self).available()
+        ans = super().available()
         if exception_flag and not ans:
             raise ApplicationError(f'Solver {self.__class__} is not available ({ans}).')
         return bool(ans)

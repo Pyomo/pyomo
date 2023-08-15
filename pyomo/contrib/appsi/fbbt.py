@@ -35,7 +35,7 @@ class IntervalConfig(ConfigDict):
         implicit_domain=None,
         visibility=0,
     ):
-        super(IntervalConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -62,14 +62,14 @@ class IntervalConfig(ConfigDict):
 
 class IntervalTightener(PersistentBase):
     def __init__(self):
-        super(IntervalTightener, self).__init__()
+        super().__init__()
         self._config = IntervalConfig()
         self._cmodel = None
-        self._var_map = dict()
-        self._con_map = dict()
-        self._param_map = dict()
-        self._rvar_map = dict()
-        self._rcon_map = dict()
+        self._var_map = {}
+        self._con_map = {}
+        self._param_map = {}
+        self._rvar_map = {}
+        self._rcon_map = {}
         self._pyomo_expr_types = cmodel.PyomoExprTypes()
         self._symbolic_solver_labels: bool = False
         self._symbol_map = SymbolMap()
@@ -254,7 +254,7 @@ class IntervalTightener(PersistentBase):
                 self._vars[v_id] = (_v, _lb, cv_ub, _fixed, _domain, _value)
 
     def _deactivate_satisfied_cons(self):
-        cons_to_deactivate = list()
+        cons_to_deactivate = []
         if self.config.deactivate_satisfied_constraints:
             for c, cc in self._con_map.items():
                 if not cc.active:

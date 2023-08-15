@@ -17,7 +17,7 @@ from ..cmodel import cmodel, cmodel_available
 
 class LPWriter(PersistentBase):
     def __init__(self, only_child_vars=False):
-        super(LPWriter, self).__init__(only_child_vars=only_child_vars)
+        super().__init__(only_child_vars=only_child_vars)
         self._config = WriterConfig()
         self._writer = None
         self._symbol_map = SymbolMap()
@@ -25,11 +25,11 @@ class LPWriter(PersistentBase):
         self._con_labeler = None
         self._param_labeler = None
         self._obj_labeler = None
-        self._pyomo_var_to_solver_var_map = dict()
-        self._pyomo_con_to_solver_con_map = dict()
-        self._solver_var_to_pyomo_var_map = dict()
-        self._solver_con_to_pyomo_con_map = dict()
-        self._pyomo_param_to_solver_param_map = dict()
+        self._pyomo_var_to_solver_var_map = {}
+        self._pyomo_con_to_solver_con_map = {}
+        self._solver_var_to_pyomo_var_map = {}
+        self._solver_con_to_pyomo_con_map = {}
+        self._pyomo_param_to_solver_param_map = {}
         self._expr_types = None
 
     @property
@@ -89,7 +89,7 @@ class LPWriter(PersistentBase):
             self._pyomo_param_to_solver_param_map[id(p)] = cp
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
-        cmodel.process_lp_constraints(cons, self)
+        cmodel.process_lp_constraints()
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) != 0:

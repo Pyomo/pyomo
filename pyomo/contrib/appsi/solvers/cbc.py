@@ -42,7 +42,7 @@ class CbcConfig(InterfaceConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super(CbcConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -66,12 +66,12 @@ class CbcConfig(InterfaceConfig):
 class Cbc(PersistentSolver):
     def __init__(self, only_child_vars=False):
         self._config = CbcConfig()
-        self._solver_options = dict()
+        self._solver_options = {}
         self._writer = LPWriter(only_child_vars=only_child_vars)
         self._filename = None
-        self._dual_sol = dict()
-        self._primal_sol = dict()
-        self._reduced_costs = dict()
+        self._dual_sol = {}
+        self._primal_sol = {}
+        self._reduced_costs = {}
         self._last_results_object: Optional[Results] = None
 
     def available(self):
@@ -261,9 +261,9 @@ class Cbc(PersistentSolver):
                     first_var_line = ndx
         last_var_line = len(all_lines) - 1
 
-        self._dual_sol = dict()
-        self._primal_sol = dict()
-        self._reduced_costs = dict()
+        self._dual_sol = {}
+        self._primal_sol = {}
+        self._reduced_costs = {}
 
         symbol_map = self._writer.symbol_map
 
@@ -362,7 +362,7 @@ class Cbc(PersistentSolver):
                 yield tmp_k, tmp_v
 
         cmd = [str(config.executable)]
-        action_options = list()
+        action_options = []
         if config.time_limit is not None:
             cmd.extend(['-sec', str(config.time_limit)])
             cmd.extend(['-timeMode', 'elapsed'])

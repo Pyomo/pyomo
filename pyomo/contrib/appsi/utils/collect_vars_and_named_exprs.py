@@ -4,10 +4,10 @@ import pyomo.core.expr as EXPR
 
 class _VarAndNamedExprCollector(ExpressionValueVisitor):
     def __init__(self):
-        self.named_expressions = dict()
-        self.variables = dict()
-        self.fixed_vars = dict()
-        self._external_functions = dict()
+        self.named_expressions = {}
+        self.variables = {}
+        self.fixed_vars = {}
+        self._external_functions = {}
 
     def visit(self, node, values):
         pass
