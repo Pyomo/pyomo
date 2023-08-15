@@ -34,7 +34,7 @@ from pyomo.gdp.util import GDP_Error
     """,
 )
 class TransformCurrentDisjunctiveState(Transformation):
-    """This transformation finds disjunctive state (indicator_vars values)
+    """This transformation finds disjunctive state (indicator_var values)
     in the given GDP, and, for any Disjunction, when the state fully
     determines what Disjunct will be selected, it reclassifies all the Disjuncts
     of the Disjunction as Blocks, and activates or deactivates them according
