@@ -13,6 +13,7 @@ from pyomo.common.errors import InfeasibleConstraintException
 import pyomo.common.unittest as unittest
 from pyomo.environ import Block, ConcreteModel, Constraint, TransformationFactory
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp.util import GDP_Error
 
 
 class TestTransformCurrentDisjunctiveState(unittest.TestCase):
@@ -190,7 +191,7 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
 
         self.assertTrue(m.disjunction2.active)
 
-    def test_partial_reverse(self):
+    def test_no_partial_reverse(self):
         m = self.make_two_term_disjunction()
         self.add_three_term_disjunction(m)
 
@@ -205,29 +206,16 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
 
         self.check_fixed_mip(m)
 
-        TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
-            m, reverse=reverse, targets=m.disjunction2
-        )
-
-        self.assertFalse(m.d[1].indicator_var.fixed)
-        self.assertIsNone(m.d[1].indicator_var.value)
-        self.assertTrue(m.d[1].active)
-        self.assertIs(m.d[1].ctype, Disjunct)
-
-        self.assertFalse(m.d[2].indicator_var.fixed)
-        self.assertTrue(m.d[2].indicator_var.value)
-        self.assertTrue(m.d[2].active)
-        self.assertIs(m.d[2].ctype, Disjunct)
-
-        self.assertFalse(m.d[3].indicator_var.fixed)
-        self.assertFalse(m.d[3].indicator_var.value)
-        self.assertTrue(m.d[3].active)
-        self.assertIs(m.d[3].ctype, Disjunct)
-
-        self.assertTrue(m.disjunction2.active)
-
-        # But the other disjunction is still transformed
-        self.check_fixed_mip(m)
+        with self.assertRaisesRegex(
+                ValueError,
+                "The 'gdp.transform_current_disjunctive_state' transformation "
+                "cannot be called with both targets and a reverse token "
+                "specified. If reversing the transformation, do not include "
+                "targets: The reverse transformation will restore all the "
+                "components the original transformation call transformed."):
+            TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(
+                m, reverse=reverse, targets=m.disjunction2
+            )
 
     def test_at_least_one_disjunction(self):
         m = ConcreteModel()
@@ -295,7 +283,7 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
         ):
             TransformationFactory('gdp.transform_current_disjunctive_state').apply_to(m)
 
-    def test_partial_transformation_indexed_disjuncts(self):
+    def test_not_enough_info_to_fully_transform(self):
         m = ConcreteModel()
         m.d = Disjunct([1, 2, 3, 4])
         m.disj1 = Disjunction(expr=[m.d[1], m.d[2]])
@@ -303,28 +291,59 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
 
         m.d[1].indicator_var = True
 
-        reverse = TransformationFactory(
-            'gdp.transform_current_disjunctive_state').apply_to(m)
+        with self.assertRaisesRegex(
+                GDP_Error,
+                "Disjunction 'disj2' does not contain enough Disjuncts with "
+                "values in their indicator_vars to specify which Disjuncts "
+                "are True. Cannot fully transform model."
+        ):
+            reverse = TransformationFactory(
+                'gdp.transform_current_disjunctive_state').apply_to(m)
 
-        self.assertTrue(m.d[1].active)
-        self.assertTrue(m.d[1].ctype, Block)
-        self.assertFalse(m.d[2].active)
-        self.assertTrue(m.d[3].active)
-        self.assertIs(m.d[3].ctype, Disjunct)
-        self.assertTrue(m.d[4].active)
-        self.assertIs(m.d[4].ctype, Disjunct)
-        self.assertFalse(m.disj1.active)
-        self.assertTrue(m.disj2.active)
+    def test_not_enough_info_in_single_disjunction_to_fully_transform_xor(self):
+        m = ConcreteModel()
+        m.d = Disjunct([1, 2, 3, 4])
+        m.disj1 = Disjunction(expr=[m.d[1], m.d[2], m.d[3], m.d[4]])
+        m.d[1].indicator_var = False
+        m.d[2].indicator_var = False
 
-        TransformationFactory(
-            'gdp.transform_current_disjunctive_state').apply_to(m)
-        self.assertTrue(m.d[1].active)
-        self.assertTrue(m.d[2].active)
-        self.assertTrue(m.d[3].active)
-        self.assertTrue(m.d[4].active)
-        self.assertIs(m.d[1].ctype, Disjunct)
-        self.assertIs(m.d[2].ctype, Disjunct)
-        self.assertIs(m.d[3].ctype, Disjunct)
-        self.assertIs(m.d[4].ctype, Disjunct)
-        self.assertTrue(m.disj1.active)
-        self.assertTrue(m.disj2.active)
+        with self.assertRaisesRegex(
+                GDP_Error,
+                "Disjunction 'disj1' does not contain enough Disjuncts with "
+                "values in their indicator_vars to specify which Disjuncts "
+                "are True. Cannot fully transform model."
+        ):
+            reverse = TransformationFactory(
+                'gdp.transform_current_disjunctive_state').apply_to(m)
+
+    def test_not_enough_info_in_single_disjunction_to_fully_transform_or(self):
+        m = ConcreteModel()
+        m.d = Disjunct([1, 2, 3, 4])
+        m.disj1 = Disjunction(expr=[m.d[1], m.d[2], m.d[3], m.d[4]], xor=False)
+        m.d[1].indicator_var = True
+        m.d[2].indicator_var = False
+
+        with self.assertRaisesRegex(
+                GDP_Error,
+                "Disjunction 'disj1' does not contain enough Disjuncts with "
+                "values in their indicator_vars to specify which Disjuncts "
+                "are True. Cannot fully transform model."
+        ):
+            reverse = TransformationFactory(
+                'gdp.transform_current_disjunctive_state').apply_to(m)
+
+    def test_complain_about_dangling_disjuncts(self):
+        m = ConcreteModel()
+        m.d = Disjunct([1, 2, 3, 4])
+        m.disj1 = Disjunction(expr=[m.d[1], m.d[2], m.d[3]])
+        m.d[1].indicator_var = True
+
+        with self.assertRaisesRegex(
+                GDP_Error,
+                "Found active Disjuncts on the model that "
+                "were not included in any Disjunctions:\nd\[4\]\nPlease "
+                "deactivate them or include them in a Disjunction."
+        ):
+            reverse = TransformationFactory(
+                'gdp.transform_current_disjunctive_state').apply_to(m)
+        
