@@ -344,9 +344,9 @@ class TestTransformCurrentDisjunctiveState(unittest.TestCase):
 
         with self.assertRaisesRegex(
             GDP_Error,
-            "Found active Disjuncts on the model that "
-            "were not included in any Disjunctions:\nd\[4\]\nPlease "
-            "deactivate them or include them in a Disjunction.",
+            r"Found active Disjuncts on the model that "
+            r"were not included in any Disjunctions:\nd\[4\]\nPlease "
+            r"deactivate them or include them in a Disjunction.",
         ):
             reverse = TransformationFactory(
                 'gdp.transform_current_disjunctive_state'
