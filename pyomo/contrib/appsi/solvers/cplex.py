@@ -292,7 +292,7 @@ class Cplex(PersistentSolver):
         elif status in [3, 103]:
             results.termination_condition = TerminationCondition.infeasible
         elif status in [10]:
-            results.termination_condition = TerminationCondition.maxIterations
+            results.termination_condition = TerminationCondition.iterationLimit
         elif status in [11, 25, 107, 131]:
             results.termination_condition = TerminationCondition.maxTimeLimit
         else:

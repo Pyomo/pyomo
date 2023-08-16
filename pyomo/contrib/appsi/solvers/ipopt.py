@@ -16,7 +16,7 @@ import math
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.visitor import replace_expressions
-from typing import Optional, Sequence, NoReturn, List, Mapping
+from typing import Optional, Sequence, List, Mapping
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.block import _BlockData
@@ -305,11 +305,11 @@ class Ipopt(PersistentSolver):
         if 'Optimal Solution Found' in termination_line:
             results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
         elif 'Problem may be infeasible' in termination_line:
-            results.termination_condition = TerminationCondition.infeasible
+            results.termination_condition = TerminationCondition.locallyInfeasible
         elif 'problem might be unbounded' in termination_line:
             results.termination_condition = TerminationCondition.unbounded
         elif 'Maximum Number of Iterations Exceeded' in termination_line:
-            results.termination_condition = TerminationCondition.maxIterations
+            results.termination_condition = TerminationCondition.iterationLimit
         elif 'Maximum CPU Time Exceeded' in termination_line:
             results.termination_condition = TerminationCondition.maxTimeLimit
         else:

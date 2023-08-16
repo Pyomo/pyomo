@@ -612,7 +612,7 @@ class Highs(PersistentBase, PersistentSolver):
         elif status == highspy.HighsModelStatus.kOptimal:
             results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
         elif status == highspy.HighsModelStatus.kInfeasible:
-            results.termination_condition = TerminationCondition.infeasible
+            results.termination_condition = TerminationCondition.provenInfeasible
         elif status == highspy.HighsModelStatus.kUnboundedOrInfeasible:
             results.termination_condition = TerminationCondition.infeasibleOrUnbounded
         elif status == highspy.HighsModelStatus.kUnbounded:
@@ -624,7 +624,7 @@ class Highs(PersistentBase, PersistentSolver):
         elif status == highspy.HighsModelStatus.kTimeLimit:
             results.termination_condition = TerminationCondition.maxTimeLimit
         elif status == highspy.HighsModelStatus.kIterationLimit:
-            results.termination_condition = TerminationCondition.maxIterations
+            results.termination_condition = TerminationCondition.iterationLimit
         elif status == highspy.HighsModelStatus.kUnknown:
             results.termination_condition = TerminationCondition.unknown
         else:
@@ -637,7 +637,7 @@ class Highs(PersistentBase, PersistentSolver):
             has_feasible_solution = True
         elif results.termination_condition in {
             TerminationCondition.objectiveLimit,
-            TerminationCondition.maxIterations,
+            TerminationCondition.iterationLimit,
             TerminationCondition.maxTimeLimit,
         }:
             if self._sol.value_valid:

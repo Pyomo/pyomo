@@ -1014,7 +1014,7 @@ class TestSolvers(unittest.TestCase):
         if type(opt) is Cbc:  # I can't figure out why CBC is reporting max iter...
             self.assertIn(
                 res.termination_condition,
-                {TerminationCondition.maxIterations, TerminationCondition.maxTimeLimit},
+                {TerminationCondition.iterationLimit, TerminationCondition.maxTimeLimit},
             )
         else:
             self.assertEqual(

@@ -242,7 +242,7 @@ class Cbc(PersistentSolver):
             results.termination_condition = TerminationCondition.maxTimeLimit
             obj_val = float(termination_line.split()[-1])
         elif termination_line.startswith('stopped on iterations'):
-            results.termination_condition = TerminationCondition.maxIterations
+            results.termination_condition = TerminationCondition.iterationLimit
             obj_val = float(termination_line.split()[-1])
         else:
             results.termination_condition = TerminationCondition.unknown

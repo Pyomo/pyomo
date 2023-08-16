@@ -884,9 +884,9 @@ class Gurobi(PersistentBase, PersistentSolver):
         elif status == grb.CUTOFF:
             results.termination_condition = TerminationCondition.objectiveLimit
         elif status == grb.ITERATION_LIMIT:
-            results.termination_condition = TerminationCondition.maxIterations
+            results.termination_condition = TerminationCondition.iterationLimit
         elif status == grb.NODE_LIMIT:
-            results.termination_condition = TerminationCondition.maxIterations
+            results.termination_condition = TerminationCondition.iterationLimit
         elif status == grb.TIME_LIMIT:
             results.termination_condition = TerminationCondition.maxTimeLimit
         elif status == grb.SOLUTION_LIMIT:

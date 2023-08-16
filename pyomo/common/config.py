@@ -2019,7 +2019,7 @@ class ConfigBase(object):
                 )
         if item_body is not None:
             deprecation_warning(
-                f"Overriding 'item_body' by passing strings to "
+                f"Overriding '{item_body}' by passing strings to "
                 "generate_documentation is deprecated.  Create an instance of a "
                 "StringConfigFormatter and pass it as the 'format' argument.",
                 version='6.6.0',

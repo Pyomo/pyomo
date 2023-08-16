@@ -486,7 +486,7 @@ class Results():
         ...     print('sub-optimal but feasible solution found: ', results.best_feasible_objective) #doctest:+SKIP
         ...     results.solution_loader.load_vars(vars_to_load=[m.x]) #doctest:+SKIP
         ...     print('The value of x in the feasible solution is ', m.x.value) #doctest:+SKIP
-        ... elif results.termination_condition in {appsi.base.TerminationCondition.maxIterations, appsi.base.TerminationCondition.maxTimeLimit}: #doctest:+SKIP
+        ... elif results.termination_condition in {appsi.base.TerminationCondition.iterationLimit, appsi.base.TerminationCondition.maxTimeLimit}: #doctest:+SKIP
         ...     print('No feasible solution was found. The best lower bound found was ', results.best_objective_bound) #doctest:+SKIP
         ... else: #doctest:+SKIP
         ...     print('The following termination condition was encountered: ', results.termination_condition) #doctest:+SKIP
