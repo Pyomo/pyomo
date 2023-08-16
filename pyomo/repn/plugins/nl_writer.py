@@ -76,6 +76,7 @@ from pyomo.repn.util import (
     categorize_valid_components,
     complex_number_error,
     initialize_var_map_from_column_order,
+    int_float,
     ordered_active_constraints,
 )
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
@@ -354,8 +355,10 @@ class _SuffixData(object):
     def update(self, suffix):
         missing_component = missing_other = 0
         self.datatype.add(suffix.datatype)
-        for item in suffix.items():
-            missing = self._store(*item)
+        for obj, val in suffix.items():
+            if val.__class__ not in int_float:
+                val = float(val)
+            missing = self._store(obj, val)
             if missing:
                 if missing > 0:
                     missing_component += missing
@@ -376,6 +379,8 @@ class _SuffixData(object):
             )
 
     def store(self, obj, val):
+        if val.__class__ not in int_float:
+            val = float(val)
         missing = self._store(obj, val)
         if not missing:
             return
@@ -560,15 +565,21 @@ class _NLWriter_impl(object):
             if expr.named_exprs:
                 self._record_named_expression_usage(expr.named_exprs, con, 0)
             lb = con.lb
-            if lb == minus_inf:
-                lb = None
-            elif lb is not None:
-                lb = repr(lb - expr.const)
+            if lb is not None:
+                if lb.__class__ not in int_float:
+                    lb = float(lb)
+                if lb == minus_inf:
+                    lb = None
+                else:
+                    lb = repr(lb - expr.const)
             ub = con.ub
-            if ub == inf:
-                ub = None
-            elif ub is not None:
-                ub = repr(ub - expr.const)
+            if ub is not None:
+                if ub.__class__ not in int_float:
+                    ub = float(ub)
+                if ub == inf:
+                    ub = None
+                else:
+                    ub = repr(ub - expr.const)
             _type = _RANGE_TYPE(lb, ub)
             if _type == 4:
                 n_equality += 1
@@ -807,14 +818,20 @@ class _NLWriter_impl(object):
         for idx, _id in enumerate(variables):
             v = var_map[_id]
             lb, ub = v.bounds
-            if lb == minus_inf:
-                lb = None
-            elif lb is not None:
-                lb = repr(lb)
-            if ub == inf:
-                ub = None
-            elif ub is not None:
-                ub = repr(ub)
+            if lb is not None:
+                if lb.__class__ not in int_float:
+                    lb = float(lb)
+                if lb == minus_inf:
+                    lb = None
+                else:
+                    lb = repr(lb)
+            if ub is not None:
+                if ub.__class__ not in int_float:
+                    ub = float(ub)
+                if ub == inf:
+                    ub = None
+                else:
+                    ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
 
@@ -1118,6 +1135,7 @@ class _NLWriter_impl(object):
                 if not _vals:
                     continue
                 ostream.write(f"S{_field|_float} {len(_vals)} {name}\n")
+                # Note: _SuffixData store/update guarantee the value is int/float
                 ostream.write(
                     ''.join(f"{_id} {_vals[_id]!r}\n" for _id in sorted(_vals))
                 )
@@ -1207,6 +1225,7 @@ class _NLWriter_impl(object):
                 logger.warning("ignoring 'dual' suffix for Model")
             if _data.con:
                 ostream.write(f"d{len(_data.con)}\n")
+                # Note: _SuffixData store/update guarantee the value is int/float
                 ostream.write(
                     ''.join(f"{_id} {_data.con[_id]!r}\n" for _id in sorted(_data.con))
                 )
@@ -1215,15 +1234,16 @@ class _NLWriter_impl(object):
         # "x" lines (variable initialization)
         #
         _init_lines = [
-            f'{var_idx} {info[0].value!r}{col_comments[var_idx]}\n'
-            for var_idx, info in enumerate(variables)
-            if info[0].value is not None
+            (var_idx, val if val.__class__ in int_float else float(val))
+            for var_idx, val in enumerate(v[0].value for v in variables)
+            if val is not None
         ]
         ostream.write(
             'x%d%s\n'
             % (len(_init_lines), "\t# initial guess" if symbolic_solver_labels else '')
         )
-        ostream.write(''.join(_init_lines))
+        ostream.write(''.join(f'{var_idx} {val!r}{col_comments[var_idx]}\n'
+                              for var_idx, val in _init_lines))
 
         #
         # "r" lines (constraint bounds)
@@ -1308,7 +1328,10 @@ class _NLWriter_impl(object):
                 continue
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
             for _id in sorted(linear.keys(), key=column_order.__getitem__):
-                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+                val = linear[_id]
+                if val.__class__ not in int_float:
+                    val = float(val)
+                ostream.write(f'{column_order[_id]} {val!r}\n')
 
         #
         # "G" lines (non-empty terms in the Objective)
@@ -1321,7 +1344,10 @@ class _NLWriter_impl(object):
                 continue
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
             for _id in sorted(linear.keys(), key=column_order.__getitem__):
-                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+                val = linear[_id]
+                if val.__class__ not in int_float:
+                    val = float(val)
+                ostream.write(f'{column_order[_id]} {val!r}\n')
 
         # Generate the return information
         info = NLWriterInfo(
@@ -1478,10 +1504,10 @@ class _NLWriter_impl(object):
             if include_const and repn.const:
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
-                nl = self.template.binary_sum + nl + (self.template.const % repn.const)
+                nl = self.template.binary_sum + nl + (self.template.const % (repn.const if repn.const.__class__ in int_float else float(repn.const)))
             self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
         elif include_const:
-            self.ostream.write(self.template.const % repn.const)
+            self.ostream.write(self.template.const % (repn.const if repn.const.__class__ in int_float else float(repn.const)))
         else:
             self.ostream.write(self.template.const % 0)
 
@@ -1501,7 +1527,10 @@ class _NLWriter_impl(object):
         #
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
         for _id in sorted(linear, key=column_order.__getitem__):
-            ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+            val = linear[_id]
+            if val.__class__ not in int_float:
+                val = float(val)
+            ostream.write(f'{column_order[_id]} {val!r}\n')
         self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1
 
@@ -1626,7 +1655,7 @@ class AMPLRepn(object):
                 args.extend(self.nonlinear[1])
         if self.const:
             nterms += 1
-            nl_sum += template.const % self.const
+            nl_sum += template.const % (self.const if self.const.__class__ in int_float else float(self.const))
 
         if nterms > 2:
             return (prefix + (template.nary_sum % nterms) + nl_sum, args, named_exprs)

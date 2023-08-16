@@ -45,6 +45,7 @@ from pyomo.repn.util import (
     FileDeterminism_to_SortComponents,
     categorize_valid_components,
     initialize_var_map_from_column_order,
+    int_float,
     ordered_active_constraints,
 )
 
@@ -383,7 +384,18 @@ class _LPWriter_impl(object):
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
             lb = con.lb
+            if lb is not None:
+                if lb.__class__ not in int_float:
+                    lb = float(lb)
+                if lb == neg_inf:
+                    lb = None
             ub = con.ub
+            if ub is not None:
+                if ub.__class__ not in int_float:
+                    ub = float(ub)
+                if ub == inf:
+                    ub = None
+
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
                 # constraints in LP format.  I suppose we could add a
@@ -399,6 +411,8 @@ class _LPWriter_impl(object):
 
             # Pull out the constant: we will move it to the bounds
             offset = repn.constant
+            if offset.__class__ not in int_float:
+                offset = float(offset)
             repn.constant = 0
 
             if repn.linear or getattr(repn, 'quadratic', None):
@@ -423,14 +437,20 @@ class _LPWriter_impl(object):
                 repn.linear[id(ONE_VAR_CONSTANT)] = 0
 
             symbol = labeler(con)
-            if lb == ub and lb is not None:
-                label = f'c_e_{symbol}_'
-                addSymbol(con, label)
-                ostream.write(f'\n{label}:\n')
-                self.write_expression(ostream, repn, False)
-                ostream.write(f'= {(lb - offset)!r}\n')
-            elif lb is not None and lb != neg_inf:
-                if ub is not None and ub != inf:
+            if lb is not None:
+                if ub is None:
+                    label = f'c_l_{symbol}_'
+                    addSymbol(con, label)
+                    ostream.write(f'\n{label}:\n')
+                    self.write_expression(ostream, repn, False)
+                    ostream.write(f'>= {(lb - offset)!r}\n')
+                elif lb == ub:
+                    label = f'c_e_{symbol}_'
+                    addSymbol(con, label)
+                    ostream.write(f'\n{label}:\n')
+                    self.write_expression(ostream, repn, False)
+                    ostream.write(f'= {(lb - offset)!r}\n')
+                else:
                     # We will need the constraint body twice.  Generate
                     # in a buffer so we only have to do that once.
                     buf = StringIO()
@@ -447,13 +467,7 @@ class _LPWriter_impl(object):
                     ostream.write(f'\n{label}:\n')
                     ostream.write(buf)
                     ostream.write(f'<= {(ub - offset)!r}\n')
-                else:
-                    label = f'c_l_{symbol}_'
-                    addSymbol(con, label)
-                    ostream.write(f'\n{label}:\n')
-                    self.write_expression(ostream, repn, False)
-                    ostream.write(f'>= {(lb - offset)!r}\n')
-            elif ub is not None and ub != inf:
+            elif ub is not None:
                 label = f'c_u_{symbol}_'
                 addSymbol(con, label)
                 ostream.write(f'\n{label}:\n')
@@ -496,8 +510,24 @@ class _LPWriter_impl(object):
                 integer_vars.append(v_symbol)
 
             lb, ub = v.bounds
-            lb = '-inf' if lb is None else repr(lb)
-            ub = '+inf' if ub is None or ub == inf else repr(ub)
+            if lb is None:
+                lb = '-inf'
+            else:
+                if lb.__class__ not in int_float:
+                    lb = float(lb)
+                if lb == neg_inf:
+                    lb = '-inf'
+                else:
+                    lb = repr(lb)
+            if ub is None:
+                ub = '+inf'
+            else:
+                if ub.__class__ not in int_float:
+                    ub = float(ub)
+                if ub == inf:
+                    ub = '+inf'
+                else:
+                    ub = repr(ub)
             ostream.write(f"\n   {lb} <= {v_symbol} <= {ub}")
 
         if integer_vars:
@@ -532,6 +562,8 @@ class _LPWriter_impl(object):
             for soscon in sos:
                 ostream.write(f'\n{getSymbol(soscon)}: S{soscon.level}::\n')
                 for v, w in getattr(soscon, 'get_items', soscon.items)():
+                    if w.__class__ not in int_float:
+                        w = float(f)
                     ostream.write(f"  {getSymbol(v)}:{w!r}\n")
 
         ostream.write("\nend\n")
@@ -550,6 +582,8 @@ class _LPWriter_impl(object):
             for vid, coef in sorted(
                 expr.linear.items(), key=lambda x: getVarOrder(x[0])
             ):
+                if coef.__class__ not in int_float:
+                    coef = float(coef)
                 if coef < 0:
                     ostream.write(f'{coef!r} {getSymbol(getVar(vid))}\n')
                 else:
@@ -571,6 +605,8 @@ class _LPWriter_impl(object):
                 else:
                     col = c1, c2
                     sym = f' {getSymbol(getVar(vid1))} * {getSymbol(getVar(vid2))}\n'
+                if coef.__class__ not in int_float:
+                    coef = float(coef)
                 if coef < 0:
                     return col, repr(coef) + sym
                 else:

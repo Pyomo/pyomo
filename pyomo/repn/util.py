@@ -38,6 +38,7 @@ valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
 
 HALT_ON_EVALUATION_ERROR = False
 nan = float('nan')
+int_float = {int, float}
 
 
 class ExprType(enum.IntEnum):
