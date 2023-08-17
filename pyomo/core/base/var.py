@@ -60,8 +60,7 @@ logger = logging.getLogger('pyomo.core')
 
 _inf = float('inf')
 _ninf = -_inf
-_no_lower_bound = {None, _ninf}
-_no_upper_bound = {None, _inf}
+_nonfinite_values = {_inf, _ninf}
 _known_global_real_domains = dict(
     [(_, True) for _ in real_global_set_ids]
     + [(_, False) for _ in integer_global_set_ids]
@@ -110,12 +109,12 @@ class _VarData(ComponentData, NumericValue):
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
-        return self.lb not in _no_lower_bound
+        return self.lb is not None
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
-        return self.ub not in _no_upper_bound
+        return self.ub is not None
 
     # TODO: deprecate this?  Properties are generally preferred over "set*()"
     def setlb(self, val):
@@ -441,54 +440,94 @@ class _GeneralVarData(_VarData):
     def bounds(self):
         # Custom implementation of _VarData.bounds to avoid unnecessary
         # expression generation and duplicate calls to domain.bounds()
-        domain_bounds = self.domain.bounds()
-        if self._lb is None:
-            lb = domain_bounds[0]
-        else:
-            lb = self._lb
-            if lb.__class__ not in native_types:
-                lb = lb()
-            if domain_bounds[0] is not None:
-                lb = max(lb, domain_bounds[0])
-        if self._ub is None:
-            ub = domain_bounds[1]
-        else:
-            ub = self._ub
-            if ub.__class__ not in native_types:
-                ub = ub()
-            if domain_bounds[1] is not None:
-                ub = min(ub, domain_bounds[1])
-        return None if lb == _ninf else lb, None if ub == _inf else ub
+        domain_lb, domain_ub = self.domain.bounds()
+        # lb is the tighter of the domain and bounds
+        lb = self._lb
+        if lb.__class__ not in native_numeric_types:
+            if lb is not None:
+                lb = float(value(lb))
+        if lb in _nonfinite_values or lb != lb:
+            if lb == _ninf:
+                lb = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "lower bound (%s)." % (self.name, bound)
+                )
+        if domain_lb is not None:
+            if lb is None:
+                lb = domain_lb
+            else:
+                lb = max(lb, domain_lb)
+        # ub is the tighter of the domain and bounds
+        ub = self._ub
+        if ub.__class__ not in native_numeric_types:
+            if ub is not None:
+                ub = float(value(ub))
+        if ub in _nonfinite_values or ub != ub:
+            if ub == _inf:
+                ub = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "lower bound (%s)." % (self.name, bound)
+                )
+        if domain_ub is not None:
+            if ub is None:
+                ub = domain_ub
+            else:
+                ub = min(ub, domain_ub)
+        return lb, ub
 
     @_VarData.lb.getter
     def lb(self):
         # Custom implementation of _VarData.lb to avoid unnecessary
         # expression generation
-        dlb, _ = self.domain.bounds()
-        if self._lb is None:
-            lb = dlb
-        else:
-            lb = self._lb
-            if lb.__class__ not in native_types:
-                lb = lb()
-            if dlb is not None:
-                lb = max(lb, dlb)
-        return None if lb == _ninf else lb
+        domain_lb, domain_ub = self.domain.bounds()
+        # lb is the tighter of the domain and bounds
+        lb = self._lb
+        if lb.__class__ not in native_numeric_types:
+            if lb is not None:
+                lb = float(value(lb))
+        if lb in _nonfinite_values or lb != lb:
+            if lb == _ninf:
+                lb = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "lower bound (%s)." % (self.name, bound)
+                )
+        if domain_lb is not None:
+            if lb is None:
+                lb = domain_lb
+            else:
+                lb = max(lb, domain_lb)
+        return lb
 
     @_VarData.ub.getter
     def ub(self):
         # Custom implementation of _VarData.ub to avoid unnecessary
         # expression generation
-        _, dub = self.domain.bounds()
-        if self._ub is None:
-            ub = dub
-        else:
-            ub = self._ub
-            if ub.__class__ not in native_types:
-                ub = ub()
-            if dub is not None:
-                ub = min(ub, dub)
-        return None if ub == _inf else ub
+        domain_lb, domain_ub = self.domain.bounds()
+        # ub is the tighter of the domain and bounds
+        ub = self._ub
+        if ub.__class__ not in native_numeric_types:
+            if ub is not None:
+                ub = float(value(ub))
+        if ub in _nonfinite_values or ub != ub:
+            if ub == _inf:
+                ub = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "lower bound (%s)." % (self.name, bound)
+                )
+        if domain_ub is not None:
+            if ub is None:
+                ub = domain_ub
+            else:
+                ub = min(ub, domain_ub)
+        return ub
 
     @property
     def lower(self):
