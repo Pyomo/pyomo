@@ -12,3 +12,4 @@ scripts using Pyomo.
    config.rst
    deprecation.rst
    expressions/index.rst
+   solvers.rst

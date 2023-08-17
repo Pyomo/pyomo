@@ -297,9 +297,8 @@ class Ipopt(PersistentSolver):
         solve_cons = self._writer.get_ordered_cons()
         results = Results()
 
-        f = open(self._filename + '.sol', 'r')
-        all_lines = list(f.readlines())
-        f.close()
+        with open(self._filename + '.sol', 'r') as f:
+            all_lines = list(f.readlines())
 
         termination_line = all_lines[1]
         if 'Optimal Solution Found' in termination_line:

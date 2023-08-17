@@ -10,11 +10,10 @@ Termination Conditions
 Pyomo offers a standard set of termination conditions to map to solver
 returns.
 
-.. currentmodule:: pyomo.contrib.appsi.base
+.. currentmodule:: pyomo.contrib.appsi
 
-.. autosummary::
-
-   TerminationCondition
+.. autoclass:: pyomo.contrib.appsi.base.TerminationCondition
+   :noindex:
 
 
 
