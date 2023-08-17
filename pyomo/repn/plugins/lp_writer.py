@@ -383,7 +383,7 @@ class _LPWriter_impl(object):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
-            # Note: Constraint.lb/ub guarantee a return value ther is
+            # Note: Constraint.lb/ub guarantee a return value that is
             # either a (finite) native_numeric_type, or None
             lb = con.lb
             ub = con.ub

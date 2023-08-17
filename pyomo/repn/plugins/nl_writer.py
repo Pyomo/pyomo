@@ -563,7 +563,7 @@ class _NLWriter_impl(object):
             expr = visitor.walk_expression((con.body, con, 0))
             if expr.named_exprs:
                 self._record_named_expression_usage(expr.named_exprs, con, 0)
-            # Note: Constraint.lb/ub guarantee a return value ther is
+            # Note: Constraint.lb/ub guarantee a return value that is
             # either a (finite) native_numeric_type, or None
             const = expr.const
             if const.__class__ not in int_float:
