@@ -95,7 +95,6 @@ TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
 
-
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL
@@ -1242,8 +1241,12 @@ class _NLWriter_impl(object):
             'x%d%s\n'
             % (len(_init_lines), "\t# initial guess" if symbolic_solver_labels else '')
         )
-        ostream.write(''.join(f'{var_idx} {val!r}{col_comments[var_idx]}\n'
-                              for var_idx, val in _init_lines))
+        ostream.write(
+            ''.join(
+                f'{var_idx} {val!r}{col_comments[var_idx]}\n'
+                for var_idx, val in _init_lines
+            )
+        )
 
         #
         # "r" lines (constraint bounds)
@@ -1504,10 +1507,28 @@ class _NLWriter_impl(object):
             if include_const and repn.const:
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
-                nl = self.template.binary_sum + nl + (self.template.const % (repn.const if repn.const.__class__ in int_float else float(repn.const)))
+                nl = (
+                    self.template.binary_sum
+                    + nl
+                    + (
+                        self.template.const
+                        % (
+                            repn.const
+                            if repn.const.__class__ in int_float
+                            else float(repn.const)
+                        )
+                    )
+                )
             self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
         elif include_const:
-            self.ostream.write(self.template.const % (repn.const if repn.const.__class__ in int_float else float(repn.const)))
+            self.ostream.write(
+                self.template.const
+                % (
+                    repn.const
+                    if repn.const.__class__ in int_float
+                    else float(repn.const)
+                )
+            )
         else:
             self.ostream.write(self.template.const % 0)
 
@@ -1655,7 +1676,9 @@ class AMPLRepn(object):
                 args.extend(self.nonlinear[1])
         if self.const:
             nterms += 1
-            nl_sum += template.const % (self.const if self.const.__class__ in int_float else float(self.const))
+            nl_sum += template.const % (
+                self.const if self.const.__class__ in int_float else float(self.const)
+            )
 
         if nterms > 2:
             return (prefix + (template.nary_sum % nterms) + nl_sum, args, named_exprs)
