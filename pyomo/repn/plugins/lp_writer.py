@@ -383,18 +383,10 @@ class _LPWriter_impl(object):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
+            # Note: Constraint.lb/ub guarantee a return value ther is
+            # either a (finite) native_numeric_type, or None
             lb = con.lb
-            if lb is not None:
-                if lb.__class__ not in int_float:
-                    lb = float(lb)
-                if lb == neg_inf:
-                    lb = None
             ub = con.ub
-            if ub is not None:
-                if ub.__class__ not in int_float:
-                    ub = float(ub)
-                if ub == inf:
-                    ub = None
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
@@ -509,25 +501,11 @@ class _LPWriter_impl(object):
             elif v.is_integer():
                 integer_vars.append(v_symbol)
 
+            # Note: Var.bounds guarantees the values are either (finite)
+            # native_numeric_types or None
             lb, ub = v.bounds
-            if lb is None:
-                lb = '-inf'
-            else:
-                if lb.__class__ not in int_float:
-                    lb = float(lb)
-                if lb == neg_inf:
-                    lb = '-inf'
-                else:
-                    lb = repr(lb)
-            if ub is None:
-                ub = '+inf'
-            else:
-                if ub.__class__ not in int_float:
-                    ub = float(ub)
-                if ub == inf:
-                    ub = '+inf'
-                else:
-                    ub = repr(ub)
+            lb = '-inf' if lb is None else repr(lb)
+            ub = '+inf' if ub is None else repr(ub)
             ostream.write(f"\n   {lb} <= {v_symbol} <= {ub}")
 
         if integer_vars:

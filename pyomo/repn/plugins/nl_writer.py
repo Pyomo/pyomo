@@ -563,22 +563,17 @@ class _NLWriter_impl(object):
             expr = visitor.walk_expression((con.body, con, 0))
             if expr.named_exprs:
                 self._record_named_expression_usage(expr.named_exprs, con, 0)
+            # Note: Constraint.lb/ub guarantee a return value ther is
+            # either a (finite) native_numeric_type, or None
+            const = expr.const
+            if const.__class__ not in int_float:
+                const = float(const)
             lb = con.lb
             if lb is not None:
-                if lb.__class__ not in int_float:
-                    lb = float(lb)
-                if lb == minus_inf:
-                    lb = None
-                else:
-                    lb = repr(lb - expr.const)
+                lb = repr(lb - const)
             ub = con.ub
             if ub is not None:
-                if ub.__class__ not in int_float:
-                    ub = float(ub)
-                if ub == inf:
-                    ub = None
-                else:
-                    ub = repr(ub - expr.const)
+                ub = repr(ub - const)
             _type = _RANGE_TYPE(lb, ub)
             if _type == 4:
                 n_equality += 1
@@ -816,21 +811,13 @@ class _NLWriter_impl(object):
         self.column_order = column_order = {_id: i for i, _id in enumerate(variables)}
         for idx, _id in enumerate(variables):
             v = var_map[_id]
+            # Note: Var.bounds guarantees the values are either (finite)
+            # native_numeric_types or None
             lb, ub = v.bounds
             if lb is not None:
-                if lb.__class__ not in int_float:
-                    lb = float(lb)
-                if lb == minus_inf:
-                    lb = None
-                else:
-                    lb = repr(lb)
+                lb = repr(lb)
             if ub is not None:
-                if ub.__class__ not in int_float:
-                    ub = float(ub)
-                if ub == inf:
-                    ub = None
-                else:
-                    ub = repr(ub)
+                ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
 
