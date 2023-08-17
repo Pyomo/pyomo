@@ -65,15 +65,14 @@ class FileDeterminism(enum.IntEnum):
     SORT_SYMBOLS = 30
 
     # We will define __str__ and __format__ so that behavior in python
-    # 3.11 is consistent with 3.7 - 3.10.
+    # 3.11 is consistent with 3.8 - 3.10.
 
     def __str__(self):
         return enum.Enum.__str__(self)
 
     def __format__(self, spec):
-        # This cannot just call Enum.__format__ because that returns the
-        # numeric value in Python 3.7
-        return str(self).__format__(spec)
+        # Removal of Python 3.7 support allows us to use Enum.__format__
+        return enum.Enum.__format__(self, spec)
 
     @classmethod
     def _missing_(cls, value):

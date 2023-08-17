@@ -13,8 +13,8 @@ import logging
 import os
 from collections import deque
 from operator import itemgetter, attrgetter, setitem
+from contextlib import nullcontext
 
-from pyomo.common.backports import nullcontext
 from pyomo.common.config import (
     ConfigBlock,
     ConfigValue,
