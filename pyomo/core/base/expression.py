@@ -418,7 +418,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         if self._constructed:
             return super().__call__(exception)
         raise ValueError(
-            "Accessing the expression of expression '%s' "
+            "Evaluating the expression of Expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no value to return)." % (self.name)
         )
@@ -429,7 +429,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         if self._constructed:
             return _GeneralExpressionData.expr.fget(self)
         raise ValueError(
-            "Accessing the expression of expression '%s' "
+            "Accessing the expression of Expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no value to return)." % (self.name)
         )
@@ -447,7 +447,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         if self._constructed:
             return _GeneralExpressionData.set_value(self, expr)
         raise ValueError(
-            "Setting the expression of expression '%s' "
+            "Setting the expression of Expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no object to set)." % (self.name)
         )
@@ -457,7 +457,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         if self._constructed:
             return _GeneralExpressionData.is_constant(self)
         raise ValueError(
-            "Accessing the is_constant flag of expression '%s' "
+            "Accessing the is_constant flag of Expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no value to return)." % (self.name)
         )
@@ -467,7 +467,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         if self._constructed:
             return _GeneralExpressionData.is_fixed(self)
         raise ValueError(
-            "Accessing the is_fixed flag of expression '%s' "
+            "Accessing the is_fixed flag of Expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no value to return)." % (self.name)
         )

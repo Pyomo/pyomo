@@ -420,8 +420,8 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                 raise ValueError(
                     "Evaluating the expression of ScalarObjective "
                     "'%s' before the Objective has been assigned "
-                    "a sense or expression. There is currently "
-                    "nothing to access." % (self.name)
+                    "a sense or expression (there is currently "
+                    "no value to return)." % (self.name)
                 )
             return super().__call__(exception)
         raise ValueError(
@@ -438,8 +438,8 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                 raise ValueError(
                     "Accessing the expression of ScalarObjective "
                     "'%s' before the Objective has been assigned "
-                    "a sense or expression. There is currently "
-                    "nothing to access." % (self.name)
+                    "a sense or expression (there is currently "
+                    "no value to return)." % (self.name)
                 )
             return _GeneralObjectiveData.expr.fget(self)
         raise ValueError(
@@ -461,8 +461,8 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                 raise ValueError(
                     "Accessing the sense of ScalarObjective "
                     "'%s' before the Objective has been assigned "
-                    "a sense or expression. There is currently "
-                    "nothing to access." % (self.name)
+                    "a sense or expression (there is currently "
+                    "no value to return)." % (self.name)
                 )
             return _GeneralObjectiveData.sense.fget(self)
         raise ValueError(
