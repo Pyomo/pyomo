@@ -101,7 +101,6 @@ class Test_noclone(unittest.TestCase):
         ):
             self.assertTrue(isinstance(noclone(obj), NumericValue))
             self.assertTrue(isinstance(noclone(obj), IIdentityExpression))
-            self.assertTrue(isinstance(noclone(obj), noclone))
             self.assertIs(noclone(obj).expr, obj)
 
     def test_pprint(self):
@@ -134,10 +133,10 @@ class Test_noclone(unittest.TestCase):
     def test_pickle(self):
         v = variable()
         e = noclone(v)
-        self.assertEqual(type(e), noclone)
+        self.assertEqual(type(e), expression)
         self.assertIs(type(e.expr), variable)
         eup = pickle.loads(pickle.dumps(e))
-        self.assertEqual(type(eup), noclone)
+        self.assertEqual(type(eup), expression)
         self.assertTrue(e is not eup)
         self.assertIs(type(eup.expr), variable)
         self.assertIs(type(e.expr), variable)
@@ -291,15 +290,17 @@ class Test_noclone(unittest.TestCase):
         p = parameter()
         e = noclone(p**2)
         self.assertEqual(str(e.expr), "<parameter>**2")
-        self.assertEqual(str(e), "{(<parameter>**2)}")
+        self.assertEqual(str(e), "<data_expression>")
         self.assertEqual(e.to_string(), "(<parameter>**2)")
         self.assertEqual(e.to_string(verbose=False), "(<parameter>**2)")
-        self.assertEqual(e.to_string(verbose=True), "{pow(<parameter>, 2)}")
+        self.assertEqual(
+            e.to_string(verbose=True), "<data_expression>{pow(<parameter>, 2)}"
+        )
         b.e = e
         b.p = p
         self.assertNotEqual(p.name, None)
-        self.assertEqual(e.to_string(verbose=True), "{pow(" + p.name + ", 2)}")
-        self.assertEqual(e.to_string(verbose=True), "{pow(p, 2)}")
+        self.assertEqual(e.to_string(verbose=True), "e{pow(" + p.name + ", 2)}")
+        self.assertEqual(e.to_string(verbose=True), "e{pow(p, 2)}")
         del b.e
         del b.p
 

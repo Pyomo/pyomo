@@ -42,7 +42,7 @@ def load_baseline(baseline, testfile, extension, version):
         _tmp = [baseline[:-3]]
     else:
         _tmp = baseline.split(f'.{extension}.', 1)
-    _tmp.insert(1, f'expr{int(EXPR._mode)}')
+    _tmp.insert(1, f'expr{int(EXPR.Mode.CURRENT)}')
     _tmp.insert(2, version)
     if not os.path.exists('.'.join(_tmp)):
         _tmp.pop(1)

@@ -16,6 +16,7 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 import pyomo.kernel as pmo
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 from pyomo.core.kernel.base import ICategorizedObject, ICategorizedObjectContainer
 from pyomo.core.kernel.homogeneous_container import IHomogeneousContainer
 from pyomo.core.kernel.dict_container import DictContainer
@@ -72,17 +73,18 @@ class _TestDictContainerBase(object):
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
-        cdict = self._container_type({None: self._ctype_factory()})
-        pyomo.kernel.pprint(cdict)
-        b = block()
-        b.cdict = cdict
-        pyomo.kernel.pprint(cdict)
-        pyomo.kernel.pprint(b)
-        m = block()
-        m.b = b
-        pyomo.kernel.pprint(cdict)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        with capture_output() as OUT:
+            cdict = self._container_type({None: self._ctype_factory()})
+            pyomo.kernel.pprint(cdict)
+            b = block()
+            b.cdict = cdict
+            pyomo.kernel.pprint(cdict)
+            pyomo.kernel.pprint(b)
+            m = block()
+            m.b = b
+            pyomo.kernel.pprint(cdict)
+            pyomo.kernel.pprint(b)
+            pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         c = self._container_type()
@@ -863,7 +865,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             return not x._is_heterogeneous_container
 
         descend.seen = []
-        pmo.pprint(cdict)
+        # pmo.pprint(cdict)
         order = list(pmo.preorder_traversal(cdict, active=True, descend=descend))
         self.assertEqual([None, '[0]', '[2]'], [c.name for c in order])
         self.assertEqual(
