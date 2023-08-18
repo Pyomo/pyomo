@@ -406,7 +406,7 @@ class _GeneralConstraintData(_ConstraintData):
         if bound in _nonfinite_values or bound != bound:
             # Note that "bound != bound" catches float('nan')
             if bound == -_inf:
-                bound = None
+                return None
             else:
                 raise ValueError(
                     "Constraint '%s' created with an invalid non-finite "
@@ -425,7 +425,7 @@ class _GeneralConstraintData(_ConstraintData):
         if bound in _nonfinite_values or bound != bound:
             # Note that "bound != bound" catches float('nan')
             if bound == _inf:
-                bound = None
+                return None
             else:
                 raise ValueError(
                     "Constraint '%s' created with an invalid non-finite "
