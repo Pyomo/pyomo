@@ -24,7 +24,7 @@ from pyomo.contrib.gdpopt.util import (
     get_main_elapsed_time,
 )
 from pyomo.core import Constraint, TransformationFactory, Objective, Block
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
 

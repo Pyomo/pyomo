@@ -35,7 +35,7 @@ from pyomo.environ import (
     inequality,
 )
 
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.compare import assertExpressionsEqual
 
 solvers = check_available_solvers('glpk')

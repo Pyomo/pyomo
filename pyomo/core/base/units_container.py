@@ -123,7 +123,7 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 
 pint_module, pint_available = attempt_import(
     'pint',

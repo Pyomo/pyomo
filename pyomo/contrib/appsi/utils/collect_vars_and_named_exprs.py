@@ -1,5 +1,5 @@
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
-from pyomo.core.expr import current as _expr
+import pyomo.core.expr as EXPR
 
 
 class _VarAndNamedExprCollector(ExpressionValueVisitor):
@@ -26,7 +26,7 @@ class _VarAndNamedExprCollector(ExpressionValueVisitor):
             self.named_expressions[id(node)] = node
             return False, None
 
-        if type(node) is _expr.ExternalFunctionExpression:
+        if type(node) is EXPR.ExternalFunctionExpression:
             self._external_functions[id(node)] = node
             return False, None
 

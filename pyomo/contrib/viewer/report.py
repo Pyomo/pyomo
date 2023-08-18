@@ -21,7 +21,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentSet
-from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.environ import Constraint, value
 
 

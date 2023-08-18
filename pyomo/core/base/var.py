@@ -22,7 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr import GetItemExpression
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue,
@@ -174,7 +174,16 @@ class _VarData(ComponentData, NumericValue):
         if _id in _known_global_real_domains:
             return not _known_global_real_domains[_id]
         _interval = self.domain.get_interval()
-        return _interval is not None and _interval[2] == 1
+        if _interval is None:
+            return False
+        # Note: it is not sufficient to just check the step: the
+        # starting / ending points must be integers (or not specified)
+        start, stop, step = _interval
+        return (
+            step == 1
+            and (start is None or int(start) == start)
+            and (stop is None or int(stop) == stop)
+        )
 
     def is_binary(self):
         """Returns True when the domain is restricted to Binary values."""
