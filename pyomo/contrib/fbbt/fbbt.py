@@ -1139,7 +1139,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                     ub = interval.inf
                 if lb - self.feasibility_tol > ub:
                     raise InfeasibleConstraintException(
-                        'Variable has a lower bound which is larger than its upper bound: {0}'.format(
+                        'Variable has a lower bound that is larger than its upper bound: {0}'.format(
                             str(node)
                         )
                     )
