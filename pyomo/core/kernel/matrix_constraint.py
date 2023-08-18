@@ -19,6 +19,8 @@ from pyomo.core.expr.numvalue import NumericValue, value
 from pyomo.core.kernel.constraint import IConstraint, constraint_tuple
 
 _noarg = object()
+_pos_inf = float('inf')
+_neg_inf = float('-inf')
 
 #
 # Note: This class is experimental. The implementation may
@@ -131,7 +133,10 @@ class _MatrixConstraintData(IConstraint):
     @property
     def lb(self):
         """The value of the lower bound of the constraint"""
-        return value(self.lower)
+        lb = value(self.lower)
+        if lb == _neg_inf:
+            return None
+        return lb
 
     @lb.setter
     def lb(self, lb):
@@ -140,7 +145,10 @@ class _MatrixConstraintData(IConstraint):
     @property
     def ub(self):
         """The value of the upper bound of the constraint"""
-        return value(self.upper)
+        ub = value(self.upper)
+        if ub == _pos_inf:
+            return None
+        return ub
 
     @ub.setter
     def ub(self, ub):
