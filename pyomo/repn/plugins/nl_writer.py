@@ -2236,23 +2236,13 @@ def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
-            ans = child()
-            if ans is None or ans != ans:
-                ans = InvalidNumber(nan)
-            elif ans.__class__ in _complex_types:
-                ans = complex_number_error(ans, self, node)
-            return False, (_CONSTANT, ans)
+            return False, (_CONSTANT, visitor._eval_fixed(child))
         visitor.var_map[_id] = child
     return False, (_MONOMIAL, _id, 1)
 
 
 def _before_param(visitor, child):
-    ans = child()
-    if ans is None or ans != ans:
-        ans = InvalidNumber(nan)
-    elif ans.__class__ in _complex_types:
-        ans = complex_number_error(ans, self, child)
-    return False, (_CONSTANT, ans)
+    return False, (_CONSTANT, visitor._eval_fixed(child))
 
 
 def _before_npv(visitor, child):
