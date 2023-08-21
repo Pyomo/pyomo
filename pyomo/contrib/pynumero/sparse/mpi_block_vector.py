@@ -567,10 +567,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         local_min = np.inf
         for i in self._owned_blocks:
-            lmin = self._block_vector.get_block(i).min()
-            if lmin <= local_min:
-                local_min = lmin
-        return self._mpiw.allreduce(local_min, op=mpi4py.MPI.MIN)
+            block = self._block_vector.get_block(i)
+            if block.size > 0:
+                lmin = block.min()
+                if lmin <= local_min:
+                    local_min = lmin
+        res = self._mpiw.allreduce(local_min, op=mpi4py.MPI.MIN)
+        if res == np.inf:
+            if self.size == 0:
+                raise ValueError('cannot get the min of a size 0 array')
+        return res
 
     def max(self, axis=None, out=None, keepdims=False):
         """
@@ -580,10 +586,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         local_max = -np.inf
         for i in self._owned_blocks:
-            lmax = self._block_vector.get_block(i).max()
-            if lmax >= local_max:
-                local_max = lmax
-        return self._mpiw.allreduce(local_max, op=mpi4py.MPI.MAX)
+            block = self._block_vector.get_block(i)
+            if block.size > 0:
+                lmax = block.max()
+                if lmax >= local_max:
+                    local_max = lmax
+        res = self._mpiw.allreduce(local_max, op=mpi4py.MPI.MAX)
+        if res == -np.inf:
+            if self.size == 0:
+                raise ValueError('cannot get the max of a size 0 array')
+        return res
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):
         """

@@ -38,4 +38,6 @@ caf = "caf"
 WRONLY = "WRONLY"
 # Ignore the name Hax
 Hax = "Hax"
+# Big Sur
+Sur = "Sur"
 # AS NEEDED: Add More Words Below
