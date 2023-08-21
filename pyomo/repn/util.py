@@ -179,7 +179,7 @@ class InvalidNumber(object):
 
     def __abs__(self):
         return self._op(operator.abs, self)
- 
+
     def __add__(self, other):
         return self._op(operator.add, self, other)
 
