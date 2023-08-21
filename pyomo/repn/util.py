@@ -12,6 +12,7 @@
 import enum
 import itertools
 import logging
+import operator
 import sys
 
 from pyomo.common.collections import Sequence, ComponentMap
@@ -99,44 +100,60 @@ class FileDeterminism(enum.IntEnum):
 
 
 class InvalidNumber(object):
-    def __init__(self, value):
+    def __init__(self, value, cause=""):
         self.value = value
+        if cause:
+            if cause.__class__ is list:
+                self.causes = list(cause)
+            else:
+                self.causes = [cause]
+        else:
+            self.causes = []
 
-    def duplicate(self, new_value):
-        return InvalidNumber(new_value)
+    def _parse_args(self, *args):
+        causes = []
+        real_args = []
+        for arg in args:
+            if obj.__class__ is InvalidNumber:
+                causes.extend(arg.causes)
+                real_args.append(arg.value)
+            else:
+                real_args.append(arg)
+        return real_args, causes
 
-    def merge(self, other, new_value):
-        return InvalidNumber(new_value)
+    def _cmp(self, op, other):
+        args, causes = self._parse_args(self, other)
+        try:
+            return op(*args)
+        except TypeError:
+            # TypeError will be raised when comparing incompatible types
+            # (e.g., int <= None)
+            return False
+
+    def _op(self, op, *args):
+        args, causes = self._parse_args(self, other)
+        try:
+            return InvalidNumber(op(*args), causes)
+        except (TypeError, ArithmeticError):
+            # TypeError will be raised when operating on incompatible
+            # types (e.g., int + None); ArithmeticError can be raised by
+            # invalid operations (like divide by zero)
+            return self.value
 
     def __eq__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value == other.value
-        else:
-            return self.value == other
+        return self._cmp(operator.eq, other)
 
     def __lt__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value < other.value
-        else:
-            return self.value < other
+        return self._cmp(operator.lt, other)
 
     def __gt__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value > other.value
-        else:
-            return self.value > other
+        return self._cmp(operator.gt, other)
 
     def __le__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value <= other.value
-        else:
-            return self.value <= other
+        return self._cmp(operator.le, other)
 
     def __ge__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.value >= other.value
-        else:
-            return self.value >= other
+        return self._cmp(operator.ge, other)
 
     def __str__(self):
         return f'InvalidNumber({self.value})'
@@ -158,85 +175,69 @@ class InvalidNumber(object):
         # raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
 
     def __neg__(self):
-        return self.duplicate(-self.value)
+        return self._op(operator.neg, self)
 
     def __abs__(self):
-        return self.duplicate(abs(self.value))
-
+        return self._op(operator.abs, self)
+ 
     def __add__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value + other.value)
-        else:
-            return self.duplicate(self.value + other)
+        return self._op(operator.add, self, other)
 
     def __sub__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value - other.value)
-        else:
-            return self.duplicate(self.value - other)
+        return self._op(operator.sub, self, other)
 
     def __mul__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value * other.value)
-        else:
-            return self.duplicate(self.value * other)
+        return self._op(operator.mul, self, other)
 
     def __truediv__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value / other.value)
-        else:
-            return self.duplicate(self.value / other)
+        return self._op(operator.truediv, self, other)
 
     def __pow__(self, other):
-        if other.__class__ is InvalidNumber:
-            return self.merge(other, self.value**other.value)
-        else:
-            return self.duplicate(self.value**other)
+        return self._op(operator.pow, self, other)
 
     def __radd__(self, other):
-        return self.duplicate(other + self.value)
+        return self._op(operator.add, other, self)
 
     def __rsub__(self, other):
-        return self.duplicate(other - self.value)
+        return self._op(operator.sub, other, self)
 
     def __rmul__(self, other):
-        return self.duplicate(other * self.value)
+        return self._op(operator.mul, other, self)
 
     def __rtruediv__(self, other):
-        return self.duplicate(other / self.value)
+        return self._op(operator.truediv, other, self)
 
     def __rpow__(self, other):
-        return self.duplicate(other**self.value)
+        return self._op(operator.pow, other, self)
 
 
 def apply_node_operation(node, args):
     try:
         ans = node._apply_operation(args)
         if ans != ans and ans.__class__ is not InvalidNumber:
-            ans = InvalidNumber(ans)
+            ans = InvalidNumber(ans, "Evaluating '{node}' returned NaN")
         return ans
     except:
+        exc_msg = str(sys.exc_info()[1])
         logger.warning(
             "Exception encountered evaluating expression "
             "'%s(%s)'\n\tmessage: %s\n\texpression: %s"
-            % (node.name, ", ".join(map(str, args)), str(sys.exc_info()[1]), node)
+            % (node.name, ", ".join(map(str, args)), exc_msg, node)
         )
         if HALT_ON_EVALUATION_ERROR:
             raise
-        return InvalidNumber(nan)
+        return InvalidNumber(nan, exc_msg)
 
 
 def complex_number_error(value, visitor, expr, node=""):
     msg = f'Pyomo {visitor.__class__.__name__} does not support complex numbers'
-    logger.warning(
-        ' '.join(filter(None, ("Complex number returned from expression", node)))
-        + f"\n\tmessage: {msg}\n\texpression: {expr}"
-    )
+    cause = ' '.join(filter(None, ("Complex number returned from expression", node)))
+    logger.warning(f"{cause}\n\tmessage: {msg}\n\texpression: {expr}")
     if HALT_ON_EVALUATION_ERROR:
         raise InvalidValueError(
             f'Pyomo {visitor.__class__.__name__} does not support complex numbers'
         )
-    return InvalidNumber(value)
+    return InvalidNumber(value, cause)
 
 
 def categorize_valid_components(
