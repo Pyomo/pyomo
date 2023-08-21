@@ -416,6 +416,7 @@ class _SuffixData(object):
             obj = self.prob
             key = 0
         else:
+            missing_ct = 0
             if isinstance(obj, PyomoObject):
                 if obj.is_indexed():
                     for o in obj.values():
