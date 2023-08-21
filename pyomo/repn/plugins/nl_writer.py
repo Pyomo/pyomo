@@ -355,8 +355,6 @@ class _SuffixData(object):
         missing_component = missing_other = 0
         self.datatype.add(suffix.datatype)
         for obj, val in suffix.items():
-            if val.__class__ not in int_float:
-                val = float(val)
             missing = self._store(obj, val)
             if missing:
                 if missing > 0:
@@ -378,8 +376,6 @@ class _SuffixData(object):
             )
 
     def store(self, obj, val):
-        if val.__class__ not in int_float:
-            val = float(val)
         missing = self._store(obj, val)
         if not missing:
             return
@@ -406,25 +402,33 @@ class _SuffixData(object):
             )
 
     def _store(self, obj, val):
-        missing_ct = 0
         _id = id(obj)
         if _id in self._column_order:
-            self.var[self._column_order[_id]] = val
+            obj = self.var
+            key = self._column_order[_id]
         elif _id in self._row_order:
-            self.con[self._row_order[_id]] = val
+            obj = self.con
+            key = self._row_order[_id]
         elif _id in self._obj_order:
-            self.obj[self._obj_order[_id]] = val
+            obj = self.obj
+            key = self._obj_order[_id]
         elif _id == self._model_id:
-            self.prob[0] = val
-        elif isinstance(obj, PyomoObject):
-            if obj.is_indexed():
-                for o in obj.values():
-                    missing_ct += self._store(o, val)
-            else:
-                missing_ct = 1
+            obj = self.prob
+            key = 0
         else:
-            missing_ct = -1
-        return missing_ct
+            if isinstance(obj, PyomoObject):
+                if obj.is_indexed():
+                    for o in obj.values():
+                        missing_ct += self._store(o, val)
+                else:
+                    missing_ct = 1
+            else:
+                missing_ct = -1
+            return missing_ct
+        if val.__class__ not in int_float:
+            val = float(val)
+        obj[key] = val
+        return 0
 
 
 class _NLWriter_impl(object):
