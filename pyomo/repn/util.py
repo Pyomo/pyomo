@@ -114,7 +114,7 @@ class InvalidNumber(object):
         causes = []
         real_args = []
         for arg in args:
-            if obj.__class__ is InvalidNumber:
+            if arg.__class__ is InvalidNumber:
                 causes.extend(arg.causes)
                 real_args.append(arg.value)
             else:
@@ -131,14 +131,14 @@ class InvalidNumber(object):
             return False
 
     def _op(self, op, *args):
-        args, causes = self._parse_args(self, other)
+        args, causes = self._parse_args(*args)
         try:
             return InvalidNumber(op(*args), causes)
         except (TypeError, ArithmeticError):
             # TypeError will be raised when operating on incompatible
             # types (e.g., int + None); ArithmeticError can be raised by
             # invalid operations (like divide by zero)
-            return self.value
+            return InvalidNumber(self.value, causes)
 
     def __eq__(self, other):
         return self._cmp(operator.eq, other)
