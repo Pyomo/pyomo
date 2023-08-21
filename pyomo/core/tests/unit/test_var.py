@@ -1678,6 +1678,45 @@ class MiscVarTests(unittest.TestCase):
         self.assertTrue(i.y.stale)
         self.assertFalse(i.z.stale)
 
+    def test_domain_categories(self):
+        """Test domain attribute"""
+        x = Var()
+        x.construct()
+        self.assertEqual(x.is_integer(), False)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), True)
+        self.assertEqual(x.bounds, (None, None))
+        x.domain = Integers
+        self.assertEqual(x.is_integer(), True)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (None, None))
+        x.domain = Binary
+        self.assertEqual(x.is_integer(), True)
+        self.assertEqual(x.is_binary(), True)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (0, 1))
+        x.domain = RangeSet(0, 10, 0)
+        self.assertEqual(x.is_integer(), False)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), True)
+        self.assertEqual(x.bounds, (0, 10))
+        x.domain = RangeSet(0, 10, 1)
+        self.assertEqual(x.is_integer(), True)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (0, 10))
+        x.domain = RangeSet(0.5, 10, 1)
+        self.assertEqual(x.is_integer(), False)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (0.5, 9.5))
+        x.domain = RangeSet(0, 1, 1)
+        self.assertEqual(x.is_integer(), True)
+        self.assertEqual(x.is_binary(), True)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (0, 1))
+
 
 if __name__ == "__main__":
     unittest.main()
