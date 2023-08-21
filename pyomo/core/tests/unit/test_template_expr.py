@@ -22,7 +22,7 @@ from pyomo.environ import (
     value,
     Integers,
 )
-import pyomo.core.expr.current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.template_expr import (
     IndexTemplate,
     TemplateExpressionError,

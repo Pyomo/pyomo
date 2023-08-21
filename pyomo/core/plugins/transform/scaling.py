@@ -22,7 +22,7 @@ from pyomo.core.base import (
 )
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
-from pyomo.core.expr.current import replace_expressions
+from pyomo.core.expr import replace_expressions
 from pyomo.util.components import rename_components
 
 

@@ -49,7 +49,7 @@ jobs:
 
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
-    needs: lint
+    needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -92,9 +92,9 @@ jobs:
           PACKAGES: mpi4py openmpi
 
         - os: ubuntu-latest
-          python: 3.7
-          other: /slim
-          slim: 1
+          python: 3.11
+          other: /singletest
+          category: "-m 'neos or importtest'"
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -108,10 +108,17 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
-        - os: ubuntu-latest
+        - os: windows-latest
           python: 3.8
-          other: /singletest
-          category: neos
+          other: /pip
+          skip_doctest: 1
+          TARGET: win
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.7
+          other: /slim
+          slim: 1
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -127,13 +134,6 @@ jobs:
           python: pypy-3.9
           skip_doctest: 1
           TARGET: linux
-          PYENV: pip
-
-        - os: windows-latest
-          python: 3.8
-          other: /pip
-          skip_doctest: 1
-          TARGET: win
           PYENV: pip
 
     steps:
@@ -463,6 +463,8 @@ jobs:
         echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
+        # We are pinning to 29.1.0 because a license is required for
+        # versions after this in order to run in demo mode.
         $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
@@ -628,12 +630,8 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        CATEGORY=
-        for cat in ${{matrix.category}}; do
-            CATEGORY+=" -m $cat"
-        done
         $PYTHON_EXE -m pytest -v \
-            -W ignore::Warning $CATEGORY \
+            -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples/pyomobook --junitxml="TEST-pyomo.xml"
 
@@ -674,7 +672,7 @@ jobs:
 
   bare-python-env:
     name: linux/3.8/bare-env
-    needs: lint
+    needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

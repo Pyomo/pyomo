@@ -154,7 +154,7 @@ class _GeneralObjectiveData(
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ("_sense", "_expr")
+    __slots__ = ("_sense", "_args_")
 
     def __init__(self, expr=None, sense=minimize, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
@@ -271,20 +271,7 @@ class Objective(ActiveIndexedComponent):
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)
-        _init = tuple(
-            _arg
-            for _arg in (kwargs.pop('rule', None), kwargs.pop('expr', None))
-            if _arg is not None
-        )
-        if len(_init) == 1:
-            _init = _init[0]
-        elif not _init:
-            _init = None
-        else:
-            raise ValueError(
-                "Duplicate initialization: Objective() only "
-                "accepts one of 'rule=' and 'expr='"
-            )
+        _init = self._pop_from_kwargs('Objective', kwargs, ('rule', 'expr'), None)
 
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
@@ -427,6 +414,22 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
     # construction
     #
 
+    def __call__(self, exception=True):
+        if self._constructed:
+            if len(self._data) == 0:
+                raise ValueError(
+                    "Evaluating the expression of ScalarObjective "
+                    "'%s' before the Objective has been assigned "
+                    "a sense or expression (there is currently "
+                    "no value to return)." % (self.name)
+                )
+            return super().__call__(exception)
+        raise ValueError(
+            "Evaluating the expression of objective '%s' "
+            "before the Objective has been constructed (there "
+            "is currently no value to return)." % (self.name)
+        )
+
     @property
     def expr(self):
         """Access the expression of this objective."""
@@ -435,8 +438,8 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                 raise ValueError(
                     "Accessing the expression of ScalarObjective "
                     "'%s' before the Objective has been assigned "
-                    "a sense or expression. There is currently "
-                    "nothing to access." % (self.name)
+                    "a sense or expression (there is currently "
+                    "no value to return)." % (self.name)
                 )
             return _GeneralObjectiveData.expr.fget(self)
         raise ValueError(
@@ -458,8 +461,8 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                 raise ValueError(
                     "Accessing the sense of ScalarObjective "
                     "'%s' before the Objective has been assigned "
-                    "a sense or expression. There is currently "
-                    "nothing to access." % (self.name)
+                    "a sense or expression (there is currently "
+                    "no value to return)." % (self.name)
                 )
             return _GeneralObjectiveData.sense.fget(self)
         raise ValueError(

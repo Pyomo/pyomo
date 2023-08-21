@@ -11,7 +11,7 @@ from pyomo.core.base import Constraint, Param, value, Suffix, Block
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
-from pyomo.core.expr import current as EXPR
+import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.template_expr import IndexTemplate, _GetItemIndexer
 

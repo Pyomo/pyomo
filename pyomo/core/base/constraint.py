@@ -39,8 +39,8 @@ from pyomo.core.expr.numvalue import (
     native_numeric_types,
     native_types,
 )
-from pyomo.core.expr.expr_common import ExpressionType
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
+    ExpressionType,
     EqualityExpression,
     InequalityExpression,
     RangedExpression,

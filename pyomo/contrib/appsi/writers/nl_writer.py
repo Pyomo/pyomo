@@ -19,7 +19,7 @@ from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
 
 class NLWriter(PersistentBase):
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         super(NLWriter, self).__init__(only_child_vars=only_child_vars)
         self._config = WriterConfig()
         self._writer = None

@@ -9,12 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
+from pyomo.common.dependencies import mpi4py
 from pyomo.contrib.pynumero.sparse import BlockVector
 from .base_block import BaseBlockVector
 from .block_vector import NotFullyDefinedBlockVectorError
 from .block_vector import assert_block_structure as block_vector_assert_block_structure
-from mpi4py import MPI
 import numpy as np
 import operator
 
@@ -546,7 +545,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         for i in self._owned_blocks:
             local *= self._block_vector.get_block(i).all()
 
-        return bool(self._mpiw.allreduce(local, op=MPI.PROD))
+        return bool(self._mpiw.allreduce(local, op=mpi4py.MPI.PROD))
 
     def any(self, axis=None, out=None, keepdims=False):
         """
@@ -558,7 +557,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         for i in self._owned_blocks:
             local += self._block_vector.get_block(i).any()
 
-        return bool(self._mpiw.allreduce(local, op=MPI.SUM))
+        return bool(self._mpiw.allreduce(local, op=mpi4py.MPI.SUM))
 
     def min(self, axis=None, out=None, keepdims=False):
         """
@@ -568,10 +567,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         local_min = np.inf
         for i in self._owned_blocks:
-            lmin = self._block_vector.get_block(i).min()
-            if lmin <= local_min:
-                local_min = lmin
-        return self._mpiw.allreduce(local_min, op=MPI.MIN)
+            block = self._block_vector.get_block(i)
+            if block.size > 0:
+                lmin = block.min()
+                if lmin <= local_min:
+                    local_min = lmin
+        res = self._mpiw.allreduce(local_min, op=mpi4py.MPI.MIN)
+        if res == np.inf:
+            if self.size == 0:
+                raise ValueError('cannot get the min of a size 0 array')
+        return res
 
     def max(self, axis=None, out=None, keepdims=False):
         """
@@ -581,10 +586,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         local_max = -np.inf
         for i in self._owned_blocks:
-            lmax = self._block_vector.get_block(i).max()
-            if lmax >= local_max:
-                local_max = lmax
-        return self._mpiw.allreduce(local_max, op=MPI.MAX)
+            block = self._block_vector.get_block(i)
+            if block.size > 0:
+                lmax = block.max()
+                if lmax >= local_max:
+                    local_max = lmax
+        res = self._mpiw.allreduce(local_max, op=mpi4py.MPI.MAX)
+        if res == -np.inf:
+            if self.size == 0:
+                raise ValueError('cannot get the max of a size 0 array')
+        return res
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):
         """
@@ -599,7 +610,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         for i in indices:
             local_sum += self._block_vector.get_block(i).sum(axis=axis, dtype=dtype)
 
-        return self._mpiw.allreduce(local_sum, op=MPI.SUM)
+        return self._mpiw.allreduce(local_sum, op=mpi4py.MPI.SUM)
 
     def prod(self, axis=None, dtype=None, out=None, keepdims=False):
         """
@@ -613,7 +624,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         local_prod = 1.0
         for i in indices:
             local_prod *= self._block_vector.get_block(i).prod(axis=axis, dtype=dtype)
-        return self._mpiw.allreduce(local_prod, op=MPI.PROD)
+        return self._mpiw.allreduce(local_prod, op=mpi4py.MPI.PROD)
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):
         """
@@ -926,7 +937,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                     other.get_block(i)
                 )
 
-            return self._mpiw.allreduce(local_dot_prod, op=MPI.SUM)
+            return self._mpiw.allreduce(local_dot_prod, op=mpi4py.MPI.SUM)
         elif isinstance(other, BlockVector):
             assert (
                 self.nblocks == other.nblocks
@@ -1302,7 +1313,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             for i in self._owned_blocks:
                 if other in self.get_block(i):
                     contains = True
-            return bool(self._mpiw.allreduce(contains, op=MPI.SUM))
+            return bool(self._mpiw.allreduce(contains, op=mpi4py.MPI.SUM))
         else:
             raise NotImplementedError('Operation not supported by MPIBlockVector')
 

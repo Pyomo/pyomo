@@ -20,7 +20,7 @@ from pyomo.core import (
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.boolean_var import _DeprecatedImplicitAssociatedBinaryVariable
 from pyomo.core.expr.cnf_walker import to_cnf
-from pyomo.core.expr.current import (
+from pyomo.core.expr import (
     AndExpression,
     OrExpression,
     NotExpression,
@@ -31,10 +31,10 @@ from pyomo.core.expr.current import (
     EqualityExpression,
     InequalityExpression,
     RangedExpression,
+    identify_variables,
 )
 from pyomo.core.expr.numvalue import native_logical_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
-from pyomo.core.expr.current import identify_variables
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.util import target_list
 

@@ -232,7 +232,7 @@ class Gurobi(PersistentBase, PersistentSolver):
     _available = None
     _num_instances = 0
 
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         super(Gurobi, self).__init__(only_child_vars=only_child_vars)
         self._num_instances += 1
         self._config = GurobiConfig()
@@ -905,21 +905,18 @@ class Gurobi(PersistentBase, PersistentSolver):
         results.best_feasible_objective = None
         results.best_objective_bound = None
         if self._objective is not None:
-            if gprob.SolCount > 0:
-                try:
-                    results.best_feasible_objective = gprob.ObjVal
-                except (gurobipy.GurobiError, AttributeError):
-                    results.best_feasible_objective = None
             try:
-                if gprob.NumBinVars + gprob.NumIntVars == 0:
-                    results.best_objective_bound = gprob.ObjVal
-                else:
-                    results.best_objective_bound = gprob.ObjBound
+                results.best_feasible_objective = gprob.ObjVal
+            except (gurobipy.GurobiError, AttributeError):
+                results.best_feasible_objective = None
+            try:
+                results.best_objective_bound = gprob.ObjBound
             except (gurobipy.GurobiError, AttributeError):
                 if self._objective.sense == minimize:
                     results.best_objective_bound = -math.inf
                 else:
                     results.best_objective_bound = math.inf
+
             if results.best_feasible_objective is not None and not math.isfinite(
                 results.best_feasible_objective
             ):
