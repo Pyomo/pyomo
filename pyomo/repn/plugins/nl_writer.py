@@ -2440,26 +2440,64 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self._eval_expr_visitor = _EvaluationVisitor(True)
 
     def _eval_fixed(self, obj):
-        ans = obj()
+        ans = obj.value
         if ans.__class__ not in native_numeric_types:
-            if ans.__class__ is not InvalidNumber:
-                ans = InvalidNumber(nan if ans is None else ans)
-        elif ans != ans:
-            ans = InvalidNumber(nan)
-        elif ans.__class__ in _complex_types:
-            ans = complex_number_error(ans, self, obj)
+            # None can be returned from uninitialized Var/Param objects
+            if ans is None:
+                return InvalidNumber(
+                    None, f"'{obj}' contains a nonnumeric value '{ans}'"
+                )
+            if ans.__class__ is InvalidNumber:
+                return ans
+            else:
+                # It is possible to get other non-numeric types.  Most
+                # common are bool and 1-element numpy.array().  We will
+                # attempt to convert the value to a float before
+                # proceeding.
+                #
+                # TODO: we should check bool and warn/error (while bool is
+                # convertible to float in Python, they have very
+                # different semantic meanings in Pyomo).
+                try:
+                    ans = float(ans)
+                except:
+                    return InvalidNumber(
+                        ans, f"'{obj}' contains a  nonnumeric value '{ans}'"
+                    )
+        if ans != ans:
+            return InvalidNumber(nan, f"'{obj}' contains a nonnumeric value '{ans}'")
+        if ans.__class__ in _complex_types:
+            return complex_number_error(ans, self, obj)
         return ans
 
     def _eval_expr(self, expr):
         ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
-        if ans.__class__ not in native_types:
-            ans = value(ans)
         if ans.__class__ not in native_numeric_types:
-            if ans.__class__ is not InvalidNumber:
-                ans = InvalidNumber(nan if ans is None else ans)
-        elif ans != ans:
-            ans = InvalidNumber(nan)
-        elif ans.__class__ in _complex_types:
+            # None can be returned from uninitialized Expression objects
+            if ans is None:
+                return InvalidNumber(
+                    ans, f"'{expr}' evaluated to nonnumeric value '{ans}'"
+                )
+            if ans.__class__ is InvalidNumber:
+                return ans
+            else:
+                # It is possible to get other non-numeric types.  Most
+                # common are bool and 1-element numpy.array().  We will
+                # attempt to convert the value to a float before
+                # proceeding.
+                #
+                # TODO: we should check bool and warn/error (while bool is
+                # convertible to float in Python, they have very
+                # different semantic meanings in Pyomo).
+                try:
+                    ans = float(ans)
+                except:
+                    return InvalidNumber(
+                        ans, f"'{expr}' evaluated to nonnumeric value '{ans}'"
+                    )
+        if ans != ans:
+            return InvalidNumber(ans, f"'{expr}' evaluated to nonnumeric value '{ans}'")
+        if ans.__class__ in _complex_types:
             return complex_number_error(ans, self, expr)
         return ans
 
