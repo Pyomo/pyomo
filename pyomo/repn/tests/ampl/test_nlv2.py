@@ -18,6 +18,7 @@ import os
 
 import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
+from pyomo.repn.util import InvalidNumber
 from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.log import LoggingIntercept
@@ -500,7 +501,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         repn = info.visitor.walk_expression((expr, None, None))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertEqual(repn.const, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -509,16 +510,16 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         repn = info.visitor.walk_expression((expr, None, None))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
-        self.assertEqual(repn.linear, {id(m.z): 10})
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.z): 10, id(m.x): InvalidNumber(None)})
         self.assertEqual(repn.nonlinear, None)
 
         expr = m.y * m.x
         repn = info.visitor.walk_expression((expr, None, None))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
-        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.x): InvalidNumber(None)})
         self.assertEqual(repn.nonlinear, None)
 
         m.z = Var([1, 2, 3, 4], initialize=lambda m, i: i - 1)
@@ -528,7 +529,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((expr, None, None))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertEqual(repn.const, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear[0], 'o16\no2\no2\nv%s\nv%s\nv%s\n')
         self.assertEqual(repn.nonlinear[1], [id(m.z[2]), id(m.z[3]), id(m.z[4])])
@@ -538,7 +539,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((expr, None, None))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertEqual(repn.const, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 

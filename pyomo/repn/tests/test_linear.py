@@ -134,7 +134,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.constant, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -188,7 +188,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.constant, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -408,7 +408,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(repn.linear, {id(m.x): InvalidNumber(nan)})
+        self.assertStructuredAlmostEqual(repn.linear, {id(m.x): InvalidNumber(None)})
         self.assertEqual(repn.nonlinear, None)
 
         m.p.set_value(4)
@@ -494,7 +494,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.constant, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -1357,7 +1357,7 @@ class TestLinear(unittest.TestCase):
         expr = 3 * m.y
         repn = LinearRepnVisitor(*cfg).walk_expression(expr)
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.constant, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -1368,7 +1368,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear), 2)
         self.assertEqual(repn.linear[id(m.z)], 10)
-        self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
+        self.assertEqual(repn.linear[id(m.x)], InvalidNumber(None))
         self.assertEqual(repn.nonlinear, None)
 
         expr = m.y * m.x
@@ -1376,7 +1376,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear), 1)
-        self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
+        self.assertEqual(repn.linear[id(m.x)], InvalidNumber(None))
         self.assertEqual(repn.nonlinear, None)
 
         m.z = Var([1, 2, 3, 4], initialize=lambda m, i: i - 1)
@@ -1384,14 +1384,14 @@ class TestLinear(unittest.TestCase):
         expr = m.z[1] - ((m.z[2] * m.z[3]) * m.z[4])
         repn = LinearRepnVisitor(*cfg).walk_expression(expr)
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.constant, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertIsNotNone(repn.nonlinear)
 
         m.z[3].fix(float('nan'))
         repn = LinearRepnVisitor(*cfg).walk_expression(expr)
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(repn.constant, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertIsNotNone(repn.nonlinear)
 
