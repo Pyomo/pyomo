@@ -436,7 +436,7 @@ def _handle_expr_if_const(visitor, node, arg1, arg2, arg3):
     _type, _test = arg1
     assert _type is _CONSTANT
     if _test:
-        if _test != _test:
+        if _test != _test or test.__class__ is InvalidNumber:
             # nan
             return _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3)
         return arg2
@@ -680,17 +680,26 @@ def _before_named_expression(visitor, child):
 
 
 def _before_expr_if(visitor, child):
+    # We want a _before_expr_if to catch constant test expressions so
+    # that we ONLY evaluate the appropriate branch.
     test, t, f = child.args
     if is_fixed(test):
         try:
-            test = test()
+            test = visitor._eval_expr(test)
         except:
             return True, None
-        subexpr = LinearRepnVisitor(
+        if test.__class__ is InvalidNumber:
+            return True, None
+        subexpr = visitor.__class__(
             visitor.subexpression_cache, visitor.var_map, visitor.var_order
         ).walk_expression(t if test else f)
         if subexpr.nonlinear is not None:
             return False, (_GENERAL, subexpr)
+        # This test is not needed for LINEAR, but is for the derived
+        # QUADRATIC.  As this is the ONLY _before_* specialization
+        # needed for Quadratic, we will handle it here.
+        elif hasattr(subexpr, 'quadratic') and subexpr.quadratic:
+            return False, (ExprType._QUADRATIC, subexpr)
         elif subexpr.linear:
             return False, (_LINEAR, subexpr)
         else:
