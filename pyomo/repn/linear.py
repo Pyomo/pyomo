@@ -576,6 +576,12 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 
+def _before_invalid(visitor, child):
+    return False, (
+        _CONSTANT, InvalidNumber(child, "'{child}' is not a valid numeric type")
+    )
+
+
 def _before_complex(visitor, child):
     return False, (_CONSTANT, complex_number_error(child, visitor, child))
 
@@ -734,6 +740,8 @@ def _register_new_before_child_dispatcher(visitor, child):
             dispatcher[child_type] = _before_complex
         else:
             dispatcher[child_type] = _before_native
+    elif child_type in native_types:
+        dispatcher[child_type] = _before_invalid
     elif not child.is_expression_type():
         if child.is_potentially_variable():
             dispatcher[child_type] = _before_var
