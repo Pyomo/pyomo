@@ -44,11 +44,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         This is the outermost function for the Extended Cutting Plane algorithm in this package; this function controls the progress of
         solving the model.
 
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
-
         Raises
         ------
         ValueError
@@ -99,11 +94,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
     def init_rNLP(self):
         """Initialize the problem by solving the relaxed NLP and then store the optimal variable
         values obtained from solving the rNLP.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
 
         Raises
         ------

@@ -1250,6 +1250,8 @@ class _MindtPyAlgorithm(object):
             Integer-variable-fixed NLP model.
         termination_condition : Pyomo TerminationCondition
             The termination condition of the fixed NLP subproblem.
+        cb_opt : SolverFactory, optional
+            The gurobi_persistent solver, by default None.
 
         Raises
         ------
@@ -1504,11 +1506,6 @@ class _MindtPyAlgorithm(object):
     def set_up_tabulist_callback(self):
         """Sets up the tabulist using IncumbentCallback.
         Currently only support CPLEX.
-
-        Parameters
-        ----------
-        mainopt : solver
-            The MIP solver.
         """
         tabulist = self.mip_opt._solver_model.register_callback(
             tabu_list.IncumbentCallback_cplex
@@ -1527,11 +1524,6 @@ class _MindtPyAlgorithm(object):
     def set_up_lazy_OA_callback(self):
         """Sets up the lazy OA using LazyConstraintCallback.
         Currently only support CPLEX and Gurobi.
-
-        Parameters
-        ----------
-        mainopt : solver
-            The MIP solver.
         """
         if self.config.mip_solver == 'cplex_persistent':
             lazyoa = self.mip_opt._solver_model.register_callback(
@@ -1780,11 +1772,6 @@ class _MindtPyAlgorithm(object):
     def handle_main_infeasible(self):
         """This function handles the result of the latest iteration of solving
         the MIP problem given an infeasible solution.
-
-        Parameters
-        ----------
-        main_mip : Pyomo model
-            The MIP main problem.
         """
         self.config.logger.info(
             'MIP main problem is infeasible. '
