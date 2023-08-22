@@ -18,6 +18,7 @@ import sys
 from pyomo.common.collections import Sequence, ComponentMap
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
+from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base import (
     Var,
     Param,
@@ -99,18 +100,16 @@ class FileDeterminism(enum.IntEnum):
         return super()._missing_(value)
 
 
-class InvalidNumber(object):
+class InvalidNumber(PyomoObject):
     def __init__(self, value, cause=""):
         self.value = value
-        if cause:
-            if cause.__class__ is list:
-                self.causes = list(cause)
-            else:
-                self.causes = [cause]
+        if cause.__class__ is list:
+            self.causes = list(cause)
         else:
-            self.causes = []
+            self.causes = [cause]
 
-    def _parse_args(self, *args):
+    @staticmethod
+    def parse_args(*args):
         causes = []
         real_args = []
         for arg in args:
@@ -122,7 +121,7 @@ class InvalidNumber(object):
         return real_args, causes
 
     def _cmp(self, op, other):
-        args, causes = self._parse_args(self, other)
+        args, causes = InvalidNumber.parse_args(self, other)
         try:
             return op(*args)
         except TypeError:
@@ -131,7 +130,7 @@ class InvalidNumber(object):
             return False
 
     def _op(self, op, *args):
-        args, causes = self._parse_args(*args)
+        args, causes = InvalidNumber.parse_args(*args)
         try:
             return InvalidNumber(op(*args), causes)
         except (TypeError, ArithmeticError):
