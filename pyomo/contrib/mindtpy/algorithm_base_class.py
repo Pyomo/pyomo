@@ -2199,26 +2199,6 @@ class _MindtPyAlgorithm(object):
                 if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
                     config.logger.info("Solution pool does not support APPSI solver.")
                 config.mip_solver = 'cplex_persistent'
-        if config.calculate_dual_at_solution:
-            if config.mip_solver == 'appsi_cplex':
-                config.logger.info(
-                    "APPSI-Cplex cannot get duals for mixed-integer problems"
-                    "mip_solver will be changed to Cplex."
-                )
-                config.mip_solver = 'cplex'
-            if config.mip_regularization_solver == 'appsi_cplex':
-                config.logger.info(
-                    "APPSI-CPLEX cannot get duals for mixed-integer problems"
-                    "mip_solver will be changed to CPLEX."
-                )
-                config.mip_regularization_solver = 'cplex'
-            if config.mip_solver in {
-                'gurobi',
-                'appsi_gurobi',
-            } or config.mip_regularization_solver in {'gurobi', 'appsi_gurobi'}:
-                raise ValueError(
-                    "Gurobi can not provide duals for mixed-integer problems."
-                )
 
     ################################################################################################################################
     # Feasibility Pump
