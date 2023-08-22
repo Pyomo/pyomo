@@ -2312,7 +2312,7 @@ def _before_linear(visitor, child):
                             "tree.  Mapping the NaN result to 0 for compatibility "
                             "with the nl_v1 writer.  In the future, this NaN "
                             "will be preserved/emitted to comply with IEEE-754.",
-                            version='6.6.0',
+                            version='6.4.3',
                         )
                 continue
 
