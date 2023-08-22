@@ -2563,9 +2563,9 @@ class _MindtPyAlgorithm(object):
                 # We will choose to perform aggressive node probing during presolve.
                 self.regularization_mip_opt.options['mip_strategy_presolvenode'] = 3
                 # When using ROA method to solve convex MINLPs, the Hessian of the Lagrangean is always positive semidefinite,
-                # and the regularization subproblems are always convex. 
-                # However, due to numerical accuracy, the regularization problem ended up nonconvex for a few cases, 
-                # e.g., the smallest eigenvalue of the Hessian was slightly negative. 
+                # and the regularization subproblems are always convex.
+                # However, due to numerical accuracy, the regularization problem ended up nonconvex for a few cases,
+                # e.g., the smallest eigenvalue of the Hessian was slightly negative.
                 # Therefore, we set the optimalitytarget parameter to 3 to enable CPLEX to solve nonconvex MIQPs in the ROA-L2 and ROA-∇2L methods.
                 if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                     self.regularization_mip_opt.options['optimalitytarget'] = 3
