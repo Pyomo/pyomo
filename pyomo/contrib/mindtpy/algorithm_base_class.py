@@ -2807,7 +2807,8 @@ class _MindtPyAlgorithm(object):
                 if not config.single_tree:
                     self.add_regularization()
 
-                # TODO: add descriptions for the following code
+                # In R-LP/NLP, we might end up with an integer combination that hasn't been explored.
+                # Therefore, we need to solve fixed NLP subproblem one more time.
                 if config.single_tree:
                     self.curr_int_sol = get_integer_solution(self.mip, string_zero=True)
                     copy_var_list_values(
