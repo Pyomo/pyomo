@@ -9,12 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
+
+from pyomo.common.log import LoggingIntercept
+from pyomo.common.dependencies import numpy, numpy_available
 
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr.numeric_expr import LinearExpression, MonomialTermExpression
 from pyomo.core.expr import Expr_if, inequality, LinearExpression, NPV_SumExpression
+import pyomo.repn.linear as linear
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 from pyomo.repn.util import InvalidNumber
 
@@ -282,6 +285,28 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
         self.assertStructuredAlmostEqual(repn.constant, InvalidNumber(1j))
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.p = None
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(nested_expr)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, InvalidNumber(None))
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(pow_expr)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -844,6 +869,32 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
+        m.e = None
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(m.e)
+        self.assertEqual(
+            cfg.subexpr, {id(m.e): (linear._CONSTANT, InvalidNumber(None))}
+        )
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, InvalidNumber(None))
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(2 * m.e)
+        self.assertEqual(
+            cfg.subexpr, {id(m.e): (linear._CONSTANT, InvalidNumber(None))}
+        )
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, InvalidNumber(None))
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
     def test_pow_expr(self):
         m = ConcreteModel()
         m.x = Var()
@@ -1157,7 +1208,11 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
-        assertExpressionsEqual(self, repn.nonlinear, m.x**2)
+        assertExpressionsEqual(
+            self,
+            repn.nonlinear,
+            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2)
+        )
 
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(f)
@@ -1167,7 +1222,11 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
-        assertExpressionsEqual(self, repn.nonlinear, m.x**2)
+        assertExpressionsEqual(
+            self,
+            repn.nonlinear,
+            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2)
+        )
 
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(g)
@@ -1177,7 +1236,11 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
-        assertExpressionsEqual(self, repn.nonlinear, m.x**2)
+        assertExpressionsEqual(
+            self,
+            repn.nonlinear,
+            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2)
+        )
 
         m.y.unfix()
 
@@ -1217,6 +1280,37 @@ class TestLinear(unittest.TestCase):
             self,
             repn.nonlinear,
             Expr_if(IF=inequality(3, m.y, 5), THEN=m.x, ELSE=m.x**2),
+        )
+
+        h = Expr_if(1/m.y >= 1, m.x, m.x**2)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(h)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.y): 0, id(m.x): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        assertExpressionsEqual(
+            self,
+            repn.nonlinear,
+            Expr_if(IF=1/m.y >= 1, THEN=m.x, ELSE=m.x**2),
+        )
+
+        m.y.fix(0)
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(h)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        assertExpressionsEqual(
+            self,
+            repn.nonlinear,
+            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2),
         )
 
     def test_division(self):
@@ -1401,8 +1495,6 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         visitor = LinearRepnVisitor(*cfg)
 
-        import pyomo.repn.linear as linear
-
         _orig_dispatcher = linear._before_child_dispatcher
         linear._before_child_dispatcher = bcd = {}
         try:
@@ -1490,3 +1582,31 @@ class TestLinear(unittest.TestCase):
         expr.linear[id(m.x)] = 0
         expr.linear[id(m.y)] = 0
         assertExpressionsEqual(self, expr.to_expression(visitor), LinearExpression())
+
+    @unittest.skipUnless(numpy_available, "Test requires numpy")
+    def test_nonnumeric(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=numpy.array([3]), domain=Any)
+        m.e = Expression()
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(m.p)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 3)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.p = numpy.array([3,4])
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(*cfg).walk_expression(m.p)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {})
+        self.assertEqual(cfg.var_order, {})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(str(repn.constant), 'InvalidNumber([3 4])')
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)

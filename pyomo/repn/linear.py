@@ -436,7 +436,7 @@ def _handle_expr_if_const(visitor, node, arg1, arg2, arg3):
     _type, _test = arg1
     assert _type is _CONSTANT
     if _test:
-        if _test != _test or test.__class__ is InvalidNumber:
+        if _test != _test or _test.__class__ is InvalidNumber:
             # nan
             return _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3)
         return arg2
@@ -473,7 +473,17 @@ for j in (_CONSTANT, _LINEAR, _GENERAL):
 
 
 def _handle_equality_const(visitor, node, arg1, arg2):
-    return _CONSTANT, arg1[1] == arg2[1]
+    # It is exceptionally likely that if we get here, one of the
+    # arguments is an InvalidNumber
+    args, causes = InvalidNumber.parse_args(arg1[1], arg2[1])
+    try:
+        ans = args[0] == args[1]
+    except:
+        ans = False
+        causes.append(str(sys.exc_info()[1]))
+    if causes:
+        ans = InvalidNumber(ans, causes)
+    return _CONSTANT, ans
 
 
 def _handle_equality_general(visitor, node, arg1, arg2):
@@ -493,7 +503,17 @@ _exit_node_handlers[EqualityExpression][_CONSTANT, _CONSTANT] = _handle_equality
 
 
 def _handle_inequality_const(visitor, node, arg1, arg2):
-    return _CONSTANT, arg1[1] <= arg2[1]
+    # It is exceptionally likely that if we get here, one of the
+    # arguments is an InvalidNumber
+    args, causes = InvalidNumber.parse_args(arg1[1], arg2[1])
+    try:
+        ans = args[0] <= args[1]
+    except:
+        ans = False
+        causes.append(str(sys.exc_info()[1]))
+    if causes:
+        ans = InvalidNumber(ans, causes)
+    return _CONSTANT, ans
 
 
 def _handle_inequality_general(visitor, node, arg1, arg2):
@@ -515,7 +535,17 @@ _exit_node_handlers[InequalityExpression][
 
 
 def _handle_ranged_const(visitor, node, arg1, arg2, arg3):
-    return _CONSTANT, arg1[1] <= arg2[1] <= arg3[1]
+    # It is exceptionally likely that if we get here, one of the
+    # arguments is an InvalidNumber
+    args, causes = InvalidNumber.parse_args(arg1[1], arg2[1], arg3[1])
+    try:
+        ans = args[0] <= args[1] <= args[2]
+    except:
+        ans = False
+        causes.append(str(sys.exc_info()[1]))
+    if causes:
+        ans = InvalidNumber(ans, causes)
+    return _CONSTANT, ans
 
 
 def _handle_ranged_general(visitor, node, arg1, arg2, arg3):
@@ -679,34 +709,6 @@ def _before_named_expression(visitor, child):
         return True, None
 
 
-def _before_expr_if(visitor, child):
-    # We want a _before_expr_if to catch constant test expressions so
-    # that we ONLY evaluate the appropriate branch.
-    test, t, f = child.args
-    if is_fixed(test):
-        try:
-            test = visitor._eval_expr(test)
-        except:
-            return True, None
-        if test.__class__ is InvalidNumber:
-            return True, None
-        subexpr = visitor.__class__(
-            visitor.subexpression_cache, visitor.var_map, visitor.var_order
-        ).walk_expression(t if test else f)
-        if subexpr.nonlinear is not None:
-            return False, (_GENERAL, subexpr)
-        # This test is not needed for LINEAR, but is for the derived
-        # QUADRATIC.  As this is the ONLY _before_* specialization
-        # needed for Quadratic, we will handle it here.
-        elif hasattr(subexpr, 'quadratic') and subexpr.quadratic:
-            return False, (ExprType._QUADRATIC, subexpr)
-        elif subexpr.linear:
-            return False, (_LINEAR, subexpr)
-        else:
-            return False, (_CONSTANT, subexpr.constant)
-    return True, None
-
-
 def _before_external(visitor, child):
     ans = visitor.Result()
     if all(is_fixed(arg) for arg in child.args):
@@ -779,9 +781,8 @@ _complex_types = set((complex,))
 
 # We do not support writing complex numbers out
 _before_child_dispatcher[complex] = _before_complex
-# Special handling for expr_if and external functions: will be handled
+# Special handling for external functions: will be handled
 # as terminal nodes from the point of view of the visitor
-_before_child_dispatcher[Expr_ifExpression] = _before_expr_if
 _before_child_dispatcher[ExternalFunctionExpression] = _before_external
 # Special linear / summation expressions
 _before_child_dispatcher[MonomialTermExpression] = _before_monomial
