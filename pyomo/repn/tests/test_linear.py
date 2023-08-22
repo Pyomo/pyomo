@@ -1211,7 +1211,7 @@ class TestLinear(unittest.TestCase):
         assertExpressionsEqual(
             self,
             repn.nonlinear,
-            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2)
+            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2),
         )
 
         cfg = VisitorConfig()
@@ -1225,7 +1225,7 @@ class TestLinear(unittest.TestCase):
         assertExpressionsEqual(
             self,
             repn.nonlinear,
-            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2)
+            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2),
         )
 
         cfg = VisitorConfig()
@@ -1239,7 +1239,7 @@ class TestLinear(unittest.TestCase):
         assertExpressionsEqual(
             self,
             repn.nonlinear,
-            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2)
+            Expr_if(IF=InvalidNumber(False), THEN=m.x, ELSE=m.x**2),
         )
 
         m.y.unfix()
@@ -1282,7 +1282,7 @@ class TestLinear(unittest.TestCase):
             Expr_if(IF=inequality(3, m.y, 5), THEN=m.x, ELSE=m.x**2),
         )
 
-        h = Expr_if(1/m.y >= 1, m.x, m.x**2)
+        h = Expr_if(1 / m.y >= 1, m.x, m.x**2)
 
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(h)
@@ -1293,9 +1293,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
         assertExpressionsEqual(
-            self,
-            repn.nonlinear,
-            Expr_if(IF=1/m.y >= 1, THEN=m.x, ELSE=m.x**2),
+            self, repn.nonlinear, Expr_if(IF=1 / m.y >= 1, THEN=m.x, ELSE=m.x**2)
         )
 
         m.y.fix(0)
@@ -1599,7 +1597,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
-        m.p = numpy.array([3,4])
+        m.p = numpy.array([3, 4])
 
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(*cfg).walk_expression(m.p)

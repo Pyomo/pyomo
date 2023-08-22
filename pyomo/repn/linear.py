@@ -578,7 +578,8 @@ def _before_native(visitor, child):
 
 def _before_invalid(visitor, child):
     return False, (
-        _CONSTANT, InvalidNumber(child, "'{child}' is not a valid numeric type")
+        _CONSTANT,
+        InvalidNumber(child, "'{child}' is not a valid numeric type"),
     )
 
 
