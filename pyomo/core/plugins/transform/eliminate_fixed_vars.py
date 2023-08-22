@@ -9,11 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.current import ExpressionBase
-from pyomo.core.expr.numvalue import as_numeric
+from pyomo.core.expr import ExpressionBase, as_numeric
 from pyomo.core import Constraint, Objective, TransformationFactory
 from pyomo.core.base.var import Var, _VarData
-from pyomo.core.base.util import sequence
+from pyomo.core.util import sequence
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
 

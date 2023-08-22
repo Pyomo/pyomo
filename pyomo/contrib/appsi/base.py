@@ -900,7 +900,7 @@ Notes:
 
 
 class PersistentBase(abc.ABC):
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         self._model = None
         self._active_constraints = dict()  # maps constraint to (lower, body, upper)
         self._vars = dict()  # maps var id to (var, lb, ub, fixed, domain, value)
@@ -1334,9 +1334,6 @@ class PersistentBase(abc.ABC):
         self.remove_constraints(old_cons)
         self.remove_sos_constraints(old_sos)
         timer.stop('cons')
-        timer.start('vars')
-        self.remove_variables(old_vars)
-        timer.stop('vars')
         timer.start('params')
         self.remove_params(old_params)
 
@@ -1462,6 +1459,12 @@ class PersistentBase(abc.ABC):
         if need_to_set_objective:
             self.set_objective(pyomo_obj)
         timer.stop('objective')
+
+        # this has to be done after the objective and constraints in case the
+        # old objective/constraints use old variables
+        timer.start('vars')
+        self.remove_variables(old_vars)
+        timer.stop('vars')
 
 
 legacy_termination_condition_map = {

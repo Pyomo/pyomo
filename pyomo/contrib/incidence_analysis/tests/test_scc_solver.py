@@ -344,6 +344,25 @@ class TestGenerateSCC(unittest.TestCase):
                     self.assertIs(block.vars[0], m.height[t_next])
                     self.assertIs(block.cons[0], m.dhdt_disc_eq[t])
 
+    def test_with_zero_coefficients(self):
+        """Test where the blocks we identify are incorrect if we don't filter
+        out variables with coefficients of zero
+        """
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1.0)
+        m.eq1 = pyo.Constraint(expr=m.x[1] + 2 * m.x[2] + 0 * m.x[3] == 7)
+        m.eq2 = pyo.Constraint(expr=m.x[1] + pyo.log(m.x[1]) == 0)
+        blocks = generate_strongly_connected_components([m.eq1, m.eq2])
+        blocks = [bl for (bl, _) in blocks]
+
+        self.assertEqual(len(blocks[0].vars), 1)
+        self.assertIs(blocks[0].vars[0], m.x[1])
+        self.assertIs(blocks[0].cons[0], m.eq2)
+
+        self.assertEqual(len(blocks[1].vars), 1)
+        self.assertIs(blocks[1].vars[0], m.x[2])
+        self.assertIs(blocks[1].cons[0], m.eq1)
+
 
 @unittest.skipUnless(scipy_available, "SciPy is not available")
 @unittest.skipUnless(networkx_available, "NetworkX is not available")
@@ -449,6 +468,37 @@ class TestSolveSCC(unittest.TestCase):
         self.assertAlmostEqual(m.v0.value, m.p0.value)
         self.assertAlmostEqual(m.v1.value, -18.4499152895)
         # -18.4499 ~= -v2*v0/p1
+
+    def test_with_zero_coefficients(self):
+        """Test where the blocks we identify are incorrect if we don't filter
+        out variables with coefficients of zero
+        """
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1.0)
+        m.eq1 = pyo.Constraint(expr=m.x[1] + 2 * m.x[2] + 0 * m.x[3] == 7)
+        m.eq2 = pyo.Constraint(expr=m.x[1] + pyo.log(m.x[1]) == 0)
+        results = solve_strongly_connected_components(m)
+
+        self.assertAlmostEqual(m.x[1].value, 0.56714329)
+        self.assertAlmostEqual(m.x[2].value, 3.21642835)
+        self.assertEqual(m.x[3].value, 1.0)
+
+    def test_with_inequalities(self):
+        """Test that we correctly ignore inequalities"""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], initialize=1.0)
+        m.eq1 = pyo.Constraint(expr=m.x[1] + 2 * m.x[2] + 0 * m.x[3] == 7)
+        m.eq2 = pyo.Constraint(expr=m.x[1] + pyo.log(m.x[1]) == 0)
+
+        # Solving the system violates this inequality. That is fine. We happily
+        # ignore it for the purpose of this equation solve.
+        m.ineq1 = pyo.Constraint(expr=m.x[1] + 2 * m.x[2] + m.x[3] <= 3)
+
+        results = solve_strongly_connected_components(m)
+
+        self.assertAlmostEqual(m.x[1].value, 0.56714329)
+        self.assertAlmostEqual(m.x[2].value, 3.21642835)
+        self.assertEqual(m.x[3].value, 1.0)
 
 
 if __name__ == "__main__":

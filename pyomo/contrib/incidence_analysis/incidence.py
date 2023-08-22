@@ -12,6 +12,7 @@
 """
 import enum
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.repn import generate_standard_repn
 from pyomo.common.backports import nullcontext
 from pyomo.util.subsystems import TemporarySubsystemManager
@@ -39,16 +40,29 @@ def _get_incident_via_standard_repn(expr, include_fixed, linear_only):
     with context:
         repn = generate_standard_repn(expr, compute_values=False, quadratic=False)
 
-    # TODO: Check coefficients of linear variables.
-    # This is only necessary when handling mutable parameters and fixed
-    # variables as coefficients, which we're punting on for now. Variables
-    # with constant coefficients of zero don't appear here.
+    linear_vars = []
+    # Check coefficients to make sure we don't include linear variables with
+    # fixed coefficients of zero.
+    # Note that linear variables with constant coefficients of zero are already
+    # filtered in generate_standard_repn
+    for var, coef in zip(repn.linear_vars, repn.linear_coefs):
+        try:
+            value = pyo_value(coef)
+        except ValueError as err:
+            # Catch error evaluating expression with uninitialized variables
+            # TODO: Suppress logged error?
+            if "No value for uninitialized NumericValue" not in str(err):
+                raise err
+            value = None
+        if value != 0:
+            linear_vars.append(var)
     if linear_only:
-        return list(repn.linear_vars)
+        nl_var_id_set = set(id(var) for var in repn.nonlinear_vars)
+        return [var for var in repn.linear_vars if id(var) not in nl_var_id_set]
     else:
         # Combine linear and nonlinear variables and filter out duplicates. Note
         # that quadratic=False, so we don't need to include repn.quadratic_vars.
-        variables = repn.linear_vars + repn.nonlinear_vars
+        variables = linear_vars + list(repn.nonlinear_vars)
         unique_variables = []
         id_set = set()
         for var in variables:

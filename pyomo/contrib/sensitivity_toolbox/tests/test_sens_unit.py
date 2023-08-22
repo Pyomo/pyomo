@@ -35,8 +35,7 @@ from pyomo.core.base.component import ComponentData
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core.expr.current import identify_variables
-from pyomo.core.expr.visitor import identify_mutable_parameters
+from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters
 from pyomo.contrib.sensitivity_toolbox.sens import (
     SensitivityInterface,
     _NotAnIndex,

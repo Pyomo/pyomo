@@ -16,8 +16,7 @@ from pyomo.contrib.cp.interval_var import (
     IntervalVarLength,
     IntervalVarPresence,
 )
-from pyomo.core.expr.current import GetItemExpression
-from pyomo.core.expr.template_expr import GetAttrExpression
+from pyomo.core.expr import GetItemExpression, GetAttrExpression
 from pyomo.environ import ConcreteModel, Integers, Set, value, Var
 
 

@@ -12,7 +12,7 @@
 import pickle
 
 import pyomo.common.unittest as unittest
-from pyomo.core.expr.current import inequality, RangedExpression, EqualityExpression
+from pyomo.core.expr import inequality, RangedExpression, EqualityExpression
 from pyomo.kernel import pprint
 from pyomo.core.tests.unit.kernel.test_dict_container import (
     _TestActiveDictContainerBase,
