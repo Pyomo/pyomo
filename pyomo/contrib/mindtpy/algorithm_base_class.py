@@ -2217,7 +2217,7 @@ class _MindtPyAlgorithm(object):
                 'appsi_gurobi',
             } or config.mip_regularization_solver in {'gurobi', 'appsi_gurobi'}:
                 raise ValueError(
-                    "GUROBI can not provide duals for mixed-integer problems."
+                    "Gurobi can not provide duals for mixed-integer problems."
                 )
 
     ################################################################################################################################

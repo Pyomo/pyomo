@@ -103,7 +103,7 @@ class TestMindtPy(unittest.TestCase):
         'gurobi_persistent' in available_mip_solvers,
         'gurobi_persistent solver is not available',
     )
-    def test_LPNLP_GUROBI(self):
+    def test_LPNLP_Gurobi(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:

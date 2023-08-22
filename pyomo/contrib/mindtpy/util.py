@@ -721,18 +721,18 @@ def copy_var_list_values_from_solution_pool(
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
-    """A new persistent interface to GUROBI.
+    """A new persistent interface to Gurobi.
 
     Args:
-        GurobiPersistent (PersistentSolver): A class that provides a persistent interface to GUROBI.
+        GurobiPersistent (PersistentSolver): A class that provides a persistent interface to Gurobi.
     """
 
     def _intermediate_callback(self):
         def f(gurobi_model, where):
-            """Callback function for GUROBI.
+            """Callback function for Gurobi.
 
             Args:
-                gurobi_model (GUROBI model): the GUROBI model derived from pyomo model.
+                gurobi_model (Gurobi model): the Gurobi model derived from pyomo model.
                 where (int): an enum member of gurobipy.GRB.Callback.
             """
             self._callback_func(

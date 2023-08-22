@@ -251,7 +251,7 @@ class TestMindtPy(unittest.TestCase):
 
     @unittest.skipUnless(
         SolverFactory('cplex').available() or SolverFactory('gurobi').available(),
-        "CPLEX or GUROBI not available.",
+        "CPLEX or Gurobi not available.",
     )
     def test_OA_quadratic_strategy(self):
         """Test the outer approximation decomposition algorithm."""
