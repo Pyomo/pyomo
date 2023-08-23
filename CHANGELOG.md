@@ -55,6 +55,7 @@ Pyomo 6.6.2   (22 Aug 2023)
   - community_detection: fix networkx dependency in doctests (#2885)
   - cp: Fix bug with `land` in `contrib.logical_to_disjunctive` transformation
     (#2879)
+  - DoE: Update tutorial notebook (#2889)
   - incidence_analysis: Filter variables with non-constant, fixed expressions
     that resolve to zero in `get_incident_variables` (#2882)
   - incidence_analysis: Correct behavior of `linear_only` argument in
