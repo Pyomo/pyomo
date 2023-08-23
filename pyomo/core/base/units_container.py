@@ -404,6 +404,10 @@ class _PyomoUnit(NumericValue):
         """
         return 1.0
 
+    @property
+    def value(self):
+        return 1.0
+
     def pprint(self, ostream=None, verbose=False):
         """Display a user readable string description of this object."""
         if ostream is None:  # pragma:nocover
