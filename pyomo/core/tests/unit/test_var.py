@@ -147,12 +147,12 @@ class TestVarData(unittest.TestCase):
         self.assertEqual(m.x.lb, 0)
         m.x.lb = float('inf')
         with self.assertRaisesRegex(
-                ValueError, r'invalid non-finite lower bound \(inf\)'
+            ValueError, r'invalid non-finite lower bound \(inf\)'
         ):
             m.x.lb
         m.x.lb = float('nan')
         with self.assertRaisesRegex(
-                ValueError, r'invalid non-finite lower bound \(nan\)'
+            ValueError, r'invalid non-finite lower bound \(nan\)'
         ):
             m.x.lb
 
@@ -164,12 +164,12 @@ class TestVarData(unittest.TestCase):
         self.assertEqual(m.x.ub, 0)
         m.x.ub = float('-inf')
         with self.assertRaisesRegex(
-                ValueError, r'invalid non-finite upper bound \(-inf\)'
+            ValueError, r'invalid non-finite upper bound \(-inf\)'
         ):
             m.x.ub
         m.x.ub = float('nan')
         with self.assertRaisesRegex(
-                ValueError, r'invalid non-finite upper bound \(nan\)'
+            ValueError, r'invalid non-finite upper bound \(nan\)'
         ):
             m.x.ub
 
@@ -185,12 +185,12 @@ class TestVarData(unittest.TestCase):
         self.assertEqual(ub, None)
         m.x.lb = float('inf')
         with self.assertRaisesRegex(
-                ValueError, r'invalid non-finite lower bound \(inf\)'
+            ValueError, r'invalid non-finite lower bound \(inf\)'
         ):
             lb, ub = m.x.bounds
         m.x.lb = float('nan')
         with self.assertRaisesRegex(
-                ValueError, r'invalid non-finite lower bound \(nan\)'
+            ValueError, r'invalid non-finite lower bound \(nan\)'
         ):
             lb, ub = m.x.bounds
 
@@ -201,15 +201,14 @@ class TestVarData(unittest.TestCase):
         self.assertEqual(ub, 0)
         m.x.ub = float('-inf')
         with self.assertRaisesRegex(
-                ValueError, r'invalid non-finite upper bound \(-inf\)'
+            ValueError, r'invalid non-finite upper bound \(-inf\)'
         ):
             lb, ub = m.x.bounds
         m.x.ub = float('nan')
         with self.assertRaisesRegex(
-                ValueError, r'invalid non-finite upper bound \(nan\)'
+            ValueError, r'invalid non-finite upper bound \(nan\)'
         ):
             lb, ub = m.x.bounds
-
 
 
 class PyomoModel(unittest.TestCase):
