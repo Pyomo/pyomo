@@ -7,8 +7,6 @@ Pyomo 6.6.2   (22 Aug 2023)
 -------------------------------------------------------------------------------
 
 - General
-  - Resolve handling of `{}**0` in Linear/QuadraticRepn (#2857)
-  - Fix Linear/QuadraticRepnVisitor handling of `{}**{float}` (#2863, #2865)
   - Fall back on `multiprocessing.dummy` when `multiprocessing.Pool` is not
     available (#2890)
   - Clean up implicit function imports (#2892)
@@ -18,7 +16,7 @@ Pyomo 6.6.2   (22 Aug 2023)
   - Improve `calculate_variable_from_constraint` error messages (#2914)
   - Add function for collecting expressions with unit inconsistencies (#2904)
   - Remove `expr.current` (#2910)
-  - BUGFIX: Loading Scalar Param from `.dat` file (#2923)
+  - Fix loading Scalar Param from `.dat` file (#2923)
 - Core
   - Resolve kernel pickle/clone errors (#2916)
   - Reorganize numeric expression modules (#2909)
@@ -33,7 +31,10 @@ Pyomo 6.6.2   (22 Aug 2023)
   - Improved documentation for SOS (#2875)
   - Silence deprecation warnings (#2854)
 - Solvers Interfaces
+  - Resolve handling of `{}**0` in Linear/QuadraticRepn (#2857)
+  - Fix Linear/QuadraticRepnVisitor handling of `{}**{float}` (#2863, #2865)
   - GAMS: fix pickling models, update tests (#2913)
+  - Xpress: fix NLP results processing for Xpress 9.2.0 (#2921)
   - Improve NaN handling in LP, NL writers (#2930)
   - Ensure constants written correctly to LP/NL files (#2953)
 - Testing
@@ -69,7 +70,6 @@ Pyomo 6.6.2   (22 Aug 2023)
   - sensitivity_toolbox: Send lists to `numpy.vstack` rather than iterators
     (#2881)
   - viewer: Fix model viewer (#2924)
-  - Xpress: fix NLP results processing for Xpress 9.2.0 (#2921)
 
 -------------------------------------------------------------------------------
 Pyomo 6.6.1    (30 May 2023)
