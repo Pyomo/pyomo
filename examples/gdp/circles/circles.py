@@ -4,8 +4,6 @@ goal is to choose a point to minimize a convex quadratic function over a set of
 disjoint hyperspheres.
 """
 
-from __future__ import division
-
 from pyomo.environ import (
     ConcreteModel,
     Objective,
@@ -15,10 +13,13 @@ from pyomo.environ import (
     Constraint,
     value,
 )
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 
 # Circles2D3 is the original example described in the papers. Ruiz and Grossman
 # (2012) discuss two more example instances, Circles2D36 and Circles3D36, but I
-# couldn't find data for them, so I made a couple.
+# (S. Davis 08/2023) couldn't find data for them, so I made a couple.
 # format: dimension, circle_centers, circle_rvals, circle_penalties, reference_point, upper_bound
 circles_model_examples = {
     "Circles2D3": {
@@ -79,7 +80,7 @@ circles_model_examples = {
 }
 
 
-def build_model(data):
+def build_model(data=circles_model_examples["Circles2D3"]):
     """Build a model. By default you get Circles2D3, a small instance."""
 
     # Ensure good data was passed
@@ -160,10 +161,6 @@ def draw_model(m, title=None):
             f"Unable to draw: this drawing code only supports 2D models, but a {len(m.idx)}-dimensional model was passed."
         )
         return
-
-    # matplotlib setup
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
     ax.set_xlabel("x")
