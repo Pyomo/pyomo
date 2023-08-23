@@ -297,9 +297,9 @@ jobs:
         # Set up environment
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --remove channels defaults
         conda config --append channels nodefaults
         conda config --append channels conda-forge
+        conda config --remove channels defaults
         # Try to install mamba
         conda install --update-deps -q -y -n base conda-libmamba-solver \
             || MAMBA_FAILED=1
