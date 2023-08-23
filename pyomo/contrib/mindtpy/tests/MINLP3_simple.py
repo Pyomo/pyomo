@@ -47,7 +47,7 @@ from pyomo.common.collections import ComponentMap
 class SimpleMINLP(ConcreteModel):
     def __init__(self, *args, **kwargs):
         """Create the problem."""
-        kwargs.setdefault('name', 'DuranEx1')
+        kwargs.setdefault('name', 'SimpleMINLP3')
         super(SimpleMINLP, self).__init__(*args, **kwargs)
         m = self
 
@@ -64,7 +64,7 @@ class SimpleMINLP(ConcreteModel):
         # DISCRETE VARIABLES
         Y = m.Y = Var(J, domain=Binary, initialize=initY)
         # CONTINUOUS VARIABLES
-        X = m.X = Var(I, domain=Reals, initialize=initX, bounds=(-1, 50))
+        X = m.X = Var(I, domain=Reals, initialize=initX, bounds=(-0.9, 50))
 
         """Constraint definitions"""
         # CONSTRAINTS
