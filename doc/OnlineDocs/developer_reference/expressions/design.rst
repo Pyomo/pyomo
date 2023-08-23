@@ -198,7 +198,7 @@ The following classes are valid interior nodes:
 
 The following classes are valid leaf nodes:
 
-* Members of :data:`nonpyomo_leaf_types <pyomo.core.expr.numvalue.nonpyomo_leaf_types>`, which includes standard numeric data types like :const:`int`, :const:`float` and :const:`long`, as well as numeric data types defined by `numpy` and other commonly used packages.  This set also includes :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is used to wrap non-numeric arguments to the :class:`ExternalFunctionExpression <pyomo.core.expr.current.ExternalFunctionExpression>` class.
+* Members of :data:`nonpyomo_leaf_types <pyomo.core.expr.numvalue.nonpyomo_leaf_types>`, which includes standard numeric data types like :const:`int`, :const:`float` and :const:`long`, as well as numeric data types defined by `numpy` and other commonly used packages.  This set also includes :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is used to wrap non-numeric arguments to the :class:`ExternalFunctionExpression <pyomo.core.expr.ExternalFunctionExpression>` class.
 
 * Parameter component classes like :class:`ScalarParam <pyomo.core.base.param.ScalarParam>` and :class:`_ParamData <pyomo.core.base.param._ParamData>`, which arise in expression trees when the parameters are declared as mutable.  (Immutable parameters are identified when generating expressions, and they are replaced with their associated numeric value.)
 
