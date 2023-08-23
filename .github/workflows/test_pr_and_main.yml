@@ -159,18 +159,6 @@ jobs:
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
-    # Ideally we would cache the conda downloads; however, each cache is
-    # over 850MB, and with 5 python versions, that would consume 4.2 of
-    # the 5 GB GitHub allows.
-    #
-    #- name: Conda package cache
-    #  uses: actions/cache@v3
-    #  if: matrix.PYENV == 'conda'
-    #  id: conda-cache
-    #  with:
-    #    path: cache/conda
-    #    key: conda-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
-
     #- name: Pip package cache
     #  uses: actions/cache@v3
     #  if: matrix.PYENV == 'pip'
@@ -309,10 +297,8 @@ jobs:
       if: matrix.PYENV == 'conda'
       run: |
         # Set up environment
-        mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
         # Try to install mamba
         conda install --update-deps -q -y -n base conda-libmamba-solver \
             || MAMBA_FAILED=1
