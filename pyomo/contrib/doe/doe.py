@@ -821,9 +821,7 @@ class DesignOfExperiments:
                 time_set.append(iter_t)
 
                 # give run information at each iteration
-                self.logger.info(
-                    'This is run %s out of %s.', (count), total_count
-                )
+                self.logger.info('This is run %s out of %s.', count, total_count)
                 self.logger.info('The code has run  %s seconds.', sum(time_set))
                 self.logger.info(
                     'Estimated remaining time:  %s seconds',
