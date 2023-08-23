@@ -8,8 +8,6 @@ and "width" on the y-axis, and it also is unclear on the way the coordinates def
 decided that they are on the bottom-left and adapted the disjunction constraints to match.
 """
 
-from __future__ import division
-
 from pyomo.environ import (
     ConcreteModel,
     Objective,
@@ -129,10 +127,10 @@ def build_model(params=farm_layout_model_examples["FLay03"]):
     )
 
     m.plot_x = Var(
-        m.plots, bounds=(0, m.overall_length_ub), doc="x-coordinate of plot center"
+        m.plots, bounds=(0, m.overall_length_ub), doc="x-coordinate of plot bottom-left corner"
     )
     m.plot_y = Var(
-        m.plots, bounds=(0, m.overall_width_ub), doc="y-coordinate of plot center"
+        m.plots, bounds=(0, m.overall_width_ub), doc="y-coordinate of plot bottom-left corner"
     )
     m.plot_length = Var(
         m.plots, bounds=(0, m.overall_length_ub), doc="Length of this plot"
