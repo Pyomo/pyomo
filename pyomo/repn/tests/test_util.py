@@ -177,10 +177,26 @@ class TestRepnUtils(unittest.TestCase):
 
         # TODO: eventually these should raise exceptions
         d = InvalidNumber('abc')
-        self.assertEqual(repr(b), "5")
-        self.assertEqual(repr(d), "'abc'")
-        self.assertEqual(f'{b}', "5")
-        self.assertEqual(f'{d}', "abc")
+        with self.assertRaisesRegex(
+                InvalidValueError,
+                r"Cannot emit InvalidNumber\(5\) in compiled representation"
+        ):
+            repr(b)
+        with self.assertRaisesRegex(
+                InvalidValueError,
+                r"Cannot emit InvalidNumber\('abc'\) in compiled representation"
+        ):
+            repr(d)
+        with self.assertRaisesRegex(
+                InvalidValueError,
+                r"Cannot emit InvalidNumber\(5\) in compiled representation"
+        ):
+            f'{b}'
+        with self.assertRaisesRegex(
+                InvalidValueError,
+                r"Cannot emit InvalidNumber\('abc'\) in compiled representation"
+        ):
+            f'{d}'
 
     def test_apply_operation(self):
         m = ConcreteModel()

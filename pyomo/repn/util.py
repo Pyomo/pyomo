@@ -134,23 +134,27 @@ class InvalidNumber(object):
             return self.value >= other
 
     def __str__(self):
-        return f'InvalidNumber({self.value})'
+        # We will support simple conversion of InvalidNumber to strings
+        # (for reporting purposes)
+        return f'InvalidNumber({self.value!r})'
 
     def __repr__(self):
-        # FIXME: We want to move to where converting InvalidNumber to
-        # string (with either repr() or f"") should raise a
-        # InvalidValueError.  However, at the moment, this breaks some
-        # tests in PyROS.
-        return repr(self.value)
-        # raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
+        # We want attempts to convert InvalidNumber to a string
+        # representation to raise a InvalidValueError.
+        raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
 
     def __format__(self, format_spec):
         # FIXME: We want to move to where converting InvalidNumber to
         # string (with either repr() or f"") should raise a
         # InvalidValueError.  However, at the moment, this breaks some
         # tests in PyROS.
-        return self.value.__format__(format_spec)
-        # raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
+        # return self.value.__format__(format_spec)
+        raise InvalidValueError(f'Cannot emit {str(self)} in compiled representation')
+
+    def __float__(self):
+        # We want attempts to convert InvalidNumber to a float
+        # representation to raise a InvalidValueError.
+        raise InvalidValueError(f'Cannot convert {str(self)} to float')
 
     def __neg__(self):
         return self.duplicate(-self.value)
