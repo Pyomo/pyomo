@@ -124,7 +124,7 @@ If :attr:`start` is not a numeric value, then the :func:`quicksum
 <pyomo.core.util.quicksum>` sets the initial value to :attr:`start`
 and executes a simple loop to sum the terms.  This allows the sum
 to be stored in an object that is passed into the function (e.g. the linear context manager 
-:data:`linear_expression <pyomo.core.expr.current.linear_expression>`).
+:data:`linear_expression <pyomo.core.expr.linear_expression>`).
 
 .. Warning::
 
