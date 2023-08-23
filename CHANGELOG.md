@@ -34,6 +34,8 @@ Pyomo 6.6.2   (22 Aug 2023)
   - Silence deprecation warnings (#2854)
 - Solvers Interfaces
   - GAMS: fix pickling models, update tests (#2913)
+  - Improve NaN handling in LP, NL writers (#2930)
+  - Ensure constants written correctly to LP/NL files (#2953)
 - Testing
   - Remove the 'singletest' job from "branches" builds (#2917)
   - Reactivate NEOS-MOSEK Tests (#2870)
@@ -44,6 +46,8 @@ Pyomo 6.6.2   (22 Aug 2023)
 - GDP
   - Fixing a typo in gdp.hull transformation (#2915)
   - Add some more instances to the GDP constrained layout example (#2838)
+  - Adding (reversible) `gdp.transform_current_disjunctive_logic`
+    transformation (#2809)
 - Contributed Packages
   - APPSI: change default behavior to not care where variables live (#2903)
   - APPSI: Correctly Process Objective Bounds from Gurobi for Nonconvex QCPs
@@ -55,7 +59,7 @@ Pyomo 6.6.2   (22 Aug 2023)
     that resolve to zero in `get_incident_variables` (#2882)
   - incidence_analysis: Correct behavior of `linear_only` argument in
     `get_incident_variables` (#2883)
-  - MindtPy: add support for cyipopt (#2830)
+  - MindtPy: Refactor to improve extensibility and maintainability (#2887)
   - PyNumero: Add `PyNumeroEvaluationError` (#2901)
   - PyNumero: Make min and max work with MPIBlockVector when some blocks have
     size 0 (#2896)
