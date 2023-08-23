@@ -1605,6 +1605,6 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertEqual(str(repn.constant), 'InvalidNumber([3 4])')
+        self.assertEqual(str(repn.constant), 'InvalidNumber(array([3, 4]))')
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
