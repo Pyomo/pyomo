@@ -822,7 +822,7 @@ class DesignOfExperiments:
 
                 # give run information at each iteration
                 self.logger.info(
-                    'This is %s run out of %s.', (count + 1), total_count
+                    'This is run %s out of %s.', (count), total_count
                 )
                 self.logger.info('The code has run  %s seconds.', sum(time_set))
                 self.logger.info(
