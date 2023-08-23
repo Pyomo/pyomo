@@ -272,7 +272,7 @@ jobs:
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --system --remove channels defaults
-        conda config --env --remove channels defaults
+        conda config --system --append channels nodefaults
         conda config --env --append channels nodefaults
         conda config --env --append channels conda-forge
         # Try to install mamba
