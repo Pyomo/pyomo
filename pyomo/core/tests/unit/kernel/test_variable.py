@@ -577,9 +577,9 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_discrete(), False)
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), False)
-        self.assertEqual(v.lb, float('-inf'))
-        self.assertEqual(v.ub, float('inf'))
-        self.assertEqual(v.bounds, (float('-inf'), float('inf')))
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, None)
+        self.assertEqual(v.bounds, (None, None))
         self.assertEqual(v.has_lb(), False)
         self.assertEqual(v.has_ub(), False)
 
@@ -662,8 +662,8 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), True)
-        self.assertEqual(v.lb, float('-inf'))
-        self.assertEqual(v.ub, float('inf'))
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, None)
         self.assertEqual(v.has_lb(), False)
         self.assertEqual(v.has_ub(), False)
 
@@ -695,21 +695,21 @@ class Test_variable(unittest.TestCase):
 
         v.lb = float('-inf')
         self.assertEqual(v.has_lb(), False)
-        self.assertEqual(v.lb, float('-inf'))
+        self.assertEqual(v.lb, None)
         self.assertEqual(v.has_ub(), False)
         self.assertEqual(v.ub, None)
 
         v.ub = float('inf')
         self.assertEqual(v.has_lb(), False)
-        self.assertEqual(v.lb, float('-inf'))
+        self.assertEqual(v.lb, None)
         self.assertEqual(v.has_ub(), False)
-        self.assertEqual(v.ub, float('inf'))
+        self.assertEqual(v.ub, None)
 
         v.lb = 0
         self.assertEqual(v.has_lb(), True)
         self.assertEqual(v.lb, 0)
         self.assertEqual(v.has_ub(), False)
-        self.assertEqual(v.ub, float('inf'))
+        self.assertEqual(v.ub, None)
 
         v.ub = 0
         self.assertEqual(v.has_lb(), True)
