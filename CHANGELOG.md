@@ -3,7 +3,7 @@ Pyomo CHANGELOG
 
 
 -------------------------------------------------------------------------------
-Pyomo 6.6.2   (22 Aug 2023)
+Pyomo 6.6.2   (23 Aug 2023)
 -------------------------------------------------------------------------------
 
 - General
@@ -15,7 +15,6 @@ Pyomo 6.6.2   (22 Aug 2023)
     `lsb_release` (#2911)
   - Improve `calculate_variable_from_constraint` error messages (#2914)
   - Add function for collecting expressions with unit inconsistencies (#2904)
-  - Remove `expr.current` (#2910)
   - Fix loading Scalar Param from `.dat` file (#2923)
 - Core
   - Resolve kernel pickle/clone errors (#2916)
@@ -23,6 +22,7 @@ Pyomo 6.6.2   (22 Aug 2023)
   - Resolve error categorizing some Var discrete domains as "integer" (#2954)
   - Named expressions: `expr` should always return `NumericValue` (#2948)
   - Support kwargs in partial objects passed to Initializer() (#2960)
+  - Remove `expr.current` (#2910)
 - Documentation
   - Fixing a 'that' vs. 'which' mistake in error about bounds crossing (#2950)
   - Add Explicit Linting Instructions to PR Template (#2947)
