@@ -6,6 +6,9 @@ Pyomo CHANGELOG
 Pyomo 6.6.2   (23 Aug 2023)
 -------------------------------------------------------------------------------
 
+ADVANCE CHANGE NOTICE
+  - This will be the last release to support Python 3.7.
+
 - General
   - Fall back on `multiprocessing.dummy` when `multiprocessing.Pool` is not
     available (#2890)
