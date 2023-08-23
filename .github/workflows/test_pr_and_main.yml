@@ -236,7 +236,7 @@ jobs:
       if: matrix.PYENV == 'conda'
       uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-update-conda: true
+        auto-update-conda: false
         python-version: ${{ matrix.python }}
         channel-priority: strict
 
@@ -343,7 +343,7 @@ jobs:
             fi
         done
         echo "*** Install Pyomo dependencies ***"
-        conda install -q -y $CONDA_DEPENDENCIES
+        conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             echo "*** Install CPLEX ***"
             conda install -q -y 'cplex>=12.10' docplex \
