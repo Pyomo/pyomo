@@ -75,7 +75,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
     # Recursively form the Disjunctions and Disjuncts. This shouldn't blow up
     # the stack, since the whole point is that we'll only go logarithmically
     # many calls deep.
-    def _get_disjunction(self, choices, parent_block, pw_expr, root_block, level):
+    def _get_disjunction(self, choices, parent_block, pw_expr, root_block):
         size = len(choices)
         if self.DEBUG:
             print(f"calling _get_disjunction with size={size}")
@@ -106,7 +106,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
                 self._set_disjunct_block_constraints(b, simplex, linear_func, pw_expr, root_block)
             @parent_block.Disjunct()
             def d_r(b):
-                b.inner_disjunction_r = self._get_disjunction(choices[1:], b, pw_expr, root_block, level + 1)
+                b.inner_disjunction_r = self._get_disjunction(choices[1:], b, pw_expr, root_block)
             return Disjunction(expr=[parent_block.d_l, parent_block.d_r])
         elif size == 2:
             # In this case both sides are regular Disjuncts
