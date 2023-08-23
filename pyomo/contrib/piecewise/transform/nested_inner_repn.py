@@ -54,8 +54,17 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
         if self.DEBUG:
             print(f"dimension is {self.dimension}")
 
-        # Add the disjunction
-        transBlock.disj = self._get_disjunction(choices, transBlock, pw_expr, transBlock, 1)
+        # If there was only one choice, don't bother making a disjunction, just
+        # use the linear function directly (but still use the substitute_var for 
+        # consistency).
+        if len(choices) == 1:
+            (_, linear_func) = choices[0] # simplex isn't important in this case
+            linear_func_expr = linear_func(*pw_expr.args)
+            transBlock.set_substitute = Constraint(expr=substitute_var == linear_func_expr)
+            (self.substitute_var_lb, self.substitute_var_ub) = compute_bounds_on_expr(linear_func_expr)
+        else:
+            # Add the disjunction
+            transBlock.disj = self._get_disjunction(choices, transBlock, pw_expr, transBlock, 1)
 
         # Widen bounds as determined when setting up the disjunction
         if self.substitute_var_lb < float('inf'):
