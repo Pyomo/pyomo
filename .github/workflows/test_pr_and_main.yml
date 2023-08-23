@@ -238,7 +238,6 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
-        channels: conda-forge,gurobi,ibmdecisionoptimization,fico-xpress
         channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
@@ -306,6 +305,11 @@ jobs:
             echo "*** Activating the mamba environment solver ***"
             conda config --set solver libmamba
         fi
+        # Add the rest of the channels
+        conda config --append channels conda-forge
+        conda config --append channels gurobi
+        conda config --append channels ibmdecisionoptimization
+        conda config --append channels fico-xpress
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
