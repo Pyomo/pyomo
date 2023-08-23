@@ -297,9 +297,10 @@ jobs:
         # Set up environment
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --append channels nodefaults
-        conda config --append channels conda-forge
-        conda config --remove channels defaults
+        conda config --system --remove channels defaults
+        conda config --env --remove channels defaults
+        conda config --env --append channels nodefaults
+        conda config --env --append channels conda-forge
         # Try to install mamba
         conda install --update-deps -q -y -n base conda-libmamba-solver \
             || MAMBA_FAILED=1
@@ -308,9 +309,9 @@ jobs:
             conda config --set solver libmamba
         fi
         # Add the rest of the channels
-        conda config --append channels gurobi
-        conda config --append channels ibmdecisionoptimization
-        conda config --append channels fico-xpress
+        conda config --env --append channels gurobi
+        conda config --env --append channels ibmdecisionoptimization
+        conda config --env --append channels fico-xpress
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
