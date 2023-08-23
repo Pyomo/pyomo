@@ -127,10 +127,14 @@ def build_model(params=farm_layout_model_examples["FLay03"]):
     )
 
     m.plot_x = Var(
-        m.plots, bounds=(0, m.overall_length_ub), doc="x-coordinate of plot bottom-left corner"
+        m.plots,
+        bounds=(0, m.overall_length_ub),
+        doc="x-coordinate of plot bottom-left corner",
     )
     m.plot_y = Var(
-        m.plots, bounds=(0, m.overall_width_ub), doc="y-coordinate of plot bottom-left corner"
+        m.plots,
+        bounds=(0, m.overall_width_ub),
+        doc="y-coordinate of plot bottom-left corner",
     )
     m.plot_length = Var(
         m.plots, bounds=(0, m.overall_length_ub), doc="Length of this plot"
