@@ -18,6 +18,7 @@ import os
 
 import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
+from pyomo.repn.util import InvalidNumber
 from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.dependencies import numpy, numpy_available
@@ -26,6 +27,7 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import Expr_if, inequality, LinearExpression
 from pyomo.core.base.expression import ScalarExpression
 from pyomo.environ import (
+    Any,
     ConcreteModel,
     Objective,
     Param,
@@ -64,6 +66,15 @@ class INFO(object):
             self.symbolic_solver_labels,
             True,
         )
+
+    def __enter__(self):
+        assert nl_writer.AMPLRepn.ActiveVisitor is None
+        nl_writer.AMPLRepn.ActiveVisitor = self.visitor
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        assert nl_writer.AMPLRepn.ActiveVisitor is self.visitor
+        nl_writer.AMPLRepn.ActiveVisitor = None
 
 
 class Test_AMPLRepnVisitor(unittest.TestCase):
@@ -455,9 +466,10 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
 
     def test_errors_propagate_nan(self):
         m = ConcreteModel()
-        m.p = Param(mutable=True, initialize=0)
+        m.p = Param(mutable=True, initialize=0, domain=Any)
         m.x = Var()
         m.y = Var()
+        m.z = Var()
         m.y.fix(1)
 
         expr = m.y**2 * m.x**2 * (((3 * m.x) / m.p) * m.x) / m.y
@@ -474,6 +486,61 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
         self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.y.fix(None)
+        expr = log(m.y) + 3
+        repn = info.visitor.walk_expression((expr, None, None))
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        expr = 3 * m.y
+        repn = info.visitor.walk_expression((expr, None, None))
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, InvalidNumber(None))
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.p.value = None
+        expr = 5 * (m.p * m.x + 2 * m.z)
+        repn = info.visitor.walk_expression((expr, None, None))
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.z): 10, id(m.x): InvalidNumber(None)})
+        self.assertEqual(repn.nonlinear, None)
+
+        expr = m.y * m.x
+        repn = info.visitor.walk_expression((expr, None, None))
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, 0)
+        self.assertEqual(repn.linear, {id(m.x): InvalidNumber(None)})
+        self.assertEqual(repn.nonlinear, None)
+
+        m.z = Var([1, 2, 3, 4], initialize=lambda m, i: i - 1)
+        m.z[1].fix(None)
+        expr = m.z[1] - ((m.z[2] * m.z[3]) * m.z[4])
+        with INFO() as info:
+            repn = info.visitor.walk_expression((expr, None, None))
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, InvalidNumber(None))
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.nonlinear[0], 'o16\no2\no2\nv%s\nv%s\nv%s\n')
+        self.assertEqual(repn.nonlinear[1], [id(m.z[2]), id(m.z[3]), id(m.z[4])])
+
+        m.z[3].fix(float('nan'))
+        with INFO() as info:
+            repn = info.visitor.walk_expression((expr, None, None))
+        self.assertEqual(repn.nl, None)
+        self.assertEqual(repn.mult, 1)
+        self.assertEqual(repn.const, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
