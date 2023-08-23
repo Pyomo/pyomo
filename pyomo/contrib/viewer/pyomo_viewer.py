@@ -26,7 +26,7 @@ from pyomo.common.dependencies import attempt_import, UnavailableClass
 from pyomo.scripting.pyomo_parser import add_subparser
 import pyomo.contrib.viewer.qt as myqt
 
-qtconsole_app, qtconsole_available = attempt_import('qtconsole.qtconsoleapp')
+qtconsole_app, qtconsole_available = attempt_import("qtconsole.qtconsoleapp")
 
 
 class QtApp(
@@ -97,13 +97,9 @@ except NameError:
     def init_qt_elements(self):
         super().init_qt_elements()
         self.kernel_pyomo_init(self.widget.kernel_client)
-        self.run_script_act = myqt.QtWidgets.QAction("&Run Script...", self.window)
-        self.show_ui_act = myqt.QtWidgets.QAction(
-            "&Show Pyomo Model Viewer", self.window
-        )
-        self.hide_ui_act = myqt.QtWidgets.QAction(
-            "&Hide Pyomo Model Viewer", self.window
-        )
+        self.run_script_act = myqt.QAction("&Run Script...", self.window)
+        self.show_ui_act = myqt.QAction("&Show Pyomo Model Viewer", self.window)
+        self.hide_ui_act = myqt.QAction("&Hide Pyomo Model Viewer", self.window)
         self.window.file_menu.addSeparator()
         self.window.file_menu.addAction(self.run_script_act)
         self.window.view_menu.addSeparator()
@@ -125,7 +121,7 @@ def main(*args):
         errors = list(myqt.import_errors)
         if not qtconsole_available:
             errors.append(qtconsole_app._moduleunavailable_message())
-        print("qt not available\n    " + '\n    '.join(errors))
+        print("qt not available\n    " + "\n    ".join(errors))
         return
     QtApp.launch_instance()
 

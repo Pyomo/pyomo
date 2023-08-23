@@ -102,17 +102,16 @@ class NumberDelegate(myqt.QItemDelegate):
 
 
 class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
-    def __init__(self, ui_data, parent=None, standard="Var"):
+    def __init__(self, ui_data, standard="Var"):
         """
-        Create a dock widdget with a QTreeView of a Pyomo model.
+        Create a dock widget with a QTreeView of a Pyomo model.
 
         Args:
-            parent: parent widget
             ui_data: Contains model and ui information
             standard: A standard setup for different types of model components
                 {"Var", "Constraint", "Param", "Expression"}
         """
-        super().__init__(parent=parent)
+        super().__init__()
         self.setupUi(self)
         # The default int and double spin boxes are not good for this
         # application.  So just use regular line edits.

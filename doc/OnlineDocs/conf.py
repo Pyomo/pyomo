@@ -146,13 +146,6 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 html_theme = 'sphinx_rtd_theme'
 
-# Force HTML4: If we don't explicitly force HTML4, then the background
-# of the Parameters/Returns/Return type headers is shaded the same as the
-# method prototype (tested 15 April 21 with Sphinx=3.5.4 and
-# sphinx-rtd-theme=0.5.2).
-html4_writer = True
-# html5_writer = True
-
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme
 
