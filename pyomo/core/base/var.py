@@ -461,7 +461,7 @@ class _GeneralVarData(_VarData):
             else:
                 raise ValueError(
                     "Var '%s' created with an invalid non-finite "
-                    "lower bound (%s)." % (self.name, bound)
+                    "lower bound (%s)." % (self.name, lb)
                 )
         if domain_lb is not None:
             if lb is None:
@@ -479,7 +479,7 @@ class _GeneralVarData(_VarData):
             else:
                 raise ValueError(
                     "Var '%s' created with an invalid non-finite "
-                    "lower bound (%s)." % (self.name, bound)
+                    "upper bound (%s)." % (self.name, ub)
                 )
         if domain_ub is not None:
             if ub is None:
@@ -504,7 +504,7 @@ class _GeneralVarData(_VarData):
             else:
                 raise ValueError(
                     "Var '%s' created with an invalid non-finite "
-                    "lower bound (%s)." % (self.name, bound)
+                    "lower bound (%s)." % (self.name, lb)
                 )
         if domain_lb is not None:
             if lb is None:
@@ -529,7 +529,7 @@ class _GeneralVarData(_VarData):
             else:
                 raise ValueError(
                     "Var '%s' created with an invalid non-finite "
-                    "lower bound (%s)." % (self.name, bound)
+                    "upper bound (%s)." % (self.name, ub)
                 )
         if domain_ub is not None:
             if ub is None:
