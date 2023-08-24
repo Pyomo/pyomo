@@ -318,7 +318,6 @@ jobs:
             fi
         done
         echo "*** Install Pyomo dependencies ***"
-        conda config --remove channels defaults
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             echo "*** Install CPLEX ***"
