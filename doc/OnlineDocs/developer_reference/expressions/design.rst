@@ -13,7 +13,7 @@ Design Details
 
 Most Pyomo expression trees have the following form
 
-1. Interior nodes are objects that inherit from the :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>` class.  These objects typically have one or more child nodes.  Linear expression nodes do not have child nodes, but they are treated as interior nodes in the expression tree because they references other leaf nodes.
+1. Interior nodes are objects that inherit from the :class:`ExpressionBase <pyomo.core.expr.ExpressionBase>` class.  These objects typically have one or more child nodes.  Linear expression nodes do not have child nodes, but they are treated as interior nodes in the expression tree because they references other leaf nodes.
 
 2. Leaf nodes are numeric values, parameter components and variable components, which represent the *inputs* to the expression.
 
@@ -26,13 +26,13 @@ describes the standard operators in Python and their associated Pyomo expression
 ========== ============= =============================================================================
 Operation  Python Syntax Pyomo Class
 ========== ============= =============================================================================
-sum        ``x + y``     :class:`SumExpression <pyomo.core.expr.current.SumExpression>`
-product    ``x * y``     :class:`ProductExpression <pyomo.core.expr.current.ProductExpression>`
-negation   ``- x``       :class:`NegationExpression <pyomo.core.expr.current.NegationExpression>`
-division   ``x / y``     :class:`DivisionExpression <pyomo.core.expr.current.DivisionExpression>`
-power      ``x ** y``    :class:`PowExpression <pyomo.core.expr.current.PowExpression>`
-inequality ``x <= y``    :class:`InequalityExpression <pyomo.core.expr.current.InequalityExpression>`
-equality   ``x == y``    :class:`EqualityExpression <pyomo.core.expr.current.EqualityExpression>`
+sum        ``x + y``     :class:`SumExpression <pyomo.core.expr.SumExpression>`
+product    ``x * y``     :class:`ProductExpression <pyomo.core.expr.ProductExpression>`
+negation   ``- x``       :class:`NegationExpression <pyomo.core.expr.NegationExpression>`
+division   ``x / y``     :class:`DivisionExpression <pyomo.core.expr.DivisionExpression>`
+power      ``x ** y``    :class:`PowExpression <pyomo.core.expr.PowExpression>`
+inequality ``x <= y``    :class:`InequalityExpression <pyomo.core.expr.InequalityExpression>`
+equality   ``x == y``    :class:`EqualityExpression <pyomo.core.expr.EqualityExpression>`
 ========== ============= =============================================================================
 
 Additionally, there are a variety of other Pyomo expression classes that capture more general 
@@ -41,10 +41,10 @@ logical relationships, which are summarized in the following table:
 ==================== ====================================   ========================================================================================
 Operation            Example                                Pyomo Class
 ==================== ====================================   ========================================================================================
-external function     ``myfunc(x,y,z)``                      :class:`ExternalFunctionExpression <pyomo.core.expr.current.ExternalFunctionExpression>`
-logical if-then-else ``Expr_if(IF=x, THEN=y, ELSE=z)``      :class:`Expr_ifExpression <pyomo.core.expr.current.Expr_ifExpression>`
-intrinsic function   ``sin(x)``                             :class:`UnaryFunctionExpression <pyomo.core.expr.current.UnaryFunctionExpression>`
-absolute function    ``abs(x)``                             :class:`AbsExpression <pyomo.core.expr.current.AbsExpression>`
+external function     ``myfunc(x,y,z)``                      :class:`ExternalFunctionExpression <pyomo.core.expr.ExternalFunctionExpression>`
+logical if-then-else ``Expr_if(IF=x, THEN=y, ELSE=z)``      :class:`Expr_ifExpression <pyomo.core.expr.Expr_ifExpression>`
+intrinsic function   ``sin(x)``                             :class:`UnaryFunctionExpression <pyomo.core.expr.UnaryFunctionExpression>`
+absolute function    ``abs(x)``                             :class:`AbsExpression <pyomo.core.expr.AbsExpression>`
 ==================== ====================================   ========================================================================================
 
 Expression objects are immutable.  Specifically, the list of
@@ -119,7 +119,7 @@ the named expression.
 .. note::
 
     The named expression classes are not implemented as sub-classes
-    of :class:`NumericExpression <pyomo.core.expr.current.NumericExpression>`.
+    of :class:`NumericExpression <pyomo.core.expr.NumericExpression>`.
     This reflects design constraints related to the fact that these
     are modeling components that belong to class hierarchies other
     than the expression class hierarchy, and Pyomo's design prohibits
@@ -130,7 +130,7 @@ Linear Expressions
 
 Pyomo includes a special expression class for linear expressions.
 The class :class:`LinearExpression
-<pyomo.core.expr.current.LinearExpression>` provides a compact
+<pyomo.core.expr.LinearExpression>` provides a compact
 description of linear polynomials.  Specifically, it includes a
 constant value :attr:`constant` and two lists for coefficients and
 variables: :attr:`linear_coefs` and :attr:`linear_vars`.
@@ -147,12 +147,12 @@ Sum Expressions
 
 Pyomo does not have a binary sum expression class.  Instead,
 it has an ``n``-ary summation class, :class:`SumExpression
-<pyomo.core.expr.current.SumExpression>`.  This expression class
+<pyomo.core.expr.SumExpression>`.  This expression class
 treats sums as ``n``-ary sums for efficiency reasons;  many large
 optimization models contain large sums. But note that this class
 maintains the immutability property described above.  This class
 shares an underlying list of arguments with other :class:`SumExpression
-<pyomo.core.expr.current.SumExpression>` objects. A particular
+<pyomo.core.expr.SumExpression>` objects. A particular
 object owns the first ``n`` arguments in the shared list, but
 different objects may have different values of ``n``.
 
@@ -173,13 +173,13 @@ model transformations, developers may be able to limit the use of
 expressions to avoid these side-effects.  The following mutable private classes
 are available in Pyomo:
 
-:class:`_MutableSumExpression <pyomo.core.expr.current._MutableSumExpression>` 
+:class:`_MutableSumExpression <pyomo.core.expr._MutableSumExpression>` 
     This class
-    is used in the :data:`nonlinear_expression <pyomo.core.expr.current.nonlinear_expression>` context manager to
+    is used in the :data:`nonlinear_expression <pyomo.core.expr.nonlinear_expression>` context manager to
     efficiently combine sums of nonlinear terms.
-:class:`_MutableLinearExpression <pyomo.core.expr.current._MutableLinearExpression>` 
+:class:`_MutableLinearExpression <pyomo.core.expr._MutableLinearExpression>` 
     This class
-    is used in the :data:`linear_expression <pyomo.core.expr.current.linear_expression>` context manager to
+    is used in the :data:`linear_expression <pyomo.core.expr.linear_expression>` context manager to
     efficiently combine sums of linear terms.
 
 
@@ -192,22 +192,22 @@ interior node.
 
 The following classes are valid interior nodes:
 
-* Subclasses of :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>`
+* Subclasses of :class:`ExpressionBase <pyomo.core.expr.ExpressionBase>`
 
-* Classes that that are *duck typed* to match the API of the :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>` class.  For example, the named expression class :class:`Expression <pyomo.core.expr.current.Expression>`.
+* Classes that that are *duck typed* to match the API of the :class:`ExpressionBase <pyomo.core.expr.ExpressionBase>` class.  For example, the named expression class :class:`Expression <pyomo.core.expr.Expression>`.
 
 The following classes are valid leaf nodes:
 
-* Members of :data:`nonpyomo_leaf_types <pyomo.core.expr.numvalue.nonpyomo_leaf_types>`, which includes standard numeric data types like :const:`int`, :const:`float` and :const:`long`, as well as numeric data types defined by `numpy` and other commonly used packages.  This set also includes :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is used to wrap non-numeric arguments to the :class:`ExternalFunctionExpression <pyomo.core.expr.current.current.ExternalFunctionExpression>` class.
+* Members of :data:`nonpyomo_leaf_types <pyomo.core.expr.numvalue.nonpyomo_leaf_types>`, which includes standard numeric data types like :const:`int`, :const:`float` and :const:`long`, as well as numeric data types defined by `numpy` and other commonly used packages.  This set also includes :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is used to wrap non-numeric arguments to the :class:`ExternalFunctionExpression <pyomo.core.expr.ExternalFunctionExpression>` class.
 
 * Parameter component classes like :class:`ScalarParam <pyomo.core.base.param.ScalarParam>` and :class:`_ParamData <pyomo.core.base.param._ParamData>`, which arise in expression trees when the parameters are declared as mutable.  (Immutable parameters are identified when generating expressions, and they are replaced with their associated numeric value.)
 
-* Variable component classes like :class:`ScalarVar <pyomo.core.base.var.ScalarVar>` and :class:`_GeneralVarData <pyomo.core.base.var._GeneralVarData>`, which often arise in expression trees.  <pyomo.core.expr.current.pyomo5_variable_types>`.
+* Variable component classes like :class:`ScalarVar <pyomo.core.base.var.ScalarVar>` and :class:`_GeneralVarData <pyomo.core.base.var._GeneralVarData>`, which often arise in expression trees.  <pyomo.core.expr.pyomo5_variable_types>`.
 
 .. note::
 
     In some contexts the :class:`LinearExpression
-    <pyomo.core.expr.current.LinearExpression>` class can be treated
+    <pyomo.core.expr.LinearExpression>` class can be treated
     as an interior node, and sometimes it can be treated as a leaf.
     This expression object does not have any child arguments, so
     ``nargs()`` is zero.  But this expression references variables
@@ -223,7 +223,7 @@ Pyomo defines several context managers that can be used to declare
 the form of expressions, and to define a mutable expression object that
 efficiently manages sums.
 
-The :data:`linear_expression <pyomo.core.expr.current.linear_expression>` 
+The :data:`linear_expression <pyomo.core.expr.linear_expression>` 
 object is a context manager that can be used to declare a linear sum.  For
 example, consider the following two loops:
 
@@ -240,8 +240,8 @@ more efficient processing of each sum, and (b) a more compact
 representation for the expression.
 
 The difference between :data:`linear_expression
-<pyomo.core.expr.current.linear_expression>` and
-:data:`nonlinear_expression <pyomo.core.expr.current.nonlinear_expression>`
+<pyomo.core.expr.linear_expression>` and
+:data:`nonlinear_expression <pyomo.core.expr.nonlinear_expression>`
 is the underlying representation that each supports.  Note that
 both of these are instances of context manager classes.  In
 singled-threaded applications, these objects can be safely used to
