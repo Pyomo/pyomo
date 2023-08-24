@@ -443,10 +443,11 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    if node.expr.__class__ in native_types:
-        expr_lb = expr_ub = node.expr
+    (expr,) = node.args
+    if expr.__class__ in native_types:
+        expr_lb = expr_ub = expr
     else:
-        expr_lb, expr_ub = bnds_dict[node.expr]
+        expr_lb, expr_ub = bnds_dict[expr]
     bnds_dict[node] = (expr_lb, expr_ub)
 
 

@@ -11,7 +11,7 @@
 
 import logging
 import os
-from collections import deque
+from collections import deque, defaultdict
 from operator import itemgetter, attrgetter, setitem
 from contextlib import nullcontext
 
@@ -72,11 +72,15 @@ from pyomo.repn.util import (
     ExprType,
     FileDeterminism,
     FileDeterminism_to_SortComponents,
+    InvalidNumber,
     apply_node_operation,
     categorize_valid_components,
     complex_number_error,
     initialize_var_map_from_column_order,
+    int_float,
     ordered_active_constraints,
+    nan,
+    sum_like_expression_types,
 )
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
@@ -93,7 +97,6 @@ logger = logging.getLogger(__name__)
 TOL = 1e-8
 inf = float('inf')
 minus_inf = -inf
-
 
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
@@ -354,8 +357,8 @@ class _SuffixData(object):
     def update(self, suffix):
         missing_component = missing_other = 0
         self.datatype.add(suffix.datatype)
-        for item in suffix.items():
-            missing = self._store(*item)
+        for obj, val in suffix.items():
+            missing = self._store(obj, val)
             if missing:
                 if missing > 0:
                     missing_component += missing
@@ -402,25 +405,34 @@ class _SuffixData(object):
             )
 
     def _store(self, obj, val):
-        missing_ct = 0
         _id = id(obj)
         if _id in self._column_order:
-            self.var[self._column_order[_id]] = val
+            obj = self.var
+            key = self._column_order[_id]
         elif _id in self._row_order:
-            self.con[self._row_order[_id]] = val
+            obj = self.con
+            key = self._row_order[_id]
         elif _id in self._obj_order:
-            self.obj[self._obj_order[_id]] = val
+            obj = self.obj
+            key = self._obj_order[_id]
         elif _id == self._model_id:
-            self.prob[0] = val
-        elif isinstance(obj, PyomoObject):
-            if obj.is_indexed():
-                for o in obj.values():
-                    missing_ct += self._store(o, val)
-            else:
-                missing_ct = 1
+            obj = self.prob
+            key = 0
         else:
-            missing_ct = -1
-        return missing_ct
+            missing_ct = 0
+            if isinstance(obj, PyomoObject):
+                if obj.is_indexed():
+                    for o in obj.values():
+                        missing_ct += self._store(o, val)
+                else:
+                    missing_ct = 1
+            else:
+                missing_ct = -1
+            return missing_ct
+        if val.__class__ not in int_float:
+            val = float(val)
+        obj[key] = val
+        return 0
 
 
 class _NLWriter_impl(object):
@@ -559,16 +571,17 @@ class _NLWriter_impl(object):
             expr = visitor.walk_expression((con.body, con, 0))
             if expr.named_exprs:
                 self._record_named_expression_usage(expr.named_exprs, con, 0)
+            # Note: Constraint.lb/ub guarantee a return value that is
+            # either a (finite) native_numeric_type, or None
+            const = expr.const
+            if const.__class__ not in int_float:
+                const = float(const)
             lb = con.lb
-            if lb == minus_inf:
-                lb = None
-            elif lb is not None:
-                lb = repr(lb - expr.const)
+            if lb is not None:
+                lb = repr(lb - const)
             ub = con.ub
-            if ub == inf:
-                ub = None
-            elif ub is not None:
-                ub = repr(ub - expr.const)
+            if ub is not None:
+                ub = repr(ub - const)
             _type = _RANGE_TYPE(lb, ub)
             if _type == 4:
                 n_equality += 1
@@ -806,14 +819,12 @@ class _NLWriter_impl(object):
         self.column_order = column_order = {_id: i for i, _id in enumerate(variables)}
         for idx, _id in enumerate(variables):
             v = var_map[_id]
+            # Note: Var.bounds guarantees the values are either (finite)
+            # native_numeric_types or None
             lb, ub = v.bounds
-            if lb == minus_inf:
-                lb = None
-            elif lb is not None:
+            if lb is not None:
                 lb = repr(lb)
-            if ub == inf:
-                ub = None
-            elif ub is not None:
+            if ub is not None:
                 ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
@@ -1118,6 +1129,7 @@ class _NLWriter_impl(object):
                 if not _vals:
                     continue
                 ostream.write(f"S{_field|_float} {len(_vals)} {name}\n")
+                # Note: _SuffixData store/update guarantee the value is int/float
                 ostream.write(
                     ''.join(f"{_id} {_vals[_id]!r}\n" for _id in sorted(_vals))
                 )
@@ -1207,6 +1219,7 @@ class _NLWriter_impl(object):
                 logger.warning("ignoring 'dual' suffix for Model")
             if _data.con:
                 ostream.write(f"d{len(_data.con)}\n")
+                # Note: _SuffixData store/update guarantee the value is int/float
                 ostream.write(
                     ''.join(f"{_id} {_data.con[_id]!r}\n" for _id in sorted(_data.con))
                 )
@@ -1215,15 +1228,20 @@ class _NLWriter_impl(object):
         # "x" lines (variable initialization)
         #
         _init_lines = [
-            f'{var_idx} {info[0].value!r}{col_comments[var_idx]}\n'
-            for var_idx, info in enumerate(variables)
-            if info[0].value is not None
+            (var_idx, val if val.__class__ in int_float else float(val))
+            for var_idx, val in enumerate(v[0].value for v in variables)
+            if val is not None
         ]
         ostream.write(
             'x%d%s\n'
             % (len(_init_lines), "\t# initial guess" if symbolic_solver_labels else '')
         )
-        ostream.write(''.join(_init_lines))
+        ostream.write(
+            ''.join(
+                f'{var_idx} {val!r}{col_comments[var_idx]}\n'
+                for var_idx, val in _init_lines
+            )
+        )
 
         #
         # "r" lines (constraint bounds)
@@ -1308,7 +1326,10 @@ class _NLWriter_impl(object):
                 continue
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
             for _id in sorted(linear.keys(), key=column_order.__getitem__):
-                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+                val = linear[_id]
+                if val.__class__ not in int_float:
+                    val = float(val)
+                ostream.write(f'{column_order[_id]} {val!r}\n')
 
         #
         # "G" lines (non-empty terms in the Objective)
@@ -1321,7 +1342,10 @@ class _NLWriter_impl(object):
                 continue
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
             for _id in sorted(linear.keys(), key=column_order.__getitem__):
-                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+                val = linear[_id]
+                if val.__class__ not in int_float:
+                    val = float(val)
+                ostream.write(f'{column_order[_id]} {val!r}\n')
 
         # Generate the return information
         info = NLWriterInfo(
@@ -1478,10 +1502,28 @@ class _NLWriter_impl(object):
             if include_const and repn.const:
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
-                nl = self.template.binary_sum + nl + (self.template.const % repn.const)
+                nl = (
+                    self.template.binary_sum
+                    + nl
+                    + (
+                        self.template.const
+                        % (
+                            repn.const
+                            if repn.const.__class__ in int_float
+                            else float(repn.const)
+                        )
+                    )
+                )
             self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
         elif include_const:
-            self.ostream.write(self.template.const % repn.const)
+            self.ostream.write(
+                self.template.const
+                % (
+                    repn.const
+                    if repn.const.__class__ in int_float
+                    else float(repn.const)
+                )
+            )
         else:
             self.ostream.write(self.template.const % 0)
 
@@ -1501,7 +1543,10 @@ class _NLWriter_impl(object):
         #
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
         for _id in sorted(linear, key=column_order.__getitem__):
-            ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+            val = linear[_id]
+            if val.__class__ not in int_float:
+                val = float(val)
+            ostream.write(f'{column_order[_id]} {val!r}\n')
         self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1
 
@@ -1626,7 +1671,9 @@ class AMPLRepn(object):
                 args.extend(self.nonlinear[1])
         if self.const:
             nterms += 1
-            nl_sum += template.const % self.const
+            nl_sum += template.const % (
+                self.const if self.const.__class__ in int_float else float(self.const)
+            )
 
         if nterms > 2:
             return (prefix + (template.nary_sum % nterms) + nl_sum, args, named_exprs)
@@ -2233,42 +2280,19 @@ def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
-            ans = child()
-            if ans is None or ans != ans:
-                ans = InvalidNumber(nan)
-            elif ans.__class__ in _complex_types:
-                ans = complex_number_error(ans, self, node)
-            return False, (_CONSTANT, ans)
+            return False, (_CONSTANT, visitor._eval_fixed(child))
         visitor.var_map[_id] = child
     return False, (_MONOMIAL, _id, 1)
 
 
 def _before_param(visitor, child):
-    ans = child()
-    if ans is None or ans != ans:
-        ans = InvalidNumber(nan)
-    elif ans.__class__ in _complex_types:
-        ans = complex_number_error(ans, self, child)
-    return False, (_CONSTANT, ans)
+    return False, (_CONSTANT, visitor._eval_fixed(child))
 
 
 def _before_npv(visitor, child):
-    # TBD: It might be more efficient to cache the value of NPV
-    # expressions to avoid duplicate evaluations.  However, current
-    # examples do not benefit from this cache.
-    #
-    # _id = id(child)
-    # if _id in visitor.value_cache:
-    #     child = visitor.value_cache[_id]
-    # else:
-    #     child = visitor.value_cache[_id] = child()
-    # return False, (_CONSTANT, child)
     try:
         return False, (_CONSTANT, visitor._eval_expr(child))
-    except:
-        # If there was an exception evaluating the subexpression, then
-        # we need to descend into it (in case there is something like 0 *
-        # nan that we need to map to 0)
+    except (ValueError, ArithmeticError):
         return True, None
 
 
@@ -2279,42 +2303,29 @@ def _before_monomial(visitor, child):
     #
     arg1, arg2 = child._args_
     if arg1.__class__ not in native_types:
-        # TBD: It might be more efficient to cache the value of NPV
-        # expressions to avoid duplicate evaluations.  However, current
-        # examples do not benefit from this cache.
-        #
-        # _id = id(arg1)
-        # if _id in visitor.value_cache:
-        #     arg1 = visitor.value_cache[_id]
-        # else:
-        #     arg1 = visitor.value_cache[_id] = arg1()
         try:
             arg1 = visitor._eval_expr(arg1)
-        except:
-            # If there was an exception evaluating the subexpression,
-            # then we need to descend into it (in case there is something
-            # like 0 * nan that we need to map to 0)
+        except (ValueError, ArithmeticError):
             return True, None
 
-    if arg2.fixed:
-        arg2 = arg2.value
-        _prod = arg1 * arg2
-        if not (arg1 and arg2) and _prod:
-            deprecation_warning(
-                f"Encountered {arg1}*{arg2} in expression tree.  "
-                "Mapping the NaN result to 0 for compatibility "
-                "with the nl_v1 writer.  In the future, this NaN "
-                "will be preserved/emitted to comply with IEEE-754.",
-                version='6.4.3',
-            )
-            _prod = 0
-        return False, (_CONSTANT, _prod)
-
-    # Trap multiplication by 0.
+    # Trap multiplication by 0 and nan.
     if not arg1:
-        return False, (_CONSTANT, 0)
+        if arg2.fixed:
+            arg2 = visitor._eval_fixed(arg2)
+            if arg2 != arg2:
+                deprecation_warning(
+                    f"Encountered {arg1}*{arg2} in expression tree.  "
+                    "Mapping the NaN result to 0 for compatibility "
+                    "with the nl_v1 writer.  In the future, this NaN "
+                    "will be preserved/emitted to comply with IEEE-754.",
+                    version='6.4.3',
+                )
+        return False, (_CONSTANT, arg1)
+
     _id = id(arg2)
     if _id not in visitor.var_map:
+        if arg2.fixed:
+            return False, (_CONSTANT, arg1 * visitor._eval_fixed(arg2))
         visitor.var_map[_id] = arg2
     return False, (_MONOMIAL, _id, arg1)
 
@@ -2328,23 +2339,46 @@ def _before_linear(visitor, child):
     linear = {}
     for arg in child.args:
         if arg.__class__ is MonomialTermExpression:
-            c, v = arg.args
-            if c.__class__ not in native_types:
-                c = visitor._eval_expr(c)
-            if v.fixed:
-                const += c * v.value
-            elif c:
-                _id = id(v)
-                if _id not in var_map:
-                    var_map[_id] = v
-                if _id in linear:
-                    linear[_id] += c
-                else:
-                    linear[_id] = c
+            arg1, arg2 = arg._args_
+            if arg1.__class__ not in native_types:
+                try:
+                    arg1 = visitor._eval_expr(arg1)
+                except (ValueError, ArithmeticError):
+                    return True, None
+
+            # Trap multiplication by 0 and nan.
+            if not arg1:
+                if arg2.fixed:
+                    arg2 = visitor._eval_fixed(arg2)
+                    if arg2 != arg2:
+                        deprecation_warning(
+                            f"Encountered {arg1}*{str(arg2.value)} in expression "
+                            "tree.  Mapping the NaN result to 0 for compatibility "
+                            "with the nl_v1 writer.  In the future, this NaN "
+                            "will be preserved/emitted to comply with IEEE-754.",
+                            version='6.4.3',
+                        )
+                continue
+
+            _id = id(arg2)
+            if _id not in var_map:
+                if arg2.fixed:
+                    const += arg1 * visitor._eval_fixed(arg2)
+                    continue
+                var_map[_id] = arg2
+                linear[_id] = arg1
+            elif _id in linear:
+                linear[_id] += arg1
+            else:
+                linear[_id] = arg1
         elif arg.__class__ in native_types:
             const += arg
         else:
-            const += visitor._eval_expr(arg)
+            try:
+                const += visitor._eval_expr(arg)
+            except (ValueError, ArithmeticError):
+                return True, None
+
     if linear:
         return False, (_GENERAL, AMPLRepn(const, linear, None))
     else:
@@ -2369,28 +2403,55 @@ def _before_general_expression(visitor, child):
     return True, None
 
 
+def _register_new_before_child_handler(visitor, child):
+    handlers = _before_child_handlers
+    child_type = child.__class__
+    if child_type in native_numeric_types:
+        if isinstance(child_type, complex):
+            _complex_types.add(child_type)
+            handlers[child_type] = _before_complex
+        else:
+            handlers[child_type] = _before_native
+    elif issubclass(child_type, str):
+        handlers[child_type] = _before_string
+    elif child_type in native_types:
+        handlers[child_type] = _before_native
+    elif not child.is_expression_type():
+        if child.is_potentially_variable():
+            handlers[child_type] = _before_var
+        else:
+            handlers[child_type] = _before_param
+    elif not child.is_potentially_variable():
+        handlers[child_type] = _before_npv
+        # If we descend into the named expression (because of an
+        # evaluation error), then on the way back out, we will use
+        # the potentially variable handler to process the result.
+        pv_base_type = child.potentially_variable_base_class()
+        if pv_base_type not in handlers:
+            try:
+                child.__class__ = pv_base_type
+                _register_new_before_child_handler(visitor, child)
+            finally:
+                child.__class__ = child_type
+        if pv_base_type in _operator_handles:
+            _operator_handles[child_type] = _operator_handles[pv_base_type]
+    elif id(child) in visitor.subexpression_cache or issubclass(
+        child_type, _GeneralExpressionData
+    ):
+        handlers[child_type] = _before_named_expression
+        _operator_handles[child_type] = handle_named_expression_node
+    else:
+        handlers[child_type] = _before_general_expression
+    return handlers[child_type](visitor, child)
+
+
+_before_child_handlers = defaultdict(lambda: _register_new_before_child_handler)
+
 _complex_types = set((complex,))
-# Register an initial set of known expression types with the "before
-# child" expression handler lookup table.
-_before_child_handlers = {_type: _before_native for _type in native_numeric_types}
 _before_child_handlers[complex] = _before_complex
 for _type in native_types:
     if issubclass(_type, str):
         _before_child_handlers[_type] = _before_string
-# general operators
-for _type in _operator_handles:
-    _before_child_handlers[_type] = _before_general_expression
-# named subexpressions
-for _type in (
-    _GeneralExpressionData,
-    ScalarExpression,
-    kernel.expression.expression,
-    kernel.expression.noclone,
-    _GeneralObjectiveData,
-    ScalarObjective,
-    kernel.objective.objective,
-):
-    _before_child_handlers[_type] = _before_named_expression
 # Special linear / summation expressions
 _before_child_handlers[MonomialTermExpression] = _before_monomial
 _before_child_handlers[LinearExpression] = _before_linear
@@ -2422,10 +2483,64 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.encountered_string_arguments = False
         self._eval_expr_visitor = _EvaluationVisitor(True)
 
+    def _eval_fixed(self, obj):
+        ans = obj.value
+        if ans.__class__ not in native_numeric_types:
+            # None can be returned from uninitialized Var/Param objects
+            if ans is None:
+                return InvalidNumber(
+                    None, f"'{obj}' contains a nonnumeric value '{ans}'"
+                )
+            if ans.__class__ is InvalidNumber:
+                return ans
+            else:
+                # It is possible to get other non-numeric types.  Most
+                # common are bool and 1-element numpy.array().  We will
+                # attempt to convert the value to a float before
+                # proceeding.
+                #
+                # TODO: we should check bool and warn/error (while bool is
+                # convertible to float in Python, they have very
+                # different semantic meanings in Pyomo).
+                try:
+                    ans = float(ans)
+                except:
+                    return InvalidNumber(
+                        ans, f"'{obj}' contains a  nonnumeric value '{ans}'"
+                    )
+        if ans != ans:
+            return InvalidNumber(nan, f"'{obj}' contains a nonnumeric value '{ans}'")
+        if ans.__class__ in _complex_types:
+            return complex_number_error(ans, self, obj)
+        return ans
+
     def _eval_expr(self, expr):
         ans = self._eval_expr_visitor.dfs_postorder_stack(expr)
-        if ans.__class__ not in native_types:
-            ans = value(ans)
+        if ans.__class__ not in native_numeric_types:
+            # None can be returned from uninitialized Expression objects
+            if ans is None:
+                return InvalidNumber(
+                    ans, f"'{expr}' evaluated to nonnumeric value '{ans}'"
+                )
+            if ans.__class__ is InvalidNumber:
+                return ans
+            else:
+                # It is possible to get other non-numeric types.  Most
+                # common are bool and 1-element numpy.array().  We will
+                # attempt to convert the value to a float before
+                # proceeding.
+                #
+                # TODO: we should check bool and warn/error (while bool is
+                # convertible to float in Python, they have very
+                # different semantic meanings in Pyomo).
+                try:
+                    ans = float(ans)
+                except:
+                    return InvalidNumber(
+                        ans, f"'{expr}' evaluated to nonnumeric value '{ans}'"
+                    )
+        if ans != ans:
+            return InvalidNumber(ans, f"'{expr}' evaluated to nonnumeric value '{ans}'")
         if ans.__class__ in _complex_types:
             return complex_number_error(ans, self, expr)
         return ans
@@ -2439,16 +2554,12 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        try:
-            return _before_child_handlers[child.__class__](self, child)
-        except KeyError:
-            self._register_new_before_child_processor(child)
         return _before_child_handlers[child.__class__](self, child)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        if node.__class__ is SumExpression:
+        if node.__class__ in sum_like_expression_types:
             data = AMPLRepn(0, {}, None)
             data.nonlinear = []
             return node.args, data
@@ -2525,43 +2636,3 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         self.active_expression_source = None
         return ans
-
-    def _register_new_before_child_processor(self, child):
-        handlers = _before_child_handlers
-        child_type = child.__class__
-        if child_type in native_numeric_types:
-            if isinstance(child_type, complex):
-                _complex_types.add(child_type)
-                dispatcher[child_type] = _before_complex
-            else:
-                dispatcher[child_type] = _before_native
-        elif issubclass(child_type, str):
-            handlers[child_type] = _before_string
-        elif child_type in native_types:
-            handlers[child_type] = _before_native
-        elif not child.is_expression_type():
-            if child.is_potentially_variable():
-                handlers[child_type] = _before_var
-            else:
-                handlers[child_type] = _before_param
-        elif not child.is_potentially_variable():
-            handlers[child_type] = _before_npv
-            # If we descend into the named expression (because of an
-            # evaluation error), then on the way back out, we will use
-            # the potentially variable handler to process the result.
-            pv_base_type = child.potentially_variable_base_class()
-            if pv_base_type not in handlers:
-                try:
-                    child.__class__ = pv_base_type
-                    _register_new_before_child_processor(self, child)
-                finally:
-                    child.__class__ = child_type
-            if pv_base_type in _operator_handles:
-                _operator_handles[child_type] = _operator_handles[pv_base_type]
-        elif id(child) in self.subexpression_cache or issubclass(
-            child_type, _GeneralExpressionData
-        ):
-            handlers[child_type] = _before_named_expression
-            _operator_handles[child_type] = handle_named_expression_node
-        else:
-            handlers[child_type] = _before_general_expression

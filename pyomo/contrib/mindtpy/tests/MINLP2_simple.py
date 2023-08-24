@@ -54,7 +54,7 @@ class SimpleMINLP(ConcreteModel):
 
     def __init__(self, *args, **kwargs):
         """Create the problem."""
-        kwargs.setdefault('name', 'DuranEx1')
+        kwargs.setdefault('name', 'SimpleMINLP2')
         super(SimpleMINLP, self).__init__(*args, **kwargs)
         m = self
 

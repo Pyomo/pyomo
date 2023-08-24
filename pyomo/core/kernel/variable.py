@@ -102,7 +102,10 @@ class IVariable(ICategorizedObject, NumericValue):
     @property
     def lb(self):
         """Return the numeric value of the variable lower bound."""
-        return value(self.lower)
+        lb = value(self.lower)
+        if lb == _neg_inf:
+            return None
+        return lb
 
     @lb.setter
     def lb(self, val):
@@ -111,7 +114,10 @@ class IVariable(ICategorizedObject, NumericValue):
     @property
     def ub(self):
         """Return the numeric value of the variable upper bound."""
-        return value(self.upper)
+        ub = value(self.upper)
+        if ub == _pos_inf:
+            return None
+        return ub
 
     @ub.setter
     def ub(self, val):

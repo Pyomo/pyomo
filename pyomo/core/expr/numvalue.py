@@ -81,13 +81,13 @@ relocated_module_attribute(
 relocated_module_attribute(
     'NumericValue',
     'pyomo.core.expr.numeric_expr.NumericValue',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 relocated_module_attribute(
     'NumericNDArray',
     'pyomo.core.expr.numeric_expr.NumericNDArray',
-    version='6.6.2.dev0',
+    version='6.6.2',
     f_globals=globals(),
 )
 

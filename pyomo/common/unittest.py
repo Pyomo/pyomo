@@ -31,6 +31,7 @@ import unittest as _unittest
 import pytest as pytest
 
 from pyomo.common.collections import Mapping, Sequence
+from pyomo.common.errors import InvalidValueError
 from pyomo.common.tee import capture_output
 
 from unittest import mock
@@ -52,11 +53,11 @@ def _floatOrCall(val):
     """
     try:
         return float(val)
-    except TypeError:
+    except (TypeError, InvalidValueError):
         pass
     try:
         return float(val())
-    except TypeError:
+    except (TypeError, InvalidValueError):
         pass
     try:
         return val.value
