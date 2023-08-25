@@ -149,8 +149,6 @@ class BoundPretransformation(Transformation):
             descend_into=Block,
             sort=SortComponents.deterministic,
         ):
-            ## DEBUG
-            constraint.pprint()
             # Avoid walking the whole expression tree if we have more than one
             # variable by just trying to get two. If we succeed at one but not
             # two, then the constraint is a bound or equality constraint and we
@@ -224,21 +222,16 @@ class BoundPretransformation(Transformation):
 
     def _update_bounds_dict(self, v_bounds, lower, upper, disjunct, gdp_forest):
         (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct, gdp_forest)
-        print("current: (%s, %s)" % (lb, ub))
-        print("lower: %s" % lower)
-        print("upper: %s" % upper)
         if lower is not None:
             if lb is None or lower > lb:
                 # This GDP is more constrained here than it was in the parent
                 # Disjunct (what we would expect, usually. If it's looser, we're
                 # essentially just ignoring it...)
                 lb = lower
-                print("updating lb to %s" % lb)
         if upper is not None:
             if ub is None or upper < ub:
                 # Same case as above in the UB
                 ub = upper
-                print("updating ub to %s" % ub)
         # In all other cases, there is nothing to do... The parent gives more
         # information, so we just propagate that down
         v_bounds[disjunct] = (lb, ub)
@@ -281,12 +274,9 @@ class BoundPretransformation(Transformation):
             if all_lbs:
                 idx = (v.local_name + '_lb', unique_id)
                 trans_block.transformed_bound_constraints[idx] = lb_expr <= v
-                print("Adding: %s" % 
-                      trans_block.transformed_bound_constraints[idx].expr)
                 trans_map[v] = [trans_block.transformed_bound_constraints[idx]]
                 for c in v_bounds['to_deactivate']:
                     if c.upper is None:
-                        print("\tDeactivating %s: %s" % (c.name, c.expr))
                         c.deactivate()
                     elif c.lower is not None:
                         deactivate_lower.add(c)
@@ -299,7 +289,6 @@ class BoundPretransformation(Transformation):
                     trans_map[v] = [trans_block.transformed_bound_constraints[idx]]
                 for c in v_bounds['to_deactivate']:
                     if c.lower is None or c in deactivate_lower:
-                        print("\tDeactivating %s: %s" % (c.name, c.expr))
                         c.deactivate()
                         deactivate_lower.discard(c)
                     elif c.upper is not None:
@@ -308,16 +297,12 @@ class BoundPretransformation(Transformation):
             # lower or upper part of a constraint that has both
             for c in deactivate_lower:
                 c.deactivate()
-                print("Deactivating '%s' and adding UB back as a new constraint"
-                      % c.name)
                 c.parent_block().add_component(
                     unique_component_name(c.parent_block(), c.local_name + '_ub'),
                     Constraint(expr=v <= c.upper),
                 )
             for c in deactivate_upper:
                 c.deactivate()
-                print("Deactivating '%s' and adding LB back as a new constraint"
-                      % c.name)
                 c.parent_block().add_component(
                     unique_component_name(c.parent_block(), c.local_name + '_lb'),
                     Constraint(expr=v >= c.lower),
