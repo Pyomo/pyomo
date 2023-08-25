@@ -926,7 +926,7 @@ class TestBoundPretransformation(unittest.TestCase):
         m.makespan = Var(bounds=(0, 4))
         m.act_time = Var(m.Time, domain=Binary)
         m.cost = Var(bounds=(1, 6))
-       
+
         @m.Disjunct()
         def d1(d):
             d.c = Constraint(expr=m.cost == 6)
@@ -935,17 +935,18 @@ class TestBoundPretransformation(unittest.TestCase):
         def d2(d):
             d.c = Constraint(expr=m.cost == 5)
             d.do_act = Constraint(expr=sum(m.act_time[t] for t in m.Time) == 1)
+
             @d.Constraint(m.Time)
             def ms(d, t):
-                return t*m.act_time[t] + 2 <= m.makespan
+                return t * m.act_time[t] + 2 <= m.makespan
 
         m.disjunction = Disjunction(expr=[m.d1, m.d2])
-        
+
         m.obj = Objective(expr=m.cost)
 
         m.act_time.fix(0)
         m.act_time[2].unfix()
-    
+
         bt = TransformationFactory('gdp.bound_pretransformation')
         bt.apply_to(m)
 
@@ -958,7 +959,7 @@ class TestBoundPretransformation(unittest.TestCase):
             lb.expr,
             0 * m.disjunction.disjuncts[0].binary_indicator_var
             + m.disjunction.disjuncts[1].binary_indicator_var
-            <= m.act_time[2]
+            <= m.act_time[2],
         )
         ub = cons[1]
         assertExpressionsEqual(
@@ -984,7 +985,7 @@ class TestBoundPretransformation(unittest.TestCase):
             lb.expr,
             0 * m.disjunction.disjuncts[0].binary_indicator_var
             + 2.0 * m.disjunction.disjuncts[1].binary_indicator_var
-            <= m.makespan
+            <= m.makespan,
         )
         ub = cons[1]
         assertExpressionsEqual(
@@ -992,7 +993,7 @@ class TestBoundPretransformation(unittest.TestCase):
             ub.expr,
             4 * m.disjunction.disjuncts[0].binary_indicator_var
             + 4 * m.disjunction.disjuncts[1].binary_indicator_var
-            >= m.makespan
+            >= m.makespan,
         )
 
         cons = bt.get_transformed_constraints(m.cost, m.disjunction)
@@ -1003,7 +1004,7 @@ class TestBoundPretransformation(unittest.TestCase):
             lb.expr,
             6.0 * m.disjunction.disjuncts[0].binary_indicator_var
             + 5.0 * m.disjunction.disjuncts[1].binary_indicator_var
-            <= m.cost
+            <= m.cost,
         )
         ub = cons[1]
         assertExpressionsEqual(
@@ -1011,6 +1012,5 @@ class TestBoundPretransformation(unittest.TestCase):
             ub.expr,
             6 * m.disjunction.disjuncts[0].binary_indicator_var
             + 5.0 * m.disjunction.disjuncts[1].binary_indicator_var
-            >= m.cost
+            >= m.cost,
         )
-

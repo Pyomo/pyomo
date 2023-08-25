@@ -172,21 +172,21 @@ class BoundPretransformation(Transformation):
                 v_bounds = self._get_bound_dict_for_var(bound_dict, v)
                 coef = repn.linear_coefs[0]
                 constant = repn.constant
-                lower = ((value(constraint.lower) - constant) / coef
-                         if constraint.lower is not None
-                         else None)
-                upper = ((value(constraint.upper) - constant) / coef
-                         if constraint.upper is not None
-                         else None)
+                lower = (
+                    (value(constraint.lower) - constant) / coef
+                    if constraint.lower is not None
+                    else None
+                )
+                upper = (
+                    (value(constraint.upper) - constant) / coef
+                    if constraint.upper is not None
+                    else None
+                )
                 if coef < 0:
                     # we divided by a negative coef above, so flip the constraint
                     (lower, upper) = (upper, lower)
                 self._update_bounds_dict(
-                    v_bounds,
-                    lower,
-                    upper,
-                    bound_dict_key,
-                    gdp_forest,
+                    v_bounds, lower, upper, bound_dict_key, gdp_forest
                 )
                 if not is_root:
                     v_bounds['to_deactivate'].add(constraint)
