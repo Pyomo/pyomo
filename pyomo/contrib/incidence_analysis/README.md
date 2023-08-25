@@ -110,7 +110,7 @@ If you use Incidence Analysis in your research, we would appreciate you citing
 the following paper:
 ```bibtex
 @article{parker2023dulmage,
-title = {Applications of the {Dulmage–Mendelsohn} decomposition for debugging nonlinear optimization problems},
+title = {Applications of the {Dulmage-Mendelsohn} decomposition for debugging nonlinear optimization problems},
 journal = {Computers \& Chemical Engineering},
 volume = {178},
 pages = {108383},
