@@ -138,6 +138,8 @@ from pyomo.core.base.objective import (
     simple_objectivelist_rule,
     Objective,
     ObjectiveList,
+    Maximize,
+    Minimize,
 )
 from pyomo.core.base.connector import Connector
 from pyomo.core.base.sos import SOSConstraint

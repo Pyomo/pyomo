@@ -31,7 +31,7 @@ This can be implemented as a concrete model as follows:
 
    model.x = pyo.Var([1,2], domain=pyo.NonNegativeReals)
 
-   model.OBJ = pyo.Objective(expr = 2*model.x[1] + 3*model.x[2])
+   model.OBJ = pyo.Minimize(expr = 2*model.x[1] + 3*model.x[2])
 
    model.Constraint1 = pyo.Constraint(expr = 3*model.x[1] + 4*model.x[2] >= 1)
 
@@ -78,7 +78,7 @@ One way to implement this in Pyomo is as shown as follows:
    def obj_expression(m):
        return pyo.summation(m.c, m.x)
 
-   model.OBJ = pyo.Objective(rule=obj_expression)
+   model.OBJ = pyo.Minimize(rule=obj_expression)
 
    def ax_constraint_rule(m, i):
        # return the expression for the constraint for i
@@ -196,16 +196,16 @@ it returns an internal representation of the expression
    def obj_expression(m):
        return pyo.summation(m.c, m.x)
 
-To declare an objective function, the Pyomo component called
-:class:`Objective` is used. The ``rule`` argument gives the name of a
-function that returns the objective expression. The default *sense* is
-minimization. For maximization, the ``sense=pyo.maximize`` argument must be
-used. The name that is declared, which is ``OBJ`` in this case, appears
-in some reports and can be almost any name.
+To declare an objective function, use the Pyomo functions :func:`Minimize` or
+:func:`Maximize`. These functions create a Pyomo component of type
+:class:`Objective` with the appropriate *sense*.  The ``rule`` argument gives
+the name of a function that returns the objective expression. The name that is
+declared, which is ``OBJ`` in this case, appears in some reports and can be
+almost any name.
 
 .. testcode::
 
-   model.OBJ = pyo.Objective(rule=obj_expression)
+   model.OBJ = pyo.Minimize(rule=obj_expression)
 
 Declaration of constraints is similar. A function is declared to generate
 the constraint expression. In this case, there can be multiple

@@ -193,6 +193,8 @@ from pyomo.core import (
     simple_objective_rule,
     simple_objectivelist_rule,
     Objective,
+    Maximize,
+    Minimize,
     ObjectiveList,
     Connector,
     SOSConstraint,

@@ -262,7 +262,7 @@ Full example with non-indexed SOS constraint
    model.x = pyo.Var([1], domain=pyo.NonNegativeReals, bounds=(0,40))
    model.A = pyo.Set(initialize=[1,2,4,6])
    model.y = pyo.Var(model.A, domain=pyo.NonNegativeReals, bounds=(0,2))
-   model.OBJ = pyo.Objective(
+   model.OBJ = pyo.Minimize(
        expr=(1*model.x[1]+
              2*model.y[1]+
              3*model.y[2]+

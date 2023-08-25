@@ -15,6 +15,8 @@ __all__ = (
     '_ObjectiveData',
     'minimize',
     'maximize',
+    'Minimize',
+    'Maximize',
     'simple_objectivelist_rule',
     'ObjectiveList',
 )
@@ -396,6 +398,22 @@ class Objective(ActiveIndexedComponent):
             ("Active", "Value"),
             lambda k, v: [v.active, value(v)],
         )
+
+
+def Minimize(*args, **kwargs):
+    """
+    An Objective that is minimized.
+    """
+
+    return Objective(*args, **kwargs, sense=minimize)
+
+
+def Maximize(*args, **kwargs):
+    """
+    An Objective that is maximized.
+    """
+
+    return Objective(*args, **kwargs, sense=maximize)
 
 
 class ScalarObjective(_GeneralObjectiveData, Objective):

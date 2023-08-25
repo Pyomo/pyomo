@@ -431,7 +431,7 @@ model is:
 
     def Obj_rule(m):
         return pyo.summation(m.FlowCost, m.Flow)
-    model.Obj = pyo.Objective(rule=Obj_rule, sense=pyo.minimize)
+    model.Obj = pyo.Minimize(rule=Obj_rule)
 
     def FlowBalance_rule(m, node):
         return m.Supply[node] \

@@ -26,7 +26,7 @@ as usual.
 >>> m = pe.ConcreteModel()
 >>> m.x = pe.Var()
 >>> m.y = pe.Var()
->>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
+>>> m.obj = pe.Minimize(expr=m.x**2 + m.y**2)
 >>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
 
 You can create an instance of a persistent solver through the SolverFactory.
@@ -118,7 +118,7 @@ be modified and then updated with with solver:
 >>> m = pe.ConcreteModel()  # doctest: +SKIP
 >>> m.x = pe.Var()  # doctest: +SKIP
 >>> m.y = pe.Var()  # doctest: +SKIP
->>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)  # doctest: +SKIP
+>>> m.obj = pe.Minimize(expr=m.x**2 + m.y**2)  # doctest: +SKIP
 >>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)  # doctest: +SKIP
 >>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
 >>> opt.set_instance(m)  # doctest: +SKIP
@@ -162,7 +162,7 @@ In order to get the best performance out of the persistent solvers, use the
 >>> m = pe.ConcreteModel()
 >>> m.x = pe.Var()
 >>> m.y = pe.Var()
->>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
+>>> m.obj = pe.Minimize(expr=m.x**2 + m.y**2)
 >>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
 >>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
 >>> opt.set_instance(m)  # doctest: +SKIP

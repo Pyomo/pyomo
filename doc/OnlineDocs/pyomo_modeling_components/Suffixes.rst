@@ -292,7 +292,7 @@ component on the model.
    model = pyo.ConcreteModel()
    model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
    model.x = pyo.Var()
-   model.obj = pyo.Objective(expr=model.x)
+   model.obj = pyo.Minimize(expr=model.x)
    model.con = pyo.Constraint(expr=model.x >= 1.0)
 
 The existence of an active suffix with the name dual that has an import
@@ -369,7 +369,7 @@ Suffix component with an IMPORT_EXPORT direction.
    model.x2 = pyo.Var(bounds=(1,5),initialize=5.0)
    model.x3 = pyo.Var(bounds=(1,5),initialize=5.0)
    model.x4 = pyo.Var(bounds=(1,5),initialize=1.0)
-   model.obj = pyo.Objective(
+   model.obj = pyo.Minimize(
        expr=model.x1*model.x4*(model.x1 + model.x2 + model.x3) + model.x3)
    model.inequality = pyo.Constraint(
        expr=model.x1*model.x2*model.x3*model.x4 >= 25.0)

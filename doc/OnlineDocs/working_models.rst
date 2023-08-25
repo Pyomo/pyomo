@@ -17,7 +17,7 @@ Repeated Solves
    >>> model.nVars = pyo.Param(initialize=4)
    >>> model.N = pyo.RangeSet(model.nVars)
    >>> model.x = pyo.Var(model.N, within=pyo.Binary)
-   >>> model.obj = pyo.Objective(expr=pyo.summation(model.x))
+   >>> model.obj = pyo.Minimize(expr=pyo.summation(model.x))
    >>> model.cuts = pyo.ConstraintList()
    >>> opt = SolverFactory('glpk')
    >>> opt.solve(model) # doctest: +SKIP
@@ -330,7 +330,7 @@ of the objective function object. Here is a simple example:
 
    >>> model.sillybound = pyo.Constraint(expr = model.x + model.y <= 2)
 
-   >>> model.obj = pyo.Objective(expr = 20 * model.x)
+   >>> model.obj = pyo.Minimize(expr = 20 * model.x)
 
    >>> opt = SolverFactory('glpk') # doctest: +SKIP
    >>> opt.solve(model) # doctest: +SKIP
@@ -349,14 +349,15 @@ Activating and Deactivating Objectives
 Multiple objectives can be declared, but only one can be active at a
 time (at present, Pyomo does not support any solvers that can be given
 more than one objective). If both ``model.obj1`` and ``model.obj2`` have
-been declared using ``Objective``, then one can ensure that
+been declared using ``Objective`` (perhaps via ``Minimize`` or ``Maximize``),
+then one can ensure that
 ``model.obj2`` is passed to the solver as shown in this simple example:
 
 .. doctest::
 
    >>> model = pyo.ConcreteModel()
-   >>> model.obj1 = pyo.Objective(expr = 0)
-   >>> model.obj2 = pyo.Objective(expr = 0)
+   >>> model.obj1 = pyo.Minimize(expr = 0)
+   >>> model.obj2 = pyo.Minimize(expr = 0)
 
    >>> model.obj1.deactivate()
    >>> model.obj2.activate()

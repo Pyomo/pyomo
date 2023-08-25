@@ -11,7 +11,7 @@ Interrogating Pyomo Models
    >>> model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
    >>> def o_rule(model):
    ...    return pyo.summation(model.x)
-   >>> model.o = pyo.Objective(rule=o_rule)
+   >>> model.o = pyo.Minimize(rule=o_rule)
    >>> model.c = pyo.Constraint(expr=model.x[2] + model.x[3] >= 1)
    >>> r = SolverFactory('glpk').solve(model)
 

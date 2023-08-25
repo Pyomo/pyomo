@@ -31,7 +31,7 @@ example of using an APPSI solver interface.
     >>> m.x = pe.Var()
     >>> m.y = pe.Var()
     >>> m.p = pe.Param(mutable=True)
-    >>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
+    >>> m.obj = pe.Minimize(expr=m.x**2 + m.y**2)
     >>> m.c1 = pe.Constraint(expr=m.y >= pe.exp(m.x))
     >>> m.c2 = pe.Constraint(expr=m.y >= (m.x - m.p)**2)
     >>> opt = appsi.solvers.Ipopt()
