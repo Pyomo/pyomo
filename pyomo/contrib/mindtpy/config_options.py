@@ -538,7 +538,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
-                    # 'appsi_highs', TODO: feasibility pump now fails with appsi_highs #2951
+                    'appsi_highs'
                 ]
             ),
             description='MIP subsolver name',
@@ -620,7 +620,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
-                    # 'appsi_highs',
+                    'appsi_highs',
                 ]
             ),
             description='MIP subsolver for regularization problem',
