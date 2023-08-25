@@ -526,7 +526,7 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare(
         'mip_solver',
         ConfigValue(
-            default='appsi_highs',
+            default='glpk',
             domain=In(
                 [
                     'gurobi',
@@ -538,7 +538,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
-                    'appsi_highs',
+                    # 'appsi_highs', TODO: feasibility pump now fails with appsi_highs #2951
                 ]
             ),
             description='MIP subsolver name',
@@ -620,7 +620,7 @@ def _add_subsolver_configs(CONFIG):
                     'cplex_persistent',
                     'appsi_cplex',
                     'appsi_gurobi',
-                    'appsi_highs',
+                    # 'appsi_highs',
                 ]
             ),
             description='MIP subsolver for regularization problem',

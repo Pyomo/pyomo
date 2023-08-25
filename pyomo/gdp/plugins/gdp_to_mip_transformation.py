@@ -100,8 +100,8 @@ class GDP_to_MIP_Transformation(Transformation):
     def _process_arguments(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
             raise GDP_Error(
-                "Transformation called on %s of type %s. 'instance'"
-                " must be a ConcreteModel, Block, or Disjunct (in "
+                "Transformation called on %s of type %s. 'instance' "
+                "must be a ConcreteModel, Block, or Disjunct (in "
                 "the case of nested disjunctions)." % (instance.name, instance.ctype)
             )
 
@@ -145,8 +145,8 @@ class GDP_to_MIP_Transformation(Transformation):
             for t in targets:
                 if not t.active:
                     self.logger.warning(
-                        'GDP.Hull transformation passed a deactivated '
-                        f'target ({t.name}). Skipping.'
+                        f'GDP.{self.transformation_name} transformation passed '
+                        f'a deactivated target ({t.name}). Skipping.'
                     )
                 else:
                     yield t

@@ -854,7 +854,7 @@ class LazyOACallback_cplex(
 
 
 def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
-    """This is a GUROBI callback function defined for LP/NLP based B&B algorithm.
+    """This is a Gurobi callback function defined for LP/NLP based B&B algorithm.
 
     Parameters
     ----------

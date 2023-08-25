@@ -595,6 +595,17 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, None), 572)
 
+        def fcn(m, k, i, j):
+            return i * 100 + j * 10 + k
+
+        part = functools.partial(fcn, i=2, j=5, k=7)
+        a = Initializer(part)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, None), 257)
+
     @unittest.skipUnless(pandas_available, "Pandas is not installed")
     def test_dataframe(self):
         d = {'col1': [1, 2, 4]}

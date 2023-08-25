@@ -92,7 +92,7 @@ class TestMindtPy(unittest.TestCase):
         and SolverFactory('gurobi_direct').available(),
         'gurobi_persistent and gurobi_direct solver is not available',
     )
-    def test_GOA_GUROBI(self):
+    def test_GOA_Gurobi(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:

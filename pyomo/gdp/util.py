@@ -232,6 +232,12 @@ class GDPTree:
             if len(children) == 0:
                 yield u
 
+    @property
+    def disjunct_nodes(self):
+        for v in self._vertices:
+            if isinstance(v, _DisjunctData) or v.ctype is Disjunct:
+                yield v
+
 
 def _parent_disjunct(obj):
     parent = obj.parent_block()

@@ -360,8 +360,7 @@ def generate_lag_objective_function(
                 jac_lag[nlp.get_primal_indices([var])[0]] = 0
         nlp_var = set([i.name for i in nlp.get_pyomo_variables()])
         first_order_term = sum(
-            float(jac_lag[nlp.get_primal_indices([temp_var])[0]])
-            * (var - temp_var.value)
+            jac_lag[nlp.get_primal_indices([temp_var])[0]][0] * (var - temp_var.value)
             for var, temp_var in zip(
                 model.MindtPy_utils.variable_list,
                 temp_model.MindtPy_utils.variable_list,
@@ -721,18 +720,18 @@ def copy_var_list_values_from_solution_pool(
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
-    """A new persistent interface to GUROBI.
+    """A new persistent interface to Gurobi.
 
     Args:
-        GurobiPersistent (PersistentSolver): A class that provides a persistent interface to GUROBI.
+        GurobiPersistent (PersistentSolver): A class that provides a persistent interface to Gurobi.
     """
 
     def _intermediate_callback(self):
         def f(gurobi_model, where):
-            """Callback function for GUROBI.
+            """Callback function for Gurobi.
 
             Args:
-                gurobi_model (GUROBI model): the GUROBI model derived from pyomo model.
+                gurobi_model (Gurobi model): the Gurobi model derived from pyomo model.
                 where (int): an enum member of gurobipy.GRB.Callback.
             """
             self._callback_func(

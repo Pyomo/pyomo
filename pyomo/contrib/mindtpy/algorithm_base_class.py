@@ -1250,6 +1250,8 @@ class _MindtPyAlgorithm(object):
             Integer-variable-fixed NLP model.
         termination_condition : Pyomo TerminationCondition
             The termination condition of the fixed NLP subproblem.
+        cb_opt : SolverFactory, optional
+            The gurobi_persistent solver, by default None.
 
         Raises
         ------
@@ -1504,11 +1506,6 @@ class _MindtPyAlgorithm(object):
     def set_up_tabulist_callback(self):
         """Sets up the tabulist using IncumbentCallback.
         Currently only support CPLEX.
-
-        Parameters
-        ----------
-        mainopt : solver
-            The MIP solver.
         """
         tabulist = self.mip_opt._solver_model.register_callback(
             tabu_list.IncumbentCallback_cplex
@@ -1527,11 +1524,6 @@ class _MindtPyAlgorithm(object):
     def set_up_lazy_OA_callback(self):
         """Sets up the lazy OA using LazyConstraintCallback.
         Currently only support CPLEX and Gurobi.
-
-        Parameters
-        ----------
-        mainopt : solver
-            The MIP solver.
         """
         if self.config.mip_solver == 'cplex_persistent':
             lazyoa = self.mip_opt._solver_model.register_callback(
@@ -1780,11 +1772,6 @@ class _MindtPyAlgorithm(object):
     def handle_main_infeasible(self):
         """This function handles the result of the latest iteration of solving
         the MIP problem given an infeasible solution.
-
-        Parameters
-        ----------
-        main_mip : Pyomo model
-            The MIP main problem.
         """
         self.config.logger.info(
             'MIP main problem is infeasible. '
@@ -2212,26 +2199,6 @@ class _MindtPyAlgorithm(object):
                 if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
                     config.logger.info("Solution pool does not support APPSI solver.")
                 config.mip_solver = 'cplex_persistent'
-        if config.calculate_dual_at_solution:
-            if config.mip_solver == 'appsi_cplex':
-                config.logger.info(
-                    "APPSI-Cplex cannot get duals for mixed-integer problems"
-                    "mip_solver will be changed to Cplex."
-                )
-                config.mip_solver = 'cplex'
-            if config.mip_regularization_solver == 'appsi_cplex':
-                config.logger.info(
-                    "APPSI-CPLEX cannot get duals for mixed-integer problems"
-                    "mip_solver will be changed to CPLEX."
-                )
-                config.mip_regularization_solver = 'cplex'
-            if config.mip_solver in {
-                'gurobi',
-                'appsi_gurobi',
-            } or config.mip_regularization_solver in {'gurobi', 'appsi_gurobi'}:
-                raise ValueError(
-                    "GUROBI can not provide duals for mixed-integer problems."
-                )
 
     ################################################################################################################################
     # Feasibility Pump
@@ -2595,6 +2562,11 @@ class _MindtPyAlgorithm(object):
                 # We don't need to solve the regularization problem to optimality.
                 # We will choose to perform aggressive node probing during presolve.
                 self.regularization_mip_opt.options['mip_strategy_presolvenode'] = 3
+                # When using ROA method to solve convex MINLPs, the Hessian of the Lagrangean is always positive semidefinite,
+                # and the regularization subproblems are always convex.
+                # However, due to numerical accuracy, the regularization problem ended up nonconvex for a few cases,
+                # e.g., the smallest eigenvalue of the Hessian was slightly negative.
+                # Therefore, we set the optimalitytarget parameter to 3 to enable CPLEX to solve nonconvex MIQPs in the ROA-L2 and ROA-∇2L methods.
                 if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                     self.regularization_mip_opt.options['optimalitytarget'] = 3
             elif config.mip_regularization_solver == 'gurobi':
@@ -2840,7 +2812,8 @@ class _MindtPyAlgorithm(object):
                 if not config.single_tree:
                     self.add_regularization()
 
-                # TODO: add descriptions for the following code
+                # In R-LP/NLP, we might end up with an integer combination that hasn't been explored.
+                # Therefore, we need to solve fixed NLP subproblem one more time.
                 if config.single_tree:
                     self.curr_int_sol = get_integer_solution(self.mip, string_zero=True)
                     copy_var_list_values(
