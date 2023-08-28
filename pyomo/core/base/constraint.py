@@ -187,12 +187,12 @@ class _ConstraintData(ActiveComponentData):
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
-        return self.lower is not None
+        return self.lb is not None
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
-        return self.upper is not None
+        return self.ub is not None
 
     def lslack(self):
         """
@@ -338,50 +338,39 @@ class _GeneralConstraintData(_ConstraintData):
         """Access the body of a constraint expression."""
         if self._body is not None:
             return self._body
-        else:
-            # The incoming RangedInequality had a potentially variable
-            # bound.  The "body" is fine, but the bounds may not be
-            # (although the responsibility for those checks lies with the
-            # lower/upper properties)
-            body = self._expr.arg(1)
-            if body.__class__ in native_types and body is not None:
-                return as_numeric(body)
-            return body
+        # The incoming RangedInequality had a potentially variable
+        # bound.  The "body" is fine, but the bounds may not be
+        # (although the responsibility for those checks lies with the
+        # lower/upper properties)
+        body = self._expr.arg(1)
+        if body.__class__ in native_types and body is not None:
+            return as_numeric(body)
+        return body
 
-    def _lb(self):
-        if self._body is not None:
-            bound = self._lower
-        elif self._expr is None:
+    def _get_range_bound(self, range_arg):
+        # Equalities and simple inequalities can always be (directly)
+        # reformulated at construction time to force constant bounds.
+        # The only time we need to defer the determination of bounds is
+        # for ranged inequalities that contain non-constant bounds (so
+        # we *know* that the expr will have 3 args)
+        #
+        # It is possible that there is no expression at all (so catch that)
+        if self._expr is None:
             return None
-        else:
-            bound = self._expr.arg(0)
-            if not is_fixed(bound):
-                raise ValueError(
-                    "Constraint '%s' is a Ranged Inequality with a "
-                    "variable %s bound.  Cannot normalize the "
-                    "constraint or send it to a solver." % (self.name, 'lower')
-                )
-        return bound
-
-    def _ub(self):
-        if self._body is not None:
-            bound = self._upper
-        elif self._expr is None:
-            return None
-        else:
-            bound = self._expr.arg(2)
-            if not is_fixed(bound):
-                raise ValueError(
-                    "Constraint '%s' is a Ranged Inequality with a "
-                    "variable %s bound.  Cannot normalize the "
-                    "constraint or send it to a solver." % (self.name, 'upper')
-                )
+        bound = self._expr.arg(range_arg)
+        if not is_fixed(bound):
+            raise ValueError(
+                "Constraint '%s' is a Ranged Inequality with a "
+                "variable %s bound.  Cannot normalize the "
+                "constraint or send it to a solver."
+                % (self.name, {0: 'lower', 2: 'upper'}[range_arg])
+            )
         return bound
 
     @property
     def lower(self):
         """Access the lower bound of a constraint expression."""
-        bound = self._lb()
+        bound = self._lower if self._body is not None else self._get_range_bound(0)
         # Historically, constraint.lower was guaranteed to return a type
         # derived from Pyomo NumericValue (or None).  Replicate that
         # functionality, although clients should in almost all cases
@@ -395,7 +384,7 @@ class _GeneralConstraintData(_ConstraintData):
     @property
     def upper(self):
         """Access the upper bound of a constraint expression."""
-        bound = self._ub()
+        bound = self._upper if self._body is not None else self._get_range_bound(2)
         # Historically, constraint.upper was guaranteed to return a type
         # derived from Pyomo NumericValue (or None).  Replicate that
         # functionality, although clients should in almost all cases
@@ -409,13 +398,15 @@ class _GeneralConstraintData(_ConstraintData):
     @property
     def lb(self):
         """Access the value of the lower bound of a constraint expression."""
-        bound = self._lb()
-        if bound.__class__ not in native_types:
-            bound = value(bound)
+        bound = self._lower if self._body is not None else self._get_range_bound(0)
+        if bound.__class__ not in native_numeric_types:
+            if bound is None:
+                return None
+            bound = float(value(bound))
         if bound in _nonfinite_values or bound != bound:
             # Note that "bound != bound" catches float('nan')
             if bound == -_inf:
-                bound = None
+                return None
             else:
                 raise ValueError(
                     "Constraint '%s' created with an invalid non-finite "
@@ -426,13 +417,15 @@ class _GeneralConstraintData(_ConstraintData):
     @property
     def ub(self):
         """Access the value of the upper bound of a constraint expression."""
-        bound = self._ub()
-        if bound.__class__ not in native_types:
-            bound = value(bound)
+        bound = self._upper if self._body is not None else self._get_range_bound(2)
+        if bound.__class__ not in native_numeric_types:
+            if bound is None:
+                return None
+            bound = float(value(bound))
         if bound in _nonfinite_values or bound != bound:
             # Note that "bound != bound" catches float('nan')
             if bound == _inf:
-                bound = None
+                return None
             else:
                 raise ValueError(
                     "Constraint '%s' created with an invalid non-finite "

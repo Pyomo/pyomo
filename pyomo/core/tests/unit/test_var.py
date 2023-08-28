@@ -139,6 +139,77 @@ class TestVarData(unittest.TestCase):
         m.y[1].setub(3)
         self.assertEqual(m.y[1].ub, 3)
 
+    def test_lb(self):
+        m = ConcreteModel()
+        m.x = Var()
+        self.assertEqual(m.x.lb, None)
+        m.x.domain = NonNegativeReals
+        self.assertEqual(m.x.lb, 0)
+        m.x.lb = float('inf')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite lower bound \(inf\)'
+        ):
+            m.x.lb
+        m.x.lb = float('nan')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite lower bound \(nan\)'
+        ):
+            m.x.lb
+
+    def test_ub(self):
+        m = ConcreteModel()
+        m.x = Var()
+        self.assertEqual(m.x.ub, None)
+        m.x.domain = NonPositiveReals
+        self.assertEqual(m.x.ub, 0)
+        m.x.ub = float('-inf')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite upper bound \(-inf\)'
+        ):
+            m.x.ub
+        m.x.ub = float('nan')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite upper bound \(nan\)'
+        ):
+            m.x.ub
+
+    def test_bounds(self):
+        m = ConcreteModel()
+        m.x = Var()
+        lb, ub = m.x.bounds
+        self.assertEqual(lb, None)
+        self.assertEqual(ub, None)
+        m.x.domain = NonNegativeReals
+        lb, ub = m.x.bounds
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, None)
+        m.x.lb = float('inf')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite lower bound \(inf\)'
+        ):
+            lb, ub = m.x.bounds
+        m.x.lb = float('nan')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite lower bound \(nan\)'
+        ):
+            lb, ub = m.x.bounds
+
+        m.x.lb = None
+        m.x.domain = NonPositiveReals
+        lb, ub = m.x.bounds
+        self.assertEqual(lb, None)
+        self.assertEqual(ub, 0)
+        m.x.ub = float('-inf')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite upper bound \(-inf\)'
+        ):
+            lb, ub = m.x.bounds
+        m.x.ub = float('nan')
+        with self.assertRaisesRegex(
+            ValueError, r'invalid non-finite upper bound \(nan\)'
+        ):
+            lb, ub = m.x.bounds
+
 
 class PyomoModel(unittest.TestCase):
     def setUp(self):
@@ -1677,6 +1748,45 @@ class MiscVarTests(unittest.TestCase):
         self.assertTrue(i.x.stale)
         self.assertTrue(i.y.stale)
         self.assertFalse(i.z.stale)
+
+    def test_domain_categories(self):
+        """Test domain attribute"""
+        x = Var()
+        x.construct()
+        self.assertEqual(x.is_integer(), False)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), True)
+        self.assertEqual(x.bounds, (None, None))
+        x.domain = Integers
+        self.assertEqual(x.is_integer(), True)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (None, None))
+        x.domain = Binary
+        self.assertEqual(x.is_integer(), True)
+        self.assertEqual(x.is_binary(), True)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (0, 1))
+        x.domain = RangeSet(0, 10, 0)
+        self.assertEqual(x.is_integer(), False)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), True)
+        self.assertEqual(x.bounds, (0, 10))
+        x.domain = RangeSet(0, 10, 1)
+        self.assertEqual(x.is_integer(), True)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (0, 10))
+        x.domain = RangeSet(0.5, 10, 1)
+        self.assertEqual(x.is_integer(), False)
+        self.assertEqual(x.is_binary(), False)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (0.5, 9.5))
+        x.domain = RangeSet(0, 1, 1)
+        self.assertEqual(x.is_integer(), True)
+        self.assertEqual(x.is_binary(), True)
+        self.assertEqual(x.is_continuous(), False)
+        self.assertEqual(x.bounds, (0, 1))
 
 
 if __name__ == "__main__":

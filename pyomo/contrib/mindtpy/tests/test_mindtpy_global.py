@@ -11,7 +11,7 @@ from pyomo.environ import *
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('baron', 'cplex_persistent')
-if not all(SolverFactory(s).available(False) for s in required_solvers):
+if not all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = False
 elif not SolverFactory('baron').license_is_valid():
     subsolvers_available = False
@@ -47,6 +47,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='GOA',
@@ -67,6 +68,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                model = model.clone()
                 results = opt.solve(
                     model,
                     strategy='GOA',
