@@ -10,7 +10,7 @@ Creating a String Representation of an Expression
 
 There are several ways that string representations can be created
 from an expression, but the :func:`expression_to_string
-<pyomo.core.expr.current.expression_to_string>` function provides
+<pyomo.core.expr.expression_to_string>` function provides
 the most flexible mechanism for generating a string representation.
 The options to this function control distinct aspects of the string
 representation.
@@ -73,11 +73,11 @@ Other Ways to Generate String Representations
 There are two other standard ways to generate string representations:
 
 * Call the :func:`__str__` magic method (e.g. using the Python :func:`str()` function.  This 
-  calls :func:`expression_to_string <pyomo.core.expr.current.expression_to_string>` with
+  calls :func:`expression_to_string <pyomo.core.expr.expression_to_string>` with
   the option :data:`standardize` equal to :const:`True` (see below).
 
-* Call the :func:`to_string` method on the :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>` class.
-  This defaults to calling :func:`expression_to_string <pyomo.core.expr.current.expression_to_string>` with
+* Call the :func:`to_string` method on the :class:`ExpressionBase <pyomo.core.expr.ExpressionBase>` class.
+  This defaults to calling :func:`expression_to_string <pyomo.core.expr.expression_to_string>` with
   the option :data:`standardize` equal to :const:`False` (see below).
 
 In practice, we expect at the :func:`__str__` magic method will be
@@ -91,9 +91,9 @@ Cloning Expressions
 
 Expressions are automatically cloned only during certain expression
 transformations.  Since this can be an expensive operation, the
-:data:`clone_counter <pyomo.core.expr.current.clone_counter>` context
+:data:`clone_counter <pyomo.core.expr.clone_counter>` context
 manager object is provided to track the number of times the
-:func:`clone_expression <pyomo.core.expr.current.clone_expression>`
+:func:`clone_expression <pyomo.core.expr.clone_expression>`
 function is executed.
 
 For example:
@@ -129,7 +129,7 @@ in your modeling script.
 
     Both the :func:`value <pyomo.core.expr.value>` function and
     :func:`__call__` method call the :func:`evaluate_expression
-    <pyomo.core.expr.current.evaluate_expression>` function.  In
+    <pyomo.core.expr.evaluate_expression>` function.  In
     practice, this function will be slightly faster, but the
     difference is only meaningful when expressions are evaluated
     many times.
@@ -140,13 +140,13 @@ Identifying Components and Variables
 Expression transformations sometimes need to find all nodes in an
 expression tree that are of a given type.  Pyomo contains two utility
 functions that support this functionality.  First, the
-:func:`identify_components <pyomo.core.expr.current.identify_components>`
+:func:`identify_components <pyomo.core.expr.identify_components>`
 function is a generator function that walks the expression tree and yields all 
 nodes whose type is in a specified set of node types.  For example:
 
 .. literalinclude:: ../../tests/expr/managing_ex8.spy
 
-The :func:`identify_variables <pyomo.core.expr.current.identify_variables>`
+The :func:`identify_variables <pyomo.core.expr.identify_variables>`
 function is a generator function that yields all nodes that are
 variables.  Pyomo uses several different classes to represent variables,
 but this set of variable types does not need to be specified by the user.
@@ -169,16 +169,16 @@ knowledge of the design of the expression system.  Pyomo includes
 several classes that define so-called visitor patterns for walking
 expression tree:
 
-:class:`SimpleExpressionVisitor <pyomo.core.expr.current.SimpleExpressionVisitor>`
+:class:`SimpleExpressionVisitor <pyomo.core.expr.SimpleExpressionVisitor>`
     A :func:`visitor` method is called for each node in the tree,
     and the visitor class collects information about the tree.
 
-:class:`ExpressionValueVisitor <pyomo.core.expr.current.ExpressionValueVisitor>`
+:class:`ExpressionValueVisitor <pyomo.core.expr.ExpressionValueVisitor>`
     When the :func:`visitor` method is called on each node in the
     tree, the *values* of its children have been computed.  The
     *value* of the node is returned from :func:`visitor`.
 
-:class:`ExpressionReplacementVisitor <pyomo.core.expr.current.ExpressionReplacementVisitor>`
+:class:`ExpressionReplacementVisitor <pyomo.core.expr.ExpressionReplacementVisitor>`
     When the :func:`visitor` method is called on each node in the
     tree, it may clone or otherwise replace the node using objects
     for its children (which themselves may be clones or replacements
@@ -187,16 +187,16 @@ expression tree:
 
 These classes define a variety of suitable tree search methods:
 
-* :class:`SimpleExpressionVisitor <pyomo.core.expr.current.SimpleExpressionVisitor>`
+* :class:`SimpleExpressionVisitor <pyomo.core.expr.SimpleExpressionVisitor>`
 
   * **xbfs**: breadth-first search where leaf nodes are immediately visited
   * **xbfs_yield_leaves**: breadth-first search where leaf nodes are immediately visited, and the visit method yields a value
 
-* :class:`ExpressionValueVisitor <pyomo.core.expr.current.ExpressionValueVisitor>`
+* :class:`ExpressionValueVisitor <pyomo.core.expr.ExpressionValueVisitor>`
 
   * **dfs_postorder_stack**: postorder depth-first search using a stack
 
-* :class:`ExpressionReplacementVisitor <pyomo.core.expr.current.ExpressionReplacementVisitor>`
+* :class:`ExpressionReplacementVisitor <pyomo.core.expr.ExpressionReplacementVisitor>`
 
   * **dfs_postorder_stack**: postorder depth-first search using a stack
 
@@ -212,7 +212,7 @@ implement the visitor:
 
 :func:`visitor`
     Defines the operation that is performed when a node is visited.  In
-    the :class:`ExpressionValueVisitor <pyomo.core.expr.current.ExpressionValueVisitor>` and :class:`ExpressionReplacementVisitor <pyomo.core.expr.current.ExpressionReplacementVisitor>` visitor classes, this 
+    the :class:`ExpressionValueVisitor <pyomo.core.expr.ExpressionValueVisitor>` and :class:`ExpressionReplacementVisitor <pyomo.core.expr.ExpressionReplacementVisitor>` visitor classes, this 
     method returns a value that is used by its parent node.
 
 :func:`visiting_potential_leaf`
@@ -221,7 +221,7 @@ implement the visitor:
     then this method returns ``(False, value)``, where *value* is
     computed by this method.  This method is not used in the
     :class:`SimpleExpressionVisitor
-    <pyomo.core.expr.current.SimpleExpressionVisitor>` visitor
+    <pyomo.core.expr.SimpleExpressionVisitor>` visitor
     class.
 
 :func:`finalize`
