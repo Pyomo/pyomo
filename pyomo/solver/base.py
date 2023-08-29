@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import abc
 import enum
 from typing import (
@@ -8,7 +19,6 @@ from typing import (
     NoReturn,
     List,
     Tuple,
-    MutableMapping,
 )
 from pyomo.core.base.constraint import _GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
@@ -20,7 +30,6 @@ from pyomo.common.collections import ComponentMap
 from .utils.get_objective import get_objective
 from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat, NonNegativeInt
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
@@ -39,32 +48,11 @@ from pyomo.core.base import SymbolMap
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
-
-
-# # TerminationCondition
-
-# We currently have: Termination condition, solver status, and solution status.
-# LL: Michael was trying to go for simplicity. All three conditions can be confusing.
-# It is likely okay to have termination condition and solver status.
-
-# ## Open Questions (User Perspective)
-# - Did I (the user) get a reasonable answer back from the solver?
-# - If the answer is not reasonable, can I figure out why?
-
-# ## Our Goal
-# Solvers normally tell you what they did and hope the users understand that.
-# *We* want to try to return that information but also _help_ the user.
-
-# ## Proposals
-# PROPOSAL 1: PyomoCondition and SolverCondition
-# - SolverCondition: what the solver said
-# - PyomoCondition: what we interpret that the solver said
-
-# PROPOSAL 2: TerminationCondition contains...
-# - Some finite list of conditions
-# - Two flags: why did it exit (TerminationCondition)? how do we interpret the result (SolutionStatus)?
-#   - Replace `optimal` with `normal` or `ok` for the termination flag; `optimal` can be used differently for the solver flag
-#   - You can use something else like `local`, `global`, `feasible` for solution status
+from pyomo.solver import (
+    SolutionLoader,
+    SolutionLoaderBase,
+    UpdateConfig
+)
 
 
 class TerminationCondition(enum.Enum):
@@ -134,326 +122,6 @@ class SolutionStatus(enum.IntEnum):
     optimal = 30
 
 
-# # InterfaceConfig
-
-# The idea here (currently / in theory) is that a call to solve will have a keyword argument `solver_config`:
-# ```
-#   solve(model, solver_config=...)
-#       config = self.config(solver_config)
-# ```
-
-# We have several flavors of options:
-# - Solver options
-# - Standardized options
-# - Wrapper options
-# - Interface options
-# - potentially... more?
-
-# ## The Options
-
-# There are three basic structures: flat, doubly-nested, separate dicts.
-# We need to pick between these three structures (and stick with it).
-
-# **Flat: Clear interface; ambiguous about what goes where; better solve interface.** <- WINNER
-# Doubly: More obscure interface; less ambiguity; better programmatic interface.
-# SepDicts: Clear delineation; **kwargs becomes confusing (what maps to what?) (NOT HAPPENING)
-
-
-class InterfaceConfig(ConfigDict):
-    """
-    Attributes
-    ----------
-    time_limit: float - sent to solver
-        Time limit for the solver
-    tee: bool
-        If True, then the solver log goes to stdout
-    load_solution: bool - wrapper
-        If False, then the values of the primal variables will not be
-        loaded into the model
-    symbolic_solver_labels: bool - sent to solver
-        If True, the names given to the solver will reflect the names
-        of the pyomo components. Cannot be changed after set_instance
-        is called.
-    report_timing: bool - wrapper
-        If True, then some timing information will be printed at the
-        end of the solve.
-    threads: integer - sent to solver
-        Number of threads to be used by a solver.
-    """
-
-    def __init__(
-        self,
-        description=None,
-        doc=None,
-        implicit=False,
-        implicit_domain=None,
-        visibility=0,
-    ):
-        super().__init__(
-            description=description,
-            doc=doc,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            visibility=visibility,
-        )
-
-        self.declare('tee', ConfigValue(domain=bool))
-        self.declare('load_solution', ConfigValue(domain=bool))
-        self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
-        self.declare('report_timing', ConfigValue(domain=bool))
-        self.declare('threads', ConfigValue(domain=NonNegativeInt, default=None))
-
-        self.time_limit: Optional[float] = self.declare(
-            'time_limit', ConfigValue(domain=NonNegativeFloat)
-        )
-        self.tee: bool = False
-        self.load_solution: bool = True
-        self.symbolic_solver_labels: bool = False
-        self.report_timing: bool = False
-
-
-class MIPInterfaceConfig(InterfaceConfig):
-    """
-    Attributes
-    ----------
-    mip_gap: float
-        Solver will terminate if the mip gap is less than mip_gap
-    relax_integrality: bool
-        If True, all integer variables will be relaxed to continuous
-        variables before solving
-    """
-
-    def __init__(
-        self,
-        description=None,
-        doc=None,
-        implicit=False,
-        implicit_domain=None,
-        visibility=0,
-    ):
-        super().__init__(
-            description=description,
-            doc=doc,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            visibility=visibility,
-        )
-
-        self.declare('mip_gap', ConfigValue(domain=NonNegativeFloat))
-        self.declare('relax_integrality', ConfigValue(domain=bool))
-
-        self.mip_gap: Optional[float] = None
-        self.relax_integrality: bool = False
-
-
-# # SolutionLoaderBase
-
-# This is an attempt to answer the issue of persistent/non-persistent solution
-# loading. This is an attribute of the results object (not the solver).
-
-# You wouldn't ask the solver to load a solution into a model. You would
-# ask the result to load the solution - into the model you solved.
-# The results object points to relevant elements; elements do NOT point to
-# the results object.
-
-# Per Michael: This may be a bit clunky; but it works.
-# Per Siirola: We may want to rethink `load_vars` and `get_primals`. In particular,
-# this is for efficiency - don't create a dictionary you don't need to. And what is
-# the client use-case for `get_primals`?
-
-
-class SolutionLoaderBase(abc.ABC):
-    def load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> NoReturn:
-        """
-        Load the solution of the primal variables into the value attribute of the variables.
-
-        Parameters
-        ----------
-        vars_to_load: list
-            A list of the variables whose solution should be loaded. If vars_to_load is None, then the solution
-            to all primal variables will be loaded.
-        """
-        for v, val in self.get_primals(vars_to_load=vars_to_load).items():
-            v.set_value(val, skip_validation=True)
-        StaleFlagManager.mark_all_as_stale(delayed=True)
-
-    @abc.abstractmethod
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        """
-        Returns a ComponentMap mapping variable to var value.
-
-        Parameters
-        ----------
-        vars_to_load: list
-            A list of the variables whose solution value should be retrieved. If vars_to_load is None,
-            then the values for all variables will be retrieved.
-
-        Returns
-        -------
-        primals: ComponentMap
-            Maps variables to solution values
-        """
-        pass
-
-    def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        """
-        Returns a dictionary mapping constraint to dual value.
-
-        Parameters
-        ----------
-        cons_to_load: list
-            A list of the constraints whose duals should be retrieved. If cons_to_load is None, then the duals for all
-            constraints will be retrieved.
-
-        Returns
-        -------
-        duals: dict
-            Maps constraints to dual values
-        """
-        raise NotImplementedError(f'{type(self)} does not support the get_duals method')
-
-    def get_slacks(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        """
-        Returns a dictionary mapping constraint to slack.
-
-        Parameters
-        ----------
-        cons_to_load: list
-            A list of the constraints whose duals should be loaded. If cons_to_load is None, then the duals for all
-            constraints will be loaded.
-
-        Returns
-        -------
-        slacks: dict
-            Maps constraints to slacks
-        """
-        raise NotImplementedError(
-            f'{type(self)} does not support the get_slacks method'
-        )
-
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        """
-        Returns a ComponentMap mapping variable to reduced cost.
-
-        Parameters
-        ----------
-        vars_to_load: list
-            A list of the variables whose reduced cost should be retrieved. If vars_to_load is None, then the
-            reduced costs for all variables will be loaded.
-
-        Returns
-        -------
-        reduced_costs: ComponentMap
-            Maps variables to reduced costs
-        """
-        raise NotImplementedError(
-            f'{type(self)} does not support the get_reduced_costs method'
-        )
-
-
-class SolutionLoader(SolutionLoaderBase):
-    def __init__(
-        self,
-        primals: Optional[MutableMapping],
-        duals: Optional[MutableMapping],
-        slacks: Optional[MutableMapping],
-        reduced_costs: Optional[MutableMapping],
-    ):
-        """
-        Parameters
-        ----------
-        primals: dict
-            maps id(Var) to (var, value)
-        duals: dict
-            maps Constraint to dual value
-        slacks: dict
-            maps Constraint to slack value
-        reduced_costs: dict
-            maps id(Var) to (var, reduced_cost)
-        """
-        self._primals = primals
-        self._duals = duals
-        self._slacks = slacks
-        self._reduced_costs = reduced_costs
-
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        if self._primals is None:
-            raise RuntimeError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check the termination condition.'
-            )
-        if vars_to_load is None:
-            return ComponentMap(self._primals.values())
-        else:
-            primals = ComponentMap()
-            for v in vars_to_load:
-                primals[v] = self._primals[id(v)][1]
-            return primals
-
-    def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        if self._duals is None:
-            raise RuntimeError(
-                'Solution loader does not currently have valid duals. Please '
-                'check the termination condition and ensure the solver returns duals '
-                'for the given problem type.'
-            )
-        if cons_to_load is None:
-            duals = dict(self._duals)
-        else:
-            duals = {}
-            for c in cons_to_load:
-                duals[c] = self._duals[c]
-        return duals
-
-    def get_slacks(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        if self._slacks is None:
-            raise RuntimeError(
-                'Solution loader does not currently have valid slacks. Please '
-                'check the termination condition and ensure the solver returns slacks '
-                'for the given problem type.'
-            )
-        if cons_to_load is None:
-            slacks = dict(self._slacks)
-        else:
-            slacks = {}
-            for c in cons_to_load:
-                slacks[c] = self._slacks[c]
-        return slacks
-
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        if self._reduced_costs is None:
-            raise RuntimeError(
-                'Solution loader does not currently have valid reduced costs. Please '
-                'check the termination condition and ensure the solver returns reduced '
-                'costs for the given problem type.'
-            )
-        if vars_to_load is None:
-            rc = ComponentMap(self._reduced_costs.values())
-        else:
-            rc = ComponentMap()
-            for v in vars_to_load:
-                rc[v] = self._reduced_costs[id(v)][1]
-        return rc
-
-
 class Results:
     """
     Attributes
@@ -509,215 +177,6 @@ class Results:
         s += 'best_feasible_objective: ' + str(self.best_feasible_objective) + '\n'
         s += 'best_objective_bound: ' + str(self.best_objective_bound)
         return s
-
-
-class UpdateConfig(ConfigDict):
-    """
-    Attributes
-    ----------
-    check_for_new_or_removed_constraints: bool
-    check_for_new_or_removed_vars: bool
-    check_for_new_or_removed_params: bool
-    update_constraints: bool
-    update_vars: bool
-    update_params: bool
-    update_named_expressions: bool
-    """
-
-    def __init__(
-        self,
-        description=None,
-        doc=None,
-        implicit=False,
-        implicit_domain=None,
-        visibility=0,
-    ):
-        if doc is None:
-            doc = 'Configuration options to detect changes in model between solves'
-        super().__init__(
-            description=description,
-            doc=doc,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            visibility=visibility,
-        )
-
-        self.declare(
-            'check_for_new_or_removed_constraints',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, new/old constraints will not be automatically detected on subsequent
-                solves. Use False only when manually updating the solver with opt.add_constraints()
-                and opt.remove_constraints() or when you are certain constraints are not being
-                added to/removed from the model.""",
-            ),
-        )
-        self.declare(
-            'check_for_new_or_removed_vars',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, new/old variables will not be automatically detected on subsequent 
-                solves. Use False only when manually updating the solver with opt.add_variables() and 
-                opt.remove_variables() or when you are certain variables are not being added to /
-                removed from the model.""",
-            ),
-        )
-        self.declare(
-            'check_for_new_or_removed_params',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, new/old parameters will not be automatically detected on subsequent 
-                solves. Use False only when manually updating the solver with opt.add_params() and 
-                opt.remove_params() or when you are certain parameters are not being added to /
-                removed from the model.""",
-            ),
-        )
-        self.declare(
-            'check_for_new_objective',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, new/old objectives will not be automatically detected on subsequent 
-                solves. Use False only when manually updating the solver with opt.set_objective() or 
-                when you are certain objectives are not being added to / removed from the model.""",
-            ),
-        )
-        self.declare(
-            'update_constraints',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, changes to existing constraints will not be automatically detected on 
-                subsequent solves. This includes changes to the lower, body, and upper attributes of 
-                constraints. Use False only when manually updating the solver with 
-                opt.remove_constraints() and opt.add_constraints() or when you are certain constraints 
-                are not being modified.""",
-            ),
-        )
-        self.declare(
-            'update_vars',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, changes to existing variables will not be automatically detected on 
-                subsequent solves. This includes changes to the lb, ub, domain, and fixed 
-                attributes of variables. Use False only when manually updating the solver with 
-                opt.update_variables() or when you are certain variables are not being modified.""",
-            ),
-        )
-        self.declare(
-            'update_params',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, changes to parameter values will not be automatically detected on 
-                subsequent solves. Use False only when manually updating the solver with 
-                opt.update_params() or when you are certain parameters are not being modified.""",
-            ),
-        )
-        self.declare(
-            'update_named_expressions',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, changes to Expressions will not be automatically detected on 
-                subsequent solves. Use False only when manually updating the solver with 
-                opt.remove_constraints() and opt.add_constraints() or when you are certain 
-                Expressions are not being modified.""",
-            ),
-        )
-        self.declare(
-            'update_objective',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                If False, changes to objectives will not be automatically detected on 
-                subsequent solves. This includes the expr and sense attributes of objectives. Use 
-                False only when manually updating the solver with opt.set_objective() or when you are 
-                certain objectives are not being modified.""",
-            ),
-        )
-        self.declare(
-            'treat_fixed_vars_as_params',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                doc="""
-                This is an advanced option that should only be used in special circumstances. 
-                With the default setting of True, fixed variables will be treated like parameters. 
-                This means that z == x*y will be linear if x or y is fixed and the constraint 
-                can be written to an LP file. If the value of the fixed variable gets changed, we have 
-                to completely reprocess all constraints using that variable. If 
-                treat_fixed_vars_as_params is False, then constraints will be processed as if fixed 
-                variables are not fixed, and the solver will be told the variable is fixed. This means 
-                z == x*y could not be written to an LP file even if x and/or y is fixed. However, 
-                updating the values of fixed variables is much faster this way.""",
-            ),
-        )
-
-        self.check_for_new_or_removed_constraints: bool = True
-        self.check_for_new_or_removed_vars: bool = True
-        self.check_for_new_or_removed_params: bool = True
-        self.check_for_new_objective: bool = True
-        self.update_constraints: bool = True
-        self.update_vars: bool = True
-        self.update_params: bool = True
-        self.update_named_expressions: bool = True
-        self.update_objective: bool = True
-        self.treat_fixed_vars_as_params: bool = True
-
-
-# # Solver
-
-# ## Open Question: What does 'solve' look like?
-
-# We may want to use the 80/20 rule here - we support 80% of the cases; anything
-# fancier than that is going to require "writing code." The 80% would be offerings
-# that are supported as part of the `pyomo` script.
-
-# ## Configs
-
-# We will likely have two configs for `solve`: standardized config (processes `**kwargs`)
-# and implicit ConfigDict with some specialized options.
-
-# These have to be separated because there is a set that need to be passed
-# directly to the solver. The other is Pyomo options / our standardized options
-# (a few of which might be passed directly to solver, e.g., time_limit).
-
-# ## Contained Methods
-
-# We do not like `symbol_map`; it's keyed towards file-based interfaces. That
-# is the `lp` writer; the `nl` writer doesn't need that (and in fact, it's
-# obnoxious). The new `nl` writer returns back more meaningful things to the `nl`
-# interface.
-
-# If the writer needs a symbol map, it will return it. But it is _not_ a
-# solver thing. So it does not need to continue to exist in the solver interface.
-
-# All other options are reasonable.
-
-# ## Other (maybe should be contained) Methods
-
-# There are other methods in other solvers such as `warmstart`, `sos`; do we
-# want to continue to support and/or offer those features?
-
-# The solver interface is not responsible for telling the client what
-# it can do, e.g., `supports_sos2`. This is actually a contract between
-# the solver and its writer.
-
-# End game: we are not supporting a `has_Xcapability` interface (CHECK BOOK).
 
 
 class SolverBase(abc.ABC):
@@ -826,29 +285,6 @@ class SolverBase(abc.ABC):
             True if the solver is a persistent solver.
         """
         return False
-
-# In a non-persistent interface, when the solver dies, it'll return
-# everthing it is going to return. And when you parse, you'll parse everything,
-# whether or not you needed it.
-
-# In a persistent interface, if all I really care about is to keep going
-# until the objective gets better. I may not need to parse the dual or state
-# vars. If I only need the objective, why waste time bringing that extra
-# cruft back? Why not just return what you ask for when you ask for it?
-
-# All the `gets_` is to be able to retrieve from the solver. Because the
-# persistent interface is still holding onto the solver's definition,
-# it saves time. Also helps avoid assuming that you are loading a model.
-
-# There is an argument whether or not the get methods could be called load.
-
-# For non-persistent, there are also questions about how we load everything.
-# We tend to just load everything because it might disappear otherwise.
-# In the file interface, we tend to parse everything, and the option is to turn
-# it all off. We still parse everything...
-
-# IDEAL SITUATION --
-# load_solutions = True -> straight into model; otherwise, into results object
 
 
 class PersistentSolver(SolverBase):
@@ -989,40 +425,6 @@ class PersistentSolver(SolverBase):
     def update_params(self):
         pass
 
-
-class PersistentSolutionLoader(SolutionLoaderBase):
-    def __init__(self, solver: PersistentSolver):
-        self._solver = solver
-        self._valid = True
-
-    def _assert_solution_still_valid(self):
-        if not self._valid:
-            raise RuntimeError('The results in the solver are no longer valid.')
-
-    def get_primals(self, vars_to_load=None):
-        self._assert_solution_still_valid()
-        return self._solver.get_primals(vars_to_load=vars_to_load)
-
-    def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        self._assert_solution_still_valid()
-        return self._solver.get_duals(cons_to_load=cons_to_load)
-
-    def get_slacks(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        self._assert_solution_still_valid()
-        return self._solver.get_slacks(cons_to_load=cons_to_load)
-
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        self._assert_solution_still_valid()
-        return self._solver.get_reduced_costs(vars_to_load=vars_to_load)
-
-    def invalidate(self):
-        self._valid = False
 
 
 """
@@ -1604,6 +1006,8 @@ class PersistentBase(abc.ABC):
         self.remove_variables(old_vars)
         timer.stop('vars')
 
+
+# Everything below here preserves backwards compatibility
 
 legacy_termination_condition_map = {
     TerminationCondition.unknown: LegacyTerminationCondition.unknown,
