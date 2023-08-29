@@ -390,10 +390,10 @@ jobs:
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
-            if test "${{matrix.TARGET}}" == osx; then
-                echo "IDAES Ipopt not available on OSX"
-                exit 0
-            fi
+            # if test "${{matrix.TARGET}}" == osx; then
+            #     echo "IDAES Ipopt not available on OSX"
+            #     exit 0
+            # fi
             URL=https://github.com/IDAES/idaes-ext
             RELEASE=$(curl --max-time 150 --retry 8 \
                 -L -s -H 'Accept: application/json' ${URL}/releases/latest)
@@ -401,7 +401,11 @@ jobs:
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-ubuntu2004-x86_64.tar.gz \
+                    -L $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz \
+                    > $IPOPT_TAR
+            elseif test "${{matrix.TARGET}}" == osx; then
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-darwin-x86_64.tar.gz \
                     > $IPOPT_TAR
             else
                 curl --max-time 150 --retry 8 \
