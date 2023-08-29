@@ -458,12 +458,14 @@ class TestSolvers(unittest.TestCase):
         self.assertNotEqual(res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied)
         if opt_class is Ipopt:
             acceptable_termination_conditions = {
-                TerminationCondition.infeasible,
+                TerminationCondition.provenInfeasible,
+                TerminationCondition.locallyInfeasible,
                 TerminationCondition.unbounded,
             }
         else:
             acceptable_termination_conditions = {
-                TerminationCondition.infeasible,
+                TerminationCondition.provenInfeasible,
+                TerminationCondition.locallyInfeasible,
                 TerminationCondition.infeasibleOrUnbounded,
             }
         self.assertIn(res.termination_condition, acceptable_termination_conditions)
