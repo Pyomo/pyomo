@@ -414,7 +414,7 @@ jobs:
             fi
         fi
         cd $IPOPT_DIR
-        tar -xzf < $IPOPT_TAR
+        tar -xz < $IPOPT_TAR
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
