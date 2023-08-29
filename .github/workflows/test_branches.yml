@@ -403,7 +403,7 @@ jobs:
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz \
                     > $IPOPT_TAR
-            elseif test "${{matrix.TARGET}}" == osx; then
+            elif test "${{matrix.TARGET}}" == osx; then
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-darwin-x86_64.tar.gz \
                     > $IPOPT_TAR
