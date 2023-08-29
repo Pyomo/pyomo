@@ -16,7 +16,7 @@ def main(plot=True, n_points=200):
     m.c1 = pe.Constraint(expr=m.y >= (m.x + 1) ** 2)
     m.c2 = pe.Constraint(expr=m.y >= (m.x - m.p) ** 2)
 
-    opt = appsi.solvers.Cplex()  # create an APPSI solver interface
+    opt = appsi.solvers.Ipopt()  # create an APPSI solver interface
     opt.config.load_solution = False  # modify the config options
     # change how automatic updates are handled
     opt.update_config.check_for_new_or_removed_vars = False
