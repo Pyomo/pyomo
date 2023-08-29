@@ -747,7 +747,7 @@ class Solver(abc.ABC):
 
     @abc.abstractmethod
     def solve(
-        self, model: _BlockData, timer: HierarchicalTimer = None, **kwargs
+        self, model: _BlockData, timer: HierarchicalTimer = None,
     ) -> Results:
         """
         Solve a Pyomo model.
