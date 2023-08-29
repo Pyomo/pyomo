@@ -6,7 +6,7 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Highs
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 
@@ -21,14 +21,12 @@ if not param_available:
 all_solvers = [
     ('gurobi', Gurobi),
     ('ipopt', Ipopt),
-    ('cplex', Cplex),
-    ('cbc', Cbc),
     ('highs', Highs),
 ]
-mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
+mip_solvers = [('gurobi', Gurobi), ('highs', Highs)]
 nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex)]
-miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex)]
+qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
+miqcqp_solvers = [('gurobi', Gurobi)]
 only_child_vars_options = [True, False]
 
 
@@ -1013,15 +1011,9 @@ class TestSolvers(unittest.TestCase):
             opt.config.time_limit = 0
         opt.config.load_solution = False
         res = opt.solve(m)
-        if type(opt) is Cbc:  # I can't figure out why CBC is reporting max iter...
-            self.assertIn(
-                res.termination_condition,
-                {TerminationCondition.iterationLimit, TerminationCondition.maxTimeLimit},
-            )
-        else:
-            self.assertEqual(
-                res.termination_condition, TerminationCondition.maxTimeLimit
-            )
+        self.assertEqual(
+            res.termination_condition, TerminationCondition.maxTimeLimit
+        )
 
     @parameterized.expand(input=_load_tests(all_solvers, only_child_vars_options))
     def test_objective_changes(
