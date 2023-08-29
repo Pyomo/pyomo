@@ -20,7 +20,7 @@ from pyomo.common.collections import ComponentMap
 from .utils.get_objective import get_objective
 from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
+from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat, NonNegativeInt
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
@@ -177,6 +177,8 @@ class InterfaceConfig(ConfigDict):
     report_timing: bool - wrapper
         If True, then some timing information will be printed at the
         end of the solve.
+    threads: integer - sent to solver
+        Number of threads to be used by a solver.
     """
 
     def __init__(
@@ -199,6 +201,7 @@ class InterfaceConfig(ConfigDict):
         self.declare('load_solution', ConfigValue(domain=bool))
         self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
         self.declare('report_timing', ConfigValue(domain=bool))
+        self.declare('threads', ConfigValue(domain=NonNegativeInt, default=None))
 
         self.time_limit: Optional[float] = self.declare(
             'time_limit', ConfigValue(domain=NonNegativeFloat)
@@ -744,7 +747,7 @@ class Solver(abc.ABC):
 
     @abc.abstractmethod
     def solve(
-        self, model: _BlockData, tee=False, timer: HierarchicalTimer = None, **kwargs
+        self, model: _BlockData, tee: bool = False, timer: HierarchicalTimer = None, **kwargs
     ) -> Results:
         """
         Solve a Pyomo model.
