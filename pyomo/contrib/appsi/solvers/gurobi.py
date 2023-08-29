@@ -876,7 +876,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         elif status == grb.OPTIMAL:  # optimal
             results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
         elif status == grb.INFEASIBLE:
-            results.termination_condition = TerminationCondition.infeasible
+            results.termination_condition = TerminationCondition.provenInfeasible
         elif status == grb.INF_OR_UNBD:
             results.termination_condition = TerminationCondition.infeasibleOrUnbounded
         elif status == grb.UNBOUNDED:

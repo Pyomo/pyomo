@@ -235,7 +235,7 @@ class Cbc(PersistentSolver):
             results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
             obj_val = float(termination_line.split()[-1])
         elif 'infeasible' in termination_line:
-            results.termination_condition = TerminationCondition.infeasible
+            results.termination_condition = TerminationCondition.provenInfeasible
         elif 'unbounded' in termination_line:
             results.termination_condition = TerminationCondition.unbounded
         elif termination_line.startswith('stopped on time'):
