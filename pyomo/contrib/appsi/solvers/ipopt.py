@@ -127,7 +127,7 @@ ipopt_command_line_options = {
 
 
 class Ipopt(PersistentSolver):
-    def __init__(self, only_child_vars=True):
+    def __init__(self, only_child_vars=False):
         self._config = IpoptConfig()
         self._solver_options = dict()
         self._writer = NLWriter(only_child_vars=only_child_vars)

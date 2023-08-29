@@ -40,17 +40,11 @@ pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
 
 
-class MindtPySolveData(object):
-    """Data container to hold solve-instance data."""
-
-    pass
-
-
 def calc_jacobians(model, config):
     """Generates a map of jacobians for the variables in the model.
 
     This function generates a map of jacobians corresponding to the variables in the
-    model and adds this ComponentMap to solve_data.
+    model.
 
     Parameters
     ----------
@@ -60,7 +54,7 @@ def calc_jacobians(model, config):
         The specific configurations for MindtPy.
     """
     # Map nonlinear_constraint --> Map(
-    #     variable --> jacobian of constraint wrt. variable)
+    #     variable --> jacobian of constraint w.r.t. variable)
     jacobians = ComponentMap()
     if config.differentiate_mode == 'reverse_symbolic':
         mode = EXPR.differentiate.Modes.reverse_symbolic
@@ -75,8 +69,9 @@ def calc_jacobians(model, config):
     return jacobians
 
 
-def add_feas_slacks(m, config):
+def initialize_feas_subproblem(m, config):
     """Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem).
+       Defines the objective function of the feasibility subproblem.
 
     Parameters
     ----------
@@ -106,6 +101,18 @@ def add_feas_slacks(m, config):
                 MindtPy.feas_opt.feas_constraints.add(
                     constr.body - constr.lower >= -MindtPy.feas_opt.slack_var
                 )
+    # Setup objective function for the feasibility subproblem.
+    if config.feasibility_norm == 'L1':
+        MindtPy.feas_obj = Objective(
+            expr=sum(s for s in MindtPy.feas_opt.slack_var.values()), sense=minimize
+        )
+    elif config.feasibility_norm == 'L2':
+        MindtPy.feas_obj = Objective(
+            expr=sum(s * s for s in MindtPy.feas_opt.slack_var.values()), sense=minimize
+        )
+    else:
+        MindtPy.feas_obj = Objective(expr=MindtPy.feas_opt.slack_var, sense=minimize)
+    MindtPy.feas_obj.deactivate()
 
 
 def add_var_bound(model, config):
@@ -353,8 +360,7 @@ def generate_lag_objective_function(
                 jac_lag[nlp.get_primal_indices([var])[0]] = 0
         nlp_var = set([i.name for i in nlp.get_pyomo_variables()])
         first_order_term = sum(
-            float(jac_lag[nlp.get_primal_indices([temp_var])[0]])
-            * (var - temp_var.value)
+            jac_lag[nlp.get_primal_indices([temp_var])[0]][0] * (var - temp_var.value)
             for var, temp_var in zip(
                 model.MindtPy_utils.variable_list,
                 temp_model.MindtPy_utils.variable_list,
@@ -492,140 +498,130 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     )
 
 
-def set_solver_options(opt, timing, config, solver_type, regularization=False):
-    """Set options for MIP/NLP solvers.
+def update_solver_timelimit(opt, solver_name, timing, config):
+    """Updates the time limit for subsolvers.
 
     Parameters
     ----------
-    opt : SolverFactory
-        The MIP/NLP solver.
+    opt : Solvers
+        The solver object.
+    solver_name : String
+        The name of solver.
     timing : Timing
-        Timing.
+        Timing
     config : ConfigBlock
         The specific configurations for MindtPy.
-    solver_type : str
-        The type of the solver, i.e. mip or nlp.
-    regularization : bool, optional
-        Whether the solver is used to solve the regularization problem, by default False.
     """
-    # TODO: integrate nlp_args here
-    # nlp_args = dict(config.nlp_solver_args)
     elapsed = get_main_elapsed_time(timing)
-    remaining = int(max(config.time_limit - elapsed, 1))
-    if solver_type == 'mip':
-        if regularization:
-            solver_name = config.mip_regularization_solver
-            if config.regularization_mip_threads > 0:
-                opt.options['threads'] = config.regularization_mip_threads
-        else:
-            solver_name = config.mip_solver
-            if config.threads > 0:
-                opt.options['threads'] = config.threads
-    elif solver_type == 'nlp':
-        solver_name = config.nlp_solver
-    # TODO: opt.name doesn't work for GAMS
-    if solver_name in {'cplex', 'gurobi', 'gurobi_persistent', 'appsi_gurobi'}:
+    remaining = math.ceil(max(config.time_limit - elapsed, 1))
+    if solver_name in {
+        'cplex',
+        'appsi_cplex',
+        'cplex_persistent',
+        'gurobi',
+        'gurobi_persistent',
+        'appsi_gurobi',
+    }:
         opt.options['timelimit'] = remaining
-        opt.options['mipgap'] = config.mip_solver_mipgap
-        if solver_name == 'gurobi_persistent' and config.single_tree:
-            # PreCrush: Controls presolve reductions that affect user cuts
-            # You should consider setting this parameter to 1 if you are using callbacks to add your own cuts.
-            opt.options['PreCrush'] = 1
-            opt.options['LazyConstraints'] = 1
-        if regularization == True:
-            if solver_name == 'cplex':
-                if config.solution_limit is not None:
-                    opt.options['mip limits solutions'] = config.solution_limit
-                opt.options['mip strategy presolvenode'] = 3
-                # TODO: need to discuss if this option should be added.
-                if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
-                    opt.options['optimalitytarget'] = 3
-            elif solver_name == 'gurobi':
-                if config.solution_limit is not None:
-                    opt.options['SolutionLimit'] = config.solution_limit
-                opt.options['Presolve'] = 2
-    elif solver_name == 'cplex_persistent':
-        opt.options['timelimit'] = remaining
-        opt._solver_model.parameters.mip.tolerances.mipgap.set(config.mip_solver_mipgap)
-        if regularization is True:
-            if config.solution_limit is not None:
-                opt._solver_model.parameters.mip.limits.solutions.set(
-                    config.solution_limit
-                )
-            opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
-            if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
-                opt._solver_model.parameters.optimalitytarget.set(3)
-    elif solver_name == 'appsi_cplex':
-        opt.options['timelimit'] = remaining
-        opt.options['mip_tolerances_mipgap'] = config.mip_solver_mipgap
-        if regularization is True:
-            if config.solution_limit is not None:
-                opt.options['mip_limits_solutions'] = config.solution_limit
-            opt.options['mip_strategy_presolvenode'] = 3
-            if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
-                opt.options['optimalitytarget'] = 3
-    elif solver_name == 'glpk':
-        opt.options['tmlim'] = remaining
-        opt.options['mipgap'] = config.mip_solver_mipgap
-    elif solver_name == 'baron':
-        opt.options['MaxTime'] = remaining
-        opt.options['AbsConFeasTol'] = config.zero_tolerance
-    elif solver_name in {'ipopt', 'appsi_ipopt'}:
-        opt.options['max_cpu_time'] = remaining
-        opt.options['constr_viol_tol'] = config.zero_tolerance
+    elif solver_name == 'appsi_highs':
+        opt.config.time_limit = remaining
     elif solver_name == 'cyipopt':
         opt.config.options['max_cpu_time'] = float(remaining)
+    elif solver_name == 'glpk':
+        opt.options['tmlim'] = remaining
+    elif solver_name == 'baron':
+        opt.options['MaxTime'] = remaining
+    elif solver_name in {'ipopt', 'appsi_ipopt'}:
+        opt.options['max_cpu_time'] = remaining
+    elif solver_name == 'gams':
+        opt.options['add_options'].append('option Reslim=%s;' % remaining)
+
+
+def set_solver_mipgap(opt, solver_name, config):
+    """Set mipgap for subsolvers.
+
+    Parameters
+    ----------
+    opt : Solvers
+        The solver object.
+    solver_name : String
+        The name of solver.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    """
+    if solver_name in {
+        'cplex',
+        'cplex_persistent',
+        'gurobi',
+        'gurobi_persistent',
+        'appsi_gurobi',
+        'glpk',
+    }:
+        opt.options['mipgap'] = config.mip_solver_mipgap
+    elif solver_name == 'appsi_cplex':
+        opt.options['mip_tolerances_mipgap'] = config.mip_solver_mipgap
+    elif solver_name == 'appsi_highs':
+        opt.config.mip_gap = config.mip_solver_mipgap
+    elif solver_name == 'gams':
+        opt.options['add_options'].append('option optcr=%s;' % config.mip_solver_mipgap)
+
+
+def set_solver_constraint_violation_tolerance(opt, solver_name, config):
+    """Set constraint violation tolerance for solvers.
+
+    Parameters
+    ----------
+    opt : Solvers
+        The solver object.
+    solver_name : String
+        The name of solver.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    """
+    if solver_name == 'baron':
+        opt.options['AbsConFeasTol'] = config.zero_tolerance
+    elif solver_name in {'ipopt', 'appsi_ipopt'}:
+        opt.options['constr_viol_tol'] = config.zero_tolerance
+    elif solver_name == 'cyipopt':
         opt.config.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'gams':
-        if solver_type == 'mip':
-            opt.options['add_options'] = [
-                'option optcr=%s;' % config.mip_solver_mipgap,
-                'option reslim=%s;' % remaining,
-            ]
-        elif solver_type == 'nlp':
-            opt.options['add_options'] = ['option reslim=%s;' % remaining]
-            if config.nlp_solver_args.__contains__('solver'):
-                if config.nlp_solver_args['solver'] in {
-                    'ipopt',
-                    'ipopth',
-                    'msnlp',
-                    'conopt',
-                    'baron',
-                }:
-                    if config.nlp_solver_args['solver'] == 'ipopt':
-                        opt.options['add_options'].append('$onecho > ipopt.opt')
-                        opt.options['add_options'].append(
-                            'constr_viol_tol ' + str(config.zero_tolerance)
-                        )
-                    elif config.nlp_solver_args['solver'] == 'ipopth':
-                        opt.options['add_options'].append('$onecho > ipopth.opt')
-                        opt.options['add_options'].append(
-                            'constr_viol_tol ' + str(config.zero_tolerance)
-                        )
-                        # TODO: Ipopt warmstart option
-                        # opt.options['add_options'].append('warm_start_init_point       yes\n'
-                        #                                   'warm_start_bound_push       1e-9\n'
-                        #                                   'warm_start_bound_frac       1e-9\n'
-                        #                                   'warm_start_slack_bound_frac 1e-9\n'
-                        #                                   'warm_start_slack_bound_push 1e-9\n'
-                        #                                   'warm_start_mult_bound_push  1e-9\n')
-                    elif config.nlp_solver_args['solver'] == 'conopt':
-                        opt.options['add_options'].append('$onecho > conopt.opt')
-                        opt.options['add_options'].append(
-                            'RTNWMA ' + str(config.zero_tolerance)
-                        )
-                    elif config.nlp_solver_args['solver'] == 'msnlp':
-                        opt.options['add_options'].append('$onecho > msnlp.opt')
-                        opt.options['add_options'].append(
-                            'feasibility_tolerance ' + str(config.zero_tolerance)
-                        )
-                    elif config.nlp_solver_args['solver'] == 'baron':
-                        opt.options['add_options'].append('$onecho > baron.opt')
-                        opt.options['add_options'].append(
-                            'AbsConFeasTol ' + str(config.zero_tolerance)
-                        )
-                    opt.options['add_options'].append('$offecho')
-                    opt.options['add_options'].append('GAMS_MODEL.optfile=1')
+        if config.nlp_solver_args['solver'] in {
+            'ipopt',
+            'ipopth',
+            'msnlp',
+            'conopt',
+            'baron',
+        }:
+            opt.options['add_options'].append('GAMS_MODEL.optfile=1')
+            opt.options['add_options'].append(
+                '$onecho > ' + config.nlp_solver_args['solver'] + '.opt'
+            )
+            if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth'}:
+                opt.options['add_options'].append(
+                    'constr_viol_tol ' + str(config.zero_tolerance)
+                )
+                # Ipopt warmstart options
+                opt.options['add_options'].append(
+                    'warm_start_init_point       yes\n'
+                    'warm_start_bound_push       1e-9\n'
+                    'warm_start_bound_frac       1e-9\n'
+                    'warm_start_slack_bound_frac 1e-9\n'
+                    'warm_start_slack_bound_push 1e-9\n'
+                    'warm_start_mult_bound_push  1e-9\n'
+                )
+            elif config.nlp_solver_args['solver'] == 'conopt':
+                opt.options['add_options'].append(
+                    'RTNWMA ' + str(config.zero_tolerance)
+                )
+            elif config.nlp_solver_args['solver'] == 'msnlp':
+                opt.options['add_options'].append(
+                    'feasibility_tolerance ' + str(config.zero_tolerance)
+                )
+            elif config.nlp_solver_args['solver'] == 'baron':
+                opt.options['add_options'].append(
+                    'AbsConFeasTol ' + str(config.zero_tolerance)
+                )
+            opt.options['add_options'].append('$offecho')
 
 
 def get_integer_solution(model, string_zero=False):
@@ -647,7 +643,8 @@ def get_integer_solution(model, string_zero=False):
     for var in model.MindtPy_utils.discrete_variable_list:
         if string_zero:
             if var.value == 0:
-                # In cplex, negative zero is different from zero, so we use string to denote this(Only in singletree)
+                # In CPLEX, negative zero is different from zero,
+                # so we use string to denote this (Only in singletree).
                 temp.append(str(var.value))
             else:
                 temp.append(int(round(var.value)))
@@ -703,8 +700,8 @@ def copy_var_list_values_from_solution_pool(
             # instead log warnings).  This means that the following will
             # always succeed and the ValueError should never be raised.
             v_to.set_value(var_val, skip_validation=True)
-        except ValueError as err:
-            err_msg = getattr(err, 'message', str(err))
+        except ValueError as e:
+            config.logger.error(e)
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality and v_to.is_integer():
@@ -734,112 +731,14 @@ class GurobiPersistent4MindtPy(GurobiPersistent):
             """Callback function for Gurobi.
 
             Args:
-                gurobi_model (gurobi model): the gurobi model derived from pyomo model.
+                gurobi_model (Gurobi model): the Gurobi model derived from pyomo model.
                 where (int): an enum member of gurobipy.GRB.Callback.
             """
             self._callback_func(
-                self._pyomo_model, self, where, self.solve_data, self.config
+                self._pyomo_model, self, where, self.mindtpy_solver, self.config
             )
 
         return f
-
-
-def update_gap(solve_data):
-    """Update the relative gap and the absolute gap.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    """
-    if solve_data.objective_sense == minimize:
-        solve_data.abs_gap = solve_data.primal_bound - solve_data.dual_bound
-    else:
-        solve_data.abs_gap = solve_data.dual_bound - solve_data.primal_bound
-    solve_data.rel_gap = solve_data.abs_gap / (abs(solve_data.primal_bound) + 1e-10)
-
-
-def update_dual_bound(solve_data, bound_value):
-    """Update the dual bound.
-
-    Call after solving relaxed problem, including relaxed NLP and MIP main problem.
-    Use the optimal primal bound of the relaxed problem to update the dual bound.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    bound_value : float
-        The input value used to update the dual bound.
-    """
-    if math.isnan(bound_value):
-        return
-    if solve_data.objective_sense == minimize:
-        solve_data.dual_bound = max(bound_value, solve_data.dual_bound)
-        solve_data.dual_bound_improved = (
-            solve_data.dual_bound > solve_data.dual_bound_progress[-1]
-        )
-    else:
-        solve_data.dual_bound = min(bound_value, solve_data.dual_bound)
-        solve_data.dual_bound_improved = (
-            solve_data.dual_bound < solve_data.dual_bound_progress[-1]
-        )
-    solve_data.dual_bound_progress.append(solve_data.dual_bound)
-    solve_data.dual_bound_progress_time.append(get_main_elapsed_time(solve_data.timing))
-    if solve_data.dual_bound_improved:
-        update_gap(solve_data)
-
-
-def update_suboptimal_dual_bound(solve_data, results):
-    """If the relaxed problem is not solved to optimality, the dual bound is updated
-    according to the dual bound of relaxed problem.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    results : SolverResults
-        Results from solving the relaxed problem.
-        The dual bound of the relaxed problem can only be obtained from the result object.
-    """
-    if solve_data.objective_sense == minimize:
-        bound_value = results.problem.lower_bound
-    else:
-        bound_value = results.problem.upper_bound
-    update_dual_bound(solve_data, bound_value)
-
-
-def update_primal_bound(solve_data, bound_value):
-    """Update the primal bound.
-
-    Call after solve fixed NLP subproblem.
-    Use the optimal primal bound of the relaxed problem to update the dual bound.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    bound_value : float
-        The input value used to update the primal bound.
-    """
-    if math.isnan(bound_value):
-        return
-    if solve_data.objective_sense == minimize:
-        solve_data.primal_bound = min(bound_value, solve_data.primal_bound)
-        solve_data.primal_bound_improved = (
-            solve_data.primal_bound < solve_data.primal_bound_progress[-1]
-        )
-    else:
-        solve_data.primal_bound = max(bound_value, solve_data.primal_bound)
-        solve_data.primal_bound_improved = (
-            solve_data.primal_bound > solve_data.primal_bound_progress[-1]
-        )
-    solve_data.primal_bound_progress.append(solve_data.primal_bound)
-    solve_data.primal_bound_progress_time.append(
-        get_main_elapsed_time(solve_data.timing)
-    )
-    if solve_data.primal_bound_improved:
-        update_gap(solve_data)
 
 
 def set_up_logger(config):
@@ -859,103 +758,6 @@ def set_up_logger(config):
     ch.setFormatter(formatter)
     # add the handlers to logger
     config.logger.addHandler(ch)
-
-
-def get_dual_integral(solve_data, config):
-    """Calculate the dual integral.
-    Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-
-    Returns
-    -------
-    float
-        The dual integral.
-    """
-    dual_integral = 0
-    dual_bound_progress = solve_data.dual_bound_progress.copy()
-    # Initial dual bound is set to inf or -inf. To calculate dual integral, we set
-    # initial_dual_bound to 10% greater or smaller than the first_found_dual_bound.
-    # TODO: check if the calculation of initial_dual_bound needs to be modified.
-    for dual_bound in dual_bound_progress:
-        if dual_bound != dual_bound_progress[0]:
-            break
-    for i in range(len(dual_bound_progress)):
-        if dual_bound_progress[i] == solve_data.dual_bound_progress[0]:
-            dual_bound_progress[i] = dual_bound * (
-                1
-                - config.initial_bound_coef
-                * solve_data.objective_sense
-                * math.copysign(1, dual_bound)
-            )
-        else:
-            break
-    for i in range(len(dual_bound_progress)):
-        if i == 0:
-            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (
-                solve_data.dual_bound_progress_time[i]
-            )
-        else:
-            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (
-                solve_data.dual_bound_progress_time[i]
-                - solve_data.dual_bound_progress_time[i - 1]
-            )
-    config.logger.info(' {:<25}:   {:>7.4f} '.format('Dual integral', dual_integral))
-    return dual_integral
-
-
-def get_primal_integral(solve_data, config):
-    """Calculate the primal integral.
-    Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-
-    Returns
-    -------
-    float
-        The primal integral.
-    """
-    primal_integral = 0
-    primal_bound_progress = solve_data.primal_bound_progress.copy()
-    # Initial primal bound is set to inf or -inf. To calculate primal integral, we set
-    # initial_primal_bound to 10% greater or smaller than the first_found_primal_bound.
-    # TODO: check if the calculation of initial_primal_bound needs to be modified.
-    for primal_bound in primal_bound_progress:
-        if primal_bound != primal_bound_progress[0]:
-            break
-    for i in range(len(primal_bound_progress)):
-        if primal_bound_progress[i] == solve_data.primal_bound_progress[0]:
-            primal_bound_progress[i] = primal_bound * (
-                1
-                + config.initial_bound_coef
-                * solve_data.objective_sense
-                * math.copysign(1, primal_bound)
-            )
-        else:
-            break
-    for i in range(len(primal_bound_progress)):
-        if i == 0:
-            primal_integral += abs(
-                primal_bound_progress[i] - solve_data.primal_bound
-            ) * (solve_data.primal_bound_progress_time[i])
-        else:
-            primal_integral += abs(
-                primal_bound_progress[i] - solve_data.primal_bound
-            ) * (
-                solve_data.primal_bound_progress_time[i]
-                - solve_data.primal_bound_progress_time[i - 1]
-            )
-
-    config.logger.info(
-        ' {:<25}:   {:>7.4f} '.format('Primal integral', primal_integral)
-    )
-    return primal_integral
 
 
 def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense):
@@ -1053,143 +855,7 @@ def setup_results_object(results, model, config):
     )
 
 
-def process_objective(
-    solve_data,
-    config,
-    move_objective=False,
-    use_mcpp=False,
-    update_var_con_list=True,
-    partition_nonlinear_terms=True,
-    obj_handleable_polynomial_degree={0, 1},
-    constr_handleable_polynomial_degree={0, 1},
-):
-    """Process model objective function.
-    Check that the model has only 1 valid objective.
-    If the objective is nonlinear, move it into the constraints.
-    If no objective function exists, emit a warning and create a dummy
-    objective.
-    Parameters
-    ----------
-    solve_data (MindtPySolveData): solver environment data class
-    config (ConfigBlock): solver configuration options
-    move_objective (bool): if True, move even linear
-        objective functions to the constraints
-    update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated.
-        This arg is set to True by default. Currently, update_var_con_list will be set to False only when
-        add_regularization is not None in MindtPy.
-    partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
-    """
-    m = solve_data.working_model
-    util_block = getattr(m, solve_data.util_block_name)
-    # Handle missing or multiple objectives
-    active_objectives = list(
-        m.component_data_objects(ctype=Objective, active=True, descend_into=True)
-    )
-    solve_data.results.problem.number_of_objectives = len(active_objectives)
-    if len(active_objectives) == 0:
-        config.logger.warning('Model has no active objectives. Adding dummy objective.')
-        util_block.dummy_objective = Objective(expr=1)
-        main_obj = util_block.dummy_objective
-    elif len(active_objectives) > 1:
-        raise ValueError('Model has multiple active objectives.')
-    else:
-        main_obj = active_objectives[0]
-    solve_data.results.problem.sense = (
-        ProblemSense.minimize if main_obj.sense == 1 else ProblemSense.maximize
-    )
-    solve_data.objective_sense = main_obj.sense
-
-    # Move the objective to the constraints if it is nonlinear or move_objective is True.
-    if (
-        main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree
-        or move_objective
-    ):
-        if move_objective:
-            config.logger.info("Moving objective to constraint set.")
-        else:
-            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
-        util_block.objective_value = VarList(domain=Reals, initialize=0)
-        util_block.objective_constr = ConstraintList()
-        if (
-            main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree
-            and partition_nonlinear_terms
-            and main_obj.expr.__class__ is EXPR.SumExpression
-        ):
-            repn = generate_standard_repn(
-                main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree
-            )
-            # the following code will also work if linear_subexpr is a constant.
-            linear_subexpr = (
-                repn.constant
-                + sum(
-                    coef * var for coef, var in zip(repn.linear_coefs, repn.linear_vars)
-                )
-                + sum(
-                    coef * var1 * var2
-                    for coef, (var1, var2) in zip(
-                        repn.quadratic_coefs, repn.quadratic_vars
-                    )
-                )
-            )
-            # only need to generate one epigraph constraint for the sum of all linear terms and constant
-            epigraph_reformulation(
-                linear_subexpr,
-                util_block.objective_value,
-                util_block.objective_constr,
-                use_mcpp,
-                main_obj.sense,
-            )
-            nonlinear_subexpr = repn.nonlinear_expr
-            if nonlinear_subexpr.__class__ is EXPR.SumExpression:
-                for subsubexpr in nonlinear_subexpr.args:
-                    epigraph_reformulation(
-                        subsubexpr,
-                        util_block.objective_value,
-                        util_block.objective_constr,
-                        use_mcpp,
-                        main_obj.sense,
-                    )
-            else:
-                epigraph_reformulation(
-                    nonlinear_subexpr,
-                    util_block.objective_value,
-                    util_block.objective_constr,
-                    use_mcpp,
-                    main_obj.sense,
-                )
-        else:
-            epigraph_reformulation(
-                main_obj.expr,
-                util_block.objective_value,
-                util_block.objective_constr,
-                use_mcpp,
-                main_obj.sense,
-            )
-
-        main_obj.deactivate()
-        util_block.objective = Objective(
-            expr=sum(util_block.objective_value[:]), sense=main_obj.sense
-        )
-
-        if (
-            main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree
-            or (move_objective and update_var_con_list)
-        ):
-            util_block.variable_list.extend(util_block.objective_value[:])
-            util_block.continuous_variable_list.extend(util_block.objective_value[:])
-            util_block.constraint_list.extend(util_block.objective_constr[:])
-            util_block.objective_list.append(util_block.objective)
-            for constr in util_block.objective_constr[:]:
-                if (
-                    constr.body.polynomial_degree()
-                    in constr_handleable_polynomial_degree
-                ):
-                    util_block.linear_constraint_list.append(constr)
-                else:
-                    util_block.nonlinear_constraint_list.append(constr)
-
-
-def fp_converged(working_model, mip_model, config, discrete_only=True):
+def fp_converged(working_model, mip_model, proj_zero_tolerance, discrete_only=True):
     """Calculates the euclidean norm between the discrete variables in the MIP and NLP models.
 
     Parameters
@@ -1198,8 +864,8 @@ def fp_converged(working_model, mip_model, config, discrete_only=True):
         The working model(original model).
     mip_model : Pyomo model
         The mip model.
-    config : ConfigBlock
-        The specific configurations for MindtPy.
+    proj_zero_tolerance : Float
+        The projection zero tolerance of Feasibility Pump.
     discrete_only : bool, optional
         Whether to only optimize on distance between the discrete variables, by default True.
 
@@ -1216,7 +882,7 @@ def fp_converged(working_model, mip_model, config, discrete_only=True):
         )
         if (not discrete_only) or milp_var.is_integer()
     )
-    return distance <= config.fp_projzerotol
+    return distance <= proj_zero_tolerance
 
 
 def add_orthogonality_cuts(working_model, mip_model, config):
