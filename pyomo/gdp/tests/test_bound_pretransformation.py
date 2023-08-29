@@ -1014,3 +1014,32 @@ class TestBoundPretransformation(unittest.TestCase):
             + 5.0 * m.disjunction.disjuncts[1].binary_indicator_var
             >= m.cost,
         )
+
+    def test_bounds_correct_for_multiple_nested_disjunctions(self):
+        m = ConcreteModel()
+        m.c = Var(bounds=(3, 9))
+        m.x = Var(bounds=(0, 10))
+        m.y = Var(bounds=(-10, 2))
+
+        m.d1 = Disjunct()
+        m.d1.cons = Constraint(expr=m.c == 4)
+        m.d1.disjunction = Disjunction(expr=[[m.x + m.y >= 8],
+                                             [m.x + m.y <= 3]])
+        m.d1.disjunction2 = Disjunction(expr=[[m.x + 2*m.y <= 4],
+                                              [m.y + 2*m.x >= 7]])
+
+        m.d2 = Disjunct()
+        m.d2.cons = Constraint(expr=m.c == 5)
+        m.d2.disjunction = Disjunction(expr=[[m.x + m.y >= 10],
+                                             [m.x + m.y <= 0]])
+        m.d2.disjunction2 = Disjunction(expr=[[m.x + 3*m.y <= 2],
+                                              [m.y + 2*m.x >= 9]])
+        m.disjunction = Disjunction(expr=[m.d1, m.d2])
+
+        m.obj = Objective(expr=m.c)
+
+        TransformationFactory('gdp.bound_pretransformation').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m)
+        from pyomo.environ import SolverFactory, value
+        SolverFactory('gurobi').solve(m, tee=True)
+        self.assertAlmostEqual(value(m.obj), 4)
