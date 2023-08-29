@@ -211,7 +211,7 @@ class Highs(PersistentBase, PersistentSolver):
                 level=self.config.log_level, logger=self.config.solver_output_logger
             )
         ]
-        if self.config.stream_solver:
+        if self.config.tee:
             ostreams.append(sys.stdout)
 
         with TeeStream(*ostreams) as t:

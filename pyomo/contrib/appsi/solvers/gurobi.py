@@ -353,7 +353,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                 level=self.config.log_level, logger=self.config.solver_output_logger
             )
         ]
-        if self.config.stream_solver:
+        if self.config.tee:
             ostreams.append(sys.stdout)
 
         with TeeStream(*ostreams) as t:
@@ -1384,7 +1384,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                 >>> _c = _add_cut(4)  # this is an arbitrary choice
                 >>>
                 >>> opt = appsi.solvers.Gurobi()
-                >>> opt.config.stream_solver = True
+                >>> opt.config.tee = True
                 >>> opt.set_instance(m) # doctest:+SKIP
                 >>> opt.gurobi_options['PreCrush'] = 1
                 >>> opt.gurobi_options['LazyConstraints'] = 1

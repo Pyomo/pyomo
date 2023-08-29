@@ -245,7 +245,7 @@ class Cplex(PersistentSolver):
         log_stream = LogStream(
             level=self.config.log_level, logger=self.config.solver_output_logger
         )
-        if config.stream_solver:
+        if config.tee:
 
             def _process_stream(arg):
                 sys.stdout.write(arg)

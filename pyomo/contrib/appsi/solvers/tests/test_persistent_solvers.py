@@ -368,7 +368,7 @@ class TestSolvers(unittest.TestCase):
         m.b2 = pe.Param(mutable=True)
         m.c1 = pe.Constraint(expr=m.y == m.a1 * m.x + m.b1)
         m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
-        opt.config.stream_solver = True
+        opt.config.tee = True
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:

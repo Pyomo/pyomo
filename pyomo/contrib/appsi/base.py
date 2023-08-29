@@ -165,7 +165,7 @@ class InterfaceConfig(ConfigDict):
     ----------
     time_limit: float - sent to solver
         Time limit for the solver
-    stream_solver: bool - wrapper
+    tee: bool - wrapper
         If True, then the solver log goes to stdout
     load_solution: bool - wrapper
         If False, then the values of the primal variables will not be
@@ -197,7 +197,7 @@ class InterfaceConfig(ConfigDict):
             visibility=visibility,
         )
 
-        self.declare('stream_solver', ConfigValue(domain=bool))
+        self.declare('tee', ConfigValue(domain=bool))
         self.declare('load_solution', ConfigValue(domain=bool))
         self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
         self.declare('report_timing', ConfigValue(domain=bool))
@@ -206,7 +206,7 @@ class InterfaceConfig(ConfigDict):
         self.time_limit: Optional[float] = self.declare(
             'time_limit', ConfigValue(domain=NonNegativeFloat)
         )
-        self.stream_solver: bool = False
+        self.tee: bool = False
         self.load_solution: bool = True
         self.symbolic_solver_labels: bool = False
         self.report_timing: bool = False
@@ -454,7 +454,7 @@ class SolutionLoader(SolutionLoaderBase):
         return rc
 
 
-class Results():
+class Results:
     """
     Attributes
     ----------
@@ -747,7 +747,7 @@ class Solver(abc.ABC):
 
     @abc.abstractmethod
     def solve(
-        self, model: _BlockData, tee: bool = False, timer: HierarchicalTimer = None, **kwargs
+        self, model: _BlockData, timer: HierarchicalTimer = None, **kwargs
     ) -> Results:
         """
         Solve a Pyomo model.
@@ -756,8 +756,6 @@ class Solver(abc.ABC):
         ----------
         model: _BlockData
             The Pyomo model to be solved
-        tee: bool
-            Show solver output in the terminal
         timer: HierarchicalTimer
             An option timer for reporting timing
         **kwargs
@@ -1635,7 +1633,7 @@ legacy_solution_status_map = {
 }
 
 
-class LegacySolverInterface():
+class LegacySolverInterface:
     def solve(
         self,
         model: _BlockData,
@@ -1653,7 +1651,7 @@ class LegacySolverInterface():
     ):
         original_config = self.config
         self.config = self.config()
-        self.config.stream_solver = tee
+        self.config.tee = tee
         self.config.load_solution = load_solutions
         self.config.symbolic_solver_labels = symbolic_solver_labels
         self.config.time_limit = timelimit
