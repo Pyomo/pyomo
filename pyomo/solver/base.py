@@ -154,7 +154,7 @@ class Results(ConfigDict):
         self.declare('termination_message', ConfigValue(domain=str))
         self.declare('iteration_count', ConfigValue(domain=NonNegativeInt))
         self.declare('timing_info', ConfigDict())
-        self.timing_info.declare('start', ConfigValue=In(datetime))
+        self.timing_info.declare('start', ConfigValue(domain=In(datetime)))
         self.timing_info.declare('wall_time', ConfigValue(domain=NonNegativeFloat))
         self.timing_info.declare('solver_wall_time', ConfigValue(domain=NonNegativeFloat))
         self.declare('extra_info', ConfigDict(implicit=True))
