@@ -4,6 +4,72 @@ import pyomo.environ as pe
 from pyomo.core.base.var import ScalarVar
 
 
+class TestTerminationCondition(unittest.TestCase):
+    def test_member_list(self):
+        member_list = base.TerminationCondition._member_names_
+        expected_list = ['unknown',
+                         'convergenceCriteriaSatisfied',
+                         'maxTimeLimit',
+                         'iterationLimit',
+                         'objectiveLimit',
+                         'minStepLength',
+                         'unbounded',
+                         'provenInfeasible',
+                         'locallyInfeasible',
+                         'infeasibleOrUnbounded',
+                         'error',
+                         'interrupted',
+                         'licensingProblems']
+        self.assertEqual(member_list, expected_list)
+
+    def test_codes(self):
+        self.assertEqual(base.TerminationCondition.unknown.value, 42)
+        self.assertEqual(base.TerminationCondition.convergenceCriteriaSatisfied.value, 0)
+        self.assertEqual(base.TerminationCondition.maxTimeLimit.value, 1)
+        self.assertEqual(base.TerminationCondition.iterationLimit.value, 2)
+        self.assertEqual(base.TerminationCondition.objectiveLimit.value, 3)
+        self.assertEqual(base.TerminationCondition.minStepLength.value, 4)
+        self.assertEqual(base.TerminationCondition.unbounded.value, 5)
+        self.assertEqual(base.TerminationCondition.provenInfeasible.value, 6)
+        self.assertEqual(base.TerminationCondition.locallyInfeasible.value, 7)
+        self.assertEqual(base.TerminationCondition.infeasibleOrUnbounded.value, 8)
+        self.assertEqual(base.TerminationCondition.error.value, 9)
+        self.assertEqual(base.TerminationCondition.interrupted.value, 10)
+        self.assertEqual(base.TerminationCondition.licensingProblems.value, 11)
+
+
+class TestSolutionStatus(unittest.TestCase):
+    def test_member_list(self):
+        member_list = base.SolutionStatus._member_names_
+        expected_list = ['noSolution', 'infeasible', 'feasible', 'optimal']
+        self.assertEqual(member_list, expected_list)
+
+    def test_codes(self):
+        self.assertEqual(base.SolutionStatus.noSolution.value, 0)
+        self.assertEqual(base.SolutionStatus.infeasible.value, 10)
+        self.assertEqual(base.SolutionStatus.feasible.value, 20)
+        self.assertEqual(base.SolutionStatus.optimal.value, 30)
+
+
+class TestSolverBase(unittest.TestCase):
+    @unittest.mock.patch.multiple(base.SolverBase, __abstractmethods__=set())
+    def test_solver_base(self):
+        self.instance = base.SolverBase()
+        self.assertFalse(self.instance.is_persistent())
+        self.assertEqual(self.instance.version(), None)
+        self.assertEqual(self.instance.config, None)
+        self.assertEqual(self.instance.solve(None), None)
+        self.assertEqual(self.instance.available(), None)
+
+    @unittest.mock.patch.multiple(base.SolverBase, __abstractmethods__=set())
+    def test_solver_availability(self):
+        self.instance = base.SolverBase()
+        self.instance.Availability._value_ = 1
+        self.assertTrue(self.instance.Availability.__bool__(self.instance.Availability))
+        self.instance.Availability._value_ = -1
+        self.assertFalse(self.instance.Availability.__bool__(self.instance.Availability))
+
+
 class TestResults(unittest.TestCase):
     def test_uninitialized(self):
         res = base.Results()

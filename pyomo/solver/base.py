@@ -262,145 +262,6 @@ class SolverBase(abc.ABC):
         return False
 
 
-class PersistentSolver(SolverBase):
-    def is_persistent(self):
-        return True
-
-    def load_vars(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> NoReturn:
-        """
-        Load the solution of the primal variables into the value attribute of the variables.
-
-        Parameters
-        ----------
-        vars_to_load: list
-            A list of the variables whose solution should be loaded. If vars_to_load is None, then the solution
-            to all primal variables will be loaded.
-        """
-        for v, val in self.get_primals(vars_to_load=vars_to_load).items():
-            v.set_value(val, skip_validation=True)
-        StaleFlagManager.mark_all_as_stale(delayed=True)
-
-    @abc.abstractmethod
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        pass
-
-    def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        """
-        Declare sign convention in docstring here.
-
-        Parameters
-        ----------
-        cons_to_load: list
-            A list of the constraints whose duals should be loaded. If cons_to_load is None, then the duals for all
-            constraints will be loaded.
-
-        Returns
-        -------
-        duals: dict
-            Maps constraints to dual values
-        """
-        raise NotImplementedError(
-            '{0} does not support the get_duals method'.format(type(self))
-        )
-
-    def get_slacks(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
-        """
-        Parameters
-        ----------
-        cons_to_load: list
-            A list of the constraints whose slacks should be loaded. If cons_to_load is None, then the slacks for all
-            constraints will be loaded.
-
-        Returns
-        -------
-        slacks: dict
-            Maps constraints to slack values
-        """
-        raise NotImplementedError(
-            '{0} does not support the get_slacks method'.format(type(self))
-        )
-
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
-        """
-        Parameters
-        ----------
-        vars_to_load: list
-            A list of the variables whose reduced cost should be loaded. If vars_to_load is None, then all reduced costs
-            will be loaded.
-
-        Returns
-        -------
-        reduced_costs: ComponentMap
-            Maps variable to reduced cost
-        """
-        raise NotImplementedError(
-            '{0} does not support the get_reduced_costs method'.format(type(self))
-        )
-
-    @property
-    @abc.abstractmethod
-    def update_config(self) -> UpdateConfig:
-        pass
-
-    @abc.abstractmethod
-    def set_instance(self, model):
-        pass
-
-    @abc.abstractmethod
-    def add_variables(self, variables: List[_GeneralVarData]):
-        pass
-
-    @abc.abstractmethod
-    def add_params(self, params: List[_ParamData]):
-        pass
-
-    @abc.abstractmethod
-    def add_constraints(self, cons: List[_GeneralConstraintData]):
-        pass
-
-    @abc.abstractmethod
-    def add_block(self, block: _BlockData):
-        pass
-
-    @abc.abstractmethod
-    def remove_variables(self, variables: List[_GeneralVarData]):
-        pass
-
-    @abc.abstractmethod
-    def remove_params(self, params: List[_ParamData]):
-        pass
-
-    @abc.abstractmethod
-    def remove_constraints(self, cons: List[_GeneralConstraintData]):
-        pass
-
-    @abc.abstractmethod
-    def remove_block(self, block: _BlockData):
-        pass
-
-    @abc.abstractmethod
-    def set_objective(self, obj: _GeneralObjectiveData):
-        pass
-
-    @abc.abstractmethod
-    def update_variables(self, variables: List[_GeneralVarData]):
-        pass
-
-    @abc.abstractmethod
-    def update_params(self):
-        pass
-
-
 class PersistentBase(abc.ABC):
     def __init__(self, only_child_vars=False):
         self._model = None
@@ -938,6 +799,146 @@ class PersistentBase(abc.ABC):
         timer.start('vars')
         self.remove_variables(old_vars)
         timer.stop('vars')
+
+
+class PersistentSolver(SolverBase):
+    def is_persistent(self):
+        return True
+
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+    ) -> NoReturn:
+        """
+        Load the solution of the primal variables into the value attribute of the variables.
+
+        Parameters
+        ----------
+        vars_to_load: list
+            A list of the variables whose solution should be loaded. If vars_to_load is None, then the solution
+            to all primal variables will be loaded.
+        """
+        for v, val in self.get_primals(vars_to_load=vars_to_load).items():
+            v.set_value(val, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+
+    @abc.abstractmethod
+    def get_primals(
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+    ) -> Mapping[_GeneralVarData, float]:
+        pass
+
+    def get_duals(
+        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
+    ) -> Dict[_GeneralConstraintData, float]:
+        """
+        Declare sign convention in docstring here.
+
+        Parameters
+        ----------
+        cons_to_load: list
+            A list of the constraints whose duals should be loaded. If cons_to_load is None, then the duals for all
+            constraints will be loaded.
+
+        Returns
+        -------
+        duals: dict
+            Maps constraints to dual values
+        """
+        raise NotImplementedError(
+            '{0} does not support the get_duals method'.format(type(self))
+        )
+
+    def get_slacks(
+        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
+    ) -> Dict[_GeneralConstraintData, float]:
+        """
+        Parameters
+        ----------
+        cons_to_load: list
+            A list of the constraints whose slacks should be loaded. If cons_to_load is None, then the slacks for all
+            constraints will be loaded.
+
+        Returns
+        -------
+        slacks: dict
+            Maps constraints to slack values
+        """
+        raise NotImplementedError(
+            '{0} does not support the get_slacks method'.format(type(self))
+        )
+
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
+    ) -> Mapping[_GeneralVarData, float]:
+        """
+        Parameters
+        ----------
+        vars_to_load: list
+            A list of the variables whose reduced cost should be loaded. If vars_to_load is None, then all reduced costs
+            will be loaded.
+
+        Returns
+        -------
+        reduced_costs: ComponentMap
+            Maps variable to reduced cost
+        """
+        raise NotImplementedError(
+            '{0} does not support the get_reduced_costs method'.format(type(self))
+        )
+
+    @property
+    @abc.abstractmethod
+    def update_config(self) -> UpdateConfig:
+        pass
+
+    @abc.abstractmethod
+    def set_instance(self, model):
+        pass
+
+    @abc.abstractmethod
+    def add_variables(self, variables: List[_GeneralVarData]):
+        pass
+
+    @abc.abstractmethod
+    def add_params(self, params: List[_ParamData]):
+        pass
+
+    @abc.abstractmethod
+    def add_constraints(self, cons: List[_GeneralConstraintData]):
+        pass
+
+    @abc.abstractmethod
+    def add_block(self, block: _BlockData):
+        pass
+
+    @abc.abstractmethod
+    def remove_variables(self, variables: List[_GeneralVarData]):
+        pass
+
+    @abc.abstractmethod
+    def remove_params(self, params: List[_ParamData]):
+        pass
+
+    @abc.abstractmethod
+    def remove_constraints(self, cons: List[_GeneralConstraintData]):
+        pass
+
+    @abc.abstractmethod
+    def remove_block(self, block: _BlockData):
+        pass
+
+    @abc.abstractmethod
+    def set_objective(self, obj: _GeneralObjectiveData):
+        pass
+
+    @abc.abstractmethod
+    def update_variables(self, variables: List[_GeneralVarData]):
+        pass
+
+    @abc.abstractmethod
+    def update_params(self):
+        pass
+
 
 
 # Everything below here preserves backwards compatibility
