@@ -143,9 +143,11 @@ class LinearRepn(object):
         Notes
         -----
         This method assumes that the operator was "+". It is implemented
-        so that we can directly use a LinearRepn() as a data object in
-        the expression walker (thereby avoiding the function call for a
-        custom callback)
+        so that we can directly use a LinearRepn() as a `data` object in
+        the expression walker (thereby allowing us to use the default
+        implementation of acceptChildResult [which calls
+        `data.append()`] and avoid the function call for a custom
+        callback).
 
         """
         # Note that self.multiplier will always be 1 (we only call append()
