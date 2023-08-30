@@ -30,7 +30,6 @@ _packages = [
     'pyomo.repn',
     'pyomo.neos',
     'pyomo.solvers',
-    'pyomo.solver',
     'pyomo.gdp',
     'pyomo.mpec',
     'pyomo.dae',
