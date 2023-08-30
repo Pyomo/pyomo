@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.common import unittest
 from pyomo.solver import base
 import pyomo.environ as pe
@@ -7,24 +18,28 @@ from pyomo.core.base.var import ScalarVar
 class TestTerminationCondition(unittest.TestCase):
     def test_member_list(self):
         member_list = base.TerminationCondition._member_names_
-        expected_list = ['unknown',
-                         'convergenceCriteriaSatisfied',
-                         'maxTimeLimit',
-                         'iterationLimit',
-                         'objectiveLimit',
-                         'minStepLength',
-                         'unbounded',
-                         'provenInfeasible',
-                         'locallyInfeasible',
-                         'infeasibleOrUnbounded',
-                         'error',
-                         'interrupted',
-                         'licensingProblems']
+        expected_list = [
+            'unknown',
+            'convergenceCriteriaSatisfied',
+            'maxTimeLimit',
+            'iterationLimit',
+            'objectiveLimit',
+            'minStepLength',
+            'unbounded',
+            'provenInfeasible',
+            'locallyInfeasible',
+            'infeasibleOrUnbounded',
+            'error',
+            'interrupted',
+            'licensingProblems',
+        ]
         self.assertEqual(member_list, expected_list)
 
     def test_codes(self):
         self.assertEqual(base.TerminationCondition.unknown.value, 42)
-        self.assertEqual(base.TerminationCondition.convergenceCriteriaSatisfied.value, 0)
+        self.assertEqual(
+            base.TerminationCondition.convergenceCriteriaSatisfied.value, 0
+        )
         self.assertEqual(base.TerminationCondition.maxTimeLimit.value, 1)
         self.assertEqual(base.TerminationCondition.iterationLimit.value, 2)
         self.assertEqual(base.TerminationCondition.objectiveLimit.value, 3)
@@ -67,7 +82,9 @@ class TestSolverBase(unittest.TestCase):
         self.instance.Availability._value_ = 1
         self.assertTrue(self.instance.Availability.__bool__(self.instance.Availability))
         self.instance.Availability._value_ = -1
-        self.assertFalse(self.instance.Availability.__bool__(self.instance.Availability))
+        self.assertFalse(
+            self.instance.Availability.__bool__(self.instance.Availability)
+        )
 
 
 class TestResults(unittest.TestCase):
@@ -75,9 +92,7 @@ class TestResults(unittest.TestCase):
         res = base.Results()
         self.assertIsNone(res.best_feasible_objective)
         self.assertIsNone(res.best_objective_bound)
-        self.assertEqual(
-            res.termination_condition, base.TerminationCondition.unknown
-        )
+        self.assertEqual(res.termination_condition, base.TerminationCondition.unknown)
 
         with self.assertRaisesRegex(
             RuntimeError, '.*does not currently have a valid solution.*'

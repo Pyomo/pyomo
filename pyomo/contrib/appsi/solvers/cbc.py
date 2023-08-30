@@ -229,7 +229,9 @@ class Cbc(PersistentSolverBase):
         termination_line = all_lines[0].lower()
         obj_val = None
         if termination_line.startswith('optimal'):
-            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition = (
+                TerminationCondition.convergenceCriteriaSatisfied
+            )
             obj_val = float(termination_line.split()[-1])
         elif 'infeasible' in termination_line:
             results.termination_condition = TerminationCondition.provenInfeasible
@@ -304,7 +306,8 @@ class Cbc(PersistentSolverBase):
                 self._reduced_costs[v_id] = (v, -rc_val)
 
         if (
-            results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition
+            == TerminationCondition.convergenceCriteriaSatisfied
             and self.config.load_solution
         ):
             for v_id, (v, val) in self._primal_sol.items():
@@ -313,7 +316,10 @@ class Cbc(PersistentSolverBase):
                 results.best_feasible_objective = None
             else:
                 results.best_feasible_objective = obj_val
-        elif results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied:
+        elif (
+            results.termination_condition
+            == TerminationCondition.convergenceCriteriaSatisfied
+        ):
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
             else:

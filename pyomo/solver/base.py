@@ -11,15 +11,7 @@
 
 import abc
 import enum
-from typing import (
-    Sequence,
-    Dict,
-    Optional,
-    Mapping,
-    NoReturn,
-    List,
-    Tuple,
-)
+from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
@@ -45,7 +37,6 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.solver.config import UpdateConfig
 from pyomo.solver.solution import SolutionLoader, SolutionLoaderBase
 from pyomo.solver.util import get_objective
-
 
 
 class TerminationCondition(enum.Enum):
@@ -97,7 +88,7 @@ class SolutionStatus(enum.IntEnum):
     """
     An enumeration for interpreting the result of a termination. This describes the designated
     status by the solver to be loaded back into the model.
-    
+
     For now, we are choosing to use IntEnum such that return values are numerically
     assigned in increasing order.
     """
@@ -394,7 +385,6 @@ class PersistentSolverBase(SolverBase):
     @abc.abstractmethod
     def update_params(self):
         pass
-
 
 
 # Everything below here preserves backwards compatibility

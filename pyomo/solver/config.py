@@ -10,7 +10,12 @@
 #  ___________________________________________________________________________
 
 from typing import Optional
-from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat, NonNegativeInt
+from pyomo.common.config import (
+    ConfigDict,
+    ConfigValue,
+    NonNegativeFloat,
+    NonNegativeInt,
+)
 
 
 class InterfaceConfig(ConfigDict):

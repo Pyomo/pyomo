@@ -97,7 +97,7 @@ class GurobiResults(Results):
         self.solution_loader = GurobiSolutionLoader(solver=solver)
 
 
-class _MutableLowerBound():
+class _MutableLowerBound:
     def __init__(self, expr):
         self.var = None
         self.expr = expr
@@ -106,7 +106,7 @@ class _MutableLowerBound():
         self.var.setAttr('lb', value(self.expr))
 
 
-class _MutableUpperBound():
+class _MutableUpperBound:
     def __init__(self, expr):
         self.var = None
         self.expr = expr
@@ -115,7 +115,7 @@ class _MutableUpperBound():
         self.var.setAttr('ub', value(self.expr))
 
 
-class _MutableLinearCoefficient():
+class _MutableLinearCoefficient:
     def __init__(self):
         self.expr = None
         self.var = None
@@ -126,7 +126,7 @@ class _MutableLinearCoefficient():
         self.gurobi_model.chgCoeff(self.con, self.var, value(self.expr))
 
 
-class _MutableRangeConstant():
+class _MutableRangeConstant:
     def __init__(self):
         self.lhs_expr = None
         self.rhs_expr = None
@@ -142,7 +142,7 @@ class _MutableRangeConstant():
         slack.ub = rhs_val - lhs_val
 
 
-class _MutableConstant():
+class _MutableConstant:
     def __init__(self):
         self.expr = None
         self.con = None
@@ -151,7 +151,7 @@ class _MutableConstant():
         self.con.rhs = value(self.expr)
 
 
-class _MutableQuadraticConstraint():
+class _MutableQuadraticConstraint:
     def __init__(
         self, gurobi_model, gurobi_con, constant, linear_coefs, quadratic_coefs
     ):
@@ -186,7 +186,7 @@ class _MutableQuadraticConstraint():
         return value(self.constant.expr)
 
 
-class _MutableObjective():
+class _MutableObjective:
     def __init__(self, gurobi_model, constant, linear_coefs, quadratic_coefs):
         self.gurobi_model = gurobi_model
         self.constant = constant
@@ -214,7 +214,7 @@ class _MutableObjective():
         return gurobi_expr
 
 
-class _MutableQuadraticCoefficient():
+class _MutableQuadraticCoefficient:
     def __init__(self):
         self.expr = None
         self.var1 = None
@@ -869,7 +869,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         if status == grb.LOADED:  # problem is loaded, but no solution
             results.termination_condition = TerminationCondition.unknown
         elif status == grb.OPTIMAL:  # optimal
-            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition = (
+                TerminationCondition.convergenceCriteriaSatisfied
+            )
         elif status == grb.INFEASIBLE:
             results.termination_condition = TerminationCondition.provenInfeasible
         elif status == grb.INF_OR_UNBD:
@@ -920,7 +922,10 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         timer.start('load solution')
         if config.load_solution:
             if gprob.SolCount > 0:
-                if results.termination_condition != TerminationCondition.convergenceCriteriaSatisfied:
+                if (
+                    results.termination_condition
+                    != TerminationCondition.convergenceCriteriaSatisfied
+                ):
                     logger.warning(
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '

@@ -10,14 +10,7 @@
 #  ___________________________________________________________________________
 
 import abc
-from typing import (
-    Sequence,
-    Dict,
-    Optional,
-    Mapping,
-    MutableMapping,
-    NoReturn,
-)
+from typing import Sequence, Dict, Optional, Mapping, MutableMapping, NoReturn
 
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.var import _GeneralVarData
@@ -250,7 +243,3 @@ class PersistentSolutionLoader(SolutionLoaderBase):
 
     def invalidate(self):
         self._valid = False
-
-
-
-

@@ -289,10 +289,16 @@ class PersistentSolverUtils(abc.ABC):
                 )
             )
         self.add_constraints(
-            list(block.component_data_objects(Constraint, descend_into=True, active=True))
+            list(
+                block.component_data_objects(Constraint, descend_into=True, active=True)
+            )
         )
         self.add_sos_constraints(
-            list(block.component_data_objects(SOSConstraint, descend_into=True, active=True))
+            list(
+                block.component_data_objects(
+                    SOSConstraint, descend_into=True, active=True
+                )
+            )
         )
         obj = get_objective(block)
         if obj is not None:
@@ -375,10 +381,18 @@ class PersistentSolverUtils(abc.ABC):
 
     def remove_block(self, block):
         self.remove_constraints(
-            list(block.component_data_objects(ctype=Constraint, descend_into=True, active=True))
+            list(
+                block.component_data_objects(
+                    ctype=Constraint, descend_into=True, active=True
+                )
+            )
         )
         self.remove_sos_constraints(
-            list(block.component_data_objects(ctype=SOSConstraint, descend_into=True, active=True))
+            list(
+                block.component_data_objects(
+                    ctype=SOSConstraint, descend_into=True, active=True
+                )
+            )
         )
         if self._only_child_vars:
             self.remove_variables(
@@ -633,4 +647,3 @@ class PersistentSolverUtils(abc.ABC):
         timer.start('vars')
         self.remove_variables(old_vars)
         timer.stop('vars')
-

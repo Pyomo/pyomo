@@ -18,6 +18,7 @@ from pyomo.solver.util import PersistentSolverUtils
 from .config import WriterConfig
 from ..cmodel import cmodel, cmodel_available
 
+
 class NLWriter(PersistentSolverUtils):
     def __init__(self, only_child_vars=False):
         super().__init__(only_child_vars=only_child_vars)

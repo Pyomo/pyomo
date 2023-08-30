@@ -67,7 +67,7 @@ class HighsResults(Results):
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
-class _MutableVarBounds():
+class _MutableVarBounds:
     def __init__(self, lower_expr, upper_expr, pyomo_var_id, var_map, highs):
         self.pyomo_var_id = pyomo_var_id
         self.lower_expr = lower_expr
@@ -82,7 +82,7 @@ class _MutableVarBounds():
         self.highs.changeColBounds(col_ndx, lb, ub)
 
 
-class _MutableLinearCoefficient():
+class _MutableLinearCoefficient:
     def __init__(self, pyomo_con, pyomo_var_id, con_map, var_map, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -97,7 +97,7 @@ class _MutableLinearCoefficient():
         self.highs.changeCoeff(row_ndx, col_ndx, value(self.expr))
 
 
-class _MutableObjectiveCoefficient():
+class _MutableObjectiveCoefficient:
     def __init__(self, pyomo_var_id, var_map, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -109,7 +109,7 @@ class _MutableObjectiveCoefficient():
         self.highs.changeColCost(col_ndx, value(self.expr))
 
 
-class _MutableObjectiveOffset():
+class _MutableObjectiveOffset:
     def __init__(self, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -118,7 +118,7 @@ class _MutableObjectiveOffset():
         self.highs.changeObjectiveOffset(value(self.expr))
 
 
-class _MutableConstraintBounds():
+class _MutableConstraintBounds:
     def __init__(self, lower_expr, upper_expr, pyomo_con, con_map, highs):
         self.lower_expr = lower_expr
         self.upper_expr = upper_expr
@@ -604,7 +604,9 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         elif status == highspy.HighsModelStatus.kModelEmpty:
             results.termination_condition = TerminationCondition.unknown
         elif status == highspy.HighsModelStatus.kOptimal:
-            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition = (
+                TerminationCondition.convergenceCriteriaSatisfied
+            )
         elif status == highspy.HighsModelStatus.kInfeasible:
             results.termination_condition = TerminationCondition.provenInfeasible
         elif status == highspy.HighsModelStatus.kUnboundedOrInfeasible:
@@ -627,7 +629,10 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         timer.start('load solution')
         self._sol = highs.getSolution()
         has_feasible_solution = False
-        if results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied:
+        if (
+            results.termination_condition
+            == TerminationCondition.convergenceCriteriaSatisfied
+        ):
             has_feasible_solution = True
         elif results.termination_condition in {
             TerminationCondition.objectiveLimit,
@@ -639,7 +644,10 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
 
         if config.load_solution:
             if has_feasible_solution:
-                if results.termination_condition != TerminationCondition.convergenceCriteriaSatisfied:
+                if (
+                    results.termination_condition
+                    != TerminationCondition.convergenceCriteriaSatisfied
+                ):
                     logger.warning(
                         'Loading a feasible but suboptimal solution. '
                         'Please set load_solution=False and check '

@@ -300,7 +300,9 @@ class Ipopt(PersistentSolverBase):
 
         termination_line = all_lines[1]
         if 'Optimal Solution Found' in termination_line:
-            results.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition = (
+                TerminationCondition.convergenceCriteriaSatisfied
+            )
         elif 'Problem may be infeasible' in termination_line:
             results.termination_condition = TerminationCondition.locallyInfeasible
         elif 'problem might be unbounded' in termination_line:
@@ -381,7 +383,8 @@ class Ipopt(PersistentSolverBase):
                 self._reduced_costs[var] = 0
 
         if (
-            results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied
+            results.termination_condition
+            == TerminationCondition.convergenceCriteriaSatisfied
             and self.config.load_solution
         ):
             for v, val in self._primal_sol.items():
@@ -392,7 +395,10 @@ class Ipopt(PersistentSolverBase):
                 results.best_feasible_objective = value(
                     self._writer.get_active_objective().expr
                 )
-        elif results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied:
+        elif (
+            results.termination_condition
+            == TerminationCondition.convergenceCriteriaSatisfied
+        ):
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
             else:
