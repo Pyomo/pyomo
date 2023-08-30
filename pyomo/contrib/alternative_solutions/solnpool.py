@@ -14,13 +14,11 @@ from pyomo.contrib.alternative_solutions import aos_utils, var_utils, solution
 
 def gurobi_generate_solutions(model, max_solutions=10, rel_opt_gap=None, 
                               abs_opt_gap=None, search_mode=2, 
-                              round_discrete_vars=True, solver_options={}):
+                              solver_options={}):
     '''
     Finds alternative optimal solutions for discrete variables using Gurobi's 
     built-in Solution Pool capability. See the Gurobi Solution Pool
-    documentation for additional details. This function requires the use of 
-    the Gurobi Auto-Persistent Pyomo Solver interface (appsi).
-
+    documentation for additional details. 
         Parameters
         ----------
         model : ConcreteModel
@@ -42,13 +40,10 @@ def gurobi_generate_solutions(model, max_solutions=10, rel_opt_gap=None,
         search_mode : 0, 1, or 2
             Indicates the SolutionPool mode that is used to generate 
             alternative solutions in Gurobi. Mode 2 should typically be used as 
-            it finds the best n solutions. Mode 0 finds a single optimal 
+            it finds the top n solutions. Mode 0 finds a single optimal 
             solution (i.e. the standard mode in Gurobi). Mode 1 will generate n 
             solutions without providing guarantees on their quality. This 
             parameter maps to the PoolSearchMode in Gurobi.
-        round_discrete_vars : boolean
-            Boolean indicating that discrete values should be rounded to the 
-            nearest integer in the solutions results.
         solver_options : dict
             Solver option-value pairs to be passed to the Gurobi solver.
             
@@ -59,18 +54,15 @@ def gurobi_generate_solutions(model, max_solutions=10, rel_opt_gap=None,
             [Solution]
     '''
 
-    # Validate inputs
-    aos_utils._is_concrete_model(model)
+    # Input validation
     num_solutions = aos_utils._get_max_solutions(max_solutions)
-    assert (isinstance(rel_opt_gap, float) and rel_opt_gap >= 0) or \
+    assert (isinstance(rel_opt_gap, (float, int)) and rel_opt_gap >= 0) or \
         isinstance(rel_opt_gap, type(None)), \
             'rel_opt_gap must be a non-negative float or None'
-    assert (isinstance(abs_opt_gap, float) and abs_opt_gap >= 0) or \
+    assert (isinstance(abs_opt_gap, (float, int)) and abs_opt_gap >= 0) or \
         isinstance(abs_opt_gap, type(None)), \
             'abs_opt_gap must be a non-negative float or None'
     assert search_mode in [0, 1, 2], 'search_mode must be 0, 1, or 2'
-    assert isinstance(round_discrete_vars, bool), \
-        'round_discrete_vars must be a Boolean'
     
     # Configure solver and solve model
     opt = appsi.solvers.Gurobi()
@@ -82,6 +74,8 @@ def gurobi_generate_solutions(model, max_solutions=10, rel_opt_gap=None,
         opt.set_gurobi_param('PoolGap', rel_opt_gap)
     if abs_opt_gap is not None:
         opt.set_gurobi_param('PoolGapAbs', abs_opt_gap)
+    for parameter, value in solver_options.items():
+        opt.set_gurobi_param(parameter, abs_opt_gap)
     results = opt.solve(model)
     assert results.termination_condition == \
         appsi.base.TerminationCondition.optimal, \
@@ -95,8 +89,6 @@ def gurobi_generate_solutions(model, max_solutions=10, rel_opt_gap=None,
     solutions = []
     for i in range(solution_count):
         results.solution_loader.load_vars(solution_number=i)
-        solutions.append(solution.Solution(model, variables, 
-                                           round_discrete_vars=\
-                                           round_discrete_vars))
+        solutions.append(solution.Solution(model, variables))
 
     return solutions

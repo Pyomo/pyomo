@@ -67,7 +67,7 @@ def get_model_variables(model, components='all', include_continuous=True,
     '''
 
     # Validate inputs
-    aos_utils._is_concrete_model(model)
+    aos_utils._check_concrete_model(model)
     assert isinstance(include_continuous, bool), \
         'include_continuous must be a Boolean'
     assert isinstance(include_binary, bool), 'include_binary must be a Boolean'
@@ -130,5 +130,5 @@ def get_model_variables(model, components='all', include_continuous=True,
                 
     return variable_set
 
-def check_variables(model, variables):
+def check_variables(model, variables, include_fixed=False):
     pass

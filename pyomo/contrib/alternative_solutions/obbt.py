@@ -9,14 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-#import pandas as pd
-
 import pyomo.environ as pe
 from pyomo.opt import SolverStatus, TerminationCondition
 from pyomo.common.collections import ComponentMap
 
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
-import pyomo.contrib.alternative_solutions.variables as var_utils
+import pyomo.contrib.alternative_solutions.var_utils as var_utils
 
 def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None, 
                   refine_bounds=False, warmstart=False, already_solved=False, 
@@ -71,7 +69,7 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None,
             {variable: (lower_bound, upper_bound)}
     '''
 
-    aos_utils._is_concrete_model(model)
+    aos_utils._check_concrete_model(model)
     assert isinstance(refine_bounds, bool), 'refine_bounds must be a Boolean'
     assert isinstance(warmstart, bool), 'warmstart must be a Boolean'
     assert isinstance(already_solved, bool), 'already_solved must be a Boolean'
@@ -83,7 +81,8 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None,
         variable_list = var_utils.get_model_variables(model, variables,
                                                       include_fixed=False)
     else:
-        variable_list = var_utils.check_variables(model, variables)
+        variable_list = var_utils.check_variables(model, variables, 
+                                                  include_fixed=False)
     
     orig_objective = aos_utils._get_active_objective(model)
     aos_block = aos_utils._add_aos_block(model)
@@ -92,7 +91,7 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None,
     opt = aos_utils._get_solver(solver, solver_options, use_persistent_solver)
 
     if not already_solved:
-        results = opt.solve(model)#, tee=tee)
+        results = opt.solve(model, tee=tee)
         status = results.solver.status
         condition = results.solver.termination_condition
         assert (status == SolverStatus.ok and 
@@ -150,7 +149,7 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None,
             if use_persistent_solver:
                 opt.update_config.check_for_new_or_removed_constraints = \
                     new_constraint
-            results = opt.solve(model)#, tee=tee)
+            results = opt.solve(model, tee=tee)
             new_constraint = False
             status = results.solver.status
             condition = results.solver.termination_condition
@@ -200,8 +199,3 @@ def obbt_analysis(model, variables='all', rel_opt_gap=None, abs_gap=None,
     orig_objective.active
     
     return variable_bounds
-
-# def get_var_bound_dataframe(variable_bounds):
-#     '''Get a pandas DataFrame displaying the variable bound results.'''
-#     return pd.DataFrame.from_dict(variable_bounds,orient='index', 
-#                                   columns=['LB','UB'])

@@ -61,8 +61,8 @@ def enumerate_binary_solutions(model, max_solutions=10, variables='all',
             {solution_id: (objective_value,[variable, variable_value])}
     '''
 
-    assert isinstance(model, ConcreteModel), \
-        'model parameter must be an instance of a Pyomo Concrete Model'
+    #assert isinstance(model, ConcreteModel), \
+    #    'model parameter must be an instance of a Pyomo Concrete Model'
 
     # Find the maximum number of solutions to generate
     num_solutions = aos_utils._get_max_solutions(max_solutions)

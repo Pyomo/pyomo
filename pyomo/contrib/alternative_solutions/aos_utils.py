@@ -1,9 +1,14 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jun 30 16:12:23 2022
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-@author: jlgearh
-"""
 import sys
 
 from numpy.random import normal
@@ -12,14 +17,10 @@ from numpy.linalg import norm
 from pyomo.common.modeling import unique_component_name
 import pyomo.environ as pe
 from pyomo.opt import SolverFactory
-from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.contrib import appsi
 
-def _is_concrete_model(model):
-    assert isinstance(model, ConcreteModel), \
-        "Parameter 'model' must be an instance of a Pyomo ConcreteModel"
-
-def _get_solver(solver, solver_options={}, use_persistent_solver=False):
+def _get_solver(solver='gurobi', solver_options={}, 
+                use_persistent_solver=False):
     if use_persistent_solver:
         assert solver == 'gurobi', \
             "Persistent solver option requires the use of Gurobi."
@@ -35,13 +36,14 @@ def _get_solver(solver, solver_options={}, use_persistent_solver=False):
 
 def _get_active_objective(model):
     '''
-    Finds and returns the active objective function for a model. Assumes there 
-    is exactly one active objective.
+    Finds and returns the active objective function for a model. Currently 
+    assume that there is exactly one active objective.
     '''
     active_objs = [o for o in model.component_data_objects(pe.Objective, 
                                                            active=True)]
     assert len(active_objs) == 1, \
-        "Model has zero or more than one active objective function"
+        "Model has {} active objective functions, exactly one is required.".\
+            format(len(active_objs))
     
     return active_objs[0]
 
