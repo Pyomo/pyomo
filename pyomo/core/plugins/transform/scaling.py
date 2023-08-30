@@ -178,7 +178,7 @@ class ScaleModel(Transformation):
         # to variable_substitution_dict (key: id() of component)
         # ToDo: We should change replace_expressions to accept a ComponentMap as well
         variable_substitution_dict = {
-            id(k): variable_substitution_map[k] for k in variable_substitution_map
+            id(k): v for k, v in variable_substitution_map.items()
         }
 
         already_scaled = set()
