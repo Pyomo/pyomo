@@ -244,6 +244,12 @@ class ScaleModel(Transformation):
             scaled_component_to_original_name_map
         )
 
+        # Now that we have scaled the model, deactivate the relevant
+        # scaling suffixes so that we don't accidentally (later)
+        # double-scale.
+        for s in self._suffix_finder.all_suffixes:
+            s.deactivate()
+
         return model
 
     def propagate_solution(self, scaled_model, original_model):
